@@ -64,3 +64,11 @@ func TestKronkClientKeepsExistingDeadline(t *testing.T) {
 		t.Fatalf("deadline changed: got %v want %v", got, want)
 	}
 }
+
+func TestKronkToolArgsJSONKeepsJSONStringObject(t *testing.T) {
+	raw := `{"title":"Owner identity","content":"Alex lives in Brasov","importance":5}`
+
+	if got := kronkToolArgsJSON(raw); got != raw {
+		t.Fatalf("kronkToolArgsJSON() = %q, want %q", got, raw)
+	}
+}

@@ -6,6 +6,32 @@
   <title>{{.Title}}</title>
   <link rel="stylesheet" href="/static/basm.css">
   <script src="/static/htmx.min.js" defer></script>
+  <script>
+    function balaurPrepareChat(form) {
+      const input = form.elements.message;
+      const msg = input.value.trim();
+      if (!msg) return false;
+
+      const chat = document.getElementById("chat");
+      const pendingID = "pending-" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const user = document.createElement("div");
+      user.className = "msg msg-user";
+      user.innerHTML = '<div class="who">You</div><div class="body"></div>';
+      user.querySelector(".body").textContent = msg;
+
+      const pending = document.createElement("div");
+      pending.className = "msg msg-balaur msg-pending";
+      pending.id = pendingID;
+      pending.innerHTML = '<div class="who">Balaur</div><div class="body"><span class="thinking thinking-dots">thinking</span></div>';
+
+      chat.append(user, pending);
+      pending.scrollIntoView({ block: "end" });
+      form.setAttribute("hx-target", "#" + pendingID);
+      form.setAttribute("hx-swap", "outerHTML");
+      form.elements.client_rendered.value = "1";
+      return true;
+    }
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -34,7 +60,8 @@
 
 {{define "chat_bar"}}
 <div class="chatbar" id="chatbar" {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
-  <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()">
+  <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
+    <input type="hidden" name="client_rendered" value="0">
     <input type="text" name="message" placeholder="{{.ChatPlaceholder}}" autocomplete="off" autofocus required {{if not .ChatReady}}disabled{{end}}>
     <button class="btn btn-primary" type="submit" {{if not .ChatReady}}disabled{{end}}>Send</button>
   </form>
@@ -69,6 +96,9 @@
         {{if .Active}}
         <span class="tag">Active</span>
         {{if .RuntimeStatus}}<span class="tag">{{.RuntimeStatus}}</span>{{end}}
+        {{if eq .RuntimeStatus "loading"}}
+        <span class="model-loader" aria-label="Loading model"></span>
+        {{end}}
         {{if .CanLoad}}
         <form hx-post="/ui/models/load" hx-target="#models-panel" hx-swap="outerHTML">
           <input type="hidden" name="key" value="{{.Key}}">

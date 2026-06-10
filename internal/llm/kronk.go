@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -182,6 +183,7 @@ func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []To
 		defer cancel()
 		defer close(ch)
 		var toolCalls []ToolCall
+		var streamedContent bool
 		for resp := range src {
 			if len(resp.Choices) == 0 {
 				continue
@@ -189,12 +191,16 @@ func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []To
 			choice := resp.Choices[0]
 			delta := choice.Delta
 			if delta == nil {
+				if streamedContent {
+					continue
+				}
 				delta = choice.Message
 			}
 			if delta == nil {
 				continue
 			}
 			if delta.Content != "" || delta.Reasoning != "" {
+				streamedContent = streamedContent || delta.Content != ""
 				select {
 				case ch <- Chunk{Content: delta.Content, Reasoning: delta.Reasoning}:
 				case <-runCtx.Done():
@@ -203,20 +209,31 @@ func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []To
 				}
 			}
 			for _, tc := range delta.ToolCalls {
-				args, err := json.Marshal(tc.Function.Arguments)
-				if err != nil {
-					args = []byte("{}")
-				}
 				toolCalls = append(toolCalls, ToolCall{
 					ID:   tc.ID,
 					Name: tc.Function.Name,
-					Args: string(args),
+					Args: kronkToolArgsJSON(tc.Function.Arguments),
 				})
 			}
 		}
 		ch <- Chunk{Done: true, ToolCalls: toolCalls}
 	}()
 	return ch, nil
+}
+
+func kronkToolArgsJSON(args any) string {
+	if s, ok := args.(string); ok {
+		s = strings.TrimSpace(s)
+		if json.Valid([]byte(s)) {
+			return s
+		}
+		return "{}"
+	}
+	raw, err := json.Marshal(args)
+	if err != nil {
+		return "{}"
+	}
+	return string(raw)
 }
 
 func (c *KronkClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {

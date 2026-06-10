@@ -32,6 +32,7 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	if local, ok := client.(*llm.KronkClient); ok && !local.ChatLoaded() {
 		return h.renderError(e, fmt.Errorf("model is not loaded yet"))
 	}
+	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
 	w := e.Response
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -43,8 +44,11 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		}
 	}
 
-	// Echo the user's message, then open the assistant fragment.
-	fmt.Fprintf(w, `<div class="msg msg-user"><div class="who">You</div><div class="body">%s</div></div>`, html.EscapeString(msg))
+	// When the browser optimistically rendered the user row, this response
+	// replaces only the pending Balaur row. Without JS, keep the old echo path.
+	if !clientRendered {
+		fmt.Fprintf(w, `<div class="msg msg-user"><div class="who">You</div><div class="body">%s</div></div>`, html.EscapeString(msg))
+	}
 	fmt.Fprint(w, `<div class="msg msg-balaur"><div class="who">Balaur</div><div class="body">`)
 	flush()
 
