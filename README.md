@@ -30,8 +30,8 @@ database you own and can open with any SQLite tool.
 - **UI:** server-rendered Go templates + HTMX, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
-- **Models:** local GGUF via kronk, downloadable from the web UI, or any
-  OpenAI-compatible endpoint — chosen explicitly, never auto-routed.
+- **Models:** local GGUF via kronk, or any OpenAI-compatible endpoint —
+  chosen explicitly, never auto-routed.
 - **Heads:** sub-agents are auth records with short-lived tokens; their
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
@@ -43,6 +43,14 @@ database you own and can open with any SQLite tool.
   memories always, message-matched recall per turn, plus a compact skills
   index loaded on demand via the `skill` tool. Every lifecycle step is
   audited.
+- **One master conversation, persisted:** every turn is stored; the model
+  sees only the recent window plus memory (persistence is not context).
+  History survives restarts and renders on page load.
+- **The recap telescope:** scrolling up past today reveals the past as
+  summaries — days for the current week, then weeks, months, quarters,
+  years — each expandable down to the preserved day transcript. Summaries
+  generate hierarchically (days → weeks/months → quarters → years) via an
+  idempotent hourly catch-up job (`BALAUR_RECAP=0` disables), audited.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
@@ -56,14 +64,10 @@ go run . serve
 Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
 
-Pick a model from the web UI. Balaur ships a small curated catalog of
-tool-capable 2026 GGUF chat models; downloaded files are stored under
-`pb_data/models/` and the completed download becomes the active chat model.
-
-Environment variables still work as bootstrap/fallback configuration:
+Pick a model (explicitly — there is no default):
 
 ```bash
-# Local GGUF through kronk (the web UI removes the need for this):
+# Local GGUF through kronk (downloads llama.cpp runtime on first use):
 BALAUR_CHAT_MODEL=/path/to/model.gguf go run . serve
 
 # Or any OpenAI-compatible endpoint (llama-server, Ollama, remote):
@@ -101,15 +105,17 @@ go test ./...
 Project layout:
 
 ```txt
-main.go            wire-up: PocketBase app, migrations, routes
+main.go            wire-up: PocketBase app, migrations, routes, recap cron
 migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: kronk (local) + OpenAI-compatible HTTP
+internal/conversation/ master conversation: persistence + context window
+internal/recap/    the telescope: period math + hierarchical summaries
 internal/heads/    sub-agent identities, grants, audit — the rule boundary
 internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
 internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
-internal/web/      HTMX handlers: chat, memory & skills pages, cards
+internal/web/      HTMX handlers: chat, memory & skills pages, cards, recap
 web/               embedded templates and static assets (Basm CSS)
 ```
 
@@ -121,7 +127,8 @@ boundary) and `DESIGN.md` for the Basm design system.
 - Johnny Decimal Markdown vault mirror: one-way export + git history
 - FTS5/embedding recall (today: importance-gated upfront + LIKE-matched
   recall; the `internal/search` spike holds the FTS5 driver decision)
-- Conversation persistence + branch/merge UI for heads
+- Branch sub-conversations with merge-back (the schema is ready; the
+  master conversation ships first)
 - Encrypted export
 - Multi-human accounts (the schema allows it; v1 serves one owner)
 
