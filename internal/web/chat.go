@@ -21,6 +21,14 @@ import (
 // footgun defusal — see internal/conversation).
 const recentTurnWindow = 20
 
+const (
+	avatarBalaurHTML  = `<span class="balaur-avatar balaur-avatar-balaur" aria-hidden="true"><img src="/static/avatars/balaur.png" alt="" decoding="async"></span>`
+	avatarSoulHTML    = `<span class="balaur-avatar balaur-avatar-soul" aria-hidden="true"><img src="/static/avatars/soul.png" alt="" decoding="async"></span>`
+	assistantOpenHTML = `<div class="msg msg-balaur msg-with-avatar">` + avatarBalaurHTML +
+		`<div class="msg-main"><div class="who">Balaur</div><div class="body">`
+	messageCloseHTML = `</div></div></div>`
+)
+
 // chat handles one user turn. v1 keeps it deliberately simple: the turn is
 // answered over a streamed chunked response that HTMX appends to the chat
 // (hx-swap beforeend); conversation persistence wires in with the
@@ -53,9 +61,9 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	// When the browser optimistically rendered the user row, this response
 	// replaces only the pending Balaur row. Without JS, keep the old echo path.
 	if !clientRendered {
-		fmt.Fprintf(w, `<div class="msg msg-user"><div class="who">You</div><div class="body">%s</div></div>`, html.EscapeString(msg))
+		fmt.Fprintf(w, `<div class="msg msg-user msg-with-avatar">%s<div class="msg-main"><div class="who">You</div><div class="body">%s</div></div></div>`, avatarSoulHTML, html.EscapeString(msg))
 	}
-	fmt.Fprint(w, `<div class="msg msg-balaur"><div class="who">Balaur</div><div class="body">`)
+	fmt.Fprint(w, assistantOpenHTML)
 	flush()
 
 	// The master conversation: load the recent window BEFORE persisting the
@@ -88,11 +96,11 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			fmt.Fprint(w, html.EscapeString(ev.Text))
 			flush()
 		case "tool_start":
-			fmt.Fprintf(w, `</div></div><div class="msg msg-tool"><div class="who">tool · %s</div><div class="body">`, html.EscapeString(ev.Tool))
+			fmt.Fprintf(w, messageCloseHTML+`<div class="msg msg-tool"><div class="who">tool · %s</div><div class="body">`, html.EscapeString(ev.Tool))
 			flush()
 		case "tool_result":
 			h.writeToolResult(w, ev.Text)
-			fmt.Fprint(w, `</div></div><div class="msg msg-balaur"><div class="who">Balaur</div><div class="body">`)
+			fmt.Fprint(w, `</div></div>`+assistantOpenHTML)
 			flush()
 		case "error":
 			fmt.Fprintf(w, `<span class="thinking">the thread snapped: %s</span>`, html.EscapeString(ev.Err.Error()))
@@ -122,7 +130,7 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		knowledge.Touch(h.app, knowledge.Memory, m)
 	}
 
-	fmt.Fprint(w, `</div></div>`)
+	fmt.Fprint(w, messageCloseHTML)
 	flush()
 	_ = runErr // already surfaced in-stream; the fragment stays well-formed
 	return nil
@@ -217,7 +225,8 @@ func (h *handlers) agentTools() []agent.Tool {
 func (h *handlers) renderError(e *core.RequestEvent, err error) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(e.Response,
-		`<div class="msg msg-balaur"><div class="who">Balaur</div><div class="body"><span class="thinking">%s</span></div></div>`,
+		`<div class="msg msg-balaur msg-with-avatar">%s<div class="msg-main"><div class="who">Balaur</div><div class="body"><span class="thinking">%s</span></div></div></div>`,
+		avatarBalaurHTML,
 		html.EscapeString(err.Error()))
 	return nil
 }

@@ -13,19 +13,24 @@
       if (!msg) return false;
 
       const chat = document.getElementById("chat");
+      const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
       const pendingID = "pending-" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const avatar = (kind, live = false) => {
+        const src = kind === "soul" ? "/static/avatars/soul.png" : "/static/avatars/balaur.png";
+        return '<span class="balaur-avatar balaur-avatar-' + kind + (live ? ' balaur-avatar-live' : '') + '" aria-hidden="true"><img src="' + src + '" alt="" decoding="async"></span>';
+      };
       const user = document.createElement("div");
-      user.className = "msg msg-user";
-      user.innerHTML = '<div class="who">You</div><div class="body"></div>';
+      user.className = "msg msg-user msg-with-avatar";
+      user.innerHTML = avatar("soul") + '<div class="msg-main"><div class="who">You</div><div class="body"></div></div>';
       user.querySelector(".body").textContent = msg;
 
       const pending = document.createElement("div");
-      pending.className = "msg msg-balaur msg-pending";
+      pending.className = "msg msg-balaur msg-pending msg-with-avatar";
       pending.id = pendingID;
-      pending.innerHTML = '<div class="who">Balaur</div><div class="body"><span class="thinking thinking-dots">thinking</span></div>';
+      pending.innerHTML = avatar("balaur", true) + '<div class="msg-main"><div class="who">Balaur</div><div class="body"><span class="thinking thinking-dots">thinking</span></div></div>';
 
       chat.append(user, pending);
-      pending.scrollIntoView({ block: "end" });
+      if (!reducedMotion) pending.scrollIntoView({ block: "end" });
       form.setAttribute("hx-target", "#" + pendingID);
       form.setAttribute("hx-swap", "outerHTML");
       form.elements.client_rendered.value = "1";
@@ -56,23 +61,28 @@
       {{if .History}}
         {{template "chat-messages.html" .History}}
       {{else}}
-      <div class="msg msg-balaur">
-        <div class="who">Balaur</div>
-        {{if .ChatReady}}
-        <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
-        {{else}}
-        <div class="body">
-          <p>No model is loaded yet.</p>
-          <a class="btn btn-primary" href="/models">Choose a model</a>
+      <div class="msg msg-balaur msg-with-avatar">
+        <span class="balaur-avatar balaur-avatar-balaur" aria-hidden="true"><img src="/static/avatars/balaur.png" alt="" decoding="async"></span>
+        <div class="msg-main">
+          <div class="who">Balaur</div>
+          {{if .ChatReady}}
+          <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
+          {{else}}
+          <div class="body">
+            <p>No model is loaded yet.</p>
+            <a class="btn btn-primary" href="/models">Choose a model</a>
+          </div>
+          {{end}}
         </div>
-        {{end}}
       </div>
       {{end}}
     </section>
   </main>
   <script>
     // Open on the present: the chat bottom is "now"; the past is above.
-    addEventListener("DOMContentLoaded", () => scrollTo(0, document.body.scrollHeight));
+    addEventListener("DOMContentLoaded", () => {
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) scrollTo(0, document.body.scrollHeight);
+    });
   </script>
 
   {{template "chat_bar" .}}
