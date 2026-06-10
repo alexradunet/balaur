@@ -30,8 +30,9 @@ database you own and can open with any SQLite tool.
 - **UI:** server-rendered Go templates + HTMX, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
-- **Models:** local GGUF via kronk, or any OpenAI-compatible endpoint —
-  chosen explicitly, never auto-routed.
+- **Models:** local GGUF via kronk, or any OpenAI-compatible endpoint. If no
+  model is configured, Balaur looks for the small default Qwen2.5 3B GGUF under
+  `pb_data/models/`.
 - **Heads:** sub-agents are auth records with short-lived tokens; their
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
@@ -64,7 +65,21 @@ go run . serve
 Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
 
-Pick a model (explicitly — there is no default):
+Balaur defaults to a small local tool-capable model:
+
+```bash
+llmfit download bartowski/Qwen2.5-3B-Instruct-GGUF \
+  --quant Q4_K_M \
+  --output-dir pb_data/models
+```
+
+Then run:
+
+```bash
+go run . serve
+```
+
+You can still override the default explicitly:
 
 ```bash
 # Local GGUF through kronk (downloads llama.cpp runtime on first use):

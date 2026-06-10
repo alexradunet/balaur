@@ -51,7 +51,7 @@ func registerRecap(app core.App) {
 		return
 	}
 	run := func() {
-		client, err := llm.FromEnv()
+		client, err := llm.FromEnvWithDefault(app.DataDir())
 		if err != nil {
 			return // no model configured; recap waits
 		}

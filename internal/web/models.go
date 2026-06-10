@@ -1,19 +1,20 @@
 package web
 
 import (
-	"context"
-	"net/http"
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/alexradunet/balaur/internal/models"
+	"github.com/alexradunet/balaur/internal/llm"
 )
 
 type homeData struct {
 	Title           string
-	Models          []modelView
 	ModelError      string
+	ModelHint       string
 	ChatReady       bool
 	ChatPlaceholder string
 	History         []messageView
@@ -21,51 +22,18 @@ type homeData struct {
 	DevSeed         bool
 }
 
-type modelView struct {
-	models.LocalModel
-	Progress      int
-	CanDownload   bool
-	CanSelect     bool
-	CanLoad       bool
-	RuntimeStatus string
-	RuntimeError  string
-}
-
 func (h *handlers) homeData() (homeData, error) {
-	data := homeData{Title: "Balaur"}
-	rows, err := h.models.List()
-	if err != nil {
-		return data, err
-	}
-	data.Models = h.modelViews(rows)
-	data.ChatReady = h.chatReady(rows)
-	data.ChatPlaceholder = "Load the active model before chatting"
-	if data.ChatReady {
-		data.ChatPlaceholder = "Speak with Balaur..."
+	data := homeData{Title: "Balaur", ChatReady: true, ChatPlaceholder: "Speak with Balaur..."}
+	if err := h.chatSetupError(); err != nil {
+		data.ChatReady = false
+		data.ModelError = err.Error()
+		if os.Getenv("BALAUR_CHAT_MODEL") == "" {
+			data.ModelHint = llm.DefaultChatModelDownloadCommand(h.app.DataDir())
+		}
+		data.ChatPlaceholder = "Download the default model before chatting"
 	}
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	return data, nil
-}
-
-func (h *handlers) modelsPanel(e *core.RequestEvent) error {
-	data, err := h.homeData()
-	if err != nil {
-		return e.InternalServerError("loading models", err)
-	}
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "models_panel", data); err != nil {
-		return e.InternalServerError("rendering models", err)
-	}
-	return nil
-}
-
-func (h *handlers) modelsPage(e *core.RequestEvent) error {
-	data, err := h.homeData()
-	if err != nil {
-		return e.InternalServerError("loading models", err)
-	}
-	data.Title = "Models"
-	return h.render(e, "models.html", data)
 }
 
 func (h *handlers) chatbar(e *core.RequestEvent) error {
@@ -80,125 +48,31 @@ func (h *handlers) chatbar(e *core.RequestEvent) error {
 	return nil
 }
 
-func (h *handlers) downloadModel(e *core.RequestEvent) error {
-	key := e.Request.FormValue("key")
-	if key == "" {
-		return e.BadRequestError("missing model key", nil)
-	}
-	if err := h.models.StartDownload(context.Background(), key); err != nil {
-		e.Response.WriteHeader(http.StatusConflict)
-	}
-	return h.modelsPanel(e)
-}
-
-func (h *handlers) selectModel(e *core.RequestEvent) error {
-	key := e.Request.FormValue("key")
-	if key == "" {
-		return e.BadRequestError("missing model key", nil)
-	}
-	if err := h.models.Select(key); err != nil {
-		e.Response.WriteHeader(http.StatusBadRequest)
-	}
-	return h.modelsPanel(e)
-}
-
-func (h *handlers) loadModel(e *core.RequestEvent) error {
-	key := e.Request.FormValue("key")
-	if key == "" {
-		return e.BadRequestError("missing model key", nil)
-	}
-	row, err := h.models.Store.ModelByKey(key)
-	if err != nil {
-		return e.BadRequestError("unknown model", err)
-	}
-	if !row.Active {
-		return e.BadRequestError("model is not active", nil)
-	}
-	if row.Status != "downloaded" || row.LocalPath == "" {
-		return e.BadRequestError("model is not downloaded", nil)
-	}
-	h.startLocalLoad(row.LocalPath)
-	return h.modelsPanel(e)
-}
-
-func (h *handlers) startLocalLoad(path string) {
-	h.localMu.Lock()
-	client := h.localKronkClientLocked(path)
-	if client.ChatLoaded() || h.localLoad {
-		h.localMu.Unlock()
-		return
-	}
-	h.localLoad = true
-	h.localErr = ""
-	h.localMu.Unlock()
-
-	go func() {
-		err := client.LoadChat(context.Background())
-		h.localMu.Lock()
-		defer h.localMu.Unlock()
-		h.localLoad = false
-		if err != nil {
-			h.localErr = err.Error()
-			return
-		}
-		h.localErr = ""
-	}()
-}
-
-func (h *handlers) modelViews(rows []models.LocalModel) []modelView {
-	out := make([]modelView, 0, len(rows))
-	for _, row := range rows {
-		mv := modelView{LocalModel: row}
-		mv.CanDownload = row.Status == "available" || row.Status == "failed"
-		mv.CanSelect = row.Status == "downloaded" && !row.Active
-		if row.Active && row.Status == "downloaded" {
-			mv.RuntimeStatus, mv.RuntimeError = h.localRuntime(row.LocalPath)
-			mv.CanLoad = mv.RuntimeStatus == "not loaded" || mv.RuntimeStatus == "load failed"
-		}
-		if row.SizeBytes > 0 && row.DownloadedBytes > 0 {
-			mv.Progress = int((row.DownloadedBytes * 100) / row.SizeBytes)
-			if mv.Progress > 100 {
-				mv.Progress = 100
-			}
-		}
-		out = append(out, mv)
-	}
-	return out
-}
-
-func (h *handlers) chatReady(rows []models.LocalModel) bool {
-	for _, row := range rows {
-		if row.Active && row.Status == "downloaded" {
-			status, _ := h.localRuntime(row.LocalPath)
-			return status == "ready"
-		}
-	}
+func (h *handlers) chatSetupError() error {
 	if os.Getenv("BALAUR_REMOTE_URL") != "" {
-		return true
+		return nil
 	}
-	if chat := os.Getenv("BALAUR_CHAT_MODEL"); chat != "" {
-		status, _ := h.localRuntime(chat)
-		return status == "ready"
-	}
-	return false
+	_, err := h.localChatModelPath()
+	return err
 }
 
-func (h *handlers) localRuntime(path string) (string, string) {
-	if path == "" {
-		return "not loaded", ""
+func (h *handlers) localChatModelPath() (string, error) {
+	if chat := os.Getenv("BALAUR_CHAT_MODEL"); chat != "" {
+		return existingModelPath(chat, "configured")
 	}
-	h.localMu.Lock()
-	defer h.localMu.Unlock()
-	if h.localClient != nil && len(h.localClient.ChatModelFiles) == 1 && h.localClient.ChatModelFiles[0] == path {
-		if h.localClient.ChatLoaded() {
-			return "ready", ""
+	return existingModelPath(llm.DefaultChatModelPath(h.app.DataDir()), "default")
+}
+
+func existingModelPath(path, label string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("%s model not found at %s", label, path)
 		}
-		if h.localLoad {
-			return "loading", ""
-		}
-		if h.localErr != "" {
-			return "load failed", h.localErr
-		}
+		return "", fmt.Errorf("checking %s model %s: %w", label, path, err)
 	}
-	return "not loaded", ""
+	if info.IsDir() || filepath.Ext(path) != ".gguf" {
+		return "", fmt.Errorf("%s model must be a .gguf file: %s", label, path)
+	}
+	return path, nil
 }

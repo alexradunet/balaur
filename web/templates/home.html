@@ -43,7 +43,6 @@
   <header class="topbar">
     <a class="brand" href="/">ᗅ Balaur</a>
     <nav>
-      <a href="/models">Models</a>
       <a href="/memory">Memory</a>
       <a href="/skills">Skills</a>
       <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
@@ -69,8 +68,8 @@
           <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
           {{else}}
           <div class="body">
-            <p>No model is loaded yet.</p>
-            <a class="btn btn-primary" href="/models">Choose a model</a>
+            <p>{{.ModelError}}</p>
+            {{if .ModelHint}}<p><code>{{.ModelHint}}</code></p>{{end}}
           </div>
           {{end}}
         </div>
@@ -100,64 +99,7 @@
   {{else}}
   <div class="chatbar-setup">
     <input type="text" placeholder="{{.ChatPlaceholder}}" disabled>
-    <a class="btn btn-primary" href="/models">Choose a model</a>
   </div>
   {{end}}
 </div>
-{{end}}
-
-{{define "models_panel"}}
-<section class="models-panel" id="models-panel" hx-get="/ui/models" hx-trigger="every 2s" hx-swap="outerHTML">
-  <div class="panel-head">
-    <h2>Models</h2>
-    <span class="tag">GGUF</span>
-  </div>
-  <div class="model-grid">
-    {{range .Models}}
-    <article class="model-card {{if .Active}}model-active{{end}}">
-      <div class="model-main">
-        <div>
-          <h3>{{.Name}}</h3>
-          <p>{{.Family}} · {{.ReleaseYear}} · {{.License}}</p>
-        </div>
-        <span class="model-status">{{.Status}}</span>
-      </div>
-      <p class="model-provenance">{{.Provenance}}</p>
-      {{if eq .Status "downloading"}}
-      <div class="progress" aria-label="Download progress">
-        <div style="width: {{.Progress}}%"></div>
-      </div>
-      {{end}}
-      {{if .Error}}<p class="model-error">{{.Error}}</p>{{end}}
-      <div class="model-actions">
-        <a href="{{.SourcePage}}" target="_blank" rel="noopener noreferrer">Source</a>
-        {{if .Active}}
-        <span class="tag">Active</span>
-        {{if .RuntimeStatus}}<span class="tag">{{.RuntimeStatus}}</span>{{end}}
-        {{if eq .RuntimeStatus "loading"}}
-        <span class="model-loader" aria-label="Loading model"></span>
-        {{end}}
-        {{if .CanLoad}}
-        <form hx-post="/ui/models/load" hx-target="#models-panel" hx-swap="outerHTML">
-          <input type="hidden" name="key" value="{{.Key}}">
-          <button class="btn btn-ghost" type="submit">Load</button>
-        </form>
-        {{end}}
-        {{else if .CanSelect}}
-        <form hx-post="/ui/models/select" hx-target="#models-panel" hx-swap="outerHTML">
-          <input type="hidden" name="key" value="{{.Key}}">
-          <button class="btn btn-ghost" type="submit">Use</button>
-        </form>
-        {{else if .CanDownload}}
-        <form hx-post="/ui/models/download" hx-target="#models-panel" hx-swap="outerHTML">
-          <input type="hidden" name="key" value="{{.Key}}">
-          <button class="btn btn-primary" type="submit">Download</button>
-        </form>
-        {{end}}
-      </div>
-      {{if .RuntimeError}}<p class="model-error">{{.RuntimeError}}</p>{{end}}
-    </article>
-    {{end}}
-  </div>
-</section>
 {{end}}

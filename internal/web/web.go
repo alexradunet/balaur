@@ -16,8 +16,6 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
-	"github.com/alexradunet/balaur/internal/models"
-	"github.com/alexradunet/balaur/internal/store"
 	webassets "github.com/alexradunet/balaur/web"
 )
 
@@ -53,24 +51,9 @@ func Register(se *core.ServeEvent) error {
 	}
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
-	modelStore := store.NewModels(se.App)
-	modelManager := models.NewManager(modelStore, se.App.DataDir(), models.DefaultCatalog())
-	if err := modelManager.SyncCatalog(); err != nil {
-		return err
-	}
-	if err := modelManager.Reconcile(); err != nil {
-		return err
-	}
-
-	h := &handlers{app: se.App, tmpl: tmpl, models: modelManager}
+	h := &handlers{app: se.App, tmpl: tmpl}
 	se.Router.GET("/", h.home)
-	se.Router.GET("/models", h.modelsPage)
 	se.Router.POST("/ui/chat", h.chat)
-	se.Router.GET("/ui/models", h.modelsPanel)
-	se.Router.POST("/ui/models/download", h.downloadModel)
-	se.Router.POST("/ui/models/select", h.selectModel)
-	se.Router.POST("/ui/models/load", h.loadModel)
-	se.Router.GET("/ui/models/status/{key}", h.modelsPanel)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.GET("/memory", h.memoryPage)
 	se.Router.GET("/skills", h.skillsPage)
@@ -87,11 +70,8 @@ func Register(se *core.ServeEvent) error {
 type handlers struct {
 	app         core.App
 	tmpl        *template.Template
-	models      *models.Manager
 	localClient *llm.KronkClient
 	localMu     sync.Mutex
-	localLoad   bool
-	localErr    string
 }
 
 func (h *handlers) render(e *core.RequestEvent, name string, data any) error {

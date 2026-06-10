@@ -43,9 +43,6 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	if err != nil {
 		return h.renderError(e, err)
 	}
-	if local, ok := client.(*llm.KronkClient); ok && !local.ChatLoaded() {
-		return h.renderError(e, fmt.Errorf("model is not loaded yet"))
-	}
 	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
 	w := e.Response
@@ -171,19 +168,17 @@ func clipText(s string, n int) string {
 	return s[:n] + "…"
 }
 
-// llmClient builds the configured client. Active downloaded models selected
-// in the UI take precedence; otherwise env configuration is explicit.
+// llmClient builds the configured client. Remote env config still wins;
+// otherwise Balaur uses the explicit local model or the fixed small default.
 func (h *handlers) llmClient() (llm.Client, error) {
-	if h.models != nil {
-		path, err := h.models.Store.ActiveChatModelPath()
-		if err != nil {
-			return nil, fmt.Errorf("loading active model: %w", err)
-		}
-		if path != "" {
-			return h.localKronkClient(path), nil
-		}
+	if os.Getenv("BALAUR_REMOTE_URL") != "" {
+		return llm.FromEnv()
 	}
-	return llm.FromEnv()
+	path, err := h.localChatModelPath()
+	if err != nil {
+		return nil, err
+	}
+	return h.localKronkClient(path), nil
 }
 
 func (h *handlers) localKronkClient(chatPath string) *llm.KronkClient {
@@ -196,8 +191,6 @@ func (h *handlers) localKronkClientLocked(chatPath string) *llm.KronkClient {
 	if h.localClient != nil && len(h.localClient.ChatModelFiles) == 1 && h.localClient.ChatModelFiles[0] == chatPath {
 		return h.localClient
 	}
-	h.localErr = ""
-	h.localLoad = false
 	h.localClient = &llm.KronkClient{
 		ChatModelFiles:  []string{chatPath},
 		EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
