@@ -1,0 +1,19 @@
+# Private data — never commit (AGENTS.md "Safety")
+pb_data/
+*.db
+*.db-shm
+*.db-wal
+
+# Models and inference libraries (downloaded data, not source)
+*.gguf
+models/
+libs/
+
+# Build artifacts
+/balaur
+/balaur.exe
+dist/
+
+# Local environment
+.env
+.env.*

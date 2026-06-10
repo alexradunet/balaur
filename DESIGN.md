@@ -1,0 +1,221 @@
+# Balaur design system — Basm
+
+Balaur's design language is **Basm** (Romanian for *fairy tale*): a pixel-art,
+16-bit design system rooted in Romanian fairy tales and the balaur — woven,
+tactile, storybook, and hand-built.
+
+This file is the source of truth for Balaur's identity, voice, visual system,
+web UI, and branded copy in the Go/PocketBase/HTMX shape.
+
+## Source of truth
+
+| Layer | Owns | Source |
+|---|---|---|
+| Identity | brand essence, character, heads, voice, messaging | this file |
+| Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
+| Product UI | HTMX + `html/template` pages served by the `balaur` binary | `internal/web/templates/` |
+| Marks & sprites | crest, logo, avatar sprite sheets | `web/static/` |
+
+If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
+The CSS custom properties in that file are the canonical token set; templates
+must reference tokens (`var(--gold)`), never hand-picked hexes.
+
+## 1. Brand essence
+
+**Balaur** *(Romanian fairy-tale dragon, often many-headed)* is **your personal
+wise companion**: a self-hosted, FOSS AI assistant that lives on a box you own,
+helps you with your life and work, remembers what matters, grows focused heads
+over time, and keeps your data your own.
+
+**The promise:** *Your personal wise companion that grows with you.*
+
+**Core metaphor — one companion, one main head.** Balaur has one master life
+conversation: the main head. Focused work opens a temporary sub-head, handled
+as a branch, then closes and merges back into the main head.
+
+**Growth metaphor — new branch, new head.** Balaur does not install plugins;
+it *grows*. Each focused branch or reviewable skill is a sub-head serving the
+same companion, not a separate AI. Never frame it as a plugin marketplace,
+extension store, or multi-agent swarm.
+
+In the Go shape this metaphor is structural: each head is an auth record whose
+data access is scoped by grants and enforced at the rule boundary. The story
+and the security model are the same drawing.
+
+**Keywords:** wise · companion · grows-with-you · helpful · remembers ·
+trustworthy · pixel-art · 16-bit · woven · tactile · storybook · local-first ·
+private · open-source · self-hosted.
+
+## 2. Character and voice
+
+Balaur is **a wise companion and quiet guardian: warm to you, steady at your
+side, and unbudging toward anything that would misuse what it knows about
+you.**
+
+**Balaur is:** wise, warm, calm, candid, patient, loyal.
+**Balaur is not:** servile, hypey, cutesy, ominous, mysterious-for-effect.
+
+**Register:** warm, wise, plain-spoken. Short, weighted sentences. Concrete
+nouns: SQLite file, your box, the chosen model, Markdown. Dry warmth. No
+exclamation marks, no hype, no emoji in product UI. Lead with the companion;
+privacy is the quiet second beat.
+
+Mythic copy — sparingly, as seasoning: "I shall weigh the matter." ·
+"A new head wakes." Plain technical truth — the default for anything that
+matters: "Your data stays on the box unless you switch models yourself."
+
+**Litmus test:** would a wise old companion who genuinely likes you, and would
+never flatter you, say it this way?
+
+**Signature lines:**
+
+- *Your personal wise companion that grows with you.*
+- *Remembers what matters.*
+- *New branch, new head.*
+- *Your life is not a product.*
+- *The repo is the system.*
+- *Woven, not rendered.*
+
+**Name:** Balaur. Avoid "the Balaur app" and "Balaur AI."
+
+## 3. Honesty ledger
+
+All copy must match this. Update it the moment shape changes.
+
+**True today:** single Go binary embedding PocketBase · HTMX web UI ·
+PocketBase collections for conversations, messages, memories, skills, heads,
+grants, audit log · local inference via Kronk (llama.cpp loaded through
+purego, downloaded at first run) · OpenAI-compatible remote providers by
+explicit choice · heads as auth records with grant-scoped, audited access ·
+OS access mode (read, write, edit, bash), off by default, fully audited.
+
+**Roadmap — do not state as shipped:** Johnny Decimal Markdown vault mirror
+(one-way export + git) · vault auto-recall · encrypted export ·
+multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client.
+
+## 4. Visual system
+
+### Principles
+
+1. **Woven, not rendered** — visible structure: borders, dashed stitches,
+   hard shadows, pixel motifs, square marks, folk bands.
+2. **Craft over gloss** — no glassmorphism, no soft SaaS gradients, no
+   rounded blobs, no generic AI sparkle.
+3. **Sovereign by construction** — robust, readable, inspectable,
+   low-dependency; no dark-pattern polish.
+4. **Dark-first guardian domain** — dark mode is the default identity.
+5. **Pixel-hard interactions** — crisp edges, 2px borders, 3px radii, hard
+   offset shadows, tiny square notches, minimal motion.
+6. **Folk accenting** — madder red, ochre/gold, deep teal, indigo as
+   accents, not decoration overload.
+7. **New branch, new head** — growth is depicted as another Balaur head on
+   the same body, never a plugin tile.
+
+### Color tokens
+
+Canonical in `web/static/basm.css`. Reference copy:
+
+```css
+:root {
+  --bg: #0b1310;        --surface: #11201b;
+  --surface-2: #172a23; --surface-3: #1f352c;
+  --fg: #eae4d6;        --on-surface: #f5f0e6;
+  --muted: #93a59b;     --hair: #233530;
+  --outline-2: #1a2823;
+
+  --gold: #f2c14e;      --gold-deep: #b8862a;
+  --ember: #ff6a2b;     --ember-deep: #c2410c;
+  --ember-red: #e5484d; --teal: #2dd4bf;
+  --teal-deep: #0d9488; --folkred: #e0563b;
+  --indigo: #a8c0f0;    --indigo-deep: #5b82e4;
+  --violet: #c084fc;    --good: #7fcf6a;
+  --steel: #9db0a5;     --smoke: #566274;
+}
+```
+
+Light theme (`:root.light`) exists but stays earthy and woven, not sterile —
+values live in `basm.css`.
+
+Usage: `--bg` page · `--surface` cards/bars · `--surface-2` tags/code ·
+`--ember` primary CTA, links, active states · `--ember-deep` hard shadows ·
+`--gold` brand accent, kicker text, Balaur nameplate, notches · `--teal`
+secondary accent, thinking state · `--folkred` heritage stripe · `--indigo`
+user-role hue · status colors always pair with text labels, never color-only.
+
+### Typography
+
+```css
+--font-display: 'Pixelify Sans', system-ui, sans-serif; /* hero, headings */
+--font-pixel: 'Silkscreen', monospace;                  /* eyebrow, brand */
+--font-body: 'Work Sans', system-ui, sans-serif;        /* body copy */
+--font-mono: 'JetBrains Mono', monospace;               /* meta, buttons, code */
+```
+
+Self-host fonts under `web/static/fonts/`; no third-party font CDNs at
+runtime. Body 17px/1.6; nav/buttons/tags 11–13px mono uppercase.
+
+### Layout and motifs
+
+```css
+--radius: 3px; --maxw: 1080px; --shadow-hard: 5px 5px 0;
+```
+
+- **Folk band** — horizontal carpet stripe between major sections:
+  repeating 135° gradient of folkred/gold/teal/ember-deep, 2px `--fg`
+  borders top and bottom, `image-rendering: pixelated`. Use sparingly in
+  dense app UI.
+- **Stitch line** — 2px dashed separator
+  (`linear-gradient(to right, var(--hair) 50%, transparent 50%)`,
+  `background-size: 8px 2px`).
+- **Pixel notches** — 4–8px squares in card corners: gold, teal, or folkred.
+- **Buttons** — squared, uppercase mono, 2px `--on-surface` border, hard
+  shadow; hover translates 1px, active collapses the shadow (press feels
+  physical).
+- **Cards** — surface bg, 2px outline, 3px radius, top-right 7px gold notch.
+- **Tags** — mono, small, surface-2, 1px outline, teal `▪` prefix.
+
+### HTMX surface conventions
+
+- Server renders complete HTML; HTMX swaps fragments. Design states
+  (thinking, streaming, tool-running) are server-driven classes on
+  fragments, not client-side framework state.
+- Streaming chat uses SSE; the thinking state is `--teal`, the assistant
+  nameplate `--gold`, the user hue `--indigo`.
+- Tool/OS-access events render as bordered, mono-typeset event rows — the
+  audit trail is part of the UI language, visible, never hidden.
+- Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
+  visible focus states consistent with the palette.
+
+### Marks, avatars, imagery
+
+- `web/static/crest.png` — ornate square emblem (hero surfaces, icon).
+- `web/static/logo.png` — gold Balaur head medallion (top bar, favicon).
+- Render raster marks with `image-rendering: pixelated`.
+- Avatar sprite sheets are 3×3, 9-frame, 256×256 PNG per entity under
+  `web/static/avatars/` (frame 0 = idle). On the web they render as `<img>`
+  with pixelated scaling; CSS sprite-sheet animation may use frames 1–8.
+- The central image is a pixel-art Balaur head over a glowing teal data-orb:
+  storybook woodcut crossed with retro pixel art.
+- Icons are simple glyphs in square bordered boxes (`⌂ ✉ ◇ ⛨ ⟳ ⌥`), not
+  detailed line icons.
+
+> Note: the original crest/logo/sprite PNGs are not in this repository yet —
+> restore them from the previous Balaur work before shipping UI that needs
+> them. Until then, templates may use the glyph `ᗅ` placeholder mark.
+
+## 5. Quick checklist
+
+For any Balaur-branded surface:
+
+- One core voice: a wise companion — warm, steady, never flattering.
+- Lead with the companion: help, memory, growth. Privacy is the quiet
+  second beat. Never lead with "sovereign / bastion / dragon swarm."
+- Heads = focused branches inside one companion; never separate AIs.
+- Mythic seasoning, plain technical truth as the base. No hype, no emoji.
+- Match the honesty ledger. Never state roadmap as shipped.
+- Dark-first, woven, pixel-hard, not glossy.
+- Tokens from `web/static/basm.css`; Basm typography roles; 2px borders,
+  3px radius, hard shadows where interactive.
+- At least one restrained folk/pixel motif per surface: stitch line, square
+  notch, folk band, or pixel crest.
+- Keep assets local; no third-party CDNs in the product UI.
