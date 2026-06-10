@@ -6,6 +6,7 @@ package web
 import (
 	"html/template"
 	"io/fs"
+	"strings"
 	"sync"
 
 	"github.com/pocketbase/pocketbase/apis"
@@ -17,9 +18,23 @@ import (
 	webassets "github.com/alexradunet/balaur/web"
 )
 
+// funcs are the few template helpers the Basm cards need.
+var funcs = template.FuncMap{
+	// iter 5 → [0 1 2 3 4]; used for the importance pips.
+	"iter": func(n int) []int {
+		out := make([]int, n)
+		for i := range out {
+			out[i] = i
+		}
+		return out
+	},
+	"list":  func(items ...string) []string { return items },
+	"lower": strings.ToLower,
+}
+
 // Register mounts the Balaur UI and static assets on the PocketBase router.
 func Register(se *core.ServeEvent) error {
-	tmpl := template.Must(template.ParseFS(webassets.FS, "templates/*.html"))
+	tmpl := template.Must(template.New("").Funcs(funcs).ParseFS(webassets.FS, "templates/*.html"))
 
 	staticFS, err := fs.Sub(webassets.FS, "static")
 	if err != nil {
@@ -45,6 +60,12 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/models/load", h.loadModel)
 	se.Router.GET("/ui/models/status/{key}", h.modelsPanel)
 	se.Router.GET("/ui/chatbar", h.chatbar)
+	se.Router.GET("/memory", h.memoryPage)
+	se.Router.GET("/skills", h.skillsPage)
+	se.Router.GET("/ui/knowledge/{kind}/grid", h.knowledgeGrid)
+	se.Router.GET("/ui/knowledge/{kind}/{id}/card", h.knowledgeCard)
+	se.Router.POST("/ui/knowledge/{kind}/{id}/transition", h.knowledgeTransition)
+	se.Router.POST("/ui/knowledge/{kind}/{id}/edit", h.knowledgeEdit)
 	return nil
 }
 

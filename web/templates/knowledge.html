@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Balaur</title>
+  <link rel="stylesheet" href="/static/basm.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ᗅ Balaur</a>
+    <nav>
+      <a href="/memory">Memory</a>
+      <a href="/skills">Skills</a>
+      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>{{.Title}}</h1>
+
+    {{if .Proposed}}
+    <section class="k-section">
+      <h2 class="k-heading k-heading-proposed">Awaiting your word <span class="k-count">{{len .Proposed}}</span></h2>
+      <p class="k-sub">Balaur proposed these. Nothing becomes memory without your approval.</p>
+      <div class="k-grid">
+        {{range .Proposed}}
+          {{if eq $.Kind "memories"}}{{template "card-memory.html" .}}{{else}}{{template "card-skill.html" .}}{{end}}
+        {{end}}
+      </div>
+    </section>
+    <div class="stitch"></div>
+    {{end}}
+
+    <section class="k-section">
+      <h2 class="k-heading">Active <span class="k-count">{{len .Active}}</span></h2>
+
+      <div class="k-controls">
+        <input class="k-search" type="search" name="q" value="{{.Query}}"
+               placeholder="Search {{.Title | lower}}…" autocomplete="off"
+               hx-get="/ui/knowledge/{{.Kind}}/grid"
+               hx-trigger="input changed delay:250ms, search"
+               hx-target="#k-active-grid"
+               hx-include=".k-tab-active [name='category']">
+        {{if .Categories}}
+        <nav class="k-tabs" id="k-tabs">
+          <a class="k-tab{{if not .Category}} k-tab-active{{end}}"
+             hx-get="/ui/knowledge/{{.Kind}}/grid" hx-target="#k-active-grid"
+             hx-include=".k-search" hx-on:click="selectTab(this)"
+             href="/memory">all<input type="hidden" name="category" value=""></a>
+          {{range $c := .Categories}}
+          <a class="k-tab{{if eq $c $.Category}} k-tab-active{{end}}"
+             hx-get="/ui/knowledge/{{$.Kind}}/grid?category={{$c}}" hx-target="#k-active-grid"
+             hx-include=".k-search" hx-on:click="selectTab(this)"
+             href="/memory?category={{$c}}">{{$c}}<input type="hidden" name="category" value="{{$c}}"></a>
+          {{end}}
+        </nav>
+        <script>
+          function selectTab(el) {
+            for (const t of document.querySelectorAll('.k-tab')) t.classList.remove('k-tab-active');
+            el.classList.add('k-tab-active');
+          }
+        </script>
+        {{end}}
+      </div>
+
+      <div id="k-active-grid">
+        {{template "knowledge-grid.html" .}}
+      </div>
+    </section>
+
+    {{if .Archived}}
+    <div class="stitch"></div>
+    <section class="k-section">
+      <h2 class="k-heading k-heading-muted">Archived <span class="k-count">{{len .Archived}}</span></h2>
+      <div class="k-grid k-grid-muted">
+        {{range .Archived}}
+          {{if eq $.Kind "memories"}}{{template "card-memory.html" .}}{{else}}{{template "card-skill.html" .}}{{end}}
+        {{end}}
+      </div>
+    </section>
+    {{end}}
+  </main>
+</body>
+</html>

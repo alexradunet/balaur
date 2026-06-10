@@ -33,6 +33,7 @@ func seedMemory(t *testing.T, app core.App, title string) {
 	rec := core.NewRecord(col)
 	rec.Set("title", title)
 	rec.Set("content", "private")
+	rec.Set("status", "active")
 	if err := app.Save(rec); err != nil {
 		t.Fatalf("seeding memory: %v", err)
 	}
