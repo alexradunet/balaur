@@ -1,0 +1,234 @@
+/* Basm — Balaur design tokens and base styles. Canonical token source:
+   if DESIGN.md and this file disagree, this file wins. */
+
+:root {
+  --bg: #0b1310;
+  --surface: #11201b;
+  --surface-2: #172a23;
+  --surface-3: #1f352c;
+
+  --fg: #eae4d6;
+  --on-surface: #f5f0e6;
+  --muted: #93a59b;
+  --hair: #233530;
+  --outline-2: #1a2823;
+
+  --gold: #f2c14e;
+  --gold-deep: #b8862a;
+  --ember: #ff6a2b;
+  --ember-deep: #c2410c;
+  --ember-red: #e5484d;
+  --teal: #2dd4bf;
+  --teal-deep: #0d9488;
+  --folkred: #e0563b;
+  --indigo: #a8c0f0;
+  --indigo-deep: #5b82e4;
+  --violet: #c084fc;
+  --good: #7fcf6a;
+  --steel: #9db0a5;
+  --smoke: #566274;
+
+  --font-display: 'Pixelify Sans', system-ui, sans-serif;
+  --font-pixel: 'Silkscreen', monospace;
+  --font-body: 'Work Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius: 3px;
+  --maxw: 1080px;
+  --shadow-hard: 5px 5px 0;
+}
+
+:root.light {
+  --bg: #f5f1e8;
+  --surface: #fffdf7;
+  --surface-2: #ece6d7;
+  --surface-3: #e3dcc9;
+
+  --fg: #18221d;
+  --on-surface: #121b16;
+  --muted: #5c6e63;
+  --hair: #d8d0bf;
+  --outline-2: #e2dccb;
+
+  --gold: #8a6d12;
+  --gold-deep: #6b5410;
+  --ember: #c2410c;
+  --ember-deep: #9a3410;
+  --ember-red: #b42318;
+  --teal: #00656b;
+  --teal-deep: #024a4f;
+  --folkred: #983f20;
+  --indigo: #1e3a8a;
+  --indigo-deep: #1e3a8a;
+  --violet: #7c3aed;
+  --good: #3f6f2f;
+  --steel: #5c6e63;
+  --smoke: #5c6e63;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 17px/1.6 var(--font-body);
+}
+
+main {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 6vw;
+}
+
+h1, h2, h3 { font-family: var(--font-display); color: var(--on-surface); line-height: 1.05; }
+a { color: var(--ember); }
+code, pre { font-family: var(--font-mono); background: var(--surface-2); border-radius: var(--radius); }
+pre { padding: 12px; overflow-x: auto; border: 1px solid var(--hair); }
+code { padding: 1px 5px; }
+
+/* Top bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 60px;
+  padding: 0 6vw;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  border-bottom: 1px solid var(--hair);
+  backdrop-filter: blur(3px);
+}
+.topbar .brand {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  letter-spacing: .08em;
+  color: var(--gold);
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.topbar nav { margin-left: auto; display: flex; gap: 18px; }
+.topbar nav a {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  text-decoration: none;
+}
+.topbar nav a:hover { color: var(--on-surface); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 13px 20px;
+  border-radius: var(--radius);
+  border: 2px solid var(--on-surface);
+  cursor: pointer;
+  transition: transform .08s, box-shadow .08s;
+}
+.btn-primary { background: var(--ember); color: #1a0e07; box-shadow: var(--shadow-hard) var(--ember-deep); }
+.btn-ghost { background: var(--surface); color: var(--on-surface); box-shadow: var(--shadow-hard) var(--hair); }
+.btn:hover { transform: translate(1px, 1px); }
+.btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0; }
+.btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* Cards */
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+}
+
+/* Motifs */
+.stitch {
+  height: 2px;
+  background-image: linear-gradient(to right, var(--hair) 50%, transparent 50%);
+  background-size: 8px 2px;
+  background-repeat: repeat-x;
+  border: 0;
+}
+.folk-band {
+  height: 16px;
+  width: 100%;
+  background: repeating-linear-gradient(135deg,
+    var(--folkred) 0 8px, var(--gold) 8px 16px,
+    var(--teal) 16px 24px, var(--ember-deep) 24px 32px);
+  border-top: 2px solid var(--fg);
+  border-bottom: 2px solid var(--fg);
+  image-rendering: pixelated;
+}
+.tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  color: var(--muted);
+}
+.tag::before { content: "▪ "; color: var(--teal); }
+
+/* Chat */
+.chat { display: flex; flex-direction: column; gap: 14px; padding: 24px 0 120px; }
+.msg { border: 2px solid var(--outline-2); border-radius: var(--radius); background: var(--surface); padding: 12px 16px; }
+.msg .who {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.msg-user .who { color: var(--indigo); }
+.msg-balaur .who { color: var(--gold); }
+.msg-tool { background: var(--surface-2); font-family: var(--font-mono); font-size: 13.5px; }
+.msg-tool .who { color: var(--teal); }
+.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.thinking { color: var(--teal); font-family: var(--font-mono); font-size: 13px; }
+
+.chatbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-top: 1px solid var(--hair);
+  padding: 14px 6vw;
+}
+.chatbar form { display: flex; gap: 10px; max-width: var(--maxw); margin: 0 auto; }
+.chatbar input[type="text"] {
+  flex: 1;
+  font: 16px/1.4 var(--font-body);
+  color: var(--on-surface);
+  background: var(--surface);
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.chatbar input[type="text"]:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn:hover, .btn:active { transition: none; transform: none; }
+}

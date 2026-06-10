@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/basm.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ᗅ Balaur</a>
+    <nav>
+      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="chat" id="chat" aria-live="polite">
+      <div class="msg msg-balaur">
+        <div class="who">Balaur</div>
+        <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="chatbar">
+    <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()">
+      <input type="text" name="message" placeholder="Speak with Balaur…" autocomplete="off" autofocus required>
+      <button class="btn btn-primary" type="submit">Send</button>
+    </form>
+  </div>
+</body>
+</html>
