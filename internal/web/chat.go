@@ -168,17 +168,25 @@ func clipText(s string, n int) string {
 	return s[:n] + "…"
 }
 
-// llmClient builds the configured client. Remote env config still wins;
-// otherwise Balaur uses the explicit local model or the fixed small default.
+// llmClient builds the model selected in the chatbar. The selected provider is
+// explicit and persisted in PocketBase; API keys stay in environment variables.
 func (h *handlers) llmClient() (llm.Client, error) {
-	if os.Getenv("BALAUR_REMOTE_URL") != "" {
-		return llm.FromEnv()
-	}
-	path, err := h.localChatModelPath()
+	choice, err := h.activeModelChoice()
 	if err != nil {
 		return nil, err
 	}
-	return h.localKronkClient(path), nil
+	switch choice.Provider {
+	case "local":
+		return h.localKronkClient(choice.Model), nil
+	case "synthetic":
+		if llm.SyntheticAPIKey() == "" {
+			return nil, fmt.Errorf("SYNTHETIC_API_KEY is not set")
+		}
+		return llm.SyntheticClient(choice.Model), nil
+	case "remote":
+		return llm.FromEnv()
+	}
+	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
 }
 
 func (h *handlers) localKronkClient(chatPath string) *llm.KronkClient {

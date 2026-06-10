@@ -12,6 +12,10 @@ const (
 	DefaultChatModelFile  = "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
 	DefaultChatModelRepo  = "bartowski/Qwen2.5-3B-Instruct-GGUF"
 	DefaultChatModelQuant = "Q4_K_M"
+
+	SyntheticBaseURL    = "https://api.synthetic.new/v1"
+	SyntheticSmallModel = "syn:small:text"
+	SyntheticLargeModel = "syn:large:text"
 )
 
 // FromEnv builds the configured client. Provider choice is explicit
@@ -64,6 +68,21 @@ func DefaultChatModelPath(dataDir string) string {
 
 func DefaultChatModelDownloadCommand(dataDir string) string {
 	return fmt.Sprintf("llmfit download %s --quant %s --output-dir %s", DefaultChatModelRepo, DefaultChatModelQuant, strconv.Quote(filepath.Join(dataDir, "models")))
+}
+
+func SyntheticAPIKey() string {
+	if key := os.Getenv("BALAUR_SYNTHETIC_API_KEY"); key != "" {
+		return key
+	}
+	return os.Getenv("SYNTHETIC_API_KEY")
+}
+
+func SyntheticClient(model string) *OpenAIClient {
+	return &OpenAIClient{
+		BaseURL: SyntheticBaseURL,
+		APIKey:  SyntheticAPIKey(),
+		Model:   model,
+	}
 }
 
 func requireModelFile(path string) error {

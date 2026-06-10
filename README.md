@@ -85,6 +85,9 @@ You can still override the default explicitly:
 # Local GGUF through kronk (downloads llama.cpp runtime on first use):
 BALAUR_CHAT_MODEL=/path/to/model.gguf go run . serve
 
+# Or Synthetic's OpenAI-compatible API aliases in the chatbar picker:
+SYNTHETIC_API_KEY=... go run . serve
+
 # Or any OpenAI-compatible endpoint (llama-server, Ollama, remote):
 BALAUR_REMOTE_URL=http://127.0.0.1:11434/v1 \
 BALAUR_REMOTE_MODEL=qwen3:8b \
@@ -96,6 +99,8 @@ Optional:
 ```bash
 BALAUR_EMBED_MODEL=/path/to/embedding.gguf   # local embeddings model
 BALAUR_REMOTE_API_KEY=...                    # key for remote endpoints
+SYNTHETIC_API_KEY=...                        # enables Synthetic API choices
+# BALAUR_SYNTHETIC_API_KEY also works if you prefer a Balaur-scoped env var.
 BALAUR_OS_ACCESS=1                           # enable read/write/edit/bash tools
 ```
 
