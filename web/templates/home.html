@@ -16,6 +16,8 @@
   </header>
 
   <main>
+    {{template "models_panel" .}}
+
     <section class="chat" id="chat" aria-live="polite">
       <div class="msg msg-balaur">
         <div class="who">Balaur</div>
@@ -32,3 +34,48 @@
   </div>
 </body>
 </html>
+
+{{define "models_panel"}}
+<section class="models-panel" id="models-panel" hx-get="/ui/models" hx-trigger="every 2s" hx-swap="outerHTML">
+  <div class="panel-head">
+    <h2>Models</h2>
+    <span class="tag">GGUF</span>
+  </div>
+  <div class="model-grid">
+    {{range .Models}}
+    <article class="model-card {{if .Active}}model-active{{end}}">
+      <div class="model-main">
+        <div>
+          <h3>{{.Name}}</h3>
+          <p>{{.Family}} · {{.ReleaseYear}} · {{.License}}</p>
+        </div>
+        <span class="model-status">{{.Status}}</span>
+      </div>
+      <p class="model-provenance">{{.Provenance}}</p>
+      {{if eq .Status "downloading"}}
+      <div class="progress" aria-label="Download progress">
+        <div style="width: {{.Progress}}%"></div>
+      </div>
+      {{end}}
+      {{if .Error}}<p class="model-error">{{.Error}}</p>{{end}}
+      <div class="model-actions">
+        <a href="{{.SourcePage}}" target="_blank" rel="noopener noreferrer">Source</a>
+        {{if .Active}}
+        <span class="tag">Active</span>
+        {{else if .CanSelect}}
+        <form hx-post="/ui/models/select" hx-target="#models-panel" hx-swap="outerHTML">
+          <input type="hidden" name="key" value="{{.Key}}">
+          <button class="btn btn-ghost" type="submit">Use</button>
+        </form>
+        {{else if .CanDownload}}
+        <form hx-post="/ui/models/download" hx-target="#models-panel" hx-swap="outerHTML">
+          <input type="hidden" name="key" value="{{.Key}}">
+          <button class="btn btn-primary" type="submit">Download</button>
+        </form>
+        {{end}}
+      </div>
+    </article>
+    {{end}}
+  </div>
+</section>
+{{end}}

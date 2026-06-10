@@ -11,7 +11,7 @@
     },
     {
       "file": "main.go",
-      "line": 10,
+      "line": 16,
       "title": "0.2 — main.go: three lines of wiring",
       "description": "```go\napp := pocketbase.New()\nmigratecmd.MustRegister(app, app.RootCmd, ...)\napp.OnServe().BindFunc(func(se *core.ServeEvent) error {\n    web.Register(se)\n    return se.Next()\n})\napp.Start()\n```\n\n`main.go` is intentionally thin — three concerns:\n\n1. **Create the app** — PocketBase with default SQLite storage\n2. **Register migrations** — the blank import `_ \"balaur/migrations\"` runs `init()` in that package, registering the schema\n3. **Mount routes** — `web.Register(se)` adds the HTMX UI routes after PocketBase's own routes\n\nEverything else lives in focused packages under `internal/`. AGENTS.md rule: *entrypoints stay focused on orchestration; move logic into `lib/*.go`*."
     },

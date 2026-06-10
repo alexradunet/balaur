@@ -23,7 +23,9 @@ func main() {
 	})
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		web.Register(se)
+		if err := web.Register(se); err != nil {
+			return err
+		}
 		return se.Next()
 	})
 

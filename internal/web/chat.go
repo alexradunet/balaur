@@ -88,6 +88,18 @@ func clipText(s string, n int) string {
 // BALAUR_REMOTE_URL switches to an OpenAI-compatible endpoint; otherwise
 // local GGUF paths in BALAUR_CHAT_MODEL/BALAUR_EMBED_MODEL run via kronk.
 func (h *handlers) llmClient() (llm.Client, error) {
+	if h.models != nil {
+		path, err := h.models.Store.ActiveChatModelPath()
+		if err != nil {
+			return nil, fmt.Errorf("loading active model: %w", err)
+		}
+		if path != "" {
+			return &llm.KronkClient{
+				ChatModelFiles:  []string{path},
+				EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
+			}, nil
+		}
+	}
 	if base := os.Getenv("BALAUR_REMOTE_URL"); base != "" {
 		return &llm.OpenAIClient{
 			BaseURL: base,
