@@ -6,12 +6,15 @@ package web
 import (
 	"html/template"
 	"io/fs"
+	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/models"
 	"github.com/alexradunet/balaur/internal/store"
@@ -30,6 +33,14 @@ var funcs = template.FuncMap{
 	},
 	"list":  func(items ...string) []string { return items },
 	"lower": strings.ToLower,
+	// reverse flips any slice for templates (recap bands render oldest-up).
+	"reverse": func(in reflect.Value) reflect.Value {
+		out := reflect.MakeSlice(in.Type(), in.Len(), in.Len())
+		for i := 0; i < in.Len(); i++ {
+			out.Index(in.Len() - 1 - i).Set(in.Index(i))
+		}
+		return out
+	},
 }
 
 // Register mounts the Balaur UI and static assets on the PocketBase router.
@@ -66,6 +77,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/knowledge/{kind}/{id}/card", h.knowledgeCard)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/transition", h.knowledgeTransition)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/edit", h.knowledgeEdit)
+	se.Router.GET("/ui/recap/bands", h.recapBands)
+	se.Router.GET("/ui/recap/expand", h.recapExpand)
 	return nil
 }
 
@@ -87,10 +100,25 @@ func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
 	return nil
 }
 
+// historyWindow caps the page-load transcript; older turns live behind the
+// recap telescope.
+const historyWindow = 60
+
 func (h *handlers) home(e *core.RequestEvent) error {
 	data, err := h.homeData()
 	if err != nil {
 		return e.InternalServerError("loading home", err)
+	}
+	if master, err := conversation.Master(h.app); err == nil {
+		if recs, err := conversation.History(h.app, master.Id, historyWindow); err == nil {
+			data.History = h.messageViews(recs)
+		}
+		// The telescope appears once any history predates today.
+		if oldest, ok := conversation.OldestMessageTime(h.app, master.Id); ok {
+			now := time.Now()
+			startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			data.HasRecap = oldest.Before(startOfToday)
+		}
 	}
 	return h.render(e, "home.html", data)
 }

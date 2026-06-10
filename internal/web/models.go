@@ -16,6 +16,8 @@ type homeData struct {
 	ModelError      string
 	ChatReady       bool
 	ChatPlaceholder string
+	History         []messageView
+	HasRecap        bool
 }
 
 type modelView struct {

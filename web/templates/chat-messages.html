@@ -1,0 +1,14 @@
+{{- /* Chat message list. Context: []messageView. Used for page-load
+     history and for day-recap expansion. */ -}}
+{{range .}}
+{{if eq .Role "user"}}
+<div class="msg msg-user"><div class="who">You</div><div class="body">{{.Content}}</div></div>
+{{else if eq .Role "assistant"}}
+<div class="msg msg-balaur"><div class="who">Balaur</div><div class="body">{{.Content}}</div></div>
+{{else if eq .Role "tool"}}
+<div class="msg msg-tool"><div class="who">tool · {{.Tool}}</div><div class="body">{{.Content}}</div></div>
+{{if .CardID}}
+<div class="k-inline" hx-get="/ui/knowledge/{{.CardKind}}/{{.CardID}}/card" hx-trigger="load" hx-swap="innerHTML"></div>
+{{end}}
+{{end}}
+{{end}}

@@ -29,7 +29,7 @@
       form.setAttribute("hx-target", "#" + pendingID);
       form.setAttribute("hx-swap", "outerHTML");
       form.elements.client_rendered.value = "1";
-      input.value = "";
+      setTimeout(() => { input.value = ""; }, 0);
       return true;
     }
   </script>
@@ -47,13 +47,27 @@
   <main>
     {{template "models_panel" .}}
 
+    {{if .HasRecap}}
+    <div id="recap" class="recap-zone"
+         hx-get="/ui/recap/bands" hx-trigger="revealed" hx-swap="outerHTML">
+      <p class="recap-hint">◇ further back…</p>
+    </div>
+    {{end}}
     <section class="chat" id="chat" aria-live="polite">
+      {{if .History}}
+        {{template "chat-messages.html" .History}}
+      {{else}}
       <div class="msg msg-balaur">
         <div class="who">Balaur</div>
         <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
       </div>
+      {{end}}
     </section>
   </main>
+  <script>
+    // Open on the present: the chat bottom is "now"; the past is above.
+    addEventListener("DOMContentLoaded", () => scrollTo(0, document.body.scrollHeight));
+  </script>
 
   {{template "chat_bar" .}}
 </body>
