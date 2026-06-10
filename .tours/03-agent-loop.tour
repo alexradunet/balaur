@@ -1,0 +1,55 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "03 — The Agent Loop",
+  "description": "internal/agent/agent.go is the core of Balaur's intelligence: a hand-rolled loop that drives model→tools→model until the model answers in plain text. This tour covers function types as values, for-range over channels, and the loop's overall design.",
+  "steps": [
+    {
+      "file": "internal/agent/agent.go",
+      "line": 16,
+      "title": "3.1 — Functions as struct fields",
+      "description": "```go\ntype Tool struct {\n    Spec    llm.ToolSpec\n    Execute func(ctx context.Context, argsJSON string) (string, error)\n}\n```\n\nIn Go, functions are first-class values. `Execute` is a struct field whose **type** is a function signature. You can store any function that matches `func(context.Context, string) (string, error)` there.\n\nThis is Go's answer to callbacks or strategy patterns — no interface needed for a single operation. Look at `internal/tools/os.go` to see how each OS tool stores its logic directly in the `Execute` field as a function literal:\n```go\nExecute: func(ctx context.Context, argsJSON string) (string, error) {\n    // ... the whole read/write/bash logic ...\n}\n```\n\nThe alternative would be an interface with one method — Go's idiom prefers the simpler `func` type for single-operation extensibility."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 29,
+      "title": "3.2 — Event: the observable seam",
+      "description": "```go\ntype Event struct {\n    Kind   string // \"text\" | \"reasoning\" | \"tool_start\" | \"tool_result\" | \"done\" | \"error\"\n    Text   string\n    Tool   string\n    CallID string\n    Err    error\n}\n```\n\nEvery observable thing the loop produces is an `Event`. The loop itself doesn't know what to do with events — the caller decides by passing an `emit` function.\n\nIn `internal/web/chat.go`, `emit` writes HTML fragments for the HTMX response. In `agent_test.go`, `emit` appends to a slice. The loop is completely decoupled from its presentation layer.\n\nThis is also how persistence will hook in later: the `emit` function can write tool events and text chunks to the `messages` collection while streaming — no second pass needed."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 38,
+      "title": "3.3 — Zero-value defaults",
+      "description": "```go\ntype Loop struct {\n    Client   llm.Client\n    Tools    []Tool\n    MaxSteps int\n}\n\nfunc (l *Loop) maxSteps() int {\n    if l.MaxSteps > 0 {\n        return l.MaxSteps\n    }\n    return 8\n}\n```\n\nIn Go, unset fields hold their **zero value**: `0` for numbers, `nil` for pointers/slices, `false` for bools, `\"\"` for strings.\n\nThe `maxSteps()` method exploits this: callers who don't set `MaxSteps` get 8 for free. No constructor, no `WithMaxSteps()` option needed. This \"zero value is useful\" principle is Go's alternative to optional parameters.\n\nYou'll see this pattern in the standard library everywhere: `http.Client{}` with no timeout works (using the OS default), `http.Client{Timeout: 30*time.Second}` sets one. Same type, optional configuration."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 71,
+      "title": "3.4 — A function as a parameter",
+      "description": "```go\nfunc (l *Loop) Run(\n    ctx context.Context,\n    history []llm.Message,\n    emit func(Event),  // ← function parameter\n) ([]llm.Message, error) {\n```\n\n`emit func(Event)` — `Run` accepts a function as a third argument. This is dependency injection without a framework: the caller wires up whatever they want to happen when an event fires.\n\nCompare:\n- `internal/web/chat.go` passes `emit` that writes `<div>` fragments to an `http.ResponseWriter`\n- `agent_test.go` passes `collect(&events)` that appends to a slice\n\nThe loop is identical in both cases. The behaviour is entirely caller-defined.\n\nNote the return: `([]llm.Message, error)` — multiple return values. The first is the updated conversation history (original messages plus everything the loop appended). The second is any terminal error."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 74,
+      "title": "3.5 — The outer loop: tool rounds",
+      "description": "```go\nfor step := 0; step < l.maxSteps(); step++ {\n    stream, err := l.Client.ChatStream(ctx, msgs, l.specs())\n    ...\n}\n```\n\nThis is a standard C-style for loop. Each iteration is one model turn:\n1. Ask the model (with the full message history + tool specs)\n2. Collect its response\n3. If it called tools: execute them, add results to history, loop\n4. If it answered in text: return\n\nThe loop has an upper bound (`maxSteps`) to prevent infinite tool-calling cycles. When the limit is hit, an error is returned — the model was unable to produce a plain-text answer within the allowed rounds."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 83,
+      "title": "3.6 — For-range over a channel: receiving the stream",
+      "description": "```go\nvar text string\nvar calls []llm.ToolCall\nfor chunk := range stream {\n    if chunk.Err != nil { ... return }\n    if chunk.Content != \"\" {\n        text += chunk.Content\n        emit(Event{Kind: \"text\", Text: chunk.Content})\n    }\n    if chunk.Done {\n        calls = chunk.ToolCalls\n    }\n}\n```\n\n`for chunk := range stream` reads from the channel until it closes (which `defer close(ch)` in the client guarantees). This is the other end of Tour 02's goroutine.\n\nThe loop does three things per chunk:\n- **Errors:** propagate immediately, the loop exits\n- **Text deltas:** accumulate in `text` AND emit immediately (so the HTMX handler can flush each token to the browser as it arrives)\n- **Done chunk:** carries the complete tool calls when the model finishes\n\nAfter the loop, `text` is the complete response and `calls` is whatever tools the model requested."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 100,
+      "title": "3.7 — Building conversation history",
+      "description": "```go\nmsgs = append(msgs, llm.Message{Role: \"assistant\", Content: text, ToolCalls: calls})\n\nif len(calls) == 0 {\n    emit(Event{Kind: \"done\"})\n    return msgs, nil\n}\n\nfor _, call := range calls {\n    emit(Event{Kind: \"tool_start\", Tool: call.Name, CallID: call.ID, Text: call.Args})\n    result := l.executeCall(ctx, call)\n    emit(Event{Kind: \"tool_result\", Tool: call.Name, CallID: call.ID, Text: result})\n    msgs = append(msgs, llm.Message{Role: \"tool\", Content: result, ToolCallID: call.ID})\n}\n```\n\nThis is the memory of the conversation: `msgs` grows as the loop runs. Each iteration appends the assistant's response, and if there were tool calls, each tool result too. On the next iteration, the model receives the full updated history — it sees both what it said and what the tools returned.\n\n`for _, call := range calls` — the `_` discards the loop index (we don't need the position). This is idiomatic Go: `for i, v := range slice` gives both; `for _, v := range slice` gives just the value; `for i := range slice` gives just the index."
+    },
+    {
+      "file": "internal/agent/agent.go",
+      "line": 120,
+      "title": "3.8 — executeCall: handling unknown tools gracefully",
+      "description": "```go\nfunc (l *Loop) executeCall(ctx context.Context, call llm.ToolCall) string {\n    tool := l.findTool(call.Name)\n    if tool == nil {\n        return fmt.Sprintf(\"error: unknown tool %q\", call.Name)\n    }\n    out, err := tool.Execute(ctx, call.Args)\n    if err != nil {\n        return fmt.Sprintf(\"error: %v\", err)\n    }\n    return out\n}\n```\n\nNotice this function returns `string`, not `(string, error)`. Tool failures are **reported to the model as text**, not propagated as Go errors. The model sees `\"error: file not found\"` and can adapt — try a different path, ask the user, or give up gracefully.\n\nThis is a deliberate design choice: the model's error-handling loop and Go's error-handling are separate concerns. The `TestRunUnknownToolFeedsErrorBack` test in `agent_test.go` specifically verifies this — an unknown tool name doesn't crash the loop, the error text is fed back and the model can recover."
+    }
+  ]
+}
