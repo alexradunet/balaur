@@ -36,6 +36,13 @@ database you own and can open with any SQLite tool.
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
   access fails.
+- **Memory & skills with consent:** the model proposes (`remember`,
+  `propose_skill`); proposals render as cards — in chat and on `/memory`
+  and `/skills` — that the owner approves, edits, or dismisses. Nothing
+  enters context without approval. Injection is two-tier: high-importance
+  memories always, message-matched recall per turn, plus a compact skills
+  index loaded on demand via the `skill` tool. Every lifecycle step is
+  audited.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
@@ -95,8 +102,10 @@ migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: kronk (local) + OpenAI-compatible HTTP
 internal/heads/    sub-agent identities, grants, audit — the rule boundary
-internal/tools/    OS access tools (read, write, edit, bash), opt-in
-internal/web/      HTMX handlers
+internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
+internal/store/    shared PocketBase helpers (audit)
+internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
+internal/web/      HTMX handlers: chat, memory & skills pages, cards
 web/               embedded templates and static assets (Basm CSS)
 ```
 
@@ -106,7 +115,8 @@ boundary) and `DESIGN.md` for the Basm design system.
 ## Roadmap (not shipped — honesty ledger)
 
 - Johnny Decimal Markdown vault mirror: one-way export + git history
-- Vault auto-recall (embeddings exist; recall wiring does not)
+- FTS5/embedding recall (today: importance-gated upfront + LIKE-matched
+  recall; the `internal/search` spike holds the FTS5 driver decision)
 - Conversation persistence + branch/merge UI for heads
 - Encrypted export
 - Multi-human accounts (the schema allows it; v1 serves one owner)

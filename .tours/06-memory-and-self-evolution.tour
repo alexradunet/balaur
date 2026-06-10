@@ -1,0 +1,61 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "06 — Memory, Skills & Self-Evolution",
+  "description": "How Balaur grows without ever changing itself silently: the propose → approve lifecycle, the two-tier context injection policy, proposal cards in the UI, and the audit trail. The consent boundary is the memory layer's equivalent of the heads rule boundary.",
+  "steps": [
+    {
+      "file": "internal/knowledge/knowledge.go",
+      "line": 1,
+      "title": "6.1 — The consent boundary",
+      "description": "The package doc states the law:\n\n> The model never changes knowledge on its own. Model tools create records with status=proposed; only the owner's explicit action activates, changes, or removes them.\n\nThis mirrors the heads rule boundary (Tour 05): enforcement lives in the **data layer**, not in prompt wording. Even if the model hallucinates \"I have saved that to memory,\" nothing changed — the record sits in `proposed` until the owner clicks Approve.\n\nFour statuses: `proposed → active | rejected`, `active ⇄ archived`. `rejected` is terminal — kept so the owner can see what was declined."
+    },
+    {
+      "file": "internal/knowledge/knowledge.go",
+      "line": 125,
+      "title": "6.2 — validTransitions: a lifecycle as data",
+      "description": "```go\nvar validTransitions = map[string][]string{\n    StatusProposed: {StatusActive, StatusRejected},\n    StatusActive:   {StatusArchived},\n    StatusArchived: {StatusActive},\n    StatusRejected: {},\n}\n```\n\nThe state machine is a map literal — Go's plain-data answer to a state-machine framework. `Transition` checks the map, audits the decision (allowed **and** denied), and only then mutates.\n\nNote the audit call happens *before* the validity check returns an error — denied transitions leave a trace too. Same fail-closed philosophy as `Scoped.allow` in Tour 05."
+    },
+    {
+      "file": "internal/knowledge/knowledge.go",
+      "line": 160,
+      "title": "6.3 — UpdateFields: the whitelist",
+      "description": "```go\nwritable := map[Kind][]string{\n    Memory: {\"title\", \"content\", \"category\", \"importance\", \"when_to_use\"},\n    Skill:  {\"name\", \"description\", \"content\", \"when_to_use\"},\n}\n```\n\nThe edit form posts arbitrary form fields; only whitelisted ones are applied. `status` is deliberately NOT writable here — editing a proposal and approving it stay two separate, deliberate actions.\n\n`TestUpdateFieldsWhitelist` proves the boundary: posting `status=active` through the edit path leaves the record proposed."
+    },
+    {
+      "file": "internal/knowledge/context.go",
+      "line": 9,
+      "title": "6.4 — The injection policy (two tiers + index)",
+      "description": "The policy comment is the spec:\n\n- **Tier 1 (upfront):** active memories with importance ≥ 4, capped at 12. Things the companion should never forget — identity, constraints, standing preferences.\n- **Tier 2 (recall):** active memories matching the current message, capped at 6. Cheap LIKE matching today; the seam stays put when FTS5/embeddings land (internal/search).\n- **Skills index:** name + when-to-use lines only. Full skill content loads through the `skill` tool on demand.\n\nWhy this shape: importance-gated upfront keeps the always-paid token cost small and owner-controlled (the importance pips on each card ARE the context budget dial). Recall adds situational memory only when terms match. Skills stay out of the prompt body entirely.\n\nPareto in action: ~80 lines covering what heavyweight memory frameworks do with embeddings pipelines — and the call site (`BuildContext`) won't change when ranking gets smarter."
+    },
+    {
+      "file": "internal/knowledge/context.go",
+      "line": 30,
+      "title": "6.5 — BuildContext returns what it used",
+      "description": "```go\nfunc BuildContext(app core.App, userMessage string) (string, []*core.Record)\n```\n\nTwo return values: the prompt block AND the records it injected. The chat handler calls `knowledge.Touch` on each used record after the turn — bumping `use_count` and `last_used`.\n\nUsage stats feed the owner's curation: on the Memory page you can see which memories actually earn their context tokens (\"used ×7\") and which are dead weight worth archiving. Self-evolution needs feedback loops, and this is the simplest honest one."
+    },
+    {
+      "file": "internal/tools/knowledge.go",
+      "line": 30,
+      "title": "6.6 — The proposal marker protocol",
+      "description": "```go\nconst ProposalMarker = \"\\x00balaur-proposal:\"\n```\n\nWhen `remember` or `propose_skill` succeeds, the tool result is *marked*: a NUL-prefixed header carrying `kind/id`, then the model-facing text.\n\nTwo consumers read the same string:\n- **The model** sees \"Memory proposal … sent to the owner for approval. It is NOT yet part of your memory.\" — wording that prevents it from claiming success.\n- **The web layer** (`ParseProposal` in chat.go) detects the marker and renders an approval card instead of a raw tool row.\n\nA NUL byte never appears in normal model output, so there are no false positives — and if the model ever echoes the marker, it carries no instructions, just an id."
+    },
+    {
+      "file": "internal/web/chat.go",
+      "line": 116,
+      "title": "6.7 — Inline approval cards (the Hyperagent pattern)",
+      "description": "```go\nfmt.Fprintf(w,\n    `...<div class=\"k-inline\" hx-get=\"/ui/knowledge/%s/%s/card\" hx-trigger=\"load\" ...`)\n```\n\nWhen a proposal lands mid-stream, the chat injects a placeholder that HTMX fills on load from `/ui/knowledge/{kind}/{id}/card` — the **same template** the Memory and Skills pages use. One card definition, three surfaces.\n\nThe card carries live Approve / Dismiss / Edit forms targeting `hx-swap=\"outerHTML\"` — clicking Approve in chat is exactly the same server action as on /memory. The server stays the single source of truth; there is no client-side state to drift."
+    },
+    {
+      "file": "web/templates/card-memory.html",
+      "line": 1,
+      "title": "6.8 — The card template",
+      "description": "One memory card: category tag, importance pips (the gold squares — Basm pixels, not stars), title, content, recall hint, an Edit `<details>` with the form, and status-dependent actions:\n\n- `proposed` → Approve (ember primary) + Dismiss\n- `active` → Archive + \"used ×N\" meta\n- `archived` → Restore\n\nThe template receives a `*core.Record` directly — `{{.GetString \"title\"}}` calls the Go method from the template. No view-model layer; PocketBase records are already the data.\n\nNote the Basm details: 2px borders, hard shadow on proposed cards (they pop), gold notch, mono uppercase labels. Proposed cards use `--gold-deep` borders — growth waiting for your word."
+    },
+    {
+      "file": "migrations/1749700000_knowledge.go",
+      "line": 26,
+      "title": "6.9 — Schema evolution by migration",
+      "description": "The second migration in the project — a template for every future schema change:\n\n1. `FindCollectionByNameOrId` to load the existing collection\n2. `Fields.Add(...)` for the new fields\n3. `AddIndex` for query paths (`status` is filtered on constantly)\n4. **Backfill**: pre-lifecycle records become `active` (they were implicitly owner-approved)\n5. A `down` function that removes exactly what `up` added\n\nRun order is filename order — the `1749700000` timestamp sorts after the init migration's `1749600000`.\n\n**Verify the lifecycle end-to-end yourself:**\n```\ngo test ./internal/knowledge/ -v\n```\nSeven tests cover propose→approve, invalid transitions, active-only search, skill loading, context assembly, and the edit whitelist."
+    }
+  ]
+}

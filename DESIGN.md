@@ -87,10 +87,14 @@ PocketBase collections for conversations, messages, memories, skills, heads,
 grants, audit log · local inference via Kronk (llama.cpp loaded through
 purego, downloaded at first run) · OpenAI-compatible remote providers by
 explicit choice · heads as auth records with grant-scoped, audited access ·
-OS access mode (read, write, edit, bash), off by default, fully audited.
+OS access mode (read, write, edit, bash), off by default, fully audited ·
+memory & skill proposals with owner approval cards (chat, /memory, /skills) ·
+two-tier context injection (importance-gated upfront + per-message recall) ·
+skills index with on-demand loading via the `skill` tool · usage tracking
+(use count, last used) on approved knowledge.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault mirror
-(one-way export + git) · vault auto-recall · encrypted export ·
+(one-way export + git) · FTS5/embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client.
 
 ## 4. Visual system
@@ -185,6 +189,25 @@ runtime. Body 17px/1.6; nav/buttons/tags 11–13px mono uppercase.
   audit trail is part of the UI language, visible, never hidden.
 - Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
   visible focus states consistent with the palette.
+
+### Knowledge cards (memory & skill approval)
+
+The growth surface: Balaur proposes, the owner decides. One card template
+per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
+
+- **Proposed cards** pop: `--gold-deep` border, hard shadow, ember notch,
+  Approve as the only primary button. The section heading is gold:
+  *"Awaiting your word."*
+- **Active cards** are calm surfaces with an Archive ghost button and a
+  mono `used ×N` counter — usage is curation signal, always visible.
+- **Archived cards** render dashed and dimmed, with Restore.
+- **Importance pips**: five 7px squares, gold-filled to the memory's
+  importance. The pips are the context-budget dial — importance ≥ 4 means
+  always injected, so the visual weight matches the token cost.
+- Edit lives in a `<details>` fold on the card — no modals, no JS state.
+- Card actions are plain HTMX forms posting to lifecycle endpoints; the
+  server re-renders the card (or removes it). Approving in chat and
+  approving on /memory are the same server action.
 
 ### Marks, avatars, imagery
 
