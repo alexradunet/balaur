@@ -84,6 +84,7 @@ main {
 
 h1, h2, h3 { font-family: var(--font-display); color: var(--on-surface); line-height: 1.05; }
 a { color: var(--ember); }
+a.btn { text-decoration: none; }
 code, pre { font-family: var(--font-mono); background: var(--surface-2); border-radius: var(--radius); }
 pre { padding: 12px; overflow-x: auto; border: 1px solid var(--hair); }
 code { padding: 1px 5px; }
@@ -217,7 +218,7 @@ code { padding: 1px 5px; }
   border-top: 1px solid var(--hair);
   padding: 14px 6vw;
 }
-.chatbar form { display: flex; gap: 10px; max-width: var(--maxw); margin: 0 auto; }
+.chatbar form, .chatbar-setup { display: flex; gap: 10px; max-width: var(--maxw); margin: 0 auto; }
 .chatbar input[type="text"] {
   flex: 1;
   font: 16px/1.4 var(--font-body);
@@ -228,6 +229,7 @@ code { padding: 1px 5px; }
   padding: 12px 14px;
 }
 .chatbar input[type="text"]:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+.chatbar input[type="text"]:disabled { color: var(--muted); opacity: 1; }
 
 /* Knowledge pages and cards */
 .k-section { padding: 26px 0; }

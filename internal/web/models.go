@@ -57,6 +57,15 @@ func (h *handlers) modelsPanel(e *core.RequestEvent) error {
 	return nil
 }
 
+func (h *handlers) modelsPage(e *core.RequestEvent) error {
+	data, err := h.homeData()
+	if err != nil {
+		return e.InternalServerError("loading models", err)
+	}
+	data.Title = "Models"
+	return h.render(e, "models.html", data)
+}
+
 func (h *handlers) chatbar(e *core.RequestEvent) error {
 	data, err := h.homeData()
 	if err != nil {
