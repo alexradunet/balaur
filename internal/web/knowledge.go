@@ -14,32 +14,64 @@ import (
 // active collection as Basm cards. Card actions post back tiny HTMX
 // fragments — the server is the single source of truth for state.
 
+// memoryCategories mirrors migrations/1749700000_knowledge.go for the
+// filter tabs. Kept here (not exported from knowledge) until a third
+// consumer appears.
+var memoryCategories = []string{"fact", "preference", "person", "project", "context"}
+
 func (h *handlers) memoryPage(e *core.RequestEvent) error {
+	q := e.Request.URL.Query().Get("q")
+	cat := e.Request.URL.Query().Get("category")
 	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusProposed)
-	active, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusActive)
+	active, _ := knowledge.FilterActive(h.app, knowledge.Memory, q, cat)
 	archived, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusArchived)
 	return h.render(e, "knowledge.html", map[string]any{
-		"Title":    "Memory",
-		"Kind":     "memories",
-		"Singular": "memory",
-		"Proposed": proposed,
-		"Active":   active,
-		"Archived": archived,
+		"Title":      "Memory",
+		"Kind":       "memories",
+		"Proposed":   proposed,
+		"Active":     active,
+		"Archived":   archived,
+		"Query":      q,
+		"Category":   cat,
+		"Categories": memoryCategories,
 	})
 }
 
 func (h *handlers) skillsPage(e *core.RequestEvent) error {
+	q := e.Request.URL.Query().Get("q")
 	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusProposed)
-	active, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusActive)
+	active, _ := knowledge.FilterActive(h.app, knowledge.Skill, q, "")
 	archived, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusArchived)
 	return h.render(e, "knowledge.html", map[string]any{
 		"Title":    "Skills",
 		"Kind":     "skills",
-		"Singular": "skill",
 		"Proposed": proposed,
 		"Active":   active,
 		"Archived": archived,
+		"Query":    q,
 	})
+}
+
+// knowledgeGrid serves just the active-section grid — the HTMX target for
+// live search and category tabs.
+func (h *handlers) knowledgeGrid(e *core.RequestEvent) error {
+	kind, err := kindFromPath(e)
+	if err != nil {
+		return e.BadRequestError("unknown kind", err)
+	}
+	q := e.Request.URL.Query().Get("q")
+	cat := e.Request.URL.Query().Get("category")
+	active, _ := knowledge.FilterActive(h.app, kind, q, cat)
+
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := h.tmpl.ExecuteTemplate(e.Response, "knowledge-grid.html", map[string]any{
+		"Kind":   string(kind),
+		"Active": active,
+		"Query":  q,
+	}); err != nil {
+		return e.InternalServerError("rendering grid", err)
+	}
+	return nil
 }
 
 func kindFromPath(e *core.RequestEvent) (knowledge.Kind, error) {

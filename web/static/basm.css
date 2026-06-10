@@ -257,6 +257,48 @@ code { padding: 1px 5px; }
 .k-grid-muted { opacity: .66; }
 .k-inline { margin: 10px 0; max-width: 480px; }
 
+/* Active-section management controls */
+.k-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+.k-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+  font: 14.5px/1.4 var(--font-body);
+  color: var(--on-surface);
+  background: var(--surface);
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+}
+.k-search:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+.k-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.k-tab {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.k-tab:hover { color: var(--on-surface); border-color: var(--steel); }
+.k-tab-active {
+  color: #1a0e07;
+  background: var(--gold);
+  border-color: var(--gold-deep);
+}
+.k-tab input { display: none; }
+
 .kcard {
   position: relative;
   display: flex;

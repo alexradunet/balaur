@@ -187,6 +187,53 @@ func TestBuildContext(t *testing.T) {
 	}
 }
 
+func TestFilterActive(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	seed := []MemoryProposal{
+		{Title: "Prefers espresso", Category: "preference", Importance: 3},
+		{Title: "Sister Ana lives in Cluj", Category: "person", Importance: 4},
+		{Title: "Espresso machine repair guide", Category: "project", Importance: 2},
+	}
+	for _, p := range seed {
+		rec, err := ProposeMemory(app, p)
+		if err != nil {
+			t.Fatalf("propose: %v", err)
+		}
+		if _, err := Transition(app, Memory, rec.Id, StatusActive); err != nil {
+			t.Fatalf("approve: %v", err)
+		}
+	}
+	// One proposed record that must never surface.
+	if _, err := ProposeMemory(app, MemoryProposal{Title: "Espresso budget", Importance: 1}); err != nil {
+		t.Fatalf("propose: %v", err)
+	}
+
+	cases := []struct {
+		name     string
+		query    string
+		category string
+		want     int
+	}{
+		{"no filters lists all active", "", "", 3},
+		{"query matches title substring", "espresso", "", 2},
+		{"category narrows", "", "person", 1},
+		{"query and category combine", "espresso", "project", 1},
+		{"no match", "espresso", "person", 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := FilterActive(app, Memory, tc.query, tc.category)
+			if err != nil {
+				t.Fatalf("FilterActive: %v", err)
+			}
+			if len(got) != tc.want {
+				t.Fatalf("got %d records, want %d", len(got), tc.want)
+			}
+		})
+	}
+}
+
 func TestUpdateFieldsWhitelist(t *testing.T) {
 	app := storetest.NewApp(t)
 	rec, _ := ProposeMemory(app, MemoryProposal{Title: "draft", Importance: 1})

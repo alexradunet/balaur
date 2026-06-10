@@ -199,6 +199,28 @@ func ListByStatus(app core.App, kind Kind, status string) ([]*core.Record, error
 		"status = {:status}", "-created", 0, 0, dbx.Params{"status": status})
 }
 
+// FilterActive narrows active records for the management pages: optional
+// substring query across the text fields, optional category (memories only).
+// Empty query and category degrade to a plain active listing.
+func FilterActive(app core.App, kind Kind, query, category string) ([]*core.Record, error) {
+	filter := "status = 'active'"
+	params := dbx.Params{}
+
+	if q := strings.TrimSpace(query); q != "" {
+		params["q"] = q
+		if kind == Memory {
+			filter += " && (title ~ {:q} || content ~ {:q} || when_to_use ~ {:q})"
+		} else {
+			filter += " && (name ~ {:q} || description ~ {:q} || content ~ {:q} || when_to_use ~ {:q})"
+		}
+	}
+	if c := strings.TrimSpace(category); c != "" && kind == Memory {
+		filter += " && category = {:cat}"
+		params["cat"] = c
+	}
+	return app.FindRecordsByFilter(string(kind), filter, "-importance,-created", 0, 0, params)
+}
+
 // SearchActive finds active memories matching any of the given terms across
 // the fields the model would care about. Plain LIKE search: with the few
 // thousand memories a personal vault accumulates, SQLite scans this

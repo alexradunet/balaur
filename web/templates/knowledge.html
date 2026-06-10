@@ -35,15 +35,39 @@
 
     <section class="k-section">
       <h2 class="k-heading">Active <span class="k-count">{{len .Active}}</span></h2>
-      {{if .Active}}
-      <div class="k-grid">
-        {{range .Active}}
-          {{if eq $.Kind "memories"}}{{template "card-memory.html" .}}{{else}}{{template "card-skill.html" .}}{{end}}
+
+      <div class="k-controls">
+        <input class="k-search" type="search" name="q" value="{{.Query}}"
+               placeholder="Search {{.Title | lower}}…" autocomplete="off"
+               hx-get="/ui/knowledge/{{.Kind}}/grid"
+               hx-trigger="input changed delay:250ms, search"
+               hx-target="#k-active-grid"
+               hx-include=".k-tab-active [name='category']">
+        {{if .Categories}}
+        <nav class="k-tabs" id="k-tabs">
+          <a class="k-tab{{if not .Category}} k-tab-active{{end}}"
+             hx-get="/ui/knowledge/{{.Kind}}/grid" hx-target="#k-active-grid"
+             hx-include=".k-search" hx-on:click="selectTab(this)"
+             href="/memory">all<input type="hidden" name="category" value=""></a>
+          {{range $c := .Categories}}
+          <a class="k-tab{{if eq $c $.Category}} k-tab-active{{end}}"
+             hx-get="/ui/knowledge/{{$.Kind}}/grid?category={{$c}}" hx-target="#k-active-grid"
+             hx-include=".k-search" hx-on:click="selectTab(this)"
+             href="/memory?category={{$c}}">{{$c}}<input type="hidden" name="category" value="{{$c}}"></a>
+          {{end}}
+        </nav>
+        <script>
+          function selectTab(el) {
+            for (const t of document.querySelectorAll('.k-tab')) t.classList.remove('k-tab-active');
+            el.classList.add('k-tab-active');
+          }
+        </script>
         {{end}}
       </div>
-      {{else}}
-      <p class="k-empty">Nothing here yet. Speak with Balaur — when something is worth keeping, it will ask.</p>
-      {{end}}
+
+      <div id="k-active-grid">
+        {{template "knowledge-grid.html" .}}
+      </div>
     </section>
 
     {{if .Archived}}

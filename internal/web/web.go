@@ -6,6 +6,7 @@ package web
 import (
 	"html/template"
 	"io/fs"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -23,7 +24,8 @@ var funcs = template.FuncMap{
 		}
 		return out
 	},
-	"list": func(items ...string) []string { return items },
+	"list":  func(items ...string) []string { return items },
+	"lower": strings.ToLower,
 }
 
 // Register mounts the Balaur UI and static assets on the PocketBase router.
@@ -41,6 +43,7 @@ func Register(se *core.ServeEvent) {
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/memory", h.memoryPage)
 	se.Router.GET("/skills", h.skillsPage)
+	se.Router.GET("/ui/knowledge/{kind}/grid", h.knowledgeGrid)
 	se.Router.GET("/ui/knowledge/{kind}/{id}/card", h.knowledgeCard)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/transition", h.knowledgeTransition)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/edit", h.knowledgeEdit)
