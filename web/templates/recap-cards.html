@@ -1,0 +1,25 @@
+{{- /* A row of recap cards. Context: []recapView. */ -}}
+{{range .}}
+<article class="recap-card recap-{{.Type}}">
+  <header class="recap-head">
+    <span class="recap-label">{{.Label}}</span>
+    {{if .HasChild}}
+    <button class="recap-expand" type="button"
+            hx-get="/ui/recap/expand?type={{.Type}}&start={{.Start}}"
+            hx-target="next .recap-children" hx-swap="innerHTML"
+            hx-on:click="this.closest('.recap-card').classList.add('recap-open'); this.remove()">
+      open
+    </button>
+    {{else}}
+    <button class="recap-expand" type="button"
+            hx-get="/ui/recap/expand?type=day&start={{.Start}}"
+            hx-target="next .recap-children" hx-swap="innerHTML"
+            hx-on:click="this.closest('.recap-card').classList.add('recap-open'); this.remove()">
+      transcript
+    </button>
+    {{end}}
+  </header>
+  <p class="recap-body">{{.Content}}</p>
+  <div class="recap-children"></div>
+</article>
+{{end}}
