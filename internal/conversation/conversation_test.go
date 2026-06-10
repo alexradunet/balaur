@@ -1,0 +1,90 @@
+package conversation
+
+import (
+	"testing"
+
+	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/storetest"
+)
+
+func TestMasterIsSingleton(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	first, err := Master(app)
+	if err != nil {
+		t.Fatalf("Master: %v", err)
+	}
+	second, err := Master(app)
+	if err != nil {
+		t.Fatalf("Master again: %v", err)
+	}
+	if first.Id != second.Id {
+		t.Fatalf("expected one master, got %s and %s", first.Id, second.Id)
+	}
+	if first.GetString("kind") != "master" || first.GetString("status") != "open" {
+		t.Fatalf("unexpected master shape: kind=%s status=%s",
+			first.GetString("kind"), first.GetString("status"))
+	}
+}
+
+func TestAppendAndRecentTurnsRoundtrip(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, _ := Master(app)
+
+	turns := []struct {
+		msg  llm.Message
+		tool string
+	}{
+		{llm.Message{Role: "user", Content: "hello"}, ""},
+		{llm.Message{Role: "assistant", Content: "", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "recall", Args: "{}"}}}, ""},
+		{llm.Message{Role: "tool", Content: "found nothing", ToolCallID: "c1"}, "recall"},
+		{llm.Message{Role: "assistant", Content: "hi there"}, ""},
+		{llm.Message{Role: "user", Content: "how are you"}, ""},
+		{llm.Message{Role: "assistant", Content: "well, thank you"}, ""},
+	}
+	for _, tt := range turns {
+		if err := Append(app, master.Id, tt.msg, tt.tool); err != nil {
+			t.Fatalf("Append(%s): %v", tt.msg.Role, err)
+		}
+	}
+
+	// RecentTurns: text turns only, chronological, no tool rounds, no
+	// empty assistant turns.
+	got, err := RecentTurns(app, master.Id, 10)
+	if err != nil {
+		t.Fatalf("RecentTurns: %v", err)
+	}
+	want := []llm.Message{
+		{Role: "user", Content: "hello"},
+		{Role: "assistant", Content: "hi there"},
+		{Role: "user", Content: "how are you"},
+		{Role: "assistant", Content: "well, thank you"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d turns, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i].Role != want[i].Role || got[i].Content != want[i].Content {
+			t.Fatalf("turn %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+
+	// Window limit keeps the most recent turns, still chronological.
+	last2, _ := RecentTurns(app, master.Id, 2)
+	if len(last2) != 2 || last2[0].Content != "how are you" || last2[1].Content != "well, thank you" {
+		t.Fatalf("window wrong: %+v", last2)
+	}
+
+	// History keeps everything, including the tool round.
+	hist, err := History(app, master.Id, 50)
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if len(hist) != 6 {
+		t.Fatalf("history = %d records, want 6", len(hist))
+	}
+	if hist[2].GetString("role") != "tool" || hist[2].GetString("tool_name") != "recall" {
+		t.Fatalf("tool round not preserved: role=%s tool=%s",
+			hist[2].GetString("role"), hist[2].GetString("tool_name"))
+	}
+}

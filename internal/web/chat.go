@@ -10,10 +10,16 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/tools"
 )
+
+// recentTurnWindow caps how many prior text turns enter the model context.
+// Persistence is unbounded; context is not (the master-conversation
+// footgun defusal — see internal/conversation).
+const recentTurnWindow = 20
 
 // chat handles one user turn. v1 keeps it deliberately simple: the turn is
 // answered over a streamed chunked response that HTMX appends to the chat
@@ -29,10 +35,6 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	if err != nil {
 		return h.renderError(e, err)
 	}
-	if local, ok := client.(*llm.KronkClient); ok && !local.ChatLoaded() {
-		return h.renderError(e, fmt.Errorf("model is not loaded yet"))
-	}
-	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
 	w := e.Response
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -44,23 +46,36 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		}
 	}
 
-	// When the browser optimistically rendered the user row, this response
-	// replaces only the pending Balaur row. Without JS, keep the old echo path.
-	if !clientRendered {
-		fmt.Fprintf(w, `<div class="msg msg-user"><div class="who">You</div><div class="body">%s</div></div>`, html.EscapeString(msg))
-	}
+	// Echo the user's message, then open the assistant fragment.
+	fmt.Fprintf(w, `<div class="msg msg-user"><div class="who">You</div><div class="body">%s</div></div>`, html.EscapeString(msg))
 	fmt.Fprint(w, `<div class="msg msg-balaur"><div class="who">Balaur</div><div class="body">`)
 	flush()
 
-	// Knowledge injection: tier-1 upfront + tier-2 recall + skills index.
-	knowledgeBlock, usedMemories := knowledge.BuildContext(h.app, msg)
-	loop := &agent.Loop{Client: client, Tools: h.agentTools()}
-	history := []llm.Message{
-		{Role: "system", Content: systemPrompt + knowledgeBlock},
-		{Role: "user", Content: msg},
+	// The master conversation: load the recent window BEFORE persisting the
+	// new user turn, so the window holds prior turns only.
+	master, err := conversation.Master(h.app)
+	if err != nil {
+		return h.renderError(e, err)
+	}
+	recent, err := conversation.RecentTurns(h.app, master.Id, recentTurnWindow)
+	if err != nil {
+		return h.renderError(e, err)
+	}
+	if err := conversation.Append(h.app, master.Id, llm.Message{Role: "user", Content: msg}, ""); err != nil {
+		return h.renderError(e, err)
 	}
 
-	_, runErr := loop.Run(e.Request.Context(), history, func(ev agent.Event) {
+	// Context = system prompt + knowledge block + recent turns + this turn.
+	// Persistence is not context: the full record stays in SQLite.
+	knowledgeBlock, usedMemories := knowledge.BuildContext(h.app, msg)
+	loop := &agent.Loop{Client: client, Tools: h.agentTools()}
+	history := make([]llm.Message, 0, len(recent)+2)
+	history = append(history, llm.Message{Role: "system", Content: systemPrompt + knowledgeBlock})
+	history = append(history, recent...)
+	history = append(history, llm.Message{Role: "user", Content: msg})
+	contextLen := len(history)
+
+	final, runErr := loop.Run(e.Request.Context(), history, func(ev agent.Event) {
 		switch ev.Kind {
 		case "text":
 			fmt.Fprint(w, html.EscapeString(ev.Text))
@@ -77,6 +92,23 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			flush()
 		}
 	})
+
+	// Persist every turn the loop appended (assistant and tool rounds).
+	// Tool turns carry the call id; map it back to the tool's name from the
+	// preceding assistant turn so the record reads human.
+	toolNames := map[string]string{}
+	for _, m := range final[contextLen:] {
+		name := ""
+		if m.Role == "tool" {
+			name = toolNames[m.ToolCallID]
+		}
+		for _, tc := range m.ToolCalls {
+			toolNames[tc.ID] = tc.Name
+		}
+		if err := conversation.Append(h.app, master.Id, m, name); err != nil {
+			break // persistence failure must not break the stream mid-reply
+		}
+	}
 
 	// Memories that informed this turn count as used.
 	for _, m := range usedMemories {
@@ -124,56 +156,9 @@ func clipText(s string, n int) string {
 	return s[:n] + "…"
 }
 
-// llmClient builds the configured client. Provider choice is explicit:
-// BALAUR_REMOTE_URL switches to an OpenAI-compatible endpoint; otherwise
-// local GGUF paths in BALAUR_CHAT_MODEL/BALAUR_EMBED_MODEL run via kronk.
+// llmClient builds the configured client (see llm.FromEnv).
 func (h *handlers) llmClient() (llm.Client, error) {
-	if h.models != nil {
-		path, err := h.models.Store.ActiveChatModelPath()
-		if err != nil {
-			return nil, fmt.Errorf("loading active model: %w", err)
-		}
-		if path != "" {
-			return h.localKronkClient(path), nil
-		}
-	}
-	if base := os.Getenv("BALAUR_REMOTE_URL"); base != "" {
-		return &llm.OpenAIClient{
-			BaseURL: base,
-			APIKey:  os.Getenv("BALAUR_REMOTE_API_KEY"),
-			Model:   os.Getenv("BALAUR_REMOTE_MODEL"),
-		}, nil
-	}
-	if chat := os.Getenv("BALAUR_CHAT_MODEL"); chat != "" {
-		return h.localKronkClient(chat), nil
-	}
-	return nil, fmt.Errorf("no model configured: set BALAUR_CHAT_MODEL (local GGUF path) or BALAUR_REMOTE_URL")
-}
-
-func (h *handlers) localKronkClient(chatPath string) *llm.KronkClient {
-	h.localMu.Lock()
-	defer h.localMu.Unlock()
-	return h.localKronkClientLocked(chatPath)
-}
-
-func (h *handlers) localKronkClientLocked(chatPath string) *llm.KronkClient {
-	if h.localClient != nil && len(h.localClient.ChatModelFiles) == 1 && h.localClient.ChatModelFiles[0] == chatPath {
-		return h.localClient
-	}
-	h.localErr = ""
-	h.localLoad = false
-	h.localClient = &llm.KronkClient{
-		ChatModelFiles:  []string{chatPath},
-		EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
-	}
-	return h.localClient
-}
-
-func nonEmpty(s string) []string {
-	if s == "" {
-		return nil
-	}
-	return []string{s}
+	return llm.FromEnv()
 }
 
 // agentTools returns the enabled tool set: knowledge tools always (they only
