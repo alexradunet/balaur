@@ -231,6 +231,16 @@ code { padding: 1px 5px; }
 .chatbar input[type="text"]:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 .chatbar input[type="text"]:disabled { color: var(--muted); opacity: 1; }
 
+.dev-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 0 10px;
+}
+.dev-panel h1 { margin: 0; }
+.dev-panel form { margin: 0; }
+
 /* Knowledge pages and cards */
 .k-section { padding: 26px 0; }
 .k-heading {

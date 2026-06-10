@@ -19,6 +19,18 @@
   </header>
 
   <main>
+    {{if .DevSeed}}
+    <section class="dev-panel">
+      <div>
+        <h1>Models</h1>
+        <p class="k-sub">Development seed controls are enabled.</p>
+      </div>
+      <form hx-post="/ui/dev/seed-recaps" hx-target="#seed-result" hx-swap="innerHTML">
+        <button class="btn btn-ghost" type="submit">Seed recap demo</button>
+      </form>
+    </section>
+    <div id="seed-result"></div>
+    {{end}}
     {{template "models_panel" .}}
   </main>
 </body>

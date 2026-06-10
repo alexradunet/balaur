@@ -18,6 +18,7 @@ type homeData struct {
 	ChatPlaceholder string
 	History         []messageView
 	HasRecap        bool
+	DevSeed         bool
 }
 
 type modelView struct {
@@ -42,6 +43,7 @@ func (h *handlers) homeData() (homeData, error) {
 	if data.ChatReady {
 		data.ChatPlaceholder = "Speak with Balaur..."
 	}
+	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	return data, nil
 }
 
