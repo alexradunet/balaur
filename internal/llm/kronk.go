@@ -4,10 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/ardanlabs/kronk/sdk/kronk"
+	"github.com/ardanlabs/kronk/sdk/kronk/applog"
 	"github.com/ardanlabs/kronk/sdk/kronk/model"
+	kronklibs "github.com/ardanlabs/kronk/sdk/tools/libs"
 )
 
 // KronkClient runs models in-process through kronk (llama.cpp loaded via
@@ -20,6 +25,7 @@ import (
 type KronkClient struct {
 	ChatModelFiles  []string // GGUF file path(s) for the chat model
 	EmbedModelFiles []string // GGUF file path(s) for the embedding model
+	Timeout         time.Duration
 
 	mu      sync.Mutex
 	chatKrn *kronk.Kronk
@@ -27,7 +33,7 @@ type KronkClient struct {
 }
 
 // instance lazily creates the kronk handle guarded by mu.
-func (c *KronkClient) instance(slot **kronk.Kronk, files []string, what string) (*kronk.Kronk, error) {
+func (c *KronkClient) instance(ctx context.Context, slot **kronk.Kronk, files []string, what string) (*kronk.Kronk, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if *slot != nil {
@@ -37,6 +43,10 @@ func (c *KronkClient) instance(slot **kronk.Kronk, files []string, what string) 
 		return nil, fmt.Errorf("no %s model configured", what)
 	}
 	if !kronk.Initialized() {
+		defaultKronkProcessor()
+		if err := ensureKronkLibraries(ctx); err != nil {
+			return nil, err
+		}
 		if err := kronk.Init(); err != nil {
 			return nil, fmt.Errorf("initializing kronk: %w", err)
 		}
@@ -47,6 +57,61 @@ func (c *KronkClient) instance(slot **kronk.Kronk, files []string, what string) 
 	}
 	*slot = krn
 	return krn, nil
+}
+
+func (c *KronkClient) ChatLoaded() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.chatKrn != nil
+}
+
+func (c *KronkClient) LoadChat(ctx context.Context) error {
+	runCtx, cancel := c.withDeadline(ctx)
+	defer cancel()
+	_, err := c.instance(runCtx, &c.chatKrn, c.ChatModelFiles, "chat")
+	return err
+}
+
+func (c *KronkClient) withDeadline(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	timeout := c.Timeout
+	if timeout <= 0 {
+		timeout = kronkTimeout()
+	}
+	return context.WithTimeout(ctx, timeout)
+}
+
+func kronkTimeout() time.Duration {
+	if v := os.Getenv("BALAUR_KRONK_TIMEOUT_SECONDS"); v != "" {
+		seconds, err := strconv.Atoi(v)
+		if err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
+		}
+	}
+	return 10 * time.Minute
+}
+
+func ensureKronkLibraries(ctx context.Context) error {
+	lib, err := kronklibs.New()
+	if err != nil {
+		return fmt.Errorf("preparing kronk libraries: %w", err)
+	}
+	if _, err := lib.Download(ctx, applog.DiscardLogger); err != nil {
+		return fmt.Errorf("installing kronk libraries: %w", err)
+	}
+	return nil
+}
+
+func defaultKronkProcessor() {
+	if os.Getenv("KRONK_PROCESSOR") != "" || os.Getenv("KRONK_LIB_PATH") != "" {
+		return
+	}
+	// Kronk auto-detects GPU backends from host tools such as vulkaninfo.
+	// Balaur defaults to CPU so a partial or stale GPU library bundle does
+	// not break the first chat turn. Owners can still opt into GPU explicitly.
+	_ = os.Setenv("KRONK_PROCESSOR", "cpu")
 }
 
 func toKronkMessages(msgs []Message) []model.D {
@@ -94,8 +159,10 @@ func toKronkTools(tools []ToolSpec) []model.D {
 }
 
 func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []ToolSpec) (<-chan Chunk, error) {
-	krn, err := c.instance(&c.chatKrn, c.ChatModelFiles, "chat")
+	runCtx, cancel := c.withDeadline(ctx)
+	krn, err := c.instance(runCtx, &c.chatKrn, c.ChatModelFiles, "chat")
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
@@ -104,13 +171,15 @@ func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []To
 		d["tools"] = kt
 	}
 
-	src, err := krn.ChatStreaming(ctx, d)
+	src, err := krn.ChatStreaming(runCtx, d)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("kronk chat: %w", err)
 	}
 
 	ch := make(chan Chunk, 8)
 	go func() {
+		defer cancel()
 		defer close(ch)
 		var toolCalls []ToolCall
 		for resp := range src {
@@ -128,8 +197,8 @@ func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []To
 			if delta.Content != "" || delta.Reasoning != "" {
 				select {
 				case ch <- Chunk{Content: delta.Content, Reasoning: delta.Reasoning}:
-				case <-ctx.Done():
-					ch <- Chunk{Err: ctx.Err()}
+				case <-runCtx.Done():
+					ch <- Chunk{Err: runCtx.Err()}
 					return
 				}
 			}
@@ -151,7 +220,10 @@ func (c *KronkClient) ChatStream(ctx context.Context, msgs []Message, tools []To
 }
 
 func (c *KronkClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
-	krn, err := c.instance(&c.embKrn, c.EmbedModelFiles, "embedding")
+	runCtx, cancel := c.withDeadline(ctx)
+	defer cancel()
+
+	krn, err := c.instance(runCtx, &c.embKrn, c.EmbedModelFiles, "embedding")
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +231,7 @@ func (c *KronkClient) Embed(ctx context.Context, texts []string) ([][]float32, e
 	// kronk's embeddings call takes one input at a time through model.D;
 	// loop keeps it simple until batching proves necessary (YAGNI).
 	for i, text := range texts {
-		resp, err := krn.Embeddings(ctx, model.D{"input": text})
+		resp, err := krn.Embeddings(runCtx, model.D{"input": text})
 		if err != nil {
 			return nil, fmt.Errorf("embedding %d: %w", i, err)
 		}

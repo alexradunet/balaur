@@ -26,14 +26,18 @@
     </section>
   </main>
 
-  <div class="chatbar">
-    <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()">
-      <input type="text" name="message" placeholder="Speak with Balaur…" autocomplete="off" autofocus required>
-      <button class="btn btn-primary" type="submit">Send</button>
-    </form>
-  </div>
+  {{template "chat_bar" .}}
 </body>
 </html>
+
+{{define "chat_bar"}}
+<div class="chatbar" id="chatbar" {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+  <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()">
+    <input type="text" name="message" placeholder="{{.ChatPlaceholder}}" autocomplete="off" autofocus required {{if not .ChatReady}}disabled{{end}}>
+    <button class="btn btn-primary" type="submit" {{if not .ChatReady}}disabled{{end}}>Send</button>
+  </form>
+</div>
+{{end}}
 
 {{define "models_panel"}}
 <section class="models-panel" id="models-panel" hx-get="/ui/models" hx-trigger="every 2s" hx-swap="outerHTML">
@@ -62,6 +66,13 @@
         <a href="{{.SourcePage}}" target="_blank" rel="noopener noreferrer">Source</a>
         {{if .Active}}
         <span class="tag">Active</span>
+        {{if .RuntimeStatus}}<span class="tag">{{.RuntimeStatus}}</span>{{end}}
+        {{if .CanLoad}}
+        <form hx-post="/ui/models/load" hx-target="#models-panel" hx-swap="outerHTML">
+          <input type="hidden" name="key" value="{{.Key}}">
+          <button class="btn btn-ghost" type="submit">Load</button>
+        </form>
+        {{end}}
         {{else if .CanSelect}}
         <form hx-post="/ui/models/select" hx-target="#models-panel" hx-swap="outerHTML">
           <input type="hidden" name="key" value="{{.Key}}">
@@ -74,6 +85,7 @@
         </form>
         {{end}}
       </div>
+      {{if .RuntimeError}}<p class="model-error">{{.RuntimeError}}</p>{{end}}
     </article>
     {{end}}
   </div>

@@ -28,6 +28,9 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	if err != nil {
 		return h.renderError(e, err)
 	}
+	if local, ok := client.(*llm.KronkClient); ok && !local.ChatLoaded() {
+		return h.renderError(e, fmt.Errorf("model is not loaded yet"))
+	}
 
 	w := e.Response
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -94,10 +97,7 @@ func (h *handlers) llmClient() (llm.Client, error) {
 			return nil, fmt.Errorf("loading active model: %w", err)
 		}
 		if path != "" {
-			return &llm.KronkClient{
-				ChatModelFiles:  []string{path},
-				EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
-			}, nil
+			return h.localKronkClient(path), nil
 		}
 	}
 	if base := os.Getenv("BALAUR_REMOTE_URL"); base != "" {
@@ -108,12 +108,28 @@ func (h *handlers) llmClient() (llm.Client, error) {
 		}, nil
 	}
 	if chat := os.Getenv("BALAUR_CHAT_MODEL"); chat != "" {
-		return &llm.KronkClient{
-			ChatModelFiles:  []string{chat},
-			EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
-		}, nil
+		return h.localKronkClient(chat), nil
 	}
 	return nil, fmt.Errorf("no model configured: set BALAUR_CHAT_MODEL (local GGUF path) or BALAUR_REMOTE_URL")
+}
+
+func (h *handlers) localKronkClient(chatPath string) *llm.KronkClient {
+	h.localMu.Lock()
+	defer h.localMu.Unlock()
+	return h.localKronkClientLocked(chatPath)
+}
+
+func (h *handlers) localKronkClientLocked(chatPath string) *llm.KronkClient {
+	if h.localClient != nil && len(h.localClient.ChatModelFiles) == 1 && h.localClient.ChatModelFiles[0] == chatPath {
+		return h.localClient
+	}
+	h.localErr = ""
+	h.localLoad = false
+	h.localClient = &llm.KronkClient{
+		ChatModelFiles:  []string{chatPath},
+		EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
+	}
+	return h.localClient
 }
 
 func nonEmpty(s string) []string {
