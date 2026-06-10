@@ -16,6 +16,8 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 // ErrDenied is returned when a head lacks a grant for the requested access.
@@ -54,7 +56,7 @@ func Spawn(app core.App, name, purpose string, ttl time.Duration, grants []Grant
 		return nil, "", fmt.Errorf("minting head token: %w", err)
 	}
 
-	audit(app, head.Id, "runtime", "head.spawn", name, true, map[string]any{"ttl": ttl.String()})
+	store.Audit(app, head.Id, "runtime", "head.spawn", name, true, map[string]any{"ttl": ttl.String()})
 	return head, token, nil
 }
 
@@ -128,23 +130,6 @@ func closeHead(app core.App, headID, status, action string) error {
 			return fmt.Errorf("deleting grant: %w", err)
 		}
 	}
-	audit(app, headID, "runtime", action, head.GetString("name"), true, nil)
+	store.Audit(app, headID, "runtime", action, head.GetString("name"), true, nil)
 	return nil
-}
-
-func audit(app core.App, headID, actor, action, target string, allowed bool, detail map[string]any) {
-	col, err := app.FindCollectionByNameOrId("audit_log")
-	if err != nil {
-		return // auditing must never take the runtime down
-	}
-	rec := core.NewRecord(col)
-	rec.Set("head", headID)
-	rec.Set("actor", actor)
-	rec.Set("action", action)
-	rec.Set("target", target)
-	rec.Set("allowed", allowed)
-	if detail != nil {
-		rec.Set("detail", detail)
-	}
-	_ = app.Save(rec)
 }

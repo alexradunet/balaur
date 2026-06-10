@@ -15,6 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 // maxOutput bounds tool output fed back to the model.
@@ -44,22 +45,9 @@ func clip(s string) string {
 	return s[:maxOutput] + "\n…(truncated)"
 }
 
-// auditOS records one OS tool invocation. Failures to audit never block the
-// tool — but they are the only silent path in this package.
+// auditOS records one OS tool invocation through the shared audit helper.
 func auditOS(app core.App, tool, target string, allowed bool, detail map[string]any) {
-	col, err := app.FindCollectionByNameOrId("audit_log")
-	if err != nil {
-		return
-	}
-	rec := core.NewRecord(col)
-	rec.Set("actor", "os")
-	rec.Set("action", "os."+tool)
-	rec.Set("target", target)
-	rec.Set("allowed", allowed)
-	if detail != nil {
-		rec.Set("detail", detail)
-	}
-	_ = app.Save(rec)
+	store.Audit(app, "", "os", "os."+tool, target, allowed, detail)
 }
 
 func readTool(app core.App) agent.Tool {

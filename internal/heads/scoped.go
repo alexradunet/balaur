@@ -6,6 +6,8 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 // Scoped is the ONLY sanctioned data path for code acting on behalf of a
@@ -24,7 +26,7 @@ func AsHead(app core.App, head *core.Record) *Scoped {
 // audits the decision either way and returns ErrDenied on failure.
 func (s *Scoped) allow(target, mode string) error {
 	allowed := s.check(target, mode)
-	audit(s.app, s.head.Id, "head:"+s.head.GetString("name"), "access."+mode, target, allowed, nil)
+	store.Audit(s.app, s.head.Id, "head:"+s.head.GetString("name"), "access."+mode, target, allowed, nil)
 	if !allowed {
 		return fmt.Errorf("%w: head %q may not %s %s", ErrDenied, s.head.GetString("name"), mode, target)
 	}
