@@ -30,8 +30,8 @@ database you own and can open with any SQLite tool.
 - **UI:** server-rendered Go templates + HTMX, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
-- **Models:** local GGUF via kronk, or any OpenAI-compatible endpoint —
-  chosen explicitly, never auto-routed.
+- **Models:** local GGUF via kronk, downloadable from the web UI, or any
+  OpenAI-compatible endpoint — chosen explicitly, never auto-routed.
 - **Heads:** sub-agents are auth records with short-lived tokens; their
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
@@ -49,10 +49,14 @@ go run . serve
 Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
 
-Pick a model (explicitly — there is no default):
+Pick a model from the web UI. Balaur ships a small curated catalog of
+tool-capable 2026 GGUF chat models; downloaded files are stored under
+`pb_data/models/` and the completed download becomes the active chat model.
+
+Environment variables still work as bootstrap/fallback configuration:
 
 ```bash
-# Local GGUF through kronk (downloads llama.cpp runtime on first use):
+# Local GGUF through kronk (the web UI removes the need for this):
 BALAUR_CHAT_MODEL=/path/to/model.gguf go run . serve
 
 # Or any OpenAI-compatible endpoint (llama-server, Ollama, remote):
