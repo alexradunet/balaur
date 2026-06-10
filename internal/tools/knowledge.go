@@ -72,7 +72,21 @@ func rememberTool(app core.App) agent.Tool {
 				WhenToUse  string `json:"when_to_use"`
 			}
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
-				return "", fmt.Errorf("remember: bad arguments: %w", err)
+				var fallback string
+				if err := json.Unmarshal([]byte(argsJSON), &fallback); err != nil {
+					return "", fmt.Errorf("remember: bad arguments: %w", err)
+				}
+				fallback = strings.TrimSpace(fallback)
+				if fallback == "" {
+					return "", fmt.Errorf("remember: memory text is required")
+				}
+				args.Title = fallback
+				args.Content = fallback
+				args.Category = "fact"
+				args.Importance = 3
+			}
+			if strings.TrimSpace(args.Title) == "" {
+				return "", fmt.Errorf("remember: memory title is required")
 			}
 			rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
 				Title:      args.Title,
