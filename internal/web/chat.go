@@ -14,23 +14,19 @@ import (
 	"github.com/alexradunet/balaur/internal/turn"
 )
 
-const (
-	// avatarBalaurHTML is the Balaur avatar span — constant because the URL
-	// never varies. data-kind lets basm.js drive the animation state.
-	avatarBalaurHTML = `<span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">` +
-		`<img src="/static/avatars/balaur.png" alt="" decoding="async"></span>`
+const messageCloseHTML = `</div></div></div>`
 
-	assistantOpenHTML = `<div class="msg msg-balaur msg-with-avatar">` + avatarBalaurHTML +
-		`<div class="msg-main"><div class="who">Balaur</div><div class="body">`
-
-	messageCloseHTML = `</div></div></div>`
-)
-
-// soulAvatarHTML builds the soul avatar span for the current owner preference.
-// Unlike the Balaur avatar, the URL is dynamic (soul-male / soul-female) so it
-// cannot be a package-level constant.
+// soulAvatarHTML builds the soul avatar span. Dynamic because the URL varies
+// by owner preference (soul-01..soul-16).
 func soulAvatarHTML(avatarURL string) string {
 	return `<span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">` +
+		`<img src="` + html.EscapeString(avatarURL) + `" alt="" decoding="async"></span>`
+}
+
+// balaurAvatarHTML builds the Balaur avatar span. Dynamic because the owner
+// can choose from 16 head personalities (balaur-01..balaur-16).
+func balaurAvatarHTML(avatarURL string) string {
+	return `<span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">` +
 		`<img src="` + html.EscapeString(avatarURL) + `" alt="" decoding="async"></span>`
 }
 
@@ -50,9 +46,12 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	}
 	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
-	// Resolve the soul avatar URL once per turn so the streaming fragment
-	// and the template path stay in sync with the owner's picker preference.
-	soulHTML := soulAvatarHTML(store.SoulAvatarURL(h.app))
+	// Resolve per-turn dynamic values — owner preferences from owner_settings.
+	soulHTML      := soulAvatarHTML(store.SoulAvatarURL(h.app))
+	balaHTML      := balaurAvatarHTML(store.BalaurAvatarURL(h.app))
+	ownerName     := store.OwnerName(h.app)
+	assistantOpen := `<div class="msg msg-balaur msg-with-avatar">` + balaHTML +
+		`<div class="msg-main"><div class="who">Balaur</div><div class="body">`
 
 	w := e.Response
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -69,10 +68,10 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	if !clientRendered {
 		fmt.Fprintf(w,
 			`<div class="msg msg-user msg-with-avatar">%s`+
-				`<div class="msg-main"><div class="who">You</div><div class="body">%s</div></div></div>`,
-			soulHTML, html.EscapeString(msg))
+				`<div class="msg-main"><div class="who">%s</div><div class="body">%s</div></div></div>`,
+			soulHTML, html.EscapeString(ownerName), html.EscapeString(msg))
 	}
-	fmt.Fprint(w, assistantOpenHTML)
+	fmt.Fprint(w, assistantOpen)
 	flush()
 
 	emitEv := func(ev agent.Event) {
@@ -81,8 +80,7 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			fmt.Fprint(w, html.EscapeString(ev.Text))
 			flush()
 		case "tool_start":
-			// Bare teal glyph matches the .tool-icon CSS class and the
-			// {{toolIcon}} template helper used by chat-messages.html.
+			// Bare teal glyph matches the {{toolIcon}} template helper.
 			fmt.Fprintf(w,
 				messageCloseHTML+
 					`<div class="msg msg-tool"><div class="who">`+
@@ -92,7 +90,7 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			flush()
 		case "tool_result":
 			h.writeToolResult(w, ev.Text)
-			fmt.Fprint(w, `</div></div>`+assistantOpenHTML)
+			fmt.Fprint(w, `</div></div>`+assistantOpen)
 			flush()
 		case "error":
 			fmt.Fprintf(w,
@@ -109,15 +107,14 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		fmt.Fprintf(w,
 			`<div class="msg msg-balaur msg-with-avatar">%s`+
 				`<div class="msg-main"><div class="who">Balaur · check</div><div class="body">%s</div></div></div>`,
-			avatarBalaurHTML, html.EscapeString(res.CheckNote))
+			balaHTML, html.EscapeString(res.CheckNote))
 	}
 	flush()
-	_ = runErr // already surfaced in-stream; the fragment stays well-formed
+	_ = runErr
 	return nil
 }
 
-// writeToolResult renders a tool result row. Marked results render as live
-// cards instead of raw text (the Hyperagent card pattern).
+// writeToolResult renders a tool result row.
 func (h *handlers) writeToolResult(w http.ResponseWriter, text string) {
 	kind, id, rest, ok := tools.ParseProposal(text)
 	if !ok {
@@ -125,15 +122,12 @@ func (h *handlers) writeToolResult(w http.ResponseWriter, text string) {
 		return
 	}
 	fmt.Fprint(w, html.EscapeString(rest))
-	// Close the tool row and inject the live card fetched by HTMX, so the
-	// card in chat is the same template the dedicated pages use.
 	fmt.Fprintf(w,
 		`</div></div><div class="k-inline" hx-get="%s" hx-trigger="load" hx-swap="innerHTML"></div>`+
 			`<div class="msg msg-tool" hidden><div class="body">`,
 		html.EscapeString(cardURL(kind, id)))
 }
 
-// cardURL maps a marker kind to its card endpoint.
 func cardURL(kind, id string) string {
 	if kind == "tasks" {
 		return "/ui/tasks/" + id + "/card"
@@ -150,10 +144,11 @@ func clipText(s string, n int) string {
 
 func (h *handlers) renderError(e *core.RequestEvent, err error) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	balaURL := store.BalaurAvatarURL(h.app)
 	fmt.Fprintf(e.Response,
 		`<div class="msg msg-balaur msg-with-avatar">%s`+
 			`<div class="msg-main"><div class="who">Balaur</div><div class="body">`+
 			`<span class="thinking">%s</span></div></div></div>`,
-		avatarBalaurHTML, html.EscapeString(err.Error()))
+		balaurAvatarHTML(balaURL), html.EscapeString(err.Error()))
 	return nil
 }

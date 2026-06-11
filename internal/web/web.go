@@ -111,6 +111,11 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/recap/expand", h.recapExpand)
 	se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
 	se.Router.POST("/ui/settings/avatar", h.setAvatarPref)
+	// Profile page and its sub-actions.
+	se.Router.GET("/profile", h.profilePage)
+	se.Router.POST("/ui/profile/name", h.saveName)
+	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
+	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
 	return nil
 }
 

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "page_head" .}}
+  <title>Profile · Balaur</title>
+</head>
+<body>
+  {{template "topbar" .}}
+
+  <main class="profile-page">
+    <h1>Your Profile</h1>
+    <p class="profile-lede">How Balaur sees you — and how you see Balaur.</p>
+    <div class="stitch"></div>
+
+    {{template "profile_identity_card" .}}
+
+    <article class="profile-card">
+      <h2 class="profile-card-title">Your avatar</h2>
+      <p class="profile-hint">Who appears in chat as you. 16 portraits from the Basm world.</p>
+      <div class="avatar-choice-list profile-avatar-grid">
+        {{range .AvatarOptions}}
+        <form hx-post="/ui/profile/soul-avatar" hx-target="body" hx-swap="none">
+          <input type="hidden" name="soul_avatar" value="{{.Key}}">
+          <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
+                  type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+            <img class="px" src="{{.URL}}" alt="" decoding="async">
+            <span>{{.Label}}</span>
+          </button>
+        </form>
+        {{end}}
+      </div>
+    </article>
+
+    <article class="profile-card">
+      <h2 class="profile-card-title">Companion head</h2>
+      <p class="profile-hint">Which Balaur personality you meet in chat. 16 heads, one companion.</p>
+      <div class="avatar-choice-list profile-avatar-grid">
+        {{range .BalaurOptions}}
+        <form hx-post="/ui/profile/balaur-avatar" hx-target="body" hx-swap="none">
+          <input type="hidden" name="balaur_avatar" value="{{.Key}}">
+          <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
+                  type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+            <img class="px" src="{{.URL}}" alt="" decoding="async">
+            <span>{{.Label}}</span>
+          </button>
+        </form>
+        {{end}}
+      </div>
+    </article>
+
+  </main>
+</body>
+</html>
+
+{{- /* Identity card — also rendered as a fragment after POST /ui/profile/name */ -}}
+{{define "profile_identity_card"}}
+<article class="profile-card" id="identity-card">
+  <h2 class="profile-card-title">Identity</h2>
+  <p class="profile-hint">The name Balaur uses in the chat label when you speak.</p>
+  <form class="profile-name-form"
+        hx-post="/ui/profile/name"
+        hx-target="#identity-card"
+        hx-swap="outerHTML">
+    <label for="display_name">Your name</label>
+    <div class="profile-name-row">
+      <input id="display_name"
+             name="display_name"
+             type="text"
+             value="{{if eq .OwnerName "You"}}{{else}}{{.OwnerName}}{{end}}"
+             placeholder="How should Balaur call you?"
+             autocomplete="off"
+             maxlength="60">
+      <button class="btn btn-primary" type="submit">Save</button>
+    </div>
+    {{if .SavedName}}<p class="profile-saved">◈ Saved.</p>{{end}}
+  </form>
+</article>
+{{end}}
