@@ -181,6 +181,7 @@ textarea:focus-visible,
   backdrop-filter: blur(3px);
   z-index: 5;
 }
+.topbar nav { margin-left: auto; }
 
 /* Brand nameplate — Silkscreen intentional here, kept for identity */
 .topbar .brand {
@@ -1060,6 +1061,105 @@ dialog::backdrop {
   box-shadow: var(--shadow-hard) var(--gold-deep);
 }
 .avatar-choice-active span { color: var(--gold); }
+
+/* ── Theme toggle ────────────────────────────────────────────────── */
+
+.theme-toggle {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: none;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  padding: 3px 9px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-left: 10px;
+  flex-shrink: 0;
+  transition: color .1s, border-color .1s;
+  line-height: 1;
+}
+.theme-toggle:hover {
+  color: var(--on-surface);
+  border-color: var(--gold-deep);
+}
+
+/* ── Profile page ────────────────────────────────────────────────── */
+
+.profile-page {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 48px 5vw 120px;
+}
+.profile-page h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  margin: 0 0 6px;
+}
+.profile-lede {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+.profile-card {
+  position: relative;
+  background: var(--surface);
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+.profile-card::after {
+  content: "";
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 7px; height: 7px;
+  background: var(--gold);
+}
+.profile-card-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin: 0 0 6px;
+  color: var(--on-surface);
+}
+.profile-hint {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+.profile-name-form label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-name-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.profile-name-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 380px;
+}
+.profile-saved {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--good);
+  margin: 10px 0 0;
+}
+/* Larger thumbnails on the profile page */
+.profile-avatar-grid { max-height: none; overflow-y: visible; }
+.profile-avatar-btn img {
+  width: 72px;
+  height: 72px;
+}
+.profile-avatar-btn span {
+  font-size: 11px;
+}
 
 /* ── Reduced motion ──────────────────────────────────────────────── */
 

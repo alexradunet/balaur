@@ -31,11 +31,11 @@ func SetOwnerSetting(app core.App, key, value string) error {
 	return app.Save(rec)
 }
 
+// ── Soul avatar ────────────────────────────────────────────────────────
+
 // soulAvatarMap maps avatar keys to their static file paths.
-// Legacy values "male" and "female" are kept as aliases so existing
-// owner_settings rows continue to work after upgrading.
+// Legacy values "male" and "female" are kept as aliases.
 var soulAvatarMap = map[string]string{
-	// Basm world — human characters
 	"soul-01": "/static/avatars/soul-01.png", // Him
 	"soul-02": "/static/avatars/soul-02.png", // Her
 	"soul-03": "/static/avatars/soul-03.png", // Elder
@@ -44,7 +44,6 @@ var soulAvatarMap = map[string]string{
 	"soul-06": "/static/avatars/soul-06.png", // Cyclops
 	"soul-07": "/static/avatars/soul-07.png", // Gnome
 	"soul-08": "/static/avatars/soul-08.png", // Ogre
-	// Romanian mythological creatures
 	"soul-09": "/static/avatars/soul-09.png", // Strigoi
 	"soul-10": "/static/avatars/soul-10.png", // Zmeu
 	"soul-11": "/static/avatars/soul-11.png", // Iele
@@ -53,23 +52,65 @@ var soulAvatarMap = map[string]string{
 	"soul-14": "/static/avatars/soul-14.png", // Solomonar
 	"soul-15": "/static/avatars/soul-15.png", // Vâlvă
 	"soul-16": "/static/avatars/soul-16.png", // Pricolici
-	// legacy aliases from the two-option picker
-	"male":   "/static/avatars/soul-01.png",
-	"female": "/static/avatars/soul-02.png",
+	"male":    "/static/avatars/soul-01.png", // legacy alias
+	"female":  "/static/avatars/soul-02.png", // legacy alias
 }
 
-// ValidSoulAvatarKey reports whether key is a recognised avatar choice.
+// ValidSoulAvatarKey reports whether key is a recognised soul avatar.
 func ValidSoulAvatarKey(key string) bool {
 	_, ok := soulAvatarMap[key]
 	return ok
 }
 
-// SoulAvatarURL resolves the current soul avatar preference to a static URL.
-// Falls back to soul-01 (Him) when the stored key is unknown or absent.
+// SoulAvatarURL resolves the owner's soul avatar preference to a static URL.
 func SoulAvatarURL(app core.App) string {
 	key := GetOwnerSetting(app, "soul_avatar", "soul-01")
 	if url, ok := soulAvatarMap[key]; ok {
 		return url
 	}
 	return "/static/avatars/soul-01.png"
+}
+
+// ── Balaur head avatar ─────────────────────────────────────────────────
+
+var balaurAvatarMap = map[string]string{
+	"balaur-01": "/static/avatars/balaur-01.png", // Wise (default)
+	"balaur-02": "/static/avatars/balaur-02.png", // Ancient
+	"balaur-03": "/static/avatars/balaur-03.png", // Guardian
+	"balaur-04": "/static/avatars/balaur-04.png", // Scholar
+	"balaur-05": "/static/avatars/balaur-05.png", // Wild
+	"balaur-06": "/static/avatars/balaur-06.png", // Storm
+	"balaur-07": "/static/avatars/balaur-07.png", // Night
+	"balaur-08": "/static/avatars/balaur-08.png", // Young
+	"balaur-09": "/static/avatars/balaur-09.png", // Ember
+	"balaur-10": "/static/avatars/balaur-10.png", // Frost
+	"balaur-11": "/static/avatars/balaur-11.png", // Healer
+	"balaur-12": "/static/avatars/balaur-12.png", // Trickster
+	"balaur-13": "/static/avatars/balaur-13.png", // Dreamer
+	"balaur-14": "/static/avatars/balaur-14.png", // Forest
+	"balaur-15": "/static/avatars/balaur-15.png", // Dawn
+	"balaur-16": "/static/avatars/balaur-16.png", // Sage
+}
+
+// ValidBalaurAvatarKey reports whether key is a recognised Balaur head.
+func ValidBalaurAvatarKey(key string) bool {
+	_, ok := balaurAvatarMap[key]
+	return ok
+}
+
+// BalaurAvatarURL resolves the owner's chosen Balaur head to a static URL.
+func BalaurAvatarURL(app core.App) string {
+	key := GetOwnerSetting(app, "balaur_avatar", "balaur-01")
+	if url, ok := balaurAvatarMap[key]; ok {
+		return url
+	}
+	return "/static/avatars/balaur-01.png"
+}
+
+// ── Owner identity ─────────────────────────────────────────────────────
+
+// OwnerName returns the owner's display name for the chat "You" label.
+// Falls back to "You" when not set.
+func OwnerName(app core.App) string {
+	return GetOwnerSetting(app, "display_name", "You")
 }

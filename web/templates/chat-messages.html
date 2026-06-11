@@ -4,11 +4,11 @@
 {{if eq .Role "user"}}
 <div class="msg msg-user msg-with-avatar">
   <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true"><img src="{{.SoulAvatarURL}}" alt="" decoding="async"></span>
-  <div class="msg-main"><div class="who">You</div><div class="body">{{.Content}}</div></div>
+  <div class="msg-main"><div class="who">{{.OwnerName}}</div><div class="body">{{.Content}}</div></div>
 </div>
 {{else if eq .Role "assistant"}}
 <div class="msg msg-balaur msg-with-avatar">
-  <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true"><img src="/static/avatars/balaur.png" alt="" decoding="async"></span>
+  <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true"><img src="{{.BalaurAvatarURL}}" alt="" decoding="async"></span>
   <div class="msg-main"><div class="who">Balaur{{with .Origin}} · {{.}}{{end}}</div><div class="body">{{.Content}}</div></div>
 </div>
 {{else if eq .Role "tool"}}

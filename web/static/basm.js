@@ -2,6 +2,35 @@
    Keeps home.html's inline script focused on chat-specific behaviour.
    No framework, no build step — just the platform. */
 
+// ── Light/dark theme toggle ────────────────────────────────────────
+// The <head> inline script in page_head reads localStorage and applies
+// the class before render to prevent FOUC. This file handles the toggle
+// interaction and keeps the button glyph in sync.
+
+window.basmToggleTheme = function () {
+  const html    = document.documentElement;
+  const isLight = html.classList.contains('light');
+  html.classList.remove('light', 'dark');
+  if (isLight) {
+    html.classList.add('dark');
+    localStorage.setItem('basm-theme', 'dark');
+  } else {
+    html.classList.add('light');
+    localStorage.setItem('basm-theme', 'light');
+  }
+  basmUpdateThemeButtons();
+};
+
+function basmUpdateThemeButtons() {
+  const isLight = document.documentElement.classList.contains('light');
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.textContent = isLight ? '◑' : '☼';
+    btn.title       = isLight ? 'Switch to dark mode' : 'Switch to light mode';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', basmUpdateThemeButtons);
+
 // ── Chatbar height → CSS custom property ──────────────────────────
 // The chat section uses padding-bottom: var(--chatbar-space) so the
 // last message is never hidden behind the fixed bar.
@@ -25,11 +54,10 @@ function basmSyncChatbarSpace() {
 
 window.addEventListener('resize', basmSyncChatbarSpace);
 
-// ── Chatbar re-watch after HTMX OOB swap (chatbar is replaced) ────
+// ── Chatbar re-watch after HTMX OOB swap ──────────────────────────
 document.body.addEventListener('htmx:oobAfterSwap', (e) => {
   if (e.detail?.target?.id === 'chatbar') {
     basmSyncChatbarSpace();
-    // Re-attach observer to the new element
     const bar = document.getElementById('chatbar');
     if (bar && window.ResizeObserver) {
       new ResizeObserver(basmSyncChatbarSpace).observe(bar);
@@ -38,10 +66,6 @@ document.body.addEventListener('htmx:oobAfterSwap', (e) => {
 });
 
 // ── Native <dialog> for model modal ───────────────────────────────
-// When HTMX swaps content into #model-modal (a <dialog> element),
-// open it. The server renders just the inner content; the dialog
-// wrapper lives in home.html and persists.
-
 document.body.addEventListener('htmx:afterSwap', (e) => {
   const el = e.detail?.target;
   if (el && el.id === 'model-modal' && el.tagName === 'DIALOG') {
@@ -50,11 +74,6 @@ document.body.addEventListener('htmx:afterSwap', (e) => {
 });
 
 // ── Avatar state via HTMX lifecycle ───────────────────────────────
-// Balaur avatar in the *pending* message already animates via the
-// .balaur-avatar-live class added by balaurPrepareChat in home.html.
-// This handler drives any *persistent* avatar elements elsewhere on
-// the page (future topbar companion display, head sidebars, etc.)
-
 function basmSetAvatarState(kind, state) {
   document.querySelectorAll(`.balaur-avatar[data-kind="${kind}"]`).forEach(el => {
     el.dataset.state = state;
@@ -70,8 +89,7 @@ document.body.addEventListener('htmx:afterSettle', () => {
   basmSetAvatarState('balaur', 'idle');
 });
 
-// ── Knowledge tab active state (instant feedback before HTMX) ─────
-// Removes the need for inline selectTab() in knowledge.html.
+// ── Knowledge tab active state ─────────────────────────────────────
 document.body.addEventListener('click', (e) => {
   const tab = e.target.closest('.k-tab[hx-get]');
   if (!tab) return;
