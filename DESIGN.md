@@ -112,12 +112,14 @@ the owner-defined life log (`log_entry` / `entry_series` / `entry_drop`,
 free-form kinds, numeric or textual, backdatable, audited) and the /life
 page mirroring what is actually logged — sparklines for numeric kinds,
 recent lines for text kinds, live habit streaks · a one-line yesterday
-reflection in the briefing.
+reflection in the briefing · day pages (/day/{date}): the owner's journal
+(verbatim via journal_write in chat or the page form, page-side removal
+only), the day's recap with transcript expand, completions, and logs —
+linked from calendar cells and recap day cards.
 
-**Roadmap — do not state as shipped:** day pages with journaling ·
-Johnny Decimal Markdown vault mirror (one-way export + git) ·
-FTS5/embedding recall · encrypted export · multi-human accounts · channel
-adapters (Signal/WhatsApp/web) · CLI client.
+**Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
+mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
+multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client.
 
 ## 4. Visual system
 

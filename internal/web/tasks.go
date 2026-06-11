@@ -103,6 +103,7 @@ type calItem struct {
 
 type calCell struct {
 	Day     int
+	Date    string // YYYY-MM-DD — links the cell to its day page
 	InMonth bool
 	IsToday bool
 	Items   []calItem
@@ -155,6 +156,7 @@ func buildCalendar(recs []*core.Record, monthParam string, now time.Time) calVie
 			key := d.Format("2006-01-02")
 			week = append(week, calCell{
 				Day:     d.Day(),
+				Date:    key,
 				InMonth: d.Month() == mStart.Month(),
 				IsToday: key == today,
 				Items:   items[key],

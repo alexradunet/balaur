@@ -105,6 +105,61 @@ func TestLifePageRenders(t *testing.T) {
 	}
 }
 
+func TestDayPageRenders(t *testing.T) {
+	tmpl := parseTemplates(t)
+	data := dayData{
+		Title: "Wednesday, June 10", Date: "2026-06-10",
+		Label: "Wednesday, June 10 2026",
+		Prev:  "2026-06-09", Next: "2026-06-11",
+		Journal:    []dayJournalView{{ID: "j1", Time: "21:40", Text: "A good, quiet day."}},
+		Recap:      "You sorted the notary papers and trained in the evening.",
+		RecapStart: "1780000000",
+		Done:       []dayLineView{{Time: "10:12", Text: "Call notary"}},
+		Logs:       []dayLineView{{Time: "08:00", Text: "weight: 82.5 kg"}},
+	}
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "day.html", data); err != nil {
+		t.Fatalf("day.html: %v", err)
+	}
+	out := b.String()
+	for _, want := range []string{
+		"A good, quiet day.", "remove", "Keep it", "notary papers",
+		"transcript", "Call notary", "weight: 82.5 kg", "/day/2026-06-09", "/day/2026-06-11",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("day page missing %q", want)
+		}
+	}
+
+	// Today: no next link, no transcript expander, honest empty states.
+	b.Reset()
+	today := dayData{Title: "t", Date: "2026-06-11", Label: "Thursday, June 11 2026", IsToday: true, Prev: "2026-06-10"}
+	if err := tmpl.ExecuteTemplate(&b, "day.html", today); err != nil {
+		t.Fatalf("day.html today: %v", err)
+	}
+	out = b.String()
+	if strings.Contains(out, "transcript") {
+		t.Error("today must not offer a transcript expander")
+	}
+	for _, want := range []string{"still being written", "Nothing marked done", "Nothing logged"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("today page missing %q", want)
+		}
+	}
+}
+
+func TestCalendarCellsLinkToDayPages(t *testing.T) {
+	tmpl := parseTemplates(t)
+	var b strings.Builder
+	data := map[string]any{"Title": "Tasks", "View": "calendar", "Cal": buildCalendar(nil, "2026-06", time.Date(2026, 6, 11, 12, 0, 0, 0, time.Local))}
+	if err := tmpl.ExecuteTemplate(&b, "tasks.html", data); err != nil {
+		t.Fatalf("tasks.html calendar: %v", err)
+	}
+	if !strings.Contains(b.String(), `href="/day/2026-06-11"`) {
+		t.Error("calendar cells do not link to day pages")
+	}
+}
+
 func TestSparkPointsScaling(t *testing.T) {
 	points, _, ly := sparkPoints([]float64{1, 2, 3}, 240, 48)
 	if points == "" {

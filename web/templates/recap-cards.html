@@ -11,6 +11,7 @@
       open
     </button>
     {{else}}
+    {{if .Date}}<a class="recap-daylink" href="/day/{{.Date}}">visit</a>{{end}}
     <button class="recap-expand" type="button"
             hx-get="/ui/recap/expand?type=day&start={{.Start}}"
             hx-target="next .recap-children" hx-swap="innerHTML"

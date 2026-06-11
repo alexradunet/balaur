@@ -782,3 +782,24 @@ code { padding: 1px 5px; }
 .life-lines { list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
 .life-lines li { padding: 3px 0; border-top: 1px dashed var(--hair); }
 .life-lines li:first-child { border-top: none; }
+
+/* ---- Day pages & journal ---- */
+
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.day-title { margin: 0; }
+.day-nav-spacer { min-width: 72px; }
+.cal-daylink { text-decoration: none; }
+.cal-daylink:hover .cal-daynum { color: var(--gold); }
+.recap-daylink { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--teal); margin-right: 8px; }
+.journal-list { margin-bottom: 12px; }
+.journal-entry { background: var(--surface); border: 2px solid var(--outline-2); border-radius: var(--radius); padding: 10px 12px; margin: 8px 0; position: relative; }
+.journal-entry::after { content: ""; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; background: var(--gold); }
+.journal-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.journal-text { margin: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.6; }
+.journal-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.journal-form textarea {
+  width: 100%; background: var(--surface); color: var(--fg);
+  border: 2px dashed var(--hair); border-radius: var(--radius);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6; padding: 10px 12px;
+}
+.journal-form textarea:focus { border-style: solid; border-color: var(--gold-deep); outline: none; }

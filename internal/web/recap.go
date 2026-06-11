@@ -23,6 +23,7 @@ type recapView struct {
 	Label    string
 	Content  string
 	Start    string // Unix seconds for expand requests (URL-safe)
+	Date     string // day cards: YYYY-MM-DD link to the day page
 	HasChild bool
 	Missing  bool // period in range but not summarised yet
 }
@@ -33,6 +34,9 @@ func (h *handlers) recapCard(p recap.Period, rec *core.Record) recapView {
 		Label:    recap.Label(p),
 		Start:    fmt.Sprintf("%d", p.Start.Unix()),
 		HasChild: p.Type != "day",
+	}
+	if p.Type == "day" {
+		v.Date = p.Start.Format("2006-01-02")
 	}
 	if rec != nil {
 		v.Content = rec.GetString("content")

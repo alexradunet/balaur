@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Balaur</title>
+  <link rel="stylesheet" href="/static/basm.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ᗅ Balaur</a>
+    <nav>
+      <a href="/tasks">Tasks</a>
+      <a href="/life">Life</a>
+      <a href="/memory">Memory</a>
+      <a href="/skills">Skills</a>
+      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="day-nav">
+      <a class="btn btn-ghost btn-sm" href="/day/{{.Prev}}">◂ prev</a>
+      <h1 class="day-title">{{.Label}}{{if .IsToday}} <span class="tag">today</span>{{end}}</h1>
+      {{if .Next}}<a class="btn btn-ghost btn-sm" href="/day/{{.Next}}">next ▸</a>{{else}}<span class="day-nav-spacer"></span>{{end}}
+    </div>
+
+    {{template "day_journal" .}}
+
+    <div class="stitch"></div>
+    <section class="k-section">
+      <h2 class="k-heading">The day in summary</h2>
+      {{if .Recap}}
+      <p class="recap-body">{{.Recap}}</p>
+      {{else if .IsToday}}
+      <p class="k-sub">Today is still being written.</p>
+      {{else}}
+      <p class="k-sub">No summary kept for this day.</p>
+      {{end}}
+      {{if not .IsToday}}
+      <article class="recap-card recap-day">
+        <header class="recap-head">
+          <span class="recap-label">The conversation, preserved</span>
+          <button class="recap-expand" type="button"
+                  hx-get="/ui/recap/expand?type=day&start={{.RecapStart}}"
+                  hx-target="next .recap-children" hx-swap="innerHTML"
+                  hx-on:click="this.closest('.recap-card').classList.add('recap-open'); this.remove()">
+            transcript
+          </button>
+        </header>
+        <div class="recap-children"></div>
+      </article>
+      {{end}}
+    </section>
+
+    <div class="stitch"></div>
+    <section class="k-section">
+      <h2 class="k-heading">What got done</h2>
+      {{if .Done}}
+      <ul class="tl-items">
+        {{range .Done}}<li class="tl-item"><span class="tl-time">{{.Time}}</span> {{.Text}}</li>{{end}}
+      </ul>
+      {{else}}
+      <p class="k-sub">Nothing marked done this day.</p>
+      {{end}}
+    </section>
+
+    <div class="stitch"></div>
+    <section class="k-section">
+      <h2 class="k-heading">The day's log</h2>
+      {{if .Logs}}
+      <ul class="tl-items">
+        {{range .Logs}}<li class="tl-item"><span class="tl-time">{{.Time}}</span> {{.Text}}</li>{{end}}
+      </ul>
+      {{else}}
+      <p class="k-sub">Nothing logged this day.</p>
+      {{end}}
+    </section>
+  </main>
+</body>
+</html>
+
+{{define "day_journal"}}
+<section class="k-section" id="day-journal">
+  <h2 class="k-heading">Your thoughts</h2>
+  {{if .Journal}}
+  <div class="journal-list">
+    {{range .Journal}}
+    <article class="journal-entry">
+      <div class="journal-meta">
+        <span class="tl-time">{{.Time}}</span>
+        <form hx-post="/ui/day/journal/{{.ID}}/drop?date={{$.Date}}" hx-target="#day-journal" hx-swap="outerHTML">
+          <button class="btn btn-ghost btn-sm" type="submit">remove</button>
+        </form>
+      </div>
+      <p class="journal-text">{{.Text}}</p>
+    </article>
+    {{end}}
+  </div>
+  {{end}}
+  <form class="journal-form" hx-post="/ui/day/{{.Date}}/journal" hx-target="#day-journal" hx-swap="outerHTML">
+    <textarea name="text" rows="3" placeholder="What stays with you from this day?" required></textarea>
+    <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
+  </form>
+</section>
+{{end}}

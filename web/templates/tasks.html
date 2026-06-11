@@ -89,7 +89,7 @@
   <div class="cal-grid">
     {{range .}}
     <div class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
-      <span class="cal-daynum">{{.Day}}</span>
+      <a class="cal-daylink" href="/day/{{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
       {{range .Items}}
       <span class="cal-item" title="{{.Time}} {{.Title}}">{{if .Recurring}}<i class="cal-recur">⟳</i>{{end}}{{.Time}} {{.Title}}</span>
       {{end}}
