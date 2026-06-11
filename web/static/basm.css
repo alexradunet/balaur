@@ -184,12 +184,29 @@ textarea:focus-visible,
 
 /* Brand nameplate — Silkscreen intentional here, kept for identity */
 .topbar .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   font-family: var(--font-pixel);
   font-size: 14px;
   letter-spacing: .08em;
   color: var(--gold);
   text-transform: uppercase;
   text-decoration: none;
+}
+
+/* The crest is borderless everywhere — its ornament lives in the art. */
+.topbar .crest {
+  width: 34px;
+  height: 34px;
+  image-rendering: pixelated;
+}
+.hearth-crest {
+  display: block;
+  width: min(240px, 56vw);
+  height: auto;
+  margin: 30px auto 18px;
+  image-rendering: pixelated;
 }
 
 .topbar nav { margin-left: auto; display: flex; gap: 18px; }
@@ -284,23 +301,15 @@ textarea:focus-visible,
 }
 .tag::before { content: "▪ "; color: var(--teal); }
 
-/* ── Tool call icons ─────────────────────────────────────────────── */
+/* ── Tool call glyphs ────────────────────────────────────────────── */
+/* Bare typography, no box — the tool row's border already provides the
+   structure; the teal color is the signal. Art and glyphs ship
+   borderless; frames are a context decision made in HTML. */
 
 .tool-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--teal-deep);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  font-size: 10px;
   color: var(--teal);
-  flex-shrink: 0;
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
-  margin-right: 4px;
-  vertical-align: middle;
+  font-size: 14px;
+  margin-right: 7px;
 }
 
 /* ── Chat ────────────────────────────────────────────────────────── */
@@ -350,26 +359,15 @@ textarea:focus-visible,
 
 /* ── Avatars ─────────────────────────────────────────────────────── */
 
+/* Avatars are borderless: no border, no backdrop, no rounding — the
+   pixel art floats on the page. The container still clips because the
+   sprite sheet image is 300% wide; that is mechanics, not chrome.
+   Sprite backgrounds must match --bg or ship transparent. */
 .balaur-avatar {
   --avatar-size: 54px;
   width: var(--avatar-size);
   height: var(--avatar-size);
   overflow: hidden;
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  background: radial-gradient(
-    circle at 50% 35%,
-    color-mix(in srgb, var(--gold) 18%, transparent),
-    color-mix(in srgb, var(--surface) 92%, transparent) 60%
-  );
-  box-shadow: inset 0 0 0 1px rgba(245, 240, 230, .05);
-}
-.balaur-avatar-soul {
-  background: radial-gradient(
-    circle at 50% 35%,
-    color-mix(in srgb, var(--teal) 18%, transparent),
-    color-mix(in srgb, var(--surface) 92%, transparent) 60%
-  );
 }
 .balaur-avatar img {
   display: block;
@@ -404,9 +402,16 @@ textarea:focus-visible,
 .msg-pending {
   border-color: color-mix(in srgb, var(--gold-deep) 65%, var(--outline-2));
 }
-.msg-pending .balaur-avatar {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 20%, transparent),
-              inset 0 0 0 1px rgba(245, 240, 230, .06);
+/* Activity is shown by light, not chrome: a breathing teal glow behind
+   the borderless sprite while Balaur thinks or works. */
+.msg-pending .balaur-avatar,
+.balaur-avatar[data-state="thinking"],
+.balaur-avatar[data-state="working"] {
+  animation: basm-glow 1.6s ease-in-out infinite;
+}
+@keyframes basm-glow {
+  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--teal) 25%, transparent); }
+  50%      { box-shadow: 0 0 26px color-mix(in srgb, var(--teal) 55%, transparent); }
 }
 
 @keyframes balaur-avatar-live {
@@ -1030,5 +1035,8 @@ dialog::backdrop {
   .balaur-avatar-live img,
   .balaur-avatar[data-state="thinking"] img,
   .balaur-avatar[data-state="working"]  img  { animation: none; }
+  .msg-pending .balaur-avatar,
+  .balaur-avatar[data-state="thinking"],
+  .balaur-avatar[data-state="working"] { animation: none; }
   .thinking-dots::after { animation: none; content: ""; }
 }
