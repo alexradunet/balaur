@@ -143,7 +143,14 @@ const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"your memory context or something the owner declined. When you notice a " +
 	"repeatable procedure worth keeping, propose it with `propose_skill`. " +
 	"Proposals require the owner's approval; never claim something is " +
-	"remembered until it is."
+	"remembered until it is.\n\n" +
+	"Commitments: when the owner voices something to do, a deadline, or a " +
+	"repeating practice, capture it with `task_add` — a concrete due time when " +
+	"one is implied, recurrence like daily, every:3d, weekly:mon,thu or " +
+	"monthly:15 for repeating ones, and useful context folded into notes. " +
+	"Check `task_list` before claiming what is or isn't on the book; mark " +
+	"things done with `task_done` when the owner says they did them; snooze " +
+	"or drop on request. Never invent tasks the owner didn't voice."
 
 // writeToolResult renders a tool result row. Proposal-marked results render
 // as approval cards instead of raw text (the Hyperagent card pattern).
@@ -214,9 +221,11 @@ func nonEmpty(s string) []string {
 }
 
 // agentTools returns the enabled tool set: knowledge tools always (they only
-// propose — the consent boundary holds), OS access opt-in (AGENTS.md).
+// propose — the consent boundary holds), task tools always (owner-consented
+// by nature), OS access opt-in (AGENTS.md).
 func (h *handlers) agentTools() []agent.Tool {
 	ts := tools.KnowledgeTools(h.app)
+	ts = append(ts, tools.TaskTools(h.app)...)
 	if os.Getenv("BALAUR_OS_ACCESS") == "1" {
 		ts = append(ts, tools.OSAccess(h.app)...)
 	}

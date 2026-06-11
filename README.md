@@ -52,6 +52,12 @@ database you own and can open with any SQLite tool.
   years — each expandable down to the preserved day transcript. Summaries
   generate hierarchically (days → weeks/months → quarters → years) via an
   idempotent hourly catch-up job (`BALAUR_RECAP=0` disables), audited.
+- **Commitments captured in chat:** `task_add`, `task_list`, `task_done`,
+  `task_snooze`, `task_drop` — one-offs and recurring habits/chores with a
+  tiny recurrence DSL (`daily`, `every:3d`, `weekly:mon,thu`, `monthly:15`,
+  fixed-schedule or from-completion). Tasks live in the `tasks` collection;
+  completions land in `entries`, the life-log substrate. Nudges, briefings,
+  and task/day pages are roadmap — Balaur does not yet remind on its own.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
@@ -131,6 +137,7 @@ internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: kronk (local) + OpenAI-compatible HTTP
 internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries
+internal/tasks/    commitments: recurrence DSL + task verbs on the entries life log
 internal/heads/    sub-agent identities, grants, audit — the rule boundary
 internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
 internal/store/    shared PocketBase helpers (audit)
@@ -144,6 +151,12 @@ boundary) and `DESIGN.md` for the Basm design system.
 
 ## Roadmap (not shipped — honesty ledger)
 
+- Task nudger (minute cron, idempotent catch-up), morning briefing, /tasks
+  page with cards
+- Life tracking on the `entries` substrate: weight, workouts, achievements,
+  /life page
+- Day pages with journaling (`/day/{date}`: your thoughts + the day's recap,
+  completions, and logs)
 - Johnny Decimal Markdown vault mirror: one-way export + git history
 - FTS5/embedding recall (today: importance-gated upfront + LIKE-matched
   recall; the `internal/search` spike holds the FTS5 driver decision)
