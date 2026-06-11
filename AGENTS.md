@@ -18,6 +18,11 @@ lean and high-signal — add a rule only when it changes a real decision.
   step in the product path.
 - Use the standard Go command surface: `go build`, `go run .`, `go test ./...`,
   `go vet ./...`. Builds must work with `CGO_ENABLED=0`.
+- Building inside a Hyperagent sandbox: if `go mod download` fails with
+  "certificate signed by unknown authority" while curl works, that is the
+  sandbox's TLS-intercepting proxy, and CA-bundle plumbing will NOT fix it —
+  run the GOPROXY shim per `docs/hyperagent-sandbox.md` (GOSUMDB stays on;
+  never weaken checksum verification instead).
 - Keep the private data directory (`pb_data/`), models, downloaded shared
   libraries, OAuth tokens, and runtime credentials out of git.
 - Prefer PocketBase-native mechanisms (collections, migrations, hooks, API
