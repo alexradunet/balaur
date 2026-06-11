@@ -124,6 +124,30 @@ func Next(r Rule, due, after time.Time) time.Time {
 	return time.Time{}
 }
 
+// calendarRule reports whether the rule carries an intrinsic calendar
+// pattern (specific weekdays / day of month) rather than an interval
+// anchored on its due.
+func calendarRule(r Rule) bool {
+	return r.Kind == "weekly" || r.Kind == "monthly"
+}
+
+// Matches reports whether t lands on the rule's calendar pattern. Interval
+// rules (daily, every:N) match anywhere — their due IS the anchor.
+func Matches(r Rule, t time.Time) bool {
+	switch r.Kind {
+	case "weekly":
+		for _, d := range r.Weekdays {
+			if t.Weekday() == d {
+				return true
+			}
+		}
+		return false
+	case "monthly":
+		return monthlyOn(t, r.MonthDay).Day() == t.Day()
+	}
+	return true
+}
+
 // monthlyOn places day-of-month `day` in t's month at t's wall-clock time,
 // clamped to the month's length.
 func monthlyOn(t time.Time, day int) time.Time {

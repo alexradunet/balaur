@@ -94,11 +94,15 @@ func taskAddTool(app core.App) agent.Tool {
 			}
 			var b strings.Builder
 			fmt.Fprintf(&b, "Task saved: %q", rec.GetString("title"))
-			if !due.IsZero() {
-				fmt.Fprintf(&b, " — due %s", fmtDue(due))
+			storedDue := rec.GetDateTime("due").Time()
+			if !storedDue.IsZero() {
+				fmt.Fprintf(&b, " — due %s", fmtDue(storedDue))
 			}
 			if rule, _ := tasks.Parse(rec.GetString("recur")); !rule.IsZero() {
 				fmt.Fprintf(&b, ", %s", tasks.Describe(rule))
+			}
+			if !due.IsZero() && !storedDue.IsZero() && !storedDue.Equal(due) {
+				b.WriteString(". NOTE: the requested date did not land on the rule's days — the first occurrence was adjusted to match; tell the owner the corrected time")
 			}
 			if dateOnly {
 				b.WriteString(". No hour was given, so it is set for 09:00 — adjust if another time suits the owner better")

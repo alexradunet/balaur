@@ -36,8 +36,20 @@ func Create(app core.App, o CreateOpts) (*core.Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !rule.IsZero() && o.Due.IsZero() {
-		return nil, fmt.Errorf("tasks: a recurring task needs a first due time to anchor the schedule")
+	if !rule.IsZero() {
+		if o.Due.IsZero() {
+			return nil, fmt.Errorf("tasks: a recurring task needs a first due time to anchor the schedule")
+		}
+		// Calendar-pattern rules are model-proofed deterministically: the
+		// pattern is the truth, not whatever date the model picked.
+		if calendarRule(rule) {
+			if o.RecurFromDone {
+				return nil, fmt.Errorf("tasks: %s rules are calendar-anchored — recur_from_done applies to daily and every:<N>d habits", rule.Kind)
+			}
+			if !Matches(rule, o.Due) {
+				o.Due = Next(rule, o.Due, o.Due) // snap forward, wall clock kept
+			}
+		}
 	}
 
 	col, err := app.FindCollectionByNameOrId("tasks")
@@ -95,7 +107,10 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		return DoneResult{}, err
 	}
 	anchor := rec.GetDateTime("due").Time().In(now.Location())
-	if rec.GetBool("recur_from_done") {
+	// From-done anchoring is an interval concept; calendar-pattern rules
+	// keep their day-and-hour pattern even on records that predate the
+	// Create-time validation.
+	if rec.GetBool("recur_from_done") && !calendarRule(rule) {
 		anchor = now
 	}
 	next := Next(rule, anchor, now)

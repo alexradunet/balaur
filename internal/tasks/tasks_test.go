@@ -42,6 +42,84 @@ func TestCreateValidation(t *testing.T) {
 	}
 }
 
+func TestCreateSnapsCalendarDues(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// The model picked a Tuesday for a Mon/Thu rule (a real live-test bug):
+	// the pattern is the truth — snap forward, wall clock kept.
+	tue := time.Date(2026, 6, 16, 18, 0, 0, 0, time.Local)
+	rec, err := Create(app, CreateOpts{Title: "Gym", Recur: "weekly:mon,thu", Due: tue})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	got := rec.GetDateTime("due").Time().In(time.Local)
+	want := time.Date(2026, 6, 18, 18, 0, 0, 0, time.Local) // Thursday
+	if !got.Equal(want) {
+		t.Errorf("snapped due = %v, want %v", got, want)
+	}
+
+	// A matching due stays untouched.
+	thu := time.Date(2026, 6, 11, 18, 0, 0, 0, time.Local)
+	rec, err = Create(app, CreateOpts{Title: "Gym 2", Recur: "weekly:mon,thu", Due: thu})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if got := rec.GetDateTime("due").Time().In(time.Local); !got.Equal(thu) {
+		t.Errorf("matching due moved: %v", got)
+	}
+
+	// Monthly mismatch snaps to the rule's day.
+	rec, err = Create(app, CreateOpts{Title: "Rent", Recur: "monthly:1", Due: time.Date(2026, 6, 15, 10, 0, 0, 0, time.Local)})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if got := rec.GetDateTime("due").Time().In(time.Local); got.Day() != 1 || got.Month() != time.July {
+		t.Errorf("monthly snap = %v, want Jul 1", got)
+	}
+}
+
+func TestCreateRejectsFromDoneOnCalendarRules(t *testing.T) {
+	app := storetest.NewApp(t)
+	if _, err := Create(app, CreateOpts{Title: "Gym", Recur: "weekly:mon,thu", RecurFromDone: true, Due: time.Now()}); err == nil {
+		t.Error("weekly + recur_from_done: want error (calendar rules are calendar-anchored)")
+	}
+	if _, err := Create(app, CreateOpts{Title: "Rent", Recur: "monthly:1", RecurFromDone: true, Due: time.Now()}); err == nil {
+		t.Error("monthly + recur_from_done: want error")
+	}
+	if _, err := Create(app, CreateOpts{Title: "Mobility", Recur: "every:3d", RecurFromDone: true, Due: time.Now().Add(time.Hour)}); err != nil {
+		t.Errorf("interval + recur_from_done must stay valid: %v", err)
+	}
+}
+
+func TestDoneCalendarRuleKeepsPattern(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := time.Now()
+
+	// Legacy data shape from before validation: weekly rule WITH
+	// recur_from_done. Completion must still anchor on the pattern (due),
+	// never drift to completion time.
+	due := time.Date(2026, 6, 11, 18, 0, 0, 0, time.Local) // a Thursday
+	rec, err := Create(app, CreateOpts{Title: "Gym", Recur: "weekly:mon,thu", Due: due})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	rec.Set("recur_from_done", true) // simulate the pre-fix record
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	res, err := Done(app, rec, now)
+	if err != nil {
+		t.Fatalf("done: %v", err)
+	}
+	local := res.NextDue.In(time.Local)
+	if local.Hour() != 18 || local.Minute() != 0 {
+		t.Errorf("weekly bump drifted off the 18:00 pattern: %v", local)
+	}
+	if wd := local.Weekday(); wd != time.Monday && wd != time.Thursday {
+		t.Errorf("weekly bump landed on %v", wd)
+	}
+}
+
 func TestDoneOneOff(t *testing.T) {
 	app := storetest.NewApp(t)
 	now := time.Now()

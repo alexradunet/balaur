@@ -140,6 +140,31 @@ func TestNextMonthlyClamp(t *testing.T) {
 	}
 }
 
+func TestMatches(t *testing.T) {
+	loc := bucharest(t)
+	weekly, _ := Parse("weekly:mon,thu")
+	monthly, _ := Parse("monthly:31")
+	daily, _ := Parse("daily")
+
+	tue := time.Date(2026, 6, 16, 18, 0, 0, 0, loc) // Tuesday
+	thu := time.Date(2026, 6, 11, 18, 0, 0, 0, loc) // Thursday
+	if Matches(weekly, tue) {
+		t.Error("weekly:mon,thu must not match a Tuesday")
+	}
+	if !Matches(weekly, thu) {
+		t.Error("weekly:mon,thu must match a Thursday")
+	}
+	if !Matches(monthly, time.Date(2026, 2, 28, 9, 0, 0, 0, loc)) {
+		t.Error("monthly:31 must match the Feb clamp day")
+	}
+	if Matches(monthly, time.Date(2026, 6, 15, 9, 0, 0, 0, loc)) {
+		t.Error("monthly:31 must not match the 15th")
+	}
+	if !Matches(daily, tue) {
+		t.Error("interval rules match anywhere — their due is the anchor")
+	}
+}
+
 func TestDescribe(t *testing.T) {
 	for in, want := range map[string]string{
 		"daily":          "repeats daily",

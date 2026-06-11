@@ -120,7 +120,8 @@ func composeNudge(client llm.Client, recs []*core.Record, now time.Time) string 
 	msgs := []llm.Message{
 		{Role: "system", Content: "You are Balaur, a wise personal companion. " +
 			"Remind the owner of what is due, in one or two short, warm, plain sentences. " +
-			"Name each task. No exclamation marks, no emoji, no guilt, no flattery."},
+			"Name each task. Use ONLY the tasks listed below — never invent tasks, " +
+			"times, or streaks. No exclamation marks, no emoji, no guilt, no flattery."},
 		{Role: "user", Content: "It is " + now.Format("Monday, 15:04") + ".\nDue now:\n" + lines.String()},
 	}
 	stream, err := client.ChatStream(ctx, msgs, nil)
