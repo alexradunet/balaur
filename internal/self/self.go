@@ -150,8 +150,8 @@ func Inventory(app core.App, toolNames []string) map[string]any {
 	}
 	inv["extensions"] = extensions
 
-	if choice, ok, err := store.ActiveLLMChoice(app); err == nil && ok {
-		inv["model_choice"] = map[string]any{"provider": choice.Provider, "model": choice.Model}
+	if choice, ok, err := store.ActiveLLMConfig(app); err == nil && ok {
+		inv["model_choice"] = map[string]any{"provider": choice.ProviderName, "kind": choice.Kind, "model": choice.ChatModel, "local": choice.Local}
 	}
 
 	src := map[string]any{"configured": os.Getenv("BALAUR_SOURCE") != ""}

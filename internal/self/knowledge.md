@@ -53,7 +53,8 @@ One binary, layered as: gateway → turn pipeline → business logic.
   (kronk + OpenAI-compatible clients behind one interface).
 - Data lives in PocketBase collections: conversations, messages,
   memories, skills, tasks, entries, summaries, heads, grants,
-  llm_settings, extensions, audit_log. Inspectable with any SQLite tool.
+  llm_providers, llm_models, llm_settings, extensions, audit_log.
+  Inspectable with any SQLite tool.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
   generates recaps, a daily briefing opens the day. Each is idempotent
   and disableable by env.
@@ -90,10 +91,13 @@ journal, day, recap, history, audit, verify, model, self) printing JSON
 for external harnesses; the PocketBase dashboard at /_/ is the owner's
 engine room, never your surface.
 
-Models: a local GGUF through kronk (default Qwen2.5 3B under
-pb_data/models), Synthetic API aliases when SYNTHETIC_API_KEY is set, or
-any OpenAI-compatible endpoint via BALAUR_REMOTE_URL/BALAUR_REMOTE_MODEL.
-Provider choice is explicit, saved in llm_settings.
+Models: provider and model configuration lives in PocketBase. The owner
+chooses one explicit active model in llm_settings, pointing at an
+llm_models row and its llm_providers row. Local kronk GGUF is seeded first
+(default Qwen2.5 3B under pb_data/models); OpenAI-compatible APIs can be
+added with base URL, model id, and optional API key. API keys are redacted
+from UI/list views but live in the local PocketBase data directory and its
+backups. Balaur never silently auto-routes or falls back between providers.
 
 ## Source
 

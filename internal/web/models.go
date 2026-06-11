@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -49,7 +50,7 @@ func (h *handlers) homeData() (homeData, error) {
 	data.ModelChoices = choices
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	if active.Key == "" {
-		data.ModelError = "No active model is available. Download the local GGUF or set SYNTHETIC_API_KEY for Synthetic."
+		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
 		data.ModelHint = llm.DefaultChatModelDownloadCommand(h.app.DataDir())
 		return data, nil
 	}
@@ -87,7 +88,7 @@ func (h *handlers) selectModel(e *core.RequestEvent) error {
 		if choice.Disabled {
 			return e.BadRequestError("model is not available", nil)
 		}
-		if err := store.SaveLLMChoice(h.app, store.LLMChoice{Provider: choice.Provider, Model: choice.Model}); err != nil {
+		if err := store.SetActiveLLMModel(h.app, choice.Key, "owner"); err != nil {
 			return e.InternalServerError("saving model choice", err)
 		}
 		return h.chatbar(e)
@@ -116,7 +117,23 @@ func (h *handlers) downloadModel(e *core.RequestEvent) error {
 		modal.Error = err.Error()
 		return h.renderModelModal(e, modal)
 	}
-	if err := store.SaveLLMChoice(h.app, store.LLMChoice{Provider: "local", Model: path}); err != nil {
+	choices, _, err := turn.ModelChoices(h.app)
+	if err != nil {
+		modal.Error = err.Error()
+		return h.renderModelModal(e, modal)
+	}
+	var modelID string
+	for _, choice := range choices {
+		if choice.Provider == "kronk" && choice.Model == path {
+			modelID = choice.Key
+			break
+		}
+	}
+	if modelID == "" {
+		modal.Error = "local model record not found"
+		return h.renderModelModal(e, modal)
+	}
+	if err := store.SetActiveLLMModel(h.app, modelID, "owner"); err != nil {
 		modal.Error = err.Error()
 		return h.renderModelModal(e, modal)
 	}
@@ -132,11 +149,50 @@ func (h *handlers) downloadModel(e *core.RequestEvent) error {
 	return nil
 }
 
+func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
+	name := strings.TrimSpace(e.Request.FormValue("name"))
+	baseURL := strings.TrimSpace(e.Request.FormValue("base_url"))
+	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
+	label := strings.TrimSpace(e.Request.FormValue("label"))
+	model := strings.TrimSpace(e.Request.FormValue("model"))
+	embedModel := strings.TrimSpace(e.Request.FormValue("embed_model"))
+	local := e.Request.FormValue("local") == "1"
+	modelID, err := store.SaveOpenAIModel(h.app, name, baseURL, apiKey, label, model, embedModel, local)
+	if err != nil {
+		data, loadErr := h.homeData()
+		if loadErr != nil {
+			return e.InternalServerError("loading chatbar", loadErr)
+		}
+		data.ModelError = err.Error()
+		e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if renderErr := h.tmpl.ExecuteTemplate(e.Response, "chat_bar", data); renderErr != nil {
+			return e.InternalServerError("rendering chatbar", renderErr)
+		}
+		return nil
+	}
+	if e.Request.FormValue("use") == "1" {
+		if err := store.SetActiveLLMModel(h.app, modelID, "owner"); err != nil {
+			return e.InternalServerError("saving model choice", err)
+		}
+	}
+	return h.chatbar(e)
+}
+
 func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
-	if key != "local" {
+	choices, _, err := turn.ModelChoices(h.app)
+	if err != nil {
+		return modelModalData{}, err
+	}
+	var choice turn.ModelChoice
+	for _, candidate := range choices {
+		if candidate.Key == key {
+			choice = candidate
+			break
+		}
+	}
+	if choice.Key == "" || choice.Provider != "kronk" {
 		return modelModalData{}, fmt.Errorf("unknown model")
 	}
-	choice := turn.LocalModelChoice(h.app)
 	if !choice.Disabled {
 		return modelModalData{}, fmt.Errorf("model is already available")
 	}

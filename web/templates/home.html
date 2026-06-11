@@ -215,6 +215,21 @@
     {{if .ModelHint}}<code>{{.ModelHint}}</code>{{end}}
   </div>
   {{end}}
+  <details class="model-add">
+    <summary>Add OpenAI-compatible API</summary>
+    {{if .ModelError}}<p class="model-error">{{.ModelError}}</p>{{end}}
+    <form class="model-provider-form" hx-post="/ui/model/openai" hx-target="#chatbar" hx-swap="outerHTML">
+      <input name="name" placeholder="Provider name, e.g. Ollama" required>
+      <input name="base_url" placeholder="Base URL, e.g. http://localhost:11434/v1" required>
+      <input name="label" placeholder="Display label, e.g. Llama 3.1 8B" required>
+      <input name="model" placeholder="Chat model id" required>
+      <input name="embed_model" placeholder="Embedding model id (optional)">
+      <input name="api_key" type="password" placeholder="API key (optional; stored in PocketBase)">
+      <label><input type="checkbox" name="local" value="1"> self-hosted/local endpoint</label>
+      <label><input type="checkbox" name="use" value="1" checked> use after saving</label>
+      <button class="btn btn-primary" type="submit">Save model</button>
+    </form>
+  </details>
 </section>
 {{end}}
 

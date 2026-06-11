@@ -16,9 +16,9 @@ import (
 
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
-	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/tasks"
+	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/web"
 	_ "github.com/alexradunet/balaur/migrations"
 )
@@ -62,8 +62,9 @@ func registerRecap(app core.App) {
 	if os.Getenv("BALAUR_RECAP") == "0" {
 		return
 	}
+	var clients turn.ClientSource
 	run := func() {
-		client, err := llm.FromEnvWithDefault(app.DataDir())
+		client, err := clients.Active(app)
 		if err != nil {
 			return // no model configured; recap waits
 		}
@@ -91,8 +92,9 @@ func registerNudge(app core.App) {
 	if os.Getenv("BALAUR_NUDGE") == "0" {
 		return
 	}
+	var clients turn.ClientSource
 	run := func() {
-		client, err := llm.FromEnvWithDefault(app.DataDir())
+		client, err := clients.Active(app)
 		if err != nil {
 			client = nil // no model configured: deterministic nudges still fire
 		}
@@ -117,8 +119,9 @@ func registerBriefing(app core.App) {
 	if h, err := strconv.Atoi(os.Getenv("BALAUR_BRIEFING_HOUR")); err == nil && h >= 0 && h <= 23 {
 		hour = h
 	}
+	var clients turn.ClientSource
 	run := func() {
-		client, err := llm.FromEnvWithDefault(app.DataDir())
+		client, err := clients.Active(app)
 		if err != nil {
 			client = nil // no model: the deterministic list still briefs
 		}

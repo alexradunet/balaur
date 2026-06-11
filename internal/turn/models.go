@@ -26,31 +26,32 @@ type ModelChoice struct {
 	Disabled bool
 }
 
-// ModelChoices lists the available model choices and resolves the active
-// one: the saved picker choice when it is still available, otherwise the
-// default order (remote, then local, then first available). An empty
-// active Key means no model is usable on this box yet.
+// ModelChoices lists PocketBase-backed model choices and resolves the active
+// one. Selection is explicit: no remote/local fallback is chosen silently.
 func ModelChoices(app core.App) ([]ModelChoice, ModelChoice, error) {
-	choices := availableChoices(app)
+	if err := store.EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
+		return nil, ModelChoice{}, err
+	}
+	choices, err := availableChoices(app)
+	if err != nil {
+		return nil, ModelChoice{}, err
+	}
 	if len(choices) == 0 {
 		return choices, ModelChoice{}, nil
 	}
 
-	saved, ok, err := store.ActiveLLMChoice(app)
+	saved, ok, err := store.ActiveLLMConfig(app)
 	if err != nil {
 		return nil, ModelChoice{}, err
 	}
 	active := -1
 	if ok {
 		for i, choice := range choices {
-			if !choice.Disabled && choice.Provider == saved.Provider && choice.Model == saved.Model {
+			if !choice.Disabled && choice.Key == saved.ModelID {
 				active = i
 				break
 			}
 		}
-	}
-	if active < 0 {
-		active = defaultChoice(choices)
 	}
 	if active < 0 {
 		return choices, ModelChoice{}, nil
@@ -74,59 +75,57 @@ func ActiveModelChoice(app core.App) (ModelChoice, error) {
 	return active, nil
 }
 
-func availableChoices(app core.App) []ModelChoice {
+func availableChoices(app core.App) ([]ModelChoice, error) {
+	configs, err := store.ListLLMModels(app)
+	if err != nil {
+		return nil, err
+	}
 	var choices []ModelChoice
-	choices = append(choices, LocalModelChoice(app))
-	if llm.SyntheticAPIKey() != "" {
-		choices = append(choices,
-			ModelChoice{
-				Key:      "synthetic-small",
-				Provider: "synthetic",
-				Model:    llm.SyntheticSmallModel,
-				Name:     "Synthetic Small",
-				Detail:   "syn:small:text · GLM-4.7-Flash",
-				Badge:    "api",
-			},
-			ModelChoice{
-				Key:      "synthetic-large",
-				Provider: "synthetic",
-				Model:    llm.SyntheticLargeModel,
-				Name:     "Synthetic Large",
-				Detail:   "syn:large:text · GLM-5.1",
-				Badge:    "api",
-			},
-		)
+	for _, cfg := range configs {
+		choice := ModelChoice{
+			Key:      cfg.ModelID,
+			Provider: cfg.Kind,
+			Model:    cfg.ChatModel,
+			Name:     cfg.DisplayName(),
+			Detail:   modelDetail(cfg),
+			Badge:    modelBadge(cfg),
+		}
+		if cfg.Kind == "kronk" {
+			if _, err := ExistingModelPath(cfg.ChatModel, "local"); err != nil {
+				choice.Disabled = true
+				choice.Badge = "missing"
+				if os.Getenv("BALAUR_CHAT_MODEL") != "" {
+					choice.Detail = filepath.Base(cfg.ChatModel) + " · not found"
+				} else {
+					choice.Detail = filepath.Base(cfg.ChatModel) + " · download needed"
+				}
+			}
+		}
+		choices = append(choices, choice)
 	}
-	if base, model := os.Getenv("BALAUR_REMOTE_URL"), os.Getenv("BALAUR_REMOTE_MODEL"); base != "" && model != "" {
-		choices = append(choices, ModelChoice{
-			Key:      "remote-env",
-			Provider: "remote",
-			Model:    model,
-			Name:     "Configured API",
-			Detail:   model + " · " + base,
-			Badge:    "api",
-		})
-	}
-	return choices
+	return choices, nil
 }
 
-func defaultChoice(choices []ModelChoice) int {
-	for i, choice := range choices {
-		if !choice.Disabled && choice.Provider == "remote" {
-			return i
-		}
+func modelDetail(cfg store.LLMConfig) string {
+	if cfg.Kind == "kronk" {
+		return filepath.Base(cfg.ChatModel) + " · on this box"
 	}
-	for i, choice := range choices {
-		if !choice.Disabled && choice.Provider == "local" {
-			return i
-		}
+	place := "remote API"
+	if cfg.Local {
+		place = "self-hosted API"
 	}
-	for i, choice := range choices {
-		if !choice.Disabled {
-			return i
-		}
+	key := "key not set"
+	if cfg.KeySet {
+		key = "key set"
 	}
-	return -1
+	return cfg.ChatModel + " · " + cfg.BaseURL + " · " + place + " · " + key
+}
+
+func modelBadge(cfg store.LLMConfig) string {
+	if cfg.Kind == "kronk" || cfg.Local {
+		return "local"
+	}
+	return "api"
 }
 
 // LocalModelChoice describes the local GGUF option: the configured
@@ -139,7 +138,7 @@ func LocalModelChoice(app core.App) ModelChoice {
 	}
 	choice := ModelChoice{
 		Key:      "local",
-		Provider: "local",
+		Provider: "kronk",
 		Model:    path,
 		Name:     localModelName(path),
 		Detail:   filepath.Base(path) + " · on this box",
@@ -199,39 +198,54 @@ type ClientSource struct {
 
 // Active resolves the active model choice and returns a client for it.
 func (s *ClientSource) Active(app core.App) (llm.Client, error) {
-	choice, err := ActiveModelChoice(app)
+	if err := store.EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
+		return nil, err
+	}
+	cfg, ok, err := store.ActiveLLMConfig(app)
 	if err != nil {
 		return nil, err
 	}
-	return s.ClientFor(app, choice)
+	if !ok {
+		return nil, fmt.Errorf("no active model is available")
+	}
+	return s.clientForConfig(cfg)
 }
 
 // ClientFor returns a client for an explicit choice. Provider choice is
 // explicit; no hidden auto-routing (AGENTS.md).
 func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, error) {
 	switch choice.Provider {
-	case "local":
+	case "local", "kronk":
 		return s.kronk(choice.Model), nil
-	case "synthetic":
-		if llm.SyntheticAPIKey() == "" {
-			return nil, fmt.Errorf("SYNTHETIC_API_KEY is not set")
-		}
-		return llm.SyntheticClient(choice.Model), nil
-	case "remote":
-		return llm.FromEnv()
+	case "openai":
+		return nil, fmt.Errorf("openai choices must be resolved from PocketBase config")
 	}
 	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
 }
 
+func (s *ClientSource) clientForConfig(cfg store.LLMConfig) (llm.Client, error) {
+	switch cfg.Kind {
+	case "kronk":
+		return s.kronkWithEmbed(cfg.ChatModel, cfg.EmbedModel), nil
+	case "openai":
+		return &llm.OpenAIClient{BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, Model: cfg.ChatModel, EmbedModel: cfg.EmbedModel}, nil
+	}
+	return nil, fmt.Errorf("unknown model provider %q", cfg.Kind)
+}
+
 func (s *ClientSource) kronk(chatPath string) *llm.KronkClient {
+	return s.kronkWithEmbed(chatPath, os.Getenv("BALAUR_EMBED_MODEL"))
+}
+
+func (s *ClientSource) kronkWithEmbed(chatPath, embedPath string) *llm.KronkClient {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.local != nil && len(s.local.ChatModelFiles) == 1 && s.local.ChatModelFiles[0] == chatPath {
+	if s.local != nil && len(s.local.ChatModelFiles) == 1 && s.local.ChatModelFiles[0] == chatPath && sameStrings(s.local.EmbedModelFiles, nonEmpty(embedPath)) {
 		return s.local
 	}
 	s.local = &llm.KronkClient{
 		ChatModelFiles:  []string{chatPath},
-		EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
+		EmbedModelFiles: nonEmpty(embedPath),
 	}
 	return s.local
 }
@@ -241,4 +255,16 @@ func nonEmpty(s string) []string {
 		return nil
 	}
 	return []string{s}
+}
+
+func sameStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
