@@ -7,13 +7,43 @@
   <link rel="stylesheet" href="/static/basm.css">
   <script src="/static/htmx.min.js" defer></script>
   <script>
+    let balaurChatbarObserver;
+
+    function balaurSyncChatbarSpace() {
+      const chatbar = document.getElementById("chatbar");
+      if (!chatbar) return;
+      document.documentElement.style.setProperty("--chatbar-space", `${chatbar.offsetHeight + 24}px`);
+    }
+
+    function balaurWatchChatbar() {
+      const chatbar = document.getElementById("chatbar");
+      if (!chatbar || !window.ResizeObserver) {
+        balaurSyncChatbarSpace();
+        return;
+      }
+      balaurChatbarObserver?.disconnect();
+      balaurChatbarObserver = new ResizeObserver(balaurSyncChatbarSpace);
+      balaurChatbarObserver.observe(chatbar);
+      balaurSyncChatbarSpace();
+    }
+
+    function balaurScrollToLatest() {
+      balaurSyncChatbarSpace();
+      scrollTo(0, document.documentElement.scrollHeight || document.body.scrollHeight);
+    }
+
+    function balaurSubmitOnEnter(event) {
+      if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+
     function balaurPrepareChat(form) {
       const input = form.elements.message;
       const msg = input.value.trim();
       if (!msg) return false;
 
       const chat = document.getElementById("chat");
-      const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
       const pendingID = "pending-" + Date.now().toString(36) + Math.random().toString(36).slice(2);
       const avatar = (kind, live = false) => {
         const src = kind === "soul" ? "/static/avatars/soul.png" : "/static/avatars/balaur.png";
@@ -30,7 +60,7 @@
       pending.innerHTML = avatar("balaur", true) + '<div class="msg-main"><div class="who">Balaur</div><div class="body"><span class="thinking thinking-dots">thinking</span></div></div>';
 
       chat.append(user, pending);
-      if (!reducedMotion) pending.scrollIntoView({ block: "end" });
+      balaurScrollToLatest();
       form.setAttribute("hx-target", "#" + pendingID);
       form.setAttribute("hx-swap", "outerHTML");
       form.elements.client_rendered.value = "1";
@@ -80,8 +110,17 @@
   <script>
     // Open on the present: the chat bottom is "now"; the past is above.
     addEventListener("DOMContentLoaded", () => {
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) scrollTo(0, document.body.scrollHeight);
+      balaurWatchChatbar();
+      balaurScrollToLatest();
     });
+    addEventListener("htmx:afterSwap", (event) => {
+      balaurWatchChatbar();
+      const target = event.detail?.target;
+      if (target?.id === "chat" || target?.classList?.contains("msg-pending") || target?.closest?.("#chat")) {
+        balaurScrollToLatest();
+      }
+    });
+    addEventListener("resize", balaurSyncChatbarSpace);
   </script>
 
   {{template "chat_bar" .}}
@@ -94,7 +133,7 @@
   {{if .ChatReady}}
   <form class="chat-form" hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
     <input type="hidden" name="client_rendered" value="0">
-    <input type="text" name="message" placeholder="{{.ChatPlaceholder}}" autocomplete="off" autofocus required>
+    <textarea name="message" placeholder="{{.ChatPlaceholder}}" autocomplete="off" rows="2" autofocus required oninput="balaurSyncChatbarSpace()" onkeydown="balaurSubmitOnEnter(event)"></textarea>
     <button class="btn btn-primary" type="submit">Send</button>
   </form>
   {{else}}
@@ -114,7 +153,7 @@
   {{if .ModelChoices}}
   <div class="model-choice-list">
     {{range .ModelChoices}}
-    <form class="model-choice-form" hx-post="/ui/model/select" hx-target="#chatbar" hx-swap="outerHTML" hx-on::after-settle="document.querySelector('#chatbar input[name=message]')?.focus()">
+    <form class="model-choice-form" hx-post="/ui/model/select" hx-target="#chatbar" hx-swap="outerHTML" hx-on::after-settle="document.querySelector('#chatbar [name=message]')?.focus()">
       <input type="hidden" name="key" value="{{.Key}}">
       <button class="model-choice {{if .Active}}model-choice-active{{end}}" type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
         <span class="model-name">{{.Name}}</span>
