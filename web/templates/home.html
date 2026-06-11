@@ -62,7 +62,7 @@
   <template id="t-msg-user">
     <div class="msg msg-user msg-with-avatar">
       <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
-        <img src="/static/avatars/soul.png" alt="" decoding="async">
+        <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
       </span>
       <div class="msg-main">
         <div class="who">You</div>
@@ -170,7 +170,9 @@
     <button class="btn btn-primary" type="submit">Send</button>
   </form>
   {{else}}
-  <div class="chatbar-setup"></div>
+  <div class="chatbar-setup">
+    <input type="text" placeholder="{{.ChatPlaceholder}}" disabled>
+  </div>
   {{end}}
 </div>
 {{end}}
@@ -237,6 +239,29 @@
       <label><input type="checkbox" name="use"   value="1" checked> use after saving</label>
       <button class="btn btn-primary" type="submit">Save model</button>
     </form>
+  </details>
+
+  <!-- Avatar picker — choose which soul portrait appears in chat -->
+  <details class="avatar-picker">
+    <summary>Your avatar</summary>
+    <div class="avatar-choice-list">
+      <form hx-post="/ui/settings/avatar" hx-target="#chatbar" hx-swap="outerHTML">
+        <input type="hidden" name="soul_avatar" value="male">
+        <button class="avatar-choice {{if eq .SoulAvatarPref "male"}}avatar-choice-active{{end}}"
+                type="submit" {{if eq .SoulAvatarPref "male"}}aria-current="true" disabled{{end}}>
+          <img class="px" src="/static/avatars/soul-male.png" alt="Male portrait" decoding="async">
+          <span>Him</span>
+        </button>
+      </form>
+      <form hx-post="/ui/settings/avatar" hx-target="#chatbar" hx-swap="outerHTML">
+        <input type="hidden" name="soul_avatar" value="female">
+        <button class="avatar-choice {{if eq .SoulAvatarPref "female"}}avatar-choice-active{{end}}"
+                type="submit" {{if eq .SoulAvatarPref "female"}}aria-current="true" disabled{{end}}>
+          <img class="px" src="/static/avatars/soul-female.png" alt="Female portrait" decoding="async">
+          <span>Her</span>
+        </button>
+      </form>
+    </div>
   </details>
 </section>
 {{end}}
