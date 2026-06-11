@@ -716,3 +716,54 @@ code { padding: 1px 5px; }
   .balaur-avatar-live img { animation: none; }
   .thinking-dots::after { animation: none; content: ""; }
 }
+
+/* ---- Tasks: cards, calendar, timeline (life organization) ---- */
+
+.t-views { margin-bottom: 18px; }
+
+.tcard-due { margin: 2px 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.tcard-overdue { color: var(--ember); }
+.tcard-done .kcard-title, .tcard-dropped .kcard-title { color: var(--muted); text-decoration: line-through; }
+.tcard-dropped { border-style: dashed; opacity: .75; }
+.tcard-snooze { display: inline-flex; gap: 6px; align-items: center; }
+.tcard-snooze select {
+  background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--hair); border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: 11px; padding: 4px 6px;
+}
+
+.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cal-label { margin: 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-head { margin-bottom: 2px; }
+.cal-wd {
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: var(--muted); padding: 4px 6px; text-align: left;
+}
+.cal-cell {
+  position: relative; min-height: 86px; padding: 6px;
+  background: var(--surface); border: 2px solid var(--outline-2);
+  border-radius: var(--radius); overflow: hidden;
+}
+.cal-cell.cal-out { opacity: .45; }
+.cal-cell.cal-today { border-color: var(--gold); }
+.cal-cell.cal-today::after {
+  content: ""; position: absolute; top: 4px; right: 4px;
+  width: 7px; height: 7px; background: var(--gold);
+}
+.cal-daynum { font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+.cal-item {
+  display: block; font-family: var(--font-mono); font-size: 11px;
+  color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 2px solid var(--teal); padding-left: 5px; margin: 2px 0;
+}
+.cal-recur { font-style: normal; color: var(--teal); margin-right: 3px; }
+
+.tl .tl-day { padding: 10px 0 4px; border-top: 2px dashed var(--hair); }
+.tl .tl-day:first-child { border-top: none; }
+.tl-today .tl-label { color: var(--gold); }
+.tl-label { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.tl-items { list-style: none; margin: 0; padding: 0; }
+.tl-item { padding: 3px 0; font-size: 15px; }
+.tl-time { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: 8px; }
+.tl-quiet { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; color: var(--smoke); }

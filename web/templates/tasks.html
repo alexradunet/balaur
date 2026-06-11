@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Balaur</title>
+  <link rel="stylesheet" href="/static/basm.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ᗅ Balaur</a>
+    <nav>
+      <a href="/tasks">Tasks</a>
+      <a href="/memory">Memory</a>
+      <a href="/skills">Skills</a>
+      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Tasks</h1>
+
+    <nav class="k-tabs t-views">
+      <a class="k-tab{{if eq .View "list"}} k-tab-active{{end}}" href="/tasks">list</a>
+      <a class="k-tab{{if eq .View "calendar"}} k-tab-active{{end}}" href="/tasks?view=calendar">calendar</a>
+      <a class="k-tab{{if eq .View "timeline"}} k-tab-active{{end}}" href="/tasks?view=timeline">timeline</a>
+    </nav>
+
+    {{if eq .View "calendar"}}{{template "tasks_calendar" .Cal}}{{end}}
+    {{if eq .View "timeline"}}{{template "tasks_timeline" .TL}}{{end}}
+    {{if eq .View "list"}}{{template "tasks_list" .}}{{end}}
+  </main>
+</body>
+</html>
+
+{{define "tasks_list"}}
+{{$b := .Buckets}}
+{{if $b.Overdue}}
+<section class="k-section">
+  <h2 class="k-heading k-heading-proposed">Overdue <span class="k-count">{{len $b.Overdue}}</span></h2>
+  <div class="k-grid">{{range $b.Overdue}}{{template "card-task.html" .}}{{end}}</div>
+</section>
+<div class="stitch"></div>
+{{end}}
+{{if $b.Today}}
+<section class="k-section">
+  <h2 class="k-heading">Today <span class="k-count">{{len $b.Today}}</span></h2>
+  <div class="k-grid">{{range $b.Today}}{{template "card-task.html" .}}{{end}}</div>
+</section>
+{{end}}
+{{if $b.Upcoming}}
+<section class="k-section">
+  <h2 class="k-heading">Upcoming <span class="k-count">{{len $b.Upcoming}}</span></h2>
+  <div class="k-grid">{{range $b.Upcoming}}{{template "card-task.html" .}}{{end}}</div>
+</section>
+{{end}}
+{{if $b.Someday}}
+<section class="k-section">
+  <h2 class="k-heading">Someday <span class="k-count">{{len $b.Someday}}</span></h2>
+  <p class="k-sub">No date yet — they wait without nagging.</p>
+  <div class="k-grid">{{range $b.Someday}}{{template "card-task.html" .}}{{end}}</div>
+</section>
+{{end}}
+{{if and (not $b.Overdue) (not $b.Today) (not $b.Upcoming) (not $b.Someday)}}
+<p class="k-empty">Nothing on the book. Tell Balaur in chat what to keep for you.</p>
+{{end}}
+{{if .DoneRecently}}
+<div class="stitch"></div>
+<section class="k-section">
+  <h2 class="k-heading k-heading-muted">Done recently</h2>
+  <div class="k-grid k-grid-muted">{{range .DoneRecently}}{{template "card-task.html" .}}{{end}}</div>
+</section>
+{{end}}
+{{end}}
+
+{{define "tasks_calendar"}}
+<section class="k-section">
+  <div class="cal-nav">
+    <a class="btn btn-ghost btn-sm" href="/tasks?view=calendar&m={{.PrevM}}">◂ prev</a>
+    <h2 class="cal-label">{{.Label}}</h2>
+    <a class="btn btn-ghost btn-sm" href="/tasks?view=calendar&m={{.NextM}}">next ▸</a>
+  </div>
+  <div class="cal-grid cal-head">
+    {{range .Weekdays}}<div class="cal-wd">{{.}}</div>{{end}}
+  </div>
+  {{range .Weeks}}
+  <div class="cal-grid">
+    {{range .}}
+    <div class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
+      <span class="cal-daynum">{{.Day}}</span>
+      {{range .Items}}
+      <span class="cal-item" title="{{.Time}} {{.Title}}">{{if .Recurring}}<i class="cal-recur">⟳</i>{{end}}{{.Time}} {{.Title}}</span>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+  <p class="k-sub">Recurring tasks are projected from their rules — the calendar shows the plan, the list holds the actions.</p>
+</section>
+{{end}}
+
+{{define "tasks_timeline"}}
+{{if .Overdue}}
+<section class="k-section">
+  <h2 class="k-heading k-heading-proposed">Slipped <span class="k-count">{{len .Overdue}}</span></h2>
+  <div class="k-grid">{{range .Overdue}}{{template "card-task.html" .}}{{end}}</div>
+</section>
+<div class="stitch"></div>
+{{end}}
+<section class="k-section tl">
+  {{range .Days}}
+  <div class="tl-day{{if .IsToday}} tl-today{{end}}">
+    <h3 class="tl-label">{{.Label}}</h3>
+    {{if .Items}}
+    <ul class="tl-items">
+      {{range .Items}}
+      <li class="tl-item"><span class="tl-time">{{.Time}}</span> {{.Title}}{{if .Recurring}} <span class="tag">⟳</span>{{end}}</li>
+      {{end}}
+    </ul>
+    {{else}}
+    <p class="tl-quiet">quiet</p>
+    {{end}}
+  </div>
+  {{end}}
+  <p class="k-sub">The next two weeks, rules unrolled — the forward mirror of the telescope above the chat.</p>
+</section>
+{{end}}

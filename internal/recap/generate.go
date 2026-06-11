@@ -8,17 +8,10 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/types"
 
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/store"
 )
-
-// pbTime formats a time the way PocketBase stores DateTime fields, so
-// filter equality on period_start matches exactly.
-func pbTime(t time.Time) string {
-	return t.UTC().Format(types.DefaultDateLayout)
-}
 
 // Generation is hierarchical: days summarise raw messages; weeks and
 // months summarise day summaries; quarters summarise month summaries;
@@ -33,7 +26,7 @@ const maxSourceChars = 24000 // bound on text fed to one summary call
 func Find(app core.App, conversationID string, p Period) *core.Record {
 	rec, err := app.FindFirstRecordByFilter("summaries",
 		"conversation = {:conv} && period_type = {:pt} && period_start = {:ps}",
-		dbx.Params{"conv": conversationID, "pt": p.Type, "ps": pbTime(p.Start)})
+		dbx.Params{"conv": conversationID, "pt": p.Type, "ps": store.PBTime(p.Start)})
 	if err != nil {
 		return nil
 	}
@@ -65,7 +58,7 @@ func daySource(app core.App, conversationID string, p Period) (string, int, erro
 		"conversation = {:conv} && (role = 'user' || role = 'assistant') && content != ''"+
 			" && created >= {:start} && created < {:end}",
 		"@rowid", 0, 0,
-		dbx.Params{"conv": conversationID, "start": pbTime(p.Start), "end": pbTime(p.End)})
+		dbx.Params{"conv": conversationID, "start": store.PBTime(p.Start), "end": store.PBTime(p.End)})
 	if err != nil {
 		return "", 0, fmt.Errorf("loading day messages: %w", err)
 	}

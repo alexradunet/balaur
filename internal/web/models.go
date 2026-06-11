@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -27,6 +28,7 @@ type homeData struct {
 	HasRecap        bool
 	DevSeed         bool
 	ChatbarOOB      bool
+	NowMillis       int64 // nudge-poll cursor: only messages after page load
 }
 
 type modelChoiceView struct {
@@ -50,7 +52,7 @@ type modelModalData struct {
 }
 
 func (h *handlers) homeData() (homeData, error) {
-	data := homeData{Title: "Balaur", ChatPlaceholder: "Choose a model before chatting"}
+	data := homeData{Title: "Balaur", ChatPlaceholder: "Choose a model before chatting", NowMillis: time.Now().UnixMilli()}
 	choices, active, err := h.modelChoices()
 	if err != nil {
 		return data, err

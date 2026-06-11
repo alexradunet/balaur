@@ -98,6 +98,7 @@
   <header class="topbar">
     <a class="brand" href="/">ᗅ Balaur</a>
     <nav>
+      <a href="/tasks">Tasks</a>
       <a href="/memory">Memory</a>
       <a href="/skills">Skills</a>
       <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
@@ -145,8 +146,16 @@
         balaurScrollToLatest();
       }
     });
+    // Nudges arrive as out-of-band appends into #chat.
+    addEventListener("htmx:oobAfterSwap", (event) => {
+      if (event.detail?.target?.id === "chat") balaurScrollToLatest();
+    });
     addEventListener("resize", balaurSyncChatbarSpace);
   </script>
+
+  <!-- Agent-initiated messages (nudges, briefings) poll in while the page
+       is open; a reload shows them via History regardless. -->
+  <div id="nudge-poll" hx-get="/ui/chat/nudges?since={{.NowMillis}}" hx-trigger="every 30s" hx-swap="none"></div>
 
   {{template "chat_bar" .}}
   <div id="modal-root"></div>

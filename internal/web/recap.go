@@ -138,11 +138,11 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 
 // messageView is one chat message's template payload (history + day expand).
 type messageView struct {
-	Role     string
-	Tool     string
-	Content  string
-	CardKind string // proposal card embed: "memories" | "skills"
-	CardID   string
+	Role    string
+	Tool    string
+	Content string
+	Origin  string // agent-initiated marker: "nudge" | "briefing"; "" = chat
+	CardURL string // inline card embed endpoint, when the tool result carried one
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {
@@ -152,11 +152,12 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			Role:    r.GetString("role"),
 			Tool:    r.GetString("tool_name"),
 			Content: r.GetString("content"),
+			Origin:  r.GetString("origin"),
 		}
-		// Re-render proposal cards that were created inline in chat.
+		// Re-render marked cards that were created inline in chat.
 		if mv.Role == "tool" {
 			if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
-				mv.CardKind, mv.CardID, mv.Content = kind, id, rest
+				mv.CardURL, mv.Content = cardURL(kind, id), rest
 			}
 		}
 		if mv.Role == "assistant" && mv.Content == "" {

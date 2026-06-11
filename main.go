@@ -16,6 +16,7 @@ import (
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/recap"
+	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/web"
 	_ "github.com/alexradunet/balaur/migrations"
 )
@@ -33,6 +34,7 @@ func main() {
 			return err
 		}
 		registerRecap(se.App)
+		registerNudge(se.App)
 		return se.Next()
 	})
 
@@ -67,4 +69,27 @@ func registerRecap(app core.App) {
 	}
 	app.Cron().MustAdd("recap", "0 * * * *", run)
 	go run() // serve-start catch-up, off the serve path
+}
+
+// registerNudge wires the task nudger: a minute tick fires due reminders
+// into the master conversation (internal/tasks). The first tick after any
+// downtime is the catch-up; nudged_at on each task keeps firing idempotent.
+// Disable with BALAUR_NUDGE=0. Unlike recap, it runs without a model —
+// composition warms the text when one is configured, the deterministic
+// line ships otherwise.
+func registerNudge(app core.App) {
+	if os.Getenv("BALAUR_NUDGE") == "0" {
+		return
+	}
+	run := func() {
+		client, err := llm.FromEnvWithDefault(app.DataDir())
+		if err != nil {
+			client = nil // no model configured: deterministic nudges still fire
+		}
+		if err := tasks.Nudge(app, client, time.Now()); err != nil {
+			app.Logger().Warn("nudge: run stopped", "error", err)
+		}
+	}
+	app.Cron().MustAdd("nudge", "* * * * *", run)
+	go run()
 }

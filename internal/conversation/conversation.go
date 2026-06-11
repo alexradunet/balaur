@@ -51,6 +51,13 @@ func Master(app core.App) (*core.Record, error) {
 // pass "" for other roles. Tool payloads land in a dedicated JSON field so
 // the record stays inspectable in the engine room.
 func Append(app core.App, conversationID string, msg llm.Message, toolName string) error {
+	return AppendOrigin(app, conversationID, msg, toolName, "")
+}
+
+// AppendOrigin is Append for agent-initiated turns: origin ("nudge",
+// "briefing") distinguishes them from chat ("") so the UI can poll for
+// them and jobs can derive idempotency from the record.
+func AppendOrigin(app core.App, conversationID string, msg llm.Message, toolName, origin string) error {
 	col, err := app.FindCollectionByNameOrId("messages")
 	if err != nil {
 		return fmt.Errorf("finding messages collection: %w", err)
@@ -61,6 +68,9 @@ func Append(app core.App, conversationID string, msg llm.Message, toolName strin
 	rec.Set("content", msg.Content)
 	if toolName != "" {
 		rec.Set("tool_name", toolName)
+	}
+	if origin != "" {
+		rec.Set("origin", origin)
 	}
 	if len(msg.ToolCalls) > 0 {
 		rec.Set("tool_payload", msg.ToolCalls)

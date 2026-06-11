@@ -104,7 +104,8 @@ func taskAddTool(app core.App) agent.Tool {
 				b.WriteString(". No hour was given, so it is set for 09:00 — adjust if another time suits the owner better")
 			}
 			fmt.Fprintf(&b, ". id: %s", rec.Id)
-			return b.String(), nil
+			// Marked so the web layer renders a live task card in chat.
+			return MarkProposal("tasks", rec.Id, b.String()), nil
 		},
 	}
 }

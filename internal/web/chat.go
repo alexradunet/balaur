@@ -152,8 +152,8 @@ const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"things done with `task_done` when the owner says they did them; snooze " +
 	"or drop on request. Never invent tasks the owner didn't voice."
 
-// writeToolResult renders a tool result row. Proposal-marked results render
-// as approval cards instead of raw text (the Hyperagent card pattern).
+// writeToolResult renders a tool result row. Marked results render as live
+// cards instead of raw text (the Hyperagent card pattern).
 func (h *handlers) writeToolResult(w http.ResponseWriter, text string) {
 	kind, id, rest, ok := tools.ParseProposal(text)
 	if !ok {
@@ -162,10 +162,18 @@ func (h *handlers) writeToolResult(w http.ResponseWriter, text string) {
 	}
 	fmt.Fprint(w, html.EscapeString(rest))
 	// Close the tool row and inject the live card fetched by HTMX, so the
-	// card in chat is the same template the /memory and /skills pages use.
+	// card in chat is the same template the dedicated pages use.
 	fmt.Fprintf(w,
-		`</div></div><div class="k-inline" hx-get="/ui/knowledge/%s/%s/card" hx-trigger="load" hx-swap="innerHTML"></div><div class="msg msg-tool" hidden><div class="body">`,
-		html.EscapeString(kind), html.EscapeString(id))
+		`</div></div><div class="k-inline" hx-get="%s" hx-trigger="load" hx-swap="innerHTML"></div><div class="msg msg-tool" hidden><div class="body">`,
+		html.EscapeString(cardURL(kind, id)))
+}
+
+// cardURL maps a marker kind to its card endpoint.
+func cardURL(kind, id string) string {
+	if kind == "tasks" {
+		return "/ui/tasks/" + id + "/card"
+	}
+	return "/ui/knowledge/" + kind + "/" + id + "/card"
 }
 
 func clipText(s string, n int) string {

@@ -1,0 +1,41 @@
+{{- /* One task card. Context: web.taskView. Serves chat embeds and the
+     /tasks page — same template, same actions, one source of truth. */ -}}
+<article class="kcard tcard tcard-{{.Status}}" id="tcard-{{.ID}}">
+  <header class="kcard-head">
+    <span class="kcard-kind">▪ task</span>
+    {{with .RecurLine}}<span class="tag">{{.}}</span>{{end}}
+  </header>
+
+  <h3 class="kcard-title">{{.Title}}</h3>
+  {{with .DueLine}}<p class="tcard-due{{if $.Overdue}} tcard-overdue{{end}}">{{.}}</p>{{end}}
+  {{with .Notes}}
+  <details class="kcard-edit">
+    <summary>Notes</summary>
+    <p class="kcard-body">{{.}}</p>
+  </details>
+  {{end}}
+
+  <footer class="kcard-actions">
+    {{if eq .Status "open"}}
+      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="#tcard-{{.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="to" value="done">
+        <button class="btn btn-primary btn-sm" type="submit">Done</button>
+      </form>
+      <form class="tcard-snooze" hx-post="/ui/tasks/{{.ID}}/transition" hx-target="#tcard-{{.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="to" value="snooze">
+        <select name="until" aria-label="Snooze until">
+          <option value="1h">+1 hour</option>
+          <option value="tonight">tonight</option>
+          <option value="tomorrow">tomorrow</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" type="submit">Snooze</button>
+      </form>
+      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="#tcard-{{.ID}}" hx-swap="outerHTML">
+        <input type="hidden" name="to" value="dropped">
+        <button class="btn btn-ghost btn-sm" type="submit">Drop</button>
+      </form>
+    {{else}}
+      <span class="kcard-meta">{{.Status}}</span>
+    {{end}}
+  </footer>
+</article>

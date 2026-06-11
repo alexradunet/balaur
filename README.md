@@ -56,8 +56,19 @@ database you own and can open with any SQLite tool.
   `task_snooze`, `task_drop` — one-offs and recurring habits/chores with a
   tiny recurrence DSL (`daily`, `every:3d`, `weekly:mon,thu`, `monthly:15`,
   fixed-schedule or from-completion). Tasks live in the `tasks` collection;
-  completions land in `entries`, the life-log substrate. Nudges, briefings,
-  and task/day pages are roadmap — Balaur does not yet remind on its own.
+  completions land in `entries`, the life-log substrate. New tasks render
+  as live cards in chat.
+- **Balaur reminds on its own:** a minute cron fires due reminders into the
+  master conversation — composed in Balaur's voice when a model is
+  configured, a plain deterministic line otherwise, batched into one
+  message per tick. Firing is idempotent across restarts; the first tick
+  after downtime is the catch-up. The open chat polls nudges in live;
+  `BALAUR_NUDGE=0` disables.
+- **/tasks — life organization:** the operational list (cards with
+  Done / Snooze / Drop), a month calendar, and a 14-day timeline — the
+  forward mirror of the recap telescope. Calendar and timeline project
+  recurrence rules forward, read-only; actions live on the list cards.
+  Morning briefing and day pages are roadmap.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
@@ -151,8 +162,7 @@ boundary) and `DESIGN.md` for the Basm design system.
 
 ## Roadmap (not shipped — honesty ledger)
 
-- Task nudger (minute cron, idempotent catch-up), morning briefing, /tasks
-  page with cards
+- Morning briefing: due tasks + habits with streaks, once per local day
 - Life tracking on the `entries` substrate: weight, workouts, achievements,
   /life page
 - Day pages with journaling (`/day/{date}`: your thoughts + the day's recap,
