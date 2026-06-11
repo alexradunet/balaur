@@ -115,7 +115,9 @@ recent lines for text kinds, live habit streaks · a one-line yesterday
 reflection in the briefing · day pages (/day/{date}): the owner's journal
 (verbatim via journal_write in chat or the page form, page-side removal
 only), the day's recap with transcript expand, completions, and logs —
-linked from calendar cells and recap day cards.
+linked from calendar cells and recap day cards · a runtime honesty check:
+capture claims without a successful tool call trigger one self-repair
+pass, then an owner-visible origin-tagged check note.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·

@@ -16,6 +16,7 @@ import (
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/tools"
+	"github.com/alexradunet/balaur/internal/verify"
 )
 
 // recentTurnWindow caps how many prior text turns enter the model context.
@@ -94,7 +95,7 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	history = append(history, llm.Message{Role: "user", Content: msg})
 	contextLen := len(history)
 
-	final, runErr := loop.Run(e.Request.Context(), history, func(ev agent.Event) {
+	emitEv := func(ev agent.Event) {
 		switch ev.Kind {
 		case "text":
 			fmt.Fprint(w, html.EscapeString(ev.Text))
@@ -110,13 +111,32 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			fmt.Fprintf(w, `<span class="thinking">the thread snapped: %s</span>`, html.EscapeString(ev.Err.Error()))
 			flush()
 		}
-	})
+	}
+
+	final, runErr := loop.Run(e.Request.Context(), history, emitEv)
+	turn := final[contextLen:]
+
+	// Runtime honesty check (verify, don't trust): a reply must not claim a
+	// capture that no tool performed. One self-repair pass gives the model
+	// the chance to actually call the tool; if it still claims without
+	// doing, the owner sees a plain note. The correction message is
+	// scaffolding — streamed context only, never persisted.
+	var checkNote string
+	if runErr == nil && !verify.CaptureSucceeded(turn) && verify.ClaimsCapture(verify.LastAssistantText(turn)) {
+		retryBase := append(final, llm.Message{Role: "user", Content: verify.Correction})
+		if final2, retryErr := loop.Run(e.Request.Context(), retryBase, emitEv); retryErr == nil {
+			turn = append(turn, final2[len(retryBase):]...)
+		}
+		if !verify.CaptureSucceeded(turn) && verify.ClaimsCapture(verify.LastAssistantText(turn)) {
+			checkNote = verify.Note
+		}
+	}
 
 	// Persist every turn the loop appended (assistant and tool rounds).
 	// Tool turns carry the call id; map it back to the tool's name from the
 	// preceding assistant turn so the record reads human.
 	toolNames := map[string]string{}
-	for _, m := range final[contextLen:] {
+	for _, m := range turn {
 		name := ""
 		if m.Role == "tool" {
 			name = toolNames[m.ToolCallID]
@@ -135,6 +155,13 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	}
 
 	fmt.Fprint(w, messageCloseHTML)
+	if checkNote != "" {
+		fmt.Fprintf(w,
+			`<div class="msg msg-balaur msg-with-avatar">%s<div class="msg-main"><div class="who">Balaur · check</div><div class="body">%s</div></div></div>`,
+			avatarBalaurHTML, html.EscapeString(checkNote))
+		_ = conversation.AppendOrigin(h.app, master.Id,
+			llm.Message{Role: "assistant", Content: checkNote}, "", "check")
+	}
 	flush()
 	_ = runErr // already surfaced in-stream; the fragment stays well-formed
 	return nil

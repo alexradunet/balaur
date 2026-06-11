@@ -66,6 +66,12 @@ database you own and can open with any SQLite tool.
   message per tick. Firing is idempotent across restarts; the first tick
   after downtime is the catch-up. The open chat polls nudges in live;
   `BALAUR_NUDGE=0` disables.
+- **Verify, don't trust:** a runtime check audits each reply's words
+  against its deeds. If the model claims a reminder or log was saved but
+  no capture tool succeeded that turn, it gets one bounded pass to
+  actually call the tool — and if it still claims without doing, a plain
+  *Balaur · check* note lands in the chat and the record. Built from real
+  live-test failures; trust the task card, not the words.
 - **The morning briefing:** once per local day, after the briefing hour
   (default 9, `BALAUR_BRIEFING_HOUR` overrides), Balaur opens the day —
   overdue items, today's commitments, habit streaks from the `entries`
@@ -172,6 +178,7 @@ internal/llm/      one model seam: kronk (local) + OpenAI-compatible HTTP
 internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries
 internal/tasks/    commitments: recurrence DSL + task verbs on the entries life log
+internal/verify/   runtime honesty check: words audited against tool deeds
 internal/heads/    sub-agent identities, grants, audit — the rule boundary
 internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
 internal/store/    shared PocketBase helpers (audit)
