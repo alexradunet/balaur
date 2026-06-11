@@ -1,24 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{template "page_head" .}}
   <title>{{.Title}} · Balaur</title>
-  <link rel="stylesheet" href="/static/basm.css">
-  <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">ᗅ Balaur</a>
-    <nav>
-      <a href="/tasks">Tasks</a>
-      <a href="/life">Life</a>
-      <a href="/models">Models</a>
-      <a href="/memory">Memory</a>
-      <a href="/skills">Skills</a>
-      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
-    </nav>
-  </header>
+  {{template "topbar" .}}
 
   <main>
     <div class="day-nav">
@@ -91,7 +78,8 @@
     <article class="journal-entry">
       <div class="journal-meta">
         <span class="tl-time">{{.Time}}</span>
-        <form hx-post="/ui/day/journal/{{.ID}}/drop?date={{$.Date}}" hx-target="#day-journal" hx-swap="outerHTML">
+        <form hx-post="/ui/day/journal/{{.ID}}/drop?date={{$.Date}}"
+              hx-target="#day-journal" hx-swap="outerHTML">
           <button class="btn btn-ghost btn-sm" type="submit">remove</button>
         </form>
       </div>
@@ -100,7 +88,9 @@
     {{end}}
   </div>
   {{end}}
-  <form class="journal-form" hx-post="/ui/day/{{.Date}}/journal" hx-target="#day-journal" hx-swap="outerHTML">
+  <form class="journal-form"
+        hx-post="/ui/day/{{.Date}}/journal"
+        hx-target="#day-journal" hx-swap="outerHTML">
     <textarea name="text" rows="3" placeholder="What stays with you from this day?" required></textarea>
     <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
   </form>

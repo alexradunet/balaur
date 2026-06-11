@@ -1,24 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{template "page_head" .}}
   <title>{{.Title}} · Balaur</title>
-  <link rel="stylesheet" href="/static/basm.css">
-  <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">ᗅ Balaur</a>
-    <nav>
-      <a href="/tasks">Tasks</a>
-      <a href="/life">Life</a>
-      <a href="/models">Models</a>
-      <a href="/memory">Memory</a>
-      <a href="/skills">Skills</a>
-      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
-    </nav>
-  </header>
+  {{template "topbar" .}}
 
   <main>
     <h1>{{.Title}}</h1>
@@ -40,31 +27,32 @@
       <h2 class="k-heading">Active <span class="k-count">{{len .Active}}</span></h2>
 
       <div class="k-controls">
-        <input class="k-search" type="search" name="q" value="{{.Query}}"
-               placeholder="Search {{.Title | lower}}…" autocomplete="off"
+        <input class="k-search"
+               type="search"
+               name="q"
+               value="{{.Query}}"
+               placeholder="Search {{.Title | lower}}…"
+               autocomplete="off"
                hx-get="/ui/knowledge/{{.Kind}}/grid"
                hx-trigger="input changed delay:250ms, search"
                hx-target="#k-active-grid"
                hx-include=".k-tab-active [name='category']">
         {{if .Categories}}
         <nav class="k-tabs" id="k-tabs">
+          {{/* Tab clicks are handled by basm.js; no inline selectTab() needed */}}
           <a class="k-tab{{if not .Category}} k-tab-active{{end}}"
-             hx-get="/ui/knowledge/{{.Kind}}/grid" hx-target="#k-active-grid"
-             hx-include=".k-search" hx-on:click="selectTab(this)"
-             href="/memory">all<input type="hidden" name="category" value=""></a>
+             hx-get="/ui/knowledge/{{.Kind}}/grid"
+             hx-target="#k-active-grid"
+             hx-include=".k-search"
+             href="/{{.Kind}}">all<input type="hidden" name="category" value=""></a>
           {{range $c := .Categories}}
           <a class="k-tab{{if eq $c $.Category}} k-tab-active{{end}}"
-             hx-get="/ui/knowledge/{{$.Kind}}/grid?category={{$c}}" hx-target="#k-active-grid"
-             hx-include=".k-search" hx-on:click="selectTab(this)"
-             href="/memory?category={{$c}}">{{$c}}<input type="hidden" name="category" value="{{$c}}"></a>
+             hx-get="/ui/knowledge/{{$.Kind}}/grid?category={{$c}}"
+             hx-target="#k-active-grid"
+             hx-include=".k-search"
+             href="/{{$.Kind}}?category={{$c}}">{{$c}}<input type="hidden" name="category" value="{{$c}}"></a>
           {{end}}
         </nav>
-        <script>
-          function selectTab(el) {
-            for (const t of document.querySelectorAll('.k-tab')) t.classList.remove('k-tab-active');
-            el.classList.add('k-tab-active');
-          }
-        </script>
         {{end}}
       </div>
 

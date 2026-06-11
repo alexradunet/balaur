@@ -140,8 +140,12 @@ law for every edit.
    Every changed line must trace to the goal.
 4. Prove it: `gofmt -l .` (must be empty), `go vet ./...`,
    `go test ./...`, then `CGO_ENABLED=0 go build -o balaur.new .` — all
-   from the source dir, all through the bash tool. A failure means fix
-   and re-run; never report success without these deeds in this turn.
+   from the source dir, all through the bash tool. Scrub your own gates
+   from the test env — your session exports BALAUR_OS_ACCESS=1 and
+   friends, which gate-default tests must not inherit: run
+   `env -u BALAUR_OS_ACCESS -u BALAUR_SOURCE -u BALAUR_MAX_STEPS go test ./...`.
+   A failure means fix and re-run — read it before blaming your change;
+   never report success without these deeds in this turn.
 5. Harness-verify the candidate binary like an outsider would: run
    `./balaur.new --dir $(mktemp -d) self` and the relevant commands; for
    behavior changes, script scripts/fake-model.py and drive
