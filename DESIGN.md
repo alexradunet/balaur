@@ -14,7 +14,7 @@ web UI, and branded copy in the Go/PocketBase/HTMX shape.
 | Identity | brand essence, character, heads, voice, messaging | this file |
 | Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
 | Product UI | HTMX + `html/template` pages served by the `balaur` binary | `web/templates/` |
-| Marks & sprites | crest, logo, avatar sprite sheets | `web/static/` |
+| Marks & avatars | crest, avatar library (soul + Balaur heads) | `web/static/` |
 
 If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
 The CSS custom properties in that file are the canonical token set; templates
@@ -117,14 +117,17 @@ reflection in the briefing · day pages (/day/{date}): the owner's journal
 only), the day's recap with transcript expand, completions, and logs —
 linked from calendar cells and recap day cards · a runtime honesty check:
 capture claims without a successful tool call trigger one self-repair
-pass, then an owner-visible origin-tagged check note.
+pass, then an owner-visible origin-tagged check note · a 16-option soul
+avatar picker in the chatbar (`/ui/settings/avatar`, stored in
+`owner_settings`) · a 16-personality Balaur head library under
+`web/static/avatars/balaur-01..16.png`.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client ·
-owner avatar picker (soul-male/soul-female selection setting) · animated
-avatar sprite frames (blink/talk) · gold Balaur head medallion
-(`web/static/logo.png`).
+gold Balaur head medallion (`web/static/logo.png`) · per-head avatar
+assignment (`balaur_avatar` key on head records, referencing `balaur-01`…`balaur-16`) ·
+light/dark theme toggle button in the topbar.
 
 ## 4. Visual system
 
@@ -235,13 +238,15 @@ mono uppercase.
   meantime. The thinking state is `--teal`, the assistant nameplate
   `--gold`, the user hue `--indigo`.
 - **Activity is shown by light, not chrome:** while Balaur thinks or works,
-  the avatar breathes a teal glow (`basm-glow` keyframes, driven by the
-  `msg-pending` class and the `data-state="thinking" / "working"` hooks).
-  All animation respects `prefers-reduced-motion`.
+  the avatar breathes a teal glow (`basm-glow` keyframes on `box-shadow`,
+  driven by the `msg-pending` class and the `data-state="thinking"/"working"`
+  hooks). No sprite-sheet animation; the static PNG is sufficient — CSS glow
+  carries the state signal. All animation respects `prefers-reduced-motion`.
 - Tool/OS-access events render as bordered, mono-typeset event rows — the
   audit trail is part of the UI language, visible, never hidden. The tool
-  glyph (`toolIcon` template helper) is bare teal typography inside the
-  row, not a boxed widget — the row's border already provides the frame.
+  glyph (`toolIcon` template helper / `toolGlyph()` in `chat.go`) is bare
+  teal typography inside the row, not a boxed widget — the row's border
+  already provides the frame.
 - Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
   visible focus states consistent with the palette.
 
@@ -266,33 +271,103 @@ per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
 
 ### Marks, avatars, imagery
 
+#### Crest and logo
+
 - `web/static/crest.png` — the owner's crest: a three-headed amber balaur
   holding a glowing teal orb and a tome, framed by its own folk-diamond
   border (the frame is part of the artwork). 512px, palette-quantized.
   Used borderless in the topbar brand (34px) and the empty-chat hearth.
-- `web/static/logo.png` — gold Balaur head medallion: **roadmap**, not in
-  the repo yet.
-- Render raster marks with `image-rendering: pixelated`.
-- **Avatar rules:** every avatar derives from the crest's world — same
-  palette, same hi-bit pixel rendering, matched grain — and is drawn in
-  **strict side profile facing right** (toward its words in the chat
-  gutter). Art ships borderless on a flat `--bg`-matching background;
-  transparent backgrounds are preferred when possible (they enable
-  silhouette glows). Mirroring, when ever needed, is CSS
-  (`transform: scaleX(-1)`), never new art.
-- Avatar sprite sheets are 3×3, 9-frame, 256×256 PNG per entity under
-  `web/static/avatars/` (frame 0 = idle):
-  - `balaur.png` — the dragon head (the crest's central head as a bust).
-  - `soul-male.png` / `soul-female.png` — the owner's two soul portraits
-    (auburn-bearded man · auburn-braided woman, folk-embroidered ie, teal
-    gem pendant). `soul.png` is the **active-soul slot** templates point
-    at; the owner avatar picker (roadmap) will write the choice here.
-  - Current sheets carry 9 identical frames — the CSS animation mechanics
-    are live, real blink/talk frames are roadmap.
-- The central image is a pixel-art Balaur head over a glowing teal data-orb:
-  storybook woodcut crossed with retro pixel art.
-- Icons are bare glyphs (`⌂ ✉ ◇ ⛨ ⟳ ⌥`) set in mono type and accent color —
-  never boxed, never detailed line icons.
+- `web/static/logo.png` — gold Balaur head medallion for the favicon:
+  **roadmap**, not in the repo yet.
+
+#### Avatar rules
+
+Every avatar in this system:
+- Derives from the crest's world — same crest palette, same hi-bit pixel
+  rendering, matched grain.
+- Drawn in **strict side profile facing right** (toward its words in the
+  chat gutter). Mirroring, if ever needed, is CSS (`transform: scaleX(-1)`),
+  never new art.
+- Ships as a **single static 256×256 PNG**, borderless, on a flat
+  `--bg`-matching background (`#101314`). Transparent backgrounds are
+  preferred for future silhouette-glow work.
+- Render with `image-rendering: pixelated`.
+- Activity state (thinking/working) is communicated through CSS glow
+  (`basm-glow` breathing animation on `box-shadow`), never frame animation.
+  There are no sprite sheets; the simplest thing that reads is enough.
+
+#### Soul avatar library — 16 options
+
+Stored as `soul-01.png` … `soul-16.png` under `web/static/avatars/`.
+`soul.png` is the **active-soul slot** — templates and `chat.go` always
+reference this file. The owner picker writes the choice to `owner_settings`
+and the server resolves the URL dynamically; `soul.png` stays as a stable
+fallback equal to `soul-01`.
+
+The picker lives in the chatbar as `<details class="avatar-picker">` — a
+4×4 grid of 48px thumbnails, one HTMX form per option, POST to
+`/ui/settings/avatar`. Selection takes effect immediately and persists.
+
+**Group 1 — Basm folk world:**
+
+| Key | Label | Character |
+|---|---|---|
+| `soul-01` | Him | Auburn-bearded man, folk-embroidered ie, teal gem |
+| `soul-02` | Her | Auburn-braided woman, folk-embroidered blouse, teal gem |
+| `soul-03` | Elder | Silver-haired elder, wise lined face, folk collar |
+| `soul-04` | Youth | Dark-haired young adventurer, eager expression |
+| `soul-05` | Maker | Stocky craftsperson, leather apron, folk motif strap |
+| `soul-06` | Cyclops | Single amber eye, gentle giant, folk tunic |
+| `soul-07` | Gnome | Pointed hat with copper stitching, white-bearded, merry |
+| `soul-08` | Ogre | Broad, warty, tusk, loveable oaf, folk tunic |
+
+**Group 2 — Romanian mythological creatures:**
+
+| Key | Label | Character |
+|---|---|---|
+| `soul-09` | Strigoi | Undead vampire, pale gaunt face, red eye, funeral folk shirt |
+| `soul-10` | Zmeu | Dragon-giant hybrid, reptilian scales, slit-pupil eye |
+| `soul-11` | Iele | Fairy spirit, silver-white flowing hair, moon-glow eye |
+| `soul-12` | Muma | Muma Pădurii, wild-haired forest crone, bark-textured skin |
+| `soul-13` | Căpcăun | Dog-headed monster, hound muzzle in profile, folk tunic |
+| `soul-14` | Solomonar | Weather wizard, long white beard, runic hat, storm orb pendant |
+| `soul-15` | Vâlvă | Mine-spirit gnome, stone-textured skin, gem-braided beard |
+| `soul-16` | Pricolici | Mid-transformation werewolf, half-human half-wolf profile |
+
+#### Balaur head library — 16 personalities
+
+Stored as `balaur-01.png` … `balaur-16.png` under `web/static/avatars/`.
+`balaur.png` is the **active Balaur slot** — templates always reference it;
+it defaults to `balaur-01` (Wise). Focused sub-heads will be assigned a
+head variant via a `balaur_avatar` field on the head record (roadmap:
+per-head avatar assignment).
+
+| Key | Personality | Visual character |
+|---|---|---|
+| `balaur-01` | **Wise** | Warm amber-gold, swept horns, calm intelligent eyes (default) |
+| `balaur-02` | **Ancient** | Pale bone-white, cracked ceremonial horns, deep weary eyes |
+| `balaur-03` | **Guardian** | Copper-rust, battle scar, thick protective horns, jaw set |
+| `balaur-04` | **Scholar** | Medium gold, spectacle-like eye markings, slim precise horns |
+| `balaur-05` | **Wild** | Vivid emerald green, wild jagged neck crest, bright eyes |
+| `balaur-06` | **Storm** | Dark charcoal, silver-lightning streaks, jagged horns |
+| `balaur-07` | **Night** | Near-black midnight, moon-silver edges, crescent horn |
+| `balaur-08` | **Young** | Bright saturated amber, small nub horns, wide eager eyes |
+| `balaur-09` | **Ember** | Deep red-orange, ember-glow copper highlights, fierce |
+| `balaur-10` | **Frost** | Silver-white, icy teal accents, cool analytical expression |
+| `balaur-11` | **Healer** | Soft golden, teal glow around the eye, kind expression |
+| `balaur-12` | **Trickster** | Asymmetric sly grin, playful irregular horns, clever glint |
+| `balaur-13` | **Dreamer** | Pale golden-lavender, star-like markings, dreamy half-closed eyes |
+| `balaur-14` | **Forest** | Deep forest green, leaf-vein markings, gnarled branch horns |
+| `balaur-15` | **Dawn** | Brilliant amber-rose, bright sunrise tones, hopeful eyes |
+| `balaur-16` | **Sage** | Deep teal, copper folk-diamond neck markings, ceremonial horns |
+
+#### Icons
+
+Icons are bare glyphs (`⌂ ✉ ◇ ⛨ ⟳ ⌥ ◈ ✎ ⌕ ◻ ≡`) set in `--font-mono`
+and `--teal` color — never boxed, never detailed line icons. Tool-call rows
+use the `toolIcon` template helper (`toolGlyph()` in `chat.go`) to map tool
+names to single Unicode characters. The row's border provides the frame;
+the glyph is pure typography.
 
 ## 5. Quick checklist
 
@@ -310,4 +385,5 @@ For any Balaur-branded surface:
 - At least one restrained folk/pixel motif per surface: stitch line, square
   notch, folk band, or pixel crest.
 - Art ships borderless; frames belong to HTML context, never to assets.
+- Avatars: static 256px PNG, side profile facing right, CSS glow for state.
 - Keep assets local; no third-party CDNs in the product UI.
