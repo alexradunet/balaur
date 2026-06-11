@@ -8,14 +8,13 @@ import (
 	"io/fs"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
 
@@ -79,10 +78,9 @@ func Register(se *core.ServeEvent) error {
 }
 
 type handlers struct {
-	app         core.App
-	tmpl        *template.Template
-	localClient *llm.KronkClient
-	localMu     sync.Mutex
+	app     core.App
+	tmpl    *template.Template
+	clients turn.ClientSource
 }
 
 func (h *handlers) render(e *core.RequestEvent, name string, data any) error {

@@ -26,11 +26,13 @@ func TaskTools(app core.App) []agent.Tool {
 	}
 }
 
-const dueFormats = "RFC3339, YYYY-MM-DDTHH:MM (box-local), or YYYY-MM-DD"
+// DueFormats names the accepted time formats — the spec promised to the
+// model and to CLI flags alike (one source of truth).
+const DueFormats = "RFC3339, YYYY-MM-DDTHH:MM (box-local), or YYYY-MM-DD"
 
-// parseDue accepts the formats the spec promises the model. Date-only input
+// ParseDue accepts the formats the spec promises the model. Date-only input
 // lands at 09:00 box-local; dateOnly reports it so the reply can say so.
-func parseDue(s string) (t time.Time, dateOnly bool, err error) {
+func ParseDue(s string) (t time.Time, dateOnly bool, err error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return time.Time{}, false, nil
@@ -46,7 +48,7 @@ func parseDue(s string) (t time.Time, dateOnly bool, err error) {
 	if d, err := time.ParseInLocation("2006-01-02", s, time.Local); err == nil {
 		return time.Date(d.Year(), d.Month(), d.Day(), 9, 0, 0, 0, time.Local), true, nil
 	}
-	return time.Time{}, false, fmt.Errorf("due: want %s, got %q", dueFormats, s)
+	return time.Time{}, false, fmt.Errorf("due: want %s, got %q", DueFormats, s)
 }
 
 func fmtDue(t time.Time) string {
@@ -57,11 +59,11 @@ func taskAddTool(app core.App) agent.Tool {
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("task_add",
 			"Save a commitment the owner voiced: a to-do, a deadline, or a repeating practice. "+
-				"Give due a concrete time when one is implied ("+dueFormats+"). "+
+				"Give due a concrete time when one is implied ("+DueFormats+"). "+
 				"Recurring tasks need due as the first occurrence.",
 			obj(map[string]any{
 				"title":           str("Short imperative title, e.g. 'Call the notary'."),
-				"due":             str("Optional due time: " + dueFormats + ". Omit for someday items."),
+				"due":             str("Optional due time: " + DueFormats + ". Omit for someday items."),
 				"recur":           map[string]any{"type": "string", "description": "Optional recurrence: daily | every:<N>d | weekly:<mon,thu,...> | monthly:<1-31>. Empty for one-offs."},
 				"recur_from_done": map[string]any{"type": "boolean", "description": "true for habits: next occurrence counts from completion, not from the schedule."},
 				"notes":           str("Optional context worth keeping with the task."),
@@ -77,7 +79,7 @@ func taskAddTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("task_add: bad arguments: %w", err)
 			}
-			due, dateOnly, err := parseDue(args.Due)
+			due, dateOnly, err := ParseDue(args.Due)
 			if err != nil {
 				return "", fmt.Errorf("task_add: %w", err)
 			}
@@ -246,7 +248,7 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			"Push a task's nudge to a later time the owner chose.",
 			obj(map[string]any{
 				"id":    str("Task id from task_list."),
-				"until": str("When to be reminded instead: " + dueFormats + "."),
+				"until": str("When to be reminded instead: " + DueFormats + "."),
 			}, "id", "until")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {
@@ -256,9 +258,9 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("task_snooze: bad arguments: %w", err)
 			}
-			until, _, err := parseDue(args.Until)
+			until, _, err := ParseDue(args.Until)
 			if err != nil || until.IsZero() {
-				return "", fmt.Errorf("task_snooze: until is required (%s)", dueFormats)
+				return "", fmt.Errorf("task_snooze: until is required (%s)", DueFormats)
 			}
 			if !until.After(time.Now()) {
 				return "", fmt.Errorf("task_snooze: %s is not in the future", fmtDue(until))

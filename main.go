@@ -14,6 +14,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
+	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/recap"
@@ -30,6 +31,10 @@ func main() {
 		Automigrate: false,
 	})
 
+	// The machine-facing gateway: balaur chat/task/memory/… for external
+	// harnesses (JSON out). Same internal packages as the web UI.
+	cli.Register(app, app.RootCmd)
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		if err := web.Register(se); err != nil {
 			return err
@@ -43,6 +48,9 @@ func main() {
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
 	}
+	// CLI commands report failures via their JSON contract; PocketBase's
+	// Execute discards RunE errors, so the exit status is read back here.
+	os.Exit(cli.ExitCode())
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve

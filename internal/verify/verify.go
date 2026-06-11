@@ -21,6 +21,11 @@ var captureTools = map[string]bool{
 	"log_entry": true, "entry_drop": true, "journal_write": true,
 }
 
+// IsCaptureTool reports whether name is a capture verb. Exposed for
+// callers auditing persisted turns, where tool rows carry the tool's name
+// rather than the in-memory call ids CaptureSucceeded works from.
+func IsCaptureTool(name string) bool { return captureTools[name] }
+
 // Correction is the synthetic turn fed back to the model for one
 // self-repair pass. It is scaffolding, not conversation — callers must not
 // persist it.

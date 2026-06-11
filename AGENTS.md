@@ -38,6 +38,11 @@ lean and high-signal — add a rule only when it changes a real decision.
   product surface. Balaur's face is its own HTMX UI under `/`.
 - **No MCP.** Capability is exposed as Go tools in the agent loop, vault
   entries, or Markdown skills — not as MCP servers.
+- **Gateways adapt; they never re-implement.** Every surface that carries
+  an owner turn — web today, the CLI, future messengers — calls the shared
+  pipeline in `internal/turn` and only renders its events in its own
+  medium. Behavior (context assembly, the loop, the honesty check,
+  persistence, model resolution) lives below the gateway line, once.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
 - Local inference goes through Kronk (llama.cpp via purego — still
@@ -53,10 +58,11 @@ lean and high-signal — add a rule only when it changes a real decision.
   migrations, mount routes, start the app. Reusable or testable logic lives
   in `internal/*` packages.
 - **Small, single-purpose packages.** `internal/agent` (loop),
-  `internal/llm` (provider interface + clients), `internal/tools` (agent
-  tools), `internal/web` (HTMX handlers + templates), `internal/heads`
-  (sub-agent identity + grants), `migrations` (schema). Treat a package past
-  ~500 lines as a smell to decompose, not extend.
+  `internal/llm` (provider interface + clients), `internal/turn` (the
+  shared turn pipeline + model resolution), `internal/tools` (agent
+  tools), `internal/web` (HTMX gateway), `internal/cli` (JSON gateway),
+  `internal/heads` (sub-agent identity + grants), `migrations` (schema).
+  Treat a package past ~500 lines as a smell to decompose, not extend.
 - **One PocketBase seam.** Everything that touches PocketBase internals
   (collections, records, tokens, rules) goes through `internal/store`.
   PocketBase is pre-1.0 with breaking-change precedent (v0.23 rewrote the
