@@ -114,11 +114,11 @@ func Register(se *core.ServeEvent) error {
 	return nil
 }
 
-// setAvatarPref saves the owner's soul-avatar preference ("male" / "female")
-// and returns an updated chatbar so the change takes effect immediately.
+// setAvatarPref saves the owner's soul-avatar preference and returns an
+// updated chatbar so the change takes effect immediately.
 func (h *handlers) setAvatarPref(e *core.RequestEvent) error {
 	pref := e.Request.FormValue("soul_avatar")
-	if pref != "male" && pref != "female" {
+	if !store.ValidSoulAvatarKey(pref) {
 		return e.BadRequestError("invalid avatar preference", nil)
 	}
 	if err := store.SetOwnerSetting(h.app, "soul_avatar", pref); err != nil {

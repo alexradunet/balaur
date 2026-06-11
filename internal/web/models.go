@@ -29,9 +29,17 @@ type homeData struct {
 	HasRecap        bool
 	DevSeed         bool
 	ChatbarOOB      bool
-	NowMillis       int64  // nudge-poll cursor: only messages after page load
-	SoulAvatarURL   string // resolved from owner_settings soul_avatar preference
-	SoulAvatarPref  string // "male" | "female" — for the picker radio state
+	NowMillis       int64         // nudge-poll cursor: only messages after page load
+	SoulAvatarURL   string        // resolved from owner_settings soul_avatar preference
+	AvatarOptions   []AvatarOption // all chooseable soul avatars for the picker
+}
+
+// AvatarOption is one entry in the soul avatar picker.
+type AvatarOption struct {
+	Key    string
+	Label  string
+	URL    string
+	Active bool
 }
 
 type modelsPageData struct {
@@ -59,8 +67,8 @@ func (h *handlers) homeData() (homeData, error) {
 	}
 	data.ModelChoices = choices
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
-	data.SoulAvatarPref = store.GetOwnerSetting(h.app, "soul_avatar", "male")
 	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
+	data.AvatarOptions = buildAvatarOptions(h.app)
 	if active.Key == "" {
 		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
 		data.ModelHint = llm.DefaultChatModelDownloadCommand(h.app.DataDir())
@@ -376,4 +384,38 @@ func (h *handlers) downloadDefaultLocalModel(ctx context.Context) (string, error
 	}
 	ok = true
 	return target, nil
+}
+
+// buildAvatarOptions returns the full roster of chooseable soul avatars with
+// the currently active one flagged. The order and labels are part of the UI
+// contract; adding a new avatar means adding an entry here.
+func buildAvatarOptions(app core.App) []AvatarOption {
+	pref := store.GetOwnerSetting(app, "soul_avatar", "soul-01")
+	// Normalise legacy keys so the active state shows correctly for old installs.
+	switch pref {
+	case "male":
+		pref = "soul-01"
+	case "female":
+		pref = "soul-02"
+	}
+	roster := []struct{ key, label string }{
+		{"soul-01", "Him"},
+		{"soul-02", "Her"},
+		{"soul-03", "Elder"},
+		{"soul-04", "Youth"},
+		{"soul-05", "Maker"},
+		{"soul-06", "Cyclops"},
+		{"soul-07", "Gnome"},
+		{"soul-08", "Ogre"},
+	}
+	opts := make([]AvatarOption, len(roster))
+	for i, r := range roster {
+		opts[i] = AvatarOption{
+			Key:    r.key,
+			Label:  r.label,
+			URL:    "/static/avatars/" + r.key + ".png",
+			Active: r.key == pref,
+		}
+	}
+	return opts
 }

@@ -237,26 +237,20 @@
     </form>
   </details>
 
-  <!-- Avatar picker — choose which soul portrait appears in chat -->
+  <!-- Avatar picker — 8 soul portraits the owner can choose from -->
   <details class="avatar-picker">
     <summary>Your avatar</summary>
     <div class="avatar-choice-list">
+      {{range .AvatarOptions}}
       <form hx-post="/ui/settings/avatar" hx-target="#chatbar" hx-swap="outerHTML">
-        <input type="hidden" name="soul_avatar" value="male">
-        <button class="avatar-choice {{if eq .SoulAvatarPref "male"}}avatar-choice-active{{end}}"
-                type="submit" {{if eq .SoulAvatarPref "male"}}aria-current="true" disabled{{end}}>
-          <img class="px" src="/static/avatars/soul-male.png" alt="Male portrait" decoding="async">
-          <span>Him</span>
+        <input type="hidden" name="soul_avatar" value="{{.Key}}">
+        <button class="avatar-choice{{if .Active}} avatar-choice-active{{end}}"
+                type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+          <img class="px" src="{{.URL}}" alt="" decoding="async">
+          <span>{{.Label}}</span>
         </button>
       </form>
-      <form hx-post="/ui/settings/avatar" hx-target="#chatbar" hx-swap="outerHTML">
-        <input type="hidden" name="soul_avatar" value="female">
-        <button class="avatar-choice {{if eq .SoulAvatarPref "female"}}avatar-choice-active{{end}}"
-                type="submit" {{if eq .SoulAvatarPref "female"}}aria-current="true" disabled{{end}}>
-          <img class="px" src="/static/avatars/soul-female.png" alt="Female portrait" decoding="async">
-          <span>Her</span>
-        </button>
-      </form>
+      {{end}}
     </div>
   </details>
 </section>
