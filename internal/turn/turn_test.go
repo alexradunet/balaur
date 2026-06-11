@@ -145,7 +145,7 @@ func TestToolsRespectsOSAccessGate(t *testing.T) {
 	}
 
 	got := names()
-	for _, want := range []string{"task_add", "remember", "log_entry", "journal_write"} {
+	for _, want := range []string{"task_add", "remember", "log_entry", "journal_write", "self"} {
 		if !got[want] {
 			t.Errorf("default tool set missing %q", want)
 		}
@@ -157,6 +157,22 @@ func TestToolsRespectsOSAccessGate(t *testing.T) {
 	t.Setenv("BALAUR_OS_ACCESS", "1")
 	if !names()["bash"] {
 		t.Error("BALAUR_OS_ACCESS=1 must enable the OS tools")
+	}
+}
+
+func TestMaxStepsEnvRaisesTheCap(t *testing.T) {
+	app := storetest.NewApp(t)
+	t.Setenv("BALAUR_MAX_STEPS", "1")
+	// Two tool rounds scripted against a cap of one: the loop must stop
+	// after the first round with the exceeded error.
+	client := &fakeClient{replies: []fakeReply{
+		{calls: []llm.ToolCall{{ID: "c1", Name: "task_list", Args: `{}`}}},
+		{calls: []llm.ToolCall{{ID: "c2", Name: "task_list", Args: `{}`}}},
+		{text: "never reached"},
+	}}
+	_, err := Run(context.Background(), app, client, "list everything twice", nil)
+	if err == nil || !strings.Contains(err.Error(), "exceeded 1 tool rounds") {
+		t.Errorf("cap of 1 must trip the loop, got %v", err)
 	}
 }
 
