@@ -47,9 +47,9 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
 	// Resolve per-turn dynamic values — owner preferences from owner_settings.
-	soulHTML      := soulAvatarHTML(store.SoulAvatarURL(h.app))
-	balaHTML      := balaurAvatarHTML(store.BalaurAvatarURL(h.app))
-	ownerName     := store.OwnerName(h.app)
+	soulHTML := soulAvatarHTML(store.SoulAvatarURL(h.app))
+	balaHTML := balaurAvatarHTML(store.BalaurAvatarURL(h.app))
+	ownerName := store.OwnerName(h.app)
 	assistantOpen := `<div class="msg msg-balaur msg-with-avatar">` + balaHTML +
 		`<div class="msg-main"><div class="who">Balaur</div><div class="body">`
 
