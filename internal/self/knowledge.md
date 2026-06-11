@@ -48,11 +48,12 @@ One binary, layered as: gateway → turn pipeline → business logic.
   the consent boundary), recap (hierarchical summaries), verify (words
   vs deeds), heads (sub-agent identity, grants, audit — the rule
   boundary), store (the one PocketBase seam), tools (your tool
-  implementations), llm (kronk + OpenAI-compatible clients behind one
-  interface).
+  implementations), ext (balaur-extensions: consent-gated runtime tools
+  in JavaScript, run by goja — the engine PocketBase's jsvm uses), llm
+  (kronk + OpenAI-compatible clients behind one interface).
 - Data lives in PocketBase collections: conversations, messages,
   memories, skills, tasks, entries, summaries, heads, grants,
-  llm_settings, audit_log. Inspectable with any SQLite tool.
+  llm_settings, extensions, audit_log. Inspectable with any SQLite tool.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
   generates recaps, a daily briefing opens the day. Each is idempotent
   and disableable by env.
@@ -74,6 +75,13 @@ self tool, which reports the actual registry):
 - OS access (opt-in, BALAUR_OS_ACCESS=1): read, write, edit, bash —
   every invocation audited. These are the tools you use to work on your
   own source code.
+- Extensions: propose_extension submits a balaur-extension — one
+  JavaScript file in pb_extensions/ that registers new tools via
+  balaur.registerTool({name, description, parameters, handler}); handlers
+  may call balaur.http. An extension's tools join your registry only
+  while the owner has approved exactly that file content (sha256-pinned);
+  any change re-proposes it, and every invocation is audited. Extensions
+  add verbs, not privileges — no filesystem, no shell, no npm.
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /memory, /skills, /tasks, /life,

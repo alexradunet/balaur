@@ -53,6 +53,7 @@ func Register(app core.App, root *cobra.Command) {
 		verifyCmd(app),
 		modelCmd(app),
 		selfCmd(app),
+		extCmd(app),
 	)
 }
 
