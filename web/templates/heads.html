@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "page_head" .}}
+  <title>Heads · Balaur</title>
+</head>
+<body>
+  {{template "topbar" .}}
+
+  <main class="profile-page">
+    <h1>Heads</h1>
+    <p class="profile-lede">Focused sub-agents that grow from the main Balaur. Each head can carry its own Balaur personality.</p>
+    <div class="stitch"></div>
+
+    {{if not .Heads}}
+    <article class="profile-card">
+      <p class="profile-hint">No active heads right now. A new head wakes when a focused branch opens.</p>
+    </article>
+    {{else}}
+    {{range .Heads}}
+      {{template "head_card" .}}
+    {{end}}
+    {{end}}
+
+  </main>
+</body>
+</html>
+
+{{define "head_card"}}
+{{$h := .}}
+<article class="profile-card" id="head-{{.ID}}">
+  <div class="head-meta">
+    <span class="head-avatar-preview"><img class="px" src="{{.AvatarURL}}" alt="" decoding="async"></span>
+    <div class="head-info">
+      <h2 class="profile-card-title">{{.Name}}</h2>
+      {{if .Purpose}}<p class="profile-hint" style="margin:0">{{.Purpose}}</p>{{end}}
+      <div class="head-status-row">
+        <span class="tag">{{.Status}}</span>
+        {{if .Expires}}<span class="head-expires">expires {{.Expires}}</span>{{end}}
+      </div>
+    </div>
+  </div>
+  <details class="avatar-picker head-avatar-picker">
+    <summary>Choose personality</summary>
+    <div class="avatar-choice-list profile-avatar-grid" style="max-height:none">
+      {{range .BalaurOptions}}
+      <form hx-post="/ui/heads/{{$h.ID}}/avatar"
+            hx-target="#head-{{$h.ID}}"
+            hx-swap="outerHTML">
+        <input type="hidden" name="balaur_avatar" value="{{.Key}}">
+        <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
+                type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+          <img class="px" src="{{.URL}}" alt="" decoding="async">
+          <span>{{.Label}}</span>
+        </button>
+      </form>
+      {{end}}
+    </div>
+  </details>
+</article>
+{{end}}

@@ -23,10 +23,25 @@ import (
 // ErrDenied is returned when a head lacks a grant for the requested access.
 var ErrDenied = errors.New("heads: access denied")
 
+// SpawnOption is a functional option for Spawn.
+type SpawnOption func(*core.Record)
+
+// WithAvatar assigns a Balaur head personality (e.g. "balaur-05" Wild) to the
+// spawned head. When a sub-head chat UI renders the conversation, it will use
+// this avatar instead of the owner's default Balaur head.
+// See store.BalaurAvatarMap for valid keys (balaur-01…balaur-16).
+func WithAvatar(key string) SpawnOption {
+	return func(r *core.Record) {
+		if key != "" {
+			r.Set("balaur_avatar", key)
+		}
+	}
+}
+
 // Spawn creates a head with the given grants and returns the head record
 // plus a short-lived static auth token for it. The token is how the head's
 // identity travels through the system; it is never persisted.
-func Spawn(app core.App, name, purpose string, ttl time.Duration, grants []Grant) (*core.Record, string, error) {
+func Spawn(app core.App, name, purpose string, ttl time.Duration, grants []Grant, opts ...SpawnOption) (*core.Record, string, error) {
 	col, err := app.FindCollectionByNameOrId("heads")
 	if err != nil {
 		return nil, "", fmt.Errorf("finding heads collection: %w", err)
@@ -41,6 +56,12 @@ func Spawn(app core.App, name, purpose string, ttl time.Duration, grants []Grant
 	// log in (PasswordAuth disabled), but the fields must be set.
 	head.SetEmail(fmt.Sprintf("head-%d@balaur.local", time.Now().UnixNano()))
 	head.SetRandomPassword()
+
+	// Apply options before save so all fields land in one write.
+	for _, opt := range opts {
+		opt(head)
+	}
+
 	if err := app.Save(head); err != nil {
 		return nil, "", fmt.Errorf("saving head: %w", err)
 	}
