@@ -13,7 +13,7 @@ web UI, and branded copy in the Go/PocketBase/HTMX shape.
 |---|---|---|
 | Identity | brand essence, character, heads, voice, messaging | this file |
 | Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
-| Product UI | HTMX + `html/template` pages served by the `balaur` binary | `internal/web/templates/` |
+| Product UI | HTMX + `html/template` pages served by the `balaur` binary | `web/templates/` |
 | Marks & sprites | crest, logo, avatar sprite sheets | `web/static/` |
 
 If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
@@ -121,7 +121,10 @@ pass, then an owner-visible origin-tagged check note.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
-multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client.
+multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client ·
+owner avatar picker (soul-male/soul-female selection setting) · animated
+avatar sprite frames (blink/talk) · gold Balaur head medallion
+(`web/static/logo.png`).
 
 ## 4. Visual system
 
@@ -140,18 +143,24 @@ multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client.
    accents, not decoration overload.
 7. **New branch, new head** — growth is depicted as another Balaur head on
    the same body, never a plugin tile.
+8. **Art ships borderless** — marks, avatars, and glyphs carry no baked-in
+   or CSS frame of their own. Frames are a context decision made in HTML:
+   a card's border belongs to the card, never to the art inside it.
 
 ### Color tokens
 
-Canonical in `web/static/basm.css`. Reference copy:
+Canonical in `web/static/basm.css`. Reference copy (Forest at Dusk):
 
 ```css
 :root {
+  color-scheme: dark light; /* tokens resolve via light-dark() */
+
+  /* dark (default identity) */
   --bg: #0b1310;        --surface: #11201b;
   --surface-2: #172a23; --surface-3: #1f352c;
-  --fg: #eae4d6;        --on-surface: #f5f0e6;
-  --muted: #93a59b;     --hair: #233530;
-  --outline-2: #1a2823;
+  --fg: #ede8d8;        --on-surface: #f5f0e6;
+  --muted: #96a090;     --hair: #243531;
+  --outline-2: #1b2923;
 
   --gold: #f2c14e;      --gold-deep: #b8862a;
   --ember: #ff6a2b;     --ember-deep: #c2410c;
@@ -159,12 +168,15 @@ Canonical in `web/static/basm.css`. Reference copy:
   --teal-deep: #0d9488; --folkred: #e0563b;
   --indigo: #a8c0f0;    --indigo-deep: #5b82e4;
   --violet: #c084fc;    --good: #7fcf6a;
-  --steel: #9db0a5;     --smoke: #566274;
+  --steel: #9db0a5;     --smoke: #566870;
 }
 ```
 
-Light theme (`:root.light`) exists but stays earthy and woven, not sterile —
-values live in `basm.css`.
+Theming is standard `light-dark()` with `color-scheme: dark light` —
+the OS preference applies automatically; `<html class="dark">` or
+`<html class="light">` force a mode. The light theme is warm fern-paper
+linen (`--bg: #f4efe4`, `--surface: #fdfaf3`), earthy and woven, not
+sterile — exact values live in `basm.css`.
 
 Usage: `--bg` page · `--surface` cards/bars · `--surface-2` tags/code ·
 `--ember` primary CTA, links, active states · `--ember-deep` hard shadows ·
@@ -176,13 +188,21 @@ user-role hue · status colors always pair with text labels, never color-only.
 
 ```css
 --font-display: 'Pixelify Sans', system-ui, sans-serif; /* hero, headings */
---font-pixel: 'Silkscreen', monospace;                  /* eyebrow, brand */
+--font-pixel: 'Silkscreen', monospace;                  /* brand nameplate + runes ONLY */
 --font-body: 'Work Sans', system-ui, sans-serif;        /* body copy */
---font-mono: 'JetBrains Mono', monospace;               /* meta, buttons, code */
+--font-mono: 'JetBrains Mono', monospace;               /* eyebrow, nav, meta, buttons, code */
 ```
 
-Self-host fonts under `web/static/fonts/`; no third-party font CDNs at
-runtime. Body 17px/1.6; nav/buttons/tags 11–13px mono uppercase.
+**Silkscreen is reserved for the brand nameplate and section runes** — at
+10–13px bitmap-style letterforms strain readability, so the functional UI
+layer (nav, tags, kickers, nameplates) uses `--font-mono`, which carries the
+same technical-craft energy at full legibility. Pixelify Sans stays for
+display sizes (20px+), where it reads comfortably.
+
+Fonts are self-hosted as latin-subset woff2 under `web/static/fonts/`
+(`pixelify-sans` · `silkscreen` · `work-sans` · `jetbrains-mono`); no
+third-party font CDNs at runtime. Body 17px/1.6; nav/buttons/tags 11–13px
+mono uppercase.
 
 ### Layout and motifs
 
@@ -209,10 +229,19 @@ runtime. Body 17px/1.6; nav/buttons/tags 11–13px mono uppercase.
 - Server renders complete HTML; HTMX swaps fragments. Design states
   (thinking, streaming, tool-running) are server-driven classes on
   fragments, not client-side framework state.
-- Streaming chat uses SSE; the thinking state is `--teal`, the assistant
-  nameplate `--gold`, the user hue `--indigo`.
+- Chat replies stream from the server as one chunked HTML fragment that
+  HTMX swaps in when the turn completes; the optimistic pending bubble
+  (client-rendered from a `<template>`) carries the thinking state in the
+  meantime. The thinking state is `--teal`, the assistant nameplate
+  `--gold`, the user hue `--indigo`.
+- **Activity is shown by light, not chrome:** while Balaur thinks or works,
+  the avatar breathes a teal glow (`basm-glow` keyframes, driven by the
+  `msg-pending` class and the `data-state="thinking" / "working"` hooks).
+  All animation respects `prefers-reduced-motion`.
 - Tool/OS-access events render as bordered, mono-typeset event rows — the
-  audit trail is part of the UI language, visible, never hidden.
+  audit trail is part of the UI language, visible, never hidden. The tool
+  glyph (`toolIcon` template helper) is bare teal typography inside the
+  row, not a boxed widget — the row's border already provides the frame.
 - Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
   visible focus states consistent with the palette.
 
@@ -237,20 +266,33 @@ per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
 
 ### Marks, avatars, imagery
 
-- `web/static/crest.png` — ornate square emblem (hero surfaces, icon).
-- `web/static/logo.png` — gold Balaur head medallion (top bar, favicon).
+- `web/static/crest.png` — the owner's crest: a three-headed amber balaur
+  holding a glowing teal orb and a tome, framed by its own folk-diamond
+  border (the frame is part of the artwork). 512px, palette-quantized.
+  Used borderless in the topbar brand (34px) and the empty-chat hearth.
+- `web/static/logo.png` — gold Balaur head medallion: **roadmap**, not in
+  the repo yet.
 - Render raster marks with `image-rendering: pixelated`.
+- **Avatar rules:** every avatar derives from the crest's world — same
+  palette, same hi-bit pixel rendering, matched grain — and is drawn in
+  **strict side profile facing right** (toward its words in the chat
+  gutter). Art ships borderless on a flat `--bg`-matching background;
+  transparent backgrounds are preferred when possible (they enable
+  silhouette glows). Mirroring, when ever needed, is CSS
+  (`transform: scaleX(-1)`), never new art.
 - Avatar sprite sheets are 3×3, 9-frame, 256×256 PNG per entity under
-  `web/static/avatars/` (frame 0 = idle). On the web they render as `<img>`
-  with pixelated scaling; CSS sprite-sheet animation may use frames 1–8.
+  `web/static/avatars/` (frame 0 = idle):
+  - `balaur.png` — the dragon head (the crest's central head as a bust).
+  - `soul-male.png` / `soul-female.png` — the owner's two soul portraits
+    (auburn-bearded man · auburn-braided woman, folk-embroidered ie, teal
+    gem pendant). `soul.png` is the **active-soul slot** templates point
+    at; the owner avatar picker (roadmap) will write the choice here.
+  - Current sheets carry 9 identical frames — the CSS animation mechanics
+    are live, real blink/talk frames are roadmap.
 - The central image is a pixel-art Balaur head over a glowing teal data-orb:
   storybook woodcut crossed with retro pixel art.
-- Icons are simple glyphs in square bordered boxes (`⌂ ✉ ◇ ⛨ ⟳ ⌥`), not
-  detailed line icons.
-
-> Note: the original crest/logo/sprite PNGs are not in this repository yet —
-> restore them from the previous Balaur work before shipping UI that needs
-> them. Until then, templates may use the glyph `ᗅ` placeholder mark.
+- Icons are bare glyphs (`⌂ ✉ ◇ ⛨ ⟳ ⌥`) set in mono type and accent color —
+  never boxed, never detailed line icons.
 
 ## 5. Quick checklist
 
@@ -267,4 +309,5 @@ For any Balaur-branded surface:
   3px radius, hard shadows where interactive.
 - At least one restrained folk/pixel motif per surface: stitch line, square
   notch, folk band, or pixel crest.
+- Art ships borderless; frames belong to HTML context, never to assets.
 - Keep assets local; no third-party CDNs in the product UI.
