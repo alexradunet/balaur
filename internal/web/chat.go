@@ -79,15 +79,17 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		return h.renderError(e, err)
 	}
 
-	// Context = system prompt + today block + knowledge block + recent
-	// turns + this turn. Persistence is not context: the full record stays
-	// in SQLite. The today block is what lets the companion speak like
-	// someone who knows the owner's day, unprompted.
+	// Context = system prompt + present moment + today block + knowledge
+	// block + recent turns + this turn. Persistence is not context: the
+	// full record stays in SQLite. The moment line grounds relative dates;
+	// the today block is what lets the companion speak like someone who
+	// knows the owner's day, unprompted.
+	now := time.Now()
 	knowledgeBlock, usedMemories := knowledge.BuildContext(h.app, msg)
-	todayBlock := tasks.TodayBlock(h.app, time.Now())
+	todayBlock := tasks.TodayBlock(h.app, now)
 	loop := &agent.Loop{Client: client, Tools: h.agentTools()}
 	history := make([]llm.Message, 0, len(recent)+2)
-	history = append(history, llm.Message{Role: "system", Content: systemPrompt + todayBlock + knowledgeBlock})
+	history = append(history, llm.Message{Role: "system", Content: systemPrompt + nowLine(now) + todayBlock + knowledgeBlock})
 	history = append(history, recent...)
 	history = append(history, llm.Message{Role: "user", Content: msg})
 	contextLen := len(history)
@@ -150,12 +152,24 @@ const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"Proposals require the owner's approval; never claim something is " +
 	"remembered until it is.\n\n" +
 	"Commitments: when the owner voices something to do, a deadline, or a " +
-	"repeating practice, capture it with `task_add` — a concrete due time when " +
-	"one is implied, recurrence like daily, every:3d, weekly:mon,thu or " +
-	"monthly:15 for repeating ones, and useful context folded into notes. " +
+	"repeating practice, capture it with `task_add` — a concrete due time " +
+	"computed from the present moment stated below when one is implied, " +
+	"recurrence like daily, every:3d, weekly:mon,thu or monthly:15 for " +
+	"repeating ones, and useful context folded into notes. " +
 	"Check `task_list` before claiming what is or isn't on the book; mark " +
 	"things done with `task_done` when the owner says they did them; snooze " +
 	"or drop on request. Never invent tasks the owner didn't voice."
+
+// nowLine grounds the model in the present moment. Relative dates in the
+// owner's words ("tomorrow at 10") must resolve against the box's clock
+// and timezone — never against the model's training prior.
+func nowLine(now time.Time) string {
+	zone, _ := now.Zone()
+	return fmt.Sprintf("\n\nThe present moment: %s (%s, UTC%s). "+
+		"Resolve every relative date and time the owner says — today, tonight, "+
+		"tomorrow, in two hours, next friday — against this moment, in this timezone.",
+		now.Format("Monday, January 2 2006, 15:04"), zone, now.Format("-07:00"))
+}
 
 // writeToolResult renders a tool result row. Marked results render as live
 // cards instead of raw text (the Hyperagent card pattern).

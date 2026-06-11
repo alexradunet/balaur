@@ -146,9 +146,11 @@ func composeBriefing(client llm.Client, now time.Time, lines []string) string {
 		{Role: "system", Content: "You are Balaur, a wise personal companion. " +
 			"Open the day with the owner: two to four short, warm, plain sentences built " +
 			"from the commitments below. Mention overdue items gently, today's items with " +
-			"their times, and any habit streak worth a word. " +
+			"their times, and any habit streak worth a word. The current time is given — " +
+			"if the morning is already gone, meet the day where it stands instead of " +
+			"pretending it is early. " +
 			"No exclamation marks, no emoji, no bullet lists, no lecturing."},
-		{Role: "user", Content: now.Format("Monday, January 2") + "\n" + strings.Join(lines, "\n")},
+		{Role: "user", Content: "It is " + now.Format("Monday, January 2, 15:04") + ".\n" + strings.Join(lines, "\n")},
 	}
 	stream, err := client.ChatStream(ctx, msgs, nil)
 	if err != nil {

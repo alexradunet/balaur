@@ -57,7 +57,9 @@ database you own and can open with any SQLite tool.
   tiny recurrence DSL (`daily`, `every:3d`, `weekly:mon,thu`, `monthly:15`,
   fixed-schedule or from-completion). Tasks live in the `tasks` collection;
   completions land in `entries`, the life-log substrate. New tasks render
-  as live cards in chat.
+  as live cards in chat. Every turn is grounded in the present moment —
+  date, time, timezone — so "tomorrow at 10" resolves against the box's
+  clock, never the model's guess.
 - **Balaur reminds on its own:** a minute cron fires due reminders into the
   master conversation — composed in Balaur's voice when a model is
   configured, a plain deterministic line otherwise, batched into one

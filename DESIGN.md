@@ -106,7 +106,8 @@ timeline (read-only recurrence projections) · task cards inline in chat ·
 the morning briefing (once per local day, hour-gated with wake catch-up,
 idempotency derived from the origin-tagged message, quiet days skipped,
 habit streaks derived from the entries log) · a Today block of open
-commitments injected into every chat turn.
+commitments and a present-moment line (date, time, timezone) injected
+into every chat turn, so relative dates resolve against the box's clock.
 
 **Roadmap — do not state as shipped:** life tracking
 (weight, workouts, achievements, /life) · day pages with journaling ·
