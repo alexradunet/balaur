@@ -101,6 +101,13 @@ database you own and can open with any SQLite tool.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
+- **A machine-facing CLI:** the same binary speaks JSON for external
+  harnesses — including other LLMs — that drive, seed, inspect, and verify
+  a box without scraping HTML. `balaur chat` runs the identical turn
+  pipeline the web UI runs (`internal/turn`); `task`, `memory`, `skill`,
+  `life`, `journal`, `day`, `recap`, `history`, `audit`, `model` work
+  deterministically without one; `balaur verify` replays the words-vs-deeds
+  check on the record. See "CLI for agents & test harnesses".
 
 ## Quick start
 
@@ -160,6 +167,56 @@ Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —
 no C toolchain. The binary is static; models and the llama.cpp runtime are
 downloaded data, stored outside the repo and outside the binary.
 
+## CLI for agents & test harnesses
+
+Every command prints one JSON value on stdout; failures print
+`{"error": ...}` on stderr and exit non-zero. Web and CLI are gateways
+over the same turn pipeline (`internal/turn`), so what the CLI observes
+is evidence about what the web UI does.
+
+| Command | What it does | Model? |
+|---|---|---|
+| `balaur chat "<msg>"` | One real companion turn: context, agent loop, honesty check, persistence. Reports the reply, every tool call with args + result, proposal references, and the words-vs-deeds verdict. | yes |
+| `balaur task add/list/done/snooze/drop` | Commitments, directly. | no |
+| `balaur memory propose/list/recall/approve/reject/archive/edit` | Memory lifecycle across the consent boundary. | no |
+| `balaur skill propose/list/show/approve/reject/archive` | Skill lifecycle. | no |
+| `balaur life log/series/kinds/drop` | The owner-defined life log. | no |
+| `balaur journal write`, `balaur day <date>` | Keep a journal line verbatim; read one day (journal, log, done, recap). | no |
+| `balaur recap show/ensure` | Read stored summaries; run the idempotent catch-up. | ensure |
+| `balaur history [--date]` | The persisted master conversation, tool rounds included. | no |
+| `balaur audit [--action] [--actor]` | The audit log — the deeds claims are checked against. | no |
+| `balaur verify` | Words vs deeds for the last persisted turn. | no |
+| `balaur model` | Available and active model choices — a harness precondition check. | no |
+
+Every command works on a fresh data dir: pending migrations apply on
+first touch, so harness runs isolate cheaply with `--dir`:
+
+```bash
+balaur --dir "$(mktemp -d)" task add --title "Smoke test"
+```
+
+`chat` turns become deterministic with the scriptable fake model server —
+script what the "model" says and which tools it calls:
+
+```bash
+cat > script.json <<'EOF'
+[
+  {"tool": "task_add", "args": {"title": "Water the plants", "due": "2027-03-01"}},
+  {"text": "I've added watering the plants for March 1."}
+]
+EOF
+python3 scripts/fake-model.py script.json &
+
+export BALAUR_REMOTE_URL=http://127.0.0.1:11435/v1 BALAUR_REMOTE_MODEL=fake
+balaur --dir /tmp/box chat "remind me to water the plants on march 1"
+balaur --dir /tmp/box verify            # words vs deeds, from the record
+balaur --dir /tmp/box audit --action task.
+```
+
+The OS-access tools are deliberately not mirrored as commands: a shell
+already has the shell. `BALAUR_OS_ACCESS` gates what the *model* may
+reach, and that gate applies identically under `balaur chat`.
+
 ## Development
 
 ```bash
@@ -171,10 +228,11 @@ go test ./...
 Project layout:
 
 ```txt
-main.go            wire-up: PocketBase app, migrations, routes, recap cron
+main.go            wire-up: PocketBase app, migrations, CLI, routes, crons
 migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: kronk (local) + OpenAI-compatible HTTP
+internal/turn/     the channel-agnostic turn pipeline + model resolution
 internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries
 internal/tasks/    commitments: recurrence DSL + task verbs on the entries life log
@@ -183,7 +241,8 @@ internal/heads/    sub-agent identities, grants, audit — the rule boundary
 internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
 internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
-internal/web/      HTMX handlers: chat, memory & skills pages, cards, recap
+internal/web/      HTMX gateway: chat, memory & skills pages, cards, recap
+internal/cli/      machine-facing gateway: balaur subcommands, JSON out
 web/               embedded templates and static assets (Basm CSS)
 ```
 
