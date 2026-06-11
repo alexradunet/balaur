@@ -2,11 +2,20 @@
      history and for day-recap expansion. */ -}}
 {{range .}}
 {{if eq .Role "user"}}
-<div class="msg msg-user msg-with-avatar"><span class="balaur-avatar balaur-avatar-soul" aria-hidden="true"><img src="/static/avatars/soul.png" alt="" decoding="async"></span><div class="msg-main"><div class="who">You</div><div class="body">{{.Content}}</div></div></div>
+<div class="msg msg-user msg-with-avatar">
+  <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true"><img src="/static/avatars/soul.png" alt="" decoding="async"></span>
+  <div class="msg-main"><div class="who">You</div><div class="body">{{.Content}}</div></div>
+</div>
 {{else if eq .Role "assistant"}}
-<div class="msg msg-balaur msg-with-avatar"><span class="balaur-avatar balaur-avatar-balaur" aria-hidden="true"><img src="/static/avatars/balaur.png" alt="" decoding="async"></span><div class="msg-main"><div class="who">Balaur{{with .Origin}} · {{.}}{{end}}</div><div class="body">{{.Content}}</div></div></div>
+<div class="msg msg-balaur msg-with-avatar">
+  <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true"><img src="/static/avatars/balaur.png" alt="" decoding="async"></span>
+  <div class="msg-main"><div class="who">Balaur{{with .Origin}} · {{.}}{{end}}</div><div class="body">{{.Content}}</div></div>
+</div>
 {{else if eq .Role "tool"}}
-<div class="msg msg-tool"><div class="who">tool · {{.Tool}}</div><div class="body">{{.Content}}</div></div>
+<div class="msg msg-tool">
+  <div class="who"><span class="tool-icon" aria-hidden="true">{{toolIcon .Tool}}</span>tool · {{.Tool}}</div>
+  <div class="body">{{.Content}}</div>
+</div>
 {{if .CardURL}}
 <div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>
 {{end}}

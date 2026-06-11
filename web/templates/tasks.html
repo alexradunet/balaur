@@ -1,23 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{template "page_head" .}}
   <title>{{.Title}} · Balaur</title>
-  <link rel="stylesheet" href="/static/basm.css">
-  <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">ᗅ Balaur</a>
-    <nav>
-      <a href="/tasks">Tasks</a>
-      <a href="/life">Life</a>
-      <a href="/memory">Memory</a>
-      <a href="/skills">Skills</a>
-      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
-    </nav>
-  </header>
+  {{template "topbar" .}}
 
   <main>
     <h1>Tasks</h1>
@@ -82,21 +70,25 @@
     <h2 class="cal-label">{{.Label}}</h2>
     <a class="btn btn-ghost btn-sm" href="/tasks?view=calendar&m={{.NextM}}">next ▸</a>
   </div>
-  <div class="cal-grid cal-head">
-    {{range .Weekdays}}<div class="cal-wd">{{.}}</div>{{end}}
-  </div>
-  {{range .Weeks}}
-  <div class="cal-grid">
-    {{range .}}
-    <div class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
-      <a class="cal-daylink" href="/day/{{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
-      {{range .Items}}
-      <span class="cal-item" title="{{.Time}} {{.Title}}">{{if .Recurring}}<i class="cal-recur">⟳</i>{{end}}{{.Time}} {{.Title}}</span>
+  <table class="cal-table">
+    <thead>
+      <tr>{{range .Weekdays}}<th scope="col">{{.}}</th>{{end}}</tr>
+    </thead>
+    <tbody>
+      {{range .Weeks}}
+      <tr>
+        {{range .}}
+        <td class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
+          <a class="cal-daylink" href="/day/{{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
+          {{range .Items}}
+          <span class="cal-item" title="{{.Time}} {{.Title}}">{{if .Recurring}}<i class="cal-recur">⟳</i>{{end}}{{.Time}} {{.Title}}</span>
+          {{end}}
+        </td>
+        {{end}}
+      </tr>
       {{end}}
-    </div>
-    {{end}}
-  </div>
-  {{end}}
+    </tbody>
+  </table>
   <p class="k-sub">Recurring tasks are projected from their rules — the calendar shows the plan, the list holds the actions.</p>
 </section>
 {{end}}
