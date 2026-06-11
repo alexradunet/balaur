@@ -1024,8 +1024,10 @@ dialog::backdrop {
 .avatar-choice-list {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 6px;
   padding: 10px 4px 4px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 .avatar-choice {
   display: flex;

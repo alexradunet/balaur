@@ -35,14 +35,24 @@ func SetOwnerSetting(app core.App, key, value string) error {
 // Legacy values "male" and "female" are kept as aliases so existing
 // owner_settings rows continue to work after upgrading.
 var soulAvatarMap = map[string]string{
-	"soul-01": "/static/avatars/soul-01.png",
-	"soul-02": "/static/avatars/soul-02.png",
-	"soul-03": "/static/avatars/soul-03.png",
-	"soul-04": "/static/avatars/soul-04.png",
-	"soul-05": "/static/avatars/soul-05.png",
-	"soul-06": "/static/avatars/soul-06.png",
-	"soul-07": "/static/avatars/soul-07.png",
-	"soul-08": "/static/avatars/soul-08.png",
+	// Basm world — human characters
+	"soul-01": "/static/avatars/soul-01.png", // Him
+	"soul-02": "/static/avatars/soul-02.png", // Her
+	"soul-03": "/static/avatars/soul-03.png", // Elder
+	"soul-04": "/static/avatars/soul-04.png", // Youth
+	"soul-05": "/static/avatars/soul-05.png", // Maker
+	"soul-06": "/static/avatars/soul-06.png", // Cyclops
+	"soul-07": "/static/avatars/soul-07.png", // Gnome
+	"soul-08": "/static/avatars/soul-08.png", // Ogre
+	// Romanian mythological creatures
+	"soul-09": "/static/avatars/soul-09.png", // Strigoi
+	"soul-10": "/static/avatars/soul-10.png", // Zmeu
+	"soul-11": "/static/avatars/soul-11.png", // Iele
+	"soul-12": "/static/avatars/soul-12.png", // Muma Pădurii
+	"soul-13": "/static/avatars/soul-13.png", // Căpcăun
+	"soul-14": "/static/avatars/soul-14.png", // Solomonar
+	"soul-15": "/static/avatars/soul-15.png", // Vâlvă
+	"soul-16": "/static/avatars/soul-16.png", // Pricolici
 	// legacy aliases from the two-option picker
 	"male":   "/static/avatars/soul-01.png",
 	"female": "/static/avatars/soul-02.png",

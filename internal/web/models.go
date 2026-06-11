@@ -399,6 +399,7 @@ func buildAvatarOptions(app core.App) []AvatarOption {
 		pref = "soul-02"
 	}
 	roster := []struct{ key, label string }{
+		// Basm world — human characters
 		{"soul-01", "Him"},
 		{"soul-02", "Her"},
 		{"soul-03", "Elder"},
@@ -407,6 +408,15 @@ func buildAvatarOptions(app core.App) []AvatarOption {
 		{"soul-06", "Cyclops"},
 		{"soul-07", "Gnome"},
 		{"soul-08", "Ogre"},
+		// Romanian mythological creatures
+		{"soul-09", "Strigoi"},
+		{"soul-10", "Zmeu"},
+		{"soul-11", "Iele"},
+		{"soul-12", "Muma"},
+		{"soul-13", "Căpcăun"},
+		{"soul-14", "Solomonar"},
+		{"soul-15", "Vâlvă"},
+		{"soul-16", "Pricolici"},
 	}
 	opts := make([]AvatarOption, len(roster))
 	for i, r := range roster {
