@@ -154,7 +154,7 @@ type messageView struct {
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {
-	soulURL   := store.SoulAvatarURL(h.app)
+	soulURL := store.SoulAvatarURL(h.app)
 	balaurURL := store.BalaurAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
 	out := make([]messageView, 0, len(recs))

@@ -76,9 +76,3 @@ func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 	e.Response.WriteHeader(204)
 	return nil
 }
-
-// Compile-time check that profileData uses the app field via the handlers receiver.
-var _ = (*handlers)(nil)
-
-// Ensure core is imported.
-var _ core.App = nil
