@@ -139,6 +139,11 @@ func TestRunNotesUnbackedCaptureClaim(t *testing.T) {
 
 func TestToolsRespectsOSAccessGate(t *testing.T) {
 	app := storetest.NewApp(t)
+	// Hermetic against the session: when Balaur runs this suite through
+	// its own bash tool during self-development, BALAUR_OS_ACCESS=1 is in
+	// the inherited env — the default-off assertion must not trust ambient
+	// state (found by the first live devloop rehearsal).
+	t.Setenv("BALAUR_OS_ACCESS", "")
 	names := func() map[string]bool {
 		out := map[string]bool{}
 		for _, tool := range Tools(app) {
