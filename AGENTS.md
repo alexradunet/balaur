@@ -18,6 +18,8 @@ lean and high-signal — add a rule only when it changes a real decision.
   step in the product path.
 - Use the standard Go command surface: `go build`, `go run .`, `go test ./...`,
   `go vet ./...`. Builds must work with `CGO_ENABLED=0`.
+- For local development, prefer `make run` (single run) and `make dev`
+  (hot reload via air, tracked in `.air.toml`).
 - Building inside a Hyperagent sandbox: if `go mod download` fails with
   "certificate signed by unknown authority" while curl works, that is the
   sandbox's TLS-intercepting proxy, and CA-bundle plumbing will NOT fix it —
@@ -148,6 +150,7 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Before declaring done, run the checks that match the change:
   `go vet ./...`, `go test ./...`, and `CGO_ENABLED=0 go build ./...`.
   Also run `git diff --check`.
+- Run `make lint` for changes that touch project-wide developer workflow.
 
 ## Known limitations & deferred work
 
