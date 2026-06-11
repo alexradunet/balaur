@@ -64,11 +64,19 @@ database you own and can open with any SQLite tool.
   message per tick. Firing is idempotent across restarts; the first tick
   after downtime is the catch-up. The open chat polls nudges in live;
   `BALAUR_NUDGE=0` disables.
+- **The morning briefing:** once per local day, after the briefing hour
+  (default 9, `BALAUR_BRIEFING_HOUR` overrides), Balaur opens the day —
+  overdue items, today's commitments, habit streaks from the `entries`
+  log — composed in its voice with a deterministic fallback. Idempotency
+  derives from the message record itself; a box asleep at the hour briefs
+  at wake; quiet days stay quiet. `BALAUR_BRIEFING=0` disables. The model
+  also sees a Today block of open commitments in every chat turn, so the
+  companion knows your day unprompted.
 - **/tasks — life organization:** the operational list (cards with
   Done / Snooze / Drop), a month calendar, and a 14-day timeline — the
   forward mirror of the recap telescope. Calendar and timeline project
   recurrence rules forward, read-only; actions live on the list cards.
-  Morning briefing and day pages are roadmap.
+  Day pages are roadmap.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
@@ -162,7 +170,6 @@ boundary) and `DESIGN.md` for the Basm design system.
 
 ## Roadmap (not shipped — honesty ledger)
 
-- Morning briefing: due tasks + habits with streaks, once per local day
 - Life tracking on the `entries` substrate: weight, workouts, achievements,
   /life page
 - Day pages with journaling (`/day/{date}`: your thoughts + the day's recap,

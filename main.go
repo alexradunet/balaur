@@ -7,6 +7,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/pocketbase/pocketbase"
@@ -35,6 +36,7 @@ func main() {
 		}
 		registerRecap(se.App)
 		registerNudge(se.App)
+		registerBriefing(se.App)
 		return se.Next()
 	})
 
@@ -91,5 +93,31 @@ func registerNudge(app core.App) {
 		}
 	}
 	app.Cron().MustAdd("nudge", "* * * * *", run)
+	go run()
+}
+
+// registerBriefing wires the morning briefing: once per local day after the
+// briefing hour (default 9, BALAUR_BRIEFING_HOUR overrides), Balaur opens
+// the day. Idempotency derives from the origin=briefing message itself —
+// no state row; a box asleep at the hour briefs at wake. Quiet days stay
+// quiet. Disable with BALAUR_BRIEFING=0.
+func registerBriefing(app core.App) {
+	if os.Getenv("BALAUR_BRIEFING") == "0" {
+		return
+	}
+	hour := 9
+	if h, err := strconv.Atoi(os.Getenv("BALAUR_BRIEFING_HOUR")); err == nil && h >= 0 && h <= 23 {
+		hour = h
+	}
+	run := func() {
+		client, err := llm.FromEnvWithDefault(app.DataDir())
+		if err != nil {
+			client = nil // no model: the deterministic list still briefs
+		}
+		if err := tasks.Briefing(app, client, time.Now(), hour); err != nil {
+			app.Logger().Warn("briefing: run stopped", "error", err)
+		}
+	}
+	app.Cron().MustAdd("briefing", "* * * * *", run)
 	go run()
 }

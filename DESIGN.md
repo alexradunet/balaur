@@ -102,9 +102,13 @@ idempotent catch-up after downtime, one batched message per tick,
 model-composed in the companion voice with a deterministic fallback,
 origin-tagged in `messages` and polled live into the open chat · the
 /tasks page: operational list with action cards, month calendar, 14-day
-timeline (read-only recurrence projections) · task cards inline in chat.
+timeline (read-only recurrence projections) · task cards inline in chat ·
+the morning briefing (once per local day, hour-gated with wake catch-up,
+idempotency derived from the origin-tagged message, quiet days skipped,
+habit streaks derived from the entries log) · a Today block of open
+commitments injected into every chat turn.
 
-**Roadmap — do not state as shipped:** morning briefing · life tracking
+**Roadmap — do not state as shipped:** life tracking
 (weight, workouts, achievements, /life) · day pages with journaling ·
 Johnny Decimal Markdown vault mirror (one-way export + git) ·
 FTS5/embedding recall · encrypted export · multi-human accounts · channel

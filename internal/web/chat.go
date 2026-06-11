@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/tools"
 )
 
@@ -77,12 +79,15 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		return h.renderError(e, err)
 	}
 
-	// Context = system prompt + knowledge block + recent turns + this turn.
-	// Persistence is not context: the full record stays in SQLite.
+	// Context = system prompt + today block + knowledge block + recent
+	// turns + this turn. Persistence is not context: the full record stays
+	// in SQLite. The today block is what lets the companion speak like
+	// someone who knows the owner's day, unprompted.
 	knowledgeBlock, usedMemories := knowledge.BuildContext(h.app, msg)
+	todayBlock := tasks.TodayBlock(h.app, time.Now())
 	loop := &agent.Loop{Client: client, Tools: h.agentTools()}
 	history := make([]llm.Message, 0, len(recent)+2)
-	history = append(history, llm.Message{Role: "system", Content: systemPrompt + knowledgeBlock})
+	history = append(history, llm.Message{Role: "system", Content: systemPrompt + todayBlock + knowledgeBlock})
 	history = append(history, recent...)
 	history = append(history, llm.Message{Role: "user", Content: msg})
 	contextLen := len(history)
