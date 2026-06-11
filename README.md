@@ -108,6 +108,20 @@ database you own and can open with any SQLite tool.
   `life`, `journal`, `day`, `recap`, `history`, `audit`, `model` work
   deterministically without one; `balaur verify` replays the words-vs-deeds
   check on the record. See "CLI for agents & test harnesses".
+- **Self-awareness:** the binary embeds its own self-knowledge
+  (`internal/self`) — what Balaur is, its architecture, the
+  self-development loop — plus a build stamp and a live capability
+  inventory (registered tools, approved skills, gates, model choice).
+  The model consults it through the read-only `self` tool instead of
+  guessing about itself; harnesses read it as JSON via `balaur self`.
+- **Self-development (opt-in):** with `BALAUR_OS_ACCESS=1` and
+  `BALAUR_SOURCE` pointing at the repo checkout, Balaur can analyze and
+  modify its own code using the ordinary OS tools, following the embedded
+  devloop: branch → edit → gofmt/vet/test → build a candidate binary →
+  verify it with its own CLI harness and `scripts/fake-model.py` → report
+  for the owner to restart. It never restarts or replaces its own running
+  binary, and the honesty check applies: "fixed" and "tested" are claims
+  that need deeds in the same turn.
 
 ## Quick start
 
@@ -187,6 +201,7 @@ is evidence about what the web UI does.
 | `balaur audit [--action] [--actor]` | The audit log — the deeds claims are checked against. | no |
 | `balaur verify` | Words vs deeds for the last persisted turn. | no |
 | `balaur model` | Available and active model choices — a harness precondition check. | no |
+| `balaur self [--section]` | Build stamp, live capability inventory, source seam; optionally one self-knowledge section (overview, architecture, capabilities, source, devloop). | no |
 
 Every command works on a fresh data dir: pending migrations apply on
 first touch, so harness runs isolate cheaply with `--dir`:
@@ -241,6 +256,7 @@ internal/heads/    sub-agent identities, grants, audit — the rule boundary
 internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
 internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
+internal/self/     self-awareness: embedded self-knowledge + live inventory
 internal/web/      HTMX gateway: chat, memory & skills pages, cards, recap
 internal/cli/      machine-facing gateway: balaur subcommands, JSON out
 web/               embedded templates and static assets (Basm CSS)

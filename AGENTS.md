@@ -60,9 +60,14 @@ lean and high-signal — add a rule only when it changes a real decision.
 - **Small, single-purpose packages.** `internal/agent` (loop),
   `internal/llm` (provider interface + clients), `internal/turn` (the
   shared turn pipeline + model resolution), `internal/tools` (agent
-  tools), `internal/web` (HTMX gateway), `internal/cli` (JSON gateway),
+  tools), `internal/self` (self-knowledge + capability inventory),
+  `internal/web` (HTMX gateway), `internal/cli` (JSON gateway),
   `internal/heads` (sub-agent identity + grants), `migrations` (schema).
   Treat a package past ~500 lines as a smell to decompose, not extend.
+- **Self-knowledge is part of the change.** `internal/self/knowledge.md`
+  is the running binary's own description of its architecture and
+  capabilities; when a change alters either, update it in the same
+  commit. A stale self-description makes Balaur lie about itself.
 - **One PocketBase seam.** Everything that touches PocketBase internals
   (collections, records, tokens, rules) goes through `internal/store`.
   PocketBase is pre-1.0 with breaking-change precedent (v0.23 rewrote the

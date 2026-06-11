@@ -353,6 +353,42 @@ func TestHistoryReadsPersistedTurn(t *testing.T) {
 	}
 }
 
+func TestSelfReportsInventory(t *testing.T) {
+	app := storetest.NewApp(t)
+	t.Setenv("BALAUR_OS_ACCESS", "")
+	t.Setenv("BALAUR_SOURCE", "")
+
+	out, err := execute(t, selfCmd(app))
+	if err != nil {
+		t.Fatalf("self: %v", err)
+	}
+	tools, _ := out["tools"].([]any)
+	names := map[string]bool{}
+	for _, n := range tools {
+		names[n.(string)] = true
+	}
+	if !names["self"] || !names["task_add"] || names["bash"] {
+		t.Errorf("inventory tools wrong: %v", tools)
+	}
+	gates := out["gates"].(map[string]any)
+	if gates["os_access"] != false {
+		t.Errorf("os_access gate must be off: %v", gates)
+	}
+	src := out["source"].(map[string]any)
+	if src["ok"] != false {
+		t.Errorf("source seam must report not ok on a bare box: %v", src)
+	}
+
+	sect, err := execute(t, selfCmd(app), "--section", "devloop")
+	if err != nil {
+		t.Fatalf("self --section: %v", err)
+	}
+	content := sect["section"].(map[string]any)["content"].(string)
+	if !strings.Contains(content, "go test") {
+		t.Errorf("devloop section missing the deeds: %.80s", content)
+	}
+}
+
 func TestModelReportsNoModelOnBareBox(t *testing.T) {
 	app := storetest.NewApp(t)
 	out, err := execute(t, modelCmd(app))

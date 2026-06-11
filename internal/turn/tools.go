@@ -6,12 +6,15 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/self"
 	"github.com/alexradunet/balaur/internal/tools"
 )
 
 // Tools returns the enabled tool set: knowledge tools always (they only
 // propose — the consent boundary holds), task, life and journal tools
-// always (owner-consented by nature), OS access opt-in (AGENTS.md).
+// always (owner-consented by nature), OS access opt-in (AGENTS.md), and
+// the read-only self tool, built last so its capability inventory reports
+// the registry that actually shipped this turn.
 func Tools(app core.App) []agent.Tool {
 	ts := tools.KnowledgeTools(app)
 	ts = append(ts, tools.TaskTools(app)...)
@@ -20,5 +23,10 @@ func Tools(app core.App) []agent.Tool {
 	if os.Getenv("BALAUR_OS_ACCESS") == "1" {
 		ts = append(ts, tools.OSAccess(app)...)
 	}
-	return ts
+	names := make([]string, 0, len(ts)+1)
+	for _, t := range ts {
+		names = append(names, t.Spec.Name)
+	}
+	names = append(names, "self")
+	return append(ts, self.Tool(app, names))
 }

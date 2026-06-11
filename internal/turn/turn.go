@@ -9,6 +9,8 @@ package turn
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -25,6 +27,18 @@ import (
 // Persistence is unbounded; context is not (the master-conversation
 // footgun defusal — see internal/conversation).
 const RecentTurnWindow = 20
+
+// maxSteps reads the tool-round cap for one turn. The agent default (8)
+// fits conversation; self-development sessions legitimately need more
+// rounds (read, edit, test, build, verify), so BALAUR_MAX_STEPS raises it
+// explicitly. 0 keeps the agent package's default.
+func maxSteps() int {
+	n, err := strconv.Atoi(os.Getenv("BALAUR_MAX_STEPS"))
+	if err != nil || n <= 0 {
+		return 0
+	}
+	return n
+}
 
 // Result is what one turn produced, after persistence.
 type Result struct {
@@ -78,7 +92,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	knowledgeBlock, usedMemories := knowledge.BuildContext(app, userText)
 	res.UsedMemories = usedMemories
 	todayBlock := tasks.TodayBlock(app, now)
-	loop := &agent.Loop{Client: client, Tools: Tools(app)}
+	loop := &agent.Loop{Client: client, Tools: Tools(app), MaxSteps: maxSteps()}
 	history := make([]llm.Message, 0, len(recent)+2)
 	history = append(history, llm.Message{Role: "system", Content: systemPrompt + nowLine(now) + todayBlock + knowledgeBlock})
 	history = append(history, recent...)
@@ -168,7 +182,14 @@ const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"journal something — keep it with `journal_write`, their words VERBATIM, " +
 	"never paraphrased or embellished. Offer gently when something reads like " +
 	"a diary line; never push, never write it unasked. Their thoughts live on " +
-	"the day pages (/day)."
+	"the day pages (/day).\n\n" +
+	"Yourself: when the owner asks what you can do, how you work, or about " +
+	"your own code, consult the `self` tool first (sections: overview, " +
+	"architecture, capabilities, source, devloop) — never guess about your " +
+	"own capabilities. With OS access enabled and BALAUR_SOURCE configured " +
+	"you can analyze and develop your own code: follow the devloop section " +
+	"exactly, and never claim a fix is tested or built without those tool " +
+	"results in this turn."
 
 // nowLine grounds the model in the present moment. Relative dates in the
 // owner's words ("tomorrow at 10") must resolve against the box's clock
