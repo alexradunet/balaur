@@ -370,33 +370,36 @@ textarea:focus-visible,
   overflow: hidden;
 }
 .balaur-avatar img {
+  /* Sprite sheet: the img is 768×768 (3×3 frames of 256×256).
+     Display shows one 256×256 frame scaled to --avatar-size.
+     object-position shifts to the correct frame via @keyframes. */
   display: block;
-  width: 300%;
+  width: 300%;       /* 768/256 = 3 × the container */
   height: 300%;
   max-width: none;
   image-rendering: pixelated;
-  transform: translate(0, 0);
+  object-fit: none;
+  /* Default position: frame 0 (row 0, col 0) = idle */
+  object-position: 0 0;
 }
 
 /* Head tinting — deterministic hue offset per head applied via inline style
    filter: hue-rotate(Ndeg). This serves until per-head sprite sheets exist. */
 .balaur-avatar-head img { filter: hue-rotate(0deg); /* overridden per head */ }
 
-/* Idle = no animation (default) */
-.balaur-avatar[data-state="idle"]      img { animation: none; }
-
-/* Thinking = slow contemplative blink (same keyframes, slower) */
-.balaur-avatar[data-state="thinking"]  img {
-  animation: balaur-avatar-live 1.8s steps(1, end) infinite;
+/* Idle = slow blink cycle */
+.balaur-avatar img,
+.balaur-avatar[data-state="idle"] img {
+  animation: balaur-avatar-blink 4.5s steps(1, end) infinite;
 }
-/* Working/streaming = full active animation */
-.balaur-avatar[data-state="working"],
-.balaur-avatar-live {
-  /* .balaur-avatar-live kept for backwards compat with pending messages */
+/* Thinking = think frame pulsed (slow) */
+.balaur-avatar[data-state="thinking"] img {
+  animation: balaur-avatar-think 2.4s steps(1, end) infinite;
 }
+/* Working/streaming = talk mouth animation */
 .balaur-avatar[data-state="working"] img,
 .balaur-avatar-live img {
-  animation: balaur-avatar-live 1.05s steps(1, end) infinite;
+  animation: balaur-avatar-talk 0.75s steps(1, end) infinite;
 }
 
 .msg-pending {
@@ -414,16 +417,44 @@ textarea:focus-visible,
   50%      { box-shadow: 0 0 26px color-mix(in srgb, var(--teal) 55%, transparent); }
 }
 
-@keyframes balaur-avatar-live {
-  0%,  12.49% { transform: translate(-33.3333%, 0); }
-  12.5%, 24.99% { transform: translate(-66.6667%, 0); }
-  25%, 37.49% { transform: translate(0, -33.3333%); }
-  37.5%, 49.99% { transform: translate(-33.3333%, -33.3333%); }
-  50%, 62.49% { transform: translate(-66.6667%, -33.3333%); }
-  62.5%, 74.99% { transform: translate(0, -66.6667%); }
-  75%, 87.49% { transform: translate(-33.3333%, -66.6667%); }
-  87.5%, 100% { transform: translate(-66.6667%, -66.6667%); }
+/* ── Sprite sheet keyframes ──────────────────────────────────────────
+   Sheet layout (3×3, 256×256 per frame, 768×768 total):
+     [0] idle    [1] blink-1  [2] blink-2
+     [3] idle    [4] talk-1   [5] talk-2
+     [6] talk-3  [7] think    [8] done-flash
+
+   object-position shifts the 768×768 img to reveal one 256×256 frame.
+   At container size S the shift per frame is -(S) since img is 3S wide/tall.
+   Using percentages: frame col/row N → -(N * 100/3)% ≈ -33.33% per step.
+   steps(1, end) produces crisp pixel jumps, no interpolation.
+──────────────────────────────────────────────────────────────────── */
+
+/* balaur-avatar-blink — idle with periodic blink (frames 0,1,2,0).
+   Used by default for all idle avatars once they have real frames. */
+@keyframes balaur-avatar-blink {
+  0%, 79%      { object-position: 0 0; }               /* frame 0: idle */
+  80%, 86%     { object-position: -33.3333% 0; }       /* frame 1: blink-1 */
+  87%, 93%     { object-position: -66.6667% 0; }       /* frame 2: blink-2 */
+  94%, 100%    { object-position: 0 0; }               /* frame 0: back idle */
 }
+
+/* balaur-avatar-talk — mouth animation (frames 3,4,5,6).
+   Driven by basm.js during streaming turns. */
+@keyframes balaur-avatar-talk {
+  0%, 24%      { object-position: 0 -33.3333%; }       /* frame 3: idle-talk */
+  25%, 49%     { object-position: -33.3333% -33.3333%; }/* frame 4: talk-1 */
+  50%, 74%     { object-position: -66.6667% -33.3333%; }/* frame 5: talk-2 */
+  75%, 100%    { object-position: 0 -66.6667%; }        /* frame 6: talk-3 */
+}
+
+/* balaur-avatar-think — contemplative squint (frame 7 pulsed). */
+@keyframes balaur-avatar-think {
+  0%, 59%  { object-position: -33.3333% -66.6667%; }   /* frame 7: think */
+  60%, 100%{ object-position: 0 0; }                   /* frame 0: idle */
+}
+
+/* Legacy name kept for backward compat with any JS referencing it. */
+@keyframes balaur-avatar-live { 0%, 100% { object-position: 0 0; } }
 
 /* ── Chatbar ─────────────────────────────────────────────────────── */
 
@@ -1027,6 +1058,62 @@ dialog::backdrop {
   .cal-item { display: none; }
   .cal-item:first-of-type { display: block; }
 }
+
+/* ── Avatar picker ───────────────────────────────────────────────── */
+
+.avatar-picker {
+  border-top: 1px solid var(--hair);
+  padding-top: 10px;
+}
+.avatar-picker summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: 2px 4px;
+}
+.avatar-picker summary:hover { color: var(--on-surface); }
+.avatar-choice-list {
+  display: flex;
+  gap: 10px;
+  padding: 10px 4px 4px;
+}
+.avatar-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface);
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color .1s;
+}
+.avatar-choice img {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+  object-fit: none;
+  object-position: 0 0;
+}
+.avatar-choice span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.avatar-choice:hover { border-color: var(--gold-deep); }
+.avatar-choice-active {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-hard) var(--gold-deep);
+}
+.avatar-choice-active span { color: var(--gold); }
 
 /* ── Reduced motion ──────────────────────────────────────────────── */
 
