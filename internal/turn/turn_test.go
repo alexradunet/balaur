@@ -2,12 +2,15 @@ package turn
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/ext"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/storetest"
 	"github.com/alexradunet/balaur/internal/verify"
@@ -157,6 +160,40 @@ func TestToolsRespectsOSAccessGate(t *testing.T) {
 	t.Setenv("BALAUR_OS_ACCESS", "1")
 	if !names()["bash"] {
 		t.Error("BALAUR_OS_ACCESS=1 must enable the OS tools")
+	}
+}
+
+func TestApprovedExtensionJoinsEveryGateway(t *testing.T) {
+	t.Setenv("BALAUR_EXT_DIR", filepath.Join(t.TempDir(), "pb_extensions"))
+	app := storetest.NewApp(t)
+	dir := ext.Dir(app)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	src := "// balaur-extension: test greeter\n" +
+		"balaur.registerTool({name: \"greet\", description: \"d\", parameters: {type:\"object\"}, handler: function(a){return \"hi\"}})\n"
+	if err := os.WriteFile(filepath.Join(dir, "greet.js"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	names := func() map[string]bool {
+		out := map[string]bool{}
+		for _, tool := range Tools(app) {
+			out[tool.Spec.Name] = true
+		}
+		return out
+	}
+	if names()["greet"] {
+		t.Fatal("a proposed extension must not join the turn")
+	}
+	if !names()["propose_extension"] {
+		t.Fatal("propose_extension must always be available")
+	}
+	if _, err := ext.Approve(app, "greet"); err != nil {
+		t.Fatal(err)
+	}
+	if !names()["greet"] {
+		t.Fatal("an approved extension must join the turn's tool set")
 	}
 }
 

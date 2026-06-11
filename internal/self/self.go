@@ -139,6 +139,17 @@ func Inventory(app core.App, toolNames []string) map[string]any {
 	}
 	inv["skills"] = skills
 
+	// Extensions by status, straight from the consent ledger (the loaded
+	// tool names already appear in the registry above).
+	extensions := map[string][]string{}
+	if recs, err := app.FindRecordsByFilter("extensions", "id != ''", "name", 0, 0); err == nil {
+		for _, r := range recs {
+			s := r.GetString("status")
+			extensions[s] = append(extensions[s], r.GetString("name"))
+		}
+	}
+	inv["extensions"] = extensions
+
 	if choice, ok, err := store.ActiveLLMChoice(app); err == nil && ok {
 		inv["model_choice"] = map[string]any{"provider": choice.Provider, "model": choice.Model}
 	}

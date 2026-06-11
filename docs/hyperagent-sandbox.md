@@ -61,9 +61,19 @@ export GOPROXY=http://127.0.0.1:8099
 go mod download
 ```
 
-Module integrity is **not** weakened: `GOSUMDB` stays enabled, and the
-sum.golang.org checksum queries route through the same shim (`/sumdb/…`
-paths are forwarded verbatim). Only the transport hop is swapped.
+Module integrity is **not** weakened: `GOSUMDB` stays enabled. The shim
+forwards `/sumdb/…` paths verbatim, but proxy.golang.org stopped
+answering them (observed June 2026 — 404s), so when a NEW dependency
+needs a checksum lookup, the Go tool falls back to sum.golang.org
+directly and hits the same TLS quirk. Run a second shim instance in
+front of sum.golang.org and point GOSUMDB's URL field at it — the key
+and verification stay exactly as they were; only the transport hop
+changes:
+
+```bash
+python3 scripts/goproxy-shim.py 8100 https://sum.golang.org &
+export GOSUMDB="sum.golang.org http://127.0.0.1:8100"
+```
 
 ## Full sandbox bootstrap
 
@@ -77,10 +87,12 @@ sudo tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
 # 2. Environment (per shell):
 export PATH=$PATH:/usr/local/go/bin
 export GOPROXY=http://127.0.0.1:8099
+export GOSUMDB="sum.golang.org http://127.0.0.1:8100"
 export CGO_ENABLED=0
 
-# 3. Shim (once per sandbox boot):
+# 3. Shims (once per sandbox boot):
 python3 scripts/goproxy-shim.py >/tmp/goproxy-shim.log 2>&1 &
+python3 scripts/goproxy-shim.py 8100 https://sum.golang.org >/tmp/sumdb-shim.log 2>&1 &
 ```
 
 ## Sandbox memory limits

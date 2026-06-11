@@ -6,8 +6,17 @@ Go's strict raw-DN chain building rejects).
 
 Dev-sandbox tooling only — never part of the Balaur product or its build.
 Usage and the full diagnosis: docs/hyperagent-sandbox.md
-    python3 scripts/goproxy-shim.py &
-    export GOPROXY=http://127.0.0.1:8099"""
+    python3 scripts/goproxy-shim.py &                          # modules
+    python3 scripts/goproxy-shim.py 8100 https://sum.golang.org &  # sumdb
+    export GOPROXY=http://127.0.0.1:8099
+    export GOSUMDB="sum.golang.org http://127.0.0.1:8100"
+
+The second instance exists because proxy.golang.org stopped answering
+/sumdb/ mirror paths (observed June 2026, 404s), so the Go tool falls
+back to sum.golang.org directly and hits the same TLS quirk. Pointing
+GOSUMDB's URL field at a shim keeps checksum verification fully ON —
+only the transport hop changes, never the trust."""
+import sys
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -48,4 +57,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    ThreadingHTTPServer(("127.0.0.1", 8099), Handler).serve_forever()
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8099
+    if len(sys.argv) > 2:
+        UPSTREAM = sys.argv[2]
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

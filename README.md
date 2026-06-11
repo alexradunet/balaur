@@ -122,6 +122,15 @@ database you own and can open with any SQLite tool.
   for the owner to restart. It never restarts or replaces its own running
   binary, and the honesty check applies: "fixed" and "tested" are claims
   that need deeds in the same turn.
+- **balaur-extensions — runtime tools, consent-gated:** one JavaScript
+  file in `pb_extensions/` registering new tools via
+  `balaur.registerTool`; run by goja (the engine PocketBase's jsvm uses —
+  still no CGO). The `extensions` collection is the consent ledger:
+  discovery proposes, the owner approves (pinning the file's sha256),
+  any change re-proposes, every invocation is audited. Balaur can write
+  and propose its own extensions in chat (`propose_extension`) — new
+  capability without rebuild or restart, but never without the owner.
+  See "balaur-extensions".
 
 ## Quick start
 
@@ -169,6 +178,9 @@ BALAUR_REMOTE_API_KEY=...                    # key for remote endpoints
 SYNTHETIC_API_KEY=...                        # enables Synthetic API choices
 # BALAUR_SYNTHETIC_API_KEY also works if you prefer a Balaur-scoped env var.
 BALAUR_OS_ACCESS=1                           # enable read/write/edit/bash tools
+BALAUR_SOURCE=/path/to/balaur                # your source checkout (self-development)
+BALAUR_MAX_STEPS=24                          # raise the tool-round cap for coding sessions
+BALAUR_EXT_DIR=/path/to/pb_extensions        # relocate balaur-extensions (default: next to pb_data)
 ```
 
 ## Build
@@ -202,6 +214,7 @@ is evidence about what the web UI does.
 | `balaur verify` | Words vs deeds for the last persisted turn. | no |
 | `balaur model` | Available and active model choices — a harness precondition check. | no |
 | `balaur self [--section]` | Build stamp, live capability inventory, source seam; optionally one self-knowledge section (overview, architecture, capabilities, source, devloop). | no |
+| `balaur ext list/approve/disable/show` | balaur-extensions lifecycle: review proposals, consent (pins sha256), turn off, inspect code. | no |
 
 Every command works on a fresh data dir: pending migrations apply on
 first touch, so harness runs isolate cheaply with `--dir`:
@@ -232,6 +245,47 @@ The OS-access tools are deliberately not mirrored as commands: a shell
 already has the shell. `BALAUR_OS_ACCESS` gates what the *model* may
 reach, and that gate applies identically under `balaur chat`.
 
+## balaur-extensions
+
+An extension is one JavaScript file in `pb_extensions/` (next to
+`pb_data/`, mirroring the `pb_hooks` convention; `BALAUR_EXT_DIR`
+overrides). It registers tools; handlers may fetch over HTTP. That is the
+whole API — extensions add verbs, not privileges: no filesystem, no
+shell, no npm, no DB.
+
+```js
+// balaur-extension: Current weather for the home town.
+balaur.registerTool({
+  name: "weather_home",
+  description: "Current weather at home.",
+  parameters: {type: "object", properties: {}},
+  handler: function (args) {
+    var res = balaur.http({url: "https://wttr.in/Brasov?format=3"});
+    return res.body;
+  }
+})
+```
+
+The consent flow, enforced by the `extensions` collection and audited at
+every step:
+
+1. A file appears (the owner drops it in, or Balaur writes one in chat
+   via `propose_extension`) → it is **proposed**, never executed.
+2. The owner reviews (`balaur ext show <name>`) and approves
+   (`balaur ext approve <name>`) — approval pins the file's **sha256**.
+3. From the next turn, its tools are live in every gateway (web, CLI) —
+   no rebuild, no restart.
+4. Any change to the file drops it from service and re-proposes it;
+   approval is always consent to exact content. Load-time side effects
+   are forbidden (`balaur.http` throws outside handlers), invocations
+   run in a fresh VM with a 30s cap, and every call lands in
+   `audit_log`.
+
+Self-evolution has two speeds: extensions grow new verbs at runtime;
+the devloop (above) evolves the Go core through an owner-restarted
+binary. Both end at the same gate — nothing becomes part of Balaur
+without the owner's explicit yes.
+
 ## Development
 
 ```bash
@@ -257,6 +311,7 @@ internal/knowledge/ memory & skill lifecycle, context injection — the consent 
 internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
 internal/self/     self-awareness: embedded self-knowledge + live inventory
+internal/ext/      balaur-extensions: consent-gated runtime tools (JS/goja)
 internal/web/      HTMX gateway: chat, memory & skills pages, cards, recap
 internal/cli/      machine-facing gateway: balaur subcommands, JSON out
 web/               embedded templates and static assets (Basm CSS)

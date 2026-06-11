@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -11,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
 
+	"github.com/alexradunet/balaur/internal/ext"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
@@ -386,6 +389,47 @@ func TestSelfReportsInventory(t *testing.T) {
 	content := sect["section"].(map[string]any)["content"].(string)
 	if !strings.Contains(content, "go test") {
 		t.Errorf("devloop section missing the deeds: %.80s", content)
+	}
+}
+
+func TestExtLifecycleViaCLI(t *testing.T) {
+	t.Setenv("BALAUR_EXT_DIR", filepath.Join(t.TempDir(), "pb_extensions"))
+	app := storetest.NewApp(t)
+	dir := ext.Dir(app)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	src := "// balaur-extension: cli greeter\n" +
+		"balaur.registerTool({name: \"greet\", description: \"d\", parameters: {type:\"object\"}, handler: function(a){return \"hi\"}})\n"
+	if err := os.WriteFile(filepath.Join(dir, "greet.js"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	listed, err := executeList(t, extCmd(app), "list")
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("list must discover the file: %v (err %v)", listed, err)
+	}
+	if listed[0].(map[string]any)["status"] != "proposed" {
+		t.Fatalf("discovery must propose: %v", listed[0])
+	}
+
+	approved, err := execute(t, extCmd(app), "approve", "greet")
+	if err != nil || approved["status"] != "active" {
+		t.Fatalf("approve: %v (err %v)", approved, err)
+	}
+	tools := approved["tools"].([]any)
+	if len(tools) != 1 || tools[0].(map[string]any)["name"] != "greet" {
+		t.Errorf("approve must record the extracted tools: %v", approved["tools"])
+	}
+
+	shown, err := execute(t, extCmd(app), "show", "greet")
+	if err != nil || !strings.Contains(shown["code"].(string), "registerTool") {
+		t.Errorf("show must include the code: %v", err)
+	}
+
+	disabled, err := execute(t, extCmd(app), "disable", "greet")
+	if err != nil || disabled["status"] != "disabled" {
+		t.Errorf("disable: %v (err %v)", disabled, err)
 	}
 }
 
