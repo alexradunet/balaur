@@ -158,7 +158,13 @@ const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"repeating ones, and useful context folded into notes. " +
 	"Check `task_list` before claiming what is or isn't on the book; mark " +
 	"things done with `task_done` when the owner says they did them; snooze " +
-	"or drop on request. Never invent tasks the owner didn't voice."
+	"or drop on request. Never invent tasks the owner didn't voice.\n\n" +
+	"Life log: when the owner reports something they track — a measurement, " +
+	"a practice, a milestone — keep it with `log_entry`, using a short " +
+	"consistent kind. Check `entry_series` (without a kind) for the kinds " +
+	"already in use before coining a new one; the owner decides what is " +
+	"worth tracking. Log only what they state, never invent values, and " +
+	"never moralize about the numbers."
 
 // nowLine grounds the model in the present moment. Relative dates in the
 // owner's words ("tomorrow at 10") must resolve against the box's clock
@@ -253,6 +259,7 @@ func nonEmpty(s string) []string {
 func (h *handlers) agentTools() []agent.Tool {
 	ts := tools.KnowledgeTools(h.app)
 	ts = append(ts, tools.TaskTools(h.app)...)
+	ts = append(ts, tools.LifeTools(h.app)...)
 	if os.Getenv("BALAUR_OS_ACCESS") == "1" {
 		ts = append(ts, tools.OSAccess(h.app)...)
 	}

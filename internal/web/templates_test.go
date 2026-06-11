@@ -69,3 +69,55 @@ func TestTasksPageViewsRender(t *testing.T) {
 		}
 	}
 }
+
+func TestLifePageRenders(t *testing.T) {
+	tmpl := parseTemplates(t)
+	points, lx, ly := sparkPoints([]float64{83, 82.6, 82.5}, sparkW, sparkH)
+	if points == "" || lx == "" || ly == "" {
+		t.Fatalf("sparkPoints empty: %q %q %q", points, lx, ly)
+	}
+	data := map[string]any{
+		"Title":  "Life",
+		"Habits": []lifeHabitView{{Title: "Stretch", Streak: 5, RecurLine: "repeats daily"}},
+		"Kinds": []lifeKindView{
+			{Kind: "weight", Unit: "kg", Count: 3, Numeric: true, LastVal: "82.5", LastAt: "Jun 11",
+				Change: "-0.5 over 90d", Points: points, SparkLastX: lx, SparkLastY: ly},
+			{Kind: "gratitude", Count: 1, Recent: []string{"Jun 10 — the morning was quiet"}},
+		},
+	}
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "life.html", data); err != nil {
+		t.Fatalf("life.html: %v", err)
+	}
+	out := b.String()
+	for _, want := range []string{"weight", "82.5", "polyline", "gratitude", "streak 5"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("life page missing %q", want)
+		}
+	}
+	// Empty state renders too.
+	b.Reset()
+	if err := tmpl.ExecuteTemplate(&b, "life.html", map[string]any{"Title": "Life"}); err != nil {
+		t.Fatalf("life.html empty: %v", err)
+	}
+	if !strings.Contains(b.String(), "yours to invent") {
+		t.Error("empty state missing")
+	}
+}
+
+func TestSparkPointsScaling(t *testing.T) {
+	points, _, ly := sparkPoints([]float64{1, 2, 3}, 240, 48)
+	if points == "" {
+		t.Fatal("no points")
+	}
+	// Three values: three coordinate pairs; the max (last) sits near the top.
+	if got := len(strings.Fields(points)); got != 3 {
+		t.Errorf("point pairs = %d, want 3", got)
+	}
+	if !strings.HasPrefix(ly, "4") { // pad = 4.0 at the maximum
+		t.Errorf("last y = %s, want near top pad", ly)
+	}
+	if p, _, _ := sparkPoints([]float64{5}, 240, 48); p != "" {
+		t.Errorf("single point should not draw a line: %q", p)
+	}
+}

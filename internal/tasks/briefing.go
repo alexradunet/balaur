@@ -59,6 +59,9 @@ func Briefing(app core.App, client llm.Client, now time.Time, hour int) error {
 	}
 
 	lines := dayLines(app, bk, now)
+	if y := loggedYesterday(app, now); y != "" {
+		lines = append(lines, y)
+	}
 	text := deterministicBriefing(now, lines)
 	if client != nil {
 		if composed := composeBriefing(client, now, lines); composed != "" {
@@ -117,6 +120,35 @@ func dayLine(app core.App, r *core.Record, now time.Time, overdue bool) string {
 		fmt.Fprintf(&b, " (%s)", notes)
 	}
 	return b.String()
+}
+
+// loggedYesterday compresses yesterday's owner-logged entries into one
+// reflective line; "" when yesterday logged nothing. Kinds are the owner's
+// own — this only mirrors what they chose to track. Briefing-only: the
+// Today context block stays commitments.
+func loggedYesterday(app core.App, now time.Time) string {
+	ys := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -1)
+	recs, err := app.FindRecordsByFilter("entries",
+		"kind != 'completion' && kind != 'journal' && noted_at >= {:s} && noted_at < {:e}",
+		"noted_at", 12, 0,
+		dbx.Params{"s": store.PBTime(ys), "e": store.PBTime(ys.AddDate(0, 0, 1))})
+	if err != nil || len(recs) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, r := range recs {
+		if len(parts) >= 4 {
+			break
+		}
+		p := r.GetString("kind")
+		if v := r.GetFloat("value_num"); v != 0 {
+			p = fmt.Sprintf("%s %g %s", p, v, r.GetString("unit"))
+		} else if t := compressLine(r.GetString("text"), 40); t != "" {
+			p = p + ": " + t
+		}
+		parts = append(parts, strings.TrimSpace(p))
+	}
+	return "logged yesterday: " + strings.Join(parts, " · ")
 }
 
 func compressLine(s string, n int) string {

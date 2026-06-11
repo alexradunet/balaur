@@ -126,6 +126,38 @@ func TestBriefingContentAndStreak(t *testing.T) {
 	}
 }
 
+func TestBriefingMentionsYesterdayLog(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := at(10)
+	if _, err := Create(app, CreateOpts{Title: "Pay rent", Due: at(15)}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	// An owner-defined tracker entry from yesterday (kind is free text).
+	col, err := app.FindCollectionByNameOrId("entries")
+	if err != nil {
+		t.Fatalf("entries collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("kind", "weight")
+	rec.Set("value_num", 82.5)
+	rec.Set("unit", "kg")
+	rec.Set("noted_at", now.AddDate(0, 0, -1).UTC())
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("save entry: %v", err)
+	}
+
+	if err := Briefing(app, nil, now, 9); err != nil {
+		t.Fatalf("briefing: %v", err)
+	}
+	msgs := briefingMessages(t, app)
+	if len(msgs) != 1 {
+		t.Fatalf("messages = %d, want 1", len(msgs))
+	}
+	if c := msgs[0].GetString("content"); !strings.Contains(c, "logged yesterday: weight 82.5 kg") {
+		t.Errorf("yesterday line missing in:\n%s", c)
+	}
+}
+
 func TestBriefingUsesComposedText(t *testing.T) {
 	app := storetest.NewApp(t)
 	if _, err := Create(app, CreateOpts{Title: "Pay rent", Due: at(15)}); err != nil {

@@ -79,6 +79,13 @@ database you own and can open with any SQLite tool.
   forward mirror of the recap telescope. Calendar and timeline project
   recurrence rules forward, read-only; actions live on the list cards.
   Day pages are roadmap.
+- **The life log — owner-defined:** Balaur does not decide what a life is
+  made of. `log_entry` keeps whatever you track under kinds you invent
+  (weight, mood, sleep, pages-read…), numeric or textual, backdatable;
+  `entry_series` reads trends, `entry_drop` corrects. `/life` mirrors what
+  exists: sparklines for numeric kinds, recent lines for the rest, live
+  habit streaks on top. Nothing is predefined; the briefing reflects
+  yesterday's log in one line.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
@@ -172,8 +179,6 @@ boundary) and `DESIGN.md` for the Basm design system.
 
 ## Roadmap (not shipped — honesty ledger)
 
-- Life tracking on the `entries` substrate: weight, workouts, achievements,
-  /life page
 - Day pages with journaling (`/day/{date}`: your thoughts + the day's recap,
   completions, and logs)
 - Johnny Decimal Markdown vault mirror: one-way export + git history

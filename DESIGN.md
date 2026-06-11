@@ -107,10 +107,14 @@ the morning briefing (once per local day, hour-gated with wake catch-up,
 idempotency derived from the origin-tagged message, quiet days skipped,
 habit streaks derived from the entries log) · a Today block of open
 commitments and a present-moment line (date, time, timezone) injected
-into every chat turn, so relative dates resolve against the box's clock.
+into every chat turn, so relative dates resolve against the box's clock ·
+the owner-defined life log (`log_entry` / `entry_series` / `entry_drop`,
+free-form kinds, numeric or textual, backdatable, audited) and the /life
+page mirroring what is actually logged — sparklines for numeric kinds,
+recent lines for text kinds, live habit streaks · a one-line yesterday
+reflection in the briefing.
 
-**Roadmap — do not state as shipped:** life tracking
-(weight, workouts, achievements, /life) · day pages with journaling ·
+**Roadmap — do not state as shipped:** day pages with journaling ·
 Johnny Decimal Markdown vault mirror (one-way export + git) ·
 FTS5/embedding recall · encrypted export · multi-human accounts · channel
 adapters (Signal/WhatsApp/web) · CLI client.
