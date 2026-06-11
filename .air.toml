@@ -1,0 +1,15 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/balaur ."
+  bin = "./tmp/balaur"
+  full_bin = "./tmp/balaur serve"
+  include_ext = ["go", "html", "css", "js", "png", "jpg", "jpeg", "svg", "woff", "woff2", "json"]
+  exclude_dir = [".git", ".github", ".cache", "tmp", "pb_data", "dist"]
+  exclude_file = []
+  delay = 1000
+  stop_on_error = true
+
+[log]
+  time = true

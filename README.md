@@ -135,8 +135,12 @@ database you own and can open with any SQLite tool.
 ## Quick start
 
 ```bash
-go run . serve
+make run
 ```
+
+For live-reload development, run `make dev` (uses [air](https://github.com/air-verse/air)).
+
+If `air` is not installed, `make dev` downloads and runs the latest release automatically.
 
 Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
