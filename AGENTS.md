@@ -36,13 +36,23 @@ lean and high-signal — add a rule only when it changes a real decision.
   PocketBase as a Go library and serves the web UI from `embed.FS`.
 - **The PocketBase admin dashboard is the superuser engine room** — never the
   product surface. Balaur's face is its own HTMX UI under `/`.
-- **No MCP.** Capability is exposed as Go tools in the agent loop, vault
-  entries, or Markdown skills — not as MCP servers.
+- **No MCP.** Capability is exposed as Go tools in the agent loop,
+  balaur-extensions, vault entries, or Markdown skills — not as MCP
+  servers.
 - **Gateways adapt; they never re-implement.** Every surface that carries
   an owner turn — web today, the CLI, future messengers — calls the shared
   pipeline in `internal/turn` and only renders its events in its own
   medium. Behavior (context assembly, the loop, the honesty check,
   persistence, model resolution) lives below the gateway line, once.
+- **balaur-extensions add verbs, not privileges.** An extension is one JS
+  file in `pb_extensions/` registering tools via `balaur.registerTool`,
+  run by goja with a deliberately tiny surface: `balaur.http` inside
+  handlers only — no filesystem, no shell, no npm, no DB. The
+  `extensions` collection is the consent ledger: nothing loads
+  unapproved, approval pins the file's sha256, any change re-proposes,
+  load-time side effects are refused, and every invocation is audited.
+  Capability that needs more than this belongs in Go, through the
+  devloop.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
 - Local inference goes through Kronk (llama.cpp via purego — still
