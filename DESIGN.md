@@ -120,14 +120,18 @@ capture claims without a successful tool call trigger one self-repair
 pass, then an owner-visible origin-tagged check note · a 16-option soul
 avatar picker in the chatbar (`/ui/settings/avatar`, stored in
 `owner_settings`) · a 16-personality Balaur head library under
-`web/static/avatars/balaur-01..16.png`.
+`web/static/avatars/balaur-01..16.png` · a Balaur head medallion favicon
+at `web/static/logo.png` wired via `<link rel="icon">` and
+`apple-touch-icon` in the `page_head` partial · a profile page (`/profile`)
+with display name, soul avatar picker (16 options), and Balaur head picker
+(16 options) · a light/dark theme toggle in the topbar persisted to
+`localStorage`.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client ·
-gold Balaur head medallion (`web/static/logo.png`) · per-head avatar
-assignment (`balaur_avatar` key on head records, referencing `balaur-01`…`balaur-16`) ·
-light/dark theme toggle button in the topbar.
+per-head avatar assignment (`balaur_avatar` key on head records, referencing
+`balaur-01`…`balaur-16`).
 
 ## 4. Visual system
 
@@ -277,8 +281,10 @@ per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
   holding a glowing teal orb and a tome, framed by its own folk-diamond
   border (the frame is part of the artwork). 512px, palette-quantized.
   Used borderless in the topbar brand (34px) and the empty-chat hearth.
-- `web/static/logo.png` — gold Balaur head medallion for the favicon:
-  **roadmap**, not in the repo yet.
+- `web/static/logo.png` — gold Balaur head medallion: front-facing dragon
+  head in a folk-diamond ring, 512px palette-quantized PNG. Used as the
+  browser favicon (`<link rel="icon">`) and iOS home-screen icon
+  (`<link rel="apple-touch-icon">`) via the `page_head` partial.
 
 #### Avatar rules
 
