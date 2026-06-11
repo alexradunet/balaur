@@ -65,7 +65,7 @@
         <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
       </span>
       <div class="msg-main">
-        <div class="who">You</div>
+        <div class="who">{{.OwnerName}}</div>
         <div class="body"></div>
       </div>
     </div>
@@ -73,7 +73,7 @@
   <template id="t-msg-pending">
     <div class="msg msg-balaur msg-pending msg-with-avatar">
       <span class="balaur-avatar balaur-avatar-balaur balaur-avatar-live" data-kind="balaur" aria-hidden="true">
-        <img src="/static/avatars/balaur.png" alt="" decoding="async">
+        <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
       </span>
       <div class="msg-main">
         <div class="who">Balaur</div>
@@ -98,7 +98,7 @@
            alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
       <div class="msg msg-balaur msg-with-avatar">
         <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
-          <img src="/static/avatars/balaur.png" alt="" decoding="async">
+          <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
         </span>
         <div class="msg-main">
           <div class="who">Balaur</div>

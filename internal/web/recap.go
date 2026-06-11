@@ -143,24 +143,30 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 
 // messageView is one chat message's template payload (history + day expand).
 type messageView struct {
-	Role          string
-	Tool          string
-	Content       string
-	Origin        string // agent-initiated marker: "nudge" | "briefing"; "" = chat
-	CardURL       string // inline card embed endpoint, when the tool result carried one
-	SoulAvatarURL string // resolved soul avatar URL (same for all views in one call)
+	Role            string
+	Tool            string
+	Content         string
+	Origin          string // agent-initiated marker: "nudge" | "briefing"; "" = chat
+	CardURL         string // inline card embed endpoint, when the tool result carried one
+	SoulAvatarURL   string // resolved soul avatar URL (same for all views in one call)
+	BalaurAvatarURL string // resolved Balaur head avatar URL
+	OwnerName       string // display name for the "You" label
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {
-	soulURL := store.SoulAvatarURL(h.app)
+	soulURL   := store.SoulAvatarURL(h.app)
+	balaurURL := store.BalaurAvatarURL(h.app)
+	ownerName := store.OwnerName(h.app)
 	out := make([]messageView, 0, len(recs))
 	for _, r := range recs {
 		mv := messageView{
-			Role:          r.GetString("role"),
-			Tool:          r.GetString("tool_name"),
-			Content:       r.GetString("content"),
-			Origin:        r.GetString("origin"),
-			SoulAvatarURL: soulURL,
+			Role:            r.GetString("role"),
+			Tool:            r.GetString("tool_name"),
+			Content:         r.GetString("content"),
+			Origin:          r.GetString("origin"),
+			SoulAvatarURL:   soulURL,
+			BalaurAvatarURL: balaurURL,
+			OwnerName:       ownerName,
 		}
 		// Re-render marked cards that were created inline in chat.
 		if mv.Role == "tool" {

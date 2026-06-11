@@ -18,23 +18,25 @@ import (
 )
 
 type homeData struct {
-	Title           string
-	ModelChoices    []turn.ModelChoice
-	ActiveModel     string
-	ModelError      string
-	ModelHint       string
-	ChatReady       bool
-	ChatPlaceholder string
-	History         []messageView
-	HasRecap        bool
-	DevSeed         bool
-	ChatbarOOB      bool
-	NowMillis       int64         // nudge-poll cursor: only messages after page load
-	SoulAvatarURL   string        // resolved from owner_settings soul_avatar preference
-	AvatarOptions   []AvatarOption // all chooseable soul avatars for the picker
+	Title             string
+	ModelChoices      []turn.ModelChoice
+	ActiveModel       string
+	ModelError        string
+	ModelHint         string
+	ChatReady         bool
+	ChatPlaceholder   string
+	History           []messageView
+	HasRecap          bool
+	DevSeed           bool
+	ChatbarOOB        bool
+	NowMillis         int64          // nudge-poll cursor: only messages after page load
+	SoulAvatarURL     string         // resolved soul avatar URL
+	AvatarOptions     []AvatarOption // soul avatar picker roster
+	OwnerName         string         // display name for the "You" label in chat
+	BalaurAvatarURL   string         // resolved Balaur head avatar URL
 }
 
-// AvatarOption is one entry in the soul avatar picker.
+// AvatarOption is one entry in an avatar picker (soul or Balaur head).
 type AvatarOption struct {
 	Key    string
 	Label  string
@@ -67,8 +69,10 @@ func (h *handlers) homeData() (homeData, error) {
 	}
 	data.ModelChoices = choices
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
-	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
-	data.AvatarOptions = buildAvatarOptions(h.app)
+	data.SoulAvatarURL   = store.SoulAvatarURL(h.app)
+	data.AvatarOptions   = buildAvatarOptions(h.app)
+	data.OwnerName       = store.OwnerName(h.app)
+	data.BalaurAvatarURL = store.BalaurAvatarURL(h.app)
 	if active.Key == "" {
 		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
 		data.ModelHint = llm.DefaultChatModelDownloadCommand(h.app.DataDir())
@@ -417,6 +421,40 @@ func buildAvatarOptions(app core.App) []AvatarOption {
 		{"soul-14", "Solomonar"},
 		{"soul-15", "Vâlvă"},
 		{"soul-16", "Pricolici"},
+	}
+	opts := make([]AvatarOption, len(roster))
+	for i, r := range roster {
+		opts[i] = AvatarOption{
+			Key:    r.key,
+			Label:  r.label,
+			URL:    "/static/avatars/" + r.key + ".png",
+			Active: r.key == pref,
+		}
+	}
+	return opts
+}
+
+// buildBalaurHeadOptions returns the full roster of chooseable Balaur head
+// personalities with the currently active one flagged.
+func buildBalaurHeadOptions(app core.App) []AvatarOption {
+	pref := store.GetOwnerSetting(app, "balaur_avatar", "balaur-01")
+	roster := []struct{ key, label string }{
+		{"balaur-01", "Wise"},
+		{"balaur-02", "Ancient"},
+		{"balaur-03", "Guardian"},
+		{"balaur-04", "Scholar"},
+		{"balaur-05", "Wild"},
+		{"balaur-06", "Storm"},
+		{"balaur-07", "Night"},
+		{"balaur-08", "Young"},
+		{"balaur-09", "Ember"},
+		{"balaur-10", "Frost"},
+		{"balaur-11", "Healer"},
+		{"balaur-12", "Trickster"},
+		{"balaur-13", "Dreamer"},
+		{"balaur-14", "Forest"},
+		{"balaur-15", "Dawn"},
+		{"balaur-16", "Sage"},
 	}
 	opts := make([]AvatarOption, len(roster))
 	for i, r := range roster {
