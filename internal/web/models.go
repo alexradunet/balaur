@@ -32,6 +32,14 @@ type homeData struct {
 	NowMillis       int64 // nudge-poll cursor: only messages after page load
 }
 
+type modelsPageData struct {
+	Title        string
+	ModelChoices []turn.ModelChoice
+	ActiveModel  string
+	ModelError   string
+	ModelHint    string
+}
+
 type modelModalData struct {
 	Title       string
 	Body        string
@@ -72,6 +80,44 @@ func (h *handlers) chatbar(e *core.RequestEvent) error {
 	return nil
 }
 
+func (h *handlers) modelsPage(e *core.RequestEvent) error {
+	data, err := h.modelsData()
+	if err != nil {
+		return e.InternalServerError("loading models", err)
+	}
+	return h.render(e, "models.html", data)
+}
+
+func (h *handlers) modelsData() (modelsPageData, error) {
+	data := modelsPageData{Title: "Models", ModelHint: llm.DefaultChatModelDownloadCommand(h.app.DataDir())}
+	choices, active, err := turn.ModelChoices(h.app)
+	if err != nil {
+		return data, err
+	}
+	data.ModelChoices = choices
+	if active.Key != "" {
+		data.ActiveModel = active.Name
+	} else {
+		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
+	}
+	return data, nil
+}
+
+func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
+	data, err := h.modelsData()
+	if err != nil {
+		return e.InternalServerError("loading models", err)
+	}
+	if msg != "" {
+		data.ModelError = msg
+	}
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := h.tmpl.ExecuteTemplate(e.Response, "models_panel", data); err != nil {
+		return e.InternalServerError("rendering models", err)
+	}
+	return nil
+}
+
 func (h *handlers) selectModel(e *core.RequestEvent) error {
 	key := e.Request.FormValue("key")
 	if key == "" {
@@ -91,6 +137,9 @@ func (h *handlers) selectModel(e *core.RequestEvent) error {
 		if err := store.SetActiveLLMModel(h.app, choice.Key, "owner"); err != nil {
 			return e.InternalServerError("saving model choice", err)
 		}
+		if e.Request.FormValue("target") == "models" {
+			return h.modelsPanel(e, "")
+		}
 		return h.chatbar(e)
 	}
 	return e.BadRequestError("model is not available", nil)
@@ -105,6 +154,9 @@ func (h *handlers) missingModelModal(e *core.RequestEvent) error {
 }
 
 func (h *handlers) downloadModel(e *core.RequestEvent) error {
+	if e.Request.FormValue("target") == "models" {
+		return h.downloadModelFromPage(e)
+	}
 	modal, err := h.missingModelModalData(e.Request.FormValue("key"))
 	if err != nil {
 		return e.BadRequestError("model is not available", err)
@@ -149,6 +201,30 @@ func (h *handlers) downloadModel(e *core.RequestEvent) error {
 	return nil
 }
 
+func (h *handlers) downloadModelFromPage(e *core.RequestEvent) error {
+	key := e.Request.FormValue("key")
+	if _, err := h.missingModelModalData(key); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	path, err := h.downloadDefaultLocalModel(e.Request.Context())
+	if err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	choices, _, err := turn.ModelChoices(h.app)
+	if err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	for _, choice := range choices {
+		if choice.Provider == "kronk" && choice.Model == path {
+			if err := store.SetActiveLLMModel(h.app, choice.Key, "owner"); err != nil {
+				return h.modelsPanel(e, err.Error())
+			}
+			return h.modelsPanel(e, "")
+		}
+	}
+	return h.modelsPanel(e, "local model record not found")
+}
+
 func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
 	name := strings.TrimSpace(e.Request.FormValue("name"))
 	baseURL := strings.TrimSpace(e.Request.FormValue("base_url"))
@@ -159,6 +235,9 @@ func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
 	local := e.Request.FormValue("local") == "1"
 	modelID, err := store.SaveOpenAIModel(h.app, name, baseURL, apiKey, label, model, embedModel, local)
 	if err != nil {
+		if e.Request.FormValue("target") == "models" {
+			return h.modelsPanel(e, err.Error())
+		}
 		data, loadErr := h.homeData()
 		if loadErr != nil {
 			return e.InternalServerError("loading chatbar", loadErr)
@@ -174,6 +253,9 @@ func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
 		if err := store.SetActiveLLMModel(h.app, modelID, "owner"); err != nil {
 			return e.InternalServerError("saving model choice", err)
 		}
+	}
+	if e.Request.FormValue("target") == "models" {
+		return h.modelsPanel(e, "")
 	}
 	return h.chatbar(e)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
 
@@ -37,6 +38,34 @@ func TestTaskCardRenders(t *testing.T) {
 	for _, want := range []string{"tcard-abc123", "Call notary", "Done", "Snooze", "Drop"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("card missing %q", want)
+		}
+	}
+}
+
+func TestModelsPageAndCleanChatbarRender(t *testing.T) {
+	tmpl := parseTemplates(t)
+	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen2.5 3B", ChatPlaceholder: "Speak..."}
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
+		t.Fatalf("chat_bar: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `href="/models"`) {
+		t.Error("chatbar should link to models page")
+	}
+	if strings.Contains(out, "Add OpenAI-compatible") || strings.Contains(out, "model-choice-list") {
+		t.Error("chatbar should not contain model configuration UI")
+	}
+
+	b.Reset()
+	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen2.5 3B", ModelChoices: []turn.ModelChoice{{Key: "m1", Provider: "kronk", Model: "model.gguf", Name: "Local Qwen2.5 3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}}}
+	if err := tmpl.ExecuteTemplate(&b, "models.html", models); err != nil {
+		t.Fatalf("models.html: %v", err)
+	}
+	out = b.String()
+	for _, want := range []string{"Available models", "Add OpenAI-compatible API", "Local Qwen2.5 3B"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("models page missing %q", want)
 		}
 	}
 }

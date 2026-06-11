@@ -52,6 +52,7 @@ func Register(se *core.ServeEvent) error {
 
 	h := &handlers{app: se.App, tmpl: tmpl}
 	se.Router.GET("/", h.home)
+	se.Router.GET("/models", h.modelsPage)
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)

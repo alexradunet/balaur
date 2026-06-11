@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/basm.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ᗅ Balaur</a>
+    <nav>
+      <a href="/tasks">Tasks</a>
+      <a href="/life">Life</a>
+      <a href="/models">Models</a>
+      <a href="/memory">Memory</a>
+      <a href="/skills">Skills</a>
+      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="k-section">
+      <h1>Models</h1>
+      <p class="k-sub">Choose the one active model Balaur uses. Local and self-hosted options stay first; remote APIs are explicit.</p>
+    </section>
+    {{template "models_panel" .}}
+  </main>
+</body>
+</html>
+
+{{define "models_panel"}}
+<div id="models-panel">
+  <section class="k-section">
+    <div class="k-heading">
+      <h2>Available models</h2>
+      {{if .ActiveModel}}<span class="k-count">active: {{.ActiveModel}}</span>{{end}}
+    </div>
+    {{if .ModelError}}<p class="model-error">{{.ModelError}}</p>{{end}}
+    {{if .ModelChoices}}
+    <div class="k-grid models-grid">
+      {{range .ModelChoices}}
+      <article class="kcard model-card {{if .Active}}model-card-active{{end}} {{if .Disabled}}model-card-disabled{{end}}">
+        <div class="kcard-head">
+          <div>
+            <div class="kcard-kind">{{.Badge}}</div>
+            <h3>{{.Name}}</h3>
+          </div>
+          {{if .Active}}<span class="tag">active</span>{{end}}
+        </div>
+        <p class="model-detail-line">{{.Detail}}</p>
+        <div class="kcard-actions">
+          {{if .Disabled}}
+          <form hx-post="/ui/model/download" hx-target="#models-panel" hx-swap="outerHTML">
+            <input type="hidden" name="target" value="models">
+            <input type="hidden" name="key" value="{{.Key}}">
+            <button class="btn btn-primary btn-sm" type="submit">Download and use</button>
+          </form>
+          {{else if .Active}}
+          <button class="btn btn-ghost btn-sm" type="button" disabled>In use</button>
+          {{else}}
+          <form hx-post="/ui/model/select" hx-target="#models-panel" hx-swap="outerHTML">
+            <input type="hidden" name="target" value="models">
+            <input type="hidden" name="key" value="{{.Key}}">
+            <button class="btn btn-primary btn-sm" type="submit">Use this model</button>
+          </form>
+          {{end}}
+        </div>
+      </article>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="k-empty">No model records yet.</p>
+    {{end}}
+  </section>
+
+  <section class="k-section">
+    <div class="k-heading">
+      <h2>Add OpenAI-compatible API</h2>
+    </div>
+    <p class="k-sub">Works with Ollama, llama-server, LM Studio, OpenAI, Synthetic, and other OpenAI-compatible endpoints.</p>
+    <form class="card model-provider-form" hx-post="/ui/model/openai" hx-target="#models-panel" hx-swap="outerHTML">
+      <input type="hidden" name="target" value="models">
+      <label>Provider name<input name="name" placeholder="Ollama" required></label>
+      <label>Base URL<input name="base_url" placeholder="http://localhost:11434/v1" required></label>
+      <label>Display label<input name="label" placeholder="Llama 3.1 8B" required></label>
+      <label>Chat model id<input name="model" placeholder="llama3.1:8b" required></label>
+      <label>Embedding model id <span class="muted">optional</span><input name="embed_model" placeholder="nomic-embed-text"></label>
+      <label>API key <span class="muted">optional, stored in PocketBase</span><input name="api_key" type="password" autocomplete="off" placeholder="sk-..."></label>
+      <div class="model-form-checks">
+        <label><input type="checkbox" name="local" value="1"> self-hosted/local endpoint</label>
+        <label><input type="checkbox" name="use" value="1" checked> use after saving</label>
+      </div>
+      <p class="k-sub">Keys are redacted in Balaur's UI and audit log, but pb_data and backups should be treated as secret.</p>
+      <button class="btn btn-primary" type="submit">Save model</button>
+    </form>
+  </section>
+</div>
+{{end}}

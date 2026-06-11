@@ -100,6 +100,7 @@
     <nav>
       <a href="/tasks">Tasks</a>
       <a href="/life">Life</a>
+      <a href="/models">Models</a>
       <a href="/memory">Memory</a>
       <a href="/skills">Skills</a>
       <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
@@ -165,7 +166,11 @@
 
 {{define "chat_bar"}}
 <div class="chatbar" id="chatbar" {{if .ChatbarOOB}}hx-swap-oob="outerHTML"{{end}} {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
-  {{template "model_switcher" .}}
+  <div class="chatbar-meta">
+    <span class="tag">Model</span>
+    {{if .ActiveModel}}<span class="model-current">{{.ActiveModel}}</span>{{else}}<span class="model-current">not configured</span>{{end}}
+    <a class="chatbar-model-link" href="/models">Configure</a>
+  </div>
   {{if .ChatReady}}
   <form class="chat-form" hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
     <input type="hidden" name="client_rendered" value="0">
@@ -178,59 +183,6 @@
   </div>
   {{end}}
 </div>
-{{end}}
-
-{{define "model_switcher"}}
-<section class="model-switcher" aria-label="Model chooser">
-  <div class="model-switcher-head">
-    <span class="model-switcher-kicker">Model</span>
-    {{if .ActiveModel}}<span class="model-current">{{.ActiveModel}}</span>{{end}}
-  </div>
-  {{if .ModelChoices}}
-  <div class="model-choice-list">
-    {{range .ModelChoices}}
-    {{if .Disabled}}
-    <div class="model-choice-form">
-      <button class="model-choice model-choice-disabled" type="button" hx-get="/ui/model/missing?key={{.Key}}" hx-target="#modal-root" hx-swap="innerHTML">
-        <span class="model-name">{{.Name}}</span>
-        <span class="model-detail">{{.Detail}}</span>
-        <span class="tag">{{.Badge}}</span>
-      </button>
-    </div>
-    {{else}}
-    <form class="model-choice-form" hx-post="/ui/model/select" hx-target="#chatbar" hx-swap="outerHTML" hx-on::after-settle="document.querySelector('#chatbar [name=message]')?.focus()">
-      <input type="hidden" name="key" value="{{.Key}}">
-      <button class="model-choice {{if .Active}}model-choice-active{{end}}" type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
-        <span class="model-name">{{.Name}}</span>
-        <span class="model-detail">{{.Detail}}</span>
-        <span class="tag">{{.Badge}}</span>
-      </button>
-    </form>
-    {{end}}
-    {{end}}
-  </div>
-  {{else}}
-  <div class="model-switcher-empty">
-    <span>{{.ModelError}}</span>
-    {{if .ModelHint}}<code>{{.ModelHint}}</code>{{end}}
-  </div>
-  {{end}}
-  <details class="model-add">
-    <summary>Add OpenAI-compatible API</summary>
-    {{if .ModelError}}<p class="model-error">{{.ModelError}}</p>{{end}}
-    <form class="model-provider-form" hx-post="/ui/model/openai" hx-target="#chatbar" hx-swap="outerHTML">
-      <input name="name" placeholder="Provider name, e.g. Ollama" required>
-      <input name="base_url" placeholder="Base URL, e.g. http://localhost:11434/v1" required>
-      <input name="label" placeholder="Display label, e.g. Llama 3.1 8B" required>
-      <input name="model" placeholder="Chat model id" required>
-      <input name="embed_model" placeholder="Embedding model id (optional)">
-      <input name="api_key" type="password" placeholder="API key (optional; stored in PocketBase)">
-      <label><input type="checkbox" name="local" value="1"> self-hosted/local endpoint</label>
-      <label><input type="checkbox" name="use" value="1" checked> use after saving</label>
-      <button class="btn btn-primary" type="submit">Save model</button>
-    </form>
-  </details>
-</section>
 {{end}}
 
 {{define "model_modal"}}

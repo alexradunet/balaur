@@ -162,7 +162,7 @@ You can still override the default explicitly:
 BALAUR_CHAT_MODEL=/path/to/model.gguf go run . serve
 
 # Add OpenAI-compatible endpoints (llama-server, Ollama, remote) from the
-# chatbar model form. Base URL, model id, and optional API key are stored in
+# /models page. Base URL, model id, and optional API key are stored in
 # PocketBase; the active model is selected explicitly.
 ```
 
