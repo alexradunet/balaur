@@ -44,26 +44,36 @@ func TestTaskCardRenders(t *testing.T) {
 
 func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	tmpl := parseTemplates(t)
-	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen2.5 3B", ChatPlaceholder: "Speak..."}
+	choice := turn.ModelChoice{Key: "m1", Provider: "kronk", Model: "model.gguf", Name: "Local Qwen2.5 3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}
+	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen2.5 3B", ChatPlaceholder: "Speak...", ModelChoices: []turn.ModelChoice{choice}}
 	var b strings.Builder
 	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
 		t.Fatalf("chat_bar: %v", err)
 	}
 	out := b.String()
-	if !strings.Contains(out, `href="/models"`) {
-		t.Error("chatbar should link to models page")
+	if !strings.Contains(out, "model-choice-list") || !strings.Contains(out, "Add OpenAI-compatible API") {
+		t.Error("chatbar should render the inline model chooser")
 	}
-	if strings.Contains(out, "Add OpenAI-compatible") || strings.Contains(out, "model-choice-list") {
-		t.Error("chatbar should not contain model configuration UI")
+	if !strings.Contains(out, `<textarea name="message"`) {
+		t.Error("chatbar should render the current textarea input when chat is ready")
 	}
 
 	b.Reset()
-	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen2.5 3B", ModelChoices: []turn.ModelChoice{{Key: "m1", Provider: "kronk", Model: "model.gguf", Name: "Local Qwen2.5 3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}}}
+	data.ChatReady = false
+	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
+		t.Fatalf("chat_bar not ready: %v", err)
+	}
+	if strings.Contains(b.String(), `input type="text"`) {
+		t.Error("chatbar should not render the old disabled text input when chat is not ready")
+	}
+
+	b.Reset()
+	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen2.5 3B", ModelChoices: []turn.ModelChoice{choice}}
 	if err := tmpl.ExecuteTemplate(&b, "models.html", models); err != nil {
 		t.Fatalf("models.html: %v", err)
 	}
 	out = b.String()
-	for _, want := range []string{"Available models", "Add OpenAI-compatible API", "Local Qwen2.5 3B"} {
+	for _, want := range []string{`href="/models"`, "Available models", "Add OpenAI-compatible API", "Local Qwen2.5 3B"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("models page missing %q", want)
 		}
