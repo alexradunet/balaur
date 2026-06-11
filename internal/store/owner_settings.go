@@ -114,3 +114,32 @@ func BalaurAvatarURL(app core.App) string {
 func OwnerName(app core.App) string {
 	return GetOwnerSetting(app, "display_name", "You")
 }
+
+// ── Per-head Balaur avatar ─────────────────────────────────────────
+
+// HeadBalaurAvatarURL resolves the Balaur avatar URL for a specific head
+// record. If the head has its own balaur_avatar set, that takes precedence.
+// Otherwise falls back to the owner's balaur_avatar preference, then to
+// balaur-01 (Wise). Pass an empty headID to get the owner's default.
+func HeadBalaurAvatarURL(app core.App, headID string) string {
+	if headID != "" {
+		head, err := app.FindRecordById("heads", headID)
+		if err == nil {
+			key := head.GetString("balaur_avatar")
+			if url, ok := balaurAvatarMap[key]; ok {
+				return url
+			}
+		}
+	}
+	return BalaurAvatarURL(app) // owner's default or balaur-01
+}
+
+// SetHeadBalaurAvatar persists a Balaur head personality on a head record.
+func SetHeadBalaurAvatar(app core.App, headID, key string) error {
+	head, err := app.FindRecordById("heads", headID)
+	if err != nil {
+		return err
+	}
+	head.Set("balaur_avatar", key)
+	return app.Save(head)
+}

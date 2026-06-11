@@ -116,6 +116,9 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
+	// Heads management — list active sub-heads and assign personalities.
+	se.Router.GET("/heads", h.headsPage)
+	se.Router.POST("/ui/heads/{id}/avatar", h.setHeadAvatar)
 	return nil
 }
 
