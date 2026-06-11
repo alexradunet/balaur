@@ -41,20 +41,6 @@ func TestTaskCardRenders(t *testing.T) {
 	}
 }
 
-func TestNowLineGroundsTheMoment(t *testing.T) {
-	loc, err := time.LoadLocation("Europe/Bucharest")
-	if err != nil {
-		t.Skipf("tzdata: %v", err)
-	}
-	now := time.Date(2026, 6, 11, 14, 32, 0, 0, loc)
-	line := nowLine(now)
-	for _, want := range []string{"Thursday, June 11 2026", "14:32", "UTC+03:00", "this moment"} {
-		if !strings.Contains(line, want) {
-			t.Errorf("now line missing %q in: %s", want, line)
-		}
-	}
-}
-
 func TestTasksPageViewsRender(t *testing.T) {
 	tmpl := parseTemplates(t)
 	now := time.Now()

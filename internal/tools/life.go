@@ -43,7 +43,7 @@ func logEntryTool(app core.App) agent.Tool {
 				"unit":      str("Optional unit for the number: kg, h, km, reps."),
 				"text":      str("Optional human line — the owner's words or useful detail."),
 				"details":   map[string]any{"type": "object", "description": "Optional structured extras, e.g. {\"exercise\":\"bench\",\"sets\":3,\"reps\":5}."},
-				"noted_at":  str("Optional backdate: " + dueFormats + ". Defaults to now."),
+				"noted_at":  str("Optional backdate: " + DueFormats + ". Defaults to now."),
 			}, "kind")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {
@@ -57,7 +57,7 @@ func logEntryTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("log_entry: bad arguments: %w", err)
 			}
-			notedAt, _, err := parseDue(args.NotedAt)
+			notedAt, _, err := ParseDue(args.NotedAt)
 			if err != nil {
 				return "", fmt.Errorf("log_entry: %w", err)
 			}

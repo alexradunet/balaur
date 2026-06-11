@@ -26,7 +26,7 @@ func journalWriteTool(app core.App) agent.Tool {
 				"Use when the owner asks to journal something, or offers a thought for the record and agrees to keep it.",
 			obj(map[string]any{
 				"text":     str("The owner's words, exactly as given."),
-				"noted_at": str("Optional: which day this belongs to (" + dueFormats + "). Defaults to now."),
+				"noted_at": str("Optional: which day this belongs to (" + DueFormats + "). Defaults to now."),
 			}, "text")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {
@@ -36,7 +36,7 @@ func journalWriteTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("journal_write: bad arguments: %w", err)
 			}
-			notedAt, _, err := parseDue(args.NotedAt)
+			notedAt, _, err := ParseDue(args.NotedAt)
 			if err != nil {
 				return "", fmt.Errorf("journal_write: %w", err)
 			}
