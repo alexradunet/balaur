@@ -18,7 +18,38 @@ import (
 	webassets "github.com/alexradunet/balaur/web"
 )
 
-// funcs are the few template helpers the Basm cards need.
+// toolGlyph maps a tool name to a single Basm-palette glyph rendered inside
+// a .tool-icon box in chat messages. Shared by the template helper and the
+// streaming writer in chat.go so both surfaces stay in sync.
+func toolGlyph(name string) string {
+	n := strings.ToLower(name)
+	switch {
+	case strings.Contains(n, "bash") || strings.Contains(n, "shell") || strings.Contains(n, "exec"):
+		return "$›"
+	case strings.Contains(n, "read"):
+		return "◈"
+	case strings.Contains(n, "write") || strings.Contains(n, "edit"):
+		return "✎"
+	case strings.Contains(n, "search") || strings.Contains(n, "recall") || strings.Contains(n, "find"):
+		return "⌕"
+	case strings.Contains(n, "task"):
+		return "◻"
+	case strings.Contains(n, "memory") || strings.Contains(n, "memo"):
+		return "◇"
+	case strings.Contains(n, "skill"):
+		return "⌥"
+	case strings.Contains(n, "log") || strings.Contains(n, "entry"):
+		return "≡"
+	case strings.Contains(n, "recap") || strings.Contains(n, "summary"):
+		return "⟳"
+	case strings.Contains(n, "day") || strings.Contains(n, "calendar") || strings.Contains(n, "journal"):
+		return "⌂"
+	default:
+		return "◈"
+	}
+}
+
+// funcs are the template helpers the Basm cards and chat messages need.
 var funcs = template.FuncMap{
 	// iter 5 → [0 1 2 3 4]; used for the importance pips.
 	"iter": func(n int) []int {
@@ -38,6 +69,8 @@ var funcs = template.FuncMap{
 		}
 		return out
 	},
+	// toolIcon returns a single glyph for a tool name, used in chat-messages.html.
+	"toolIcon": toolGlyph,
 }
 
 // Register mounts the Balaur UI and static assets on the PocketBase router.

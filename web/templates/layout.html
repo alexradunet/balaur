@@ -1,0 +1,27 @@
+{{- /* layout.html — shared partials for every Balaur page.
+     Defines: page_head (meta/link/scripts), topbar (header nav).
+     Usage:
+       <head>{{template "page_head" .}}<title>...</title></head>
+       <body>{{template "topbar" .}} ... </body>
+*/ -}}
+
+{{define "page_head"}}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/basm.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/basm.js" defer></script>
+{{end}}
+
+{{define "topbar"}}
+<header class="topbar">
+  <a class="brand" href="/">ᗅ Balaur</a>
+  <nav>
+    <a href="/tasks">Tasks</a>
+    <a href="/life">Life</a>
+    <a href="/memory">Memory</a>
+    <a href="/skills">Skills</a>
+    <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
+  </nav>
+</header>
+{{end}}

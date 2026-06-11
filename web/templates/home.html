@@ -1,110 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{template "page_head" .}}
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/basm.css">
-  <script src="/static/htmx.min.js" defer></script>
   <script>
-    let balaurChatbarObserver;
-
-    function balaurSyncChatbarSpace() {
-      const chatbar = document.getElementById("chatbar");
-      if (!chatbar) return;
-      document.documentElement.style.setProperty("--chatbar-space", `${chatbar.offsetHeight + 24}px`);
-    }
-
-    function balaurWatchChatbar() {
-      const chatbar = document.getElementById("chatbar");
-      if (!chatbar || !window.ResizeObserver) {
-        balaurSyncChatbarSpace();
-        return;
-      }
-      balaurChatbarObserver?.disconnect();
-      balaurChatbarObserver = new ResizeObserver(balaurSyncChatbarSpace);
-      balaurChatbarObserver.observe(chatbar);
-      balaurSyncChatbarSpace();
-    }
-
+    // ── Chat scroll helpers ────────────────────────────────────────
     function balaurScrollToLatest() {
-      balaurSyncChatbarSpace();
+      // basm.js already syncs --chatbar-space; just scroll.
       scrollTo(0, document.documentElement.scrollHeight || document.body.scrollHeight);
     }
 
     function balaurSubmitOnEnter(event) {
-      if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+      if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
+          event.ctrlKey || event.metaKey || event.isComposing) return;
       event.preventDefault();
       event.currentTarget.form?.requestSubmit();
     }
 
+    // ── Optimistic chat rendering ──────────────────────────────────
+    // Clones <template> elements so the user and pending Balaur rows
+    // appear immediately, before the server streams the response.
     function balaurPrepareChat(form) {
       const input = form.elements.message;
-      const msg = input.value.trim();
+      const msg   = input.value.trim();
       if (!msg) return false;
 
-      const chat = document.getElementById("chat");
-      const pendingID = "pending-" + Date.now().toString(36) + Math.random().toString(36).slice(2);
-      const avatar = (kind, live = false) => {
-        const src = kind === "soul" ? "/static/avatars/soul.png" : "/static/avatars/balaur.png";
-        return '<span class="balaur-avatar balaur-avatar-' + kind + (live ? ' balaur-avatar-live' : '') + '" aria-hidden="true"><img src="' + src + '" alt="" decoding="async"></span>';
-      };
-      const user = document.createElement("div");
-      user.className = "msg msg-user msg-with-avatar";
-      user.innerHTML = avatar("soul") + '<div class="msg-main"><div class="who">You</div><div class="body"></div></div>';
-      user.querySelector(".body").textContent = msg;
+      const chat      = document.getElementById('chat');
+      const pendingID = 'pending-' + Date.now().toString(36) +
+                        Math.random().toString(36).slice(2);
 
-      const pending = document.createElement("div");
-      pending.className = "msg msg-balaur msg-pending msg-with-avatar";
-      pending.id = pendingID;
-      pending.innerHTML = avatar("balaur", true) + '<div class="msg-main"><div class="who">Balaur</div><div class="body"><span class="thinking thinking-dots">thinking</span></div></div>';
+      // Clone user row
+      const userFrag = document.getElementById('t-msg-user').content.cloneNode(true);
+      userFrag.querySelector('.body').textContent = msg;
 
-      chat.append(user, pending);
+      // Clone pending Balaur row
+      const pendingFrag = document.getElementById('t-msg-pending').content.cloneNode(true);
+      const pendingDiv  = pendingFrag.querySelector('.msg-balaur');
+      pendingDiv.id = pendingID;
+
+      chat.append(userFrag, pendingFrag);
       balaurScrollToLatest();
-      form.setAttribute("hx-target", "#" + pendingID);
-      form.setAttribute("hx-swap", "outerHTML");
-      form.elements.client_rendered.value = "1";
-      setTimeout(() => { input.value = ""; }, 0);
+
+      form.setAttribute('hx-target', '#' + pendingID);
+      form.setAttribute('hx-swap',   'outerHTML');
+      form.elements.client_rendered.value = '1';
+      setTimeout(() => { input.value = ''; }, 0);
       return true;
     }
+
+    // ── Modal close (native <dialog>) ─────────────────────────────
     function balaurCloseModal() {
-      document.getElementById("modal-root")?.replaceChildren();
-    }
-    function balaurTrapModal(event) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        balaurCloseModal();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const modal = document.getElementById("model-modal");
-      if (!modal) return;
-      const focusable = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
-        .filter((el) => !el.disabled && el.offsetParent !== null);
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      const d = document.getElementById('model-modal');
+      if (d) { d.close(); d.innerHTML = ''; }
     }
   </script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">ᗅ Balaur</a>
-    <nav>
-      <a href="/tasks">Tasks</a>
-      <a href="/life">Life</a>
-      <a href="/memory">Memory</a>
-      <a href="/skills">Skills</a>
-      <a href="/_/" target="_blank" rel="noopener noreferrer">Engine room</a>
-    </nav>
-  </header>
+  {{template "topbar" .}}
+
+  <!-- Message bubble templates — cloned by balaurPrepareChat, no JS string-building -->
+  <template id="t-msg-user">
+    <div class="msg msg-user msg-with-avatar">
+      <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
+        <img src="/static/avatars/soul.png" alt="" decoding="async">
+      </span>
+      <div class="msg-main">
+        <div class="who">You</div>
+        <div class="body"></div>
+      </div>
+    </div>
+  </template>
+  <template id="t-msg-pending">
+    <div class="msg msg-balaur msg-pending msg-with-avatar">
+      <span class="balaur-avatar balaur-avatar-balaur balaur-avatar-live" data-kind="balaur" aria-hidden="true">
+        <img src="/static/avatars/balaur.png" alt="" decoding="async">
+      </span>
+      <div class="msg-main">
+        <div class="who">Balaur</div>
+        <div class="body"><span class="thinking thinking-dots">thinking</span></div>
+      </div>
+    </div>
+  </template>
 
   <main>
     {{if .HasRecap}}
@@ -113,12 +89,15 @@
       <p class="recap-hint">◇ further back…</p>
     </div>
     {{end}}
+
     <section class="chat" id="chat" aria-live="polite">
       {{if .History}}
         {{template "chat-messages.html" .History}}
       {{else}}
       <div class="msg msg-balaur msg-with-avatar">
-        <span class="balaur-avatar balaur-avatar-balaur" aria-hidden="true"><img src="/static/avatars/balaur.png" alt="" decoding="async"></span>
+        <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
+          <img src="/static/avatars/balaur.png" alt="" decoding="async">
+        </span>
         <div class="msg-main">
           <div class="who">Balaur</div>
           {{if .ChatReady}}
@@ -134,42 +113,58 @@
       {{end}}
     </section>
   </main>
+
   <script>
-    // Open on the present: the chat bottom is "now"; the past is above.
-    addEventListener("DOMContentLoaded", () => {
-      balaurWatchChatbar();
+    addEventListener('DOMContentLoaded', () => {
       balaurScrollToLatest();
     });
-    addEventListener("htmx:afterSwap", (event) => {
-      balaurWatchChatbar();
+    addEventListener('htmx:afterSwap', (event) => {
       const target = event.detail?.target;
-      if (target?.id === "chat" || target?.classList?.contains("msg-pending") || target?.closest?.("#chat")) {
+      if (target?.id === 'chat' ||
+          target?.classList?.contains('msg-pending') ||
+          target?.closest?.('#chat')) {
         balaurScrollToLatest();
       }
     });
-    // Nudges arrive as out-of-band appends into #chat.
-    addEventListener("htmx:oobAfterSwap", (event) => {
-      if (event.detail?.target?.id === "chat") balaurScrollToLatest();
+    addEventListener('htmx:oobAfterSwap', (event) => {
+      if (event.detail?.target?.id === 'chat') balaurScrollToLatest();
     });
-    addEventListener("resize", balaurSyncChatbarSpace);
   </script>
 
-  <!-- Agent-initiated messages (nudges, briefings) poll in while the page
-       is open; a reload shows them via History regardless. -->
-  <div id="nudge-poll" hx-get="/ui/chat/nudges?since={{.NowMillis}}" hx-trigger="every 30s" hx-swap="none"></div>
+  <!-- Nudge poll — agent-initiated messages while page is open -->
+  <div id="nudge-poll"
+       hx-get="/ui/chat/nudges?since={{.NowMillis}}"
+       hx-trigger="every 30s"
+       hx-swap="none"></div>
 
   {{template "chat_bar" .}}
-  <div id="modal-root"></div>
+
+  <!-- Native dialog — showModal() called by basm.js after HTMX swap -->
+  <dialog id="model-modal" aria-labelledby="model-modal-title"></dialog>
 </body>
 </html>
 
 {{define "chat_bar"}}
-<div class="chatbar" id="chatbar" {{if .ChatbarOOB}}hx-swap-oob="outerHTML"{{end}} {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+<div class="chatbar" id="chatbar"
+     {{if .ChatbarOOB}}hx-swap-oob="outerHTML"{{end}}
+     {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   {{template "model_switcher" .}}
   {{if .ChatReady}}
-  <form class="chat-form" hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend" hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
+  <form class="chat-form"
+        hx-post="/ui/chat"
+        hx-target="#chat"
+        hx-swap="beforeend"
+        hx-on::after-request="this.reset()"
+        onsubmit="return balaurPrepareChat(this)">
     <input type="hidden" name="client_rendered" value="0">
-    <textarea name="message" placeholder="{{.ChatPlaceholder}}" autocomplete="off" rows="2" autofocus required oninput="balaurSyncChatbarSpace()" onkeydown="balaurSubmitOnEnter(event)"></textarea>
+    <textarea name="message"
+              placeholder="{{.ChatPlaceholder}}"
+              autocomplete="off"
+              rows="2"
+              autofocus
+              required
+              oninput="if(typeof basmSyncChatbarSpace==='function') basmSyncChatbarSpace()"
+              onkeydown="balaurSubmitOnEnter(event)"></textarea>
     <button class="btn btn-primary" type="submit">Send</button>
   </form>
   {{else}}
@@ -191,16 +186,26 @@
     {{range .ModelChoices}}
     {{if .Disabled}}
     <div class="model-choice-form">
-      <button class="model-choice model-choice-disabled" type="button" hx-get="/ui/model/missing?key={{.Key}}" hx-target="#modal-root" hx-swap="innerHTML">
+      <button class="model-choice model-choice-disabled"
+              type="button"
+              hx-get="/ui/model/missing?key={{.Key}}"
+              hx-target="#model-modal"
+              hx-swap="innerHTML">
         <span class="model-name">{{.Name}}</span>
         <span class="model-detail">{{.Detail}}</span>
         <span class="tag">{{.Badge}}</span>
       </button>
     </div>
     {{else}}
-    <form class="model-choice-form" hx-post="/ui/model/select" hx-target="#chatbar" hx-swap="outerHTML" hx-on::after-settle="document.querySelector('#chatbar [name=message]')?.focus()">
+    <form class="model-choice-form"
+          hx-post="/ui/model/select"
+          hx-target="#chatbar"
+          hx-swap="outerHTML"
+          hx-on::after-settle="document.querySelector('#chatbar [name=message]')?.focus()">
       <input type="hidden" name="key" value="{{.Key}}">
-      <button class="model-choice {{if .Active}}model-choice-active{{end}}" type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+      <button class="model-choice {{if .Active}}model-choice-active{{end}}"
+              type="submit"
+              {{if .Active}}aria-current="true" disabled{{end}}>
         <span class="model-name">{{.Name}}</span>
         <span class="model-detail">{{.Detail}}</span>
         <span class="tag">{{.Badge}}</span>
@@ -218,41 +223,45 @@
   <details class="model-add">
     <summary>Add OpenAI-compatible API</summary>
     {{if .ModelError}}<p class="model-error">{{.ModelError}}</p>{{end}}
-    <form class="model-provider-form" hx-post="/ui/model/openai" hx-target="#chatbar" hx-swap="outerHTML">
-      <input name="name" placeholder="Provider name, e.g. Ollama" required>
-      <input name="base_url" placeholder="Base URL, e.g. http://localhost:11434/v1" required>
-      <input name="label" placeholder="Display label, e.g. Llama 3.1 8B" required>
-      <input name="model" placeholder="Chat model id" required>
+    <form class="model-provider-form"
+          hx-post="/ui/model/openai"
+          hx-target="#chatbar"
+          hx-swap="outerHTML">
+      <input name="name"        placeholder="Provider name, e.g. Ollama" required>
+      <input name="base_url"    placeholder="Base URL, e.g. http://localhost:11434/v1" required>
+      <input name="label"       placeholder="Display label, e.g. Llama 3.1 8B" required>
+      <input name="model"       placeholder="Chat model id" required>
       <input name="embed_model" placeholder="Embedding model id (optional)">
       <input name="api_key" type="password" placeholder="API key (optional; stored in PocketBase)">
       <label><input type="checkbox" name="local" value="1"> self-hosted/local endpoint</label>
-      <label><input type="checkbox" name="use" value="1" checked> use after saving</label>
+      <label><input type="checkbox" name="use"   value="1" checked> use after saving</label>
       <button class="btn btn-primary" type="submit">Save model</button>
     </form>
   </details>
 </section>
 {{end}}
 
+{{- /* model_modal — inner content injected into <dialog id="model-modal">.
+     basm.js calls showModal() after the HTMX swap. The outer <dialog>
+     element provides backdrop, focus-trap, and Escape-key handling for free. */ -}}
 {{define "model_modal"}}
-<div class="modal-backdrop" id="model-modal" onkeydown="balaurTrapModal(event)">
-  <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="model-modal-title">
-    <div class="modal-head">
-      <span class="tag">local</span>
-      <h2 id="model-modal-title">{{.Title}}</h2>
-    </div>
-    <p>{{.Body}}</p>
-    {{if .Detail}}<p class="modal-detail"><code>{{.Detail}}</code></p>{{end}}
-    {{if .Error}}<p class="model-error">{{.Error}}</p>{{end}}
-    <div class="modal-actions">
-      {{if .CanDownload}}
-      <form hx-post="/ui/model/download" hx-target="#modal-root" hx-swap="innerHTML">
-        <input type="hidden" name="key" value="{{.Key}}">
-        <button class="btn btn-primary" type="submit" autofocus>Download and use</button>
-      </form>
-      {{end}}
-      <button class="btn btn-ghost" type="button" {{if not .CanDownload}}autofocus{{end}} hx-on:click="balaurCloseModal()">Not now</button>
-    </div>
-  </section>
+<div class="modal-head">
+  <span class="tag">local</span>
+  <h2 id="model-modal-title">{{.Title}}</h2>
+</div>
+<p>{{.Body}}</p>
+{{if .Detail}}<p class="modal-detail"><code>{{.Detail}}</code></p>{{end}}
+{{if .Error}}<p class="model-error">{{.Error}}</p>{{end}}
+<div class="modal-actions">
+  {{if .CanDownload}}
+  <form hx-post="/ui/model/download" hx-target="#model-modal" hx-swap="innerHTML">
+    <input type="hidden" name="key" value="{{.Key}}">
+    <button class="btn btn-primary" type="submit" autofocus>Download and use</button>
+  </form>
+  {{end}}
+  <button class="btn btn-ghost" type="button"
+          {{if not .CanDownload}}autofocus{{end}}
+          onclick="balaurCloseModal()">Not now</button>
 </div>
 {{end}}
 
