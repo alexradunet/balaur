@@ -29,7 +29,9 @@ type homeData struct {
 	HasRecap        bool
 	DevSeed         bool
 	ChatbarOOB      bool
-	NowMillis       int64 // nudge-poll cursor: only messages after page load
+	NowMillis       int64  // nudge-poll cursor: only messages after page load
+	SoulAvatarURL   string // resolved from owner_settings soul_avatar preference
+	SoulAvatarPref  string // "male" | "female" — for the picker radio state
 }
 
 type modelsPageData struct {
@@ -57,6 +59,8 @@ func (h *handlers) homeData() (homeData, error) {
 	}
 	data.ModelChoices = choices
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
+	data.SoulAvatarPref = store.GetOwnerSetting(h.app, "soul_avatar", "male")
+	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
 	if active.Key == "" {
 		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
 		data.ModelHint = llm.DefaultChatModelDownloadCommand(h.app.DataDir())

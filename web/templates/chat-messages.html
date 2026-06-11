@@ -3,7 +3,7 @@
 {{range .}}
 {{if eq .Role "user"}}
 <div class="msg msg-user msg-with-avatar">
-  <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true"><img src="/static/avatars/soul.png" alt="" decoding="async"></span>
+  <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true"><img src="{{.SoulAvatarURL}}" alt="" decoding="async"></span>
   <div class="msg-main"><div class="who">You</div><div class="body">{{.Content}}</div></div>
 </div>
 {{else if eq .Role "assistant"}}
