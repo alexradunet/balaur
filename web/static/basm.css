@@ -342,6 +342,12 @@ code { padding: 1px 5px; }
   background: color-mix(in srgb, var(--surface-2) 82%, var(--gold) 18%);
   cursor: default;
 }
+.model-choice-disabled {
+  border-style: dashed;
+  cursor: help;
+}
+.model-choice-disabled .model-name,
+.model-choice-disabled .model-detail { color: var(--muted); }
 .model-choice:disabled { opacity: 1; }
 .model-name {
   grid-column: 1;
@@ -365,6 +371,57 @@ code { padding: 1px 5px; }
   justify-content: flex-end;
   gap: 8px;
   color: var(--muted);
+  font-size: 13px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 76%, transparent);
+  backdrop-filter: blur(2px);
+}
+.modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(78vh, 720px);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 2px solid var(--gold-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hard) rgba(184, 134, 42, .35);
+  padding: 20px;
+}
+.modal-card::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--gold);
+}
+.modal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.modal-head h2 { margin: 0; font-size: 24px; }
+.modal-card p { margin: 14px 0 0; }
+.modal-detail { color: var(--muted); }
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.modal-actions form { margin: 0; }
+.model-error {
+  color: var(--ember-red);
+  font-family: var(--font-mono);
   font-size: 13px;
 }
 

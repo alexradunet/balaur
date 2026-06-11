@@ -56,6 +56,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)
+	se.Router.GET("/ui/model/missing", h.missingModelModal)
+	se.Router.POST("/ui/model/download", h.downloadModel)
 	se.Router.GET("/memory", h.memoryPage)
 	se.Router.GET("/skills", h.skillsPage)
 	se.Router.GET("/ui/knowledge/{kind}/grid", h.knowledgeGrid)
