@@ -1006,6 +1006,29 @@ dialog::backdrop {
 
 /* ── Avatar picker ───────────────────────────────────────────────── */
 
+/* ── Chatbar profile link (replaces inline picker) ───────────────── */
+
+.chatbar-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--hair);
+  padding: 10px 4px 4px;
+}
+.chatbar-profile-link .balaur-avatar {
+  --avatar-size: 28px;
+  flex-shrink: 0;
+}
+.chatbar-profile-href {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  text-decoration: none;
+}
+.chatbar-profile-href:hover { color: var(--gold); }
+
 .avatar-picker {
   border-top: 1px solid var(--hair);
   padding-top: 10px;
