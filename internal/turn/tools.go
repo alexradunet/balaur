@@ -24,6 +24,7 @@ func Tools(app core.App) []agent.Tool {
 	ts = append(ts, tools.LifeTools(app)...)
 	ts = append(ts, tools.JournalTools(app)...)
 	ts = append(ts, tools.ChoiceTools(app)...)
+	ts = append(ts, tools.UITools(app)...)
 	if os.Getenv("BALAUR_OS_ACCESS") == "1" {
 		ts = append(ts, tools.OSAccess(app)...)
 	}

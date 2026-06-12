@@ -125,7 +125,24 @@ in v1: column spans come from each card type's default width in the registry.
 Four default boards are seeded on first visit: Study (today + quests + calendar),
 Quest log (quests + calendar), Self (journal + timeline), Balaur (memory +
 skills + heads). Owners can create, rename, and delete boards, and add or
-remove cards. Plan 030 adds agent tools to compose boards programmatically.
+remove cards.
+
+Agent UI tools: two tools let you compose on-the-spot UI from the typed card
+registry — you never author markup, only {type, params} validated by the registry.
+
+- card_show: renders a live card inline in the conversation. Call it with a type
+  from the registry and optional params; the server fetches real data and embeds
+  the card in the chat via the k-inline HTMX slot. Example: show the owner their
+  weight trend by calling card_show with type="measure" and params.kind set to
+  their weight kind. The composition rule: only the registry-validated type and
+  params reach the hx-get URL — no free-form text, no model-authored markup.
+- board_compose: creates a new named board of up to 8 cards for the owner. The
+  board immediately appears at /boards/{id}. Cards are validated by the same
+  registry. Every board creation is audited in audit_log with action "board_compose".
+  Return value is plain text: "board raised: <name> (<n> cards) — /boards/<id>".
+
+The registry vocabulary for both tools is embedded in the tool description at
+registration time — when new card types are added the model sees them for free.
 
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an

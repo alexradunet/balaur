@@ -101,6 +101,20 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			h.execFragment(w, "chat-msg-tool-start", messageView{Tool: ev.Tool})
 			flush()
 		case "tool_result":
+			// Consumer order: uicard → choices → proposal → plain.
+			// uicard: re-renders on reload (lazy-fetches live data — safe).
+			// choices: inert on reload (no live panel for stale decisions).
+			// proposal: renders an approval card on first view and reload.
+			if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
+				mv := messageView{Content: rest, CardURL: "/ui/cards/" + typ + "?" + query}
+				h.execFragment(w, "chat-msg-tool-end", mv)
+				h.execFragment(w, "chat-balaur-open", messageView{
+					BalaurAvatarURL: balaURL,
+					WhoLabel:        "Balaur",
+				})
+				flush()
+				break
+			}
 			// Check ParseChoices before ParseProposal — choices ride a tool_result.
 			if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
 				h.execFragment(w, "chat-msg-tool-end", messageView{Content: "choices offered"})

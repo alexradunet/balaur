@@ -619,6 +619,95 @@ func TestProviderManager(t *testing.T) {
 	})
 }
 
+// newCardShowSSEServer creates a two-turn fake model server. The first request
+// returns a card_show tool call (for the "today" card); the second returns plain
+// text so the agent completes.
+func newCardShowSSEServer() *httptest.Server {
+	calls := 0
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat/completions" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		calls++
+		if calls == 1 {
+			// First turn: return a card_show tool call.
+			args := `{\"type\":\"today\"}`
+			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"tc1\",\"function\":{\"name\":\"card_show\",\"arguments\":\"\"}}]}}]}\n\n")
+			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"card_show\",\"arguments\":\"%s\"}}]}}]}\n\n", args)
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{}}],\"finish_reason\":\"tool_calls\"}\n\n")
+			fmt.Fprint(w, "data: [DONE]\n\n")
+		} else {
+			// Second turn: plain text reply after tool executes.
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"Here is your today card.\"}}]}\n\n")
+			fmt.Fprint(w, "data: [DONE]\n\n")
+		}
+	}))
+}
+
+func TestChatCardShow(t *testing.T) {
+	sseSrv := newCardShowSSEServer()
+	t.Cleanup(func() { sseSrv.Close() })
+
+	newCardShowApp := func(tb testing.TB) *tests.TestApp {
+		app := newWebApp(tb)
+		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
+		store.SetActiveLLMModel(app, id, "test")
+		return app
+	}
+
+	t.Run("streamed card_show yields k-inline embed", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:            "chat card_show inline embed",
+			Method:          "POST",
+			URL:             "/ui/chat",
+			Body:            strings.NewReader("message=show+me+today"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  newCardShowApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`hx-get="/ui/cards/today`, `class="k-inline"`},
+		}
+		scenario.Test(t)
+	})
+}
+
+// TestUICardHistoryRendersCardURL verifies that when a conversation containing a
+// uicard tool result is loaded from history (page-load path), the messageViews
+// function sets CardURL so the template embeds the k-inline div.
+func TestUICardHistoryRendersCardURL(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	// Simulate what messageViews produces for a uicard-marked tool result.
+	marked := tools.MarkUICard("today", map[string]string{}, "showing the owner the Today card")
+
+	// Parse as messageViews would.
+	typ, query, rest, ok := tools.ParseUICard(marked)
+	if !ok {
+		t.Fatal("ParseUICard: ok=false on well-formed marked text")
+	}
+	cardURL := "/ui/cards/" + typ + "?" + query
+
+	mv := messageView{
+		Role:    "tool",
+		Tool:    "card_show",
+		Content: rest,
+		CardURL: cardURL,
+	}
+
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
+		t.Fatalf("chat-msg-tool: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `hx-get="/ui/cards/today`) {
+		t.Errorf("history uicard render: k-inline embed missing or wrong hx-get. output:\n%s", out)
+	}
+	if !strings.Contains(out, `class="k-inline"`) {
+		t.Errorf("history uicard render: missing k-inline class. output:\n%s", out)
+	}
+}
+
 func TestGgufHandlers(t *testing.T) {
 	t.Run("delete path traversal returns 200 panel", func(t *testing.T) {
 		// The traversal is rejected inside gguf.Delete; the handler re-renders the

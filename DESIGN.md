@@ -138,7 +138,10 @@ model-composed prompt line (deterministic fallback), entries shared with day
 pages · boards — owner-composed dashboards of typed cards at /boards
 (server-defined layout; Study/Quest log/Self/Balaur defaults); each board is a
 named, ordered list of card references in the `boards` collection; the page
-renders a 12-column CSS grid of HTMX slots that lazy-load cards.
+renders a 12-column CSS grid of HTMX slots that lazy-load cards ·
+on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
+raises a new board from chat (both tools compose from the typed registry only —
+Balaur cannot author markup).
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·

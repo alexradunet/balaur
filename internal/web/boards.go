@@ -16,11 +16,10 @@ import (
 	"github.com/alexradunet/balaur/internal/cards"
 )
 
-// boardCard is one slot in a board's cards array.
-type boardCard struct {
-	Type   string            `json:"type"`
-	Params map[string]string `json:"params,omitempty"`
-}
+// boardCard is one slot in a board's cards array. It mirrors cards.Card
+// exactly in JSON shape; using the leaf type directly would create a view
+// concern in the cards package, so we keep this local alias.
+type boardCard = cards.Card
 
 // boardView is the template data for the full boards page and fragments.
 type boardView struct {
@@ -43,21 +42,6 @@ type boardCardView struct {
 	W     int    // grid column span (from registry spec)
 	Query string // URL-encoded query string, e.g. "?status=open&limit=8"
 	Idx   int    // position in the cards array (for remove route)
-}
-
-// validateBoardCards validates and cleans a slice of boardCards via the
-// registry. Used by ensureDefaultBoards, create, and add handlers so the
-// validation rule is a single definition.
-func validateBoardCards(bcs []boardCard) error {
-	for i, bc := range bcs {
-		if _, _, err := func() (string, map[string]string, error) {
-			cleaned, err := cards.Validate(bc.Type, bc.Params)
-			return bc.Type, cleaned, err
-		}(); err != nil {
-			return fmt.Errorf("card[%d]: %w", i, err)
-		}
-	}
-	return nil
 }
 
 // boardCardViewsOf converts a []boardCard to []boardCardView, resolving
@@ -172,7 +156,7 @@ func (h *handlers) ensureDefaultBoards() error {
 	}
 
 	for _, d := range defaults {
-		if err := validateBoardCards(d.cards); err != nil {
+		if _, err := cards.ValidateCards(d.cards); err != nil {
 			return fmt.Errorf("default board %q: %w", d.name, err)
 		}
 		raw, err := json.Marshal(d.cards)

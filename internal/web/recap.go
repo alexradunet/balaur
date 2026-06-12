@@ -170,10 +170,18 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			OwnerName:       ownerName,
 			WhoLabel:        "Balaur",
 		}
-		// Re-render marked tool results. Choices degrade to inert plain text
-		// on reload — no live panel (avoids resubmitting stale decisions).
+		// Re-render marked tool results.
+		// Consumer order: uicard → choices → proposal → plain.
+		// uicard: safe and useful to re-render on reload — it lazy-fetches
+		//   current data from the registry, so the card is always live.
+		// choices: degrade to inert plain text — no live panel on reload
+		//   (avoids resubmitting stale decisions).
+		// proposal: renders an approval card on first view and on reload.
 		if mv.Role == "tool" {
-			if _, _, modelText, ok := tools.ParseChoices(mv.Content); ok {
+			if typ, query, rest, ok := tools.ParseUICard(mv.Content); ok {
+				mv.CardURL = "/ui/cards/" + typ + "?" + query
+				mv.Content = rest
+			} else if _, _, modelText, ok := tools.ParseChoices(mv.Content); ok {
 				mv.Content = clipText(modelText, 2000)
 			} else if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
 				mv.CardURL, mv.Content = cardURL(kind, id), rest

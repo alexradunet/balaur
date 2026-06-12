@@ -145,6 +145,32 @@ func Get(typ string) (Spec, bool) {
 	return s, ok
 }
 
+// Card is a typed, parameterized card reference — the composition unit for
+// boards and on-the-spot UI. It matches the JSON shape stored in the boards
+// collection's cards field and produced by the board_compose tool.
+type Card struct {
+	Type   string            `json:"type"`
+	Params map[string]string `json:"params,omitempty"`
+}
+
+// ValidateCards validates each entry via Validate and returns the cleaned list.
+// The first invalid card stops validation and returns an error.
+func ValidateCards(cs []Card) ([]Card, error) {
+	out := make([]Card, 0, len(cs))
+	for i, c := range cs {
+		cleaned, err := Validate(c.Type, c.Params)
+		if err != nil {
+			return nil, fmt.Errorf("card[%d]: %w", i, err)
+		}
+		card := Card{Type: c.Type}
+		if len(cleaned) > 0 {
+			card.Params = cleaned
+		}
+		out = append(out, card)
+	}
+	return out, nil
+}
+
 // Validate checks params against the spec for typ. Rules:
 //   - Unknown type → error.
 //   - Unknown param keys → silently dropped (returns cleaned map).
