@@ -10,8 +10,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	_ "github.com/alexradunet/balaur/migrations"
 	"github.com/alexradunet/balaur/internal/store"
+	_ "github.com/alexradunet/balaur/migrations"
 )
 
 func newWebApp(t testing.TB) *tests.TestApp {
@@ -77,13 +77,13 @@ func TestChatHandler(t *testing.T) {
 			ExpectedContent: []string{"Hello from the fake model", "msg msg-user"},
 		},
 		{
-			Name:            "chat with client_rendered=1",
-			Method:          "POST",
-			URL:             "/ui/chat",
-			Body:            strings.NewReader("message=hello&client_rendered=1"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"Hello from the fake model"},
+			Name:               "chat with client_rendered=1",
+			Method:             "POST",
+			URL:                "/ui/chat",
+			Body:               strings.NewReader("message=hello&client_rendered=1"),
+			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"Hello from the fake model"},
 			NotExpectedContent: []string{"msg msg-user"},
 		},
 		{

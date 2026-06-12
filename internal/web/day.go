@@ -121,7 +121,6 @@ func (h *handlers) buildDay(d, now time.Time) dayData {
 	return data
 }
 
-
 // dayJournalWrite handles the page form: writing the day, on the day page.
 func (h *handlers) dayJournalWrite(e *core.RequestEvent) error {
 	now := time.Now()
