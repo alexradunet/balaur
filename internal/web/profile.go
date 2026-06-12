@@ -45,10 +45,9 @@ func (h *handlers) saveName(e *core.RequestEvent) error {
 	return h.tmpl.ExecuteTemplate(e.Response, "profile_identity_card", data)
 }
 
-// setSoulAvatarFromProfile handles POST /ui/profile/soul-avatar — sets the
-// soul avatar preference and triggers a full page refresh so the picker
-// shows the updated active state. Used only from the /profile page; the
-// chatbar picker still uses /ui/settings/avatar.
+// setSoulAvatarFromProfile handles POST /ui/profile/soul-avatar — saves the
+// preference and re-renders only the soul avatar section card (same pattern
+// as the identity card: fragment swap, no full page reload).
 func (h *handlers) setSoulAvatarFromProfile(e *core.RequestEvent) error {
 	pref := e.Request.FormValue("soul_avatar")
 	if !store.ValidSoulAvatarKey(pref) {
@@ -57,13 +56,13 @@ func (h *handlers) setSoulAvatarFromProfile(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "soul_avatar", pref); err != nil {
 		return e.InternalServerError("saving avatar preference", err)
 	}
-	e.Response.Header().Set("HX-Refresh", "true")
-	e.Response.WriteHeader(204)
-	return nil
+	data := h.buildProfileData(false)
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return h.tmpl.ExecuteTemplate(e.Response, "profile_soul_section", data)
 }
 
-// setBalaurAvatarPref handles POST /ui/profile/balaur-avatar — sets the
-// Balaur head personality and triggers a full page refresh.
+// setBalaurAvatarPref handles POST /ui/profile/balaur-avatar — saves the
+// preference and re-renders only the Balaur head section card.
 func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 	pref := e.Request.FormValue("balaur_avatar")
 	if !store.ValidBalaurAvatarKey(pref) {
@@ -72,7 +71,7 @@ func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "balaur_avatar", pref); err != nil {
 		return e.InternalServerError("saving balaur avatar", err)
 	}
-	e.Response.Header().Set("HX-Refresh", "true")
-	e.Response.WriteHeader(204)
-	return nil
+	data := h.buildProfileData(false)
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return h.tmpl.ExecuteTemplate(e.Response, "profile_balaur_section", data)
 }

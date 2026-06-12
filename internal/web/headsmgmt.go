@@ -37,7 +37,7 @@ func (h *handlers) headsPage(e *core.RequestEvent) error {
 func (h *handlers) buildHeadsData() (headsData, error) {
 	recs, err := h.app.FindRecordsByFilter(
 		"heads",
-		"status != 'revoked'",
+		"status = 'active'",
 		"-created", 0, 0,
 	)
 	if err != nil {

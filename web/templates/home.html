@@ -237,22 +237,12 @@
     </form>
   </details>
 
-  <!-- Avatar picker — 8 soul portraits the owner can choose from -->
-  <details class="avatar-picker">
-    <summary>Your avatar</summary>
-    <div class="avatar-choice-list">
-      {{range .AvatarOptions}}
-      <form hx-post="/ui/settings/avatar" hx-target="#chatbar" hx-swap="outerHTML">
-        <input type="hidden" name="soul_avatar" value="{{.Key}}">
-        <button class="avatar-choice{{if .Active}} avatar-choice-active{{end}}"
-                type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
-          <img class="px" src="{{.URL}}" alt="" decoding="async">
-          <span>{{.Label}}</span>
-        </button>
-      </form>
-      {{end}}
-    </div>
-  </details>
+  <div class="chatbar-profile-link">
+    <span class="balaur-avatar balaur-avatar-soul" aria-hidden="true">
+      <img class="px" src="{{.SoulAvatarURL}}" alt="" decoding="async">
+    </span>
+    <a href="/profile" class="chatbar-profile-href">Your avatar &amp; profile →</a>
+  </div>
 </section>
 {{end}}
 

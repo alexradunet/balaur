@@ -13,46 +13,14 @@
     <div class="stitch"></div>
 
     {{template "profile_identity_card" .}}
-
-    <article class="profile-card">
-      <h2 class="profile-card-title">Your avatar</h2>
-      <p class="profile-hint">Who appears in chat as you. 16 portraits from the Basm world.</p>
-      <div class="avatar-choice-list profile-avatar-grid">
-        {{range .AvatarOptions}}
-        <form hx-post="/ui/profile/soul-avatar" hx-target="body" hx-swap="none">
-          <input type="hidden" name="soul_avatar" value="{{.Key}}">
-          <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
-                  type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
-            <img class="px" src="{{.URL}}" alt="" decoding="async">
-            <span>{{.Label}}</span>
-          </button>
-        </form>
-        {{end}}
-      </div>
-    </article>
-
-    <article class="profile-card">
-      <h2 class="profile-card-title">Companion head</h2>
-      <p class="profile-hint">Which Balaur personality you meet in chat. 16 heads, one companion.</p>
-      <div class="avatar-choice-list profile-avatar-grid">
-        {{range .BalaurOptions}}
-        <form hx-post="/ui/profile/balaur-avatar" hx-target="body" hx-swap="none">
-          <input type="hidden" name="balaur_avatar" value="{{.Key}}">
-          <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
-                  type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
-            <img class="px" src="{{.URL}}" alt="" decoding="async">
-            <span>{{.Label}}</span>
-          </button>
-        </form>
-        {{end}}
-      </div>
-    </article>
+    {{template "profile_soul_section" .}}
+    {{template "profile_balaur_section" .}}
 
   </main>
 </body>
 </html>
 
-{{- /* Identity card — also rendered as a fragment after POST /ui/profile/name */ -}}
+{{- /* Identity card — re-rendered as a fragment after POST /ui/profile/name */ -}}
 {{define "profile_identity_card"}}
 <article class="profile-card" id="identity-card">
   <h2 class="profile-card-title">Identity</h2>
@@ -74,5 +42,49 @@
     </div>
     {{if .SavedName}}<p class="profile-saved">◈ Saved.</p>{{end}}
   </form>
+</article>
+{{end}}
+
+{{- /* Soul avatar section — re-rendered as a fragment after POST /ui/profile/soul-avatar */ -}}
+{{define "profile_soul_section"}}
+<article class="profile-card" id="soul-section">
+  <h2 class="profile-card-title">Your avatar</h2>
+  <p class="profile-hint">Who appears in chat as you. 16 portraits from the Basm world.</p>
+  <div class="avatar-choice-list profile-avatar-grid">
+    {{range .AvatarOptions}}
+    <form hx-post="/ui/profile/soul-avatar"
+          hx-target="#soul-section"
+          hx-swap="outerHTML">
+      <input type="hidden" name="soul_avatar" value="{{.Key}}">
+      <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
+              type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+        <img class="px" src="{{.URL}}" alt="" decoding="async">
+        <span>{{.Label}}</span>
+      </button>
+    </form>
+    {{end}}
+  </div>
+</article>
+{{end}}
+
+{{- /* Balaur head section — re-rendered as a fragment after POST /ui/profile/balaur-avatar */ -}}
+{{define "profile_balaur_section"}}
+<article class="profile-card" id="balaur-section">
+  <h2 class="profile-card-title">Companion head</h2>
+  <p class="profile-hint">Which Balaur personality you meet in chat. 16 heads, one companion.</p>
+  <div class="avatar-choice-list profile-avatar-grid">
+    {{range .BalaurOptions}}
+    <form hx-post="/ui/profile/balaur-avatar"
+          hx-target="#balaur-section"
+          hx-swap="outerHTML">
+      <input type="hidden" name="balaur_avatar" value="{{.Key}}">
+      <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
+              type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+        <img class="px" src="{{.URL}}" alt="" decoding="async">
+        <span>{{.Label}}</span>
+      </button>
+    </form>
+    {{end}}
+  </div>
 </article>
 {{end}}
