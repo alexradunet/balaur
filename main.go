@@ -17,7 +17,11 @@ import (
 
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
+	"github.com/alexradunet/balaur/internal/gguf"
+	"github.com/alexradunet/balaur/internal/llama"
+	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/recap"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/web"
@@ -43,7 +47,15 @@ func main() {
 		registerRecap(se.App)
 		registerNudge(se.App)
 		registerBriefing(se.App)
+		ensureDefaultModel(se.App)
 		return se.Next()
+	})
+
+	// Tear down the local llamafile server (if one was started) on shutdown
+	// so it does not outlive the Balaur process.
+	app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
+		llama.Default.Stop()
+		return te.Next()
 	})
 
 	if err := app.Start(); err != nil {
@@ -52,6 +64,38 @@ func main() {
 	// CLI commands report failures via their JSON contract; PocketBase's
 	// Execute discards RunE errors, so the exit status is read back here.
 	os.Exit(cli.ExitCode())
+}
+
+// ensureDefaultModel fetches Balaur's hardcoded default model (the Qwen3.5-27B
+// llamafile) in the background on serve start, so a fresh box is usable out of
+// the box. No-op when the owner pinned BALAUR_CHAT_MODEL, the file is already
+// present, or BALAUR_AUTO_MODEL=0. The ~19 GB download runs through gguf.Shared
+// — the same manager the /models page polls — so progress is visible there.
+func ensureDefaultModel(app core.App) {
+	if os.Getenv("BALAUR_AUTO_MODEL") == "0" || os.Getenv("BALAUR_CHAT_MODEL") != "" {
+		return
+	}
+	dest := llm.DefaultChatModelPath(app.DataDir())
+	if _, err := os.Stat(dest); err == nil {
+		return // already downloaded
+	}
+	onDone := func(path string) {
+		id, err := store.SaveLocalGGUFModel(app, "", path)
+		if err != nil {
+			app.Logger().Error("default model: save", "err", err)
+			return
+		}
+		if err := store.SetActiveLLMModel(app, id, "system"); err != nil {
+			app.Logger().Error("default model: activate", "err", err)
+		}
+	}
+	if err := gguf.Shared.Start(llm.DefaultChatModelURL, dest, onDone); err != nil {
+		app.Logger().Warn("default model: download not started", "err", err)
+		return
+	}
+	app.Logger().Info("default model: downloading on first serve", "url", llm.DefaultChatModelURL, "dest", dest)
+	store.Audit(app, "", "system", "llm.gguf.download", llm.DefaultChatModelURL, true,
+		map[string]any{"dest": dest, "auto": true})
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve

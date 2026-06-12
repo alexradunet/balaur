@@ -9,6 +9,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/llama"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/store"
 )
@@ -90,7 +91,7 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 			Detail:   modelDetail(cfg),
 			Badge:    modelBadge(cfg),
 		}
-		if cfg.Kind == "kronk" {
+		if cfg.Kind == "local" {
 			if _, err := ExistingModelPath(cfg.ChatModel, "local"); err != nil {
 				choice.Disabled = true
 				choice.Badge = "missing"
@@ -107,7 +108,7 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 }
 
 func modelDetail(cfg store.LLMConfig) string {
-	if cfg.Kind == "kronk" {
+	if cfg.Kind == "local" {
 		return filepath.Base(cfg.ChatModel) + " · on this box"
 	}
 	place := "remote API"
@@ -122,7 +123,7 @@ func modelDetail(cfg store.LLMConfig) string {
 }
 
 func modelBadge(cfg store.LLMConfig) string {
-	if cfg.Kind == "kronk" || cfg.Local {
+	if cfg.Kind == "local" || cfg.Local {
 		return "local"
 	}
 	return "api"
@@ -138,7 +139,7 @@ func LocalModelChoice(app core.App) ModelChoice {
 	}
 	choice := ModelChoice{
 		Key:      "local",
-		Provider: "kronk",
+		Provider: "local",
 		Model:    path,
 		Name:     localModelName(path),
 		Detail:   filepath.Base(path) + " · on this box",
@@ -163,7 +164,8 @@ func localChatModelPath(app core.App) (string, error) {
 	return ExistingModelPath(llm.DefaultChatModelPath(app.DataDir()), "default")
 }
 
-// ExistingModelPath validates that path points at a GGUF file on disk.
+// ExistingModelPath validates that path points at a local model file on disk:
+// a bare GGUF, or a fat llamafile (engine + weights in one executable).
 func ExistingModelPath(path, label string) (string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -172,28 +174,28 @@ func ExistingModelPath(path, label string) (string, error) {
 		}
 		return "", fmt.Errorf("checking %s model %s: %w", label, path, err)
 	}
-	if info.IsDir() || filepath.Ext(path) != ".gguf" {
-		return "", fmt.Errorf("%s model must be a .gguf file: %s", label, path)
+	if ext := filepath.Ext(path); info.IsDir() || (ext != ".gguf" && ext != ".llamafile") {
+		return "", fmt.Errorf("%s model must be a .gguf or .llamafile file: %s", label, path)
 	}
 	return path, nil
 }
 
 func localModelName(path string) string {
 	if os.Getenv("BALAUR_CHAT_MODEL") != "" {
-		return "Local GGUF"
+		return "Local model"
 	}
 	if filepath.Base(path) == llm.DefaultChatModelFile {
-		return "Local Qwen3.6 35B A3B"
+		return "Local " + llm.DefaultChatModelName
 	}
-	return "Local GGUF"
+	return "Local model"
 }
 
 // ClientSource builds llm clients for model choices, caching the local
-// kronk client (loading a GGUF is expensive; the cache survives across
-// turns within one process). The zero value is ready to use.
+// client so a single warm llamafile server is shared across turns within one
+// process. The zero value is ready to use.
 type ClientSource struct {
 	mu    sync.Mutex
-	local *llm.KronkClient
+	local *llama.LocalClient
 }
 
 // Active resolves the active model choice and returns a client for it.
@@ -208,63 +210,41 @@ func (s *ClientSource) Active(app core.App) (llm.Client, error) {
 	if !ok {
 		return nil, fmt.Errorf("no active model is available")
 	}
-	return s.clientForConfig(cfg)
+	return s.clientForConfig(app, cfg)
 }
 
 // ClientFor returns a client for an explicit choice. Provider choice is
 // explicit; no hidden auto-routing (AGENTS.md).
 func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, error) {
 	switch choice.Provider {
-	case "local", "kronk":
-		return s.kronk(choice.Model), nil
+	case "local":
+		return s.localClient(app.DataDir(), choice.Model), nil
 	case "openai":
 		return nil, fmt.Errorf("openai choices must be resolved from PocketBase config")
 	}
 	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
 }
 
-func (s *ClientSource) clientForConfig(cfg store.LLMConfig) (llm.Client, error) {
+func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.Client, error) {
 	switch cfg.Kind {
-	case "kronk":
-		return s.kronkWithEmbed(cfg.ChatModel, cfg.EmbedModel), nil
+	case "local":
+		return s.localClient(app.DataDir(), cfg.ChatModel), nil
 	case "openai":
 		return &llm.OpenAIClient{BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, Model: cfg.ChatModel, EmbedModel: cfg.EmbedModel}, nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", cfg.Kind)
 }
 
-func (s *ClientSource) kronk(chatPath string) *llm.KronkClient {
-	return s.kronkWithEmbed(chatPath, os.Getenv("BALAUR_EMBED_MODEL"))
-}
-
-func (s *ClientSource) kronkWithEmbed(chatPath, embedPath string) *llm.KronkClient {
+// localClient returns a cached local client for chatPath, served by the
+// process-wide llamafile supervisor. The server itself starts lazily on the
+// first chat (loading a GGUF is expensive), not here.
+func (s *ClientSource) localClient(dataDir, chatPath string) *llama.LocalClient {
+	engine := llama.EnginePath(dataDir)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.local != nil && len(s.local.ChatModelFiles) == 1 && s.local.ChatModelFiles[0] == chatPath && sameStrings(s.local.EmbedModelFiles, nonEmpty(embedPath)) {
+	if s.local != nil && s.local.Model == chatPath && s.local.Engine == engine {
 		return s.local
 	}
-	s.local = &llm.KronkClient{
-		ChatModelFiles:  []string{chatPath},
-		EmbedModelFiles: nonEmpty(embedPath),
-	}
+	s.local = llama.Default.NewClient(engine, chatPath)
 	return s.local
-}
-
-func nonEmpty(s string) []string {
-	if s == "" {
-		return nil
-	}
-	return []string{s}
-}
-
-func sameStrings(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

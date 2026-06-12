@@ -44,7 +44,7 @@ func TestTaskCardRenders(t *testing.T) {
 
 func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	tmpl := parseTemplates(t)
-	choice := turn.ModelChoice{Key: "m1", Provider: "kronk", Model: "model.gguf", Name: "Local Qwen3.6 35B A3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}
+	choice := turn.ModelChoice{Key: "m1", Provider: "local", Model: "model.gguf", Name: "Local Qwen3.6 35B A3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}
 	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen3.6 35B A3B", ChatPlaceholder: "Speak...", ModelChoices: []turn.ModelChoice{choice}}
 	var b strings.Builder
 	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {

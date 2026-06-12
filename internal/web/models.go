@@ -293,7 +293,7 @@ func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 			break
 		}
 	}
-	if choice.Key == "" || choice.Provider != "kronk" {
+	if choice.Key == "" || choice.Provider != "local" {
 		return modelModalData{}, fmt.Errorf("unknown model")
 	}
 	if !choice.Disabled {
@@ -307,11 +307,11 @@ func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 	}
 	if os.Getenv("BALAUR_CHAT_MODEL") != "" {
 		modal.Title = "Local model missing"
-		modal.Body = "BALAUR_CHAT_MODEL points at a GGUF file Balaur cannot find. Put that file at the configured path, or unset BALAUR_CHAT_MODEL to use Balaur's default local model."
+		modal.Body = "BALAUR_CHAT_MODEL points at a model file Balaur cannot find. Put that file at the configured path, or unset BALAUR_CHAT_MODEL to use Balaur's default local model."
 		return modal, nil
 	}
 	modal.CanDownload = true
-	modal.Body = "Download Balaur's default Qwen3.6-35B-A3B GGUF and make it the active model?"
+	modal.Body = "Download Balaur's default " + llm.DefaultChatModelName + " llamafile (~19 GB) and make it the active model?"
 	return modal, nil
 }
 
@@ -389,7 +389,7 @@ func (h *handlers) ggufDelete(e *core.RequestEvent) error {
 	modelsDir := filepath.Join(h.app.DataDir(), "models")
 
 	// Guard: don't delete the active model.
-	if cfg, ok, _ := store.ActiveLLMConfig(h.app); ok && cfg.Kind == "kronk" &&
+	if cfg, ok, _ := store.ActiveLLMConfig(h.app); ok && cfg.Kind == "local" &&
 		filepath.Base(cfg.ChatModel) == name {
 		return h.modelsPanel(e, "that file is the active model — choose another model first")
 	}

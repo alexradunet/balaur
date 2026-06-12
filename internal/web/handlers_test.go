@@ -617,7 +617,7 @@ func TestGgufHandlers(t *testing.T) {
 			models, listErr := store.ListLLMModels(e2eApp)
 			if listErr == nil {
 				for _, m := range models {
-					if m.Kind == "kronk" && filepath.Base(m.ChatModel) == "testmodel.gguf" {
+					if m.Kind == "local" && filepath.Base(m.ChatModel) == "testmodel.gguf" {
 						foundModel = true
 						break
 					}

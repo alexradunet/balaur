@@ -77,6 +77,39 @@ func TestStartHappyPath(t *testing.T) {
 	}
 }
 
+// A .llamafile download skips the GGUF magic check (it is an executable, not a
+// GGUF) and is marked executable on completion.
+func TestStartLlamafileSkipsMagicAndChmods(t *testing.T) {
+	// Non-GGUF payload — would fail the magic check for a .gguf dest.
+	payload := []byte("MZqFpD not-a-gguf executable payload")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(payload)
+	}))
+	defer srv.Close()
+
+	dest := filepath.Join(t.TempDir(), "model.llamafile")
+	var m Manager
+	if err := m.Start(srv.URL+"/model.llamafile", dest, nil); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	pollUntil(t, 5*time.Second, func() bool {
+		snap := m.Snapshot()
+		return snap.Done || snap.Err != ""
+	})
+
+	snap := m.Snapshot()
+	if snap.Err != "" {
+		t.Fatalf("unexpected error for llamafile: %s", snap.Err)
+	}
+	info, err := os.Stat(dest)
+	if err != nil {
+		t.Fatalf("dest file missing: %v", err)
+	}
+	if info.Mode().Perm()&0o100 == 0 {
+		t.Fatalf("llamafile not marked executable; mode = %v", info.Mode().Perm())
+	}
+}
+
 // Test 2: non-GGUF payload — Err mentions GGUF, dest absent, .part removed.
 func TestNonGGUFPayload(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

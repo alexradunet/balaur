@@ -2,7 +2,8 @@
 
 This repository is the source for Balaur, a local-first personal AI companion
 shipped as a single Go binary: PocketBase as an embedded framework, an HTMX
-web interface, and local LLM inference through Kronk.
+web interface, and local LLM inference via a llamafile engine Balaur runs as a
+subprocess and reaches over the OpenAI-compatible API.
 
 Balaur follows a small-core, local-first design: a transparent runtime with
 capability pushed into small Go packages, Markdown skills, and explicit,
@@ -58,9 +59,9 @@ lean and high-signal — add a rule only when it changes a real decision.
   devloop.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
-- Local inference goes through Kronk (llama.cpp via purego — still
-  CGO-free); remote providers go through an OpenAI-compatible HTTP client.
-  Both sit behind the same internal `llm` interface. Provider choice is
+- Local inference is served by a llamafile engine (subprocess, OpenAI API —
+  see `internal/llama`); remote providers go through the same OpenAI-compatible
+  HTTP client. Both sit behind the same internal `llm` interface. Provider choice is
   explicit; no hidden auto-routing.
 - Keep context transparent: durable state lives in PocketBase collections
   (inspectable SQLite) and exported Markdown, never hidden in-session state.
@@ -112,8 +113,8 @@ lean and high-signal — add a rule only when it changes a real decision.
 
 - Standard Go style: `gofmt` is law; run `go vet ./...` before declaring done.
 - Prefer plain functions and small structs over interfaces with one
-  implementation. Introduce an interface only at a real seam (e.g. `llm.Client`
-  where Kronk and the HTTP client both live).
+  implementation. Introduce an interface only at a real seam (e.g. `llm.Client`,
+  the one OpenAI-compatible HTTP client behind which local and remote both sit).
 - Errors are values: wrap with `fmt.Errorf("doing x: %w", err)`, return early,
   no panics in library code. `log.Fatal` only in `main`.
 - No global mutable state. Pass `core.App`, config structs, and loggers
@@ -166,9 +167,11 @@ lean and high-signal — add a rule only when it changes a real decision.
   not preclude multiple humans later, but no code path serves them yet.
 - The Johnny Decimal Markdown vault mirror (one-way export + git) is
   roadmap, not shipped. Do not claim it in user-facing copy until real.
-- Kronk tracks llama.cpp head and occasionally pins around upstream
-  breakage; pin `KRONK_LIB_VERSION` and record the known-good version in
-  the README when it changes.
+- Local inference is a supervised llamafile subprocess (`internal/llama`):
+  Balaur spawns it with `--server`, health-probes it, and stops it on
+  shutdown. The engine bundles llama.cpp, so there is no llama.cpp-head
+  tracking; keep the supervisor's failure modes (missing engine, slow load,
+  crash) surfaced as plain errors.
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
   content that may be sent to remote providers.
 

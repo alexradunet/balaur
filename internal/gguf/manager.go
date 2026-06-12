@@ -40,6 +40,11 @@ type Manager struct {
 	onDone   func(dest string) // set per Start; called only on success
 }
 
+// Shared is the process-wide download manager. The web UI and the serve-start
+// default-model fetch use the same instance so a single slot and one progress
+// snapshot are observed everywhere.
+var Shared = &Manager{}
+
 // Start begins a background download of the GGUF file at url to dest.
 // Only one download may be active at a time; a second Start while one is
 // active returns an error. url must use http or https. onDone is called
@@ -129,6 +134,10 @@ func (m *Manager) run(ctx context.Context, rawURL, dest string) {
 		}
 	}()
 
+	// A fat llamafile is an executable, not a GGUF, so skip the GGUF magic
+	// check and mark it executable after install.
+	llamafile := filepath.Ext(dest) == ".llamafile"
+
 	buf := make([]byte, 128*1024)
 	var first []byte
 	var done int64
@@ -162,7 +171,7 @@ func (m *Manager) run(ctx context.Context, rawURL, dest string) {
 		}
 	}
 
-	if string(first) != "GGUF" {
+	if !llamafile && string(first) != "GGUF" {
 		setErr("downloaded file is not a valid GGUF (magic bytes mismatch)")
 		return
 	}
@@ -174,6 +183,12 @@ func (m *Manager) run(ctx context.Context, rawURL, dest string) {
 	if err := os.Rename(tmpPath, dest); err != nil {
 		setErr(fmt.Sprintf("installing model: %v", err))
 		return
+	}
+	if llamafile {
+		if err := os.Chmod(dest, 0o755); err != nil {
+			setErr(fmt.Sprintf("making llamafile executable: %v", err))
+			return
+		}
 	}
 
 	cleanupTmp = false

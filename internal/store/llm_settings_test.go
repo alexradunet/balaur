@@ -22,8 +22,8 @@ func TestEnsureDefaultLLMConfigDoesNotAutoSelectMissingLocal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
-	if len(models) != 1 || models[0].Kind != "kronk" || !models[0].Local {
-		t.Fatalf("default models = %#v, want one local kronk", models)
+	if len(models) != 1 || models[0].Kind != "local" || !models[0].Local {
+		t.Fatalf("default models = %#v, want one local model", models)
 	}
 }
 
@@ -43,7 +43,7 @@ func TestEnsureDefaultLLMConfigSelectsExistingLocal(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("active = %v, %v; want set", ok, err)
 	}
-	if cfg.Kind != "kronk" || cfg.ChatModel != target {
+	if cfg.Kind != "local" || cfg.ChatModel != target {
 		t.Fatalf("active config = %#v", cfg)
 	}
 }

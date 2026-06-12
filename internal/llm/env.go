@@ -1,74 +1,36 @@
 package llm
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
+// The default local model is a "fat" llamafile: a single self-contained
+// executable bundling the llama.cpp engine and the Qwen3.5-27B weights. It is
+// the strongest llamafile model the target box runs, hardcoded as the
+// out-of-the-box default. Balaur runs it as a subprocess (see internal/llama)
+// and reaches it over the OpenAI-compatible API. The file is external data,
+// downloaded on first serve — never embedded in the binary.
 const (
-	DefaultChatModelFile  = "Qwen3.6-35B-A3B-Q4_K_M.gguf"
-	DefaultChatModelRepo  = "Qwen/Qwen3.6-35B-A3B-GGUF"
-	DefaultChatModelQuant = "Q4_K_M"
-	DefaultChatModelURL   = "https://huggingface.co/Qwen/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-Q4_K_M.gguf"
+	DefaultChatModelName = "Qwen3.5 27B"
+	DefaultChatModelFile = "Qwen3.5-27B-Q5_K_S.llamafile"
+	DefaultChatModelURL  = "https://huggingface.co/mozilla-ai/llamafile_0.10/resolve/main/Qwen3.5-27B-Q5_K_S.llamafile"
 
 	SyntheticBaseURL    = "https://api.synthetic.new/v1"
 	SyntheticSmallModel = "syn:small:text"
 	SyntheticLargeModel = "syn:large:text"
 )
 
-// FromEnv builds the configured client. Provider choice is explicit
-// (AGENTS.md): BALAUR_REMOTE_URL selects an OpenAI-compatible endpoint;
-// otherwise BALAUR_CHAT_MODEL points at a local GGUF run via kronk.
-func FromEnv() (Client, error) {
-	return fromEnv("")
-}
-
-// FromEnvWithDefault falls back to Balaur's default local GGUF path when no
-// explicit provider is configured. The model weights remain external data;
-// they are not embedded in the binary.
-func FromEnvWithDefault(dataDir string) (Client, error) {
-	return fromEnv(DefaultChatModelPath(dataDir))
-}
-
-func fromEnv(defaultChat string) (Client, error) {
-	if base := os.Getenv("BALAUR_REMOTE_URL"); base != "" {
-		return &OpenAIClient{
-			BaseURL: base,
-			APIKey:  os.Getenv("BALAUR_REMOTE_API_KEY"),
-			Model:   os.Getenv("BALAUR_REMOTE_MODEL"),
-		}, nil
-	}
-	if chat := os.Getenv("BALAUR_CHAT_MODEL"); chat != "" {
-		var embed []string
-		if e := os.Getenv("BALAUR_EMBED_MODEL"); e != "" {
-			embed = []string{e}
-		}
-		return &KronkClient{
-			ChatModelFiles:  []string{chat},
-			EmbedModelFiles: embed,
-		}, nil
-	}
-	if defaultChat != "" {
-		if err := requireModelFile(defaultChat); err != nil {
-			return nil, err
-		}
-		return &KronkClient{
-			ChatModelFiles:  []string{defaultChat},
-			EmbedModelFiles: nonEmpty(os.Getenv("BALAUR_EMBED_MODEL")),
-		}, nil
-	}
-	return nil, fmt.Errorf("no model configured: set BALAUR_CHAT_MODEL (local GGUF path) or BALAUR_REMOTE_URL")
-}
-
+// DefaultChatModelPath is where Balaur keeps its default local model file.
 func DefaultChatModelPath(dataDir string) string {
 	return filepath.Join(dataDir, "models", DefaultChatModelFile)
 }
 
+// DefaultChatModelDownloadCommand is the manual fetch hint shown in the UI when
+// the default model is missing. Balaur also fetches it automatically on serve.
 func DefaultChatModelDownloadCommand(dataDir string) string {
-	return fmt.Sprintf("llmfit download %s --quant %s --output-dir %s", DefaultChatModelRepo, DefaultChatModelQuant, strconv.Quote(filepath.Join(dataDir, "models")))
+	return fmt.Sprintf("curl -L -o %s %s", filepath.Join(dataDir, "models", DefaultChatModelFile), DefaultChatModelURL)
 }
 
 // SyntheticAPIKey reads the internal/experimental synthetic API credentials.
@@ -87,23 +49,6 @@ func SyntheticClient(model string) *OpenAIClient {
 		APIKey:  SyntheticAPIKey(),
 		Model:   model,
 	}
-}
-
-func requireModelFile(path string) error {
-	if _, err := os.Stat(path); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("model file not found: %s", path)
-		}
-		return fmt.Errorf("checking model file: %w", err)
-	}
-	return nil
-}
-
-func nonEmpty(s string) []string {
-	if s == "" {
-		return nil
-	}
-	return []string{s}
 }
 
 // Collect drains a ChatStream into the full text reply. For background

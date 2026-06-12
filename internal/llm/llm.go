@@ -1,7 +1,8 @@
-// Package llm defines Balaur's single seam to language models. Two clients
-// implement it: Kronk (local llama.cpp via purego) and an OpenAI-compatible
-// HTTP client for explicit remote providers. Everything above this package
-// is provider-agnostic.
+// Package llm defines Balaur's single seam to language models. One client
+// implements it: an OpenAI-compatible HTTP client. It speaks to remote
+// providers and to local endpoints alike — a local GGUF is served by a
+// llamafile subprocess (see internal/llama) and reached over the same API.
+// Everything above this package is provider-agnostic.
 package llm
 
 import "context"

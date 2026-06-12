@@ -173,7 +173,7 @@ func Register(se *core.ServeEvent) error {
 
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
-	h := &handlers{app: se.App, tmpl: tmpl}
+	h := &handlers{app: se.App, tmpl: tmpl, gguf: gguf.Shared}
 	se.Router.GET("/", h.home)
 	se.Router.GET("/models", h.modelsPage)
 	se.Router.POST("/ui/chat", h.chat)
@@ -229,7 +229,7 @@ type handlers struct {
 	app     core.App
 	tmpl    *template.Template
 	clients turn.ClientSource
-	gguf    gguf.Manager
+	gguf    *gguf.Manager
 }
 
 func (h *handlers) render(e *core.RequestEvent, name string, data any) error {

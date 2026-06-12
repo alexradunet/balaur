@@ -13,7 +13,7 @@ import (
 
 // OpenAIClient speaks the OpenAI-compatible chat/embeddings HTTP API.
 // It covers remote providers and any local server exposing the same API
-// (llama-server, Ollama, kronk server). Provider choice is explicit
+// (Balaur's own llamafile, llama-server, Ollama). Provider choice is explicit
 // configuration — Balaur never auto-routes.
 type OpenAIClient struct {
 	BaseURL    string // e.g. https://api.openai.com/v1 or http://127.0.0.1:11435/v1

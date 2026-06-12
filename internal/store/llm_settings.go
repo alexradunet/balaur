@@ -37,7 +37,7 @@ func (c LLMConfig) DisplayName() string {
 }
 
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
-	provider, err := findOrCreateLLMProvider(app, "Local Kronk", "kronk", "", "", true, true)
+	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
 	if err != nil {
 		return err
 	}
@@ -45,9 +45,9 @@ func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
 	if path == "" {
 		path = llm.DefaultChatModelPath(dataDir)
 	}
-	label := "Local GGUF"
+	label := "Local model"
 	if os.Getenv("BALAUR_CHAT_MODEL") == "" {
-		label = "Local Qwen3.6 35B A3B"
+		label = "Local " + llm.DefaultChatModelName
 	}
 	model, err := findOrCreateLLMModel(app, provider.Id, label, path, os.Getenv("BALAUR_EMBED_MODEL"), true)
 	if err != nil {
@@ -83,7 +83,7 @@ func ListLLMModels(app core.App) ([]LLMConfig, error) {
 			return out[i].Local
 		}
 		if out[i].Kind != out[j].Kind {
-			return out[i].Kind == "kronk"
+			return out[i].Kind == "local"
 		}
 		return out[i].DisplayName() < out[j].DisplayName()
 	})
@@ -132,9 +132,9 @@ func SaveOpenAIModel(app core.App, name, baseURL, apiKey, label, model, embedMod
 	return llmModel.Id, nil
 }
 
-// SaveLocalGGUFModel registers path as a kronk model under the "Local
-// Kronk" provider and returns the model record id. Label defaults to the
-// file name.
+// SaveLocalGGUFModel registers path as a local GGUF model under the "Local
+// model" provider and returns the model record id. The model is served by a
+// llamafile subprocess at chat time. Label defaults to the file name.
 func SaveLocalGGUFModel(app core.App, label, path string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("model path is required")
@@ -142,7 +142,7 @@ func SaveLocalGGUFModel(app core.App, label, path string) (string, error) {
 	if label == "" {
 		label = filepath.Base(path)
 	}
-	provider, err := findOrCreateLLMProvider(app, "Local Kronk", "kronk", "", "", true, true)
+	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
 	if err != nil {
 		return "", err
 	}
@@ -151,7 +151,7 @@ func SaveLocalGGUFModel(app core.App, label, path string) (string, error) {
 		return "", err
 	}
 	Audit(app, "", "owner", "llm.model.upsert", model.Id, true,
-		map[string]any{"provider": "Local Kronk", "kind": "kronk", "local": true})
+		map[string]any{"provider": "Local model", "kind": "local", "local": true})
 	return model.Id, nil
 }
 

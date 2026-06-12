@@ -84,9 +84,9 @@ All copy must match this. Update it the moment shape changes.
 
 **True today:** single Go binary embedding PocketBase · HTMX web UI ·
 PocketBase collections for conversations, messages, memories, skills, heads,
-grants, audit log · local inference via Kronk (llama.cpp loaded through
-purego, downloaded at first run) · OpenAI-compatible remote providers by
-explicit choice · heads as auth records with grant-scoped, audited access ·
+grants, audit log · local inference via a llamafile engine Balaur runs as a
+subprocess and reaches over the OpenAI-compatible API · OpenAI-compatible
+remote providers by explicit choice · heads as auth records with grant-scoped, audited access ·
 OS access mode (read, write, edit, bash), off by default, fully audited ·
 memory & skill proposals with owner approval cards (chat, /memory, /skills) ·
 two-tier context injection (importance-gated upfront + per-message recall) ·
