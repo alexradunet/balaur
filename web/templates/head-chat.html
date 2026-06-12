@@ -94,6 +94,7 @@
       </div>
       {{end}}
     </section>
+    {{template "head_chat_draft" .}}
   </main>
 
   <script>
@@ -108,7 +109,7 @@
     });
   </script>
 
-  <div class="chatbar" id="chatbar">
+  <div class="chatbar chatbar-slim" id="chatbar">
     <div class="chatbar-head-context">
       <span class="balaur-avatar balaur-avatar-balaur" aria-hidden="true">
         <img class="px" src="{{.BalaurAvatarURL}}" alt="" decoding="async">
@@ -116,24 +117,32 @@
       <span class="head-name-label">{{.HeadName}}</span>
       <a href="/heads" class="chatbar-back-link">← all heads</a>
     </div>
-    {{if .ChatReady}}
-    <form class="chat-form"
-          hx-post="/ui/heads/{{.HeadID}}/chat"
-          hx-target="#chat"
-          hx-swap="beforeend"
-          hx-on::after-request="this.reset()"
-          onsubmit="return balaurPrepareChat(this)">
-      <input type="hidden" name="client_rendered" value="0">
-      <textarea name="message"
-                placeholder="Message {{.HeadName}}…"
-                autocomplete="off"
-                rows="2"
-                autofocus
-                required
-                onkeydown="balaurSubmitOnEnter(event)"></textarea>
-      <button class="btn btn-primary" type="submit">Send</button>
-    </form>
-    {{end}}
   </div>
 </body>
 </html>
+
+{{define "head_chat_draft"}}
+<div class="msg msg-user msg-draft" id="chat-draft">
+  <figure class="portrait">
+    <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
+      <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
+    </span>
+    <figcaption class="who">{{.OwnerName}}</figcaption>
+  </figure>
+  <div class="msg-main">
+    <form class="chat-form" hx-post="/ui/heads/{{.HeadID}}/chat" hx-target="#chat" hx-swap="beforeend"
+          hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
+      <input type="hidden" name="client_rendered" value="0">
+      <textarea name="message" placeholder="Message {{.HeadName}}…" rows="2"
+                autocomplete="off" autofocus required
+                {{if not .ChatReady}}disabled{{end}}
+                onkeydown="balaurSubmitOnEnter(event)"></textarea>
+      <div class="msg-draft-foot">
+        <span class="msg-draft-hint">enter to speak · shift+enter for a new line</span>
+        <button class="btn btn-primary btn-sm" type="submit"
+                {{if not .ChatReady}}disabled{{end}}>Speak</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

@@ -47,6 +47,8 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	tmpl := parseTemplates(t)
 	choice := turn.ModelChoice{Key: "m1", Provider: "local", Model: "model.gguf", Name: "Local Qwen3.6 35B A3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}
 	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen3.6 35B A3B", ChatPlaceholder: "Speak...", ModelChoices: []turn.ModelChoice{choice}}
+
+	// chat_bar is now a slim ledge — no form, just the model switcher + profile link.
 	var b strings.Builder
 	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
 		t.Fatalf("chat_bar: %v", err)
@@ -59,8 +61,9 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	if !strings.Contains(out, `href="/settings/models"`) {
 		t.Error("chatbar should link to /settings/models to manage models")
 	}
-	if !strings.Contains(out, `<textarea name="message"`) {
-		t.Error("chatbar should render the current textarea input when chat is ready")
+	// The form now lives in chat_draft, not in the chatbar.
+	if strings.Contains(out, `name="message"`) {
+		t.Error("chatbar must not contain the message textarea — it belongs in chat_draft")
 	}
 
 	b.Reset()
@@ -84,7 +87,32 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Error("chatbar should render a download progress bar while a model is downloading")
 	}
 	if strings.Contains(dl, `<textarea name="message"`) {
-		t.Error("chatbar should not render the chat input while downloading (not ready)")
+		t.Error("chatbar must not render the chat input — it belongs in chat_draft")
+	}
+
+	// chat_draft renders the composer form in the flow.
+	b.Reset()
+	data.ChatReady = true
+	data.Gguf = gguf.Progress{}
+	if err := tmpl.ExecuteTemplate(&b, "chat_draft", data); err != nil {
+		t.Fatalf("chat_draft: %v", err)
+	}
+	draft := b.String()
+	if !strings.Contains(draft, `id="chat-draft"`) {
+		t.Error("chat_draft must render #chat-draft")
+	}
+	if !strings.Contains(draft, `<textarea name="message"`) {
+		t.Error("chat_draft must contain the message textarea when ready")
+	}
+	// Not-ready: textarea and button are disabled.
+	b.Reset()
+	data.ChatReady = false
+	if err := tmpl.ExecuteTemplate(&b, "chat_draft", data); err != nil {
+		t.Fatalf("chat_draft not ready: %v", err)
+	}
+	notReady := b.String()
+	if !strings.Contains(notReady, "disabled") {
+		t.Error("chat_draft: textarea/button must be disabled when chat is not ready")
 	}
 
 	b.Reset()

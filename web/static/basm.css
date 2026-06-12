@@ -2261,3 +2261,17 @@ progress.gguf-progress-bar::-moz-progress-bar {
     position: static;
   }
 }
+
+/* ── Draft composer glue ─────────────────────────────────────────── */
+/* The chat-form lives inside .msg-draft in the flow; wire up column layout. */
+.msg-draft .chat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Slim chatbar — form removed; reduce height pressure. */
+.chatbar-slim {
+  padding: 8px 6vw;
+}
