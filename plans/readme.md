@@ -42,6 +42,13 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 022 | Settings page: sidebar shell for Profile/Skills/Models | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `431727e`) |
 | 023 | GGUF download manager (background, progress, cancel, delete) | P2 | M–L | MED | 022 | — | DONE (reviewed; merged to main `b47b451`) |
 | 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | DONE (reviewed; merged to main `bba4494`) |
+| 025 | Hearthwood (Basm v2) visual foundation: tokens, fonts, icons | P1 | M | LOW–MED | — | — | DONE (reviewed; awaiting owner merge from worktree `agent-a09f8dd7e4621f639`, commit `022d7d6`) |
+| 026 | Immersive chat: portraits, nameplates, parchment dialogue | P1 | M | MED | 025 | — | TODO |
+| 027 | Dialogue choices: numbered server-rendered replies | P2 | M | MED | 026 | — | TODO |
+| 028 | Typed card registry: /ui/cards/{type} (HATEOAS foundation) | P1 | L | MED | 025 | — | TODO |
+| 029 | Boards: owner-composed dashboards of typed cards | P2 | M–L | MED | 028 | — | TODO |
+| 030 | Agent UI tools: card_show + board_compose | P2 | M | MED | 028, 029 (027 soft) | — | TODO |
+| 031 | The candle: immersive /journal page (free + guided) | P3 | M | LOW | 025 | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -82,6 +89,35 @@ REJECTED (one-line rationale).
   confirmed with the owner: old routes redirect (302) into /settings;
   download manager is background + progress + cancel + custom URL; provider
   manager is full list/edit/delete with key redaction.
+
+## Third cycle: Hearthwood redesign + HATEOAS UI (plans 025–031)
+
+Owner-requested via `improve plan` on 2026-06-12 against `9c77f42`: adopt the
+Hearthwood (Basm v2) design export in `Balaur_ds/` as the product UI, keep
+SSR + HTMX per card, and let Balaur compose UI on the spot (HATEOAS). Scope
+decisions confirmed with the owner: boards ship with **server-defined
+layouts** first (drag/resize is a follow-up); dynamic cards are **typed
+composition only** (the model picks `{type, params}` from a registry — never
+authors HTML; agent-authored markup REJECTED); dialogue choices are in scope
+as a capability.
+
+- **025 → 026 (strict)**: 026's markup targets 025's CSS.
+- **026 → 027**: 027 appends a chat fragment assuming 026's structure.
+- **028 → 029 → 030 (strict)**: registry → boards → agent tools. 027 before
+  030 preferred (both extend the tool-result marker seam in
+  `internal/tools/knowledge.go` + `internal/web/chat.go`; 030 inherits 027's
+  Mark/Parse consolidation note).
+- **029 claims migration timestamp `1750740000`** (next free after
+  `1750730000_local_provider_kind.go`); whoever lands a migration first claims
+  the number, the next takes the following one.
+- 031 is independent after 025; 028 can run in parallel with 026/027 (different
+  files except `web.go` route registration — trivial conflicts).
+- Deferred follow-ups recorded in the plans' maintenance notes: board
+  drag/move/resize with persisted layout; `.msg-draft` in-flow composer;
+  quest-log two-pane /tasks layout; profile-flavored card types (character,
+  identity, souls, companion); `board_add_card` tool; journal mode tag;
+  board-summary card embed. Ambient audio and moon phases from the mockup:
+  rejected (against quiet-craft principles / YAGNI).
 
 ## Execution record (2026-06-12, second cycle)
 
