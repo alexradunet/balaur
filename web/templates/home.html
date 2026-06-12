@@ -122,6 +122,7 @@
       </div>
       {{end}}
     </section>
+    {{template "chat_draft" .}}
   </main>
 
   <script>
@@ -155,29 +156,36 @@
 </html>
 
 {{define "chat_bar"}}
-<div class="chatbar" id="chatbar"
+<div class="chatbar chatbar-slim" id="chatbar"
      {{if .ChatbarOOB}}hx-swap-oob="outerHTML"{{end}}
      {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   {{template "model_switcher" .}}
-  {{if .ChatReady}}
-  <form class="chat-form"
-        hx-post="/ui/chat"
-        hx-target="#chat"
-        hx-swap="beforeend"
-        hx-on::after-request="this.reset()"
-        onsubmit="return balaurPrepareChat(this)">
-    <input type="hidden" name="client_rendered" value="0">
-    <textarea name="message"
-              placeholder="{{.ChatPlaceholder}}"
-              autocomplete="off"
-              rows="2"
-              autofocus
-              required
-              oninput="if(typeof basmSyncChatbarSpace==='function') basmSyncChatbarSpace()"
-              onkeydown="balaurSubmitOnEnter(event)"></textarea>
-    <button class="btn btn-primary" type="submit">Send</button>
-  </form>
-  {{end}}
+</div>
+{{end}}
+
+{{define "chat_draft"}}
+<div class="msg msg-user msg-draft" id="chat-draft">
+  <figure class="portrait">
+    <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
+      <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
+    </span>
+    <figcaption class="who">{{.OwnerName}}</figcaption>
+  </figure>
+  <div class="msg-main">
+    <form class="chat-form" hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend"
+          hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
+      <input type="hidden" name="client_rendered" value="0">
+      <textarea name="message" placeholder="{{.ChatPlaceholder}}" rows="2"
+                autocomplete="off" autofocus required
+                {{if not .ChatReady}}disabled{{end}}
+                onkeydown="balaurSubmitOnEnter(event)"></textarea>
+      <div class="msg-draft-foot">
+        <span class="msg-draft-hint">enter to speak · shift+enter for a new line</span>
+        <button class="btn btn-primary btn-sm" type="submit"
+                {{if not .ChatReady}}disabled{{end}}>Speak</button>
+      </div>
+    </form>
+  </div>
 </div>
 {{end}}
 

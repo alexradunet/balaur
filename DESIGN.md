@@ -329,6 +329,9 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
   driven by the `msg-pending` class and the `data-state="thinking"/"working"`
   hooks). No sprite-sheet animation; the static PNG is sufficient — CSS glow
   carries the state signal. All animation respects `prefers-reduced-motion`.
+- The composer is a `.msg-draft` parchment row in the chat flow (`#chat-draft`);
+  the chatbar is a slim status ledge (`.chatbar-slim`) holding only the model
+  switcher and profile link — it no longer contains the message form.
 - Tool/OS-access events render as wood-inset slab rows (`.msg-tool`) with a
   pixel icon (`<img class="tool-icon">`) from `web/static/icons/` — the
   audit trail is part of the UI language, visible, never hidden.
