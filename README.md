@@ -215,6 +215,9 @@ Optional environment variables:
 | `BALAUR_BRIEFING_HOUR` | `9` | Hour (0–23) to open the day with a briefing |
 | `BALAUR_DEV_SEED` | `0` | Set to `1` to enable the `/ui/dev/seed-recaps` endpoint for testing |
 
+To reach Balaur from a NetBird network without embedding any VPN code into
+the binary, see [docs/netbird.md](docs/netbird.md).
+
 ## Build
 
 ```bash
