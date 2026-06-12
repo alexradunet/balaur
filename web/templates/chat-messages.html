@@ -27,7 +27,7 @@
 
 {{define "chat-msg-tool"}}
 <div class="msg msg-tool">
-  <div class="who"><span class="tool-icon" aria-hidden="true">{{toolIcon .Tool}}</span>tool · {{.Tool}}</div>
+  <div class="who"><img class="tool-icon" src="/static/icons/{{toolIcon .Tool}}.png" alt="" aria-hidden="true">tool · {{.Tool}}</div>
   <div class="body">{{.Content}}</div>
 </div>
 {{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}
@@ -47,7 +47,7 @@
 {{- /* chat-msg-tool-start opens a tool row for the streaming path: who-line + open body. */ -}}
 {{define "chat-msg-tool-start"}}
 <div class="msg msg-tool">
-  <div class="who"><span class="tool-icon" aria-hidden="true">{{toolIcon .Tool}}</span>tool · {{.Tool}}</div>
+  <div class="who"><img class="tool-icon" src="/static/icons/{{toolIcon .Tool}}.png" alt="" aria-hidden="true">tool · {{.Tool}}</div>
   <div class="body">{{end}}
 
 {{- /* chat-msg-tool-end closes an open tool row; if CardURL is set it adds the inline card. */ -}}

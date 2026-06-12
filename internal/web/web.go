@@ -25,35 +25,27 @@ import (
 	webassets "github.com/alexradunet/balaur/web"
 )
 
-// toolGlyph maps a tool name to a single Basm-palette glyph rendered inside
-// a .tool-icon box in chat messages. Shared by the template helper and the
-// streaming writer in chat.go so both surfaces stay in sync.
-func toolGlyph(name string) string {
+// toolIconFile maps a tool name to a pixel icon filename under /static/icons/.
+// Unmapped tools fall back to "orb" so every tool row gets an icon.
+func toolIconFile(name string) string {
 	n := strings.ToLower(name)
 	switch {
-	case strings.Contains(n, "bash") || strings.Contains(n, "shell") || strings.Contains(n, "exec"):
-		return "$›"
-	case strings.Contains(n, "read"):
-		return "◈"
-	case strings.Contains(n, "write") || strings.Contains(n, "edit"):
-		return "✎"
-	case strings.Contains(n, "search") || strings.Contains(n, "recall") || strings.Contains(n, "find"):
-		return "⌕"
-	case strings.Contains(n, "task"):
-		return "◻"
-	case strings.Contains(n, "memory") || strings.Contains(n, "memo"):
-		return "◇"
+	case strings.HasPrefix(n, "task_"):
+		return "scroll"
+	case n == "remember" || strings.Contains(n, "memor"):
+		return "tome"
 	case strings.Contains(n, "skill"):
-		return "⌥"
-	case strings.Contains(n, "log") || strings.Contains(n, "entry"):
-		return "≡"
-	case strings.Contains(n, "recap") || strings.Contains(n, "summary"):
-		return "⟳"
-	case strings.Contains(n, "day") || strings.Contains(n, "calendar") || strings.Contains(n, "journal"):
-		return "⌂"
-	default:
-		return "◈"
+		return "key"
+	case n == "journal_write" || strings.Contains(n, "journal"):
+		return "quill"
+	case strings.HasPrefix(n, "log_") || strings.HasPrefix(n, "entry_"):
+		return "orb"
+	case strings.Contains(n, "search") || strings.Contains(n, "recall") || strings.Contains(n, "find"):
+		return "lens"
+	case strings.HasPrefix(n, "os_") || strings.Contains(n, "bash") || strings.Contains(n, "shell"):
+		return "shield"
 	}
+	return "orb"
 }
 
 // funcs are the template helpers the Basm cards and chat messages need.
@@ -76,8 +68,9 @@ var funcs = template.FuncMap{
 		}
 		return out
 	},
-	// toolIcon returns a single glyph for a tool name, used in chat-messages.html.
-	"toolIcon": toolGlyph,
+	// toolIcon returns a pixel icon filename for a tool name, used in chat-messages.html.
+	// The template renders <img src="/static/icons/{{toolIcon .Tool}}.png">.
+	"toolIcon": toolIconFile,
 	// base returns the last element of a path (filepath.Base), used in templates.
 	"base": filepath.Base,
 	// fmtBytes formats a byte count as a human-readable string (KB/MB/GB).

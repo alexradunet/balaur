@@ -132,103 +132,171 @@ Balaur avatars.
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web).
 
-## 4. Visual system
+## 4. Visual system — Hearthwood (Basm v2)
+
+The canonical stylesheet is **Hearthwood**, the v2 iteration of Basm.
+It shifts the palette from Forest at Dusk (deep teal-greens) to a
+grounded fantasy-RPG material language: tavern-oak wood chrome,
+candlelit gold accents, constant-parchment content panels, and strict
+16-bit squared construction throughout.
 
 ### Principles
 
-1. **Woven, not rendered** — visible structure: borders, dashed stitches,
-   hard shadows, pixel motifs, square marks, folk bands.
+1. **Woven, not rendered** — visible structure: beveled borders, dashed
+   stitches, hard pixel shadows, square marks, folk bands.
 2. **Craft over gloss** — no glassmorphism, no soft SaaS gradients, no
    rounded blobs, no generic AI sparkle.
 3. **Sovereign by construction** — robust, readable, inspectable,
    low-dependency; no dark-pattern polish.
 4. **Dark-first guardian domain** — dark mode is the default identity.
-5. **Pixel-hard interactions** — crisp edges, 2px borders, 3px radii, hard
-   offset shadows, tiny square notches, minimal motion.
-6. **Folk accenting** — madder red, ochre/gold, deep teal, indigo as
+5. **Pixel-hard interactions** — crisp `--radius: 0` edges, 2px borders,
+   bevel shadow system, buttons that physically sink 3px on press.
+6. **Folk accenting** — madder red, candlelit gold, deep teal, indigo as
    accents, not decoration overload.
 7. **New branch, new head** — growth is depicted as another Balaur head on
    the same body, never a plugin tile.
-8. **Art ships borderless** — marks, avatars, and glyphs carry no baked-in
-   or CSS frame of their own. Frames are a context decision made in HTML:
-   a card's border belongs to the card, never to the art inside it.
+8. **Art ships borderless** — marks, avatars, and pixel icons carry no
+   baked-in or CSS frame of their own. Frames are a context decision made
+   in HTML: a card's border belongs to the card, never to the art inside it.
 
-### Color tokens
+### Color tokens — Hearthwood palette
 
-Canonical in `web/static/basm.css`. Reference copy (Forest at Dusk):
+Canonical in `web/static/basm.css`. Reference copy (dark-mode values):
 
 ```css
 :root {
   color-scheme: dark light; /* tokens resolve via light-dark() */
 
-  /* dark (default identity) */
-  --bg: #0b1310;        --surface: #11201b;
-  --surface-2: #172a23; --surface-3: #1f352c;
-  --fg: #ede8d8;        --on-surface: #f5f0e6;
-  --muted: #96a090;     --hair: #243531;
-  --outline-2: #1b2923;
+  /* Page & wood chrome */
+  --bg: #140c06;          /* deep tavern-oak dark */
+  --chrome: #2a1709;      /* topbar, chatbar, tool rows, tags */
+  --chrome-2: #1d0f06;    /* deeper wood inset */
+  --chrome-fg: #b59872;   /* text on wood */
 
-  --gold: #f2c14e;      --gold-deep: #b8862a;
-  --ember: #ff6a2b;     --ember-deep: #c2410c;
-  --ember-red: #e5484d; --teal: #2dd4bf;
-  --teal-deep: #0d9488; --folkred: #e0563b;
-  --indigo: #a8c0f0;    --indigo-deep: #5b82e4;
-  --violet: #c084fc;    --good: #7fcf6a;
-  --steel: #9db0a5;     --smoke: #566870;
+  /* Parchment content panels — constant across dark and light */
+  --surface: #e8d9ae;     --surface-2: #d6c188;
+  --surface-3: #c4ab74;   --parch-edge: #8a6f3c;
+
+  /* Text */
+  --fg: #c9b894;          /* body on page bg */
+  --fg-strong: #ecdcb2;   /* headings on page bg */
+  --muted: #8a7355;       --smoke: #6b5639;
+  --hair: #3b2a16;        --outline-2: #120a04;  /* near-black pixel outline */
+
+  /* Ink — text on parchment (constant) */
+  --ink: #2c2012;         --ink-muted: #6f5e3c;
+  --on-surface: #2c2012;
+
+  /* Accents */
+  --gold: #f2c14e;        --gold-deep: #a87b24;
+  --gold-ink: #8a6212;    /* gold on parchment */
+  --ember: #ff7a33;       --ember-deep: #8f3a12;
+  --ember-red: #e5484d;   --teal: #3ecfb8;
+  --teal-deep: #169a82;   --teal-ink: #0d6e5c;   /* teal on parchment */
+  --folkred: #e0563b;     --indigo: #a8c0f0;
+  --indigo-ink: #3d54a0;  /* user hue on parchment */
+  --violet: #c084fc;      --good: #7fcf6a;
+  --good-ink: #4c7a2c;    --steel: #9b8a6c;
 }
 ```
 
 Theming is standard `light-dark()` with `color-scheme: dark light` —
 the OS preference applies automatically; `<html class="dark">` or
-`<html class="light">` force a mode. The light theme is warm fern-paper
-linen (`--bg: #f4efe4`, `--surface: #fdfaf3`), earthy and woven, not
-sterile — exact values live in `basm.css`.
+`<html class="light">` force a mode. The light theme applies the same
+material language at daylight intensity (parchment surface, warm oak
+chrome) — exact values live in `basm.css`.
 
-Usage: `--bg` page · `--surface` cards/bars · `--surface-2` tags/code ·
-`--ember` primary CTA, links, active states · `--ember-deep` hard shadows ·
-`--gold` brand accent, kicker text, Balaur nameplate, notches · `--teal`
-secondary accent, thinking state · `--folkred` heritage stripe · `--indigo`
-user-role hue · status colors always pair with text labels, never color-only.
+Two surface regions: **page/chrome** (wood, dark-responsive) and
+**parchment** (constant `--surface: #e8d9ae` in both modes). `--ink` is
+the on-parchment text color; `--fg` is text on the page background.
+
+Usage: `--bg` page · `--chrome` topbar/chatbar/tool rows · `--surface`
+parchment cards · `--ember` primary CTA, links · `--gold` brand accent,
+kicker text, Balaur nameplate, notches · `--teal` secondary accent,
+thinking state · `--folkred` heritage stripe · `--indigo-ink` user-role
+hue on parchment · status colors always pair with text labels, never
+color-only.
 
 ### Typography
 
 ```css
---font-display: 'Pixelify Sans', system-ui, sans-serif; /* hero, headings */
---font-pixel: 'Silkscreen', monospace;                  /* brand nameplate + runes ONLY */
---font-body: 'Work Sans', system-ui, sans-serif;        /* body copy */
---font-mono: 'JetBrains Mono', monospace;               /* eyebrow, nav, meta, buttons, code */
+--font-display: 'Jersey 15', 'Pixelify Sans', sans-serif; /* hero, headings — squared 16-bit */
+--font-pixel:   'Silkscreen', monospace;                   /* brand nameplate + section runes ONLY */
+--font-body:    'Piazzolla', Georgia, serif;               /* body copy — humanist serif, storybook warmth */
+--font-mono:    'JetBrains Mono', ui-monospace, monospace; /* eyebrow, nav, meta, buttons, tags, code */
 ```
 
-**Silkscreen is reserved for the brand nameplate and section runes** — at
-10–13px bitmap-style letterforms strain readability, so the functional UI
-layer (nav, tags, kickers, nameplates) uses `--font-mono`, which carries the
-same technical-craft energy at full legibility. Pixelify Sans stays for
-display sizes (20px+), where it reads comfortably.
+**Jersey 15** is the display face — a squared bitmap display font for
+headings at 20px+. **Piazzolla** is a screen-paired humanist serif that
+reads warm on parchment at length. **Silkscreen** remains reserved for the
+brand nameplate and section runes only. **JetBrains Mono** carries all
+functional small-text (nav, tags, kickers, metadata).
 
-Fonts are self-hosted as latin-subset woff2 under `web/static/fonts/`
-(`pixelify-sans` · `silkscreen` · `work-sans` · `jetbrains-mono`); no
-third-party font CDNs at runtime. Body 17px/1.6; nav/buttons/tags 11–13px
-mono uppercase.
+Fonts are self-hosted under `web/static/fonts/` — no third-party CDNs at
+runtime. New in Hearthwood: `jersey-15.ttf`, `piazzolla.ttf` (TTF variable
+font, opsz+wght). Retained: `pixelify-sans.woff2`, `silkscreen.woff2`,
+`work-sans.woff2`, `jetbrains-mono.woff2`. Body 17px/1.6; nav/buttons/tags
+11–13px mono uppercase.
 
 ### Layout and motifs
 
 ```css
---radius: 3px; --maxw: 1080px; --shadow-hard: 5px 5px 0;
+--radius: 0px;   /* RPG panels are square; rounding is for blobs */
+--maxw: 1080px;
+
+/* Bevel system — replaces old flat shadow */
+--bevel-up:   inset 0 3px 0 <light>, inset 3px 0 0 <light>,
+              inset 0 -3px 0 <dark>, inset -3px 0 0 <dark>;
+--bevel-in:   inset 0 3px 0 <dark>, …;    /* sunken panels */
+--parch-bevel: inset 0 2px 0 rgba(255,255,255,.45), …;  /* parchment edge */
+--drop-hard:  0 3px 0 rgba(0,0,0,.55);
+
+/* legacy alias */
+--shadow-hard: 5px 5px 0;
 ```
 
-- **Folk band** — horizontal carpet stripe between major sections:
-  repeating 135° gradient of folkred/gold/teal/ember-deep, 2px `--fg`
-  borders top and bottom, `image-rendering: pixelated`. Use sparingly in
-  dense app UI.
-- **Stitch line** — 2px dashed separator
-  (`linear-gradient(to right, var(--hair) 50%, transparent 50%)`,
-  `background-size: 8px 2px`).
-- **Pixel notches** — 4–8px squares in card corners: gold, teal, or folkred.
-- **Buttons** — squared, uppercase mono, 2px `--on-surface` border, hard
-  shadow; hover translates 1px, active collapses the shadow (press feels
-  physical).
-- **Cards** — surface bg, 2px outline, 3px radius, top-right 7px gold notch.
-- **Tags** — mono, small, surface-2, 1px outline, teal `▪` prefix.
+- **Materials**: `.parch` (parchment content: `--surface` bg, `--grain-ink`
+  dither, `--ink` text, `--parch-bevel`), `.wood` (chrome: `--chrome` bg,
+  `--wood-planks` + `--grain-warm`, `--bevel-up`), `.ornate` (gold corner
+  brackets on `.parch` for proposed/choice panels).
+- **Folk band** — horizontal carpet stripe: repeating 135° gradient of
+  folkred/gold/teal/ember-deep, 2px `--outline-2` borders, pixelated.
+- **Stitch line** — 2px dashed separator in `--hair`.
+- **Pixel grain** — `--grain-warm` (dither over wood) and `--grain-ink`
+  (dither over parchment), both 4×4 repeating-conic-gradient.
+- **Buttons** — `--radius: 0`, uppercase mono, 2px `--outline-2` border,
+  beveled shadow; active press sinks 3px (`translateY(3px)` + bevel flip).
+- **Cards** — parchment material, 2px `--parch-edge` border, top-right 7px
+  `--gold-ink` notch, `--parch-bevel`.
+- **Tags** — wood material, mono, `--bevel-up`, teal `▪` prefix.
+
+### Icons
+
+Hearthwood ships **13 pixel-art PNG icons** under `web/static/icons/`:
+`bell` · `check` · `flame` · `gem` · `hourglass` · `key` · `lens` ·
+`orb` · `quill` · `rune_x` · `scroll` · `shield` · `tome`.
+
+Icons render at 18px (`img.tool-icon`) in tool rows and 26px (`.h-icon`)
+beside page headings. They are always bare pixel art — never boxed, never
+bordered (the row or heading provides the frame context).
+
+**Tool → icon mapping** (implemented in `toolIconFile()`, `internal/web/web.go`):
+
+| Tool prefix / name | Icon |
+|---|---|
+| `task_*` | `scroll` |
+| `remember`, `*memor*` | `tome` |
+| `*skill*` | `key` |
+| `journal_write`, `*journal*` | `quill` |
+| `log_*`, `entry_*` | `orb` |
+| `*search*`, `*recall*`, `*find*` | `lens` |
+| `os_*`, `*bash*`, `*shell*` | `shield` |
+| (fallback) | `orb` |
+
+**Page heading icons** (`.h-icon`, 26px): Tasks → `scroll`, Memory/Knowledge
+→ `tome`, Life → `orb`, Heads → `tome`.
+
+The Unicode glyph language is retired; tool rows render pixel icons via the `toolIcon` template helper (`toolIconFile()` in `internal/web/web.go`).
 
 ### HTMX surface conventions
 
@@ -245,28 +313,26 @@ mono uppercase.
   driven by the `msg-pending` class and the `data-state="thinking"/"working"`
   hooks). No sprite-sheet animation; the static PNG is sufficient — CSS glow
   carries the state signal. All animation respects `prefers-reduced-motion`.
-- Tool/OS-access events render as bordered, mono-typeset event rows — the
-  audit trail is part of the UI language, visible, never hidden. The tool
-  glyph (`toolIcon` template helper / `toolGlyph()` in `chat.go`) is bare
-  teal typography inside the row, not a boxed widget — the row's border
-  already provides the frame.
+- Tool/OS-access events render as wood-inset slab rows (`.msg-tool`) with a
+  pixel icon (`<img class="tool-icon">`) from `web/static/icons/` — the
+  audit trail is part of the UI language, visible, never hidden.
 - Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
-  visible focus states consistent with the palette.
+  visible focus states (`--focus-ring: 2px solid var(--teal)`).
 
 ### Knowledge cards (memory & skill approval)
 
 The growth surface: Balaur proposes, the owner decides. One card template
 per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
 
-- **Proposed cards** pop: `--gold-deep` border, hard shadow, ember notch,
-  Approve as the only primary button. The section heading is gold:
-  *"Awaiting your word."*
-- **Active cards** are calm surfaces with an Archive ghost button and a
-  mono `used ×N` counter — usage is curation signal, always visible.
+- **Proposed cards** pop: `--gold-deep` border, ornate gold corner brackets
+  (`.ornate`), ember notch, Approve as the only primary button. The section
+  heading is gold: *"Awaiting your word."*
+- **Active cards** are calm parchment surfaces with an Archive ghost button
+  and a mono `used ×N` counter — usage is curation signal, always visible.
 - **Archived cards** render dashed and dimmed, with Restore.
-- **Importance pips**: five 7px squares, gold-filled to the memory's
-  importance. The pips are the context-budget dial — importance ≥ 4 means
-  always injected, so the visual weight matches the token cost.
+- **Importance pips**: five 7px squares, `--gold-ink`-filled to the
+  memory's importance. The pips are the context-budget dial — importance
+  ≥ 4 means always injected, so the visual weight matches the token cost.
 - Edit lives in a `<details>` fold on the card — no modals, no JS state.
 - Card actions are plain HTMX forms posting to lifecycle endpoints; the
   server re-renders the card (or removes it). Approving in chat and
@@ -365,13 +431,6 @@ variant via the `balaur_avatar` field on the head record (via `POST /ui/heads/{i
 | `balaur-15` | **Dawn** | Brilliant amber-rose, bright sunrise tones, hopeful eyes |
 | `balaur-16` | **Sage** | Deep teal, copper folk-diamond neck markings, ceremonial horns |
 
-#### Icons
-
-Icons are bare glyphs (`⌂ ✉ ◇ ⛨ ⟳ ⌥ ◈ ✎ ⌕ ◻ ≡`) set in `--font-mono`
-and `--teal` color — never boxed, never detailed line icons. Tool-call rows
-use the `toolIcon` template helper (`toolGlyph()` in `chat.go`) to map tool
-names to single Unicode characters. The row's border provides the frame;
-the glyph is pure typography.
 
 ## 5. Quick checklist
 
@@ -384,10 +443,10 @@ For any Balaur-branded surface:
 - Mythic seasoning, plain technical truth as the base. No hype, no emoji.
 - Match the honesty ledger. Never state roadmap as shipped.
 - Dark-first, woven, pixel-hard, not glossy.
-- Tokens from `web/static/basm.css`; Basm typography roles; 2px borders,
-  3px radius, hard shadows where interactive.
+- Tokens from `web/static/basm.css`; Hearthwood typography roles; 2px borders,
+  `--radius: 0`, bevel shadows and press-sink 3px for interactive elements.
 - At least one restrained folk/pixel motif per surface: stitch line, square
-  notch, folk band, or pixel crest.
+  notch, folk band, pixel crest, or parchment grain.
 - Art ships borderless; frames belong to HTML context, never to assets.
 - Avatars: static 256px PNG, side profile facing right, CSS glow for state.
 - Keep assets local; no third-party CDNs in the product UI.

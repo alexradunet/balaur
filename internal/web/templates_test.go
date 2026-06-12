@@ -206,6 +206,22 @@ func TestCalendarCellsLinkToDayPages(t *testing.T) {
 	}
 }
 
+func TestToolIconRendersAsImg(t *testing.T) {
+	tmpl := parseTemplates(t)
+	var b strings.Builder
+	mv := messageView{Tool: "task_add", Content: "added a task"}
+	if err := tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
+		t.Fatalf("chat-msg-tool: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `<img class="tool-icon" src="/static/icons/`) {
+		t.Errorf("tool row should render pixel icon img, got: %s", out)
+	}
+	if strings.Contains(out, `<span class="tool-icon"`) {
+		t.Error("tool row should no longer use span.tool-icon glyph")
+	}
+}
+
 func TestSparkPointsScaling(t *testing.T) {
 	points, _, ly := sparkPoints([]float64{1, 2, 3}, 240, 48)
 	if points == "" {
