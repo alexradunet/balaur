@@ -44,7 +44,7 @@ func (h *handlers) buildHeadsData() (headsData, error) {
 	recs, err := h.app.FindRecordsByFilter(
 		"heads",
 		"status = 'active'",
-		"-created", 0, 0,
+		"-@rowid", 0, 0,
 	)
 	if err != nil {
 		return headsData{}, fmt.Errorf("listing heads: %w", err)
