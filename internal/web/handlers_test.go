@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -128,6 +129,179 @@ func TestTaskTransition(t *testing.T) {
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 	}
 	scenario.Test(t)
+}
+
+// seedHeadRec creates an active head record for web handler tests.
+func seedHeadRec(t testing.TB, app *tests.TestApp, name, status string) *core.Record {
+	t.Helper()
+	col, err := app.FindCollectionByNameOrId("heads")
+	if err != nil {
+		t.Fatalf("heads collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("name", name)
+	rec.Set("status", status)
+	rec.SetEmail(fmt.Sprintf("head-%d@balaur.local", time.Now().UnixNano()))
+	rec.SetRandomPassword()
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("saving head: %v", err)
+	}
+	return rec
+}
+
+func TestHeadsPage(t *testing.T) {
+	scenarios := []tests.ApiScenario{
+		{
+			Name:   "active head appears on /heads",
+			Method: "GET",
+			URL:    "/heads",
+			TestAppFactory: func(tb testing.TB) *tests.TestApp {
+				app := newWebApp(tb)
+				seedHeadRec(tb, app, "Scout", "active")
+				return app
+			},
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"Scout"},
+		},
+	}
+	for _, scenario := range scenarios {
+		scenario.Test(t)
+	}
+}
+
+func TestHeadChatPage(t *testing.T) {
+	// URLs contain record IDs that must be seeded first, so we run subtests
+	// rather than an ApiScenario table.
+	t.Run("active head", func(t *testing.T) {
+		app := newWebApp(t)
+		head := seedHeadRec(t, app, "Scout", "active")
+		scenario := tests.ApiScenario{
+			Name:            "active head renders chat page",
+			Method:          "GET",
+			URL:             "/heads/" + head.Id + "/chat",
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"Scout"},
+		}
+		scenario.Test(t)
+	})
+	t.Run("merged head is forbidden", func(t *testing.T) {
+		app := newWebApp(t)
+		head := seedHeadRec(t, app, "OldHead", "merged")
+		scenario := tests.ApiScenario{
+			Name:            "merged head is forbidden",
+			Method:          "GET",
+			URL:             "/heads/" + head.Id + "/chat",
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"not active"},
+		}
+		scenario.Test(t)
+	})
+	t.Run("unknown id is not found", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:            "unknown head id is 404",
+			Method:          "GET",
+			URL:             "/heads/nope/chat",
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  404,
+			ExpectedContent: []string{"not found"},
+		}
+		scenario.Test(t)
+	})
+}
+
+func TestHeadChat(t *testing.T) {
+	sseSrv := newFakeSSEServer("Hello from Scout")
+	t.Cleanup(func() { sseSrv.Close() })
+
+	newHeadChatApp := func(tb testing.TB) (*tests.TestApp, *core.Record) {
+		app := newWebApp(tb)
+		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
+		store.SetActiveLLMModel(app, id, "test")
+		head := seedHeadRec(tb, app, "Scout", "active")
+		return app, head
+	}
+
+	t.Run("message without client_rendered includes user bubble", func(t *testing.T) {
+		app, head := newHeadChatApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "head chat basic",
+			Method:          "POST",
+			URL:             "/ui/heads/" + head.Id + "/chat",
+			Body:            strings.NewReader("message=hello"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"Hello from Scout", "msg msg-user"},
+		}
+		scenario.Test(t)
+	})
+	t.Run("message with client_rendered=1 skips user bubble", func(t *testing.T) {
+		app, head := newHeadChatApp(t)
+		scenario := tests.ApiScenario{
+			Name:               "head chat client rendered",
+			Method:             "POST",
+			URL:                "/ui/heads/" + head.Id + "/chat",
+			Body:               strings.NewReader("message=hello&client_rendered=1"),
+			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"Hello from Scout"},
+			NotExpectedContent: []string{"msg msg-user"},
+		}
+		scenario.Test(t)
+	})
+	t.Run("empty message returns 400", func(t *testing.T) {
+		app, head := newHeadChatApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "head chat empty message",
+			Method:          "POST",
+			URL:             "/ui/heads/" + head.Id + "/chat",
+			Body:            strings.NewReader("message="),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Empty message"},
+		}
+		scenario.Test(t)
+	})
+}
+
+func TestSetHeadAvatar(t *testing.T) {
+	// Confirm balaur-01 is a valid key before using it in the test.
+	if !store.ValidBalaurAvatarKey("balaur-01") {
+		t.Fatal("expected balaur-01 to be a valid avatar key")
+	}
+
+	t.Run("valid avatar key returns 200", func(t *testing.T) {
+		app := newWebApp(t)
+		head := seedHeadRec(t, app, "Scout", "active")
+		scenario := tests.ApiScenario{
+			Name:            "set head avatar valid key",
+			Method:          "POST",
+			URL:             "/ui/heads/" + head.Id + "/avatar",
+			Body:            strings.NewReader("balaur_avatar=balaur-01"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"Scout"},
+		}
+		scenario.Test(t)
+	})
+	t.Run("bogus avatar key returns 400", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:            "set head avatar bogus key",
+			Method:          "POST",
+			URL:             "/ui/heads/someid/avatar",
+			Body:            strings.NewReader("balaur_avatar=bogus"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Invalid balaur avatar"},
+		}
+		scenario.Test(t)
+	})
 }
 
 func TestOriginGuard(t *testing.T) {

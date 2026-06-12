@@ -1,7 +1,11 @@
 package conversation
 
 import (
+	"fmt"
 	"testing"
+	"time"
+
+	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/storetest"
@@ -86,5 +90,69 @@ func TestAppendAndRecentTurnsRoundtrip(t *testing.T) {
 	if hist[2].GetString("role") != "tool" || hist[2].GetString("tool_name") != "recall" {
 		t.Fatalf("tool round not preserved: role=%s tool=%s",
 			hist[2].GetString("role"), hist[2].GetString("tool_name"))
+	}
+}
+
+// seedHead creates an active head record in the test app.
+func seedHead(t *testing.T, app core.App, name, status string) *core.Record {
+	t.Helper()
+	col, err := app.FindCollectionByNameOrId("heads")
+	if err != nil {
+		t.Fatalf("heads collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("name", name)
+	rec.Set("status", status)
+	rec.SetEmail(fmt.Sprintf("head-%d@balaur.local", time.Now().UnixNano()))
+	rec.SetRandomPassword()
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("saving head: %v", err)
+	}
+	return rec
+}
+
+func TestForHead(t *testing.T) {
+	app := storetest.NewApp(t)
+	head := seedHead(t, app, "Scout", "active")
+
+	// First call: creates the branch conversation.
+	conv, err := ForHead(app, head)
+	if err != nil {
+		t.Fatalf("ForHead: %v", err)
+	}
+	if conv.GetString("kind") != "branch" {
+		t.Errorf("kind = %q, want branch", conv.GetString("kind"))
+	}
+	if conv.GetString("status") != "open" {
+		t.Errorf("status = %q, want open", conv.GetString("status"))
+	}
+	if conv.GetString("head") != head.Id {
+		t.Errorf("head = %q, want %q", conv.GetString("head"), head.Id)
+	}
+
+	master, err := Master(app)
+	if err != nil {
+		t.Fatalf("Master: %v", err)
+	}
+	if conv.GetString("parent") != master.Id {
+		t.Errorf("parent = %q, want master id %q", conv.GetString("parent"), master.Id)
+	}
+
+	// Second call: returns the same record (idempotent).
+	conv2, err := ForHead(app, head)
+	if err != nil {
+		t.Fatalf("ForHead second: %v", err)
+	}
+	if conv.Id != conv2.Id {
+		t.Errorf("ForHead created a second record: %s vs %s", conv.Id, conv2.Id)
+	}
+
+	// Exactly one branch conversation exists.
+	branches, err := app.FindRecordsByFilter("conversations", "kind = 'branch'", "", 0, 0)
+	if err != nil {
+		t.Fatalf("listing branches: %v", err)
+	}
+	if len(branches) != 1 {
+		t.Errorf("want 1 branch conversation, got %d", len(branches))
 	}
 }
