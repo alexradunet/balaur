@@ -223,6 +223,14 @@ func Register(se *core.ServeEvent) error {
 	// Typed card registry (plan 028) — parameterized server resources.
 	se.Router.GET("/ui/cards", h.uiCardPalette)
 	se.Router.GET("/ui/cards/{type}", h.uiCard)
+	// Boards — owner-composed dashboards of typed cards (plan 029).
+	se.Router.GET("/boards", h.boardsIndex)
+	se.Router.GET("/boards/{id}", h.boardsPage)
+	se.Router.POST("/ui/boards", h.boardsCreate)
+	se.Router.POST("/ui/boards/{id}/rename", h.boardsRename)
+	se.Router.POST("/ui/boards/{id}/delete", h.boardsDelete)
+	se.Router.POST("/ui/boards/{id}/cards/add", h.boardsCardAdd)
+	se.Router.POST("/ui/boards/{id}/cards/{idx}/remove", h.boardsCardRemove)
 	return nil
 }
 

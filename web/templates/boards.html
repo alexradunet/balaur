@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "page_head" .}}
+  <title>Boards · Balaur</title>
+</head>
+<body>
+  {{template "topbar" .}}
+
+  <main>
+    <h1><img class="h-icon" src="/static/icons/scroll.png" alt="">Boards</h1>
+
+    {{/* Tab strip */}}
+    <nav class="k-tabs board-tabs" id="board-tabs">
+      {{range .Boards}}
+      <a class="k-tab{{if eq .ID $.Current.ID}} k-tab-active{{end}}"
+         href="/boards/{{.ID}}">{{.Name}}</a>
+      {{end}}
+      <details class="board-new-details">
+        <summary class="btn btn-ghost btn-sm">+ board</summary>
+        <form method="POST" action="/ui/boards" class="board-new-form">
+          <input type="text" name="name" placeholder="Board name" maxlength="80" required autocomplete="off">
+          <button class="btn btn-sm" type="submit">Create</button>
+        </form>
+      </details>
+    </nav>
+
+    {{if .Current}}
+    {{template "board_header" .}}
+    {{template "board_grid" .}}
+    {{end}}
+  </main>
+</body>
+</html>
+
+{{define "board_header"}}
+<div class="board-header" id="board-header">
+  <h2 class="board-name">{{.Current.Name}}</h2>
+  <div class="board-actions">
+    <details class="board-rename-details">
+      <summary class="btn btn-ghost btn-sm">Rename</summary>
+      <form method="POST"
+            action="/ui/boards/{{.Current.ID}}/rename"
+            hx-post="/ui/boards/{{.Current.ID}}/rename"
+            hx-target="#board-header"
+            hx-swap="outerHTML"
+            class="board-rename-form">
+        <input type="text" name="name" value="{{.Current.Name}}" maxlength="80" required autocomplete="off">
+        <button class="btn btn-sm" type="submit">Save</button>
+      </form>
+    </details>
+    <form method="POST" action="/ui/boards/{{.Current.ID}}/delete"
+          class="board-delete-form"
+          onsubmit="return confirm('Delete this board?')">
+      <button class="btn btn-ghost btn-sm btn-danger" type="submit">Delete board</button>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "board_grid"}}
+<div class="board-grid" id="board-grid">
+  {{range .Current.Cards}}
+  <div class="board-slot" style="grid-column: span {{.W}}">
+    <div class="board-slot-inner"
+         hx-get="/ui/cards/{{.Type}}{{.Query}}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="k-empty board-loading">Loading…</div>
+    </div>
+    <form method="POST"
+          action="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"
+          hx-post="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"
+          hx-target="#board-grid"
+          hx-swap="outerHTML"
+          class="board-slot-remove">
+      <button class="btn btn-ghost btn-sm" type="submit" title="Remove card">✕</button>
+    </form>
+  </div>
+  {{end}}
+
+  {{/* Add a card */}}
+  <div class="board-add-card" style="grid-column: span 12">
+    <details class="board-add-details">
+      <summary class="btn btn-ghost">+ add a card</summary>
+      <div class="board-palette">
+        {{range .Specs}}
+        <form method="POST"
+              action="/ui/boards/{{$.Current.ID}}/cards/add"
+              hx-post="/ui/boards/{{$.Current.ID}}/cards/add"
+              hx-target="#board-grid"
+              hx-swap="outerHTML"
+              class="board-palette-entry">
+          <input type="hidden" name="type" value="{{.Type}}">
+          <div class="board-palette-label">
+            <img class="h-icon-sm" src="/static/icons/{{.Icon}}.png" alt="">
+            <strong>{{.Label}}</strong>
+          </div>
+          {{range .Params}}
+          <div class="board-palette-param">
+            <label>{{.Name}}</label>
+            <input type="text" name="{{.Name}}" placeholder="{{.Doc}}"
+                   {{if .Required}}required{{end}} autocomplete="off">
+          </div>
+          {{end}}
+          <button class="btn btn-sm" type="submit">Add</button>
+        </form>
+        {{end}}
+      </div>
+    </details>
+  </div>
+</div>
+{{end}}

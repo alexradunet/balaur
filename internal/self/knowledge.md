@@ -117,6 +117,16 @@ params), skills (active skills, limit param), heads (active heads, no params).
 GET /ui/cards lists the full palette. The registry lives in internal/cards
 (no web imports); renderers live in internal/web/cards.go.
 
+Boards: owner-composed dashboards of typed cards at /boards. A board is a
+named, ordered list of card references stored in the `boards` PocketBase
+collection; the page renders a 12-column CSS grid where each slot lazy-loads
+its card via HTMX (hx-get="/ui/cards/{type}?params"). Layout is server-defined
+in v1: column spans come from each card type's default width in the registry.
+Four default boards are seeded on first visit: Study (today + quests + calendar),
+Quest log (quests + calendar), Self (journal + timeline), Balaur (memory +
+skills + heads). Owners can create, rename, and delete boards, and add or
+remove cards. Plan 030 adds agent tools to compose boards programmatically.
+
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. A local model (provider kind

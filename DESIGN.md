@@ -134,7 +134,11 @@ parameterized, server-rendered card resources under `/ui/cards/{type}` (the
 composition unit for boards and on-the-spot UI): today, quests, calendar,
 timeline, journal, measure, lines, memory, skills, heads ·
 the candle (/journal): immersive writing page — free-hand or guided by one
-model-composed prompt line (deterministic fallback), entries shared with day pages.
+model-composed prompt line (deterministic fallback), entries shared with day
+pages · boards — owner-composed dashboards of typed cards at /boards
+(server-defined layout; Study/Quest log/Self/Balaur defaults); each board is a
+named, ordered list of card references in the `boards` collection; the page
+renders a 12-column CSS grid of HTMX slots that lazy-load cards.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
