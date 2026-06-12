@@ -76,6 +76,7 @@
     });
 
     grid.classList.add('board-grid-free');
+    packAndApply();
   }
 
   // applySlotStyle writes the inline style from dataset.x/y/w/h.
@@ -105,6 +106,49 @@
       });
     });
     return list;
+  }
+
+  // packLayout compacts slots upward: sort by (y, x), then walk each card up
+  // one row unit at a time while it overlaps nothing already placed.
+  // Mirrors the mockup's gPack. Pure: takes/returns [{el,x,y,w,h}].
+  function packLayout(items) {
+    var placed = [];
+    var sorted = items.slice().sort(function (a, b) {
+      return a.y !== b.y ? a.y - b.y : a.x - b.x;
+    });
+    sorted.forEach(function (it) {
+      var y = 0;
+      while (placed.some(function (p) {
+        return it.x < p.x + p.w && p.x < it.x + it.w &&
+               y   < p.y + p.h && p.y < y   + it.h;
+      })) {
+        y++;
+      }
+      it.y = y;
+      placed.push(it);
+    });
+    return items;
+  }
+
+  // packAndApply reads all slots, runs packLayout, and writes packed y back to
+  // dataset.y + inline grid-row so the visual and the persisted payload agree.
+  function packAndApply() {
+    var slots = grid.querySelectorAll('.board-slot');
+    var items = [];
+    slots.forEach(function (slot) {
+      items.push({
+        el: slot,
+        x: parseInt(slot.dataset.x, 10) || 0,
+        y: parseInt(slot.dataset.y, 10) || 0,
+        w: parseInt(slot.dataset.w, 10) || 4,
+        h: parseInt(slot.dataset.h, 10) || 16,
+      });
+    });
+    packLayout(items);
+    items.forEach(function (it) {
+      it.el.dataset.y = it.y;
+      applySlotStyle(it.el);
+    });
   }
 
   function persistLayout() {
@@ -175,6 +219,7 @@
       grip.removeEventListener('pointermove', onMove);
       grip.removeEventListener('pointerup', onUp);
       grip.removeEventListener('pointercancel', onUp);
+      packAndApply();
       persistLayout();
     }
 
@@ -231,6 +276,7 @@
       handle.removeEventListener('pointermove', onMove);
       handle.removeEventListener('pointerup', onUp);
       handle.removeEventListener('pointercancel', onUp);
+      packAndApply();
       persistLayout();
     }
 

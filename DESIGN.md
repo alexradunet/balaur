@@ -139,7 +139,7 @@ pages · boards — owner-composed dashboards of typed cards at /boards
 (Study/Quest log/Self/Balaur defaults); each board is a named, ordered list of
 card references in the `boards` collection; the page renders a 12-column CSS
 grid of HTMX slots that lazy-load cards; cards drag and resize (pointer +
-12-col snap), layout persisted per board — compaction not implemented ·
+12-col snap), layout persisted per board — cards auto-pack upward after each move/resize ·
 on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
 raises a new board from chat; `board_add_card` amends an existing board (all three
 tools compose from the typed registry only — Balaur cannot author markup).

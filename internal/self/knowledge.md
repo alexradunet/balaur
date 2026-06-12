@@ -127,8 +127,8 @@ pointer events with 12-column snap; layout is persisted per board to PocketBase
 on each drop (POST /ui/boards/{id}/layout). Existing
 boards with no stored layout render in legacy flow mode (unchanged appearance)
 until the owner drags a card, at which point all slots are pinned to explicit
-coordinates. Compaction (auto-pack) is not implemented — gaps stay where you
-leave them. Four default boards are seeded on first visit: Study (today + quests
+coordinates. After each move or resize, cards auto-pack upward (compaction):
+gaps are filled and the board stays dense. Four default boards are seeded on first visit: Study (today + quests
 + calendar), Quest log (quests + calendar), Self (journal + timeline), Balaur
 (memory + skills + heads). Owners can create, rename, and delete boards, and
 add or remove cards.
