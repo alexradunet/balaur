@@ -36,8 +36,9 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 016 | Characterize sub-head chat (handlers, RunFor, ForHead) | P1 | M | LOW | — | — | DONE (reviewed; tests surfaced the heads-list 500 → plan 020) |
 | 020 | Fix heads-list 500 (invalid `-created` sort on auth collection) | P1 | S | LOW | 016 (same branch) | — | DONE (reviewed) |
 | 017 | Conversations partial-unique indexes + ForHead race retry | P2 | S–M | MED | 016, 020 | — | DONE (reviewed) |
-| 018 | Docs sync: knowledge.md/README/DESIGN ledger ← sub-head chat | P2 | S | LOW | — | — | DONE (reviewed; branch advisor/018-docs-subhead-chat, awaiting merge) |
-| 019 | Design spike: scoped head tools through grants (doc only) | P3 | M | LOW | — | — | DONE (reviewed; worktree branch, awaiting merge) |
+| 018 | Docs sync: knowledge.md/README/DESIGN ledger ← sub-head chat | P2 | S | LOW | — | — | DONE (reviewed; merged to main) |
+| 019 | Design spike: scoped head tools through grants (doc only) | P3 | M | LOW | — | — | DONE (reviewed; merged to main) |
+| 021 | Access Balaur over NetBird via host daemon (docs only) | P2 | S | LOW | — | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -71,19 +72,19 @@ REJECTED (one-line rationale).
 
 All five plans executed by dispatched sonnet executors in isolated
 worktrees, each reviewed (done criteria re-run, scope + diff + test
-assertions audited) before APPROVE. Nothing merged — branches await the
-owner's merge decision.
+assertions audited) before APPROVE, then **all merged to main** (2026-06-12)
+via `chore: merge` commits with `go test ./...` green on the merged tree.
 
 - **016 + 020 + 017** landed as one stacked, fully-green branch
   `advisor/016-subhead-chat-tests` (3 commits): the characterization tests
   (016) surfaced a real production 500 on `GET /heads` (auth collection has
   no `created` field) → fixed by plan 020 (`-created` → `-@rowid`); then the
-  conversations indexes + ForHead race retry (017) stacked on top. Final
-  `go test ./...` exit 0.
-- **018** on branch `advisor/018-docs-subhead-chat` (commit `9b422fb`).
-- **019** doc `docs/head-tools-design.md` on its worktree branch; surfaced a
-  real schema gap (the `grants.target` SelectField lacks `tasks`/
-  `life_entries`/`journal` — any head-tools build needs a migration first).
+  conversations indexes + ForHead race retry (017) stacked on top.
+- **018** merged from `advisor/018-docs-subhead-chat`.
+- **019** doc `docs/head-tools-design.md` merged from
+  `advisor/019-head-tools-spike`; surfaced a real schema gap (the
+  `grants.target` SelectField lacks `tasks`/`life_entries`/`journal` — any
+  head-tools build needs a migration first).
 
 ## Direction findings (not planned — ask the advisor to spec when wanted)
 
