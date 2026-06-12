@@ -52,11 +52,13 @@ One binary, layered as: gateway → turn pipeline → business logic.
   (owner-defined log + journal), knowledge (memory & skill lifecycle —
   the consent boundary), recap (hierarchical summaries), verify (words
   vs deeds), heads (sub-agent identity, grants, audit — the rule
-  boundary), store (the one PocketBase seam), tools (your tool
-  implementations), ext (balaur-extensions: consent-gated runtime tools
-  in JavaScript, run by goja — the engine PocketBase's jsvm uses), llm
-  (one OpenAI-compatible client for local and remote alike), llama (the
-  llamafile subprocess supervisor that serves a local GGUF).
+  boundary), store (the one PocketBase seam), search (FTS5 sidecar index
+  — bm25-ranked recall rebuilt on boot, synced on write; pb_data/search.db
+  is disposable and safe to delete), tools (your tool implementations),
+  ext (balaur-extensions: consent-gated runtime tools in JavaScript, run
+  by goja — the engine PocketBase's jsvm uses), llm (one OpenAI-compatible
+  client for local and remote alike), llama (the llamafile subprocess
+  supervisor that serves a local GGUF).
 - Data lives in PocketBase collections: conversations, messages,
   memories, skills, tasks, entries, summaries, heads, grants,
   llm_providers, llm_models, llm_settings, extensions, audit_log.

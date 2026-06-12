@@ -7,6 +7,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/alexradunet/balaur/internal/llama"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/recap"
+	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -48,6 +50,7 @@ func main() {
 		registerNudge(se.App)
 		registerBriefing(se.App)
 		ensureDefaultModel(se.App)
+		registerSearchIndex(se.App)
 		return se.Next()
 	})
 
@@ -55,6 +58,12 @@ func main() {
 	// so it does not outlive the Balaur process.
 	app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
 		llama.Default.Stop()
+		// Close the FTS5 sidecar index if it was opened.
+		if raw, ok := app.Store().GetOk(search.StoreKey); ok {
+			if ix, ok := raw.(*search.Index); ok && ix != nil {
+				ix.Close()
+			}
+		}
 		return te.Next()
 	})
 
@@ -191,4 +200,65 @@ func registerBriefing(app core.App) {
 	}
 	app.Cron().MustAdd("briefing", "* * * * *", run)
 	go run()
+}
+
+// registerSearchIndex opens the FTS5 sidecar index at pb_data/search.db,
+// puts it in app.Store(), and rebuilds it from active memories. On any
+// error Balaur boots without the index — LIKE fallback keeps recall live.
+// A corrupt file is deleted and one retry is attempted before giving up.
+// Record hooks keep the index eventually consistent between boots.
+func registerSearchIndex(app core.App) {
+	dbPath := filepath.Join(app.DataDir(), "search.db")
+
+	openAndRebuild := func() (*search.Index, error) {
+		ix, err := search.Open(dbPath)
+		if err != nil {
+			return nil, err
+		}
+		if err := ix.Rebuild(app); err != nil {
+			ix.Close()
+			return nil, err
+		}
+		return ix, nil
+	}
+
+	ix, err := openAndRebuild()
+	if err != nil {
+		// Corrupt or unreadable — delete and retry once.
+		app.Logger().Warn("search: index open/rebuild failed, deleting and retrying", "err", err)
+		os.Remove(dbPath)
+		ix, err = openAndRebuild()
+		if err != nil {
+			app.Logger().Warn("search: index unavailable after retry — LIKE fallback active", "err", err)
+			return
+		}
+	}
+
+	app.Store().Set(search.StoreKey, ix)
+	app.Logger().Info("search: FTS5 index ready")
+
+	upsertHook := func(e *core.RecordEvent) error {
+		if raw, ok := app.Store().GetOk(search.StoreKey); ok {
+			if idx, ok := raw.(*search.Index); ok && idx != nil {
+				if err := idx.Upsert(e.Record); err != nil {
+					app.Logger().Warn("search: upsert failed", "id", e.Record.Id, "err", err)
+				}
+			}
+		}
+		return e.Next()
+	}
+	deleteHook := func(e *core.RecordEvent) error {
+		if raw, ok := app.Store().GetOk(search.StoreKey); ok {
+			if idx, ok := raw.(*search.Index); ok && idx != nil {
+				if err := idx.Delete(e.Record.Id); err != nil {
+					app.Logger().Warn("search: delete failed", "id", e.Record.Id, "err", err)
+				}
+			}
+		}
+		return e.Next()
+	}
+
+	app.OnRecordAfterCreateSuccess("memories").BindFunc(upsertHook)
+	app.OnRecordAfterUpdateSuccess("memories").BindFunc(upsertHook)
+	app.OnRecordAfterDeleteSuccess("memories").BindFunc(deleteHook)
 }
