@@ -23,40 +23,44 @@
 </body>
 </html>
 
+{{define "quest_rail"}}
+<nav class="quest-rail" id="quest-rail"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+  {{range .Groups}}
+  <section class="quest-group">
+    <h3 class="quest-group-title">{{.Name}} <span class="k-count">{{len .Tasks}}</span></h3>
+    <ul>
+      {{range .Tasks}}
+      <li><button class="quest-row{{if .Overdue}} quest-overdue{{end}}"
+            hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
+          {{.Title}}{{with .DueLine}}<span class="quest-due">{{.}}</span>{{end}}
+      </button></li>
+      {{end}}
+    </ul>
+  </section>
+  {{end}}
+  {{if not .Groups}}
+  <p class="k-empty">No quests yet. Speak one in the chat.</p>
+  {{end}}
+  {{if .DoneRecently}}
+  <details class="quest-done">
+    <summary class="quest-group-title">Done recently <span class="k-count">{{len .DoneRecently}}</span></summary>
+    <ul>
+      {{range .DoneRecently}}
+      <li><button class="quest-row"
+            hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
+          {{.Title}}
+      </button></li>
+      {{end}}
+    </ul>
+  </details>
+  {{end}}
+</nav>
+{{end}}
+
 {{define "tasks_list"}}
 {{$ql := .QuestLog}}
 <div class="quest-log">
-  <nav class="quest-rail">
-    {{range $ql.Groups}}
-    <section class="quest-group">
-      <h3 class="quest-group-title">{{.Name}} <span class="k-count">{{len .Tasks}}</span></h3>
-      <ul>
-        {{range .Tasks}}
-        <li><button class="quest-row{{if .Overdue}} quest-overdue{{end}}"
-              hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
-            {{.Title}}{{with .DueLine}}<span class="quest-due">{{.}}</span>{{end}}
-        </button></li>
-        {{end}}
-      </ul>
-    </section>
-    {{end}}
-    {{if not $ql.Groups}}
-    <p class="k-empty">No quests yet. Speak one in the chat.</p>
-    {{end}}
-    {{if $ql.DoneRecently}}
-    <details class="quest-done">
-      <summary class="quest-group-title">Done recently <span class="k-count">{{len $ql.DoneRecently}}</span></summary>
-      <ul>
-        {{range $ql.DoneRecently}}
-        <li><button class="quest-row"
-              hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
-            {{.Title}}
-        </button></li>
-        {{end}}
-      </ul>
-    </details>
-    {{end}}
-  </nav>
+  {{template "quest_rail" $ql}}
   <aside class="quest-detail" id="quest-detail">
     {{if $ql.First}}{{template "card-task.html" $ql.First}}{{else}}
     <p class="k-empty">No quests yet. Speak one in the chat.</p>
