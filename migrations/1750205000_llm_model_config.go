@@ -11,6 +11,13 @@ func init() {
 }
 
 func llmModelConfigUp(app core.App) error {
+	// Re-run guard: boxes migrated before this file was renamed from
+	// 1750200000_llm_model_config.go already hold this schema under the old
+	// migration name. The work is keyed on its outcome, not the name.
+	if _, err := app.FindCollectionByNameOrId("llm_providers"); err == nil {
+		return nil
+	}
+
 	owner := types.Pointer(ruleOwner)
 
 	providers := core.NewBaseCollection("llm_providers")
