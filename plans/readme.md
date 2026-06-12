@@ -39,6 +39,9 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 018 | Docs sync: knowledge.md/README/DESIGN ledger ← sub-head chat | P2 | S | LOW | — | — | DONE (reviewed; merged to main) |
 | 019 | Design spike: scoped head tools through grants (doc only) | P3 | M | LOW | — | — | DONE (reviewed; merged to main) |
 | 021 | Access Balaur over NetBird via host daemon (docs only) | P2 | S | LOW | — | — | TODO |
+| 022 | Settings page: sidebar shell for Profile/Skills/Models | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `431727e`) |
+| 023 | GGUF download manager (background, progress, cancel, delete) | P2 | M–L | MED | 022 | — | DONE (reviewed; merged to main `b47b451`) |
+| 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -67,6 +70,18 @@ REJECTED (one-line rationale).
 - **018 and 019 both end in prose about head tools** — 018 documents what
   shipped (tool-free chat); 019's eventual build slice re-touches the same
   three documents. No file conflicts; land in any order.
+- **022 → 023 → 024 (strict)**: 022 creates the `/settings/{section}` shell
+  the other two render inside; 023 reshapes `models_panel` more invasively
+  than 024, so it goes second; all three touch
+  `internal/web/{web,models}.go` and `web/templates/models.html` — landing
+  out of order means manual conflict surgery. Plans 022–024 were
+  owner-requested (settings page with sidebar: profile, skills, model
+  configuration with llama download manager + OpenAI API manager) via
+  `improve plan` on 2026-06-12 against `9fd16ac`; baseline there: gofmt
+  clean, vet ok, `go test ./...` all ok, CGO-free build ok. Scope decisions
+  confirmed with the owner: old routes redirect (302) into /settings;
+  download manager is background + progress + cancel + custom URL; provider
+  manager is full list/edit/delete with key redaction.
 
 ## Execution record (2026-06-12, second cycle)
 
