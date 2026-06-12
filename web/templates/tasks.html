@@ -24,43 +24,45 @@
 </html>
 
 {{define "tasks_list"}}
-{{$b := .Buckets}}
-{{if $b.Overdue}}
-<section class="k-section">
-  <h2 class="k-heading k-heading-proposed">Overdue <span class="k-count">{{len $b.Overdue}}</span></h2>
-  <div class="k-grid">{{range $b.Overdue}}{{template "card-task.html" .}}{{end}}</div>
-</section>
-<div class="stitch"></div>
-{{end}}
-{{if $b.Today}}
-<section class="k-section">
-  <h2 class="k-heading">Today <span class="k-count">{{len $b.Today}}</span></h2>
-  <div class="k-grid">{{range $b.Today}}{{template "card-task.html" .}}{{end}}</div>
-</section>
-{{end}}
-{{if $b.Upcoming}}
-<section class="k-section">
-  <h2 class="k-heading">Upcoming <span class="k-count">{{len $b.Upcoming}}</span></h2>
-  <div class="k-grid">{{range $b.Upcoming}}{{template "card-task.html" .}}{{end}}</div>
-</section>
-{{end}}
-{{if $b.Someday}}
-<section class="k-section">
-  <h2 class="k-heading">Someday <span class="k-count">{{len $b.Someday}}</span></h2>
-  <p class="k-sub">No date yet — they wait without nagging.</p>
-  <div class="k-grid">{{range $b.Someday}}{{template "card-task.html" .}}{{end}}</div>
-</section>
-{{end}}
-{{if and (not $b.Overdue) (not $b.Today) (not $b.Upcoming) (not $b.Someday)}}
-<p class="k-empty">Nothing on the book. Tell Balaur in chat what to keep for you.</p>
-{{end}}
-{{if .DoneRecently}}
-<div class="stitch"></div>
-<section class="k-section">
-  <h2 class="k-heading k-heading-muted">Done recently</h2>
-  <div class="k-grid k-grid-muted">{{range .DoneRecently}}{{template "card-task.html" .}}{{end}}</div>
-</section>
-{{end}}
+{{$ql := .QuestLog}}
+<div class="quest-log">
+  <nav class="quest-rail">
+    {{range $ql.Groups}}
+    <section class="quest-group">
+      <h3 class="quest-group-title">{{.Name}} <span class="k-count">{{len .Tasks}}</span></h3>
+      <ul>
+        {{range .Tasks}}
+        <li><button class="quest-row{{if .Overdue}} quest-overdue{{end}}"
+              hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
+            {{.Title}}{{with .DueLine}}<span class="quest-due">{{.}}</span>{{end}}
+        </button></li>
+        {{end}}
+      </ul>
+    </section>
+    {{end}}
+    {{if not $ql.Groups}}
+    <p class="k-empty">No quests yet. Speak one in the chat.</p>
+    {{end}}
+    {{if $ql.DoneRecently}}
+    <details class="quest-done">
+      <summary class="quest-group-title">Done recently <span class="k-count">{{len $ql.DoneRecently}}</span></summary>
+      <ul>
+        {{range $ql.DoneRecently}}
+        <li><button class="quest-row"
+              hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
+            {{.Title}}
+        </button></li>
+        {{end}}
+      </ul>
+    </details>
+    {{end}}
+  </nav>
+  <aside class="quest-detail" id="quest-detail">
+    {{if $ql.First}}{{template "card-task.html" $ql.First}}{{else}}
+    <p class="k-empty">No quests yet. Speak one in the chat.</p>
+    {{end}}
+  </aside>
+</div>
 {{end}}
 
 {{define "tasks_calendar"}}
