@@ -1,10 +1,12 @@
 package gguf
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -107,6 +109,73 @@ func TestStartLlamafileSkipsMagicAndChmods(t *testing.T) {
 	}
 	if info.Mode().Perm()&0o100 == 0 {
 		t.Fatalf("llamafile not marked executable; mode = %v", info.Mode().Perm())
+	}
+}
+
+// A connection that drops mid-stream is resumed via HTTP Range and completes.
+func TestResumeAfterMidStreamDrop(t *testing.T) {
+	full := []byte("GGUF" + strings.Repeat("payload-bytes-", 64))
+	var reqs int
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		reqs++
+		n := reqs
+		mu.Unlock()
+
+		start := 0
+		if rng := r.Header.Get("Range"); rng != "" {
+			// "bytes=<start>-"
+			fmt.Sscanf(rng, "bytes=%d-", &start)
+		}
+		if start >= len(full) {
+			w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+			return
+		}
+		if n == 1 {
+			// First attempt: serve a short prefix then hang up mid-stream so the
+			// client sees an early EOF (fewer bytes than Content-Length).
+			w.Header().Set("Content-Length", fmt.Sprint(len(full)))
+			w.WriteHeader(http.StatusOK)
+			if fl, ok := w.(http.Flusher); ok {
+				w.Write(full[:20])
+				fl.Flush()
+			}
+			panic(http.ErrAbortHandler) // drop the connection
+		}
+		// Resume: honor Range with 206 and serve the remainder.
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, len(full)-1, len(full)))
+		w.Header().Set("Content-Length", fmt.Sprint(len(full)-start))
+		w.WriteHeader(http.StatusPartialContent)
+		w.Write(full[start:])
+	}))
+	defer srv.Close()
+
+	dest := filepath.Join(t.TempDir(), "resume.gguf")
+	var m Manager
+	if err := m.Start(srv.URL+"/resume.gguf", dest, nil); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	pollUntil(t, 10*time.Second, func() bool {
+		snap := m.Snapshot()
+		return snap.Done || snap.Err != ""
+	})
+
+	snap := m.Snapshot()
+	if snap.Err != "" {
+		t.Fatalf("expected resume to succeed, got error: %s", snap.Err)
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("read dest: %v", err)
+	}
+	if string(got) != string(full) {
+		t.Fatalf("resumed file mismatch: got %d bytes, want %d", len(got), len(full))
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if reqs < 2 {
+		t.Fatalf("expected at least 2 requests (initial + resume), got %d", reqs)
 	}
 }
 

@@ -12,7 +12,13 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 )
+
+// maxAttempts bounds how many times a download is (re)tried before giving up.
+// Large files (multi-GB llamafiles) can hit transient connection drops; the
+// .part file is kept between attempts and resumed via HTTP Range.
+const maxAttempts = 8
 
 // Progress is a snapshot of the current download state.
 type Progress struct {
@@ -82,8 +88,13 @@ func (m *Manager) Start(rawURL, dest string, onDone func(dest string)) error {
 func (m *Manager) run(ctx context.Context, rawURL, dest string) {
 	tmpPath := dest + ".part"
 
-	setErr := func(msg string) {
-		_ = os.Remove(tmpPath)
+	// fail records an error. removeTmp=true discards the partial file (for
+	// terminal failures like a bad magic or explicit cancel); false keeps it so
+	// a later Start resumes from where this attempt left off.
+	fail := func(msg string, removeTmp bool) {
+		if removeTmp {
+			_ = os.Remove(tmpPath)
+		}
 		m.mu.Lock()
 		m.progress.Active = false
 		m.progress.Err = msg
@@ -91,71 +102,140 @@ func (m *Manager) run(ctx context.Context, rawURL, dest string) {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-		setErr(fmt.Sprintf("creating model directory: %v", err))
+		fail(fmt.Sprintf("creating model directory: %v", err), true)
 		return
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		setErr(fmt.Sprintf("building request: %v", err))
-		return
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		setErr(fmt.Sprintf("requesting model: %v", err))
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		setErr(fmt.Sprintf("download failed: %s", resp.Status))
-		return
-	}
-
-	if resp.ContentLength > 0 {
-		m.mu.Lock()
-		m.progress.BytesTotal = resp.ContentLength
-		m.mu.Unlock()
-	}
-
-	_ = os.Remove(tmpPath)
-	tmp, err := os.Create(tmpPath)
-	if err != nil {
-		setErr(fmt.Sprintf("creating model file: %v", err))
-		return
-	}
-
-	cleanupTmp := true
-	defer func() {
-		_ = tmp.Close()
-		if cleanupTmp {
-			_ = os.Remove(tmpPath)
+	// Retry loop: each attempt resumes from the current .part size via Range.
+	// Multi-GB downloads hit transient drops; keep the partial and resume.
+	backoff := time.Second
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		complete, err := m.attempt(ctx, rawURL, tmpPath)
+		if err == nil && complete {
+			lastErr = nil
+			break
 		}
-	}()
+		lastErr = err
+		if ctx.Err() != nil {
+			fail("download cancelled", true)
+			return
+		}
+		if attempt == maxAttempts {
+			break
+		}
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			fail("download cancelled", true)
+			return
+		}
+		if backoff < 30*time.Second {
+			backoff *= 2
+		}
+	}
+	if lastErr != nil {
+		fail(fmt.Sprintf("download failed (resumable on retry): %v", lastErr), false)
+		return
+	}
 
 	// A fat llamafile is an executable, not a GGUF, so skip the GGUF magic
 	// check and mark it executable after install.
 	llamafile := filepath.Ext(dest) == ".llamafile"
+	if !llamafile {
+		ok, err := hasGGUFMagic(tmpPath)
+		if err != nil {
+			fail(fmt.Sprintf("reading model: %v", err), true)
+			return
+		}
+		if !ok {
+			fail("downloaded file is not a valid GGUF (magic bytes mismatch)", true)
+			return
+		}
+	}
+	if err := os.Rename(tmpPath, dest); err != nil {
+		fail(fmt.Sprintf("installing model: %v", err), true)
+		return
+	}
+	if llamafile {
+		if err := os.Chmod(dest, 0o755); err != nil {
+			fail(fmt.Sprintf("making llamafile executable: %v", err), false)
+			return
+		}
+	}
+
+	var cb func(string)
+	m.mu.Lock()
+	m.progress.Active = false
+	m.progress.Done = true
+	m.progress.Err = ""
+	cb = m.onDone
+	m.mu.Unlock()
+
+	if cb != nil {
+		cb(dest)
+	}
+}
+
+// attempt performs one download pass, resuming from the current size of
+// tmpPath via an HTTP Range request. complete=true means the whole file is on
+// disk. A returned error is treated as transient by the caller (the .part is
+// kept and the next attempt resumes).
+func (m *Manager) attempt(ctx context.Context, rawURL, tmpPath string) (bool, error) {
+	offset := fileSize(tmpPath)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return false, fmt.Errorf("building request: %w", err)
+	}
+	if offset > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	var total int64
+	var flags int
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Server ignored Range (or none requested): (re)start from byte 0.
+		offset = 0
+		total = resp.ContentLength
+		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	case http.StatusPartialContent:
+		total = offset + resp.ContentLength
+		flags = os.O_WRONLY | os.O_APPEND
+	case http.StatusRequestedRangeNotSatisfiable:
+		// Stale/oversized .part: drop it so the next attempt starts clean.
+		_ = os.Remove(tmpPath)
+		return false, fmt.Errorf("range not satisfiable; restarting")
+	default:
+		return false, fmt.Errorf("download failed: %s", resp.Status)
+	}
+
+	if total > 0 {
+		m.mu.Lock()
+		m.progress.BytesTotal = total
+		m.mu.Unlock()
+	}
+
+	f, err := os.OpenFile(tmpPath, flags, 0o644)
+	if err != nil {
+		return false, fmt.Errorf("opening model file: %w", err)
+	}
+	defer f.Close()
 
 	buf := make([]byte, 128*1024)
-	var first []byte
-	var done int64
-
+	done := offset
 	for {
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
-			chunk := buf[:n]
-			if len(first) < 4 {
-				need := 4 - len(first)
-				if need > len(chunk) {
-					need = len(chunk)
-				}
-				first = append(first, chunk[:need]...)
-			}
-			if _, werr := tmp.Write(chunk); werr != nil {
-				setErr(fmt.Sprintf("writing model: %v", werr))
-				return
+			if _, werr := f.Write(buf[:n]); werr != nil {
+				return false, fmt.Errorf("writing model: %w", werr)
 			}
 			done += int64(n)
 			m.mu.Lock()
@@ -166,43 +246,37 @@ func (m *Manager) run(ctx context.Context, rawURL, dest string) {
 			break
 		}
 		if readErr != nil {
-			setErr(fmt.Sprintf("reading model: %v", readErr))
-			return
+			return false, readErr
 		}
 	}
 
-	if !llamafile && string(first) != "GGUF" {
-		setErr("downloaded file is not a valid GGUF (magic bytes mismatch)")
-		return
+	// Complete when we have the whole file, or the length was unknown and the
+	// body ended cleanly.
+	if total <= 0 || done >= total {
+		return true, nil
 	}
+	return false, fmt.Errorf("connection ended early at %d/%d bytes", done, total)
+}
 
-	if err := tmp.Close(); err != nil {
-		setErr(fmt.Sprintf("closing model: %v", err))
-		return
+func fileSize(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0
 	}
-	if err := os.Rename(tmpPath, dest); err != nil {
-		setErr(fmt.Sprintf("installing model: %v", err))
-		return
-	}
-	if llamafile {
-		if err := os.Chmod(dest, 0o755); err != nil {
-			setErr(fmt.Sprintf("making llamafile executable: %v", err))
-			return
-		}
-	}
+	return info.Size()
+}
 
-	cleanupTmp = false
-
-	var cb func(string)
-	m.mu.Lock()
-	m.progress.Active = false
-	m.progress.Done = true
-	cb = m.onDone
-	m.mu.Unlock()
-
-	if cb != nil {
-		cb(dest)
+func hasGGUFMagic(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
 	}
+	defer f.Close()
+	var magic [4]byte
+	if _, err := io.ReadFull(f, magic[:]); err != nil {
+		return false, err
+	}
+	return string(magic[:]) == "GGUF", nil
 }
 
 // Cancel stops the active download, if any. Idempotent.
