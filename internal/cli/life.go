@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
-	"github.com/alexradunet/balaur/internal/recap"
-	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 )
 
@@ -198,40 +195,45 @@ func dayCmd(app core.App) *cobra.Command {
 		if err != nil {
 			return nil, err
 		}
-		de := ds.AddDate(0, 0, 1)
 		out := map[string]any{"date": args[0]}
 
-		collect := func(filter string) []map[string]any {
-			recs, err := app.FindRecordsByFilter("entries", filter, "noted_at", 200, 0,
-				dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
-			if err != nil {
-				return nil
-			}
-			rows := make([]map[string]any, 0, len(recs))
-			for _, r := range recs {
-				rows = append(rows, entryJSON(r))
-			}
-			return rows
+		var convID string
+		if master, err := conversation.Master(app); err == nil {
+			convID = master.Id
 		}
-		out["journal"] = collect("kind = 'journal' && noted_at >= {:s} && noted_at < {:e}")
-		out["logged"] = collect("kind != 'completion' && kind != 'journal' && noted_at >= {:s} && noted_at < {:e}")
+		dayData, _ := life.Day(app, convID, ds)
 
-		done := []map[string]any{}
-		if recs, err := app.FindRecordsByFilter("tasks",
-			"status = 'done' && done_at >= {:s} && done_at < {:e}", "done_at", 200, 0,
-			dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-			for _, r := range recs {
+		// Journal entries
+		journal := make([]map[string]any, 0, len(dayData.Journal))
+		for _, r := range dayData.Journal {
+			journal = append(journal, entryJSON(r))
+		}
+		out["journal"] = journal
+
+		// Logged entries
+		logged := make([]map[string]any, 0, len(dayData.Logged))
+		for _, r := range dayData.Logged {
+			logged = append(logged, entryJSON(r))
+		}
+		out["logged"] = logged
+
+		// Done tasks and completions
+		done := make([]map[string]any, 0, len(dayData.Done))
+		for _, r := range dayData.Done {
+			coll := r.Collection()
+			if coll.Name == "entries" {
+				done = append(done, entryJSON(r))
+			} else {
 				done = append(done, taskJSON(r))
 			}
 		}
 		out["done"] = done
 
-		if master, err := conversation.Master(app); err == nil {
-			if rec := recap.Find(app, master.Id, recap.Day(ds)); rec != nil {
-				out["recap"] = map[string]any{
-					"content":       rec.GetString("content"),
-					"message_count": rec.GetInt("message_count"),
-				}
+		// Recap
+		if dayData.Recap != nil {
+			out["recap"] = map[string]any{
+				"content":       dayData.Recap.GetString("content"),
+				"message_count": dayData.Recap.GetInt("message_count"),
 			}
 		}
 		return out, nil

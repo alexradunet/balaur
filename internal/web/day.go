@@ -6,13 +6,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
-	"github.com/alexradunet/balaur/internal/recap"
-	"github.com/alexradunet/balaur/internal/store"
 )
 
 // /day/{date}: where one day of the owner's life lives — their journal
@@ -58,7 +55,6 @@ func (h *handlers) dayPage(e *core.RequestEvent) error {
 
 func (h *handlers) buildDay(d, now time.Time) dayData {
 	loc := now.Location()
-	ds, de := d, d.AddDate(0, 0, 1)
 	today := dayStartOf(now)
 
 	data := dayData{
@@ -73,76 +69,58 @@ func (h *handlers) buildDay(d, now time.Time) dayData {
 		data.Next = d.AddDate(0, 0, 1).Format(dayLayout)
 	}
 
-	data.Journal = h.dayJournal(ds, de, loc)
-
-	// The day's recap, when the telescope has reached it.
+	// Query all day data at once
+	var convID string
 	if master, err := conversation.Master(h.app); err == nil {
-		if rec := recap.Find(h.app, master.Id, recap.Day(d)); rec != nil {
-			data.Recap = rec.GetString("content")
-		}
+		convID = master.Id
 	}
+	dayData, _ := life.Day(h.app, convID, d)
 
-	// What got done: completions plus one-offs closed that day.
-	if recs, err := h.app.FindRecordsByFilter("entries",
-		"kind = 'completion' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 100, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		for _, r := range recs {
-			data.Done = append(data.Done, dayLineView{
-				Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-				Text: r.GetString("text"),
-			})
-		}
-	}
-	if recs, err := h.app.FindRecordsByFilter("tasks",
-		"status = 'done' && done_at >= {:s} && done_at < {:e}", "done_at", 100, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		for _, r := range recs {
-			data.Done = append(data.Done, dayLineView{
-				Time: r.GetDateTime("done_at").Time().In(loc).Format("15:04"),
-				Text: r.GetString("title"),
-			})
-		}
-	}
-	sort.Slice(data.Done, func(i, j int) bool { return data.Done[i].Time < data.Done[j].Time })
-
-	// The day's log: everything the owner tracked.
-	if recs, err := h.app.FindRecordsByFilter("entries",
-		"kind != 'completion' && kind != 'journal' && noted_at >= {:s} && noted_at < {:e}",
-		"noted_at", 100, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		for _, r := range recs {
-			text := r.GetString("kind")
-			if v := r.GetFloat("value_num"); v != 0 {
-				text = fmt.Sprintf("%s: %g %s", text, v, r.GetString("unit"))
-			} else if t := r.GetString("text"); t != "" {
-				text = text + ": " + clipText(t, 120)
-			}
-			data.Logs = append(data.Logs, dayLineView{
-				Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-				Text: text,
-			})
-		}
-	}
-	return data
-}
-
-func (h *handlers) dayJournal(ds, de time.Time, loc *time.Location) []dayJournalView {
-	recs, err := h.app.FindRecordsByFilter("entries",
-		"kind = 'journal' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 100, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
-	if err != nil {
-		return nil
-	}
-	out := make([]dayJournalView, 0, len(recs))
-	for _, r := range recs {
-		out = append(out, dayJournalView{
+	// Build journal view
+	for _, r := range dayData.Journal {
+		data.Journal = append(data.Journal, dayJournalView{
 			ID:   r.Id,
 			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
 			Text: r.GetString("text"),
 		})
 	}
-	return out
+
+	// Build done view: tasks + completions
+	for _, r := range dayData.Done {
+		coll := r.Collection()
+		timeField := "done_at"
+		if coll.Name == "entries" {
+			timeField = "noted_at"
+		}
+		data.Done = append(data.Done, dayLineView{
+			Time: r.GetDateTime(timeField).Time().In(loc).Format("15:04"),
+			Text: r.GetString("title") + r.GetString("text"),
+		})
+	}
+	sort.Slice(data.Done, func(i, j int) bool { return data.Done[i].Time < data.Done[j].Time })
+
+	// Build logs view: everything tracked
+	for _, r := range dayData.Logged {
+		text := r.GetString("kind")
+		if v := r.GetFloat("value_num"); v != 0 {
+			text = fmt.Sprintf("%s: %g %s", text, v, r.GetString("unit"))
+		} else if t := r.GetString("text"); t != "" {
+			text = text + ": " + clipText(t, 120)
+		}
+		data.Logs = append(data.Logs, dayLineView{
+			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
+			Text: text,
+		})
+	}
+
+	// Day recap
+	if dayData.Recap != nil {
+		data.Recap = dayData.Recap.GetString("content")
+	}
+
+	return data
 }
+
 
 // dayJournalWrite handles the page form: writing the day, on the day page.
 func (h *handlers) dayJournalWrite(e *core.RequestEvent) error {
@@ -177,10 +155,24 @@ func (h *handlers) dayJournalDrop(e *core.RequestEvent) error {
 
 func (h *handlers) renderDayJournal(e *core.RequestEvent, d, now time.Time) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	var convID string
+	if master, err := conversation.Master(h.app); err == nil {
+		convID = master.Id
+	}
+	dayData, _ := life.Day(h.app, convID, d)
+	loc := now.Location()
+	journal := make([]dayJournalView, 0, len(dayData.Journal))
+	for _, r := range dayData.Journal {
+		journal = append(journal, dayJournalView{
+			ID:   r.Id,
+			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
+			Text: r.GetString("text"),
+		})
+	}
 	data := struct {
 		Date    string
 		Journal []dayJournalView
-	}{d.Format(dayLayout), h.dayJournal(d, d.AddDate(0, 0, 1), now.Location())}
+	}{d.Format(dayLayout), journal}
 	if err := h.tmpl.ExecuteTemplate(e.Response, "day_journal", data); err != nil {
 		return e.InternalServerError("rendering journal", err)
 	}
