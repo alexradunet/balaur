@@ -145,6 +145,16 @@ If `air` is not installed, `make dev` downloads and runs the latest release auto
 Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
 
+`make dev` uses the repo-local `pb_data/` directory and restarts Balaur
+whenever Go, template, CSS, JS, or static asset files change. If the
+always-on user service is running, stop it first or move one process to a
+different port:
+
+```bash
+make stop-user-service
+make dev
+```
+
 Balaur defaults to Qwen3.6-35B-A3B as the local tool-capable model:
 
 ```bash
@@ -187,6 +197,41 @@ BALAUR_EXT_DIR=/path/to/pb_extensions        # relocate balaur-extensions (defau
 
 ```bash
 CGO_ENABLED=0 go build -o balaur .
+```
+
+## Always on
+
+On Linux with systemd, Balaur can run as a user service. This keeps it on
+loopback at http://127.0.0.1:8090/ and stores production data under
+`~/.local/share/balaur/pb_data`, separate from the repo-local development
+data directory.
+
+```bash
+make install-user-service
+make start-user-service
+```
+
+The install target builds a CGO-free binary, copies it to
+`~/.local/bin/balaur`, installs `contrib/systemd/balaur.service` to
+`~/.config/systemd/user/balaur.service`, creates `~/.config/balaur/env` if it
+does not already exist, and reloads the user systemd manager.
+
+Useful service commands:
+
+```bash
+make status-user-service
+make logs-user-service
+make restart-user-service
+make stop-user-service
+```
+
+Edit `~/.config/balaur/env` for model paths, remote provider settings, or
+optional features. The file is not overwritten by later installs.
+
+To let the user service start at boot before you log in, enable linger once:
+
+```bash
+loginctl enable-linger "$USER"
 ```
 
 Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —

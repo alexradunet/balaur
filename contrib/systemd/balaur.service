@@ -1,0 +1,16 @@
+[Unit]
+Description=Balaur personal AI companion
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=BALAUR_HTTP=127.0.0.1:8090
+Environment=BALAUR_DATA_DIR=%h/.local/share/balaur/pb_data
+EnvironmentFile=-%h/.config/balaur/env
+ExecStart=%h/.local/bin/balaur serve --http ${BALAUR_HTTP} --dir ${BALAUR_DATA_DIR}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
