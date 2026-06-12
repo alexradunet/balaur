@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{template "page_head" .}}
+  <title>{{.Title}} · Balaur</title>
+</head>
+<body>
+  {{template "topbar" .}}
+
+  <main class="candle-page">
+
+    <img class="hearth-crest candle-crest" src="/static/crest.png"
+         alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
+
+    <div class="k-tabs" role="tablist">
+      <button class="k-tab k-tab-active" type="button"
+              hx-on:click="document.getElementById('candle-prompt').innerHTML='';this.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));this.classList.add('k-tab-active')">
+        free hand
+      </button>
+      <button class="k-tab" type="button"
+              hx-get="/ui/journal/prompt"
+              hx-target="#candle-prompt"
+              hx-swap="innerHTML"
+              hx-on:click="this.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));this.classList.add('k-tab-active')">
+        guided
+      </button>
+    </div>
+
+    <div id="candle-prompt"></div>
+
+    {{template "journal_candle_body" .}}
+
+  </main>
+</body>
+</html>
+
+{{define "journal_candle_body"}}
+<div id="journal-candle-body">
+  <form class="journal-form"
+        hx-post="/ui/journal"
+        hx-target="#journal-candle-body"
+        hx-swap="outerHTML">
+    <textarea name="text" rows="8" placeholder="What stays with you from this day?"></textarea>
+    <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
+  </form>
+
+  {{if .Journal}}
+  <div class="journal-list">
+    {{range .Journal}}
+    <article class="journal-entry">
+      <div class="journal-meta">
+        <span class="tl-time">{{.Time}}</span>
+        <a class="btn btn-ghost btn-sm" href="/day/{{.Date}}">→ this day</a>
+      </div>
+      <p class="journal-text">{{.Text}}</p>
+    </article>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}

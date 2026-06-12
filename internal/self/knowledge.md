@@ -93,10 +93,18 @@ self tool, which reports the actual registry):
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks, /life,
-/day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing CLI (chat, task, memory,
+/journal, /day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing CLI (chat, task, memory,
 skill, life, journal, day, recap, history, audit, verify, model, self)
 printing JSON for external harnesses; the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
+
+The candle (/journal): an immersive writing page — free-hand (default) or
+guided by one model-composed prompt line (deterministic fallback:
+"Write what the day left behind. I am listening." — returned on any error or
+no active model). Entries written here are the same journal records as the
+chat journal_write tool and the day pages; they appear on /day/{date} as well.
+The guided prompt is the only LLM call on the page and is strictly opt-in
+(the owner clicks the "guided" button).
 
 Typed card registry: Balaur's UI supports 10 parameterized card types at
 GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment

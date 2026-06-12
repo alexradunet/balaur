@@ -2017,3 +2017,34 @@ progress.gguf-progress-bar::-moz-progress-bar {
 
 /* ── Recap-day modifier ──────────────────────────────────────────── */
 .recap-day { border-left-color: var(--gold); }
+
+/* ── Candle ──────────────────────────────────────────────────────── */
+/* The /journal writing page: centered column, breathing crest glow,
+   mode toggle. Glow disabled under prefers-reduced-motion. */
+
+.candle-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+@keyframes candle-breathe {
+  0%, 100% { filter: drop-shadow(0 0 6px #c8860088); }
+  50%       { filter: drop-shadow(0 0 18px #c88600cc); }
+}
+
+.candle-crest {
+  animation: candle-breathe 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candle-crest { animation: none; }
+}
+
+.candle-prompt {
+  margin: 12px 0 8px;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink-muted);
+  text-align: center;
+}

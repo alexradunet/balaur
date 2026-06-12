@@ -132,7 +132,9 @@ dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in cha
 (keyboard 1–9); a choice posts as the owner's turn · typed card registry — 10
 parameterized, server-rendered card resources under `/ui/cards/{type}` (the
 composition unit for boards and on-the-spot UI): today, quests, calendar,
-timeline, journal, measure, lines, memory, skills, heads.
+timeline, journal, measure, lines, memory, skills, heads ·
+the candle (/journal): immersive writing page — free-hand or guided by one
+model-composed prompt line (deterministic fallback), entries shared with day pages.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
