@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"html"
+	"io"
 	"net/http"
 	"strings"
 
@@ -14,26 +15,16 @@ import (
 	"github.com/alexradunet/balaur/internal/turn"
 )
 
-const messageCloseHTML = `</div></div></div>`
-
-// soulAvatarHTML builds the soul avatar span. Dynamic because the URL varies
-// by owner preference (soul-01..soul-16).
-func soulAvatarHTML(avatarURL string) string {
-	return `<span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">` +
-		`<img src="` + html.EscapeString(avatarURL) + `" alt="" decoding="async"></span>`
-}
-
-// balaurAvatarHTML builds the Balaur avatar span. Dynamic because the owner
-// can choose from 16 head personalities (balaur-01..balaur-16).
-func balaurAvatarHTML(avatarURL string) string {
-	return `<span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">` +
-		`<img src="` + html.EscapeString(avatarURL) + `" alt="" decoding="async"></span>`
+// execFragment executes a named template fragment to w, silently ignoring
+// errors — the caller already owns the live stream and cannot un-write bytes.
+func (h *handlers) execFragment(w io.Writer, name string, data messageView) {
+	_ = h.tmpl.ExecuteTemplate(w, name, data)
 }
 
 // chat handles one user turn. The web layer is a gateway: it adapts the
 // shared turn pipeline (internal/turn) to a streamed chunked response that
-// HTMX appends to the chat (hx-swap beforeend). The fragment shape mirrors
-// templates/home.html; the behavior lives in turn.Run.
+// HTMX appends to the chat (hx-swap beforeend). The fragment shape is
+// defined once in chat-messages.html and executed here and on page-load.
 func (h *handlers) chat(e *core.RequestEvent) error {
 	msg := strings.TrimSpace(e.Request.FormValue("message"))
 	if msg == "" {
@@ -46,12 +37,9 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	}
 	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
-	// Resolve per-turn dynamic values — owner preferences from owner_settings.
-	soulHTML := soulAvatarHTML(store.SoulAvatarURL(h.app))
-	balaHTML := balaurAvatarHTML(store.BalaurAvatarURL(h.app))
+	soulURL := store.SoulAvatarURL(h.app)
+	balaURL := store.BalaurAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
-	assistantOpen := `<div class="msg msg-balaur msg-with-avatar">` + balaHTML +
-		`<div class="msg-main"><div class="who">Balaur</div><div class="body">`
 
 	w := e.Response
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -64,14 +52,20 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	}
 
 	// When the browser optimistically rendered the user row, this response
-	// replaces only the pending Balaur row. Without JS, keep the old echo path.
+	// replaces only the pending Balaur row. Without JS, echo the user row first.
 	if !clientRendered {
-		fmt.Fprintf(w,
-			`<div class="msg msg-user msg-with-avatar">%s`+
-				`<div class="msg-main"><div class="who">%s</div><div class="body">%s</div></div></div>`,
-			soulHTML, html.EscapeString(ownerName), html.EscapeString(msg))
+		h.execFragment(w, "chat-msg-user", messageView{
+			SoulAvatarURL: soulURL,
+			OwnerName:     ownerName,
+			Content:       msg,
+		})
 	}
-	fmt.Fprint(w, assistantOpen)
+
+	// Open the assistant bubble; token text streams into its open body div.
+	h.execFragment(w, "chat-balaur-open", messageView{
+		BalaurAvatarURL: balaURL,
+		WhoLabel:        "Balaur",
+	})
 	flush()
 
 	emitEv := func(ev agent.Event) {
@@ -80,17 +74,22 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			fmt.Fprint(w, html.EscapeString(ev.Text))
 			flush()
 		case "tool_start":
-			// Bare teal glyph matches the {{toolIcon}} template helper.
-			fmt.Fprintf(w,
-				messageCloseHTML+
-					`<div class="msg msg-tool"><div class="who">`+
-					`<span class="tool-icon" aria-hidden="true">%s</span>tool · %s`+
-					`</div><div class="body">`,
-				toolGlyph(ev.Tool), html.EscapeString(ev.Tool))
+			h.execFragment(w, "chat-balaur-close", messageView{})
+			h.execFragment(w, "chat-msg-tool-start", messageView{Tool: ev.Tool})
 			flush()
 		case "tool_result":
-			h.writeToolResult(w, ev.Text)
-			fmt.Fprint(w, `</div></div>`+assistantOpen)
+			kind, id, rest, ok := tools.ParseProposal(ev.Text)
+			var mv messageView
+			if ok {
+				mv = messageView{Content: rest, CardURL: cardURL(kind, id)}
+			} else {
+				mv = messageView{Content: clipText(ev.Text, 2000)}
+			}
+			h.execFragment(w, "chat-msg-tool-end", mv)
+			h.execFragment(w, "chat-balaur-open", messageView{
+				BalaurAvatarURL: balaURL,
+				WhoLabel:        "Balaur",
+			})
 			flush()
 		case "error":
 			fmt.Fprintf(w,
@@ -102,32 +101,20 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 
 	res, runErr := turn.Run(e.Request.Context(), h.app, client, msg, emitEv)
 
-	fmt.Fprint(w, messageCloseHTML)
+	h.execFragment(w, "chat-balaur-close", messageView{})
 	if res.CheckNote != "" {
-		fmt.Fprintf(w,
-			`<div class="msg msg-balaur msg-with-avatar">%s`+
-				`<div class="msg-main"><div class="who">Balaur · check</div><div class="body">%s</div></div></div>`,
-			balaHTML, html.EscapeString(res.CheckNote))
+		h.execFragment(w, "chat-msg-balaur", messageView{
+			BalaurAvatarURL: balaURL,
+			WhoLabel:        "Balaur",
+			Origin:          "check",
+			Content:         res.CheckNote,
+		})
 	}
 	flush()
 	if runErr != nil {
 		h.app.Logger().Warn("chat: turn failed", "error", runErr)
 	}
 	return nil
-}
-
-// writeToolResult renders a tool result row.
-func (h *handlers) writeToolResult(w http.ResponseWriter, text string) {
-	kind, id, rest, ok := tools.ParseProposal(text)
-	if !ok {
-		fmt.Fprint(w, html.EscapeString(clipText(text, 2000)))
-		return
-	}
-	fmt.Fprint(w, html.EscapeString(rest))
-	fmt.Fprintf(w,
-		`</div></div><div class="k-inline" hx-get="%s" hx-trigger="load" hx-swap="innerHTML"></div>`+
-			`<div class="msg msg-tool" hidden><div class="body">`,
-		html.EscapeString(cardURL(kind, id)))
 }
 
 func cardURL(kind, id string) string {
@@ -147,10 +134,10 @@ func clipText(s string, n int) string {
 func (h *handlers) renderError(e *core.RequestEvent, err error) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	balaURL := store.BalaurAvatarURL(h.app)
-	fmt.Fprintf(e.Response,
-		`<div class="msg msg-balaur msg-with-avatar">%s`+
-			`<div class="msg-main"><div class="who">Balaur</div><div class="body">`+
-			`<span class="thinking">%s</span></div></div></div>`,
-		balaurAvatarHTML(balaURL), html.EscapeString(err.Error()))
+	h.execFragment(e.Response, "chat-msg-balaur", messageView{
+		BalaurAvatarURL: balaURL,
+		WhoLabel:        "Balaur",
+		Content:         err.Error(),
+	})
 	return nil
 }

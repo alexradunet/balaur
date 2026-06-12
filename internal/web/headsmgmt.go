@@ -166,11 +166,6 @@ func (h *handlers) headChat(e *core.RequestEvent) error {
 	ownerName := store.OwnerName(h.app)
 	headName := head.GetString("name")
 
-	balaHTML := balaurAvatarHTML(balaURL)
-	soulHTML := soulAvatarHTML(soulURL)
-	assistantOpen := `<div class="msg msg-balaur msg-with-avatar">` + balaHTML +
-		`<div class="msg-main"><div class="who">` + html.EscapeString(headName) + `</div><div class="body">`
-
 	w := e.Response
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -182,12 +177,16 @@ func (h *handlers) headChat(e *core.RequestEvent) error {
 	}
 
 	if !clientRendered {
-		fmt.Fprintf(w,
-			`<div class="msg msg-user msg-with-avatar">%s`+
-				`<div class="msg-main"><div class="who">%s</div><div class="body">%s</div></div></div>`,
-			soulHTML, html.EscapeString(ownerName), html.EscapeString(msg))
+		h.execFragment(w, "chat-msg-user", messageView{
+			SoulAvatarURL: soulURL,
+			OwnerName:     ownerName,
+			Content:       msg,
+		})
 	}
-	fmt.Fprint(w, assistantOpen)
+	h.execFragment(w, "chat-balaur-open", messageView{
+		BalaurAvatarURL: balaURL,
+		WhoLabel:        headName,
+	})
 	flush()
 
 	emitEv := func(ev agent.Event) {
@@ -205,7 +204,7 @@ func (h *handlers) headChat(e *core.RequestEvent) error {
 	_, runErr := turn.RunFor(e.Request.Context(), h.app, client, conv,
 		headName, head.GetString("purpose"), msg, emitEv)
 
-	fmt.Fprint(w, messageCloseHTML)
+	h.execFragment(w, "chat-balaur-close", messageView{})
 	flush()
 	if runErr != nil {
 		h.app.Logger().Warn("head chat: turn failed", "head", headID, "error", runErr)
@@ -220,6 +219,7 @@ func (h *handlers) messageViewsForHead(recs []*core.Record, head *core.Record) [
 	headURL := store.HeadBalaurAvatarURL(h.app, head.Id)
 	ownerName := store.OwnerName(h.app)
 	out := make([]messageView, 0, len(recs))
+	headName := head.GetString("name")
 	for _, r := range recs {
 		mv := messageView{
 			Role:            r.GetString("role"),
@@ -229,6 +229,7 @@ func (h *handlers) messageViewsForHead(recs []*core.Record, head *core.Record) [
 			SoulAvatarURL:   soulURL,
 			BalaurAvatarURL: headURL,
 			OwnerName:       ownerName,
+			WhoLabel:        headName,
 		}
 		if mv.Role == "assistant" && mv.Content == "" {
 			continue

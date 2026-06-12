@@ -1,23 +1,54 @@
 {{- /* Chat message list. Context: []messageView. Used for page-load
      history and for day-recap expansion. */ -}}
 {{range .}}
-{{if eq .Role "user"}}
+{{if eq .Role "user"}}{{template "chat-msg-user" .}}
+{{else if eq .Role "assistant"}}{{template "chat-msg-balaur" .}}
+{{else if eq .Role "tool"}}{{template "chat-msg-tool" .}}
+{{end}}
+{{end}}
+
+{{- /* ── Named fragments — the single source of truth for chat message markup.
+     The streaming path (internal/web/chat.go) executes these same fragments
+     into the response writer, so a markup change is a one-file change. ── */ -}}
+
+{{define "chat-msg-user"}}
 <div class="msg msg-user msg-with-avatar">
   <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true"><img src="{{.SoulAvatarURL}}" alt="" decoding="async"></span>
   <div class="msg-main"><div class="who">{{.OwnerName}}</div><div class="body">{{.Content}}</div></div>
 </div>
-{{else if eq .Role "assistant"}}
+{{end}}
+
+{{define "chat-msg-balaur"}}
 <div class="msg msg-balaur msg-with-avatar">
   <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true"><img src="{{.BalaurAvatarURL}}" alt="" decoding="async"></span>
-  <div class="msg-main"><div class="who">Balaur{{with .Origin}} · {{.}}{{end}}</div><div class="body">{{.Content}}</div></div>
+  <div class="msg-main"><div class="who">{{.WhoLabel}}{{with .Origin}} · {{.}}{{end}}</div><div class="body">{{.Content}}</div></div>
 </div>
-{{else if eq .Role "tool"}}
+{{end}}
+
+{{define "chat-msg-tool"}}
 <div class="msg msg-tool">
   <div class="who"><span class="tool-icon" aria-hidden="true">{{toolIcon .Tool}}</span>tool · {{.Tool}}</div>
   <div class="body">{{.Content}}</div>
 </div>
-{{if .CardURL}}
-<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>
+{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}
 {{end}}
-{{end}}
-{{end}}
+
+{{- /* chat-balaur-open emits the assistant bubble prefix only — the streaming
+     handler writes this, then streams token text into it, then closes with
+     chat-balaur-close. Context: messageView with Content="" and WhoLabel set. */ -}}
+{{define "chat-balaur-open"}}
+<div class="msg msg-balaur msg-with-avatar">
+  <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true"><img src="{{.BalaurAvatarURL}}" alt="" decoding="async"></span>
+  <div class="msg-main"><div class="who">{{.WhoLabel}}{{with .Origin}} · {{.}}{{end}}</div><div class="body">{{end}}
+
+{{- /* chat-balaur-close closes what chat-balaur-open opened. */ -}}
+{{define "chat-balaur-close"}}</div></div></div>{{end}}
+
+{{- /* chat-msg-tool-start opens a tool row for the streaming path: who-line + open body. */ -}}
+{{define "chat-msg-tool-start"}}
+<div class="msg msg-tool">
+  <div class="who"><span class="tool-icon" aria-hidden="true">{{toolIcon .Tool}}</span>tool · {{.Tool}}</div>
+  <div class="body">{{end}}
+
+{{- /* chat-msg-tool-end closes an open tool row; if CardURL is set it adds the inline card. */ -}}
+{{define "chat-msg-tool-end"}}</div></div>{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}{{end}}

@@ -58,7 +58,9 @@
 <body>
   {{template "topbar" .}}
 
-  <!-- Message bubble templates — cloned by balaurPrepareChat, no JS string-building -->
+  <!-- Message bubble templates — cloned by balaurPrepareChat, no JS string-building.
+       Keep in sync with the chat-msg-* fragments in chat-messages.html;
+       the JS optimistic path clones these server-side templates. -->
   <template id="t-msg-user">
     <div class="msg msg-user msg-with-avatar">
       <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">

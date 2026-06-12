@@ -151,6 +151,7 @@ type messageView struct {
 	SoulAvatarURL   string // resolved soul avatar URL (same for all views in one call)
 	BalaurAvatarURL string // resolved Balaur head avatar URL
 	OwnerName       string // display name for the "You" label
+	WhoLabel        string // assistant display name ("Balaur", or head name for branch chats)
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {
@@ -167,6 +168,7 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			SoulAvatarURL:   soulURL,
 			BalaurAvatarURL: balaurURL,
 			OwnerName:       ownerName,
+			WhoLabel:        "Balaur",
 		}
 		// Re-render marked cards that were created inline in chat.
 		if mv.Role == "tool" {
