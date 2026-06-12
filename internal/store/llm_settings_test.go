@@ -48,6 +48,53 @@ func TestEnsureDefaultLLMConfigSelectsExistingLocal(t *testing.T) {
 	}
 }
 
+func TestSaveLocalGGUFModelIdempotent(t *testing.T) {
+	app := storetest.NewApp(t)
+	path := filepath.Join(app.DataDir(), "models", "test.gguf")
+
+	id1, err := SaveLocalGGUFModel(app, "", path)
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	if id1 == "" {
+		t.Fatal("expected non-empty id")
+	}
+
+	// Second call with same path must return same id (idempotent upsert).
+	id2, err := SaveLocalGGUFModel(app, "", path)
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if id1 != id2 {
+		t.Fatalf("idempotent upsert: first=%q second=%q; want same id", id1, id2)
+	}
+
+	// Label defaults to file name.
+	models, err := ListLLMModels(app)
+	if err != nil {
+		t.Fatalf("list models: %v", err)
+	}
+	var found bool
+	for _, m := range models {
+		if m.ModelID == id1 {
+			if m.Label != "test.gguf" {
+				t.Fatalf("label = %q, want %q", m.Label, "test.gguf")
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("model not found in list")
+	}
+}
+
+func TestSaveLocalGGUFModelRequiresPath(t *testing.T) {
+	app := storetest.NewApp(t)
+	if _, err := SaveLocalGGUFModel(app, "label", ""); err == nil {
+		t.Fatal("expected error when path is empty")
+	}
+}
+
 func TestListLLMModelsRedactsAPIKey(t *testing.T) {
 	app := storetest.NewApp(t)
 	modelID, err := SaveOpenAIModel(app, "OpenAI", "https://api.openai.com/v1", "sk-secret", "GPT", "gpt-4.1", "", false)

@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"github.com/pocketbase/dbx"
@@ -129,6 +130,29 @@ func SaveOpenAIModel(app core.App, name, baseURL, apiKey, label, model, embedMod
 	}
 	Audit(app, "", "owner", "llm.model.upsert", llmModel.Id, true, map[string]any{"provider": name, "kind": "openai", "local": local})
 	return llmModel.Id, nil
+}
+
+// SaveLocalGGUFModel registers path as a kronk model under the "Local
+// Kronk" provider and returns the model record id. Label defaults to the
+// file name.
+func SaveLocalGGUFModel(app core.App, label, path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("model path is required")
+	}
+	if label == "" {
+		label = filepath.Base(path)
+	}
+	provider, err := findOrCreateLLMProvider(app, "Local Kronk", "kronk", "", "", true, true)
+	if err != nil {
+		return "", err
+	}
+	model, err := findOrCreateLLMModel(app, provider.Id, label, path, "", true)
+	if err != nil {
+		return "", err
+	}
+	Audit(app, "", "owner", "llm.model.upsert", model.Id, true,
+		map[string]any{"provider": "Local Kronk", "kind": "kronk", "local": true})
+	return model.Id, nil
 }
 
 func SetActiveLLMModel(app core.App, modelID, actor string) error {

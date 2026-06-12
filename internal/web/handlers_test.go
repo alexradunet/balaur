@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -385,4 +387,123 @@ func TestOriginGuard(t *testing.T) {
 	}
 	scenario.TestAppFactory = newWebApp
 	scenario.Test(t)
+}
+
+func TestGgufHandlers(t *testing.T) {
+	t.Run("delete path traversal returns 200 panel", func(t *testing.T) {
+		// The traversal is rejected inside gguf.Delete; the handler re-renders the
+		// panel with the error message (200, not a 4xx) per the plan's HTMX pattern.
+		scenario := tests.ApiScenario{
+			Name:            "delete path traversal",
+			Method:          "POST",
+			URL:             "/ui/model/gguf/delete",
+			Body:            strings.NewReader("name=../../evil.gguf"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"models-panel"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("download ftp URL returns panel with error", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:            "download ftp scheme rejected",
+			Method:          "POST",
+			URL:             "/ui/model/gguf/download",
+			Body:            strings.NewReader("url=ftp://x/m.gguf"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"models-panel", "http or https"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("end-to-end tiny GGUF download", func(t *testing.T) {
+		// Serve a tiny GGUF payload from a local httptest server. The server
+		// uses a channel to synchronise with the test: it waits until the
+		// test signals "allow response", so we can verify the file and record
+		// AFTER the goroutine has definitely completed.
+		payload := []byte("GGUFtiny test model payload for handler test")
+		allowResp := make(chan struct{})
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			<-allowResp // wait until the test allows the response
+			w.Write(payload)
+		}))
+		defer srv.Close()
+
+		// Use a single app for all sub-scenarios so the background goroutine
+		// does not outlive the app. DisableTestAppCleanup prevents automatic
+		// cleanup; we clean up manually after all checks are done.
+		e2eApp := newWebApp(t)
+		t.Cleanup(e2eApp.Cleanup)
+		factory := func(tb testing.TB) *tests.TestApp { return e2eApp }
+
+		// POST to gguf/download — starts the background goroutine; panel returned immediately.
+		downloadScenario := tests.ApiScenario{
+			Name:                  "gguf download starts",
+			Method:                "POST",
+			URL:                   "/ui/model/gguf/download",
+			Body:                  strings.NewReader("url=" + srv.URL + "/testmodel.gguf&activate=1"),
+			Headers:               map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:        factory,
+			DisableTestAppCleanup: true,
+			ExpectedStatus:        200,
+			ExpectedContent:       []string{"models-panel"},
+		}
+		downloadScenario.Test(t)
+
+		// Allow the server to respond — the goroutine is now blocked waiting
+		// for the HTTP response. Unblocking it lets it complete the download.
+		close(allowResp)
+
+		// Poll for the file — the goroutine should finish very quickly now
+		// that the server has responded with the 44-byte payload.
+		destFile := filepath.Join(e2eApp.DataDir(), "models", "testmodel.gguf")
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			if _, statErr := os.Stat(destFile); statErr == nil {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		if _, statErr := os.Stat(destFile); statErr != nil {
+			t.Fatalf("GGUF file not found at %s after download", destFile)
+		}
+
+		// Poll for the llm_models record created by onDone.
+		deadline = time.Now().Add(5 * time.Second)
+		var foundModel bool
+		for time.Now().Before(deadline) {
+			models, listErr := store.ListLLMModels(e2eApp)
+			if listErr == nil {
+				for _, m := range models {
+					if m.Kind == "kronk" && filepath.Base(m.ChatModel) == "testmodel.gguf" {
+						foundModel = true
+						break
+					}
+				}
+			}
+			if foundModel {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		if !foundModel {
+			t.Fatal("llm_models record for testmodel.gguf not found after download")
+		}
+
+		// Confirm the progress endpoint renders (idle on any fresh app).
+		progressScenario := tests.ApiScenario{
+			Name:            "gguf progress endpoint renders when idle",
+			Method:          "GET",
+			URL:             "/ui/model/gguf/progress",
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"gguf-progress"},
+		}
+		progressScenario.Test(t)
+	})
 }

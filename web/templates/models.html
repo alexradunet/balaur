@@ -3,6 +3,28 @@
      There is no full-page wrapper; GET /models redirects to /settings/models.
 */ -}}
 
+{{define "gguf_progress"}}
+{{- /* Renders inside #models-panel via hx-swap="outerHTML" on itself. */ -}}
+<div id="gguf-progress"{{if .Active}} hx-get="/ui/model/gguf/progress" hx-trigger="every 1s" hx-swap="outerHTML"{{end}}>
+  {{if .Active}}
+  <div class="gguf-download-row">
+    <span class="gguf-download-name">{{.Dest | base}}</span>
+    <span class="gguf-download-bytes">{{fmtBytes .BytesDone}}{{if .BytesTotal}} / {{fmtBytes .BytesTotal}}{{end}}</span>
+    {{if .BytesTotal}}
+    <progress class="gguf-progress-bar" value="{{.BytesDone}}" max="{{.BytesTotal}}"></progress>
+    {{end}}
+    <form hx-post="/ui/model/gguf/cancel" hx-target="#models-panel" hx-swap="outerHTML" style="display:inline">
+      <button class="btn btn-ghost btn-sm" type="submit">Cancel</button>
+    </form>
+  </div>
+  {{else if .Err}}
+  <p class="model-error">{{.Err}} — <a href="/settings/models">reload</a></p>
+  {{else if .Done}}
+  <p class="gguf-done">Download finished. <a href="/settings/models">Reload</a></p>
+  {{end}}
+</div>
+{{end}}
+
 {{define "models_panel"}}
 <div id="models-panel">
   <section class="k-section">
@@ -46,6 +68,40 @@
     {{else}}
     <p class="k-empty">No model records yet.</p>
     {{end}}
+  </section>
+
+  <section class="k-section">
+    <div class="k-heading">
+      <h2>Local model files</h2>
+    </div>
+    {{template "gguf_progress" .Gguf}}
+    {{if .GgufFiles}}
+    <div class="gguf-file-list">
+      {{range .GgufFiles}}
+      <div class="gguf-file-row">
+        <span class="gguf-file-name">{{.Name}}</span>
+        <span class="gguf-file-size k-sub">{{fmtBytes .Size}}</span>
+        <form hx-post="/ui/model/gguf/delete" hx-target="#models-panel" hx-swap="outerHTML"
+              hx-confirm="Delete this model file from disk?" style="display:inline">
+          <input type="hidden" name="name" value="{{.Name}}">
+          <button class="btn btn-ghost btn-sm" type="submit">Delete</button>
+        </form>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="k-sub">No GGUF files in the models directory.</p>
+    {{end}}
+    <form class="card model-provider-form" hx-post="/ui/model/gguf/download" hx-target="#models-panel" hx-swap="outerHTML">
+      <label>Model URL
+        <input name="url" placeholder="https://huggingface.co/…/resolve/main/model.gguf">
+        <span class="k-sub">Leave blank to download the default Qwen3.6 35B A3B GGUF.</span>
+      </label>
+      <div class="model-form-checks">
+        <label><input type="checkbox" name="activate" value="1" checked> activate after download</label>
+      </div>
+      <button class="btn btn-primary" type="submit">Download</button>
+    </form>
   </section>
 
   <section class="k-section">

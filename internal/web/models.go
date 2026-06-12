@@ -1,10 +1,9 @@
 package web
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/gguf"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -50,6 +50,8 @@ type modelsPageData struct {
 	ActiveModel  string
 	ModelError   string
 	ModelHint    string
+	Gguf         gguf.Progress
+	GgufFiles    []gguf.FileInfo
 }
 
 type modelModalData struct {
@@ -111,6 +113,11 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 		data.ActiveModel = active.Name
 	} else {
 		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
+	}
+	data.Gguf = h.gguf.Snapshot()
+	modelsDir := filepath.Join(h.app.DataDir(), "models")
+	if files, err := gguf.List(modelsDir); err == nil {
+		data.GgufFiles = files
 	}
 	return data, nil
 }
@@ -176,31 +183,25 @@ func (h *handlers) downloadModel(e *core.RequestEvent) error {
 	if !modal.CanDownload {
 		return h.renderModelModal(e, modal)
 	}
-	path, err := h.downloadDefaultLocalModel(e.Request.Context())
-	if err != nil {
-		modal.Error = err.Error()
-		return h.renderModelModal(e, modal)
-	}
-	choices, _, err := turn.ModelChoices(h.app)
-	if err != nil {
-		modal.Error = err.Error()
-		return h.renderModelModal(e, modal)
-	}
-	var modelID string
-	for _, choice := range choices {
-		if choice.Provider == "kronk" && choice.Model == path {
-			modelID = choice.Key
-			break
+	dest := llm.DefaultChatModelPath(h.app.DataDir())
+	onDone := func(path string) {
+		id, err := store.SaveLocalGGUFModel(h.app, "", path)
+		if err != nil {
+			h.app.Logger().Error("gguf onDone: save model", "err", err)
+			return
+		}
+		if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
+			h.app.Logger().Error("gguf onDone: activate model", "err", err)
 		}
 	}
-	if modelID == "" {
-		modal.Error = "local model record not found"
-		return h.renderModelModal(e, modal)
-	}
-	if err := store.SetActiveLLMModel(h.app, modelID, "owner"); err != nil {
+	if err := h.gguf.Start(llm.DefaultChatModelURL, dest, onDone); err != nil {
 		modal.Error = err.Error()
 		return h.renderModelModal(e, modal)
 	}
+	store.Audit(h.app, "", "owner", "llm.gguf.download", llm.DefaultChatModelURL, true,
+		map[string]any{"dest": dest})
+	// Close the modal immediately; the chatbar's every-2s poll will flip to
+	// ready once the background download finishes and activates the model.
 	data, err := h.homeData()
 	if err != nil {
 		return e.InternalServerError("loading chatbar", err)
@@ -218,23 +219,23 @@ func (h *handlers) downloadModelFromPage(e *core.RequestEvent) error {
 	if _, err := h.missingModelModalData(key); err != nil {
 		return h.modelsPanel(e, err.Error())
 	}
-	path, err := h.downloadDefaultLocalModel(e.Request.Context())
-	if err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	choices, _, err := turn.ModelChoices(h.app)
-	if err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	for _, choice := range choices {
-		if choice.Provider == "kronk" && choice.Model == path {
-			if err := store.SetActiveLLMModel(h.app, choice.Key, "owner"); err != nil {
-				return h.modelsPanel(e, err.Error())
-			}
-			return h.modelsPanel(e, "")
+	dest := llm.DefaultChatModelPath(h.app.DataDir())
+	onDone := func(path string) {
+		id, err := store.SaveLocalGGUFModel(h.app, "", path)
+		if err != nil {
+			h.app.Logger().Error("gguf onDone: save model", "err", err)
+			return
+		}
+		if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
+			h.app.Logger().Error("gguf onDone: activate model", "err", err)
 		}
 	}
-	return h.modelsPanel(e, "local model record not found")
+	if err := h.gguf.Start(llm.DefaultChatModelURL, dest, onDone); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	store.Audit(h.app, "", "owner", "llm.gguf.download", llm.DefaultChatModelURL, true,
+		map[string]any{"dest": dest})
+	return h.modelsPanel(e, "")
 }
 
 func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
@@ -314,76 +315,82 @@ func (h *handlers) renderModelModal(e *core.RequestEvent, data modelModalData) e
 	return nil
 }
 
-func (h *handlers) downloadDefaultLocalModel(ctx context.Context) (string, error) {
-	target := llm.DefaultChatModelPath(h.app.DataDir())
-	if _, err := turn.ExistingModelPath(target, "default"); err == nil {
-		return target, nil
+// ggufDownload starts a background download of a GGUF model.
+func (h *handlers) ggufDownload(e *core.RequestEvent) error {
+	rawURL := strings.TrimSpace(e.Request.FormValue("url"))
+	if rawURL == "" {
+		rawURL = llm.DefaultChatModelURL
 	}
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		return "", fmt.Errorf("creating model directory: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, llm.DefaultChatModelURL, nil)
-	if err != nil {
-		return "", err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("requesting model: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return "", fmt.Errorf("download failed: %s", resp.Status)
+	activate := e.Request.FormValue("activate") == "1"
+
+	parsed, err := url.Parse(rawURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return h.modelsPanel(e, fmt.Sprintf("invalid URL: only http or https are supported"))
 	}
 
-	tmpPath := target + ".part"
-	_ = os.Remove(tmpPath)
-	tmp, err := os.Create(tmpPath)
-	if err != nil {
-		return "", fmt.Errorf("creating model file: %w", err)
+	base := filepath.Base(parsed.Path)
+	if filepath.Ext(base) != ".gguf" {
+		return h.modelsPanel(e, "URL must point to a .gguf file")
 	}
-	ok := false
-	defer func() {
-		_ = tmp.Close()
-		if !ok {
-			_ = os.Remove(tmpPath)
-		}
-	}()
 
-	buf := make([]byte, 128*1024)
-	var first []byte
-	for {
-		n, readErr := resp.Body.Read(buf)
-		if n > 0 {
-			chunk := buf[:n]
-			if len(first) < 4 {
-				need := 4 - len(first)
-				if need > len(chunk) {
-					need = len(chunk)
-				}
-				first = append(first, chunk[:need]...)
-			}
-			if _, err := tmp.Write(chunk); err != nil {
-				return "", fmt.Errorf("writing model: %w", err)
+	modelsDir := filepath.Join(h.app.DataDir(), "models")
+	dest := filepath.Join(modelsDir, base)
+
+	onDone := func(path string) {
+		id, err := store.SaveLocalGGUFModel(h.app, "", path)
+		if err != nil {
+			h.app.Logger().Error("gguf onDone: save model", "err", err)
+			return
+		}
+		if activate {
+			if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
+				h.app.Logger().Error("gguf onDone: activate model", "err", err)
 			}
 		}
-		if readErr == io.EOF {
-			break
-		}
-		if readErr != nil {
-			return "", fmt.Errorf("reading model: %w", readErr)
-		}
 	}
-	if string(first) != "GGUF" {
-		return "", fmt.Errorf("downloaded file is not GGUF")
+
+	if err := h.gguf.Start(rawURL, dest, onDone); err != nil {
+		return h.modelsPanel(e, err.Error())
 	}
-	if err := tmp.Close(); err != nil {
-		return "", fmt.Errorf("closing model: %w", err)
+
+	store.Audit(h.app, "", "owner", "llm.gguf.download", rawURL, true,
+		map[string]any{"dest": dest})
+	return h.modelsPanel(e, "")
+}
+
+// ggufProgress renders the progress fragment.
+func (h *handlers) ggufProgress(e *core.RequestEvent) error {
+	snap := h.gguf.Snapshot()
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := h.tmpl.ExecuteTemplate(e.Response, "gguf_progress", snap); err != nil {
+		return e.InternalServerError("rendering gguf progress", err)
 	}
-	if err := os.Rename(tmpPath, target); err != nil {
-		return "", fmt.Errorf("installing model: %w", err)
+	return nil
+}
+
+// ggufCancel cancels the active download, if any.
+func (h *handlers) ggufCancel(e *core.RequestEvent) error {
+	h.gguf.Cancel()
+	store.Audit(h.app, "", "owner", "llm.gguf.cancel", "", true, nil)
+	return h.modelsPanel(e, "")
+}
+
+// ggufDelete deletes a GGUF file from the models directory.
+func (h *handlers) ggufDelete(e *core.RequestEvent) error {
+	name := e.Request.FormValue("name")
+	modelsDir := filepath.Join(h.app.DataDir(), "models")
+
+	// Guard: don't delete the active model.
+	if cfg, ok, _ := store.ActiveLLMConfig(h.app); ok && cfg.Kind == "kronk" &&
+		filepath.Base(cfg.ChatModel) == name {
+		return h.modelsPanel(e, "that file is the active model — choose another model first")
 	}
-	ok = true
-	return target, nil
+
+	if err := gguf.Delete(modelsDir, name); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	store.Audit(h.app, "", "owner", "llm.gguf.delete", name, true, nil)
+	return h.modelsPanel(e, "")
 }
 
 // buildAvatarOptions returns the full roster of chooseable soul avatars with
