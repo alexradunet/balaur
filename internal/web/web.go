@@ -183,6 +183,10 @@ func Register(se *core.ServeEvent) error {
 	if devSeedEnabled() {
 		se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
 	}
+	// Settings shell — sidebar with profile, skills, models sections.
+	se.Router.GET("/settings", h.settingsRoot)
+	se.Router.GET("/settings/{section}", h.settingsPage)
+	// Legacy redirects — old bookmarks keep working.
 	// Profile page and its sub-actions.
 	se.Router.GET("/profile", h.profilePage)
 	se.Router.POST("/ui/profile/name", h.saveName)

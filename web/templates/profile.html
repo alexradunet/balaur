@@ -1,24 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>Profile · Balaur</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main class="profile-page">
-    <h1>Your Profile</h1>
-    <p class="profile-lede">How Balaur sees you — and how you see Balaur.</p>
-    <div class="stitch"></div>
-
-    {{template "profile_identity_card" .}}
-    {{template "profile_soul_section" .}}
-    {{template "profile_balaur_section" .}}
-
-  </main>
-</body>
-</html>
+{{- /* profile.html — fragment defines only.
+     These render inside settings.html and as HTMX swap responses.
+     There is no full-page wrapper; GET /profile redirects to /settings/profile.
+*/ -}}
 
 {{- /* Identity card — re-rendered as a fragment after POST /ui/profile/name */ -}}
 {{define "profile_identity_card"}}

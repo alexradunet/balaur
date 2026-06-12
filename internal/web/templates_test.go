@@ -69,8 +69,9 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 
 	b.Reset()
 	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
-	if err := tmpl.ExecuteTemplate(&b, "models.html", models); err != nil {
-		t.Fatalf("models.html: %v", err)
+	settingsModels := settingsData{Title: "Settings", Section: "models", Models: models}
+	if err := tmpl.ExecuteTemplate(&b, "settings.html", settingsModels); err != nil {
+		t.Fatalf("settings.html models: %v", err)
 	}
 	out = b.String()
 	for _, want := range []string{"Available models", "Add OpenAI-compatible API", "Local Qwen3.6 35B A3B"} {

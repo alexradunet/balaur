@@ -1,21 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>{{.Title}}</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main>
-    <section class="k-section">
-      <h1>Models</h1>
-      <p class="k-sub">Choose the one active model Balaur uses. Local and self-hosted options stay first; remote APIs are explicit.</p>
-    </section>
-    {{template "models_panel" .}}
-  </main>
-</body>
-</html>
+{{- /* models.html — fragment defines only.
+     These render inside settings.html and as HTMX swap responses.
+     There is no full-page wrapper; GET /models redirects to /settings/models.
+*/ -}}
 
 {{define "models_panel"}}
 <div id="models-panel">

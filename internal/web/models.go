@@ -97,11 +97,7 @@ func (h *handlers) chatbar(e *core.RequestEvent) error {
 }
 
 func (h *handlers) modelsPage(e *core.RequestEvent) error {
-	data, err := h.modelsData()
-	if err != nil {
-		return e.InternalServerError("loading models", err)
-	}
-	return h.render(e, "models.html", data)
+	return e.Redirect(http.StatusFound, "/settings/models")
 }
 
 func (h *handlers) modelsData() (modelsPageData, error) {

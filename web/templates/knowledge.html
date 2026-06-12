@@ -9,7 +9,12 @@
 
   <main>
     <h1>{{.Title}}</h1>
+    {{template "knowledge_body" .}}
+  </main>
+</body>
+</html>
 
+{{define "knowledge_body"}}
     {{if .Proposed}}
     <section class="k-section">
       <h2 class="k-heading k-heading-proposed">Awaiting your word <span class="k-count">{{len .Proposed}}</span></h2>
@@ -72,6 +77,4 @@
       </div>
     </section>
     {{end}}
-  </main>
-</body>
-</html>
+{{end}}
