@@ -392,7 +392,7 @@ func (h *handlers) downloadDefaultLocalModel(ctx context.Context) (string, error
 
 // buildAvatarOptions returns the full roster of chooseable soul avatars with
 // the currently active one flagged. The order and labels are part of the UI
-// contract; adding a new avatar means adding an entry here.
+// contract; the roster is the single source from store.SoulAvatars.
 func buildAvatarOptions(app core.App) []AvatarOption {
 	pref := store.GetOwnerSetting(app, "soul_avatar", "soul-01")
 	// Normalise legacy keys so the active state shows correctly for old installs.
@@ -402,58 +402,17 @@ func buildAvatarOptions(app core.App) []AvatarOption {
 	case "female":
 		pref = "soul-02"
 	}
-	roster := []struct{ key, label string }{
-		// Basm world — human characters
-		{"soul-01", "Him"},
-		{"soul-02", "Her"},
-		{"soul-03", "Elder"},
-		{"soul-04", "Youth"},
-		{"soul-05", "Maker"},
-		{"soul-06", "Cyclops"},
-		{"soul-07", "Gnome"},
-		{"soul-08", "Ogre"},
-		// Romanian mythological creatures
-		{"soul-09", "Strigoi"},
-		{"soul-10", "Zmeu"},
-		{"soul-11", "Iele"},
-		{"soul-12", "Muma"},
-		{"soul-13", "Căpcăun"},
-		{"soul-14", "Solomonar"},
-		{"soul-15", "Vâlvă"},
-		{"soul-16", "Pricolici"},
-	}
+	roster := store.SoulAvatars()
 	opts := make([]AvatarOption, len(roster))
 	for i, r := range roster {
 		opts[i] = AvatarOption{
-			Key:    r.key,
-			Label:  r.label,
-			URL:    "/static/avatars/" + r.key + ".png",
-			Active: r.key == pref,
+			Key:    r.Key,
+			Label:  r.Label,
+			URL:    r.URL,
+			Active: r.Key == pref,
 		}
 	}
 	return opts
-}
-
-// balaurHeadRoster is the single source for the 16 Balaur personalities —
-// keys, display order, and labels. Adding a head means one entry here plus
-// the matching entry in store.balaurAvatarMap.
-var balaurHeadRoster = []struct{ key, label string }{
-	{"balaur-01", "Wise"},
-	{"balaur-02", "Ancient"},
-	{"balaur-03", "Guardian"},
-	{"balaur-04", "Scholar"},
-	{"balaur-05", "Wild"},
-	{"balaur-06", "Storm"},
-	{"balaur-07", "Night"},
-	{"balaur-08", "Young"},
-	{"balaur-09", "Ember"},
-	{"balaur-10", "Frost"},
-	{"balaur-11", "Healer"},
-	{"balaur-12", "Trickster"},
-	{"balaur-13", "Dreamer"},
-	{"balaur-14", "Forest"},
-	{"balaur-15", "Dawn"},
-	{"balaur-16", "Sage"},
 }
 
 // buildBalaurHeadOptions returns the roster with the owner's current
@@ -464,14 +423,16 @@ func buildBalaurHeadOptions(app core.App) []AvatarOption {
 
 // buildBalaurHeadOptionsFor returns the roster with an explicit active key —
 // used by the /heads page where each head carries its own preference.
+// The roster is the single source from store.BalaurHeads.
 func buildBalaurHeadOptionsFor(activePref string) []AvatarOption {
-	opts := make([]AvatarOption, len(balaurHeadRoster))
-	for i, r := range balaurHeadRoster {
+	roster := store.BalaurHeads()
+	opts := make([]AvatarOption, len(roster))
+	for i, r := range roster {
 		opts[i] = AvatarOption{
-			Key:    r.key,
-			Label:  r.label,
-			URL:    "/static/avatars/" + r.key + ".png",
-			Active: r.key == activePref,
+			Key:    r.Key,
+			Label:  r.Label,
+			URL:    r.URL,
+			Active: r.Key == activePref,
 		}
 	}
 	return opts

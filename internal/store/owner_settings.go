@@ -2,6 +2,15 @@ package store
 
 import "github.com/pocketbase/pocketbase/core"
 
+// AvatarEntry is one selectable avatar: key (stored in owner_settings /
+// head records), human label, and served URL. The exported rosters are the
+// single source of truth — web option builders iterate these.
+type AvatarEntry struct {
+	Key   string
+	Label string
+	URL   string
+}
+
 // GetOwnerSetting returns the value of a key from the owner_settings
 // collection. Returns defaultVal if the key is not found or any error occurs.
 func GetOwnerSetting(app core.App, key, defaultVal string) string {
@@ -62,6 +71,30 @@ func ValidSoulAvatarKey(key string) bool {
 	return ok
 }
 
+// SoulAvatars returns the roster of 16 soul avatars, the single source of truth.
+func SoulAvatars() []AvatarEntry {
+	return []AvatarEntry{
+		// Basm world — human characters
+		{"soul-01", "Him", "/static/avatars/soul-01.png"},
+		{"soul-02", "Her", "/static/avatars/soul-02.png"},
+		{"soul-03", "Elder", "/static/avatars/soul-03.png"},
+		{"soul-04", "Youth", "/static/avatars/soul-04.png"},
+		{"soul-05", "Maker", "/static/avatars/soul-05.png"},
+		{"soul-06", "Cyclops", "/static/avatars/soul-06.png"},
+		{"soul-07", "Gnome", "/static/avatars/soul-07.png"},
+		{"soul-08", "Ogre", "/static/avatars/soul-08.png"},
+		// Romanian mythological creatures
+		{"soul-09", "Strigoi", "/static/avatars/soul-09.png"},
+		{"soul-10", "Zmeu", "/static/avatars/soul-10.png"},
+		{"soul-11", "Iele", "/static/avatars/soul-11.png"},
+		{"soul-12", "Muma", "/static/avatars/soul-12.png"},
+		{"soul-13", "Căpcăun", "/static/avatars/soul-13.png"},
+		{"soul-14", "Solomonar", "/static/avatars/soul-14.png"},
+		{"soul-15", "Vâlvă", "/static/avatars/soul-15.png"},
+		{"soul-16", "Pricolici", "/static/avatars/soul-16.png"},
+	}
+}
+
 // SoulAvatarURL resolves the owner's soul avatar preference to a static URL.
 func SoulAvatarURL(app core.App) string {
 	key := GetOwnerSetting(app, "soul_avatar", "soul-01")
@@ -90,6 +123,28 @@ var balaurAvatarMap = map[string]string{
 	"balaur-14": "/static/avatars/balaur-14.png", // Forest
 	"balaur-15": "/static/avatars/balaur-15.png", // Dawn
 	"balaur-16": "/static/avatars/balaur-16.png", // Sage
+}
+
+// BalaurHeads returns the roster of 16 Balaur personalities, the single source of truth.
+func BalaurHeads() []AvatarEntry {
+	return []AvatarEntry{
+		{"balaur-01", "Wise", "/static/avatars/balaur-01.png"},
+		{"balaur-02", "Ancient", "/static/avatars/balaur-02.png"},
+		{"balaur-03", "Guardian", "/static/avatars/balaur-03.png"},
+		{"balaur-04", "Scholar", "/static/avatars/balaur-04.png"},
+		{"balaur-05", "Wild", "/static/avatars/balaur-05.png"},
+		{"balaur-06", "Storm", "/static/avatars/balaur-06.png"},
+		{"balaur-07", "Night", "/static/avatars/balaur-07.png"},
+		{"balaur-08", "Young", "/static/avatars/balaur-08.png"},
+		{"balaur-09", "Ember", "/static/avatars/balaur-09.png"},
+		{"balaur-10", "Frost", "/static/avatars/balaur-10.png"},
+		{"balaur-11", "Healer", "/static/avatars/balaur-11.png"},
+		{"balaur-12", "Trickster", "/static/avatars/balaur-12.png"},
+		{"balaur-13", "Dreamer", "/static/avatars/balaur-13.png"},
+		{"balaur-14", "Forest", "/static/avatars/balaur-14.png"},
+		{"balaur-15", "Dawn", "/static/avatars/balaur-15.png"},
+		{"balaur-16", "Sage", "/static/avatars/balaur-16.png"},
+	}
 }
 
 // ValidBalaurAvatarKey reports whether key is a recognised Balaur head.

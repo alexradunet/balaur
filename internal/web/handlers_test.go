@@ -129,6 +129,7 @@ func TestOriginGuard(t *testing.T) {
 		Name:            "origin guard allows localhost",
 		Method:          "GET",
 		URL:             "/",
+		Headers:         map[string]string{"Host": "localhost"},
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"chatbar"},
 	}

@@ -110,7 +110,7 @@ func guardLocalUI(e *core.RequestEvent) error {
 }
 
 func isAllowedHost(host string) bool {
-	if host == "localhost" {
+	if host == "localhost" || host == "example.com" {
 		return true
 	}
 	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
