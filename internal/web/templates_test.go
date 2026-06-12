@@ -345,3 +345,85 @@ func TestSparkPointsScaling(t *testing.T) {
 		t.Errorf("single point should not draw a line: %q", p)
 	}
 }
+
+// TestChatbarOOBDraftOnReady verifies that the chatbar poll response carries
+// an OOB swap of chat_draft when the model is ready, and nothing about the
+// draft when the model is not ready.
+func TestChatbarOOBDraftOnReady(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	// Model ready: chatbar + OOB draft both present.
+	ready := homeData{
+		ChatReady:       true,
+		ActiveModel:     "TestModel",
+		ChatPlaceholder: "Speak…",
+		SoulAvatarURL:   "/static/avatars/soul.png",
+		OwnerName:       "Alex",
+	}
+
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "chat_bar", ready); err != nil {
+		t.Fatalf("chat_bar ready: %v", err)
+	}
+	// Simulate what chatbar handler does: also render chat_draft with DraftOOB=true.
+	ready.DraftOOB = true
+	if err := tmpl.ExecuteTemplate(&b, "chat_draft", ready); err != nil {
+		t.Fatalf("chat_draft OOB: %v", err)
+	}
+	out := b.String()
+
+	if !strings.Contains(out, `id="chat-draft"`) {
+		t.Error("ready response must contain id=\"chat-draft\"")
+	}
+	if !strings.Contains(out, `hx-swap-oob="outerHTML"`) {
+		t.Error("ready response must contain hx-swap-oob=\"outerHTML\" on the draft")
+	}
+	if strings.Contains(out, "disabled") {
+		t.Error("ready response must not contain disabled attributes")
+	}
+
+	// Model not ready: only chatbar, no draft element at all.
+	notReady := homeData{
+		ChatReady:     false,
+		SoulAvatarURL: "/static/avatars/soul.png",
+		OwnerName:     "Alex",
+	}
+	b.Reset()
+	if err := tmpl.ExecuteTemplate(&b, "chat_bar", notReady); err != nil {
+		t.Fatalf("chat_bar not ready: %v", err)
+	}
+	barOnly := b.String()
+	if strings.Contains(barOnly, "chat-draft") {
+		t.Error("not-ready chatbar response must not contain chat-draft")
+	}
+}
+
+// TestHeadChatDraftIdDecollided verifies that head-chat.html uses
+// id="head-chat-draft" and not id="chat-draft", so that an OOB swap
+// targeting #chat-draft from /ui/chatbar cannot clobber the head page's form.
+func TestHeadChatDraftIdDecollided(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	data := headChatData{
+		Title:           "TestHead · Balaur",
+		HeadID:          "abc123",
+		HeadName:        "TestHead",
+		SoulAvatarURL:   "/static/avatars/soul.png",
+		BalaurAvatarURL: "/static/avatars/balaur-01.png",
+		OwnerName:       "Alex",
+		ChatReady:       true,
+	}
+
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "head-chat.html", data); err != nil {
+		t.Fatalf("head-chat.html: %v", err)
+	}
+	out := b.String()
+
+	if strings.Contains(out, `id="chat-draft"`) {
+		t.Error("head-chat.html must not use id=\"chat-draft\" (collision hazard with home OOB swap)")
+	}
+	if !strings.Contains(out, `id="head-chat-draft"`) {
+		t.Error("head-chat.html must use id=\"head-chat-draft\"")
+	}
+}

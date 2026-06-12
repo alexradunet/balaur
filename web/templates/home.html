@@ -164,7 +164,8 @@
 {{end}}
 
 {{define "chat_draft"}}
-<div class="msg msg-user msg-draft" id="chat-draft">
+<div class="msg msg-user msg-draft" id="chat-draft"
+     {{if .DraftOOB}}hx-swap-oob="outerHTML"{{end}}>
   <figure class="portrait">
     <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
       <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
