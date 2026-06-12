@@ -124,7 +124,9 @@ avatar picker in the profile page (stored in `owner_settings`) · a
 `<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
 profile page (`/profile`) with display name, soul avatar picker (16 options),
 and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
-`localStorage`.
+`localStorage` · sub-head branch conversations with a focused,
+tool-free chat channel per active head (/heads/{id}/chat), per-head
+Balaur avatars.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·

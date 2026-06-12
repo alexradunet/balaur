@@ -36,7 +36,9 @@ database you own and can open with any SQLite tool.
 - **Heads:** sub-agents are auth records with short-lived tokens; their
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
-  access fails.
+  access fails. Each active head also has a persistent, focused,
+  tool-free chat channel at `/heads/{id}/chat`, kept as a branch
+  conversation separate from the master.
 - **Memory & skills with consent:** the model proposes (`remember`,
   `propose_skill`); proposals render as cards — in chat and on `/memory`
   and `/skills` — that the owner approves, edits, or dismisses. Nothing
@@ -384,8 +386,8 @@ boundary) and `DESIGN.md` for the Basm design system.
 - Johnny Decimal Markdown vault mirror: one-way export + git history
 - FTS5/embedding recall (today: importance-gated upfront + LIKE-matched
   recall; the `internal/search` spike holds the FTS5 driver decision)
-- Branch sub-conversations with merge-back (the schema is ready; the
-  master conversation ships first)
+- Sub-head merge-back and scoped head tools (branch chat shipped;
+  merge and grant-scoped tools are the next slices)
 - Encrypted export
 - Multi-human accounts (the schema allows it; v1 serves one owner)
 
