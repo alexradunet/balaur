@@ -14,7 +14,7 @@ import (
 // period; a habit whose last completion is more than one period old has
 // lapsed and reads 0.
 
-// periodDays is the rule's expected gap between completions.
+// periodDays is the fixed-length period for non-monthly rules.
 func periodDays(r Rule) int {
 	switch r.Kind {
 	case "daily":
@@ -23,10 +23,20 @@ func periodDays(r Rule) int {
 		return r.N
 	case "weekly":
 		return 7
-	case "monthly":
-		return 31
 	}
 	return 0
+}
+
+// allowedGapDays is the rule's maximum calendar-day gap from an anchor
+// completion to the next one before the streak breaks: the distance to the
+// rule's next occurrence after the anchor. Fixed-length kinds keep their
+// constants; monthly is calendar-aware (Feb≠July, clamped day-of-month).
+func allowedGapDays(r Rule, anchor time.Time) int {
+	if r.Kind == "monthly" {
+		next := monthlyOn(anchor.AddDate(0, 1, 0), r.MonthDay)
+		return daysBetween(anchor, next)
+	}
+	return periodDays(r)
 }
 
 // noonOf anchors a date at local noon — date arithmetic DST cannot wobble
@@ -62,16 +72,16 @@ func CompletionDays(app core.App, taskID string, loc *time.Location) ([]time.Tim
 // completions whose gaps fit the rule's period. 0 when there is no rule,
 // no completions, or the habit has lapsed relative to today.
 func Streak(r Rule, days []time.Time, today time.Time) int {
-	period := periodDays(r)
-	if period == 0 || len(days) == 0 {
+	if (periodDays(r) == 0 && r.Kind != "monthly") || len(days) == 0 {
 		return 0
 	}
-	if daysBetween(days[len(days)-1], today) > period {
+	lastDay := days[len(days)-1]
+	if daysBetween(lastDay, today) > allowedGapDays(r, lastDay) {
 		return 0
 	}
 	streak := 1
 	for i := len(days) - 2; i >= 0; i-- {
-		if daysBetween(days[i], days[i+1]) > period {
+		if daysBetween(days[i], days[i+1]) > allowedGapDays(r, days[i]) {
 			break
 		}
 		streak++

@@ -55,6 +55,17 @@ func TestStreakEdges(t *testing.T) {
 	}
 }
 
+func TestStreakMonthlyCalendarAware(t *testing.T) {
+	// Monthly streaks now use calendar-aware gaps instead of fixed 31 days
+	r, _ := Parse("monthly:15")
+	days := []time.Time{day(2026, 1, 15), day(2026, 2, 15)}
+
+	// Alive through next due (allowed gap: Jan 15 → Feb 15 = 31 days)
+	if got := Streak(r, days, day(2026, 2, 15)); got != 2 {
+		t.Errorf("monthly calendar-aware streak = %d, want 2", got)
+	}
+}
+
 func TestDaysBetweenAcrossDST(t *testing.T) {
 	loc := bucharest(t)
 	// Spring forward (Mar 29 2026): the 23-hour day still counts as 1.
