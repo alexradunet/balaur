@@ -31,7 +31,7 @@ database you own and can open with any SQLite tool.
 - **UI:** server-rendered Go templates + HTMX, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
-- **Models:** out of the box, a self-contained **Qwen3.5-27B llamafile**
+- **Models:** out of the box, a self-contained **Qwen3.6-27B llamafile**
   (engine + weights in one executable) that Balaur downloads on first serve and
   runs as a subprocess. Add any OpenAI-compatible endpoint — your own
   llama-server, Ollama, or a remote API — and select it explicitly. Advanced:
@@ -165,8 +165,8 @@ Just run it:
 go run . serve
 ```
 
-On first serve, Balaur downloads its default model — the **Qwen3.5-27B
-llamafile** (~19 GB, a single self-contained executable) — into
+On first serve, Balaur downloads its default model — the **Qwen3.6-27B
+llamafile** (~18 GB, a single self-contained executable) — into
 `pb_data/models/` and activates it once the download finishes. Progress shows
 on the `/models` page. Disable the auto-download with `BALAUR_AUTO_MODEL=0`.
 
@@ -202,7 +202,7 @@ Optional environment variables:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `BALAUR_CHAT_MODEL` | (unset) | Path to a local model file (`.llamafile` or `.gguf`); overrides the default and the /models page choice |
-| `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-download of the default Qwen3.5-27B llamafile |
+| `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-download of the default Qwen3.6-27B llamafile |
 | `BALAUR_LLAMAFILE` | (unset) | Path to the llamafile engine binary used to serve a bare `.gguf`; defaults to `pb_data/bin/llamafile`. Not needed for a fat `.llamafile`. |
 | `BALAUR_EMBED_MODEL` | (unset) | Path to a local embedding model GGUF (reserved for embedding recall; not yet wired — recall is LIKE-based today) |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |

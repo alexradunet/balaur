@@ -13,9 +13,9 @@ import (
 // and reaches it over the OpenAI-compatible API. The file is external data,
 // downloaded on first serve — never embedded in the binary.
 const (
-	DefaultChatModelName = "Qwen3.5 27B"
-	DefaultChatModelFile = "Qwen3.5-27B-Q5_K_S.llamafile"
-	DefaultChatModelURL  = "https://huggingface.co/mozilla-ai/llamafile_0.10/resolve/main/Qwen3.5-27B-Q5_K_S.llamafile"
+	DefaultChatModelName = "Qwen3.6 27B"
+	DefaultChatModelFile = "Qwen3.6-27B-Q4_K_M.llamafile"
+	DefaultChatModelURL  = "https://huggingface.co/mozilla-ai/llamafile_0.10/resolve/main/Qwen3.6-27B-Q4_K_M.llamafile"
 
 	SyntheticBaseURL    = "https://api.synthetic.new/v1"
 	SyntheticSmallModel = "syn:small:text"

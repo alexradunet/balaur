@@ -101,7 +101,7 @@ Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. A local model (provider kind
 "local") is seeded first and downloaded on first serve: the default
-Qwen3.5-27B llamafile under pb_data/models, a self-contained executable run
+Qwen3.6-27B llamafile under pb_data/models, a self-contained executable run
 as a subprocess. OpenAI-compatible APIs can be
 added with base URL, model id, and optional API key. API keys are redacted
 from UI/list views but live in the local PocketBase data directory and its
