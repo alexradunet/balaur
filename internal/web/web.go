@@ -4,12 +4,14 @@
 package web
 
 import (
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -18,6 +20,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
+	"github.com/alexradunet/balaur/internal/gguf"
 	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
@@ -75,6 +78,21 @@ var funcs = template.FuncMap{
 	},
 	// toolIcon returns a single glyph for a tool name, used in chat-messages.html.
 	"toolIcon": toolGlyph,
+	// base returns the last element of a path (filepath.Base), used in templates.
+	"base": filepath.Base,
+	// fmtBytes formats a byte count as a human-readable string (KB/MB/GB).
+	"fmtBytes": func(n int64) string {
+		switch {
+		case n >= 1<<30:
+			return fmt.Sprintf("%.1f GB", float64(n)/float64(1<<30))
+		case n >= 1<<20:
+			return fmt.Sprintf("%.1f MB", float64(n)/float64(1<<20))
+		case n >= 1<<10:
+			return fmt.Sprintf("%.1f KB", float64(n)/float64(1<<10))
+		default:
+			return fmt.Sprintf("%d B", n)
+		}
+	},
 }
 
 // guardLocalUI rejects browser-driven cross-site requests to Balaur's own
@@ -164,6 +182,10 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/model/openai", h.saveOpenAIModel)
 	se.Router.GET("/ui/model/missing", h.missingModelModal)
 	se.Router.POST("/ui/model/download", h.downloadModel)
+	se.Router.GET("/ui/model/gguf/progress", h.ggufProgress)
+	se.Router.POST("/ui/model/gguf/download", h.ggufDownload)
+	se.Router.POST("/ui/model/gguf/cancel", h.ggufCancel)
+	se.Router.POST("/ui/model/gguf/delete", h.ggufDelete)
 	se.Router.GET("/memory", h.memoryPage)
 	se.Router.GET("/skills", h.skillsPage)
 	se.Router.GET("/tasks", h.tasksPage)
@@ -204,6 +226,7 @@ type handlers struct {
 	app     core.App
 	tmpl    *template.Template
 	clients turn.ClientSource
+	gguf    gguf.Manager
 }
 
 func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
