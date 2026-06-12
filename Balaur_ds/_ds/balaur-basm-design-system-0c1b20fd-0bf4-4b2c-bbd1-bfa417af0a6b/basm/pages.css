@@ -1,0 +1,712 @@
+/* Basm page patterns — Hearthwood canon.
+   Knowledge cards, recap, tasks, life, day, profile on wood + parchment. */
+
+/* ── Knowledge pages ─────────────────────────────────────────────── */
+
+/* Page heading icon — bare pixel art beside the title; never boxed. */
+.h-icon {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+
+.k-section { padding: 26px 0; }
+.k-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  color: var(--fg-strong);
+}
+.k-heading::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, var(--hair) 50%, transparent 50%) 0 0 / 8px 2px repeat-x;
+}
+.k-heading-proposed { color: var(--gold); }
+.k-heading-proposed::after {
+  background-image: linear-gradient(to right, var(--gold-deep) 50%, transparent 50%);
+  opacity: .6;
+}
+.k-heading-muted { color: var(--muted); }
+.k-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chrome-fg);
+  background: var(--chrome);
+  border: 1px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 1px 7px;
+}
+.k-sub   { color: var(--muted); margin-top: -4px; font-size: 14.5px; }
+.k-empty { color: var(--muted); font-size: 15px; }
+.k-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+}
+.k-grid-muted { opacity: .72; }
+.k-inline { margin: 10px 0; max-width: 480px; }
+/* In chat, an embedded record rides the message column: same left edge
+   and full width as the speech panels — same UI, same space. */
+.chat .k-inline { margin: 0 0 0 var(--chat-gutter, 124px); max-width: none; }
+.chat .k-inline .kcard { padding: 15px 18px; }
+
+.k-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+.k-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+  font: 14.5px/1.4 var(--font-body);
+  color: var(--ink);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 3px 0 rgba(64,44,18,.18);
+  padding: 9px 12px;
+}
+.k-search::placeholder { color: var(--ink-muted); }
+.k-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.k-tab {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--chrome-fg);
+  text-decoration: none;
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.k-tab:hover { color: var(--gold); }
+.k-tab-active {
+  color: #1c0d04;
+  background: var(--gold);
+  border-color: var(--outline-2);
+  box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
+}
+.k-tab input { display: none; }
+
+/* ── Knowledge cards (kcard) — parchment ─────────────────────────── */
+
+.kcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 15px 17px;
+}
+.kcard::after {
+  content: "";
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  background: var(--gold-ink);
+}
+
+/* Proposed — the decision moment: gold border + ornate corner brackets. */
+.kcard-proposed { border-color: var(--gold-deep); }
+.kcard-proposed::after { background: var(--ember-deep); }
+.kcard-proposed::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep));
+  background-repeat: no-repeat;
+  background-size: 12px 3px, 3px 12px, 12px 3px, 3px 12px,
+                   12px 3px, 3px 12px, 12px 3px, 3px 12px;
+  background-position:
+    left 5px top 5px,    left 5px top 5px,
+    right 5px top 5px,   right 5px top 5px,
+    left 5px bottom 5px, left 5px bottom 5px,
+    right 5px bottom 5px, right 5px bottom 5px;
+}
+.kcard-archived { border-style: dashed; box-shadow: none; }
+
+.kcard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.kcard-kind {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--teal-ink);
+}
+.kcard-on {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--good-ink);
+}
+.kcard-pips { display: inline-flex; gap: 3px; }
+.pip {
+  width: 7px; height: 7px;
+  background: rgba(64, 44, 18, .14);
+  border: 1px solid var(--parch-edge);
+  display: inline-block;
+}
+.pip-on { background: var(--gold-ink); border-color: var(--gold-ink); }
+
+.kcard-title { font-size: 19px; margin: 0; color: var(--ink); font-family: var(--font-display); }
+.kcard-body  { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
+.kcard-when  { margin: 0; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); }
+.kcard-meta  { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); align-self: center; }
+.kcard-pre   { font-size: 12.5px; max-height: 220px; overflow-y: auto; white-space: pre-wrap;
+               background: var(--chrome-2); color: var(--chrome-fg); }
+
+.kcard-edit summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-muted);
+}
+.kcard-edit summary:hover { color: var(--ink); }
+.kcard-edit form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.kcard-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-muted);
+}
+.kcard-edit input,
+.kcard-edit textarea,
+.kcard-edit select {
+  font: 14px/1.4 var(--font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 rgba(64,44,18,.15);
+  padding: 7px 9px;
+}
+
+.kcard-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 4px;
+  border-top: 2px dotted var(--parch-edge);
+  padding-top: 12px;
+}
+.card-note {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  border: 1px solid var(--parch-edge);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.card-note-error { color: var(--ember-red); border-color: var(--ember-red); }
+
+/* ── Recap telescope — carved into the wood above the chat ───────── */
+
+.recap-zone { padding: 18px 0 6px; }
+.recap-hint {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--smoke);
+  text-align: center;
+}
+.recap-band { padding: 14px 0; }
+.recap-heading {
+  font-size: 15px;
+  font-family: var(--font-pixel);   /* intentional — section rune heading */
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.recap-rune { color: var(--teal); }
+.recap-card {
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  color: var(--chrome-fg);
+  border: 2px solid var(--outline-2);
+  border-left: 3px solid var(--teal-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--bevel-in);
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+.recap-card.recap-open { border-left-color: var(--gold); }
+.recap-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.recap-label {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--gold);
+}
+.recap-expand {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--chrome-fg);
+  background: none;
+  border: 1px solid var(--chrome-fg);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.recap-expand:hover { color: var(--gold); border-color: var(--gold-deep); }
+.recap-body    { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--chrome-fg); }
+.recap-children { margin-left: 14px; }
+.recap-children .msg { margin: 8px 0; font-size: 14px; }
+.recap-daylink {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-right: 8px;
+}
+
+/* ── Tasks ───────────────────────────────────────────────────────── */
+
+.t-views { margin-bottom: 18px; }
+
+/* Capture confirmation — Balaur's voice on a parchment strip when a task
+   is kept through the page composer (mirrors the chat task_add). */
+.capture-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 6px;
+  padding: 10px 14px;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--gold-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  font-size: 15px;
+  animation: capture-rise var(--duration-fast) var(--ease-crisp);
+}
+.capture-note b { color: var(--gold-ink); font-weight: 700; }
+.capture-note-icon {
+  width: 22px; height: 22px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+@keyframes capture-rise {
+  from { transform: translateY(4px); opacity: 0; }
+  to   { transform: translateY(0);  opacity: 1; }
+}
+
+/* A newly captured card flares gold, then settles. */
+.task-fresh { animation: task-flare 1.6s var(--ease-crisp); }
+@keyframes task-flare {
+  0%   { filter: brightness(1.18); }
+  100% { filter: brightness(1); }
+}
+
+.tcard-due     { margin: 2px 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.tcard-overdue { color: var(--ember-deep); font-weight: 700; }
+.tcard-done .kcard-title,
+.tcard-dropped .kcard-title { color: var(--ink-muted); text-decoration: line-through; }
+.tcard-dropped { border-style: dashed; opacity: .8; box-shadow: none; }
+.tcard-snooze  { display: inline-flex; gap: 6px; align-items: center; }
+.tcard-snooze select {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+/* Calendar — parchment day cells on wood */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cal-label { margin: 0; }
+.cal-table { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }
+.cal-table th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4px 6px;
+  text-align: left;
+  font-weight: normal;
+}
+.cal-cell {
+  position: relative;
+  height: 86px;
+  padding: 6px;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  overflow: hidden;
+  vertical-align: top;
+}
+.cal-cell.cal-out { opacity: .45; }
+.cal-cell.cal-today { border-color: var(--gold-deep); box-shadow: inset 0 0 0 1px var(--gold-deep); }
+.cal-cell.cal-today::after {
+  content: "";
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 7px; height: 7px;
+  background: var(--gold-ink);
+}
+.cal-daynum {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  display: block;
+  margin-bottom: 4px;
+}
+.cal-item {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid var(--teal-ink);
+  padding-left: 5px;
+  margin: 2px 0;
+}
+.cal-recur { font-style: normal; color: var(--teal-ink); margin-right: 3px; }
+.cal-daylink { text-decoration: none; }
+.cal-daylink:hover .cal-daynum { color: var(--gold-ink); }
+
+/* Timeline */
+.tl .tl-day  { padding: 10px 0 4px; border-top: 2px dashed var(--hair); }
+.tl .tl-day:first-child { border-top: none; }
+.tl-today .tl-label { color: var(--gold); }
+.tl-label { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-strong); }
+.tl-items { list-style: none; margin: 0; padding: 0; }
+.tl-item  { padding: 3px 0; font-size: 15px; }
+.tl-time  { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: 8px; }
+.tl-quiet { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; color: var(--smoke); }
+
+/* ── Life page ───────────────────────────────────────────────────── */
+
+.habit-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.habit-tag   { font-size: 12px; padding: 5px 9px; }
+.life-stat   { margin: 4px 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--ink); }
+.life-unit   { font-family: var(--font-mono); font-size: 13px; color: var(--ink-muted); }
+.life-lastat { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+.life-change { margin: 4px 0 0; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.spark { display: block; margin-top: 2px; }
+.spark polyline { stroke: var(--teal-ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark circle   { fill: var(--gold-ink); }
+.life-lines { list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
+.life-lines li { padding: 3px 0; border-top: 1px dashed var(--parch-edge); }
+.life-lines li:first-child { border-top: none; }
+
+/* ── Day pages ───────────────────────────────────────────────────── */
+
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.day-title { margin: 0; }
+.day-nav-spacer { min-width: 72px; }
+.journal-list { margin-bottom: 12px; }
+.journal-entry {
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 10px 12px;
+  margin: 8px 0;
+  position: relative;
+}
+.journal-entry::after {
+  content: "";
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 6px; height: 6px;
+  background: var(--gold-ink);
+}
+.journal-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.journal-text { margin: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.6; }
+.journal-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.journal-form textarea {
+  width: 100%;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px dashed var(--parch-edge);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 10px 12px;
+}
+.journal-form textarea:focus {
+  border-style: solid;
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+/* ── Avatar picker — wood frames around dark portraits ───────────── */
+
+.avatar-choice-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  padding: 10px 4px 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.avatar-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  padding: 7px 6px 6px;
+  cursor: pointer;
+  transition: border-color .1s, filter .1s;
+}
+.avatar-choice img {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  object-fit: cover;
+}
+.avatar-choice span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--chrome-fg);
+}
+.avatar-choice:hover { border-color: var(--gold-deep); filter: brightness(1.12); }
+.avatar-choice-active {
+  border-color: var(--gold);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark),
+              0 0 0 1px var(--gold), var(--drop-hard);
+}
+.avatar-choice-active span { color: var(--gold); }
+
+/* ── Profile page ────────────────────────────────────────────────── */
+
+.profile-page {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 48px 5vw 120px;
+}
+.profile-page h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  margin: 0 0 6px;
+}
+.profile-lede {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+.profile-card {
+  position: relative;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 20px 22px;
+  margin-bottom: 22px;
+}
+.profile-card::after {
+  content: "";
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 7px; height: 7px;
+  background: var(--gold-ink);
+}
+.profile-card-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.profile-hint {
+  color: var(--ink-muted);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+.profile-name-form label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-name-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.profile-name-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 380px;
+  font: 16px/1.4 var(--font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 rgba(64,44,18,.15);
+  padding: 12px 14px;
+}
+.profile-saved {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--good-ink);
+  margin: 10px 0 0;
+}
+.profile-avatar-grid { max-height: none; overflow-y: visible; }
+.profile-avatar-btn img {
+  width: 72px;
+  height: 72px;
+}
+.profile-avatar-btn span { font-size: 10.5px; }
+
+/* ── Model switcher — wood chips on the chatbar ──────────────────── */
+
+.model-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  max-width: var(--maxw);
+  margin: 0 auto 10px;
+}
+.model-switcher-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 130px;
+}
+.model-switcher-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.model-current {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chrome-fg);
+}
+.model-choice-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.model-choice-form { margin: 0; }
+.model-choice {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 1px 8px;
+  min-width: 170px;
+  padding: 8px 10px;
+  color: var(--chrome-fg);
+  background-color: var(--chrome-2);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: var(--bevel-in);
+  cursor: pointer;
+  text-align: left;
+}
+.model-choice:hover { border-color: var(--gold-deep); }
+.model-choice-active {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  background-color: var(--chrome);
+  cursor: default;
+}
+.model-choice-disabled { border-style: dashed; cursor: help; }
+.model-choice-disabled .model-name,
+.model-choice-disabled .model-detail { color: var(--smoke); }
+.model-name {
+  grid-column: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.model-detail {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--smoke);
+}
+.model-choice .tag { grid-column: 2; grid-row: 1; align-self: start; }

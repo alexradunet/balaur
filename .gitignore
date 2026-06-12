@@ -19,3 +19,6 @@ tmp/
 # Local environment
 .env
 .env.*
+
+# Claude Code local state (settings.local.json, locks, worktrees)
+.claude/

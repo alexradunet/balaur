@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./ds-base.js"></script>
+<style>
+.screen-wrap .chatbar { display: none !important; }
+.with-sidebar { padding-right: calc(var(--sidebar-w, 336px) + 16px); }
+</style>
+</helmet>
+<div>
+  <sc-if value="{{ showTopbar }}" hint-placeholder-val="{{ true }}">
+    <x-import component-from-global-scope="BalaurBasmDesignSystem_0c1b20.Topbar" crest-src="{{ crestSrc }}" links="{{ navLinks }}" active="{{ page }}" on-navigate="{{ onNavigate }}" on-toggle-theme="{{ onToggleTheme }}" theme-glyph="{{ themeGlyph }}" hint-size="100%,60px"></x-import>
+  </sc-if>
+
+  <div class="{{ contentClass }}">
+  <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ true }}">
+    <main style="max-width:1320px;margin:0 auto;padding:8px 4vw 0">{{ boardView }}</main>
+  </sc-if>
+
+  <sc-if value="{{ isImmersive }}" hint-placeholder-val="{{ true }}">
+    <main>{{ chatView }}</main>
+  </sc-if>
+
+  <sc-if value="{{ isCandle }}" hint-placeholder-val="{{ true }}">
+    <main style="max-width:880px;margin:0 auto;padding:0 5vw 60px">{{ candleView }}</main>
+  </sc-if>
+  </div>
+
+  {{ sidebar }}
+  {{ dock }}
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  seedQuests() {
+    const campaigns = [
+      { id:'c1', title:'Restore the orchard', desc:'The old trees by the east wall can bear again. One season of patient work.', steps:[{t:'Clear the brambles',done:true},{t:'Prune the old wood',done:true},{t:'Graft the new scions',done:false},{t:'Mend the deer fence',done:false}], reward:'The first apples in seven years.' },
+      { id:'c2', title:'Learn the Solomonar chant', desc:'The weather-binding verses, copied from the manuscript you found in the loft.', steps:[{t:'Find the manuscript',done:true},{t:'Transcribe the verses',done:false},{t:'Memorize the first canto',done:false}], reward:'You will read the sky like a page.' },
+      { id:'c3', title:'Raise the new beehive', desc:'A second hive by the lindens, before the summer flow ends.', steps:[{t:'Build the hive boxes',done:true},{t:'Order the queen',done:false},{t:'Settle the swarm',done:false},{t:'First honey harvest',done:false}], reward:'Honey from your own hives.' },
+      { id:'c4', title:'Digitize the family archive', desc:'The shoebox of photographs, before the colors go.', steps:[{t:'Sort the shoebox',done:true},{t:'Scan the photographs',done:false},{t:'Label the names and years',done:false},{t:'Copy to the vault disk',done:false}], reward:'The family, kept against time.' },
+    ].map(q=>Object.assign(q,{ cat:'campaign', status:'active' }));
+
+    const dailies = [
+      ['Feed the hens','06:30',64,true],
+      ['Morning pages','07:00',12,false,'Three pages before the day takes you.','A clear head, kept clear.'],
+      ['Water the seedlings','',3,false],
+      ['Tend the fire','',8,false],
+      ['Read ten pages','',5,false,'Any book. Ten pages is a promise you can keep.','A library, one evening at a time.'],
+      ['Stretch the back','',1,false],
+      ['Walk at dusk','dusk',31,true,'A turn around the orchard before the dark settles.','The body remembers the road.'],
+    ].map((a,i)=>({ id:'d'+(i+1), cat:'daily', title:a[0], recur:a[1]||undefined, streak:a[2], unit:'days', doneToday:a[3], desc:a[4], reward:a[5], status:'active' }));
+
+    const weeklies = [
+      ['Plan the week','Mondays',2,false,'Name the three things that matter before Monday runs.','A week you chose, not one that chose you.'],
+      ['Market run','Saturdays',14,false],
+      ['Back up to the vault disk','Sundays',6,false,'Copy pb_data to the disk in the drawer.','Nothing lost, ever.'],
+      ['Call your mother','',9,true,'She will not call first. You know this.','Her week, made better.'],
+      ['Sweep the cellar','',4,false],
+      ['Write to Radu','',1,false],
+    ].map((a,i)=>({ id:'w'+(i+1), cat:'weekly', title:a[0], recur:a[1]||undefined, streak:a[2], unit:'weeks', doneToday:a[3], desc:a[4], reward:a[5], status:'active' }));
+
+    const oneoffs = [
+      ['Renew the passport','was due Tuesday',1,'The office on the square, before the queue grows.','The road stays open.'],
+      ['Return Mihai’s ladder','was due Sunday',1],
+      ['Buy seed potatoes','was due May 30',1],
+      ['Call the notary about the deed','today · 10:00',0,'Ask about the missing signature page.','The land, settled in your name.'],
+      ['Collect the parcel from the post','Jun 13',0],
+      ['Pay the electrician','Jun 13',0],
+      ['Take honey to Ana','Jun 14',0],
+      ['Book the dentist','Jun 16',0],
+      ['Take the car for inspection','Jun 17',0],
+      ['Order firewood for autumn','Jun 18',0],
+      ['Fix the gutter over the porch','Jun 19',0],
+      ['Pay the land tax','Jun 20',0,'At the town hall, or by the box online.','No letters in red ink.'],
+      ['Mend the gate latch','Jun 21',0],
+      ['Print the land survey','Jun 22',0],
+      ['Renew the house insurance','Jun 23',0],
+      ['Patch the shed roof','Jun 24',0],
+      ['Sharpen the chainsaw','Jun 25',0],
+      ['Clean the chimney','Jun 26',0],
+      ['Service the well pump','Jun 27',0],
+      ['Change the router password','Jun 28',0],
+      ['Frame the old map','Jun 29',0],
+      ['Update the will at the notary','Jun 30',0],
+    ].map((a,i)=>({ id:'o'+(i+1), cat:'oneoff', title:a[0], due:a[1], overdue:!!a[2], desc:a[3], reward:a[4], status:'active' }));
+
+    const somedays = [
+      ['Build a cold frame','Glass over the seedlings; spring comes early under it.','Greens in March.'],
+      ['Press apples for cider'],
+      ['Learn to whittle spoons'],
+      ['Plant a walnut by the road'],
+      ['Build a bird table'],
+      ['Brew a small mead'],
+      ['Map the family tree'],
+      ['Restore grandfather’s radio'],
+      ['Learn the accordion'],
+      ['Bind a journal by hand'],
+      ['Carve a new mailbox'],
+      ['Build a smoker behind the shed'],
+    ].map((a,i)=>({ id:'s'+(i+1), cat:'someday', title:a[0], desc:a[1], reward:a[2], status:'active' }));
+
+    return campaigns.concat(dailies, weeklies, oneoffs, somedays);
+  }
+
+  state = {
+    page: 'board', light: false,
+    soul: 'soul-01', head: 'balaur-01', ownerName: 'Alex',
+    query: '', filter: 'all',
+    folded: { someday: true },
+    expanded: {},
+    inspect: 'quest', selectedId: 'c1', selectedDay: 12,
+    note: null, flareId: null,
+    quests: this.seedQuests(),
+    messages: [
+      { id: 1, role: 'balaur', text: 'I am here. The hearth is lit and your words stay on this box. What shall we weigh today?' },
+      { id: 2, role: 'user', text: 'Remind me to water the tomatoes every two days, evenings.' },
+      { id: 3, role: 'balaur', text: 'Every second evening at 18:00, then. Shall I hold you to it?' },
+      { id: 4, role: 'choices', kind: 'confirmTask' },
+    ],
+    pending: false,
+    sidebarOpen: true,
+    sideW: 336,
+    soundOn: true,
+    lastPage: 'board',
+    memories: [
+      { id:'m1', status:'proposed', kind:'preference', title:'Prefers Markdown exports', body:'Asked twice for notes as .md files.', used:0 },
+      { id:'m2', status:'proposed', kind:'fact', title:'The deed is missing a signature page', body:'Heard at the notary, this morning.', used:0 },
+      { id:'m3', status:'kept', kind:'preference', title:'Garden — tomatoes & peppers, watered at dusk', body:'Part of your story since spring.', used:3 },
+      { id:'m4', status:'kept', kind:'person', title:'Ana — sister, lives by the coast', body:'Honey for her each month.', used:5 },
+      { id:'m5', status:'kept', kind:'ritual', title:'Morning pages before 08:00', body:'Three pages, any words.', used:12 },
+    ],
+    skills: [
+      { name:'calendar & nudges', icon:'bell', used:31 },
+      { name:'recall', icon:'tome', used:22 },
+      { name:'search the box', icon:'lens', used:14 },
+      { name:'measures', icon:'orb', used:9 },
+      { name:'journal scribe', icon:'quill', used:7 },
+    ],
+    heads: [
+      { id:'main', name:'The main head', avatar:'balaur-01', skills:['the one conversation'], status:'awake' },
+      { id:'steward', name:'The Steward', avatar:'balaur-03', skills:['quests','calendar','nudges'], status:'awake' },
+      { id:'scribe', name:'The Scribe', avatar:'balaur-04', skills:['journal','compaction'], status:'wakes at dusk' },
+      { id:'archivist', name:'The Archivist', avatar:'balaur-16', skills:['memory','recall'], status:'asleep' },
+    ],
+    model: 'hearth-7b',
+    journal: [
+      { id:1, day:'Thu Jun 11', time:'22:10', mode:'guided', text:'The notary found the missing page. I keep waiting for the orchard to fail, and it keeps not failing. Three rows grafted clean.' },
+    ],
+    jDraft: '', jMode: 'free', jPrompt: 0,
+    lifeLines: [ 'Jun 12 06:31 · weight 81.2kg', 'Jun 11 · mood steady, long walk' ],
+    openFold: false,
+    gridW: 0, palette: false, uid: 100, cardMenu: null,
+    activeBoard: 'study',
+    boards: [
+      { id:'study', name:'Study', cards:[ {cid:'k1',type:'character',x:0,y:0,w:4,h:22},{cid:'k2',type:'today',x:4,y:0,w:4,h:16},{cid:'k3',type:'campaigns',x:4,y:16,w:4,h:12},{cid:'k4',type:'road',x:0,y:22,w:4,h:11} ] },
+      { id:'log', name:'Quest log', cards:[ {cid:'k5',type:'quests',x:0,y:0,w:5,h:34},{cid:'k5b',type:'calendar',x:5,y:0,w:3,h:26} ] },
+      { id:'self', name:'Self', cards:[ {cid:'k6',type:'identity',x:0,y:0,w:4,h:14},{cid:'k7',type:'stats',x:0,y:14,w:4,h:16},{cid:'k8',type:'mood',x:0,y:30,w:4,h:11},{cid:'k9',type:'souls',x:4,y:0,w:4,h:11},{cid:'k10',type:'weight',x:4,y:11,w:4,h:11},{cid:'k11',type:'ledger',x:4,y:22,w:4,h:11} ] },
+      { id:'balaur', name:'Balaur', cards:[ {cid:'k12',type:'companion',x:0,y:0,w:4,h:26},{cid:'k13',type:'skills',x:0,y:26,w:4,h:13},{cid:'k14',type:'memory',x:4,y:0,w:4,h:22},{cid:'k15',type:'heads',x:4,y:22,w:4,h:18} ] },
+    ],
+  };
+
+  CARD_TYPES = {
+    character:{label:'Character',icon:'shield',w:4,h:22}, today:{label:'Today',icon:'scroll',w:4,h:16},
+    campaigns:{label:'Campaign',icon:'key',w:4,h:12}, road:{label:'Road ahead',icon:'hourglass',w:4,h:11},
+    quests:{label:'Quest log',icon:'scroll',w:8,h:34}, calendar:{label:'Calendar',icon:'hourglass',w:4,h:26}, timeline:{label:'Timeline',icon:'hourglass',w:8,h:28}, journal:{label:'Journal',icon:'quill',w:4,h:18},
+    identity:{label:'Identity',icon:'shield',w:4,h:14}, souls:{label:'Soul portrait',icon:'shield',w:4,h:11}, stats:{label:'Measures',icon:'orb',w:4,h:16},
+    weight:{label:'Weight',icon:'orb',w:4,h:11}, mood:{label:'Mood',icon:'orb',w:4,h:11}, ledger:{label:'Recent lines',icon:'orb',w:4,h:11},
+    companion:{label:'Companion',icon:'tome',w:4,h:26}, skills:{label:'Skills',icon:'key',w:4,h:13}, memory:{label:'Memory',icon:'tome',w:4,h:22}, heads:{label:'Heads',icon:'tome',w:4,h:18},
+  };
+
+  JPROMPTS = [
+    'What did today ask of you, and what did you answer?',
+    'Name one thing the orchard taught you this week.',
+    'What waits unspoken on the book?',
+    'Where did your word hold; where did it bend?',
+  ];
+
+  CATS = [
+    { key:'campaign', label:'Campaign', icon:'key', sub:'the main story' },
+    { key:'daily', label:'Dailies', icon:'flame', sub:'reset each dawn' },
+    { key:'weekly', label:'Weeklies', icon:'hourglass', sub:'reset on Monday' },
+    { key:'oneoff', label:'Quests', icon:'scroll', sub:'one-off' },
+    { key:'someday', label:'Side quests', icon:'gem', sub:'no date' },
+  ];
+
+  CHOICES = {
+    confirmTask: [
+      { label: 'Hold me to it.', hint: 'add recurring task', kind: 'hold' },
+      { label: 'Just this once.', hint: 'add one-time task', kind: 'once' },
+      { label: 'Let it be.', hint: 'cancel', kind: 'cancel' },
+    ],
+    memory: [
+      { label: 'Keep it.', hint: 'approve memory', kind: 'approve' },
+      { label: 'Not this.', hint: 'dismiss', kind: 'dismiss' },
+      { label: 'Ask me another time.', hint: 'later', kind: 'later' },
+    ],
+    nudge: [
+      { label: 'It is done.', hint: 'mark done', kind: 'done' },
+      { label: 'At nightfall.', hint: 'snooze · 21:00', kind: 'tonight' },
+      { label: 'Tomorrow, I swear it.', hint: 'snooze · tomorrow', kind: 'tomorrow' },
+      { label: 'Let this one go.', hint: 'drop task', kind: 'drop' },
+    ],
+  };
+
+  ns = () => window.BalaurBasmDesignSystem_0c1b20;
+
+  componentDidMount() {
+    this.applyTheme();
+    this._timers = [];
+    document.addEventListener('keydown', this.onKey);
+    document.addEventListener('mousedown', this.onDocDown);
+    window.addEventListener('resize', this.measureGrid);
+    document.documentElement.style.setProperty('--sidebar-w', this.state.sideW+'px');
+    try {
+      const raw = JSON.parse(localStorage.getItem('balaur-boards'));
+      const act = localStorage.getItem('balaur-active');
+      if (Array.isArray(raw) && raw.length) {
+        // one-time migration: the calendar moved out of the quest log into its own card
+        if (!localStorage.getItem('balaur-cal-mig')) {
+          const hasCal = raw.some(b=>b.cards && b.cards.some(c=>c.type==='calendar'));
+          if (!hasCal) { const tgt = raw.find(b=>b.id==='log') || raw.find(b=>b.cards.some(c=>c.type==='quests')) || raw[0]; tgt.cards = this.gPack(tgt.cards.concat([{ cid:this.uid(), type:'calendar', x:5, y:0, w:3, h:26 }]), null); }
+          try { localStorage.setItem('balaur-cal-mig','1'); } catch(e) {}
+        }
+        // one-time: give the quest-log card full width so its detail has room
+        if (!localStorage.getItem('balaur-ql-wide')) {
+          raw.forEach(b=>{ if(b.cards){ b.cards.forEach(c=>{ if(c.type==='quests' && c.w<8){ c.x=0; c.w=8; } }); b.cards = this.gPack(b.cards, null); } });
+          try { localStorage.setItem('balaur-ql-wide','1'); } catch(e) {}
+        }
+        this.setState({ boards: raw, activeBoard: (act && raw.some(b=>b.id===act)) ? act : raw[0].id }, this.saveBoards);
+      }
+    } catch(e) {}
+    if (!this.ns()) {
+      this._poll = setInterval(()=>{ if (this.ns()) { clearInterval(this._poll); this.forceUpdate(); } }, 120);
+    }
+  }
+  componentWillUnmount() { (this._timers||[]).forEach(clearTimeout); clearInterval(this._poll); document.removeEventListener('keydown', this.onKey); document.removeEventListener('mousedown', this.onDocDown); window.removeEventListener('resize', this.measureGrid); this.stopAmbient(); }
+  onDocDown = (e) => { if (this.state.cardMenu && !(e.target.closest && e.target.closest('[data-cardmenu]'))) this.setState({ cardMenu:null }); };
+  componentDidUpdate(prevProps, prevState) {
+    document.documentElement.style.setProperty('--sidebar-w', this.state.sideW+'px');
+    this.measureGrid();
+    if (!prevState || prevState.messages === this.state.messages) return;
+    if (this.state.page==='immersive') window.scrollTo(0, document.body.scrollHeight);
+    if (this._sideEl) this._sideEl.scrollTop = this._sideEl.scrollHeight;
+  }
+  startDrag = (e) => {
+    e.preventDefault();
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', this.onDrag);
+    document.addEventListener('mouseup', this.endDrag);
+  };
+  onDrag = (e) => {
+    const w = Math.min(Math.max(window.innerWidth - e.clientX, 280), Math.min(960, window.innerWidth - 320));
+    this.setState({ sideW: w });
+  };
+  endDrag = () => {
+    document.body.style.userSelect = '';
+    document.removeEventListener('mousemove', this.onDrag);
+    document.removeEventListener('mouseup', this.endDrag);
+  };
+  applyTheme() {
+    const r = document.documentElement;
+    r.classList.toggle('light', this.state.light);
+    r.classList.toggle('dark', !this.state.light);
+  }
+
+  ic = (name, size, extra) => React.createElement('img', { src:'assets/icons/'+name+'.png', alt:'', style: Object.assign({ width:size, height:size, imageRendering:'pixelated', flexShrink:0 }, extra||{}) });
+
+  setNote = (text) => { this.setState({ note:text }); clearTimeout(this._nt); this._nt = setTimeout(()=>this.setState({ note:null }), 3200); };
+  flare = (id) => { this.setState({ flareId:id }); clearTimeout(this._ft); this._ft = setTimeout(()=>this.setState({ flareId:null }), 1600); };
+  selectQuest = (id) => this.setState({ selectedId:id });
+  selectDay = (d) => this.setState({ selectedDay:d });
+  toggleFold = (cat) => this.setState(s=>({ folded:Object.assign({},s.folded,{ [cat]:!s.folded[cat] }) }));
+  toggleExpand = (cat) => this.setState(s=>({ expanded:Object.assign({},s.expanded,{ [cat]:!s.expanded[cat] }) }));
+
+  toggleDone = (q) => {
+    const becoming = !q.doneToday;
+    this.setState(s=>({ quests:s.quests.map(x=>x.id===q.id?Object.assign({},x,{ doneToday:becoming, streak: becoming ? x.streak+1 : Math.max(0,x.streak-1) }):x) }));
+    if (becoming) { this.setNote('Kept. “'+q.title+'”'+(q.reward?' — '+q.reward:'')); this.flare(q.id); }
+  };
+  complete = (q) => {
+    this.setState(s=>({ quests:s.quests.map(x=>x.id===q.id?Object.assign({},x,{ status:'done' }):x) }));
+    this.setNote('Done. “'+q.title+'”'+(q.reward?' — '+q.reward:'')); this.flare(q.id);
+  };
+  abandon = (q) => {
+    this.setState(s=>({ quests:s.quests.map(x=>x.id===q.id?Object.assign({},x,{ status:'dropped' }):x) }));
+    this.setNote('Let it go. “'+q.title+'” leaves the log.');
+  };
+  snooze = (q) => this.setNote('Set aside. I shall raise “'+q.title+'” again tomorrow.');
+  toggleStep = (q, i) => this.setState(s=>({ quests:s.quests.map(x=>{ if(x.id!==q.id) return x; return Object.assign({},x,{ steps:x.steps.map((st,j)=>j===i?Object.assign({},st,{done:!st.done}):st) }); }) }));
+  advance = (q) => {
+    const i = q.steps.findIndex(st=>!st.done);
+    if (i < 0) return;
+    const cleared = q.steps.filter(st=>st.done).length + 1;
+    if (cleared >= q.steps.length) {
+      this.setState(s=>({ quests:s.quests.map(x=>x.id===q.id?Object.assign({},x,{ status:'done', steps:x.steps.map(st=>Object.assign({},st,{done:true})) }):x) }));
+      this.setNote('The quest is complete. “'+q.title+'”'+(q.reward?' — '+q.reward:'')); this.flare(q.id);
+    } else {
+      this.toggleStep(q, i);
+      this.setNote('A step done. '+cleared+' of '+q.steps.length+' cleared on “'+q.title+'”.');
+    }
+  };
+  addQuest = (text) => {
+    const dated = /\b(today|tonight|tomorrow|mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|evening|morning|noon)\b|\d{1,2}:\d{2}/i.test(text);
+    const id = 'n'+Date.now();
+    const q = { id, cat: dated?'oneoff':'someday', title: text.trim().charAt(0).toUpperCase()+text.trim().slice(1), desc:'You set this down yourself.', due: dated?'soon':undefined, reward:'A thing you meant to do, done.', status:'active' };
+    this.setState(s=>({ quests:[q].concat(s.quests), selectedId:id, inspect:'quest', filter:'all', query:'' }));
+    this.flare(id);
+    return q;
+  };
+
+  // ── Conversation engine ───────────────────────────────────────────
+  revealMs = (t) => Math.min(t.length * 14 + 500, 3200);
+  HEADAV = { steward:'balaur-03', scribe:'balaur-04', archivist:'balaur-16', main:'balaur-01' };
+  toolHeadAv = (tool) => { if (!tool) return null; const h = tool.split(' · ')[0]; return this.HEADAV[h] ? 'assets/avatars/'+this.HEADAV[h]+'.png' : null; };
+  headByTool = (tool) => {
+    if (!tool) return null;
+    if (tool.indexOf('memory')===0) return 'archivist';
+    if (tool.indexOf('journal')===0) return 'scribe';
+    if (tool.indexOf('task')===0 || tool.indexOf('life')===0) return 'steward';
+    return null;
+  };
+  push = (msg, delay) => {
+    this._mid = this._mid || 100;
+    const id = this._mid++;
+    const dec = Object.assign({ id, ts: Date.now() }, msg);
+    if (dec.role==='tool' && dec.tool && dec.tool.indexOf('·')<0) { const h = this.headByTool(dec.tool); if (h) dec.tool = h+' · '+dec.tool; }
+    const t = setTimeout(()=>{ this.setState(s=>({ messages:s.messages.concat([dec]) })); if (msg.role==='balaur') this.sndArrive(); }, delay||0);
+    (this._timers = this._timers || []).push(t);
+  };
+  speak = (choice) => {
+    this.setState(s=>({ messages:s.messages.filter(x=>x.role!=='choices') }));
+    this.push({ role:'user', text:choice.label });
+    this.sndPick();
+  };
+  matchChoice = (text, choices) => {
+    const t = text.trim().toLowerCase().replace(/[.!]$/,'');
+    if (/^[1-9]$/.test(t)) return choices[parseInt(t,10)-1] || null;
+    return choices.find(c=>{
+      const l = c.label.toLowerCase().replace(/[.!]$/,'');
+      return l===t || l.includes(t) || t.includes(l) || (c.hint && c.hint.toLowerCase().includes(t));
+    }) || null;
+  };
+
+  askMemory = (after) => {
+    const q = 'You speak of the garden often. Shall I remember it as yours to tend — tomatoes and peppers, watered at dusk?';
+    this._memText = 'Garden — tomatoes & peppers, watered at dusk';
+    this.push({ role:'balaur', text:q, reveal:true }, after);
+    this.push({ role:'choices', kind:'memory' }, after + this.revealMs(q));
+  };
+  sendNudge = (after) => {
+    const q = 'The evening comes, and the tomatoes thirst. Will you tend them now?';
+    this.push({ role:'balaur', text:q, reveal:true, origin:'nudge' }, after);
+    this.push({ role:'choices', kind:'nudge' }, after + this.revealMs(q));
+  };
+  onConfirmTask = (choice) => {
+    this.speak(choice);
+    if (choice.kind==='cancel') { this.push({ role:'balaur', text:'Then I shall not speak of it again.', reveal:true }, 500); return; }
+    const once = choice.kind==='once';
+    this.push({ role:'task', once }, 520);
+    const line = once ? 'Once, then. Today at 18:00 — I shall speak of it when the hour comes.' : 'It is written. I shall nudge you every second evening; the first falls today at 18:00.';
+    this.push({ role:'balaur', text:line, reveal:true }, 950);
+    this.askMemory(950 + this.revealMs(line) + 600);
+  };
+  onMemory = (choice) => {
+    this.speak(choice);
+    const kept = this._memText || 'the matter';
+    if (choice.kind==='approve') {
+      this.setState(s=>({ memories:s.memories.concat([{ id:'mm'+Date.now(), status:'kept', kind:'note', title:kept, body:'Kept from the conversation.', used:0 }]) }));
+      this.push({ role:'tool', tool:'memory_keep', icon:'tome', text:'memory kept: "'+kept+'" · importance 3' }, 500);
+      this.push({ role:'balaur', text:'Then it is written. It is part of your story now.', reveal:true }, 800);
+      if (!this._nudged) { this._nudged = true; this.sendNudge(800 + 1800); }
+    } else if (choice.kind==='dismiss') {
+      this.push({ role:'balaur', text:'Then it passes from me, unkept.', reveal:true }, 500);
+      if (!this._nudged) { this._nudged = true; this.sendNudge(2400); }
+    } else {
+      this.push({ role:'balaur', text:'As you wish. I shall ask another day.', reveal:true }, 500);
+      if (!this._nudged) { this._nudged = true; this.sendNudge(2400); }
+    }
+    this._memText = null;
+  };
+  onNudge = (choice) => {
+    this.speak(choice);
+    if (choice.kind==='done') {
+      this.push({ role:'tool', tool:'task_done', icon:'check', text:'logged: water the tomatoes · done 18:42 → entries' }, 500);
+      this.push({ role:'balaur', text:'Well tended. The streak holds — four evenings now.', reveal:true }, 800);
+    } else if (choice.kind==='tonight') {
+      this.push({ role:'tool', tool:'task_snooze', icon:'hourglass', text:'snoozed: water the tomatoes · until 21:00' }, 500);
+      this.push({ role:'balaur', text:'At nightfall, then. I shall ask once more, and only once.', reveal:true }, 800);
+    } else if (choice.kind==='tomorrow') {
+      this.push({ role:'tool', tool:'task_snooze', icon:'hourglass', text:'snoozed: water the tomatoes · until tomorrow 18:00' }, 500);
+      this.push({ role:'balaur', text:'Sworn and noted. Tomorrow at dusk.', reveal:true }, 800);
+    } else {
+      this.push({ role:'tool', tool:'task_drop', icon:'rune_x', text:'dropped: water the tomatoes' }, 500);
+      this.push({ role:'balaur', text:'Dropped. No grudge is kept.', reveal:true }, 800);
+    }
+  };
+  onPickFor = (kind) => ({ confirmTask:this.onConfirmTask, memory:this.onMemory, nudge:this.onNudge })[kind];
+
+  findQuest = (text) => {
+    const words = text.toLowerCase().split(/[^a-zà-ž’']+/).filter(w=>w.length>3);
+    let best = null, bestScore = 0;
+    this.state.quests.filter(q=>q.status==='active').forEach(q=>{
+      const tw = q.title.toLowerCase().split(/[^a-zà-ž’']+/);
+      const score = words.filter(w=>tw.some(x=>x===w || x.startsWith(w))).length;
+      if (score > bestScore) { best = q; bestScore = score; }
+    });
+    return best;
+  };
+
+  sendText = (text) => {
+    text = text.trim();
+    if (!text) return;
+    const open = this.state.messages.find(m=>m.role==='choices');
+    if (open) {
+      const hit = this.matchChoice(text, this.CHOICES[open.kind]);
+      if (hit) { this.onPickFor(open.kind)(hit); return; }
+    }
+    this.push({ role:'user', text });
+    this.sndSend();
+    const lower = text.toLowerCase();
+
+    // remember → propose a memory
+    if (/^remember\b/i.test(lower)) {
+      const what = text.replace(/^remember\s*(that\s*)?/i,'').trim() || text;
+      this._memText = what.charAt(0).toUpperCase()+what.slice(1);
+      this.push({ role:'tool', tool:'memory_propose', icon:'tome', text:'memory proposed: "'+this._memText+'"' }, 450);
+      const q = 'Shall I keep it — “'+this._memText+'”?';
+      this.push({ role:'balaur', text:q, reveal:true }, 750);
+      this.push({ role:'choices', kind:'memory' }, 750 + this.revealMs(q));
+      return;
+    }
+
+    // compose a whole board from one ask — "set up a board for the trip"
+    if (/\bboard (for|about)\b/.test(lower)) {
+      const m = text.match(/board (?:for|about)\s+(.+)$/i);
+      const topic = ((m&&m[1])||'').replace(/[."']/g,'').trim() || 'New board';
+      const name = topic.charAt(0).toUpperCase()+topic.slice(1);
+      const id = 'b'+Date.now();
+      let types = ['today','quests'];
+      if (/trip|travel|journey|mountain|coast|holiday|road/.test(lower)) types = ['road','today','journal'];
+      else if (/garden|orchard|plant|harvest|grow/.test(lower)) types = ['campaigns','today','journal'];
+      else if (/health|body|fitness|weight|mood|sleep/.test(lower)) types = ['weight','mood','today'];
+      else if (/work|focus|project|deep/.test(lower)) types = ['quests','campaigns','today'];
+      else if (/balaur|memor|skill|head/.test(lower)) types = ['companion','memory','heads'];
+      const cards = this.gPack(types.map((t,i)=>{ const d=this.CARD_TYPES[t]; return { cid:this.uid(), type:t, x:(i%2)*4, y:i, w:d.w, h:d.h }; }), null);
+      this.setState(s=>({ boards:s.boards.concat([{ id, name, cards }]), activeBoard:id }), this.saveBoards);
+      this.push({ role:'tool', tool:'ui_render', icon:'orb', text:'board composed: '+name.toLowerCase()+' · '+types.map(t=>this.CARD_TYPES[t].label.toLowerCase()).join(', ') }, 350);
+      this.push({ role:'balaur', text:'I have set up “'+name+'” with '+types.length+' cards to begin. Arrange them as you like.', reveal:true }, 700);
+      return;
+    }
+
+    // new board
+    if (/\bnew board\b|\bboard called\b|\bmake (a|another) board\b/.test(lower)) {
+      const nm = (text.match(/board(?:\s+called)?\s+(.+)$/i)||[])[1];
+      const name = (nm||'New board').replace(/["']/g,'').trim();
+      const id='b'+Date.now();
+      this.setState(s=>({ boards:s.boards.concat([{ id, name, cards:[] }]), activeBoard:id }), this.saveBoards);
+      this.push({ role:'tool', tool:'ui_render', icon:'orb', text:'board raised: '+name.toLowerCase() }, 300);
+      this.push({ role:'balaur', text:'A fresh board, “'+name+'”. Tell me what to set on it.', reveal:true }, 600);
+      return;
+    }
+
+    // HATEOAS UI render — "show / open / bring / add ... <card>"
+    if (/\b(show|open|bring|add|put|raise|display|give me)\b/.test(lower)) {
+      const MAP = [ ['weight','weight'],['mood','mood'],['calendar','calendar'],['quest','quests'],['task','quests'],['log','quests'],['journal','journal'],['head','heads'],['memor','memory'],['skill','skills'],['character','character'],['sheet','character'],['identit','identity'],['today','today'],['campaign','campaigns'],['timeline','timeline'],['road','road'],['portrait','souls'],['soul','souls'] ];
+      const hit = MAP.find(m=>lower.indexOf(m[0])>=0);
+      if (hit && !/\bdone\b|\badd (a )?quest\b/.test(lower)) {
+        this.addCard(hit[1]);
+        this.push({ role:'tool', tool:'ui_render', icon:'orb', text:'card raised: '+this.CARD_TYPES[hit[1]].label.toLowerCase()+' → '+this.activeB().name.toLowerCase() }, 350);
+        this.push({ role:'balaur', text:'Raised the '+this.CARD_TYPES[hit[1]].label.toLowerCase()+' onto your board.', reveal:true }, 650);
+        return;
+      }
+    }
+
+    // quest verbs (done / add / snooze / drop)
+    if (/\b(done|did|finished|completed|kept|tended|snooze|drop|abandon|forget|give up)\b/.test(lower) || /^(add|new quest|quest:)\s/i.test(text)) { this.questOps(text, lower); return; }
+
+    // measures → life log
+    if (/\b(weight|mood|slept|sleep|steps|ran|walked|weighed)\b|\b\d+(\.\d+)?\s?(kg|km|h|hrs|hours)\b/.test(lower)) {
+      this.setState(s2=>({ lifeLines:['Jun 12 · '+text].concat(s2.lifeLines) }));
+      this.push({ role:'tool', tool:'life_log', icon:'orb', text:'logged: '+text }, 450);
+      this.push({ role:'balaur', text:'Logged. The line moves on your sheet.', reveal:true }, 750);
+      return;
+    }
+
+    // a request Balaur can answer with generated hypermedia UI
+    if (/\b(plan|help|draft|make|build|design|prepare|organi|what should|how do)\b/.test(lower) || text.length>22) {
+      const spec = this.genSpec(text);
+      this.addCard('gen', spec);
+      this.push({ role:'tool', tool:'ui_render', icon:'orb', text:'hypermedia view rendered: "'+spec.title.toLowerCase()+'"' }, 400);
+      this.push({ role:'balaur', text:'I have drawn it onto your board — “'+spec.title+'”, with the controls to act on it.', reveal:true }, 700);
+      return;
+    }
+
+    this.setState({ pending:true });
+    const t = setTimeout(()=>{
+      this.setState({ pending:false });
+      this.push({ role:'balaur', text:'I shall weigh the matter. It is kept on this box, and nowhere else.', reveal:true });
+    }, 1400);
+    this._timers.push(t);
+  };
+
+  questOps = (text, lower) => {
+    const doneRe = /\b(done|did|finished|completed|kept|tended)\b/;
+    const snoozeRe = /\b(snooze|later|not today|push)\b/;
+    const dropRe = /\b(drop|abandon|forget|let .* go|give up)\b/;
+    const addRe = /^(add|new quest|quest:)\s*/i;
+    const isAdd = addRe.test(text);
+    const verb = isAdd ? 'add' : doneRe.test(lower) ? 'done' : snoozeRe.test(lower) ? 'snooze' : dropRe.test(lower) ? 'drop' : null;
+
+    if (verb && verb!=='add') {
+      const q = this.findQuest(lower.replace(doneRe,'').replace(snoozeRe,'').replace(dropRe,''));
+      if (!q) { this.push({ role:'balaur', text:'I find no quest by those words. Name it as it stands on the book.', reveal:true }, 450); return; }
+      if (verb==='done') {
+        if (q.cat==='daily' || q.cat==='weekly') {
+          if (q.doneToday) { this.push({ role:'balaur', text:'“'+q.title+'” is already kept today. The streak stands at '+q.streak+' '+q.unit+'.', reveal:true }, 450); return; }
+          this.toggleDone(q);
+          this.push({ role:'tool', tool:'task_done', icon:'check', text:'kept: '+q.title.toLowerCase()+' · streak '+(q.streak+1) }, 450);
+          this.push({ role:'balaur', text:'Well tended. The streak holds — '+(q.streak+1)+' '+q.unit+' now.', reveal:true }, 750);
+        } else if (q.cat==='campaign') {
+          const step = q.steps.find(st=>!st.done);
+          this.advance(q);
+          this.push({ role:'tool', tool:'task_done', icon:'check', text:'objective cleared: '+(step?step.t.toLowerCase():q.title.toLowerCase()) }, 450);
+          this.push({ role:'balaur', text:'A step on “'+q.title+'” is cleared. The story moves.', reveal:true }, 750);
+        } else {
+          this.complete(q);
+          this.push({ role:'tool', tool:'task_done', icon:'check', text:'done: '+q.title.toLowerCase() }, 450);
+          this.push({ role:'balaur', text:'Then it is written. “'+q.title+'” is done.'+(q.reward?' '+q.reward:''), reveal:true }, 750);
+        }
+      } else if (verb==='snooze') {
+        this.push({ role:'tool', tool:'task_snooze', icon:'hourglass', text:'snoozed: '+q.title.toLowerCase()+' · until tomorrow' }, 450);
+        this.push({ role:'balaur', text:'At nightfall, then. I shall raise “'+q.title+'” again tomorrow.', reveal:true }, 750);
+      } else {
+        this.abandon(q);
+        this.push({ role:'tool', tool:'task_drop', icon:'rune_x', text:'dropped: '+q.title.toLowerCase() }, 450);
+        this.push({ role:'balaur', text:'Dropped. No grudge is kept.', reveal:true }, 750);
+      }
+      return;
+    }
+
+    const named = text.replace(addRe,'').trim();
+    const q = this.addQuest(named);
+    this.push({ role:'tool', tool:'task_add', icon:'quill', text:'added quest: '+q.title.toLowerCase()+(q.due?' · due '+q.due:' · no date') }, 450);
+    this.push({ role:'balaur', text:'Kept. “'+q.title+'” waits on the book'+(q.due?'.':' — no date; it will not nag.'), reveal:true }, 750);
+  };
+
+  // ── Chat page ─────────────────────────────────────────────────────
+  chatView = () => {
+    const NS = this.ns();
+    if (!NS) return null;
+    const s = this.state;
+    const I = (n) => 'assets/icons/'+n+'.png';
+    const soulSrc = 'assets/avatars/'+s.soul+'.png', headSrc = 'assets/avatars/'+s.head+'.png';
+    return React.createElement('div', null,
+      React.createElement('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 0 0' } },
+        React.createElement('button', { className:'btn btn-wood btn-sm', onClick:this.leaveImmersive }, '⟨ back to the study'),
+        React.createElement('button', { className:'btn btn-wood btn-sm', onClick:this.toggleSound, title:'Toggle sound' }, s.soundOn ? '♪ the fire crackles' : '♪ muted')
+      ),
+      React.createElement('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'18px 0 0' } },
+        React.createElement('img', { src:'assets/crest.png', alt:'', style:{ width:64, height:64, imageRendering:'pixelated' } }),
+        React.createElement('span', { style:{ fontFamily:'var(--font-pixel)', fontSize:10, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--gold)' } }, 'the hearth')
+      ),
+      React.createElement('div', { className:'recap-zone' },
+        React.createElement('p', { className:'recap-hint' },
+          React.createElement('img', { src:I('orb'), alt:'', style:{ width:15, height:15, imageRendering:'pixelated', verticalAlign:'-3px', marginRight:6 } }),
+          'further back…')),
+      React.createElement('section', { className:'chat', 'aria-live':'polite', style:{ paddingBottom:30 } },
+        s.messages.map(m=>{
+          if (m.role==='tool') return React.createElement(NS.ToolRow, { key:m.id, tool:m.tool, icon: this.toolHeadAv(m.tool) || (m.icon?I(m.icon):undefined) }, m.text);
+          if (m.role==='task') return this.taskRow(m);
+          if (m.role==='choices') return null;
+          return React.createElement(NS.ChatMessage, { key:m.id, role:m.role, who: m.role==='user'?s.ownerName:'Balaur', avatarSrc: m.role==='user'?soulSrc:headSrc, origin:m.origin, reveal: m.reveal && m.ts && (Date.now()-m.ts < 5000) }, m.text);
+        }),
+        s.pending ? React.createElement(NS.ChatMessage, { role:'balaur', avatarSrc:headSrc, pending:true }) : null
+      ),
+      React.createElement('div', { style:{ height:300 } })
+    );
+  };
+
+  // ── The shared dock — one ledge on every page ─────────────────────
+  dock = () => {
+    const NS = this.ns();
+    if (!NS) return null;
+    const s = this.state;
+    if (s.page!=='immersive') return null;
+    const soulSrc = 'assets/avatars/'+s.soul+'.png', headSrc = 'assets/avatars/'+s.head+'.png';
+    const open = s.messages.find(m=>m.role==='choices');
+    const col = { maxWidth:'var(--maxw)', margin:'0 auto', width:'100%' };
+
+    // mini-chat: the tail of the one conversation, carried to every page
+    let mini = null;
+    if (s.page!=='home') {
+      const tail = s.messages.filter(m=>m.role!=='choices' && m.role!=='task').slice(-2);
+      mini = React.createElement('div', { style:Object.assign({ display:'flex', flexDirection:'column', gap:5, marginBottom:9 }, col) },
+        tail.map(m=>{
+          if (m.role==='tool') return React.createElement('div', { key:m.id, style:{ display:'flex', alignItems:'center', gap:7, alignSelf:'flex-start', marginLeft:38, background:'var(--chrome-2)', backgroundImage:'var(--grain-warm)', backgroundSize:'4px 4px', border:'2px solid var(--outline-2)', boxShadow:'var(--bevel-in)', padding:'4px 10px', fontFamily:'var(--font-mono)', fontSize:11, color:'var(--chrome-fg)' } },
+            m.icon?this.ic(m.icon,14):null, React.createElement('span', { style:{ color:'var(--teal)' } }, m.tool), ' · '+m.text);
+          const isUser = m.role==='user';
+          return React.createElement('div', { key:m.id, style:{ display:'flex', alignItems:'flex-start', gap:8, flexDirection: isUser?'row-reverse':'row' } },
+            React.createElement('img', { src:isUser?soulSrc:headSrc, alt:'', style:{ width:30, height:30, imageRendering:'pixelated', flexShrink:0, border:'2px solid var(--outline-2)', boxShadow:'inset 0 0 0 1px '+(isUser?'var(--indigo)':'var(--gold-deep)'), background:'var(--chrome-2)', transform:isUser?'scaleX(-1)':'none' } }),
+            React.createElement('div', { style:{ background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', color:'var(--ink)', border:'2px solid var(--parch-edge)', padding:'5px 11px', fontSize:13.5, lineHeight:1.45, maxWidth:'72%' } },
+              React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:9.5, textTransform:'uppercase', letterSpacing:'.06em', color:isUser?'var(--indigo-ink)':'var(--gold-ink)', display:'block' } }, isUser?s.ownerName:'Balaur'),
+              m.text)
+          );
+        }),
+        s.pending ? React.createElement('div', { style:{ marginLeft:38, fontFamily:'var(--font-mono)', fontSize:11, color:'var(--smoke)' } }, 'Balaur weighs the matter…') : null,
+        React.createElement('a', { href:'#', onClick:(e)=>{ e.preventDefault(); this.onNavigate('home'); }, style:{ alignSelf:'flex-end', fontFamily:'var(--font-mono)', fontSize:10.5, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--teal)', textDecoration:'none' } }, 'the full conversation ▸')
+      );
+    }
+
+    const placeholders = {
+      home: 'Speak; I am listening.',
+      Tasks: 'Speak; I shall tend the log. (“done morning pages” · “add fix the fence saturday” · “drop the radio”)',
+      Life: 'Log a measure. (“weight 81.2kg” · “mood bright, long walk”)',
+      Memory: 'Tell me what to keep. (“remember Ana prefers tea”)',
+      Skills: 'Tell me what to keep. (“remember Ana prefers tea”)',
+    };
+
+    let action;
+    if (open) {
+      action = React.createElement('div', { style:col },
+        React.createElement(NS.DialogueChoices, { kicker:'Your word', who:s.ownerName, avatarSrc:soulSrc, choices:this.CHOICES[open.kind], onPick:this.onPickFor(open.kind) }));
+    } else {
+      action = React.createElement('form', { style:Object.assign({ display:'flex', gap:10, alignItems:'stretch' }, col),
+        onSubmit:(e)=>{ e.preventDefault(); const i=e.target.elements.message; this.sendText(i.value); i.value=''; } },
+        React.createElement('input', { type:'text', name:'message', placeholder: placeholders[s.page] || 'Speak; I am listening.', autoComplete:'off', style:{ flex:1, minWidth:0 } }),
+        React.createElement('button', { className:'btn btn-primary', type:'submit' }, 'Send'),
+        React.createElement('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:0, flexShrink:0 } },
+          React.createElement('img', { src:soulSrc, alt:s.ownerName, style:{ width:46, height:46, imageRendering:'pixelated', border:'2px solid var(--outline-2)', boxShadow:'var(--bevel-up), inset 0 0 0 1px var(--indigo)', background:'var(--chrome-2)', transform:'scaleX(-1)' } }),
+          React.createElement('span', { style:{ fontFamily:'var(--font-pixel)', fontSize:8, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--chrome-fg)', background:'var(--chrome)', border:'1px solid var(--outline-2)', padding:'1px 5px', marginTop:-2 } }, s.ownerName)
+        )
+      );
+    }
+
+    return React.createElement('div', { className:'chatbar' }, action);
+  };
+
+  // ── Quest rail ────────────────────────────────────────────────────
+  pips7 = (streak) => React.createElement('div', { className:'kcard-pips' },
+    Array.from({length:7}).map((_,i)=>React.createElement('span', { key:i, className:'pip'+(i>=7-Math.min(streak,7)?' pip-on':'') })));
+
+  statusHint = (q) => {
+    const mono = { fontFamily:'var(--font-mono)', fontSize:12 };
+    if (q.cat==='daily' || q.cat==='weekly') {
+      if (q.doneToday) return React.createElement('span', { style:Object.assign({color:'var(--good-ink)'},mono) }, 'kept');
+      return React.createElement('span', { style:Object.assign({display:'inline-flex',alignItems:'center',gap:4,color:'var(--ember-deep)'},mono) }, this.ic('flame',14), q.streak);
+    }
+    if (q.cat==='oneoff') return React.createElement('span', { style:Object.assign({color:q.overdue?'var(--ember-red)':'var(--ink-muted)',fontWeight:q.overdue?700:400},mono) }, q.due||'');
+    if (q.cat==='campaign') { const d=q.steps.filter(s=>s.done).length; return React.createElement('span', { style:Object.assign({color:'var(--ink-muted)'},mono) }, d+'/'+q.steps.length); }
+    return null;
+  };
+
+  questBox = (q) => {
+    const base = { width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center', border:'2px solid var(--parch-edge)', background:'var(--surface-2)', cursor:'pointer', flexShrink:0, boxShadow:'inset 0 2px 0 rgba(64,44,18,.15)' };
+    if (q.cat==='campaign') {
+      const all = q.steps.every(s=>s.done);
+      return React.createElement('div', { style:Object.assign({},base,{cursor:'default',background: all?'var(--gold)':'var(--surface-2)'}) }, all?this.ic('check',13):null);
+    }
+    const filled = (q.cat==='daily'||q.cat==='weekly') && q.doneToday;
+    return React.createElement('button', {
+      'aria-label':'complete', onClick:(e)=>{ e.stopPropagation(); (q.cat==='daily'||q.cat==='weekly')?this.toggleDone(q):this.complete(q); },
+      style:Object.assign({},base,{ background: filled?'var(--gold)':'var(--surface-2)' }),
+    }, filled?this.ic('check',13):null);
+  };
+
+  questRow = (q) => {
+    const selected = q.id===this.state.selectedId && this.state.inspect==='quest';
+    const dim = (q.cat==='daily'||q.cat==='weekly') && q.doneToday;
+    return React.createElement('div', {
+      key:q.id, onClick:()=>this.selectQuest(q.id), className: this.state.flareId===q.id?'task-fresh':undefined,
+      style:{ display:'flex', alignItems:'center', gap:10, padding:'8px 11px', marginBottom:5, cursor:'pointer',
+        border:'2px solid '+(selected?'var(--gold-deep)':'var(--parch-edge)'),
+        background: selected?'var(--surface)':'var(--surface-2)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px',
+        boxShadow: selected?'var(--parch-bevel)':'none', opacity: dim?0.62:1 },
+    },
+      this.questBox(q),
+      React.createElement('span', { style:{ flex:1, minWidth:0, fontSize:15, color:'var(--ink)', fontFamily:'var(--font-body)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textDecoration: dim?'line-through':'none' } }, q.title),
+      this.statusHint(q)
+    );
+  };
+
+  groupSub = (cat, items) => {
+    const mono = { fontFamily:'var(--font-mono)', fontSize:11, marginLeft:'auto', flexShrink:0 };
+    if (cat.key==='daily' || cat.key==='weekly') {
+      const kept = items.filter(q=>q.doneToday).length;
+      const word = cat.key==='daily' ? 'today' : 'this week';
+      return React.createElement('span', { style:Object.assign({ color: kept===items.length?'var(--good-ink)':'var(--muted)' },mono) }, kept+' of '+items.length+' kept '+word);
+    }
+    if (cat.key==='oneoff') {
+      const od = items.filter(q=>q.overdue).length;
+      if (od) return React.createElement('span', { style:Object.assign({ color:'var(--ember-red)', fontWeight:700 },mono) }, od+' overdue');
+      return React.createElement('span', { style:Object.assign({ color:'var(--muted)' },mono) }, cat.sub);
+    }
+    return React.createElement('span', { style:Object.assign({ color:'var(--muted)' },mono) }, cat.sub);
+  };
+
+  renderRail = (active, filterOverride) => {
+    const s = this.state;
+    const flt = filterOverride || s.filter;
+    const q = s.query.trim().toLowerCase();
+    const searching = q.length > 0;
+    const CAP = 6;
+    const groups = this.CATS.map(cat=>{
+      if (flt!=='all' && flt!==cat.key) return null;
+      let items = active.filter(x=>x.cat===cat.key && (!searching || x.title.toLowerCase().includes(q)));
+      if (cat.key==='oneoff') items = items.slice().sort((a,b)=>(b.overdue?1:0)-(a.overdue?1:0));
+      if (searching && !items.length) return null;
+      const folded = !searching && flt==='all' && s.folded[cat.key];
+      const showAll = searching || flt!=='all' || s.expanded[cat.key];
+      const shown = folded ? [] : (showAll ? items : items.slice(0, CAP));
+      const hidden = items.length - shown.length;
+      return React.createElement('section', { key:cat.key, style:{ marginBottom:14 } },
+        React.createElement('div', { onClick:()=>this.toggleFold(cat.key), className:'k-heading', role:'button',
+          style:{ fontSize:15, marginBottom:8, gap:8, cursor:'pointer', userSelect:'none' } },
+          React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--teal)', width:12 } }, folded?'▸':'▾'),
+          this.ic(cat.icon,16), cat.label,
+          React.createElement('span', { className:'k-count' }, items.length),
+          this.groupSub(cat, items)
+        ),
+        shown.map(x=>this.questRow(x)),
+        (!folded && hidden>0) ? React.createElement('button', { onClick:()=>this.toggleExpand(cat.key),
+          style:{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--teal)', padding:'2px 0 0 24px' } }, '▾ show all '+items.length) : null,
+        (!folded && hidden===0 && showAll && !searching && flt==='all' && items.length>CAP) ? React.createElement('button', { onClick:()=>this.toggleExpand(cat.key),
+          style:{ background:'none', border:'none', cursor:'pointer', fontFamily:'var(--font-mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--muted)', padding:'2px 0 0 24px' } }, '▴ fewer') : null
+      );
+    });
+
+    const done = s.quests.filter(x=>x.status!=='active');
+    const doneSection = done.length ? React.createElement('section', { style:{ paddingTop:8 } },
+      React.createElement('h2', { className:'k-heading k-heading-muted', style:{ fontSize:15, marginBottom:8 } }, 'Recently closed'),
+      React.createElement('div', { style:{ display:'flex', flexWrap:'wrap', gap:7, opacity:.75 } },
+        done.map(x=>React.createElement('span', { key:x.id, style:{ fontFamily:'var(--font-mono)', fontSize:11.5, color:'var(--ink-muted)', textDecoration:'line-through', border:'2px '+(x.status==='dropped'?'dashed':'solid')+' var(--parch-edge)', padding:'3px 8px', background:'var(--surface-2)' } }, x.title))
+      )
+    ) : null;
+
+    const empty = groups.every(g=>g===null) ? React.createElement('p', { className:'k-empty', style:{ padding:'18px 0' } }, 'Nothing answers to “'+s.query+'”. Tell me in the ledge below and I shall enter it.') : null;
+    return React.createElement('div', null, groups, empty, doneSection);
+  };
+
+  // ── Inspector: quest detail ───────────────────────────────────────
+  stepRow = (q, st, i) => React.createElement('button', {
+    key:i, onClick:()=>this.toggleStep(q,i),
+    style:{ display:'flex', alignItems:'center', gap:11, padding:'6px 0', background:'none', border:'none', textAlign:'left', width:'100%', cursor:'pointer' },
+  },
+    React.createElement('span', { style:{ width:18, height:18, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', border:'2px solid var(--parch-edge)', background: st.done?'var(--gold)':'var(--surface-2)' } }, st.done?this.ic('check',12):null),
+    React.createElement('span', { style:{ fontSize:15, color: st.done?'var(--ink-muted)':'var(--ink)', textDecoration: st.done?'line-through':'none' } }, st.t)
+  );
+
+  detailPane = (q) => {
+    if (!q) return React.createElement('div', { className:'kcard', style:{ minHeight:120, justifyContent:'center', textAlign:'center' } }, React.createElement('p', { className:'kcard-body', style:{color:'var(--ink-muted)'} }, 'Choose a quest from the log to read its charge.'));
+    const cat = this.CATS.find(c=>c.key===q.cat);
+    const kids = [];
+    kids.push(React.createElement('div', { key:'k', className:'kcard-kind' }, cat.label+' · '+cat.sub));
+    kids.push(React.createElement('h2', { key:'t', className:'kcard-title', style:{ fontSize:22, lineHeight:1.2 } }, q.title));
+    if (q.desc) kids.push(React.createElement('p', { key:'d', className:'kcard-body', style:{ fontSize:15 } }, q.desc));
+
+    if (q.cat==='campaign') {
+      const d = q.steps.filter(s=>s.done).length;
+      kids.push(React.createElement('div', { key:'m', style:{ marginTop:2 } },
+        React.createElement('div', { className:'kcard-kind', style:{ color:'var(--gold-ink)', marginBottom:2 } }, 'Objectives'),
+        q.steps.map((st,i)=>this.stepRow(q,st,i)),
+        React.createElement('p', { className:'kcard-when', style:{ marginTop:4 } }, d+' of '+q.steps.length+' cleared')
+      ));
+    } else if (q.cat==='daily' || q.cat==='weekly') {
+      const reset = q.cat==='daily' ? 'resets at dawn · in 6h' : 'resets Monday · in 3 days';
+      kids.push(React.createElement('div', { key:'m', style:{ display:'flex', alignItems:'center', gap:12, marginTop:2, flexWrap:'wrap' } },
+        this.ic('flame',28),
+        React.createElement('div', null,
+          React.createElement('div', { style:{ fontFamily:'var(--font-display)', fontSize:23, color:'var(--ink)' } }, q.streak+' '+q.unit+' streak'),
+          React.createElement('div', { className:'kcard-when' }, reset + (q.doneToday?' · kept today':''))
+        )
+      ));
+      kids.push(React.createElement('div', { key:'p' }, this.pips7(q.streak)));
+    } else if (q.cat==='oneoff') {
+      kids.push(React.createElement('div', { key:'m', style:{ fontFamily:'var(--font-mono)', fontSize:13.5, marginTop:2, color: q.overdue?'var(--ember-red)':'var(--ink-muted)', fontWeight: q.overdue?700:400 } }, (q.overdue?'⚠ ':'')+'Due '+q.due));
+    } else {
+      kids.push(React.createElement('p', { key:'m', className:'kcard-when', style:{ fontSize:12.5 } }, 'No date yet. It waits without nagging.'));
+    }
+
+    if (q.reward) kids.push(React.createElement('div', { key:'r', style:{ display:'flex', gap:9, alignItems:'center', borderTop:'2px dotted var(--parch-edge)', paddingTop:11 } },
+      this.ic('gem',18),
+      React.createElement('span', { style:{ fontStyle:'italic', color:'var(--ink-muted)', fontSize:13.5 } }, 'When it’s done — '+q.reward)
+    ));
+
+    let primary;
+    if (q.cat==='campaign') primary = React.createElement('button', { className:'btn btn-primary btn-sm', onClick:()=>this.advance(q) }, this.ic('check',15), 'Advance');
+    else if (q.cat==='daily'||q.cat==='weekly') primary = React.createElement('button', { className:'btn btn-primary btn-sm', onClick:()=>this.toggleDone(q) }, this.ic('check',15), q.doneToday?'Undo today':'Keep it today');
+    else primary = React.createElement('button', { className:'btn btn-primary btn-sm', onClick:()=>this.complete(q) }, this.ic('check',15), 'Complete');
+
+    kids.push(React.createElement('div', { key:'a', className:'kcard-actions', style:{ flexWrap:'wrap', gap:7 } },
+      primary,
+      React.createElement('button', { className:'btn btn-wood btn-sm', onClick:()=>this.snooze(q) }, this.ic('hourglass',15), 'Snooze'),
+      React.createElement('button', { className:'btn btn-ghost btn-sm', onClick:()=>this.abandon(q) }, this.ic('rune_x',15), 'Abandon')
+    ));
+
+    return React.createElement('div', { className:'kcard kcard-proposed', style:{ gap:11, padding:'18px 19px', maxWidth:'none' } }, kids);
+  };
+
+  // ── Calendar (docked) ─────────────────────────────────────────────
+  calData = () => ({
+    spans: [{ label:'Trip to the mountains', start:18, end:21 }],
+    events: {
+      3:  [{ icon:'scroll', label:'Passport overdue', overdue:true }],
+      12: [{ icon:'scroll', label:'Notary · 10:00' }],
+      13: [{ icon:'scroll', label:'Parcel · Electrician' }],
+      14: [{ icon:'gem', label:'Take honey to Ana' }],
+      16: [{ icon:'scroll', label:'Dentist' }],
+      17: [{ icon:'scroll', label:'Car inspection' }],
+      20: [{ icon:'gem', label:'Land tax due' }],
+      24: [{ icon:'orb', label:'Sânziene' }],
+    },
+    resets: [8,15,22,29],
+    moons: { 6:'○', 13:'◐', 20:'●', 27:'◑' },
+  });
+
+  renderCalendarCard = () => React.createElement('div', null,
+    React.createElement('h1', { style:{ fontFamily:'var(--font-display)', fontSize:26, margin:'0 0 2px', color:'var(--fg-strong)', display:'flex', alignItems:'center', gap:8 } }, this.ic('hourglass',24), 'Calendar'),
+    React.createElement('p', { style:{ margin:'0 0 12px', fontFamily:'var(--font-mono)', fontSize:11.5, color:'var(--muted)' } }, 'your rules projected forward \u00b7 choose a day'),
+    this.miniCal(),
+    React.createElement('div', { style:{ marginTop:14 } }, this.dayPane(this.state.selectedDay)));
+
+  miniCal = () => {
+    const { spans, events, resets } = this.calData();
+    const today = 12, sel = this.state.selectedDay;
+    const cells = [];
+    for (let d=1; d<=30; d++) cells.push({ d, inMonth:true });
+    for (let d=1; d<=5; d++) cells.push({ d, inMonth:false });
+    return React.createElement('div', { className:'parch', style:{ padding:'12px 12px 10px', background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', border:'2px solid var(--parch-edge)', boxShadow:'var(--parch-bevel)' } },
+      React.createElement('div', { style:{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:8 } },
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--ink-muted)' } }, '◂'),
+        React.createElement('span', { style:{ fontFamily:'var(--font-display)', fontSize:16, color:'var(--ink)', whiteSpace:'nowrap' } }, 'June 2026'),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--ink-muted)' } }, '▸')
+      ),
+      React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3, marginBottom:3 } },
+        ['m','t','w','t','f','s','s'].map((x,i)=>React.createElement('div', { key:i, style:{ fontFamily:'var(--font-mono)', fontSize:10, textTransform:'uppercase', color:'var(--ink-muted)', textAlign:'center' } }, x))),
+      React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:3 } },
+        cells.map((c,idx)=>{
+          const isToday = c.inMonth && c.d===today;
+          const isSel = c.inMonth && c.d===sel;
+          const sp = c.inMonth && spans.some(s=>c.d>=s.start && c.d<=s.end);
+          const ev = c.inMonth ? (events[c.d]||[]) : [];
+          const hasOver = ev.some(e=>e.overdue);
+          const isReset = c.inMonth && resets.includes(c.d);
+          return React.createElement('div', {
+            key:idx, onClick: c.inMonth?()=>this.selectDay(c.d):undefined,
+            style:{ height:38, padding:'3px 4px', display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:c.inMonth?'pointer':'default',
+              background: isSel?'var(--surface-2)':'transparent',
+              border:'2px solid '+(isSel?'var(--gold-deep)':(isToday?'var(--gold-ink)':'var(--parch-edge)')),
+              boxShadow: isSel?'inset 0 0 0 1px var(--gold-deep)':'none',
+              borderBottom: sp ? '3px solid var(--gold-ink)' : undefined,
+              opacity:c.inMonth?1:0.35 },
+          },
+            React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, fontWeight:isToday?700:400, color: isToday?'var(--gold-ink)':'var(--ink-muted)' } }, c.d),
+            React.createElement('span', { style:{ display:'flex', gap:2, height:5 } },
+              ev.length ? React.createElement('span', { style:{ width:5, height:5, background: hasOver?'var(--ember-red)':'var(--ember-deep)' } }) : null,
+              isReset ? React.createElement('span', { style:{ width:5, height:5, background:'var(--teal-ink)' } }) : null
+            )
+          );
+        })
+      ),
+      React.createElement('div', { style:{ display:'flex', gap:10, marginTop:8, fontFamily:'var(--font-mono)', fontSize:9.5, color:'var(--ink-muted)', flexWrap:'wrap' } },
+        React.createElement('span', { style:{ display:'inline-flex', alignItems:'center', gap:4 } }, React.createElement('span', { style:{ width:5, height:5, background:'var(--ember-deep)' } }), 'due'),
+        React.createElement('span', { style:{ display:'inline-flex', alignItems:'center', gap:4 } }, React.createElement('span', { style:{ width:5, height:5, background:'var(--teal-ink)' } }), 'week resets'),
+        React.createElement('span', { style:{ display:'inline-flex', alignItems:'center', gap:4 } }, React.createElement('span', { style:{ width:9, height:3, background:'var(--gold-ink)' } }), 'away')
+      )
+    );
+  };
+
+  dayPane = (d) => {
+    const { spans, events, resets, moons } = this.calData();
+    const weekday = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(d-1)%7];
+    const dow = (d-1)%7;
+    const today = d===12;
+    const items = [];
+    spans.forEach(sp=>{ if (d>=sp.start && d<=sp.end) items.push({ kind:'span', label:'Away · '+sp.label }); });
+    (events[d]||[]).forEach(e=>items.push(Object.assign({ kind:'event' }, e)));
+    if (resets.includes(d)) items.push({ kind:'event', icon:'hourglass', label:'Weeklies reset', muted:true });
+    if (dow===6) items.push({ kind:'event', icon:'hourglass', label:'Back up to the vault disk', recur:true });
+    if (dow===5) items.push({ kind:'event', icon:'hourglass', label:'Market run', recur:true });
+    if (dow===0) items.push({ kind:'event', icon:'hourglass', label:'Plan the week', recur:true });
+    const dailies = this.state.quests.filter(q=>q.cat==='daily' && q.status==='active');
+    return React.createElement('div', { className:'kcard', style:{ gap:8, padding:'16px 18px', maxWidth:'none' } },
+      React.createElement('div', { className:'kcard-kind' }, today?'Today':'June '+d),
+      React.createElement('h3', { className:'kcard-title', style:{ fontSize:19, margin:0 } }, weekday+', June '+d),
+      moons[d] ? React.createElement('p', { className:'kcard-when', style:{ margin:0 } }, moons[d]+' '+({6:'new moon',13:'first quarter',20:'full moon',27:'last quarter'})[d]) : null,
+      React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:5, marginTop:2 } },
+        items.length ? items.map((it,i)=>{
+          if (it.kind==='span') return React.createElement('div', { key:i, style:{ alignSelf:'flex-start', background:'var(--gold)', color:'#1c0d04', fontFamily:'var(--font-mono)', fontSize:11.5, padding:'2px 8px' } }, it.label);
+          return React.createElement('div', { key:i, style:{ display:'flex', alignItems:'center', gap:7, fontSize:14, color: it.overdue?'var(--ember-red)':'var(--ink)', opacity: it.muted?0.7:1 } },
+            this.ic(it.icon,15), React.createElement('span', null, it.label),
+            it.recur ? React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--teal-ink)' } }, '⟳') : null
+          );
+        }) : React.createElement('p', { style:{ margin:0, fontFamily:'var(--font-mono)', fontSize:12, color:'var(--ink-muted)' } }, 'quiet — only the dailies')
+      ),
+      React.createElement('div', { style:{ borderTop:'2px dotted var(--parch-edge)', paddingTop:9 } },
+        React.createElement('div', { className:'kcard-kind', style:{ marginBottom:5 } }, dailies.length+' dailies, as every day'),
+        dailies.map((q,i)=>React.createElement('div', { key:i, style:{ display:'flex', alignItems:'center', gap:7, fontSize:13.5, color:'var(--ink-muted)', padding:'1px 0' } },
+          this.ic('flame',14), q.title, q.recur?React.createElement('span',{style:{fontFamily:'var(--font-mono)',fontSize:11,color:'var(--teal-ink)'}},q.recur):null))
+      )
+    );
+  };
+
+  // ── Page ──────────────────────────────────────────────────────────
+  renderTasks = (forceFilter) => {
+    const s = this.state;
+    const active = s.quests.filter(q=>q.status==='active');
+    const overdue = active.filter(q=>q.overdue).length;
+    const dleft = active.filter(q=>q.cat==='daily' && !q.doneToday).length;
+    const sel = s.quests.find(q=>q.id===s.selectedId && q.status==='active');
+    const SCOPELABEL = { daily:'dailies', weekly:'weeklies', campaign:'campaign', oneoff:'one-off quests', someday:'side quests' };
+
+    const chip = (key, label) => {
+      const on = s.filter===key;
+      return React.createElement('a', { key, href:'#', onClick:(e)=>{ e.preventDefault(); this.setState({ filter:key }); },
+        className:'k-tab'+(on?' k-tab-active':'') }, label);
+    };
+
+    return React.createElement(React.Fragment, null,
+      React.createElement('h1', { style:{ fontFamily:'var(--font-display)', fontSize:30, margin:'0 0 2px', color:'var(--fg-strong)', display:'flex', alignItems:'center', gap:8 } }, this.ic('scroll',26), forceFilter ? SCOPELABEL[forceFilter]||'Quest log' : 'Quest log'),
+      React.createElement('p', { style:{ margin:'0 0 14px', fontFamily:'var(--font-mono)', fontSize:12, color:'var(--muted)' } },
+        active.length+' on the book', ' · ',
+        overdue ? React.createElement('span', { style:{ color:'var(--ember)' , fontWeight:700 } }, overdue+' overdue') : 'nothing overdue',
+        ' · ', dleft ? dleft+' dailies yet today' : 'all dailies kept'),
+      s.note ? React.createElement('div', { className:'capture-note', role:'status', style:{ marginBottom:12 } }, this.ic('quill',22,{}), React.createElement('span', null, s.note)) : null,
+      forceFilter ? null : React.createElement('div', { className:'k-controls', style:{ marginBottom:14 } },
+        React.createElement('input', { className:'k-search', type:'search', placeholder:'Search the log…', value:s.query, onChange:(e)=>this.setState({ query:e.target.value }) }),
+        React.createElement('nav', { className:'k-tabs' }, chip('all','all'), chip('campaign','campaign'), chip('daily','dailies'), chip('weekly','weeklies'), chip('oneoff','quests'), chip('someday','side'))
+      ),
+      React.createElement('div', { style:{ display:'grid', gridTemplateColumns: forceFilter?'minmax(0,1fr)':'minmax(0,1fr) minmax(0,1fr)', gap:18, alignItems:'start' } },
+        this.renderRail(active, forceFilter),
+        forceFilter ? null : React.createElement('div', { style:{ position:'sticky', top:74 } },
+          this.detailPane(sel)
+        )
+      ),
+      React.createElement('div', { style:{ height:90 } })
+    );
+  };
+
+  // ── The conversation sidebar — on every page but home ────────────
+  onKey = (e) => {
+    if (this.state.page==='immersive' || this.state.page==='candle') return;
+    const open = this.state.messages.find(m=>m.role==='choices');
+    if (!open) return;
+    const tag = (document.activeElement||{}).tagName;
+    if (tag==='INPUT' || tag==='TEXTAREA') return;
+    if (/^[1-9]$/.test(e.key)) {
+      const c = this.CHOICES[open.kind][parseInt(e.key,10)-1];
+      if (c) this.onPickFor(open.kind)(c);
+    }
+  };
+
+  taskRow = (m) => { const NS = this.ns(); return React.createElement('div', { key:m.id, style:{ width:'100%' } }, React.createElement(NS.TaskCard, { title:'Water the tomatoes', dueLine:'due today 18:00', recurLine: m.once?undefined:'every 2 days' })); };
+
+  sideMsg = (m, soulSrc, headSrc) => {
+    if (m.role==='tool') { const hav = this.toolHeadAv(m.tool); return React.createElement('div', { key:m.id, style:{ display:'flex', alignItems:'center', gap:6, background:'var(--chrome-2)', backgroundImage:'var(--grain-warm)', backgroundSize:'4px 4px', border:'2px solid var(--outline-2)', boxShadow:'var(--bevel-in)', padding:'4px 9px', fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--chrome-fg)', marginLeft:35, minWidth:0 } },
+      hav ? React.createElement('img', { src:hav, alt:'', style:{ width:16, height:16, imageRendering:'pixelated', flexShrink:0, border:'1px solid var(--outline-2)' } }) : (m.icon?this.ic(m.icon,14):null),
+      React.createElement('span', { style:{ color:'var(--teal)', flexShrink:0 } }, m.tool),
+      React.createElement('span', { style:{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } }, '· '+m.text)); }
+    if (m.role==='task') return this.taskRow(m);
+    const isUser = m.role==='user';
+    return React.createElement('div', { key:m.id, style:{ display:'flex', alignItems:'flex-start', gap:7, flexDirection: isUser?'row-reverse':'row' } },
+      React.createElement('img', { src:isUser?soulSrc:headSrc, alt:'', style:{ width:28, height:28, imageRendering:'pixelated', flexShrink:0, border:'2px solid var(--outline-2)', boxShadow:'inset 0 0 0 1px '+(isUser?'var(--indigo)':'var(--gold-deep)'), background:'var(--chrome-2)', transform:isUser?'scaleX(-1)':'none' } }),
+      React.createElement('div', { style:{ background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', color:'var(--ink)', border:'2px solid var(--parch-edge)', padding:'5px 10px', fontSize:13, lineHeight:1.45, maxWidth:'82%' } },
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:9, textTransform:'uppercase', letterSpacing:'.06em', color:isUser?'var(--indigo-ink)':'var(--gold-ink)', display:'block' } }, isUser?this.state.ownerName:'Balaur'),
+        m.text)
+    );
+  };
+
+  sideChoices = (open) => React.createElement('div', { style:{ margin:'0 12px 10px', background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', border:'2px solid var(--gold-deep)', boxShadow:'var(--parch-bevel)', padding:'9px 11px', flexShrink:0 } },
+    React.createElement('div', { className:'kcard-kind', style:{ color:'var(--gold-ink)', marginBottom:3 } }, 'Your word'),
+    this.CHOICES[open.kind].map((c,i)=>React.createElement('button', { key:i, onClick:()=>this.onPickFor(open.kind)(c),
+      style:{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:8, width:'100%', background:'none', border:'none', cursor:'pointer', padding:'5px 2px', textAlign:'left' } },
+      React.createElement('span', { style:{ fontSize:13.5, color:'var(--ink)' } },
+        React.createElement('span', { style:{ color:'var(--ember)', fontFamily:'var(--font-mono)', fontSize:11, marginRight:5 } }, '▸ '+(i+1)),
+        c.label),
+      React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:9.5, color:'var(--ink-muted)', flexShrink:0 } }, c.hint)
+    )));
+
+  sidebar = () => {
+    const NS = this.ns();
+    if (!NS) return null;
+    const s = this.state;
+    if (s.page==='immersive' || s.page==='candle') return null;
+    const soulSrc = 'assets/avatars/'+s.soul+'.png', headSrc = 'assets/avatars/'+s.head+'.png';
+    if (!s.sidebarOpen) return React.createElement('button', { onClick:()=>this.setState({ sidebarOpen:true }), title:'Open the conversation',
+      style:{ position:'fixed', right:0, top:'42%', zIndex:40, width:32, padding:'12px 0', display:'flex', flexDirection:'column', alignItems:'center', gap:7, background:'var(--chrome)', backgroundImage:'var(--wood-planks)', border:'2px solid var(--outline-2)', borderRight:'none', boxShadow:'var(--bevel-up)', cursor:'pointer', color:'var(--gold)', fontFamily:'var(--font-mono)', fontSize:12 } },
+      '◂', React.createElement('img', { src:headSrc, alt:'', style:{ width:20, height:20, imageRendering:'pixelated' } }));
+    const open = s.messages.find(m=>m.role==='choices');
+    const wide = s.sideW >= 560;
+    const I = (n) => 'assets/icons/'+n+'.png';
+    const rows = s.messages.filter(m=>m.role!=='choices').map(m=>{
+      if (!wide) return this.sideMsg(m, soulSrc, headSrc);
+      if (m.role==='tool') return React.createElement(NS.ToolRow, { key:m.id, tool:m.tool, icon: this.toolHeadAv(m.tool) || (m.icon?I(m.icon):undefined) }, m.text);
+      if (m.role==='task') return this.taskRow(m);
+      return React.createElement(NS.ChatMessage, { key:m.id, role:m.role, who: m.role==='user'?s.ownerName:'Balaur', avatarSrc: m.role==='user'?soulSrc:headSrc, origin:m.origin, reveal: m.reveal && m.ts && (Date.now()-m.ts < 5000) }, m.text);
+    });
+    const ph = { board:'“done morning pages” · “show my weight” · “plan my evening”' };
+    return React.createElement('aside', { 'aria-label':'The conversation', style:{ position:'fixed', top:52, right:0, bottom:0, width:s.sideW, zIndex:40, display:'flex', flexDirection:'column', background:'var(--chrome)', backgroundImage:'var(--wood-planks)', borderLeft:'2px solid var(--outline-2)' } },
+      React.createElement('div', { onMouseDown:this.startDrag, title:'Drag to resize',
+        style:{ position:'absolute', left:-4, top:0, bottom:0, width:9, cursor:'col-resize', zIndex:5 } },
+        React.createElement('div', { style:{ position:'absolute', left:3, top:'46%', width:3, height:54, background:'var(--gold-deep)', opacity:.7 } })),
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', borderBottom:'2px solid var(--outline-2)', boxShadow:'inset 0 2px 0 var(--bevel-light)', flexShrink:0 } },
+        React.createElement('img', { src:headSrc, alt:'', className: s.pending?'basm-glow':undefined, style:{ width:24, height:24, imageRendering:'pixelated' } }),
+        React.createElement('span', { style:{ fontFamily:'var(--font-pixel)', fontSize:10, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--gold)' } }, 'The conversation'),
+        React.createElement('a', { href:'#', onClick:(e)=>{ e.preventDefault(); this.goImmersive(); }, style:{ marginLeft:'auto', fontFamily:'var(--font-mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--teal)', textDecoration:'none' } }, 'immerse ▸'),
+        React.createElement('button', { onClick:()=>this.setState({ sidebarOpen:false }), title:'Tuck away', style:{ background:'none', border:'none', cursor:'pointer', color:'var(--chrome-fg)', fontFamily:'var(--font-mono)', fontSize:13, padding:'0 0 0 2px' } }, '▸')
+      ),
+      React.createElement('div', { className: wide?'chat':undefined, ref:(el)=>{ if (el && !this._sideEl) { this._sideEl = el; el.scrollTop = el.scrollHeight; } this._sideEl = el; }, style:{ flex:1, overflowY:'auto', padding: wide?'18px 22px 10px':'12px 12px 8px', display:'flex', flexDirection:'column', gap: wide?14:7 } },
+        rows,
+        s.pending ? (wide ? React.createElement(NS.ChatMessage, { role:'balaur', avatarSrc:headSrc, pending:true }) : React.createElement('div', { style:{ marginLeft:35, fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--smoke)' } }, 'Balaur weighs the matter…')) : null
+      ),
+      open
+        ? this.sideChoices(open)
+        : React.createElement('form', { onSubmit:(e)=>{ e.preventDefault(); const i=e.target.elements.message; this.sendText(i.value); i.value=''; },
+            style:{ display:'flex', gap:7, alignItems:'center', padding:'10px 12px 12px', borderTop:'2px solid var(--outline-2)', flexShrink:0 } },
+            React.createElement('input', { type:'text', name:'message', autoComplete:'off', placeholder: ph[s.page] || 'Speak; I am listening.',
+              style:{ flex:1, minWidth:0, font:'13.5px/1.4 var(--font-body)', color:'var(--ink)', backgroundColor:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', border:'2px solid var(--outline-2)', boxShadow:'inset 0 3px 0 rgba(64,44,18,.18)', padding:'8px 10px' } }),
+            React.createElement('button', { className:'btn btn-primary btn-sm', type:'submit' }, 'Send')
+          )
+    );
+  };
+
+  // ── Card primitive — every UI piece is a named, grid-ready card ───
+  card = (id, kicker, kids, opts) => {
+    opts = opts || {};
+    return React.createElement('div', { 'data-card-id':id, className:'kcard'+(opts.ornate?' kcard-proposed':''), style:Object.assign({ gap:8, padding:'16px 18px', maxWidth:'none' }, opts.style||{}) },
+      kicker ? React.createElement('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 } },
+        React.createElement('span', { className:'kcard-kind', style: opts.gold?{ color:'var(--gold-ink)' }:undefined }, kicker),
+        React.createElement('span', { title:'card · '+id, style:{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--ink-muted)', opacity:.45, cursor:'grab', userSelect:'none' } }, '⠿')) : null,
+      kids);
+  };
+
+  // ── Timeline — each day the conversation resets ───────────────────
+  timelineDays = () => {
+    const s = this.state;
+    const doneToday = s.quests.filter(q=>(q.doneToday || q.status==='done')).map(q=>q.title);
+    const jToday = s.journal.filter(j=>j.day==='Today');
+    return [
+      { label:'Today · Fri Jun 12', today:true, recap:null, done:doneToday, logged:s.lifeLines.filter(l=>l.indexOf('Jun 12')===0), journal:jToday },
+      { label:'Thu Jun 11', recap:'You spoke of the deed and the orchard. The notary found the missing page; two dailies kept; honey jars counted for Ana.', done:['Morning pages','Feed the hens','Read ten pages'], logged:['weight 81.4kg'], journal:s.journal.filter(j=>j.day==='Thu Jun 11') },
+      { label:'Wed Jun 10', recap:'A quiet day. The fence posts arrived; you let the chainsaw wait.', done:['Feed the hens','Walk at dusk'], logged:['mood low, mended by the walk'], journal:[] },
+      { label:'The week before · Jun 1–7', fold:true, recap:'Folded into one: seedlings potted on, two calls to the notary, the beehive boxes built. 19 dailies kept of 21. This fold is the context I carry forward.', breakdown:[
+        { d:'Mon Jun 1', s:'planned the week · seedlings potted on' },
+        { d:'Tue Jun 2', s:'first call to the notary about the deed' },
+        { d:'Wed Jun 3', s:'built the beehive boxes' },
+        { d:'Thu Jun 4', s:'quiet · only the dailies' },
+        { d:'Fri Jun 5', s:'market run · honey jars counted' },
+        { d:'Sat Jun 6', s:'new moon · long walk, mood bright' },
+        { d:'Sun Jun 7', s:'backed up to the vault disk' },
+      ], done:[], logged:[], journal:[] },
+    ];
+  };
+
+  renderTimelineP = () => {
+    const days = this.timelineDays();
+    return React.createElement(React.Fragment, null,
+      React.createElement('h1', { style:{ fontFamily:'var(--font-display)', fontSize:30, margin:'0 0 2px', color:'var(--fg-strong)', display:'flex', alignItems:'center', gap:8 } }, this.ic('hourglass',26), 'Timeline'),
+      React.createElement('p', { style:{ margin:'0 0 18px', fontFamily:'var(--font-mono)', fontSize:12, color:'var(--muted)' } }, 'each dusk the conversation resets · the week folds into context for the next'),
+      days.map((d,di)=>React.createElement('section', { key:di, style:{ padding:'14px 0', borderTop: di?'2px dashed var(--hair)':'none' } },
+        React.createElement('h3', { style:{ margin:'0 0 10px', fontFamily:'var(--font-mono)', fontSize:12, textTransform:'uppercase', letterSpacing:'.05em', color: d.today?'var(--gold)':'var(--fg-strong)' } }, d.label),
+        React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:10 } },
+          d.recap ? React.createElement('div', { 'data-card-id':'recap-'+di, className:'recap-card'+(d.today?' recap-open':''), style:{ margin:0, cursor: d.fold?'pointer':'default' }, onClick: d.fold?()=>this.setState(x=>({ openFold:!x.openFold })):undefined },
+            React.createElement('div', { className:'recap-head' },
+              React.createElement('span', { className:'recap-label' }, d.fold?'weekly fold · carried context':'day compaction · context for tomorrow'),
+              d.fold ? React.createElement('span', { className:'recap-expand' }, this.state.openFold?'fold ▴':'unfold the week ▾') : React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--smoke)' } }, '⠿')),
+            React.createElement('p', { className:'recap-body' }, d.recap),
+            (d.fold && this.state.openFold) ? React.createElement('div', { className:'recap-children', style:{ marginTop:8, borderTop:'1px dashed var(--steel)', paddingTop:8 } },
+              d.breakdown.map((b,bi)=>React.createElement('div', { key:bi, style:{ display:'flex', gap:10, padding:'3px 0', fontSize:13.5 } },
+                React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--teal)', width:74, flexShrink:0 } }, b.d),
+                React.createElement('span', { style:{ color:'var(--chrome-fg)' } }, b.s)))) : null
+          ) : null,
+          d.today ? React.createElement('div', { className:'recap-card recap-open', 'data-card-id':'recap-today', style:{ margin:0 } },
+            React.createElement('div', { className:'recap-head' }, React.createElement('span', { className:'recap-label' }, 'the day still burns'),
+              React.createElement('a', { href:'#', onClick:(e)=>{ e.preventDefault(); this.goImmersive(); }, style:{ fontFamily:'var(--font-mono)', fontSize:10.5, textTransform:'uppercase', color:'var(--teal)', textDecoration:'none' } }, 'sit by the hearth ▸')),
+            React.createElement('p', { className:'recap-body' }, 'No compaction yet — it is written at dusk, when the Scribe wakes.')) : null,
+          d.done.length ? this.card('done-'+di, 'Deeds done', React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:3 } },
+            d.done.map((t,i)=>React.createElement('div', { key:i, style:{ display:'flex', alignItems:'center', gap:8, fontSize:14.5, color:'var(--ink)' } }, this.ic('check',15), t)))) : null,
+          d.logged.length ? this.card('logged-'+di, 'Measures', React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:3 } },
+            d.logged.map((t,i)=>React.createElement('div', { key:i, style:{ display:'flex', alignItems:'center', gap:8, fontFamily:'var(--font-mono)', fontSize:12.5, color:'var(--ink-muted)' } }, this.ic('orb',14), t)))) : null,
+          (d.journal||[]).length ? this.card('journal-'+di, 'From the journal', d.journal.map((j,i)=>React.createElement('p', { key:i, style:{ margin:0, fontSize:14.5, lineHeight:1.55, color:'var(--ink)' } }, '“'+j.text.slice(0,140)+(j.text.length>140?'…':'')+'”'))) : null
+        ))),
+      React.createElement('div', { style:{ height:90 } })
+    );
+  };
+
+  // ── Journal ───────────────────────────────────────────────────────
+  goCandle = () => { this.ensureAudio(); this.setState(s=>({ lastPage: s.page, page:'candle' }), this.startAmbient); };
+  keepJournal = () => {
+    const t = this.state.jDraft.trim();
+    if (!t) return;
+    this.setState(s=>({ journal:[{ id:Date.now(), day:'Today', time:'now', mode:s.jMode, text:t }].concat(s.journal), jDraft:'' }));
+    this.sndArrive();
+    this.setNote('Kept. The page joins your story.');
+  };
+  renderJournalP = () => {
+    const s = this.state;
+    return React.createElement(React.Fragment, null,
+      React.createElement('h1', { style:{ fontFamily:'var(--font-display)', fontSize:30, margin:'0 0 2px', color:'var(--fg-strong)', display:'flex', alignItems:'center', gap:8 } }, this.ic('quill',26), 'Journal'),
+      React.createElement('p', { style:{ margin:'0 0 16px', fontFamily:'var(--font-mono)', fontSize:12, color:'var(--muted)' } }, 'pages of your own hand · the Scribe reads them into the timeline'),
+      s.note ? React.createElement('div', { className:'capture-note', role:'status', style:{ marginBottom:12 } }, this.ic('quill',22,{}), React.createElement('span', null, s.note)) : null,
+      React.createElement('button', { className:'btn btn-primary', onClick:this.goCandle, style:{ marginBottom:18 } }, this.ic('flame',16), 'Write by candlelight'),
+      React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:12 } },
+        s.journal.map(j=>React.createElement('div', { key:j.id, 'data-card-id':'entry-'+j.id, className:'journal-entry', style:{ margin:0 } },
+          React.createElement('div', { className:'journal-meta' },
+            React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--ink-muted)' } }, j.day+' · '+j.time),
+            React.createElement('span', { className:'tag' }, j.mode==='guided'?'with Balaur':'free hand')),
+          React.createElement('p', { className:'journal-text' }, j.text)))),
+      React.createElement('div', { style:{ height:90 } })
+    );
+  };
+  renderCandle = () => {
+    const s = this.state;
+    const guided = s.jMode==='guided';
+    return React.createElement('div', null,
+      React.createElement('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 0 0' } },
+        React.createElement('button', { className:'btn btn-wood btn-sm', onClick:this.leaveImmersive }, '⟨ put out the candle'),
+        React.createElement('div', { style:{ display:'flex', gap:7 } },
+          React.createElement('button', { className:'btn btn-wood btn-sm', onClick:this.toggleSound, title:'Toggle sound' }, s.soundOn ? '♪' : '♪̶'),
+          React.createElement('button', { className:'btn btn-wood btn-sm', onClick:()=>this.setState({ jMode:'free' }), style: !guided?{ color:'var(--gold)' }:undefined }, 'free hand'),
+          React.createElement('button', { className:'btn btn-wood btn-sm', onClick:()=>this.setState({ jMode:'guided' }), style: guided?{ color:'var(--gold)' }:undefined }, 'with Balaur'))),
+      React.createElement('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'22px 0 14px' } },
+        React.createElement('img', { src:'assets/logo.png', alt:'', className:'basm-glow', style:{ width:56, height:56, imageRendering:'pixelated' } }),
+        React.createElement('span', { style:{ fontFamily:'var(--font-pixel)', fontSize:10, letterSpacing:'.12em', textTransform:'uppercase', color:'var(--gold)' } }, 'by candlelight')),
+      guided ? React.createElement('div', { style:{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:14 } },
+        React.createElement('img', { src:'assets/avatars/'+s.head+'.png', alt:'', style:{ width:40, height:40, imageRendering:'pixelated', border:'2px solid var(--outline-2)', boxShadow:'inset 0 0 0 1px var(--gold-deep)', background:'var(--chrome-2)', flexShrink:0 } }),
+        React.createElement('div', { style:{ flex:1, background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', color:'var(--ink)', border:'2px solid var(--parch-edge)', boxShadow:'var(--parch-bevel)', padding:'10px 14px', fontSize:15.5, lineHeight:1.5 } },
+          this.JPROMPTS[s.jPrompt],
+          React.createElement('a', { href:'#', onClick:(e)=>{ e.preventDefault(); this.setState(x=>({ jPrompt:(x.jPrompt+1)%this.JPROMPTS.length })); }, style:{ display:'block', marginTop:5, fontFamily:'var(--font-mono)', fontSize:10.5, textTransform:'uppercase', color:'var(--teal-ink)', textDecoration:'none' } }, 'ask me another ▸'))) : null,
+      React.createElement('textarea', { value:s.jDraft, onChange:(e)=>this.setState({ jDraft:e.target.value }), rows:12,
+        placeholder: guided ? 'Answer in your own hand…' : 'The page is yours. No one reads it unless you say so.',
+        style:{ width:'100%', boxSizing:'border-box', background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', color:'var(--ink)', border:'2px dashed var(--parch-edge)', boxShadow:'var(--parch-bevel)', font:'17px/1.7 var(--font-body)', padding:'18px 20px', minHeight:340 } }),
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:10, marginTop:12 } },
+        React.createElement('button', { className:'btn btn-primary', onClick:this.keepJournal }, this.ic('quill',16), 'Keep this page'),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--smoke)' } }, s.journal.length+' pages kept · they stay on this box'))
+    );
+  };
+
+  // ── Character sheet (profile + tracking) ──────────────────────────
+  sheetCards = () => {
+    const s = this.state;
+    const active = s.quests.filter(q=>q.status==='active');
+    const dailies = active.filter(q=>q.cat==='daily');
+    const weeklies = active.filter(q=>q.cat==='weekly');
+    const campaigns = active.filter(q=>q.cat==='campaign');
+    const streaked = active.filter(q=>q.streak).sort((a,b)=>b.streak-a.streak);
+    const overdue = active.filter(q=>q.overdue);
+    const stepsDone = campaigns.reduce((a,q)=>a+q.steps.filter(st=>st.done).length,0);
+    const stepsAll = campaigns.reduce((a,q)=>a+q.steps.length,0);
+    const spark = (pts) => React.createElement('svg', { className:'spark', width:150, height:34, viewBox:'0 0 150 34' },
+      React.createElement('polyline', { fill:'none', points:pts }),
+      React.createElement('circle', { cx:pts.trim().split(' ').pop().split(',')[0], cy:pts.trim().split(' ').pop().split(',')[1], r:3 }));
+    const identity = this.card('identity', 'Identity', React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:10 } },
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:14 } },
+        React.createElement('img', { src:'assets/avatars/'+s.soul+'.png', alt:'', style:{ width:84, height:84, imageRendering:'pixelated', border:'3px solid var(--outline-2)', boxShadow:'var(--bevel-up), inset 0 0 0 2px var(--indigo)', background:'var(--chrome-2)' } }),
+        React.createElement('div', null,
+          React.createElement('div', { style:{ fontFamily:'var(--font-display)', fontSize:24, color:'var(--ink)' } }, s.ownerName),
+          React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--ink-muted)' } }, 'the owner of this box'))),
+      React.createElement('input', { type:'text', value:s.ownerName, maxLength:24, onChange:(e)=>this.setState({ ownerName:e.target.value }),
+        style:{ font:'15px/1.4 var(--font-body)', color:'var(--ink)', background:'var(--surface-2)', border:'2px solid var(--parch-edge)', boxShadow:'inset 0 2px 0 rgba(64,44,18,.15)', padding:'9px 11px', maxWidth:240 } })), { ornate:true });
+    const souls = this.card('soul-portrait', 'Soul portrait', React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'repeat(8,1fr)', gap:6 } },
+      Array.from({length:16}).map((_,i)=>{
+        const id = 'soul-'+String(i+1).padStart(2,'0');
+        const on = s.soul===id;
+        return React.createElement('button', { key:id, onClick:()=>this.setState({ soul:id }), title:id,
+          style:{ padding:3, background:'var(--chrome)', backgroundImage:'var(--grain-warm)', backgroundSize:'4px 4px', border:'2px solid '+(on?'var(--gold)':'var(--outline-2)'), boxShadow: on?'var(--drop-hard)':'inset 0 2px 0 var(--bevel-light)', cursor:'pointer' } },
+          React.createElement('img', { src:'assets/avatars/'+id+'.png', alt:id, style:{ width:'100%', display:'block', imageRendering:'pixelated' } }));
+      })));
+    const stats = this.card('stats', 'The measures of you', React.createElement('div', null,
+      streaked[0] ? this.dashStat('flame','constancy', streaked[0].streak+' days', 'longest watch · '+streaked[0].title.toLowerCase()) : null,
+      this.dashStat('check','word kept today', dailies.filter(q=>q.doneToday).length+' of '+dailies.length, weeklies.filter(q=>q.doneToday).length+' of '+weeklies.length+' weeklies this week'),
+      this.dashStat('scroll','burdens', String(active.length), overdue.length?overdue.length+' overdue':'nothing overdue', overdue.length>0),
+      this.dashStat('key','stories', stepsDone+' of '+stepsAll, campaigns.length+' campaigns under way')));
+    const weight = this.card('weight', 'Weight', React.createElement('div', null,
+      React.createElement('div', { className:'life-stat' }, '81.2 ', React.createElement('span', { className:'life-unit' }, 'kg')),
+      spark('0,22 25,20 50,24 75,18 100,16 125,17 150,14'),
+      React.createElement('div', { className:'life-lastat' }, 'this morning · −1.8 since May')));
+    const mood = this.card('mood', 'Mood', React.createElement('div', null,
+      React.createElement('div', { className:'life-stat', style:{ fontSize:22 } }, 'steady'),
+      spark('0,26 25,28 50,20 75,24 100,14 125,16 150,12'),
+      React.createElement('div', { className:'life-lastat' }, 'yesterday · mended by the walk')));
+    const ledger = this.card('ledger', 'Recent lines', React.createElement('ul', { className:'life-lines' },
+      s.lifeLines.map((l,i)=>React.createElement('li', { key:i }, l)),
+      React.createElement('li', { style:{ color:'var(--ink-muted)', fontFamily:'var(--font-mono)', fontSize:11.5 } }, 'log in the ledge — “weight 81.2kg” · “mood bright”')));
+    return { identity:identity, stats:stats, souls:souls, weight:weight, mood:mood, ledger:ledger };
+  };
+
+  // ── Balaur page — heads, skills, memory, configuration ───────────
+  memoryKeep = (m) => { this.setState(s=>({ memories:s.memories.map(x=>x.id===m.id?Object.assign({},x,{ status:'kept' }):x) })); this.setNote('Then it is written. “'+m.title+'” is part of your story now.'); };
+  memoryDismiss = (m) => { this.setState(s=>({ memories:s.memories.filter(x=>x.id!==m.id) })); this.setNote('Then it passes, unkept.'); };
+  balaurCards = () => {
+    const s = this.state;
+    const proposed = s.memories.filter(m=>m.status==='proposed');
+    const kept = s.memories.filter(m=>m.status==='kept');
+    const companion = this.card('companion', 'The companion', React.createElement('div', { style:{ display:'flex', flexDirection:'column', gap:12 } },
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:14 } },
+        React.createElement('img', { src:'assets/avatars/'+s.head+'.png', alt:'Balaur', style:{ width:84, height:84, imageRendering:'pixelated', border:'3px solid var(--outline-2)', boxShadow:'var(--bevel-up), inset 0 0 0 2px var(--gold-deep)', background:'var(--chrome-2)' } }),
+        React.createElement('div', null,
+          React.createElement('div', { style:{ fontFamily:'var(--font-display)', fontSize:24, color:'var(--ink)' } }, 'Balaur'),
+          React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--ink-muted)' } }, 'one companion · many heads'))),
+      React.createElement('div', { style:{ display:'grid', gridTemplateColumns:'repeat(8,1fr)', gap:6 } },
+        Array.from({length:16}).map((_,i)=>{
+          const id = 'balaur-'+String(i+1).padStart(2,'0');
+          const on = s.head===id;
+          return React.createElement('button', { key:id, onClick:()=>this.setState({ head:id }), title:id,
+            style:{ padding:3, background:'var(--chrome)', backgroundImage:'var(--grain-warm)', backgroundSize:'4px 4px', border:'2px solid '+(on?'var(--gold)':'var(--outline-2)'), boxShadow: on?'var(--drop-hard)':'inset 0 2px 0 var(--bevel-light)', cursor:'pointer' } },
+            React.createElement('img', { src:'assets/avatars/'+id+'.png', alt:id, style:{ width:'100%', display:'block', imageRendering:'pixelated' } }));
+        })),
+      React.createElement('div', { style:{ borderTop:'2px dotted var(--parch-edge)', paddingTop:10 } },
+        React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'.06em', color:'var(--ink-muted)', marginBottom:6 } }, 'the chosen model'),
+        React.createElement('div', { style:{ display:'flex', gap:7, flexWrap:'wrap' } },
+          [{ id:'hearth-7b', d:'local · runs on this box' }, { id:'ember-13b', d:'local · slower, wiser' }, { id:'cloud-opus', d:'leaves the box — not while I guard it', off:true }].map(m=>
+            React.createElement('button', { key:m.id, onClick: m.off?undefined:()=>{ this.setState({ model:m.id }); this.setNote('Then I shall think with '+m.id+'. Your words still stay here.'); }, title:m.d,
+              style:{ fontFamily:'var(--font-mono)', fontSize:11, padding:'5px 9px', cursor:m.off?'help':'pointer', color: s.model===m.id?'var(--gold-ink)':'var(--ink-muted)', background:'var(--surface-2)', border:'2px '+(m.off?'dashed':'solid')+' '+(s.model===m.id?'var(--gold-deep)':'var(--parch-edge)') } }, m.id))))), { ornate:false });
+    const headsCard = this.card('heads', 'Heads — branches of one mind', React.createElement('div', null,
+      s.heads.map(h=>React.createElement('div', { key:h.id, style:{ display:'flex', alignItems:'center', gap:11, padding:'8px 0', borderTop:'1px dashed var(--parch-edge)' } },
+        React.createElement('img', { src:'assets/avatars/'+h.avatar+'.png', alt:'', className: h.status==='awake'?'basm-glow':undefined, style:{ width:38, height:38, imageRendering:'pixelated', border:'2px solid var(--outline-2)', background:'var(--chrome-2)', opacity:h.status==='asleep'?0.55:1 } }),
+        React.createElement('div', { style:{ flex:1, minWidth:0 } },
+          React.createElement('div', { style:{ fontSize:15, color:'var(--ink)' } }, h.name),
+          React.createElement('div', { style:{ display:'flex', gap:5, flexWrap:'wrap', marginTop:2 } },
+            h.skills.map((sk,i)=>React.createElement('span', { key:i, className:'tag', style:{ fontSize:10 } }, sk)))),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color: h.status==='awake'?'var(--good-ink)':'var(--ink-muted)', flexShrink:0 } }, h.status))),
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:10, borderTop:'2px dotted var(--parch-edge)', paddingTop:10, marginTop:6 } },
+        React.createElement('button', { className:'btn btn-ghost btn-sm', onClick:()=>this.setNote('A new head wakes when a branch of work needs one. Name the work in chat, and it shall be so.') }, 'Wake a new head'),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--ink-muted)' } }, 'new branch, new head — never a swarm'))));
+    const memCard = this.card('memory', 'Memory — awaiting your word', React.createElement('div', null,
+      proposed.length ? proposed.map(m=>React.createElement('div', { key:m.id, style:{ border:'2px solid var(--gold-deep)', padding:'9px 11px', marginBottom:8, background:'var(--surface-2)' } },
+        React.createElement('div', { style:{ display:'flex', justifyContent:'space-between', gap:8 } },
+          React.createElement('span', { className:'kcard-kind' }, m.kind),
+          React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--ink-muted)' } }, 'proposed')),
+        React.createElement('div', { style:{ fontSize:15, color:'var(--ink)', margin:'3px 0' } }, m.title),
+        React.createElement('div', { style:{ fontSize:12.5, color:'var(--ink-muted)', marginBottom:7 } }, m.body),
+        React.createElement('div', { style:{ display:'flex', gap:7 } },
+          React.createElement('button', { className:'btn btn-primary btn-sm', onClick:()=>this.memoryKeep(m) }, 'Keep it.'),
+          React.createElement('button', { className:'btn btn-ghost btn-sm', onClick:()=>this.memoryDismiss(m) }, 'Not this.')))) : React.createElement('p', { className:'kcard-when', style:{ margin:'0 0 8px' } }, 'Nothing awaits your word.'),
+      React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'.06em', color:'var(--ink-muted)', margin:'6px 0 4px' } }, 'kept · '+kept.length),
+      kept.map(m=>React.createElement('div', { key:m.id, style:{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderTop:'1px dashed var(--parch-edge)' } },
+        this.ic('tome',15),
+        React.createElement('span', { style:{ flex:1, minWidth:0, fontSize:14, color:'var(--ink)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } }, m.title),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--ink-muted)', flexShrink:0 } }, 'used ×'+m.used)))), { gold:true });
+    const skillsCard = this.card('skills', 'Skills', React.createElement('div', null,
+      s.skills.map((sk,i)=>React.createElement('div', { key:i, style:{ display:'flex', alignItems:'center', gap:9, padding:'6px 0', borderTop: i?'1px dashed var(--parch-edge)':'none' } },
+        this.ic(sk.icon,16),
+        React.createElement('span', { style:{ flex:1, fontSize:14.5, color:'var(--ink)' } }, sk.name),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--ink-muted)' } }, 'used ×'+sk.used)))));
+    return { companion:companion, skills:skillsCard, memory:memCard, heads:headsCard };
+  };
+
+  // ── The hearth: immersive mode + sound ────────────────────────────
+  goImmersive = () => { this.ensureAudio(); this.setState(s=>({ lastPage: s.page==='immersive'?s.lastPage:s.page, page:'immersive' }), this.startAmbient); };
+  leaveImmersive = () => { this.stopAmbient(); this.setState(s=>({ page: (s.lastPage && s.lastPage!=='immersive' && s.lastPage!=='candle') ? s.lastPage : 'board' })); };
+  ensureAudio = () => {
+    if (!this._ac) { try { this._ac = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} }
+    if (this._ac && this._ac.state==='suspended') this._ac.resume();
+  };
+  beep = (freq, dur, type, gain, delay) => {
+    const pg = this.state.page;
+    if (!this.state.soundOn || (pg!=='immersive' && pg!=='candle')) return;
+    this.ensureAudio();
+    if (!this._ac) return;
+    const t = this._ac.currentTime + (delay||0);
+    const o = this._ac.createOscillator(), g = this._ac.createGain();
+    o.type = type||'triangle'; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain||0.04, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g); g.connect(this._ac.destination);
+    o.start(t); o.stop(t+dur+0.02);
+  };
+  sndSend = () => { this.beep(196, 0.09, 'square', 0.028); };
+  sndPick = () => { this.beep(330, 0.07, 'square', 0.028); };
+  sndArrive = () => { this.beep(523, 0.12, 'triangle', 0.034); this.beep(659, 0.16, 'triangle', 0.028, 0.09); };
+  toggleSound = () => this.setState(s=>({ soundOn:!s.soundOn }), () => {
+    if (this.state.soundOn && (this.state.page==='immersive' || this.state.page==='candle')) this.startAmbient();
+    else this.stopAmbient();
+  });
+  startAmbient = () => {
+    if (!this.state.soundOn) return;
+    this.ensureAudio();
+    const ac = this._ac;
+    if (!ac || this._amb) return;
+    // brown-noise hearth bed
+    const n = ac.sampleRate * 2, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+    let last = 0;
+    for (let i=0;i<n;i++){ const w = Math.random()*2-1; last = (last + 0.02*w)/1.02; d[i] = last*3.2; }
+    const src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+    const lp = ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=440;
+    const g = ac.createGain(); g.gain.value=0.0; g.gain.setTargetAtTime(0.022, ac.currentTime, 0.8);
+    src.connect(lp); lp.connect(g); g.connect(ac.destination); src.start();
+    this._amb = { src, g };
+    const pop = () => {
+      if (!this._amb) return;
+      const len = Math.floor(ac.sampleRate * 0.05), nb = ac.createBuffer(1, len, ac.sampleRate), nd = nb.getChannelData(0);
+      for (let i=0;i<len;i++) nd[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 3);
+      const c = ac.createBufferSource(); c.buffer = nb;
+      const bp = ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 700 + Math.random()*1900; bp.Q.value = 0.8;
+      const cg = ac.createGain(); cg.gain.value = 0.025 + Math.random()*0.055;
+      c.connect(bp); bp.connect(cg); cg.connect(ac.destination); c.start();
+      this._crackleTimer = setTimeout(pop, 70 + Math.random()*430);
+    };
+    pop();
+  };
+  stopAmbient = () => {
+    if (this._amb) { try { this._amb.g.gain.setTargetAtTime(0.0001, this._ac.currentTime, 0.2); const a=this._amb; setTimeout(()=>{ try{a.src.stop();}catch(e){} }, 400); } catch(e) {} this._amb = null; }
+    clearTimeout(this._crackleTimer);
+  };
+
+  // ── Draggable + resizable card grid (react-grid-layout-ready) ─────
+  // ── Boards engine — free 2D drag / resize / compaction, per board ──
+  GCOLS = 8; GROW = 8; GMAR = 12;
+  uid = () => 'c'+(this.state.uid++);
+  boardById = (id) => this.state.boards.find(b=>b.id===id) || this.state.boards[0];
+  activeB = () => this.boardById(this.state.activeBoard);
+  saveBoards = () => { try { localStorage.setItem('balaur-boards', JSON.stringify(this.state.boards)); localStorage.setItem('balaur-active', this.state.activeBoard); } catch(e) {} };
+  setBoards = (fn, cb) => this.setState(s=>({ boards: s.boards.map(b=>b.id===s.activeBoard?Object.assign({},b,{ cards: fn(b.cards.map(c=>Object.assign({},c))) }):b) }), ()=>{ this.saveBoards(); if(cb)cb(); });
+  gridRef = (el) => { this._gridEl = el; if (el) requestAnimationFrame(this.measureGrid); };
+  measureGrid = () => { if (this._gridEl) { const w = this._gridEl.clientWidth; if (w && Math.abs(w - this.state.gridW) > 2) this.setState({ gridW:w }); } };
+  gColW = () => { const W = this.state.gridW || (this._gridEl?this._gridEl.clientWidth:800); return Math.max(18,(W-(this.GCOLS-1)*this.GMAR)/this.GCOLS); };
+  gCollide = (a,b) => a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+  gPack = (L, prioId) => { const placed=[]; const prio=L.find(o=>o.cid===prioId); if(prio)placed.push(prio); L.filter(o=>o.cid!==prioId).sort((a,b)=> a.y-b.y || a.x-b.x).forEach(it=>{ let y=0; while(placed.some(p=>this.gCollide(Object.assign({},it,{y}),p))) y++; it.y=y; placed.push(it); }); return L; };
+  gCommit = (cid) => this.setBoards(cards=>this.gPack(cards,cid));
+  gStartDrag = (e,cid) => { e.preventDefault(); e.stopPropagation(); const it=this.activeB().cards.find(o=>o.cid===cid); this._gd={ cid,colW:this.gColW(),sx:e.clientX,sy:e.clientY,ox:it.x,oy:it.y }; document.body.style.userSelect='none'; document.addEventListener('mousemove',this.gDragMove); document.addEventListener('mouseup',this.gDragEnd); this.forceUpdate(); };
+  gDragMove = (e) => { const g=this._gd; if(!g) return; const unit=this.GROW+this.GMAR; const dx=Math.round((e.clientX-g.sx)/(g.colW+this.GMAR)); const dy=Math.round((e.clientY-g.sy)/unit); this.setBoards(cards=>{ const it=cards.find(o=>o.cid===g.cid); it.x=Math.max(0,Math.min(this.GCOLS-it.w,g.ox+dx)); it.y=Math.max(0,g.oy+dy); return cards; }); };
+  gDragEnd = () => { const g=this._gd; this._gd=null; document.body.style.userSelect=''; document.removeEventListener('mousemove',this.gDragMove); document.removeEventListener('mouseup',this.gDragEnd); if(g) this.gCommit(g.cid); this.forceUpdate(); };
+  gStartResize = (e,cid) => { e.preventDefault(); e.stopPropagation(); const it=this.activeB().cards.find(o=>o.cid===cid); this._gr={ cid,colW:this.gColW(),sx:e.clientX,sy:e.clientY,ow:it.w,oh:it.h }; document.body.style.userSelect='none'; document.addEventListener('mousemove',this.gResizeMove); document.addEventListener('mouseup',this.gResizeEnd); this.forceUpdate(); };
+  gResizeMove = (e) => { const g=this._gr; if(!g) return; const unit=this.GROW+this.GMAR; const dw=Math.round((e.clientX-g.sx)/(g.colW+this.GMAR)); const dh=Math.round((e.clientY-g.sy)/unit); this.setBoards(cards=>{ const it=cards.find(o=>o.cid===g.cid); it.w=Math.max(2,Math.min(this.GCOLS-it.x,g.ow+dw)); it.h=Math.max(4,g.oh+dh); return cards; }); };
+  gResizeEnd = () => { const g=this._gr; this._gr=null; document.body.style.userSelect=''; document.removeEventListener('mousemove',this.gResizeMove); document.removeEventListener('mouseup',this.gResizeEnd); if(g) this.gCommit(g.cid); this.forceUpdate(); };
+
+  // ── Board / card CRUD ─────────────────────────────────────────────
+  setBoard = (id) => this.setState({ activeBoard:id, palette:false }, this.saveBoards);
+  addBoard = () => { const name = (window.prompt('Name the new board', 'New board')||'').trim(); if(!name) return; const id='b'+Date.now(); this.setState(s=>({ boards:s.boards.concat([{ id, name, cards:[] }]), activeBoard:id, palette:true }), this.saveBoards); };
+  renameBoard = (id) => { const b=this.boardById(id); const name=(window.prompt('Rename board', b.name)||'').trim(); if(!name) return; this.setState(s=>({ boards:s.boards.map(x=>x.id===id?Object.assign({},x,{name}):x) }), this.saveBoards); };
+  deleteBoard = (id) => { if(this.state.boards.length<=1) return; this.setState(s=>{ const boards=s.boards.filter(b=>b.id!==id); return { boards, activeBoard: s.activeBoard===id?boards[0].id:s.activeBoard }; }, this.saveBoards); };
+  bottomY = (cards) => cards.reduce((m,c)=>Math.max(m,c.y+c.h),0);
+  addCard = (type, spec) => {
+    const def = this.CARD_TYPES[type] || { w:4, h:12 };
+    const cid = this.uid();
+    const card = Object.assign({ cid, type, x:0, y:this.bottomY(this.activeB().cards), w: type==='gen'?4:def.w, h: type==='gen'?12:def.h }, spec?{spec}:{});
+    this.setBoards(cards=>{ cards.push(card); return this.gPack(cards, cid); });
+    this.flare && this.flare(cid);
+    return card;
+  };
+  addOrFocusCard = (type) => { if(!this.activeB().cards.some(c=>c.type===type)) this.addCard(type); };
+  deleteCard = (cid) => this.setBoards(cards=>this.gPack(cards.filter(c=>c.cid!==cid)));
+
+  // ── Dynamically generated, hypermedia (HATEOAS) card ──────────────
+  dispatch = (op) => {
+    if (!op) return;
+    if (op.kind==='addCard') { this.addCard(op.type); this.push({ role:'tool', tool:'ui_render', icon:'orb', text:'card raised: '+(this.CARD_TYPES[op.type]?this.CARD_TYPES[op.type].label.toLowerCase():op.type) }, 200); return; }
+    if (op.kind==='board') { this.setBoard(op.id); return; }
+    if (op.kind==='remember') { this._memText = op.text; this.push({ role:'tool', tool:'memory_propose', icon:'tome', text:'memory proposed: "'+op.text+'"' }, 150); const q='Shall I keep it — “'+op.text+'”?'; this.push({ role:'balaur', text:q, reveal:true }, 450); this.push({ role:'choices', kind:'memory' }, 450+this.revealMs(q)); return; }
+    if (op.kind==='addQuest') { const nq=this.addQuest(op.text); this.push({ role:'tool', tool:'task_add', icon:'quill', text:'added quest: '+nq.title.toLowerCase() }, 150); this.push({ role:'balaur', text:'Kept. “'+nq.title+'” waits on the book.', reveal:true }, 450); return; }
+    if (op.kind==='questDone') { const q=this.findQuest(op.text); if(!q){ this.push({ role:'balaur', text:'I find no such quest.', reveal:true }, 150); return; } if(q.cat==='daily'||q.cat==='weekly'){ if(!q.doneToday) this.toggleDone(q); } else this.complete(q); this.push({ role:'tool', tool:'task_done', icon:'check', text:'kept: '+q.title.toLowerCase() }, 150); this.push({ role:'balaur', text:'Well done. It is marked.', reveal:true }, 450); return; }
+  };
+  genCard = (item) => {
+    const sp = item.spec || { title:'A note', lines:[], actions:[] };
+    return React.createElement('div', { 'data-card-id':item.cid, className:'kcard kcard-proposed', style:{ gap:9, padding:'16px 18px', maxWidth:'none' } },
+      React.createElement('div', { className:'kcard-kind', style:{ color:'var(--teal-ink)' } }, 'generated · hypermedia'),
+      React.createElement('h3', { className:'kcard-title', style:{ fontSize:19, margin:0 } }, sp.title),
+      (sp.lines||[]).map((l,i)=>React.createElement('p', { key:i, style:{ margin:0, fontSize:14, lineHeight:1.5, color:'var(--ink)' } }, l)),
+      (sp.actions&&sp.actions.length) ? React.createElement('div', { style:{ display:'flex', flexWrap:'wrap', gap:7, borderTop:'2px dotted var(--parch-edge)', paddingTop:11, marginTop:2 } },
+        sp.actions.map((a,i)=>React.createElement('button', { key:i, className:'btn '+(i===0?'btn-primary':'btn-ghost')+' btn-sm', onClick:()=>this.dispatch(a.op) }, a.label))) : null,
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:6, fontFamily:'var(--font-mono)', fontSize:9.5, color:'var(--ink-muted)' } }, this.ic('shield',13), 'controls served with this view · rendered on your box'));
+  };
+  genSpec = (text) => {
+    const t = text.toLowerCase();
+    if (/evening|tonight|dusk/.test(t)) return { title:'This evening', lines:['The light is going. Three things still want your hand.'], actions:[{label:'Walk at dusk — done', op:{kind:'questDone', text:'walk dusk'}},{label:'Water the tomatoes', op:{kind:'questDone', text:'water tomatoes seedlings'}},{label:'Read ten pages', op:{kind:'questDone', text:'read ten pages'}}] };
+    if (/plan|week/.test(t)) return { title:'Plan the week', lines:['Name the three that matter; the rest can wait without nagging.'], actions:[{label:'Open the quest log', op:{kind:'addCard', type:'quests'}},{label:'Plan the week — done', op:{kind:'questDone', text:'plan the week'}}] };
+    return { title: text.trim().charAt(0).toUpperCase()+text.trim().slice(1), lines:['Balaur drafted this view from your words. It lives only on this board.'], actions:[{label:'Keep as a quest', op:{kind:'addQuest', text:text.trim()}},{label:'Remember this', op:{kind:'remember', text:text.trim()}}] };
+  };
+
+  // ── Render one board as a free grid ───────────────────────────────
+  renderBoardGrid = () => {
+    const board = this.activeB();
+    const cardMap = this.buildCardMap();
+    const layout = board.cards;
+    const W = this.state.gridW || (this._gridEl?this._gridEl.clientWidth:800);
+    const stacked = W>0 && W<470;
+    if (!layout.length) return React.createElement('div', { ref:this.gridRef, style:{ padding:'60px 0', textAlign:'center', color:'var(--muted)', fontFamily:'var(--font-mono)', fontSize:13 } }, 'An empty board. Add a card, or tell Balaur in the ledge what you want to see.');
+    if (stacked) {
+      const order = layout.slice().sort((a,b)=> a.y-b.y || a.x-b.x);
+      return React.createElement('div', { ref:this.gridRef, style:{ display:'flex', flexDirection:'column', gap:14 } },
+        order.map(it=>{ const node = this.cardNode(it, cardMap); return node?React.createElement('div', { key:it.cid }, node):null; }));
+    }
+    const colW = this.gColW(), unit = this.GROW+this.GMAR;
+    const H = layout.reduce((m,it)=>Math.max(m,(it.y+it.h)),0)*unit + 4;
+    return React.createElement('div', { ref:this.gridRef, style:{ position:'relative', height:H } },
+      layout.map(it=>{
+        const node = this.cardNode(it, cardMap); if(!node) return null;
+        const dragging = (this._gd&&this._gd.cid===it.cid) || (this._gr&&this._gr.cid===it.cid);
+        const clone = React.cloneElement(node, { style: Object.assign({}, node.props.style, { height:'100%', overflowY:'auto', boxSizing:'border-box', margin:0 }) });
+        return React.createElement('div', { key:it.cid, style:{ position:'absolute', left:it.x*(colW+this.GMAR), top:it.y*unit, width:it.w*colW+(it.w-1)*this.GMAR, height:it.h*this.GROW+(it.h-1)*this.GMAR, zIndex: (dragging|| this.state.cardMenu===it.cid)?20:1, transition: dragging?'none':'left .12s ease, top .12s ease, width .12s ease, height .12s ease' } },
+          clone,
+          React.createElement('div', { onMouseDown:(e)=>this.gStartDrag(e,it.cid), title:'Drag to move', style:{ position:'absolute', top:5, right:52, cursor:'grab', fontFamily:'var(--font-mono)', fontSize:13, color:'var(--ink-muted)', zIndex:5, padding:'2px 5px', lineHeight:1 } }, '⠿'),
+          React.createElement('div', { 'data-cardmenu':'1', onMouseDown:(e)=>{ e.stopPropagation(); this.setState(x=>({ cardMenu: x.cardMenu===it.cid?null:it.cid })); }, title:'Card menu', style:{ position:'absolute', top:5, right:30, cursor:'pointer', fontFamily:'var(--font-mono)', fontSize:14, color: this.state.cardMenu===it.cid?'var(--gold-ink)':'var(--ink-muted)', zIndex:5, padding:'2px 5px', lineHeight:1 } }, '⋯'),
+          React.createElement('div', { onClick:()=>this.deleteCard(it.cid), title:'Remove card', style:{ position:'absolute', top:5, right:8, cursor:'pointer', fontFamily:'var(--font-mono)', fontSize:13, color:'var(--ink-muted)', zIndex:5, padding:'2px 5px', lineHeight:1 } }, '✕'),
+          this.cardMenuPanel(it),
+          React.createElement('div', { onMouseDown:(e)=>this.gStartResize(e,it.cid), title:'Drag to resize', style:{ position:'absolute', right:1, bottom:1, width:16, height:16, cursor:'se-resize', zIndex:5, background:'linear-gradient(135deg, transparent 45%, var(--gold-deep) 45%, var(--gold-deep) 60%, transparent 60%, transparent 72%, var(--gold-deep) 72%, var(--gold-deep) 87%, transparent 87%)' } })
+        );
+      }));
+  };
+
+  // ── Board bar + add-card palette + the board view ─────────────────
+  boardBar = () => {
+    const s = this.state;
+    const tab = (b) => React.createElement('div', { key:b.id, onClick:()=>this.setBoard(b.id), onDoubleClick:()=>this.renameBoard(b.id),
+      style:{ display:'flex', alignItems:'center', gap:7, padding:'6px 11px', cursor:'pointer', userSelect:'none',
+        background: b.id===s.activeBoard?'var(--gold)':'var(--chrome)', backgroundImage: b.id===s.activeBoard?'none':'var(--grain-warm)', backgroundSize:'4px 4px',
+        color: b.id===s.activeBoard?'#1c0d04':'var(--chrome-fg)', border:'2px solid var(--outline-2)', boxShadow:'inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark)',
+        fontFamily:'var(--font-mono)', fontSize:11.5, textTransform:'uppercase', letterSpacing:'.04em' } },
+      b.name,
+      b.id===s.activeBoard && s.boards.length>1 ? React.createElement('span', { onClick:(e)=>{ e.stopPropagation(); this.deleteBoard(b.id); }, title:'Delete board', style:{ color:'#5a3210', fontWeight:700 } }, '✕') : null);
+    return React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', padding:'14px 0 12px' } },
+      s.boards.map(tab),
+      React.createElement('button', { onClick:this.addBoard, title:'New board', className:'btn btn-wood btn-sm' }, '＋ board'),
+      React.createElement('div', { style:{ marginLeft:'auto', display:'flex', gap:8 } },
+        React.createElement('button', { onClick:()=>this.setState(x=>({ palette:!x.palette })), className:'btn '+(s.palette?'btn-primary':'btn-ghost')+' btn-sm' }, this.ic('quill',15), 'add a card'),
+        React.createElement('button', { onClick:this.goImmersive, className:'btn btn-wood btn-sm' }, this.ic('flame',15), 'the hearth')));
+  };
+  palettePanel = () => {
+    if (!this.state.palette) return null;
+    const present = this.activeB().cards.map(c=>c.type);
+    return React.createElement('div', { className:'parch', style:{ padding:'12px 14px', marginBottom:14, background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', border:'2px solid var(--gold-deep)', boxShadow:'var(--parch-bevel)' } },
+      React.createElement('div', { className:'kcard-kind', style:{ color:'var(--gold-ink)', marginBottom:8 } }, 'Raise a card onto this board'),
+      React.createElement('div', { style:{ display:'flex', flexWrap:'wrap', gap:7 } },
+        Object.keys(this.CARD_TYPES).map(type=>{
+          const d = this.CARD_TYPES[type], on = present.indexOf(type)>=0;
+          return React.createElement('button', { key:type, onClick:()=>{ this.addCard(type); }, title: on?'already on this board (adds another)':'',
+            style:{ display:'flex', alignItems:'center', gap:7, padding:'7px 10px', cursor:'pointer', background:'var(--surface-2)', border:'2px solid '+(on?'var(--gold-deep)':'var(--parch-edge)'), color:'var(--ink)', fontFamily:'var(--font-body)', fontSize:13.5 } },
+            this.ic(d.icon,15), d.label, on?React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:9.5, color:'var(--ink-muted)' } }, 'on') : null);
+        })));
+  };
+  boardView = () => React.createElement(React.Fragment, null,
+    this.boardBar(),
+    this.state.note ? React.createElement('div', { className:'capture-note', role:'status', style:{ marginBottom:12 } }, this.ic('quill',22,{}), React.createElement('span', null, this.state.note)) : null,
+    this.palettePanel(),
+    this.renderBoardGrid(),
+    React.createElement('div', { style:{ height:90 } }));
+
+  // ── Card map: every functionality as a card element ───────────────
+  wrapCard = (node) => React.createElement('div', { className:'kcard', style:{ padding:'10px 16px 16px', maxWidth:'none' } }, node);
+  cardNode = (it, cardMap) => {
+    if (it.type==='gen') return this.genCard(it);
+    if (it.type==='quests') return this.wrapCard(this.renderTasks(it.props && it.props.filter));
+    return cardMap[it.type];
+  };
+  dupCard = (cid) => { const src = this.activeB().cards.find(c=>c.cid===cid); if(!src) return; const copy = Object.assign({}, src, { cid:this.uid(), x:0, y:this.bottomY(this.activeB().cards) }); this.setState({ cardMenu:null }); this.setBoards(cards=>{ cards.push(copy); return this.gPack(cards, copy.cid); }); };
+  sizeCard = (cid, dw, dh) => this.setBoards(cards=>{ const it=cards.find(c=>c.cid===cid); if(it){ it.w=Math.max(2,Math.min(this.GCOLS-it.x,it.w+dw)); it.h=Math.max(4,it.h+dh); } return this.gPack(cards, cid); });
+  setCardProp = (cid, key, val) => this.setState({ cardMenu:null }, ()=>this.setBoards(cards=>{ const it=cards.find(c=>c.cid===cid); if(it) it.props=Object.assign({}, it.props, { [key]:val }); return cards; }));
+  cardMenuPanel = (it) => {
+    if (this.state.cardMenu !== it.cid) return null;
+    const row = (label, onClick) => React.createElement('button', { onMouseDown:(e)=>e.stopPropagation(), onClick, style:{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'6px 10px', fontSize:13, color:'var(--ink)', fontFamily:'var(--font-body)' } }, label);
+    const scopes = it.type==='quests' ? [['all','everything'],['daily','dailies'],['weekly','weeklies'],['campaign','campaign'],['oneoff','one-off'],['someday','side quests']] : null;
+    return React.createElement('div', { 'data-cardmenu':'1', onMouseDown:(e)=>e.stopPropagation(), style:{ position:'absolute', top:28, right:8, zIndex:30, minWidth:162, background:'var(--surface)', backgroundImage:'var(--grain-ink)', backgroundSize:'4px 4px', border:'2px solid var(--gold-deep)', boxShadow:'var(--parch-bevel)', padding:'5px 0' } },
+      row('⠿ Duplicate', ()=>this.dupCard(it.cid)),
+      row('⤢ Wider', ()=>this.sizeCard(it.cid, 2, 0)),
+      row('⤡ Narrower', ()=>this.sizeCard(it.cid, -2, 0)),
+      row('↕ Taller', ()=>this.sizeCard(it.cid, 0, 4)),
+      row('↥ Shorter', ()=>this.sizeCard(it.cid, 0, -4)),
+      scopes ? React.createElement('div', { style:{ borderTop:'1px dashed var(--parch-edge)', margin:'4px 0', paddingTop:4 } },
+        React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:9.5, textTransform:'uppercase', color:'var(--ink-muted)', padding:'2px 10px' } }, 'scope'),
+        scopes.map(sc=>React.createElement('button', { key:sc[0], onMouseDown:(e)=>e.stopPropagation(), onClick:()=>this.setCardProp(it.cid,'filter', sc[0]==='all'?null:sc[0]),
+          style:{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'4px 10px', fontSize:12.5, color:(((it.props&&it.props.filter)||'all')===sc[0])?'var(--gold-ink)':'var(--ink)', fontFamily:'var(--font-body)' } }, sc[1]))) : null,
+      React.createElement('div', { style:{ borderTop:'1px dashed var(--parch-edge)', marginTop:4, paddingTop:2 } },
+        row('✕ Remove card', ()=>{ this.setState({ cardMenu:null }); this.deleteCard(it.cid); })));
+  };
+  buildCardMap = () => {
+    const wrap = (node) => React.createElement('div', { className:'kcard', style:{ padding:'10px 16px 16px', maxWidth:'none' } }, node);
+    return Object.assign({}, this.dashCards(), this.sheetCards(), this.balaurCards(), {
+      quests: wrap(this.renderTasks()),
+      calendar: wrap(this.renderCalendarCard()),
+      timeline: wrap(this.renderTimelineP()),
+      journal: wrap(this.renderJournalP()),
+    });
+  };
+
+  // ── Dashboard cards ───────────────────────────────────────────────
+  goTasksQuest = (id) => { this.addOrFocusCard('quests'); this.setState({ selectedId:id, inspect:'quest' }); };
+
+  dashStat = (icon, label, value, sub, ember) => React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:11, padding:'8px 0', borderTop:'1px dashed var(--parch-edge)' } },
+    this.ic(icon, 20),
+    React.createElement('div', { style:{ flex:1, minWidth:0 } },
+      React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'.06em', color:'var(--ink-muted)' } }, label),
+      React.createElement('div', { style:{ fontFamily:'var(--font-display)', fontSize:21, color:'var(--ink)', lineHeight:1.15 } }, value),
+      sub ? React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color: ember?'var(--ember-deep)':'var(--ink-muted)', fontWeight: ember?700:400 } }, sub) : null
+    ));
+
+  dashStat = (icon, label, value, sub, ember) => React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:11, padding:'8px 0', borderTop:'1px dashed var(--parch-edge)' } },
+    this.ic(icon, 20),
+    React.createElement('div', { style:{ flex:1, minWidth:0 } },
+      React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10, textTransform:'uppercase', letterSpacing:'.06em', color:'var(--ink-muted)' } }, label),
+      React.createElement('div', { style:{ fontFamily:'var(--font-display)', fontSize:21, color:'var(--ink)', lineHeight:1.15 } }, value),
+      sub ? React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color: ember?'var(--ember-deep)':'var(--ink-muted)', fontWeight: ember?700:400 } }, sub) : null
+    ));
+
+  dashCards = () => {
+    const s = this.state;
+    const active = s.quests.filter(q=>q.status==='active');
+    const overdue = active.filter(q=>q.overdue);
+    const dailies = active.filter(q=>q.cat==='daily');
+    const keptD = dailies.filter(q=>q.doneToday).length;
+    const weeklies = active.filter(q=>q.cat==='weekly');
+    const keptW = weeklies.filter(q=>q.doneToday).length;
+    const campaigns = active.filter(q=>q.cat==='campaign');
+    const stepsDone = campaigns.reduce((a,q)=>a+q.steps.filter(st=>st.done).length, 0);
+    const stepsAll = campaigns.reduce((a,q)=>a+q.steps.length, 0);
+    const streaked = active.filter(q=>q.streak).sort((a,b)=>b.streak-a.streak);
+    const longest = streaked[0];
+    const dueToday = active.filter(q=>q.cat==='oneoff' && q.due && q.due.indexOf('today')===0);
+    const soulSrc = 'assets/avatars/'+s.soul+'.png';
+
+    const charSheet = React.createElement('div', { 'data-card-id':'character', className:'kcard kcard-proposed', style:{ gap:8, padding:'20px 20px 16px', maxWidth:'none' } },
+      React.createElement('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:7, paddingBottom:6 } },
+        React.createElement('img', { src:soulSrc, alt:s.ownerName, style:{ width:108, height:108, imageRendering:'pixelated', border:'3px solid var(--outline-2)', boxShadow:'var(--bevel-up), inset 0 0 0 2px var(--indigo)', background:'var(--chrome-2)' } }),
+        React.createElement('div', { style:{ fontFamily:'var(--font-pixel)', fontSize:13, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--chrome-fg)', background:'var(--chrome)', border:'2px solid var(--outline-2)', boxShadow:'var(--drop-hard)', padding:'3px 12px' } }, s.ownerName),
+        React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--ink-muted)' } }, 'the owner of this box')
+      ),
+      longest ? this.dashStat('flame', 'constancy', longest.streak+' days', 'longest watch · '+longest.title.toLowerCase()) : null,
+      this.dashStat('check', 'word kept today', keptD+' of '+dailies.length, keptW+' of '+weeklies.length+' weeklies this week'),
+      this.dashStat('scroll', 'burdens', String(active.length), overdue.length ? overdue.length+' overdue' : 'nothing overdue', overdue.length>0),
+      this.dashStat('key', 'stories', stepsDone+' of '+stepsAll, campaigns.length+' campaigns under way'),
+      React.createElement('button', { className:'btn btn-primary', onClick:this.goImmersive, style:{ justifyContent:'center', marginTop:8 } }, this.ic('flame',16), 'Sit by the hearth'),
+      React.createElement('div', { style:{ textAlign:'center', fontFamily:'var(--font-mono)', fontSize:10, color:'var(--ink-muted)' } }, 'the conversation, immersive · with sound'),
+      React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:7, justifyContent:'center', borderTop:'2px dotted var(--parch-edge)', paddingTop:10, marginTop:4 } },
+        this.ic('shield',15),
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--ink-muted)' } }, 'All quiet. Your words stay on this box.'))
+    );
+
+    const today = React.createElement('div', { 'data-card-id':'today', className:'kcard', style:{ gap:7, padding:'16px 18px', maxWidth:'none' } },
+      React.createElement('div', { className:'kcard-kind' }, 'Today'),
+      React.createElement('h3', { className:'kcard-title', style:{ fontSize:20, margin:0 } }, 'Friday, June 12'),
+      dueToday.map(q=>React.createElement('div', { key:q.id, onClick:()=>this.goTasksQuest(q.id), style:{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:14.5, color:'var(--ink)', padding:'3px 0' } },
+        this.ic('scroll',16), q.title, React.createElement('span', { style:{ marginLeft:'auto', fontFamily:'var(--font-mono)', fontSize:11.5, color:'var(--ink-muted)' } }, q.due))),
+      React.createElement('div', { style:{ borderTop:'1px dashed var(--parch-edge)', paddingTop:7, display:'flex', flexDirection:'column', gap:2 } },
+        dailies.map(q=>React.createElement('div', { key:q.id, style:{ display:'flex', alignItems:'center', gap:9, padding:'3px 0', opacity:q.doneToday?0.6:1 } },
+          this.questBox(q),
+          React.createElement('span', { style:{ flex:1, minWidth:0, fontSize:14.5, color:'var(--ink)', textDecoration:q.doneToday?'line-through':'none', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' } }, q.title),
+          this.statusHint(q)))),
+      overdue.length ? React.createElement('a', { href:'#', onClick:(e)=>{ e.preventDefault(); this.addOrFocusCard('quests'); this.setState({ filter:'oneoff' }); }, style:{ fontFamily:'var(--font-mono)', fontSize:11, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--ember-deep)', fontWeight:700, textDecoration:'none', borderTop:'1px dashed var(--parch-edge)', paddingTop:8 } }, '⚠ '+overdue.length+' overdue wait — open the log ▸') : null
+    );
+
+    const campaignPanel = React.createElement('div', { 'data-card-id':'campaigns', className:'kcard', style:{ gap:6, padding:'16px 18px', maxWidth:'none' } },
+      React.createElement('div', { className:'kcard-kind' }, 'The main story'),
+      campaigns.map(q=>{
+        const next = q.steps.find(st=>!st.done);
+        return React.createElement('div', { key:q.id, onClick:()=>this.goTasksQuest(q.id), style:{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderTop:'1px dashed var(--parch-edge)', cursor:'pointer' } },
+          this.ic('key',16),
+          React.createElement('div', { style:{ flex:1, minWidth:0 } },
+            React.createElement('div', { style:{ fontSize:15, color:'var(--ink)' } }, q.title),
+            next ? React.createElement('div', { style:{ fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--ink-muted)' } }, 'next · '+next.t.toLowerCase()) : null),
+          React.createElement('span', { style:{ display:'inline-flex', gap:3, flexShrink:0 } },
+            q.steps.map((st,i)=>React.createElement('span', { key:i, style:{ width:8, height:8, background: st.done?'var(--gold-ink)':'rgba(64,44,18,.14)', border:'1px solid '+(st.done?'var(--gold-ink)':'var(--parch-edge)') } }))));
+      })
+    );
+
+    const road = [
+      { d:'Sat 13', t:'Parcel · pay the electrician' },
+      { d:'Sun 14', t:'Take honey to Ana' },
+      { d:'Tue 16', t:'Book the dentist' },
+      { d:'Thu 18', t:'Trip to the mountains begins', gold:true },
+    ];
+    const roadPanel = React.createElement('div', { 'data-card-id':'road', className:'kcard', style:{ gap:6, padding:'16px 18px', maxWidth:'none' } },
+      React.createElement('div', { className:'kcard-kind' }, 'The road ahead'),
+      road.map((r,i)=>React.createElement('div', { key:i, style:{ display:'flex', alignItems:'baseline', gap:10, padding:'4px 0', borderTop: i?'1px dashed var(--parch-edge)':'none' } },
+        React.createElement('span', { style:{ fontFamily:'var(--font-mono)', fontSize:11, color: r.gold?'var(--gold-ink)':'var(--teal-ink)', width:52, flexShrink:0 } }, r.d),
+        React.createElement('span', { style:{ fontSize:14.5, color:'var(--ink)', fontWeight: r.gold?600:400 } }, r.t))),
+      React.createElement('a', { href:'#', onClick:(e)=>{ e.preventDefault(); this.addOrFocusCard('quests'); this.setState({ inspect:'day', selectedDay:12 }); }, style:{ fontFamily:'var(--font-mono)', fontSize:10.5, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--teal-ink)', textDecoration:'none', marginTop:2 } }, 'the full calendar ▸')
+    );
+
+    return { character:charSheet, today:today, campaigns:campaignPanel, road:roadPanel };
+  };
+
+  onNavigate = (p) => this.setState({ page:'board' });
+  onToggleTheme = () => this.setState(s=>({ light:!s.light }), this.applyTheme);
+
+  renderVals() {
+    const s = this.state;
+    return {
+      assetBase:'assets', crestSrc:'assets/crest.png',
+      navLinks:[],
+      page:s.page, themeGlyph: s.light?'◑':'☼',
+      onNavigate:this.onNavigate, onToggleTheme:this.onToggleTheme,
+      soul:s.soul, head:s.head, ownerName:s.ownerName,
+      onSoul:(v)=>this.setState({ soul:v }), onHead:(v)=>this.setState({ head:v }), onName:(v)=>this.setState({ ownerName:v }),
+      isBoard:s.page==='board', isImmersive:s.page==='immersive', isCandle:s.page==='candle',
+      showTopbar: s.page!=='immersive' && s.page!=='candle',
+      boardView: s.page==='board' ? this.boardView() : null,
+      chatView: s.page==='immersive' ? this.chatView() : null,
+      candleView: s.page==='candle' ? this.renderCandle() : null,
+      dock: this.dock(),
+      sidebar: this.sidebar(),
+      contentClass: (s.page!=='immersive' && s.page!=='candle' && s.sidebarOpen) ? 'with-sidebar' : '',
+    };
+  }
+}
+</script>
+</body>
+</html>
