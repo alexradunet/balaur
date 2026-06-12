@@ -196,6 +196,7 @@ Optional environment variables:
 | `BALAUR_REMOTE_API_KEY` | (unset) | API key for the remote endpoint (stored securely in PocketBase) |
 | `BALAUR_EMBED_MODEL` | (unset) | Path to a local embedding model GGUF (reserved for embedding recall; not yet wired — recall is LIKE-based today) |
 | `BALAUR_KRONK_TIMEOUT_SECONDS` | (unset) | Timeout (sec) for the llama.cpp inference server; kronk tracks llama.cpp head and may need pinning via `KRONK_LIB_VERSION` (see Build) |
+| `KRONK_LIB_VERSION` | (unset) | Pin the llama.cpp runtime that kronk downloads (e.g. `b4321`); record the known-good tag here when you pin it |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
