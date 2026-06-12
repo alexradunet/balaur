@@ -46,8 +46,9 @@ func skillJSON(r *core.Record, withContent bool) map[string]any {
 
 // transitionCmd builds approve/reject/archive verbs shared by memory and
 // skill: thin wrappers over knowledge.Transition, which owns the lifecycle
-// rules and the audit trail.
-func transitionCmd(app core.App, kind knowledge.Kind, verb, to string, render func(*core.Record) map[string]any) *cobra.Command {
+// rules and the audit trail. cliKind is the <command>.<subcommand> string
+// for the v1 envelope (e.g. "memory.approve").
+func transitionCmd(app core.App, kind knowledge.Kind, verb, to string, cliKind string, render func(*core.Record) map[string]any) *cobra.Command {
 	short := map[string]string{
 		"approve": "Move a proposal to active (the owner's consent)",
 		"reject":  "Dismiss a proposal",
@@ -58,7 +59,7 @@ func transitionCmd(app core.App, kind knowledge.Kind, verb, to string, render fu
 		Short: short[verb],
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, cliKind, func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := knowledge.Transition(app, kind, args[0], to)
 		if err != nil {
 			return nil, err
@@ -68,7 +69,7 @@ func transitionCmd(app core.App, kind knowledge.Kind, verb, to string, render fu
 	return cmd
 }
 
-func statusListCmd(app core.App, kind knowledge.Kind, render func(*core.Record) map[string]any) *cobra.Command {
+func statusListCmd(app core.App, kind knowledge.Kind, cliKind string, render func(*core.Record) map[string]any) *cobra.Command {
 	var status string
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -76,7 +77,7 @@ func statusListCmd(app core.App, kind knowledge.Kind, render func(*core.Record) 
 		Args:  cobra.NoArgs,
 	}
 	cmd.Flags().StringVar(&status, "status", knowledge.StatusActive, "proposed | active | archived | rejected")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, cliKind, func(cmd *cobra.Command, args []string) (any, error) {
 		recs, err := knowledge.ListByStatus(app, kind, status)
 		if err != nil {
 			return nil, err
@@ -98,11 +99,11 @@ func memoryCmd(app core.App) *cobra.Command {
 	mem := func(r *core.Record) map[string]any { return memoryJSON(r) }
 	cmd.AddCommand(
 		memoryProposeCmd(app),
-		statusListCmd(app, knowledge.Memory, mem),
+		statusListCmd(app, knowledge.Memory, "memory.list", mem),
 		memoryRecallCmd(app),
-		transitionCmd(app, knowledge.Memory, "approve", knowledge.StatusActive, mem),
-		transitionCmd(app, knowledge.Memory, "reject", knowledge.StatusRejected, mem),
-		transitionCmd(app, knowledge.Memory, "archive", knowledge.StatusArchived, mem),
+		transitionCmd(app, knowledge.Memory, "approve", knowledge.StatusActive, "memory.approve", mem),
+		transitionCmd(app, knowledge.Memory, "reject", knowledge.StatusRejected, "memory.reject", mem),
+		transitionCmd(app, knowledge.Memory, "archive", knowledge.StatusArchived, "memory.archive", mem),
 		memoryEditCmd(app),
 	)
 	return cmd
@@ -123,7 +124,7 @@ func memoryProposeCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&whenToUse, "when-to-use", "", "when should this memory be recalled?")
 	_ = cmd.MarkFlagRequired("title")
 	_ = cmd.MarkFlagRequired("content")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "memory.propose", func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
 			Title:      title,
 			Content:    content,
@@ -148,7 +149,7 @@ func memoryRecallCmd(app core.App) *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 	}
 	cmd.Flags().IntVar(&limit, "limit", 8, "max results")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "memory.recall", func(cmd *cobra.Command, args []string) (any, error) {
 		// Inspection only: unlike the model's recall tool this does not
 		// Touch the records — a harness probing memory must not skew the
 		// owner's usage statistics.
@@ -178,7 +179,7 @@ func memoryEditCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&category, "category", "", "new category")
 	cmd.Flags().IntVar(&importance, "importance", 0, "new importance (1-5)")
 	cmd.Flags().StringVar(&whenToUse, "when-to-use", "", "new recall hint")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "memory.edit", func(cmd *cobra.Command, args []string) (any, error) {
 		fields := map[string]string{}
 		set := func(flag, field, value string) {
 			if cmd.Flags().Changed(flag) {
@@ -212,11 +213,11 @@ func skillCmd(app core.App) *cobra.Command {
 	sk := func(r *core.Record) map[string]any { return skillJSON(r, false) }
 	cmd.AddCommand(
 		skillProposeCmd(app),
-		statusListCmd(app, knowledge.Skill, sk),
+		statusListCmd(app, knowledge.Skill, "skill.list", sk),
 		skillShowCmd(app),
-		transitionCmd(app, knowledge.Skill, "approve", knowledge.StatusActive, sk),
-		transitionCmd(app, knowledge.Skill, "reject", knowledge.StatusRejected, sk),
-		transitionCmd(app, knowledge.Skill, "archive", knowledge.StatusArchived, sk),
+		transitionCmd(app, knowledge.Skill, "approve", knowledge.StatusActive, "skill.approve", sk),
+		transitionCmd(app, knowledge.Skill, "reject", knowledge.StatusRejected, "skill.reject", sk),
+		transitionCmd(app, knowledge.Skill, "archive", knowledge.StatusArchived, "skill.archive", sk),
 	)
 	return cmd
 }
@@ -235,7 +236,7 @@ func skillProposeCmd(app core.App) *cobra.Command {
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("description")
 	_ = cmd.MarkFlagRequired("content")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "skill.propose", func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := knowledge.ProposeSkill(app, knowledge.SkillProposal{
 			Name:        name,
 			Description: description,
@@ -256,7 +257,7 @@ func skillShowCmd(app core.App) *cobra.Command {
 		Short: "Load one active skill by name, content included (the model's skill tool)",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "skill.show", func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := knowledge.LoadSkill(app, args[0])
 		if err != nil {
 			return nil, err

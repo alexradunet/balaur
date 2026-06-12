@@ -105,13 +105,16 @@ database you own and can open with any SQLite tool.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
   every invocation is audited.
-- **A machine-facing CLI:** the same binary speaks JSON for external
+- **A machine-facing CLI (API v1):** the same binary speaks JSON for external
   harnesses — including other LLMs — that drive, seed, inspect, and verify
-  a box without scraping HTML. `balaur chat` runs the identical turn
-  pipeline the web UI runs (`internal/turn`); `task`, `memory`, `skill`,
-  `life`, `journal`, `day`, `recap`, `history`, `audit`, `model` work
-  deterministically without one; `balaur verify` replays the words-vs-deeds
-  check on the record. See "CLI for agents & test harnesses".
+  a box without scraping HTML. Every command emits a versioned envelope
+  `{"v":1,"kind":"<cmd>.<sub>","data":{…}}`; additive fields inside `data`
+  are free, renames or removals bump `v`. `balaur doctor` preflights the box
+  (no model calls). `balaur chat` runs the identical turn pipeline the web UI
+  runs (`internal/turn`); `task`, `memory`, `skill`, `life`, `journal`, `day`,
+  `recap`, `history`, `audit`, `model` work deterministically without one;
+  `balaur verify` replays the words-vs-deeds check on the record. See "CLI for
+  agents & test harnesses".
 - **Self-awareness:** the binary embeds its own self-knowledge
   (`internal/self`) — what Balaur is, its architecture, the
   self-development loop — plus a build stamp and a live capability
@@ -265,13 +268,30 @@ engine are downloaded data, stored outside the repo and outside the binary.
 
 ## CLI for agents & test harnesses
 
-Every command prints one JSON value on stdout; failures print
-`{"error": ...}` on stderr and exit non-zero. Web and CLI are gateways
-over the same turn pipeline (`internal/turn`), so what the CLI observes
-is evidence about what the web UI does.
+Every command prints one JSON envelope on stdout:
+
+```json
+{"v": 1, "kind": "task.add", "data": { … }}
+```
+
+`v` is the CLI API version (integer, bumped only on breaking changes to the
+envelope or any command's data shape; additive fields inside `data` are
+free). `kind` is `<command>.<subcommand>` — a discriminator for consumers.
+`data` is exactly the value each command returns. Failures print an error
+envelope `{"v":1,"kind":"error","data":{"error":"…"}}` on stderr and exit
+non-zero. Web and CLI are gateways over the same turn pipeline
+(`internal/turn`), so what the CLI observes is evidence about what the web
+UI does.
+
+Before driving a box with scripts, run `balaur doctor` — a no-model
+preflight that checks the data dir, core collections, model readiness,
+gates, and extensions. Exit code 0 means all fatal checks pass; the
+top-level `ok` field is the AND of fatal checks only (model not configured
+is non-fatal).
 
 | Command | What it does | Model? |
 |---|---|---|
+| `balaur doctor` | Preflight: data dir writable, core collections present, model readiness, OS-access gate, extensions. Exit 0 if box is operable. | no |
 | `balaur chat "<msg>"` | One real companion turn: context, agent loop, honesty check, persistence. Reports the reply, every tool call with args + result, proposal references, and the words-vs-deeds verdict. | yes |
 | `balaur task add/list/done/snooze/drop` | Commitments, directly. | no |
 | `balaur memory propose/list/recall/approve/reject/archive/edit` | Memory lifecycle across the consent boundary. | no |

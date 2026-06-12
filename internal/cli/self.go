@@ -21,7 +21,7 @@ func selfCmd(app core.App) *cobra.Command {
 		Args: cobra.NoArgs,
 	}
 	cmd.Flags().StringVar(&section, "section", "", "include a self-knowledge section: overview | architecture | capabilities | source | devloop")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "self", func(cmd *cobra.Command, args []string) (any, error) {
 		// Assemble the real tool registry so the inventory reports what a
 		// turn in this process would actually ship.
 		names := []string{}

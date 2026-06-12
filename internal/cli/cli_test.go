@@ -17,36 +17,9 @@ import (
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
-// execute runs one CLI command tree against a test app and returns parsed
-// stdout JSON. The storetest app is already migrated, so RunAllMigrations
-// inside run() is an idempotent no-op — the same path production takes.
-func execute(t *testing.T, cmd *cobra.Command, args ...string) (map[string]any, error) {
-	t.Helper()
-	v, err := executeRaw(t, cmd, args...)
-	if err != nil {
-		return nil, err
-	}
-	obj, ok := v.(map[string]any)
-	if !ok {
-		t.Fatalf("want a JSON object, got %T", v)
-	}
-	return obj, nil
-}
-
-func executeList(t *testing.T, cmd *cobra.Command, args ...string) ([]any, error) {
-	t.Helper()
-	v, err := executeRaw(t, cmd, args...)
-	if err != nil {
-		return nil, err
-	}
-	list, ok := v.([]any)
-	if !ok {
-		t.Fatalf("want a JSON array, got %T", v)
-	}
-	return list, nil
-}
-
-func executeRaw(t *testing.T, cmd *cobra.Command, args ...string) (any, error) {
+// executeEnvelope runs a command and returns the raw v1 envelope from stdout.
+// It also asserts that the envelope is structurally valid: v==1, kind non-empty.
+func executeEnvelope(t *testing.T, cmd *cobra.Command, args ...string) (map[string]any, error) {
 	t.Helper()
 	var out, errOut bytes.Buffer
 	cmd.SetOut(&out)
@@ -54,18 +27,73 @@ func executeRaw(t *testing.T, cmd *cobra.Command, args ...string) (any, error) {
 	cmd.SetArgs(args)
 	execErr := cmd.Execute()
 	if execErr != nil {
-		// The failure contract: stderr carries a JSON error object.
+		// The failure contract: stderr carries a v1 error envelope.
 		var e map[string]any
 		if err := json.Unmarshal(errOut.Bytes(), &e); err != nil {
 			t.Fatalf("stderr is not JSON on failure: %q", errOut.String())
 		}
-		return nil, execErr
+		if v, _ := e["v"].(float64); v != 1 {
+			t.Errorf("error envelope must have v:1, got %v", e["v"])
+		}
+		if e["kind"] != "error" {
+			t.Errorf("error envelope must have kind:error, got %v", e["kind"])
+		}
+		return e, execErr
 	}
-	var v any
-	if err := json.Unmarshal(out.Bytes(), &v); err != nil {
+	var env map[string]any
+	if err := json.Unmarshal(out.Bytes(), &env); err != nil {
 		t.Fatalf("stdout is not JSON: %v\n%s", err, out.String())
 	}
-	return v, nil
+	if v, _ := env["v"].(float64); v != 1 {
+		t.Errorf("envelope must have v:1, got %v", env["v"])
+	}
+	if k, _ := env["kind"].(string); k == "" {
+		t.Errorf("envelope must have a non-empty kind, got %v", env["kind"])
+	}
+	if _, hasData := env["data"]; !hasData {
+		t.Errorf("envelope must have a data field")
+	}
+	return env, nil
+}
+
+// execute runs one CLI command tree against a test app and returns the data
+// field of the v1 envelope, parsed as a JSON object. The storetest app is
+// already migrated, so RunAllMigrations inside run() is a no-op.
+func execute(t *testing.T, cmd *cobra.Command, args ...string) (map[string]any, error) {
+	t.Helper()
+	env, err := executeEnvelope(t, cmd, args...)
+	if err != nil {
+		return nil, err
+	}
+	obj, ok := env["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("want envelope.data to be a JSON object, got %T", env["data"])
+	}
+	return obj, nil
+}
+
+func executeList(t *testing.T, cmd *cobra.Command, args ...string) ([]any, error) {
+	t.Helper()
+	env, err := executeEnvelope(t, cmd, args...)
+	if err != nil {
+		return nil, err
+	}
+	list, ok := env["data"].([]any)
+	if !ok {
+		t.Fatalf("want envelope.data to be a JSON array, got %T", env["data"])
+	}
+	return list, nil
+}
+
+// executeRaw is kept for the envelope family test: returns the parsed data
+// field (any) without asserting its type.
+func executeRaw(t *testing.T, cmd *cobra.Command, args ...string) (any, error) {
+	t.Helper()
+	env, err := executeEnvelope(t, cmd, args...)
+	if err != nil {
+		return nil, err
+	}
+	return env["data"], nil
 }
 
 func TestTaskLifecycle(t *testing.T) {
@@ -417,5 +445,160 @@ func TestRecapShowFindsNothingOnFreshBox(t *testing.T) {
 	}
 	if out["found"] != false {
 		t.Errorf("fresh box has no summaries: %v", out)
+	}
+}
+
+// TestEnvelopeFamilies proves that each output family (object, array, error)
+// emits the v1 envelope with v:1, the correct kind, and the prior value
+// nested under data. Assertions unmarshal — they do not string-match.
+func TestEnvelopeFamilies(t *testing.T) {
+	t.Run("object kind (model)", func(t *testing.T) {
+		app := storetest.NewApp(t)
+		env, err := executeEnvelope(t, modelCmd(app))
+		if err != nil {
+			t.Fatalf("model: %v", err)
+		}
+		if env["kind"] != "model" {
+			t.Errorf("kind: want model, got %v", env["kind"])
+		}
+		data, ok := env["data"].(map[string]any)
+		if !ok {
+			t.Fatalf("data must be an object, got %T", env["data"])
+		}
+		if _, has := data["chat_ready"]; !has {
+			t.Errorf("data must contain chat_ready, got %v", data)
+		}
+	})
+
+	t.Run("array kind (audit)", func(t *testing.T) {
+		app := storetest.NewApp(t)
+		env, err := executeEnvelope(t, auditCmd(app))
+		if err != nil {
+			t.Fatalf("audit: %v", err)
+		}
+		if env["kind"] != "audit" {
+			t.Errorf("kind: want audit, got %v", env["kind"])
+		}
+		if _, ok := env["data"].([]any); !ok {
+			t.Fatalf("data must be an array for audit, got %T", env["data"])
+		}
+	})
+
+	t.Run("error envelope on failure", func(t *testing.T) {
+		app := storetest.NewApp(t)
+		// A bad --due triggers a well-defined failure path.
+		env, err := executeEnvelope(t, taskCmd(app), "add", "--title", "x", "--due", "not-a-time")
+		if err == nil {
+			t.Fatal("bad --due must fail")
+		}
+		if env["kind"] != "error" {
+			t.Errorf("error kind: want error, got %v", env["kind"])
+		}
+		data, ok := env["data"].(map[string]any)
+		if !ok || data["error"] == "" {
+			t.Errorf("error data must have error field: %v", env["data"])
+		}
+	})
+}
+
+// TestDoctorHealthyBox verifies that a fresh test app passes all fatal
+// checks and exits with code 0 (top-level ok:true).
+func TestDoctorHealthyBox(t *testing.T) {
+	app := storetest.NewApp(t)
+	exitCode.Store(0) // reset any residual state
+	out, err := execute(t, doctorCmd(app))
+	if err != nil {
+		t.Fatalf("doctor: %v", err)
+	}
+	if out["ok"] != true {
+		t.Errorf("healthy box must have top-level ok:true, got %v", out)
+	}
+	checks, _ := out["checks"].([]any)
+	if len(checks) == 0 {
+		t.Fatal("doctor must return at least one check")
+	}
+	// data_dir_writable and collections_present must both pass on a fresh box.
+	names := map[string]bool{}
+	for _, ch := range checks {
+		m := ch.(map[string]any)
+		names[m["name"].(string)] = m["ok"].(bool)
+	}
+	if !names["data_dir_writable"] {
+		t.Error("data_dir_writable must be ok on a fresh box")
+	}
+	if !names["collections_present"] {
+		t.Error("collections_present must be ok on a fresh box")
+	}
+	// model_ready is expected false on a bare box, but must not block top-level ok.
+	if out["ok"] != true {
+		t.Errorf("top-level ok must be true even when model_ready is false")
+	}
+	// version block must be present.
+	if _, hasVersion := out["version"]; !hasVersion {
+		t.Error("doctor must include a version block")
+	}
+}
+
+// TestDoctorMissingCollectionFails injects a deliberately absent collection
+// name into the check list and confirms top-level ok becomes false and the
+// command exits non-zero.
+func TestDoctorMissingCollectionFails(t *testing.T) {
+	app := storetest.NewApp(t)
+	exitCode.Store(0)
+
+	// Inject a checker list with a non-existent collection.
+	prev := doctorCheckers
+	doctorCheckers = func(a core.App) []doctorCheck {
+		return []doctorCheck{
+			checkDataDir(a),
+			checkCollections(a, []string{"messages", "definitely_does_not_exist"}),
+			checkOSAccess(),
+		}
+	}
+	t.Cleanup(func() { doctorCheckers = prev })
+
+	env, err := executeEnvelope(t, doctorCmd(app))
+	// doctor itself should not return a RunE error — it uses exitCode instead.
+	if err != nil {
+		t.Fatalf("doctor RunE must not error: %v", err)
+	}
+	data := env["data"].(map[string]any)
+	if data["ok"] != false {
+		t.Errorf("missing collection must make top-level ok:false, got %v", data["ok"])
+	}
+	if int(exitCode.Load()) != 1 {
+		t.Errorf("exit code must be 1 when top-level ok is false, got %d", exitCode.Load())
+	}
+}
+
+// TestDoctorModelReadyNonFatal verifies that a box without a model has
+// ok:true (model_ready is non-fatal) but model_ready.ok is false.
+func TestDoctorModelReadyNonFatal(t *testing.T) {
+	app := storetest.NewApp(t)
+	exitCode.Store(0)
+	out, err := execute(t, doctorCmd(app))
+	if err != nil {
+		t.Fatalf("doctor: %v", err)
+	}
+	if out["ok"] != true {
+		t.Errorf("top-level ok must be true when only non-fatal checks fail: %v", out)
+	}
+	checks, _ := out["checks"].([]any)
+	var modelReady map[string]any
+	for _, ch := range checks {
+		m := ch.(map[string]any)
+		if m["name"] == "model_ready" {
+			modelReady = m
+			break
+		}
+	}
+	if modelReady == nil {
+		t.Fatal("model_ready check must be present")
+	}
+	if modelReady["ok"] != false {
+		t.Errorf("model_ready must be false on a bare box: %v", modelReady)
+	}
+	if modelReady["fatal"] != false {
+		t.Errorf("model_ready must not be fatal: %v", modelReady)
 	}
 }

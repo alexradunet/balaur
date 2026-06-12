@@ -46,7 +46,7 @@ func extListCmd(app core.App) *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 	cmd.Flags().StringVar(&status, "status", "", "filter: proposed | active | disabled")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "ext.list", func(cmd *cobra.Command, args []string) (any, error) {
 		ext.Sync(app) // discover new files and changes before reporting
 		filter, params := "id != ''", dbx.Params{}
 		if status != "" {
@@ -72,7 +72,7 @@ func extApproveCmd(app core.App) *cobra.Command {
 		Short: "Consent to an extension's current file content (pins its sha256, activates its tools)",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "ext.approve", func(cmd *cobra.Command, args []string) (any, error) {
 		ext.Sync(app)
 		rec, err := ext.Approve(app, args[0])
 		if err != nil {
@@ -89,7 +89,7 @@ func extDisableCmd(app core.App) *cobra.Command {
 		Short: "Turn an extension off (the file stays; approve re-enables)",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "ext.disable", func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := ext.Disable(app, args[0])
 		if err != nil {
 			return nil, err
@@ -105,7 +105,7 @@ func extShowCmd(app core.App) *cobra.Command {
 		Short: "One extension's record plus its current file content",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "ext.show", func(cmd *cobra.Command, args []string) (any, error) {
 		ext.Sync(app)
 		recs, err := app.FindRecordsByFilter("extensions", "name = {:n}", "", 1, 0, dbx.Params{"n": args[0]})
 		if err != nil || len(recs) == 0 {
