@@ -313,7 +313,7 @@ func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 		return modal, nil
 	}
 	modal.CanDownload = true
-	modal.Body = "Download Balaur's default " + llm.DefaultChatModelName + " llamafile (~18 GB) and make it the active model?"
+	modal.Body = "Download Balaur's default " + llm.DefaultChatModelName + " llamafile (~4 GB) and make it the active model?"
 	return modal, nil
 }
 

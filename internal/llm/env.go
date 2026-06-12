@@ -7,15 +7,16 @@ import (
 )
 
 // The default local model is a "fat" llamafile: a single self-contained
-// executable bundling the llama.cpp engine and the Qwen3.5-27B weights. It is
-// the strongest llamafile model the target box runs, hardcoded as the
-// out-of-the-box default. Balaur runs it as a subprocess (see internal/llama)
-// and reaches it over the OpenAI-compatible API. The file is external data,
-// downloaded on first serve — never embedded in the binary.
+// executable bundling the llama.cpp engine and the Qwen3.5-4B weights. The 4B
+// is chosen for responsiveness on a CPU-only box (the 27B reasons too slowly
+// there); it is hardcoded as the out-of-the-box default. Balaur runs it as a
+// subprocess (see internal/llama) and reaches it over the OpenAI-compatible
+// API. The file is external data, downloaded on first serve — never embedded
+// in the binary.
 const (
-	DefaultChatModelName = "Qwen3.6 27B"
-	DefaultChatModelFile = "Qwen3.6-27B-Q4_K_M.llamafile"
-	DefaultChatModelURL  = "https://huggingface.co/mozilla-ai/llamafile_0.10/resolve/main/Qwen3.6-27B-Q4_K_M.llamafile"
+	DefaultChatModelName = "Qwen3.5 4B"
+	DefaultChatModelFile = "Qwen3.5-4B-Q5_K_S.llamafile"
+	DefaultChatModelURL  = "https://huggingface.co/mozilla-ai/llamafile_0.10/resolve/main/Qwen3.5-4B-Q5_K_S.llamafile"
 
 	SyntheticBaseURL    = "https://api.synthetic.new/v1"
 	SyntheticSmallModel = "syn:small:text"
