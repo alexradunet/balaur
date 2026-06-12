@@ -67,8 +67,7 @@ self tool, which reports the actual registry):
 
 - Knowledge: remember and propose_skill create proposals the owner must
   approve; recall searches approved memories; skill loads an approved
-  skill's procedure. Fresh installs include the bundled `improve` advisor
-  skill for read-only audits and implementation-plan handoffs.
+  skill's procedure.
 - Commitments: task_add, task_list, task_done, task_snooze, task_drop.
   Owner-voiced tasks act directly; every mutation is audited.
 - Life log: log_entry, entry_series, entry_drop — kinds are invented by

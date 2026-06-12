@@ -43,8 +43,7 @@ database you own and can open with any SQLite tool.
   enters context without approval. Injection is two-tier: high-importance
   memories always, message-matched recall per turn, plus a compact skills
   index loaded on demand via the `skill` tool. Every lifecycle step is
-  audited. Fresh installs include the bundled `improve` advisor skill for
-  read-only audits and implementation-plan handoffs.
+  audited.
 - **One master conversation, persisted:** every turn is stored; the model
   sees only the recent window plus memory (persistence is not context).
   History survives restarts and renders on page load.
