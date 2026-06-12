@@ -33,6 +33,12 @@ func OSAccess(app core.App) []agent.Tool {
 }
 
 func obj(props map[string]any, required ...string) map[string]any {
+	// A variadic with no args is a nil slice, which marshals to "required":
+	// null. JSON Schema wants an array, and llama.cpp's tool-call grammar
+	// generation rejects null ("type must be array, but is null"). Emit [].
+	if required == nil {
+		required = []string{}
+	}
 	return map[string]any{"type": "object", "properties": props, "required": required}
 }
 
