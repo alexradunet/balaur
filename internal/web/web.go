@@ -18,7 +18,6 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
-	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
@@ -184,7 +183,6 @@ func Register(se *core.ServeEvent) error {
 	if devSeedEnabled() {
 		se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
 	}
-	se.Router.POST("/ui/settings/avatar", h.setAvatarPref)
 	// Profile page and its sub-actions.
 	se.Router.GET("/profile", h.profilePage)
 	se.Router.POST("/ui/profile/name", h.saveName)
@@ -194,19 +192,6 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/heads", h.headsPage)
 	se.Router.POST("/ui/heads/{id}/avatar", h.setHeadAvatar)
 	return nil
-}
-
-// setAvatarPref saves the owner's soul-avatar preference and returns an
-// updated chatbar so the change takes effect immediately.
-func (h *handlers) setAvatarPref(e *core.RequestEvent) error {
-	pref := e.Request.FormValue("soul_avatar")
-	if !store.ValidSoulAvatarKey(pref) {
-		return e.BadRequestError("invalid avatar preference", nil)
-	}
-	if err := store.SetOwnerSetting(h.app, "soul_avatar", pref); err != nil {
-		return e.InternalServerError("saving avatar preference", err)
-	}
-	return h.chatbar(e)
 }
 
 type handlers struct {

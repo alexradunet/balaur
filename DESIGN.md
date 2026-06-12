@@ -118,13 +118,12 @@ only), the day's recap with transcript expand, completions, and logs —
 linked from calendar cells and recap day cards · a runtime honesty check:
 capture claims without a successful tool call trigger one self-repair
 pass, then an owner-visible origin-tagged check note · a 16-option soul
-avatar picker in the chatbar (`/ui/settings/avatar`, stored in
-`owner_settings`) · a 16-personality Balaur head library under
-`web/static/avatars/balaur-01..16.png` · a Balaur head medallion favicon
-at `web/static/logo.png` wired via `<link rel="icon">` and
-`apple-touch-icon` in the `page_head` partial · a profile page (`/profile`)
-with display name, soul avatar picker (16 options), and Balaur head picker
-(16 options) · a light/dark theme toggle in the topbar persisted to
+avatar picker in the profile page (stored in `owner_settings`) · a
+16-personality Balaur head library under `web/static/avatars/balaur-01..16.png`
+· a Balaur head medallion favicon at `web/static/logo.png` wired via
+`<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
+profile page (`/profile`) with display name, soul avatar picker (16 options),
+and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
 `localStorage`.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
@@ -308,9 +307,9 @@ reference this file. The owner picker writes the choice to `owner_settings`
 and the server resolves the URL dynamically; `soul.png` stays as a stable
 fallback equal to `soul-01`.
 
-The picker lives in the chatbar as `<details class="avatar-picker">` — a
-4×4 grid of 48px thumbnails, one HTMX form per option, POST to
-`/ui/settings/avatar`. Selection takes effect immediately and persists.
+The picker lives on the profile page (`/profile`) as a set of option buttons,
+one HTMX form per option, POSTing to `/ui/profile/soul-avatar`. Selection
+takes effect immediately and persists.
 
 **Group 1 — Basm folk world:**
 
