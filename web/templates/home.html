@@ -63,22 +63,26 @@
        the JS optimistic path clones these server-side templates. -->
   <template id="t-msg-user">
     <div class="msg msg-user msg-with-avatar">
-      <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
-        <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
-      </span>
+      <figure class="portrait">
+        <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
+          <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
+        </span>
+        <figcaption class="who">{{.OwnerName}}</figcaption>
+      </figure>
       <div class="msg-main">
-        <div class="who">{{.OwnerName}}</div>
         <div class="body"></div>
       </div>
     </div>
   </template>
   <template id="t-msg-pending">
     <div class="msg msg-balaur msg-pending msg-with-avatar">
-      <span class="balaur-avatar balaur-avatar-balaur balaur-avatar-live" data-kind="balaur" aria-hidden="true">
-        <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
-      </span>
+      <figure class="portrait">
+        <span class="balaur-avatar balaur-avatar-balaur balaur-avatar-live" data-kind="balaur" aria-hidden="true">
+          <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
+        </span>
+        <figcaption class="who">Balaur</figcaption>
+      </figure>
       <div class="msg-main">
-        <div class="who">Balaur</div>
         <div class="body"><span class="thinking thinking-dots">thinking</span></div>
       </div>
     </div>
@@ -99,11 +103,13 @@
       <img class="hearth-crest" src="/static/crest.png"
            alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
       <div class="msg msg-balaur msg-with-avatar">
-        <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
-          <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
-        </span>
+        <figure class="portrait">
+          <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
+            <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
+          </span>
+          <figcaption class="who">Balaur</figcaption>
+        </figure>
         <div class="msg-main">
-          <div class="who">Balaur</div>
           {{if .ChatReady}}
           <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
           {{else}}

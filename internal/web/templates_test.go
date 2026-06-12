@@ -222,6 +222,85 @@ func TestToolIconRendersAsImg(t *testing.T) {
 	}
 }
 
+func TestChatMsgBalaurPortraitStructure(t *testing.T) {
+	tmpl := parseTemplates(t)
+	var b strings.Builder
+	mv := messageView{
+		BalaurAvatarURL: "/static/avatars/balaur-01.png",
+		WhoLabel:        "Balaur",
+		Content:         "Hello, traveller.",
+	}
+	if err := tmpl.ExecuteTemplate(&b, "chat-msg-balaur", mv); err != nil {
+		t.Fatalf("chat-msg-balaur: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `<figure class="portrait">`) {
+		t.Errorf("chat-msg-balaur should contain portrait figure, got:\n%s", out)
+	}
+	// .who must be inside the portrait figure (as figcaption), not inside .msg-main
+	msgMainIdx := strings.Index(out, `class="msg-main"`)
+	whoIdx := strings.Index(out, `class="who"`)
+	if msgMainIdx == -1 {
+		t.Error("chat-msg-balaur missing msg-main div")
+	}
+	if whoIdx == -1 {
+		t.Error("chat-msg-balaur missing .who element")
+	}
+	if msgMainIdx != -1 && whoIdx != -1 && whoIdx > msgMainIdx {
+		t.Errorf("chat-msg-balaur: .who appears inside .msg-main (at %d > %d); it must be in .portrait instead", whoIdx, msgMainIdx)
+	}
+}
+
+func TestChatMsgUserPortraitStructure(t *testing.T) {
+	tmpl := parseTemplates(t)
+	var b strings.Builder
+	mv := messageView{
+		SoulAvatarURL: "/static/avatars/soul.png",
+		OwnerName:     "Alex",
+		Content:       "Tell me more.",
+	}
+	if err := tmpl.ExecuteTemplate(&b, "chat-msg-user", mv); err != nil {
+		t.Fatalf("chat-msg-user: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `<figure class="portrait">`) {
+		t.Errorf("chat-msg-user should contain portrait figure, got:\n%s", out)
+	}
+	msgMainIdx := strings.Index(out, `class="msg-main"`)
+	whoIdx := strings.Index(out, `class="who"`)
+	if msgMainIdx != -1 && whoIdx != -1 && whoIdx > msgMainIdx {
+		t.Errorf("chat-msg-user: .who appears inside .msg-main; it must be in .portrait instead")
+	}
+}
+
+func TestChatStreamingBalancedDivs(t *testing.T) {
+	// The open/close fragment pair is load-bearing: unclosed tags in
+	// chat-balaur-open must equal the closes in chat-balaur-close.
+	tmpl := parseTemplates(t)
+	mv := messageView{
+		BalaurAvatarURL: "/static/avatars/balaur-01.png",
+		WhoLabel:        "Balaur",
+	}
+
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "chat-balaur-open", mv); err != nil {
+		t.Fatalf("chat-balaur-open: %v", err)
+	}
+	// Simulate streaming content.
+	b.WriteString("streamed token text")
+	if err := tmpl.ExecuteTemplate(&b, "chat-balaur-close", messageView{}); err != nil {
+		t.Fatalf("chat-balaur-close: %v", err)
+	}
+
+	out := b.String()
+	openCount := strings.Count(out, "<div")
+	closeCount := strings.Count(out, "</div")
+	if openCount != closeCount {
+		t.Errorf("streaming open/close: unbalanced divs: %d <div> vs %d </div>\nHTML:\n%s",
+			openCount, closeCount, out)
+	}
+}
+
 func TestSparkPointsScaling(t *testing.T) {
 	points, _, ly := sparkPoints([]float64{1, 2, 3}, 240, 48)
 	if points == "" {
