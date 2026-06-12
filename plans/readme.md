@@ -42,7 +42,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 022 | Settings page: sidebar shell for Profile/Skills/Models | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `431727e`) |
 | 023 | GGUF download manager (background, progress, cancel, delete) | P2 | M–L | MED | 022 | — | DONE (reviewed; merged to main `b47b451`) |
 | 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | DONE (reviewed; merged to main `bba4494`) |
-| 025 | Hearthwood (Basm v2) visual foundation: tokens, fonts, icons | P1 | M | LOW–MED | — | — | DONE (reviewed; awaiting owner merge from worktree `agent-a09f8dd7e4621f639`, commit `022d7d6`) |
+| 025 | Hearthwood (Basm v2) visual foundation: tokens, fonts, icons | P1 | M | LOW–MED | — | — | DONE (reviewed; merged to main `58658da`) |
 | 026 | Immersive chat: portraits, nameplates, parchment dialogue | P1 | M | MED | 025 | — | TODO |
 | 027 | Dialogue choices: numbered server-rendered replies | P2 | M | MED | 026 | — | TODO |
 | 028 | Typed card registry: /ui/cards/{type} (HATEOAS foundation) | P1 | L | MED | 025 | — | TODO |
