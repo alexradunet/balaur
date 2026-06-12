@@ -71,6 +71,9 @@ func DefaultChatModelDownloadCommand(dataDir string) string {
 	return fmt.Sprintf("llmfit download %s --quant %s --output-dir %s", DefaultChatModelRepo, DefaultChatModelQuant, strconv.Quote(filepath.Join(dataDir, "models")))
 }
 
+// SyntheticAPIKey reads the internal/experimental synthetic API credentials.
+// BALAUR_SYNTHETIC_API_KEY and SYNTHETIC_API_KEY are undocumented, reserved
+// for testing and internal development (SyntheticClient has no production callers).
 func SyntheticAPIKey() string {
 	if key := os.Getenv("BALAUR_SYNTHETIC_API_KEY"); key != "" {
 		return key

@@ -85,11 +85,11 @@ self tool, which reports the actual registry):
   add verbs, not privileges — no filesystem, no shell, no npm.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks,
-/life, /day/{date}); the machine-facing CLI (chat, task, memory, skill, life,
-journal, day, recap, history, audit, verify, model, self) printing JSON
-for external harnesses; the PocketBase dashboard at /_/ is the owner's
-engine room, never your surface.
+Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks, /life,
+/day/{date}, /profile, /heads); the machine-facing CLI (chat, task, memory,
+skill, life, journal, day, recap, history, audit, verify, model, self)
+printing JSON for external harnesses; the PocketBase dashboard at /_/ is the
+owner's engine room, never your surface.
 
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an

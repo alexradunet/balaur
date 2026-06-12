@@ -129,9 +129,7 @@ with display name, soul avatar picker (16 options), and Balaur head picker
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
-multi-human accounts · channel adapters (Signal/WhatsApp/web) · CLI client ·
-per-head avatar assignment (`balaur_avatar` key on head records, referencing
-`balaur-01`…`balaur-16`).
+multi-human accounts · channel adapters (Signal/WhatsApp/web).
 
 ## 4. Visual system
 
@@ -344,9 +342,8 @@ The picker lives in the chatbar as `<details class="avatar-picker">` — a
 
 Stored as `balaur-01.png` … `balaur-16.png` under `web/static/avatars/`.
 `balaur.png` is the **active Balaur slot** — templates always reference it;
-it defaults to `balaur-01` (Wise). Focused sub-heads will be assigned a
-head variant via a `balaur_avatar` field on the head record (roadmap:
-per-head avatar assignment).
+it defaults to `balaur-01` (Wise). Focused sub-heads are assigned a head
+variant via the `balaur_avatar` field on the head record (via `POST /ui/heads/{id}/avatar`).
 
 | Key | Personality | Visual character |
 |---|---|---|

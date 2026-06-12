@@ -84,7 +84,6 @@ database you own and can open with any SQLite tool.
   Done / Snooze / Drop), a month calendar, and a 14-day timeline — the
   forward mirror of the recap telescope. Calendar and timeline project
   recurrence rules forward, read-only; actions live on the list cards.
-  Day pages are roadmap.
 - **The life log — owner-defined:** Balaur does not decide what a life is
   made of. `log_entry` keeps whatever you track under kinds you invent
   (weight, mood, sleep, pages-read…), numeric or textual, backdatable;
@@ -183,15 +182,25 @@ BALAUR_CHAT_MODEL=/path/to/model.gguf go run . serve
 API keys are never rendered back into the UI or audit log, but they live in
 the local PocketBase data directory and backups. Treat `pb_data/` as secret.
 
-Optional:
+Optional environment variables:
 
-```bash
-BALAUR_EMBED_MODEL=/path/to/embedding.gguf   # local embeddings model
-BALAUR_OS_ACCESS=1                           # enable read/write/edit/bash tools
-BALAUR_SOURCE=/path/to/balaur                # your source checkout (self-development)
-BALAUR_MAX_STEPS=24                          # raise the tool-round cap for coding sessions
-BALAUR_EXT_DIR=/path/to/pb_extensions        # relocate balaur-extensions (default: next to pb_data)
-```
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BALAUR_CHAT_MODEL` | (unset) | Path to a local GGUF model for chat; overrides the interactive /models page choice |
+| `BALAUR_REMOTE_URL` | (unset) | Base URL for an OpenAI-compatible endpoint (e.g. `http://127.0.0.1:8000/v1`) |
+| `BALAUR_REMOTE_MODEL` | (unset) | Model ID at the remote endpoint (e.g. `gpt-4` or `llama2`) |
+| `BALAUR_REMOTE_API_KEY` | (unset) | API key for the remote endpoint (stored securely in PocketBase) |
+| `BALAUR_EMBED_MODEL` | (unset) | Path to a local embedding model GGUF (reserved for embedding recall; not yet wired — recall is LIKE-based today) |
+| `BALAUR_KRONK_TIMEOUT_SECONDS` | (unset) | Timeout (sec) for the llama.cpp inference server; kronk tracks llama.cpp head and may need pinning via `KRONK_LIB_VERSION` (see Build) |
+| `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
+| `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
+| `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
+| `BALAUR_EXT_DIR` | `pb_data/` | Relocate the `pb_extensions/` directory (default: next to pb_data) |
+| `BALAUR_RECAP` | `1` | Set to `0` to disable hourly recap generation |
+| `BALAUR_NUDGE` | `1` | Set to `0` to disable minute-cadence task nudging |
+| `BALAUR_BRIEFING` | `1` | Set to `0` to disable the morning briefing |
+| `BALAUR_BRIEFING_HOUR` | `9` | Hour (0–23) to open the day with a briefing |
+| `BALAUR_DEV_SEED` | `0` | Set to `1` to enable the `/ui/dev/seed-recaps` endpoint for testing |
 
 ## Build
 
