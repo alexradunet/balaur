@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase"
@@ -62,8 +63,13 @@ func registerRecap(app core.App) {
 	if os.Getenv("BALAUR_RECAP") == "0" {
 		return
 	}
+	var mu sync.Mutex
 	var clients turn.ClientSource
 	run := func() {
+		if !mu.TryLock() {
+			return // a previous run is still in flight; this tick skips
+		}
+		defer mu.Unlock()
 		client, err := clients.Active(app)
 		if err != nil {
 			return // no model configured; recap waits
@@ -92,8 +98,13 @@ func registerNudge(app core.App) {
 	if os.Getenv("BALAUR_NUDGE") == "0" {
 		return
 	}
+	var mu sync.Mutex
 	var clients turn.ClientSource
 	run := func() {
+		if !mu.TryLock() {
+			return // a previous run is still in flight; this tick skips
+		}
+		defer mu.Unlock()
 		client, err := clients.Active(app)
 		if err != nil {
 			client = nil // no model configured: deterministic nudges still fire
@@ -119,8 +130,13 @@ func registerBriefing(app core.App) {
 	if h, err := strconv.Atoi(os.Getenv("BALAUR_BRIEFING_HOUR")); err == nil && h >= 0 && h <= 23 {
 		hour = h
 	}
+	var mu sync.Mutex
 	var clients turn.ClientSource
 	run := func() {
+		if !mu.TryLock() {
+			return // a previous run is still in flight; this tick skips
+		}
+		defer mu.Unlock()
 		client, err := clients.Active(app)
 		if err != nil {
 			client = nil // no model: the deterministic list still briefs
