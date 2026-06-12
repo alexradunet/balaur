@@ -110,12 +110,19 @@ func toWireTools(tools []ToolSpec) []map[string]any {
 }
 
 func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []ToolSpec) (<-chan Chunk, error) {
-	resp, err := c.post(ctx, "/chat/completions", map[string]any{
+	body := map[string]any{
 		"model":    c.Model,
 		"messages": toWire(msgs),
-		"tools":    toWireTools(tools),
 		"stream":   true,
-	})
+	}
+	// Only include tools when there are some. A null/empty tools field makes
+	// llama.cpp's server fail tool-call parser generation for some chat
+	// templates ("type must be array, but is null"); omitting it is also the
+	// correct OpenAI shape when no tools are offered.
+	if wt := toWireTools(tools); wt != nil {
+		body["tools"] = wt
+	}
+	resp, err := c.post(ctx, "/chat/completions", body)
 	if err != nil {
 		return nil, err
 	}
