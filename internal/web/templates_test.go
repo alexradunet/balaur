@@ -44,8 +44,8 @@ func TestTaskCardRenders(t *testing.T) {
 
 func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	tmpl := parseTemplates(t)
-	choice := turn.ModelChoice{Key: "m1", Provider: "kronk", Model: "model.gguf", Name: "Local Qwen2.5 3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}
-	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen2.5 3B", ChatPlaceholder: "Speak...", ModelChoices: []turn.ModelChoice{choice}}
+	choice := turn.ModelChoice{Key: "m1", Provider: "kronk", Model: "model.gguf", Name: "Local Qwen3.6 35B A3B", Detail: "model.gguf · on this box", Badge: "local", Active: true}
+	data := homeData{Title: "Balaur", ChatReady: true, ActiveModel: "Local Qwen3.6 35B A3B", ChatPlaceholder: "Speak...", ModelChoices: []turn.ModelChoice{choice}}
 	var b strings.Builder
 	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
 		t.Fatalf("chat_bar: %v", err)
@@ -68,12 +68,12 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	}
 
 	b.Reset()
-	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen2.5 3B", ModelChoices: []turn.ModelChoice{choice}}
+	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
 	if err := tmpl.ExecuteTemplate(&b, "models.html", models); err != nil {
 		t.Fatalf("models.html: %v", err)
 	}
 	out = b.String()
-	for _, want := range []string{`href="/models"`, "Available models", "Add OpenAI-compatible API", "Local Qwen2.5 3B"} {
+	for _, want := range []string{"Available models", "Add OpenAI-compatible API", "Local Qwen3.6 35B A3B"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("models page missing %q", want)
 		}

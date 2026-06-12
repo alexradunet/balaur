@@ -144,6 +144,25 @@ func TestSkillLifecycleAndLoad(t *testing.T) {
 	}
 }
 
+func TestSeededImproveSkillLoadsWithReferences(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	loaded, err := LoadSkill(app, "improve")
+	if err != nil {
+		t.Fatalf("LoadSkill improve: %v", err)
+	}
+	if !loaded.GetBool("enabled") {
+		t.Fatal("seeded improve skill must be enabled")
+	}
+	content := loaded.GetString("content")
+	if !strings.Contains(content, "# Improve") {
+		t.Fatal("seeded improve skill missing main content")
+	}
+	if !strings.Contains(content, "## Inlined reference: audit-playbook.md") {
+		t.Fatal("seeded improve skill missing inlined audit playbook")
+	}
+}
+
 func TestBuildContext(t *testing.T) {
 	app := storetest.NewApp(t)
 

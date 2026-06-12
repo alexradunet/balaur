@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	DefaultChatModelFile  = "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
-	DefaultChatModelRepo  = "bartowski/Qwen2.5-3B-Instruct-GGUF"
+	DefaultChatModelFile  = "Qwen3.6-35B-A3B-Q4_K_M.gguf"
+	DefaultChatModelRepo  = "Qwen/Qwen3.6-35B-A3B-GGUF"
 	DefaultChatModelQuant = "Q4_K_M"
-	DefaultChatModelURL   = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+	DefaultChatModelURL   = "https://huggingface.co/Qwen/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-Q4_K_M.gguf"
 
 	SyntheticBaseURL    = "https://api.synthetic.new/v1"
 	SyntheticSmallModel = "syn:small:text"

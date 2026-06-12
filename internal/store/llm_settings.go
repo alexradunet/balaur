@@ -46,7 +46,7 @@ func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
 	}
 	label := "Local GGUF"
 	if os.Getenv("BALAUR_CHAT_MODEL") == "" {
-		label = "Local Qwen2.5 3B"
+		label = "Local Qwen3.6 35B A3B"
 	}
 	model, err := findOrCreateLLMModel(app, provider.Id, label, path, os.Getenv("BALAUR_EMBED_MODEL"), true)
 	if err != nil {

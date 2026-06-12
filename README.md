@@ -31,7 +31,7 @@ database you own and can open with any SQLite tool.
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
 - **Models:** local GGUF via kronk, or any OpenAI-compatible endpoint. If no
-  model is configured, Balaur looks for the small default Qwen2.5 3B GGUF under
+  model is configured, Balaur looks for the default Qwen3.6-35B-A3B GGUF under
   `pb_data/models/`.
 - **Heads:** sub-agents are auth records with short-lived tokens; their
   permissions are rows in `grants`, enforced in one code path
@@ -43,7 +43,8 @@ database you own and can open with any SQLite tool.
   enters context without approval. Injection is two-tier: high-importance
   memories always, message-matched recall per turn, plus a compact skills
   index loaded on demand via the `skill` tool. Every lifecycle step is
-  audited.
+  audited. Fresh installs include the bundled `improve` advisor skill for
+  read-only audits and implementation-plan handoffs.
 - **One master conversation, persisted:** every turn is stored; the model
   sees only the recent window plus memory (persistence is not context).
   History survives restarts and renders on page load.
@@ -145,10 +146,10 @@ If `air` is not installed, `make dev` downloads and runs the latest release auto
 Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
 
-Balaur defaults to a small local tool-capable model:
+Balaur defaults to Qwen3.6-35B-A3B as the local tool-capable model:
 
 ```bash
-llmfit download bartowski/Qwen2.5-3B-Instruct-GGUF \
+llmfit download Qwen/Qwen3.6-35B-A3B-GGUF \
   --quant Q4_K_M \
   --output-dir pb_data/models
 ```

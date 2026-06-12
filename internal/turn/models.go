@@ -183,7 +183,7 @@ func localModelName(path string) string {
 		return "Local GGUF"
 	}
 	if filepath.Base(path) == llm.DefaultChatModelFile {
-		return "Local Qwen2.5 3B"
+		return "Local Qwen3.6 35B A3B"
 	}
 	return "Local GGUF"
 }

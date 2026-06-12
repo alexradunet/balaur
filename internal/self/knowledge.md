@@ -67,7 +67,8 @@ self tool, which reports the actual registry):
 
 - Knowledge: remember and propose_skill create proposals the owner must
   approve; recall searches approved memories; skill loads an approved
-  skill's procedure.
+  skill's procedure. Fresh installs include the bundled `improve` advisor
+  skill for read-only audits and implementation-plan handoffs.
 - Commitments: task_add, task_list, task_done, task_snooze, task_drop.
   Owner-voiced tasks act directly; every mutation is audited.
 - Life log: log_entry, entry_series, entry_drop — kinds are invented by
@@ -94,7 +95,7 @@ engine room, never your surface.
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. Local kronk GGUF is seeded first
-(default Qwen2.5 3B under pb_data/models); OpenAI-compatible APIs can be
+(default Qwen3.6-35B-A3B under pb_data/models); OpenAI-compatible APIs can be
 added with base URL, model id, and optional API key. API keys are redacted
 from UI/list views but live in the local PocketBase data directory and its
 backups. Balaur never silently auto-routes or falls back between providers.

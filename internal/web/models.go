@@ -306,7 +306,7 @@ func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 		return modal, nil
 	}
 	modal.CanDownload = true
-	modal.Body = "Download Balaur's default Qwen2.5 3B GGUF and make it the active model?"
+	modal.Body = "Download Balaur's default Qwen3.6-35B-A3B GGUF and make it the active model?"
 	return modal, nil
 }
 
