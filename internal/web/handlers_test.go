@@ -389,6 +389,143 @@ func TestOriginGuard(t *testing.T) {
 	scenario.Test(t)
 }
 
+func TestProviderManager(t *testing.T) {
+	const secretKey = "sk-test-secret-zzz"
+
+	// newProviderApp seeds two providers and makes prov1's model active.
+	// Returns (app, prov1ID, model1ID, prov2ID, model2ID).
+	newProviderApp := func(tb testing.TB) (*tests.TestApp, string, string, string, string) {
+		tb.Helper()
+		app := newWebApp(tb)
+		mid1, err := store.SaveOpenAIModel(app, "Prov1", "https://p1.example.com/v1", secretKey, "Model A", "model-a", "", false)
+		if err != nil {
+			tb.Fatalf("save prov1: %v", err)
+		}
+		mid2, err := store.SaveOpenAIModel(app, "Prov2", "https://p2.example.com/v1", "sk-other", "Model B", "model-b", "", false)
+		if err != nil {
+			tb.Fatalf("save prov2: %v", err)
+		}
+		if err := store.SetActiveLLMModel(app, mid1, "test"); err != nil {
+			tb.Fatalf("set active: %v", err)
+		}
+		providers, err := store.ListOpenAIProviders(app)
+		if err != nil {
+			tb.Fatalf("list providers: %v", err)
+		}
+		var prov1ID, prov2ID string
+		for _, p := range providers {
+			if p.Name == "Prov1" {
+				prov1ID = p.ID
+			} else if p.Name == "Prov2" {
+				prov2ID = p.ID
+			}
+		}
+		if prov1ID == "" || prov2ID == "" {
+			tb.Fatalf("provider IDs not found; prov1=%q prov2=%q", prov1ID, prov2ID)
+		}
+		return app, prov1ID, mid1, prov2ID, mid2
+	}
+
+	t.Run("GET /settings/models shows provider name and key set, not secret", func(t *testing.T) {
+		app, _, _, _, _ := newProviderApp(t)
+		scenario := tests.ApiScenario{
+			Name:               "models page shows provider",
+			Method:             "GET",
+			URL:                "/settings/models",
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"Prov1", "key set"},
+			NotExpectedContent: []string{secretKey},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("delete active provider returns refusal message", func(t *testing.T) {
+		app, prov1ID, _, _, _ := newProviderApp(t)
+		// Verify state before scenario (scenario's AfterTestFunc runs while app is alive).
+		scenario := tests.ApiScenario{
+			Name:            "delete active provider refused",
+			Method:          "POST",
+			URL:             "/ui/model/provider/" + prov1ID + "/delete",
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"active model", "models-panel"},
+			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+				// Prov1 should still be listed after the refused delete.
+				providers, err := store.ListOpenAIProviders(app)
+				if err != nil {
+					t.Fatalf("list after refused delete: %v", err)
+				}
+				var found bool
+				for _, p := range providers {
+					if p.ID == prov1ID {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatal("provider was deleted despite having the active model")
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("delete after re-pointing active succeeds", func(t *testing.T) {
+		app, prov1ID, _, _, mid2 := newProviderApp(t)
+		// Re-point active to prov2's model.
+		if err := store.SetActiveLLMModel(app, mid2, "test"); err != nil {
+			t.Fatalf("re-point active: %v", err)
+		}
+		scenario := tests.ApiScenario{
+			Name:            "delete prov1 after re-point",
+			Method:          "POST",
+			URL:             "/ui/model/provider/" + prov1ID + "/delete",
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"models-panel"},
+			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+				// Prov1 should be gone.
+				providers, err := store.ListOpenAIProviders(app)
+				if err != nil {
+					t.Fatalf("list after delete: %v", err)
+				}
+				for _, p := range providers {
+					if p.ID == prov1ID {
+						t.Fatal("provider still present after delete")
+					}
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("update with blank key keeps existing secret", func(t *testing.T) {
+		app, prov1ID, _, _, _ := newProviderApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "update provider blank key",
+			Method:          "POST",
+			URL:             "/ui/model/provider/" + prov1ID + "/save",
+			Body:            strings.NewReader("name=Prov1+Renamed&base_url=https%3A%2F%2Fp1.example.com%2Fv1&api_key="),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"models-panel"},
+			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+				// Raw record should still have the original key.
+				raw, err := app.FindRecordById("llm_providers", prov1ID)
+				if err != nil {
+					t.Fatalf("find raw: %v", err)
+				}
+				if raw.GetString("api_key") != secretKey {
+					t.Fatalf("key overwritten: got %q, want %q", raw.GetString("api_key"), secretKey)
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+}
+
 func TestGgufHandlers(t *testing.T) {
 	t.Run("delete path traversal returns 200 panel", func(t *testing.T) {
 		// The traversal is rejected inside gguf.Delete; the handler re-renders the

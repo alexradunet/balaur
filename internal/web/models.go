@@ -45,13 +45,15 @@ type AvatarOption struct {
 }
 
 type modelsPageData struct {
-	Title        string
-	ModelChoices []turn.ModelChoice
-	ActiveModel  string
-	ModelError   string
-	ModelHint    string
-	Gguf         gguf.Progress
-	GgufFiles    []gguf.FileInfo
+	Title         string
+	ModelChoices  []turn.ModelChoice
+	ActiveModel   string
+	ActiveModelID string
+	ModelError    string
+	ModelHint     string
+	Gguf          gguf.Progress
+	GgufFiles     []gguf.FileInfo
+	Providers     []store.ProviderView
 }
 
 type modelModalData struct {
@@ -119,6 +121,12 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	if files, err := gguf.List(modelsDir); err == nil {
 		data.GgufFiles = files
 	}
+	if providers, err := store.ListOpenAIProviders(h.app); err == nil {
+		data.Providers = providers
+	}
+	// Capture the active model ID for per-model active badge rendering.
+	// active.Key is the model record id (same as ModelChoice.Key).
+	data.ActiveModelID = active.Key
 	return data, nil
 }
 
@@ -390,6 +398,37 @@ func (h *handlers) ggufDelete(e *core.RequestEvent) error {
 		return h.modelsPanel(e, err.Error())
 	}
 	store.Audit(h.app, "", "owner", "llm.gguf.delete", name, true, nil)
+	return h.modelsPanel(e, "")
+}
+
+// updateProvider handles POST /ui/model/provider/{id}/save.
+func (h *handlers) updateProvider(e *core.RequestEvent) error {
+	id := e.Request.PathValue("id")
+	name := strings.TrimSpace(e.Request.FormValue("name"))
+	baseURL := strings.TrimSpace(e.Request.FormValue("base_url"))
+	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
+	local := e.Request.FormValue("local") == "1"
+	if err := store.UpdateOpenAIProvider(h.app, id, name, baseURL, apiKey, local); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	return h.modelsPanel(e, "")
+}
+
+// deleteProvider handles POST /ui/model/provider/{id}/delete.
+func (h *handlers) deleteProvider(e *core.RequestEvent) error {
+	id := e.Request.PathValue("id")
+	if err := store.DeleteOpenAIProvider(h.app, id); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	return h.modelsPanel(e, "")
+}
+
+// deleteModelRecord handles POST /ui/model/{id}/delete.
+func (h *handlers) deleteModelRecord(e *core.RequestEvent) error {
+	id := e.Request.PathValue("id")
+	if err := store.DeleteLLMModel(h.app, id); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
 	return h.modelsPanel(e, "")
 }
 
