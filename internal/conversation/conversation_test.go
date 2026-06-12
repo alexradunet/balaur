@@ -2,6 +2,7 @@ package conversation
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -154,5 +155,59 @@ func TestForHead(t *testing.T) {
 	}
 	if len(branches) != 1 {
 		t.Errorf("want 1 branch conversation, got %d", len(branches))
+	}
+}
+
+func TestForHeadConcurrentCreate(t *testing.T) {
+	app := storetest.NewApp(t)
+	head := seedHead(t, app, "Concurrent", "active")
+
+	const goroutines = 8
+	ids := make([]string, goroutines)
+	errs := make([]error, goroutines)
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(i int) {
+			defer wg.Done()
+			conv, err := ForHead(app, head)
+			if err != nil {
+				errs[i] = err
+				return
+			}
+			ids[i] = conv.Id
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("goroutine %d returned error: %v", i, err)
+		}
+	}
+
+	// All goroutines must have returned the same conversation id.
+	var firstID string
+	for i, id := range ids {
+		if id == "" {
+			continue
+		}
+		if firstID == "" {
+			firstID = id
+		} else if id != firstID {
+			t.Errorf("goroutine %d returned different id %s (want %s)", i, id, firstID)
+		}
+	}
+
+	// Exactly one open branch conversation must exist afterward.
+	open, err := app.FindRecordsByFilter("conversations",
+		"kind = 'branch' && status = 'open' && head = {:head}",
+		"", 0, 0, map[string]any{"head": head.Id})
+	if err != nil {
+		t.Fatalf("listing open branch conversations: %v", err)
+	}
+	if len(open) != 1 {
+		t.Errorf("want exactly 1 open branch conversation, got %d", len(open))
 	}
 }

@@ -41,6 +41,11 @@ func Master(app core.App) (*core.Record, error) {
 	rec.Set("kind", "master")
 	rec.Set("status", "open")
 	if err := app.Save(rec); err != nil {
+		// Lost-race retry: another request may have won the create race.
+		if existing, findErr := app.FindFirstRecordByFilter("conversations",
+			"kind = 'master' && status = 'open'", nil); findErr == nil {
+			return existing, nil
+		}
 		return nil, fmt.Errorf("creating master conversation: %w", err)
 	}
 	return rec, nil
@@ -73,6 +78,12 @@ func ForHead(app core.App, head *core.Record) (*core.Record, error) {
 	rec.Set("head", head.Id)
 	rec.Set("parent", master.Id)
 	if err := app.Save(rec); err != nil {
+		// Lost-race retry: another request may have won the create race.
+		if existing, findErr := app.FindFirstRecordByFilter("conversations",
+			"kind = 'branch' && status = 'open' && head = {:head}",
+			dbx.Params{"head": head.Id}); findErr == nil {
+			return existing, nil
+		}
 		return nil, fmt.Errorf("creating branch conversation: %w", err)
 	}
 	return rec, nil
