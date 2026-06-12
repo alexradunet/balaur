@@ -98,6 +98,8 @@ skill, life, journal, day, recap, history, audit, verify, model, self)
 printing JSON for external harnesses; the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
 
+The quest log (/tasks list view): rhythm groups Dailies/Rituals/Quests/Side quests in a left rail + sticky right detail panel; month calendar and 14-day timeline views unchanged.
+
 The candle (/journal): an immersive writing page — free-hand (default) or
 guided by one model-composed prompt line (deterministic fallback:
 "Write what the day left behind. I am listening." — returned on any error or

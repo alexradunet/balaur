@@ -2187,3 +2187,77 @@ progress.gguf-progress-bar::-moz-progress-bar {
   .board-grid { grid-template-columns: 1fr; }
   .board-slot { grid-column: span 1 !important; }
 }
+
+/* ── Quest log ─────────────────────────────────────────────────────── */
+.quest-log {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.quest-rail { display: flex; flex-direction: column; gap: 12px; }
+
+.quest-group { display: flex; flex-direction: column; gap: 4px; }
+.quest-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.quest-group-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-muted);
+  margin: 0 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.quest-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .12s;
+}
+.quest-row:hover { background: var(--parchment); }
+.quest-row:focus-visible { outline: 2px solid var(--ember); outline-offset: 1px; }
+
+.quest-overdue { color: var(--ember); }
+
+.quest-due {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.quest-overdue .quest-due { color: var(--ember); }
+
+.quest-detail {
+  position: sticky;
+  top: 80px;
+}
+
+.quest-done {
+  margin-top: 8px;
+}
+.quest-done > summary { cursor: pointer; }
+.quest-done > summary.quest-group-title { display: flex; align-items: center; gap: 6px; }
+.quest-done ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+@media (max-width: 860px) {
+  .quest-log {
+    grid-template-columns: 1fr;
+  }
+  .quest-detail {
+    order: -1;
+    position: static;
+  }
+}

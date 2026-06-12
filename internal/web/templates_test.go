@@ -105,7 +105,7 @@ func TestTasksPageViewsRender(t *testing.T) {
 	tmpl := parseTemplates(t)
 	now := time.Now()
 	for name, data := range map[string]map[string]any{
-		"list":     {"Title": "Tasks", "View": "list", "Buckets": bucketsView{}},
+		"list":     {"Title": "Tasks", "View": "list", "QuestLog": questLogView{}},
 		"calendar": {"Title": "Tasks", "View": "calendar", "Cal": buildCalendar(nil, "", now)},
 		"timeline": {"Title": "Tasks", "View": "timeline", "TL": buildTimeline(nil, now)},
 	} {

@@ -101,7 +101,7 @@ the `tasks` collection — tiny recurrence DSL, completions logged to the
 idempotent catch-up after downtime, one batched message per tick,
 model-composed in the companion voice with a deterministic fallback,
 origin-tagged in `messages` and polled live into the open chat · the
-/tasks page: operational list with action cards, month calendar, 14-day
+/tasks page: quest-log list (rhythm groups: Dailies/Rituals/Quests/Side quests, rail + sticky detail), month calendar, 14-day
 timeline (read-only recurrence projections) · task cards inline in chat ·
 the morning briefing (once per local day, hour-gated with wake catch-up,
 idempotency derived from the origin-tagged message, quiet days skipped,

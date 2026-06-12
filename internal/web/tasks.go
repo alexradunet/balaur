@@ -58,8 +58,82 @@ func taskViewsOf(recs []*core.Record, now time.Time) []taskView {
 	return out
 }
 
-type bucketsView struct {
-	Overdue, Today, Upcoming, Someday []taskView
+// questGroup buckets an open task by rhythm: Dailies (daily / every:1d),
+// Rituals (any other recurrence), Quests (one-off with due),
+// Side quests (one-off without due).
+// A recur string that fails to parse counts as one-off — same forgiving
+// behaviour as the builder (which ignores Parse errors when setting RecurLine).
+func questGroup(recur string, hasDue bool) string {
+	rule, err := tasks.Parse(recur)
+	if err != nil || rule.IsZero() {
+		if hasDue {
+			return "Quests"
+		}
+		return "Side quests"
+	}
+	// daily or every:1d → Dailies
+	if rule.Kind == "daily" || (rule.Kind == "every" && rule.N == 1) {
+		return "Dailies"
+	}
+	return "Rituals"
+}
+
+// questGroupView is one rhythm group in the quest-log rail.
+type questGroupView struct {
+	Name  string
+	Tasks []taskView
+}
+
+// questLogView is the full quest-log list template payload.
+type questLogView struct {
+	Groups       []questGroupView
+	First        *taskView // first open task (for server-side panel pre-render)
+	DoneRecently []taskView
+}
+
+// buildQuestLog groups open tasks by rhythm and returns the view.
+func buildQuestLog(openRecs []*core.Record, doneRecs []*core.Record, now time.Time) questLogView {
+	groups := map[string]*questGroupView{
+		"Dailies":     {Name: "Dailies"},
+		"Rituals":     {Name: "Rituals"},
+		"Quests":      {Name: "Quests"},
+		"Side quests": {Name: "Side quests"},
+	}
+	order := []string{"Dailies", "Rituals", "Quests", "Side quests"}
+
+	for _, rec := range openRecs {
+		tv := taskViewOf(rec, now)
+		grp := questGroup(rec.GetString("recur"), !rec.GetDateTime("due").Time().IsZero())
+		groups[grp].Tasks = append(groups[grp].Tasks, tv)
+	}
+
+	var result []questGroupView
+	for _, name := range order {
+		g := groups[name]
+		if len(g.Tasks) > 0 {
+			result = append(result, *g)
+		}
+	}
+
+	var first *taskView
+	for i := range result {
+		if len(result[i].Tasks) > 0 {
+			t := result[i].Tasks[0]
+			first = &t
+			break
+		}
+	}
+
+	var done []taskView
+	for _, r := range doneRecs {
+		done = append(done, taskViewOf(r, now))
+	}
+
+	return questLogView{
+		Groups:       result,
+		First:        first,
+		DoneRecently: done,
+	}
 }
 
 func (h *handlers) tasksPage(e *core.RequestEvent) error {
@@ -80,16 +154,11 @@ func (h *handlers) tasksPage(e *core.RequestEvent) error {
 	case "timeline":
 		data["TL"] = buildTimeline(recs, now)
 	default:
-		bk := tasks.Bucket(recs, now)
-		data["Buckets"] = bucketsView{
-			Overdue:  taskViewsOf(bk.Overdue, now),
-			Today:    taskViewsOf(bk.Today, now),
-			Upcoming: taskViewsOf(bk.Upcoming, now),
-			Someday:  taskViewsOf(bk.Someday, now),
+		var doneRecs []*core.Record
+		if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
+			doneRecs = dr
 		}
-		if done, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
-			data["DoneRecently"] = taskViewsOf(done, now)
-		}
+		data["QuestLog"] = buildQuestLog(recs, doneRecs, now)
 	}
 	return h.render(e, "tasks.html", data)
 }
