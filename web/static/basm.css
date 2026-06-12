@@ -1,83 +1,127 @@
 /* Basm — Balaur design tokens and base styles.
    Canonical token source: if DESIGN.md and this file disagree, this file wins.
 
+   Hearthwood — Basm v2 canon, imported from the Balaur_ds export.
    Color scheme strategy: light-dark() + color-scheme (Baseline 2024).
    OS preference is respected automatically. Force a mode with:
      <html class="light"> or <html class="dark">
 */
 
-/* ── Tokens ──────────────────────────────────────────────────────── */
+/* ══ Section 1: Color tokens ════════════════════════════════════════ */
+/* Basm color tokens — "Hearthwood" (canon v2).
+   This project is now the canon; it intentionally diverges from the
+   repo's Forest at Dusk palette toward a grounded fantasy-RPG material
+   language: tavern oak chrome, candlelit gold, parchment content panels
+   with ink text. Dark is the brand identity; light is a daylight study
+   of the same room. Force a mode with <html class="dark|light">. */
 
 :root {
   color-scheme: dark light;
 
-  /* Backgrounds — Forest at Dusk: deep forest-green dark, warm fern-linen light */
-  --bg:        light-dark(#f4efe4, #0b1310);
-  --surface:   light-dark(#fdfaf3, #11201b);
-  --surface-2: light-dark(#e8e2d4, #172a23);
-  --surface-3: light-dark(#ddd7c8, #1f352c);
+  /* Page & wood chrome */
+  --bg:        light-dark(#efe2bd, #140c06);
+  --chrome:    light-dark(#3a2210, #2a1709);  /* topbar, chatbar, tool rows, tags */
+  --chrome-2:  light-dark(#2c1a0c, #1d0f06);  /* deeper wood inset */
+  --chrome-fg: light-dark(#d6bb92, #b59872);  /* text on wood */
 
-  /* Text — warm parchment dark, deep umber light */
-  --fg:        light-dark(#181e19, #ede8d8);
-  --on-surface:light-dark(#101610, #f5f0e6);
-  --muted:     light-dark(#5c7060, #96a090);
-  --hair:      light-dark(#d0cbb8, #243531);
-  --outline-2: light-dark(#ddd8c8, #1b2923);
+  /* Parchment content panels (constant across modes) */
+  --surface:    light-dark(#f4e9c4, #e8d9ae);
+  --surface-2:  light-dark(#e4d49e, #d6c188);
+  --surface-3:  light-dark(#d2bf82, #c4ab74);
+  --parch-edge: light-dark(#9a7f4c, #8a6f3c);
 
-  /* Accents */
-  --gold:       light-dark(#8a6d12, #f2c14e);
-  --gold-deep:  light-dark(#6b5410, #b8862a);
-  --ember:      light-dark(#c2410c, #ff6a2b);
-  --ember-deep: light-dark(#9a3410, #c2410c);
-  --ember-red:  light-dark(#b42318, #e5484d);
-  --teal:       light-dark(#00656b, #2dd4bf);
-  --teal-deep:  light-dark(#024a4f, #0d9488);
+  /* Text */
+  --fg:        light-dark(#3a2c18, #c9b894);  /* body on page bg */
+  --fg-strong: light-dark(#241a0c, #ecdcb2);  /* headings on page bg */
+  --muted:     light-dark(#7a6644, #8a7355);
+  --smoke:     light-dark(#8f7a52, #6b5639);
+  --hair:      light-dark(#c8b488, #3b2a16);
+  --outline-2: light-dark(#241708, #120a04);  /* the near-black pixel outline */
+
+  /* Ink — text on parchment (constant) */
+  --ink:       #2c2012;
+  --ink-muted: #6f5e3c;
+  --on-surface: #2c2012;
+
+  /* Bevel edges */
+  --bevel-light: light-dark(rgba(255,222,166,.30), rgba(255,196,118,.18));
+  --bevel-dark:  rgba(0,0,0,.55);
+
+  /* Accents — candlelit on dark, ink-weight on light */
+  --gold:       light-dark(#8a6212, #f2c14e);
+  --gold-deep:  light-dark(#7a5a14, #a87b24);
+  --gold-ink:   #8a6212;                       /* gold on parchment */
+  --ember:      light-dark(#d04f12, #ff7a33);
+  --ember-deep: light-dark(#7e3210, #8f3a12);
+  --ember-red:  light-dark(#a8201f, #e5484d);
+  --teal:       light-dark(#0d6e5c, #3ecfb8);
+  --teal-deep:  light-dark(#0a574a, #169a82);
+  --teal-ink:   #0d6e5c;                       /* teal on parchment */
   --folkred:    light-dark(#983f20, #e0563b);
-  --indigo:     light-dark(#1e3a8a, #a8c0f0);
-  --indigo-deep:light-dark(#1e3a8a, #5b82e4);
-  --violet:     light-dark(#7c3aed, #c084fc);
+  --indigo:     light-dark(#3d54a0, #a8c0f0);
+  --indigo-ink: #3d54a0;                       /* user hue on parchment */
+  --violet:     light-dark(#6d3bb8, #c084fc);
   --good:       light-dark(#3f6f2f, #7fcf6a);
-  --steel:      light-dark(#5c7060, #9db0a5);
-  --smoke:      light-dark(#5c7060, #566274);
+  --good-ink:   #4c7a2c;
+  --steel:      light-dark(#7a6644, #9b8a6c);
 
-  /* Typography
-     Fonts are self-hosted under /static/fonts/ (woff2, latin subset).
-     Silkscreen is reserved for the brand nameplate only; all functional
-     small text (nav, tags, kickers, metadata) uses --font-mono. */
-  --font-display: 'Pixelify Sans', system-ui, sans-serif;
-  --font-pixel:   'Silkscreen', monospace;
-  --font-body:    'Work Sans', system-ui, sans-serif;
-  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
-
-  /* Layout */
-  --radius: 3px;
-  --maxw: 1080px;
-  --shadow-hard: 5px 5px 0;
-  --chatbar-space: 190px;
-
-  /* Motion — pixel-hard, no soft easing */
-  --duration-fast: 80ms;
-  --ease-crisp: cubic-bezier(0, 0, 0.2, 1);
-
-  /* Focus */
-  --focus-ring: 2px solid var(--teal);
+  /* Pixel grain (dither) */
+  --grain-warm: repeating-conic-gradient(rgba(255,214,150,.022) 0% 25%, transparent 0% 50%); /* @kind other */
+  --grain-ink:  repeating-conic-gradient(rgba(64,44,18,.045) 0% 25%, transparent 0% 50%); /* @kind other */
+  --wood-planks: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 2px, transparent 2px 9px); /* @kind other */
 }
 
 /* Manual color-scheme overrides (toggled via JS on <html>) */
 :root.light { color-scheme: light; }
 :root.dark  { color-scheme: dark;  }
 
-/* ── Self-hosted fonts ───────────────────────────────────────────── */
+/* ══ Section 2: Typography tokens + self-hosted fonts ══════════════ */
+/* Basm typography tokens + self-hosted fonts.
+   Hearthwood canon (diverges from the repo's basm.css).
 
+   Roles:
+   --font-display  Jersey 15      — hero, headings (squared 16-bit, 20px+ only)
+   --font-pixel    Silkscreen     — brand nameplate + section runes ONLY
+   --font-body     Piazzolla      — body copy (humanist serif, storybook warmth)
+   --font-mono     JetBrains Mono — eyebrow, nav, meta, buttons, tags, code
+
+   Silkscreen is reserved for the brand nameplate and section runes — at
+   10–13px bitmap letterforms strain readability, so the functional small
+   layer (nav, tags, kickers, metadata) uses --font-mono. Jersey 15 carves
+   the headings; Piazzolla, a screen-paired humanist serif, reads warm on
+   parchment at length. Pixelify Sans is kept as a display fallback. */
+
+:root {
+  --font-display: 'Jersey 15', 'Pixelify Sans', system-ui, sans-serif;
+  --font-pixel:   'Silkscreen', monospace;
+  --font-body:    'Piazzolla', Georgia, 'Times New Roman', serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Self-hosted — no third-party font CDNs at runtime.
+   Silkscreen · Pixelify Sans · Work Sans · JetBrains Mono are latin woff2;
+   Jersey 15 is a static TTF; Piazzolla ships as a variable TTF (opsz+wght). */
+
+@font-face {
+  font-family: 'Jersey 15';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/jersey-15.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Piazzolla';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/static/fonts/piazzolla.ttf') format('truetype-variations');
+}
 @font-face {
   font-family: 'Pixelify Sans';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
   src: url('/static/fonts/pixelify-sans.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
-                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
-                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF;
 }
 @font-face {
   font-family: 'Silkscreen';
@@ -85,9 +129,6 @@
   font-weight: 400 700;
   font-display: swap;
   src: url('/static/fonts/silkscreen.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
-                 U+02DA, U+02DC, U+2000-206F, U+2122, U+2191, U+2193,
-                 U+2212, U+2215, U+FEFF;
 }
 @font-face {
   font-family: 'Work Sans';
@@ -95,9 +136,6 @@
   font-weight: 300 600;
   font-display: swap;
   src: url('/static/fonts/work-sans.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
-                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
-                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF;
 }
 @font-face {
   font-family: 'JetBrains Mono';
@@ -105,19 +143,49 @@
   font-weight: 400 700;
   font-display: swap;
   src: url('/static/fonts/jetbrains-mono.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
-                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
-                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF;
 }
 
-/* ── Reset ───────────────────────────────────────────────────────── */
+/* ══ Section 3: Layout, motion, and focus tokens ════════════════════ */
+/* Basm layout, motion, and focus tokens — Hearthwood canon.
+   16-bit RPG construction: near-black pixel outlines, beveled panels,
+   parchment content, presses that physically sink. */
+
+:root {
+  /* Layout */
+  --radius: 0px;            /* RPG panels are square; rounding is for blobs */
+  --maxw: 1080px;
+  --chatbar-space: 210px;
+
+  /* Bevels & drops (the shadow system) */
+  --bevel-up: inset 0 3px 0 var(--bevel-light), inset 3px 0 0 var(--bevel-light),
+              inset 0 -3px 0 var(--bevel-dark), inset -3px 0 0 var(--bevel-dark);
+  --bevel-in: inset 0 3px 0 var(--bevel-dark), inset 3px 0 0 var(--bevel-dark),
+              inset 0 -3px 0 var(--bevel-light), inset -3px 0 0 var(--bevel-light);
+  --parch-bevel: inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 0 var(--surface-2),
+                 0 3px 0 rgba(0,0,0,.55);
+  --drop-hard: 0 3px 0 rgba(0,0,0,.55);
+  /* legacy alias (pre-Hearthwood) */
+  --shadow-hard: 5px 5px 0;
+
+  /* Motion — pixel-hard, no soft easing */
+  --duration-fast: 80ms; /* @kind other */
+  --ease-crisp: cubic-bezier(0, 0, 0.2, 1); /* @kind other */
+
+  /* Focus */
+  --focus-ring: 2px solid var(--teal);
+}
+
+/* ══ Section 4: Base reset and element styles ═══════════════════════ */
+/* Basm base — reset and element styles. Hearthwood canon. */
 
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
   color: var(--fg);
   font: 17px/1.6 var(--font-body);
 }
@@ -128,11 +196,9 @@ main {
   padding: 0 6vw;
 }
 
-/* ── Element base styles ─────────────────────────────────────────── */
-
 h1, h2, h3 {
   font-family: var(--font-display);
-  color: var(--on-surface);
+  color: var(--fg-strong);
   line-height: 1.05;
 }
 
@@ -141,17 +207,18 @@ a.btn { text-decoration: none; }
 
 code, pre {
   font-family: var(--font-mono);
-  background: var(--surface-2);
+  background: var(--chrome-2);
+  color: var(--chrome-fg);
   border-radius: var(--radius);
 }
 pre {
   padding: 12px;
   overflow-x: auto;
-  border: 1px solid var(--hair);
+  border: 2px solid var(--outline-2);
+  box-shadow: var(--bevel-in);
 }
 code { padding: 1px 5px; }
 
-/* Base button — overridden by .btn classes below */
 button {
   font-family: var(--font-mono);
   cursor: pointer;
@@ -166,7 +233,63 @@ textarea:focus-visible,
   outline-offset: 2px;
 }
 
-/* ── Top bar ─────────────────────────────────────────────────────── */
+/* Pixel art always renders crisp */
+.px { image-rendering: pixelated; }
+
+/* Parchment panel — the content material. Ink text, paper grain,
+   paper-edge bevel, hard drop onto the wood below. */
+.parch {
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  box-shadow: var(--parch-bevel);
+}
+
+/* Wood slab — the chrome material. */
+.wood {
+  background-color: var(--chrome);
+  background-image: var(--wood-planks), var(--grain-warm);
+  background-size: auto, 4px 4px;
+  color: var(--chrome-fg);
+  border: 2px solid var(--outline-2);
+  box-shadow: var(--bevel-up);
+}
+
+/* Ornate gold corner brackets — reserved for panels that matter:
+   proposed knowledge, dialogue choices, dialogs. Add to a .parch. */
+.ornate { position: relative; border-color: var(--gold-deep); }
+.ornate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep));
+  background-repeat: no-repeat;
+  background-size: 12px 3px, 3px 12px, 12px 3px, 3px 12px,
+                   12px 3px, 3px 12px, 12px 3px, 3px 12px;
+  background-position:
+    left 5px top 5px,    left 5px top 5px,
+    right 5px top 5px,   right 5px top 5px,
+    left 5px bottom 5px, left 5px bottom 5px,
+    right 5px bottom 5px, right 5px bottom 5px;
+}
+
+/* ══ Section 5: Components ══════════════════════════════════════════ */
+/* Basm components — Hearthwood canon.
+   Wood chrome, parchment speech panels with nameplate tabs, beveled
+   buttons that press in, RPG dialogue choices, wood tags, teal glow. */
+
+/* ── Top bar — wood planks, raised bevel ─────────────────────────── */
 
 .topbar {
   position: sticky;
@@ -174,14 +297,15 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   gap: 14px;
-  height: 60px;
+  height: 62px;
   padding: 0 6vw;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  border-bottom: 1px solid var(--hair);
-  backdrop-filter: blur(3px);
+  background-color: var(--chrome);
+  background-image: var(--wood-planks), var(--grain-warm);
+  background-size: auto, 4px 4px;
+  border-bottom: 2px solid var(--outline-2);
+  box-shadow: inset 0 3px 0 var(--bevel-light), inset 0 -3px 0 var(--bevel-dark);
   z-index: 5;
 }
-.topbar nav { margin-left: auto; }
 
 /* Brand nameplate — Silkscreen intentional here, kept for identity */
 .topbar .brand {
@@ -216,50 +340,78 @@ textarea:focus-visible,
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: var(--muted);
+  color: var(--chrome-fg);
   text-decoration: none;
 }
-.topbar nav a:hover { color: var(--on-surface); }
+.topbar nav a:hover { color: var(--gold); }
 
-/* ── Buttons ─────────────────────────────────────────────────────── */
+/* ── Buttons — beveled 16-bit, press sinks 3px ───────────────────── */
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 9px;
   font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 12.5px;
   text-transform: uppercase;
   letter-spacing: .06em;
-  padding: 13px 20px;
+  padding: 12px 19px;
   border-radius: var(--radius);
-  border: 2px solid var(--on-surface);
+  border: 2px solid var(--outline-2);
   cursor: pointer;
   transition: transform var(--duration-fast) var(--ease-crisp),
-              box-shadow var(--duration-fast) var(--ease-crisp);
+              box-shadow var(--duration-fast) var(--ease-crisp),
+              filter var(--duration-fast) var(--ease-crisp);
 }
 .btn-primary {
   background: var(--ember);
-  color: #1a0e07;
-  box-shadow: var(--shadow-hard) var(--ember-deep);
+  color: #1c0d04;
+  box-shadow: inset 0 3px 0 rgba(255,236,200,.42), inset 0 -3px 0 rgba(60,10,0,.38),
+              var(--drop-hard);
+}
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-primary:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 rgba(60,10,0,.38), inset 0 -3px 0 rgba(255,236,200,.2);
 }
 .btn-ghost {
-  background: var(--surface);
-  color: var(--on-surface);
-  box-shadow: var(--shadow-hard) var(--hair);
+  background: var(--surface-2);
+  color: var(--ink);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.5), inset 0 -3px 0 rgba(64,44,18,.25),
+              var(--drop-hard);
 }
-.btn:hover { transform: translate(1px, 1px); }
-.btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0; }
-.btn-sm { padding: 8px 14px; font-size: 11.5px; }
+.btn-ghost:hover { filter: brightness(1.04); }
+.btn-ghost:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 rgba(64,44,18,.25);
+}
+.btn-wood {
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  color: var(--gold);
+  box-shadow: inset 0 3px 0 var(--bevel-light), inset 0 -3px 0 var(--bevel-dark),
+              var(--drop-hard);
+}
+.btn-wood:hover { filter: brightness(1.12); }
+.btn-wood:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 var(--bevel-dark);
+}
+.btn-sm { padding: 8px 13px; font-size: 11px; }
 
 /* ── Cards ───────────────────────────────────────────────────────── */
 
 .card {
   position: relative;
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
   border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
   padding: 18px;
 }
 .card::after {
@@ -267,8 +419,9 @@ textarea:focus-visible,
   position: absolute;
   top: 6px; right: 6px;
   width: 7px; height: 7px;
-  background: var(--gold);
+  background: var(--gold-ink);
 }
+.card h1, .card h2, .card h3 { color: var(--ink); }
 
 /* ── Motifs ──────────────────────────────────────────────────────── */
 
@@ -285,8 +438,8 @@ textarea:focus-visible,
   background: repeating-linear-gradient(135deg,
     var(--folkred) 0 8px, var(--gold) 8px 16px,
     var(--teal) 16px 24px, var(--ember-deep) 24px 32px);
-  border-top: 2px solid var(--fg);
-  border-bottom: 2px solid var(--fg);
+  border-top: 2px solid var(--outline-2);
+  border-bottom: 2px solid var(--outline-2);
   image-rendering: pixelated;
 }
 .tag {
@@ -294,18 +447,18 @@ textarea:focus-visible,
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .05em;
-  background: var(--surface-2);
-  border: 1px solid var(--hair);
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 1px solid var(--outline-2);
   border-radius: var(--radius);
-  padding: 3px 8px;
-  color: var(--muted);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  padding: 4px 9px;
+  color: var(--chrome-fg);
 }
 .tag::before { content: "▪ "; color: var(--teal); }
 
 /* ── Tool call glyphs ────────────────────────────────────────────── */
-/* Bare typography, no box — the tool row's border already provides the
-   structure; the teal color is the signal. Art and glyphs ship
-   borderless; frames are a context decision made in HTML. */
 
 .tool-icon {
   color: var(--teal);
@@ -313,40 +466,211 @@ textarea:focus-visible,
   margin-right: 7px;
 }
 
-/* ── Chat ────────────────────────────────────────────────────────── */
+/* ── Chat — RPG dialogue ─────────────────────────────────────────── */
 
 .chat {
+  --portrait-size: 96px;
+  --chat-gutter: calc(var(--portrait-size) + 14px);   /* portrait column + grid gap — indents tool rows etc. */
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 24px;
   padding: 24px 0 var(--chatbar-space);
 }
+
+/* A spoken line: framed portrait beside a parchment speech panel.
+   Balaur speaks from the left; the owner answers from the right,
+   portrait mirrored (CSS only, per the avatar rules) to face the words. */
 .msg {
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 12px 16px;
-}
-.msg-with-avatar {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 14px;
   align-items: start;
+  border: 0;
+  background: none;
+  padding: 0;
 }
-.msg-main { min-width: 0; }
-.msg .who {
+.msg-user { grid-template-columns: minmax(0, 1fr) auto; }
+.msg-user .portrait  { order: 2; }
+.msg-user .msg-main  { order: 1; }
+.msg-user .balaur-avatar img { transform: scaleX(-1); }
+.msg-with-avatar { display: grid; }
+
+/* Portrait — the art is borderless; this wood frame is chat context. */
+.portrait {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+}
+.portrait .balaur-avatar {
+  width: var(--portrait-size);
+  height: var(--portrait-size);
+  border: 2px solid var(--outline-2);
+  background: #101314;
+  box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
+  padding: 3px;
+}
+.msg-user .portrait .balaur-avatar {
+  box-shadow: inset 0 0 0 2px var(--indigo-deep), var(--drop-hard);
+}
+
+/* Nameplate — a small wood plate hung beneath the portrait frame. */
+.portrait .who {
+  margin-top: -2px;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: .06em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  text-align: center;
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  padding: 2px 8px;
+  line-height: 1.5;
+  max-width: calc(var(--portrait-size) + 18px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .msg-user   .who { color: var(--indigo); }
 .msg-balaur .who { color: var(--gold); }
-.msg-tool { background: var(--surface-2); font-family: var(--font-mono); font-size: 13.5px; }
-.msg-tool .who { color: var(--teal); }
-.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; }
-.thinking { color: var(--teal); font-family: var(--font-mono); font-size: 13px; }
+
+.msg-main {
+  position: relative;
+  min-width: 0;
+  min-height: calc(var(--portrait-size) + 10px);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+}
+
+/* Pixel speech tail — stepped squares pointing at the speaker. */
+.msg-main::before,
+.msg-main::after {
+  content: "";
+  position: absolute;
+  top: 36px;
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border: 2px solid var(--parch-edge);
+}
+.msg-balaur .msg-main::before { left: -10px; border-right: 0; }
+.msg-balaur .msg-main::after  { left: -17px; top: 39px; width: 7px; height: 7px; border-right: 0; }
+.msg-user   .msg-main::before { right: -10px; border-left: 0; }
+.msg-user   .msg-main::after  { right: -17px; top: 39px; width: 7px; height: 7px; border-left: 0; }
+
+.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; width: 100%; }
+
+/* ── Message draft — the composer as an unsent message ────────────
+   Dashed = draft (the established vocabulary). No speech tail until it is
+   spoken; the border solidifies to gold while writing. */
+
+.msg-draft .msg-main {
+  border-style: dashed;
+  box-shadow: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px 14px 10px;
+}
+.msg-draft .msg-main::before,
+.msg-draft .msg-main::after { content: none; }
+.msg-draft:focus-within .msg-main {
+  border-style: solid;
+  border-color: var(--gold-deep);
+  box-shadow: var(--parch-bevel);
+}
+.msg-draft textarea {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  resize: none;
+  font: 16px/1.6 var(--font-body);
+  color: var(--ink);
+  caret-color: var(--ember-deep);
+  padding: 2px 4px;
+  min-height: 52px;
+  max-height: 28vh;
+}
+.msg-draft textarea:focus { outline: none; }
+.msg-draft textarea::placeholder { color: var(--ink-muted); opacity: .8; }
+.msg-draft-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 2px dotted var(--parch-edge);
+  padding-top: 9px;
+}
+.msg-draft-hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-muted);
+}
+.msg-draft .portrait .balaur-avatar { opacity: .92; }
+
+/* Tool/OS-access events — dark wood inset slab; the visible audit trail. */
+.msg-tool {
+  display: block;
+  background-color: var(--chrome-2);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: var(--bevel-in);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--chrome-fg);
+  padding: 9px 14px;
+  margin: 0 0 0 var(--chat-gutter, 124px);
+  min-height: 0;
+}
+.msg-tool::before, .msg-tool::after { content: none; }
+.msg-tool .who {
+  position: static;
+  display: inline;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  color: var(--teal);
+  font-weight: 400;
+  max-width: none;
+}
+/* Pixel icon in a tool row — bare image, the row is the frame. */
+img.tool-icon {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+  vertical-align: -4px;
+  margin-right: 8px;
+}
+.msg-tool .body { display: inline; font-size: 13px; }
+
+.thinking { color: var(--teal-ink); font-family: var(--font-mono); font-size: 13px; }
+.type-cursor {
+  display: inline-block;
+  color: var(--ember-deep);
+  animation: basm-blink .8s steps(1, end) infinite;
+}
+@keyframes basm-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
 .thinking-dots::after {
   content: "";
   animation: thinking-dots 1s steps(1, end) infinite;
@@ -358,11 +682,132 @@ textarea:focus-visible,
   75%, 100%   { content: "..."; }
 }
 
-/* ── Avatars ─────────────────────────────────────────────────────── */
+/* ── Dialogue choices — the player's reply, RPG style ────────────── */
 
-/* Avatars are borderless static images: a single 256×256 PNG per entity.
-   Activity states are shown through CSS glow (basm-glow), not frame
-   animation — no sprite-sheet mechanics needed. */
+.choices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+.choices .portrait .balaur-avatar img { transform: scaleX(-1); }
+.choices .portrait .balaur-avatar {
+  box-shadow: inset 0 0 0 2px var(--indigo-deep), var(--drop-hard);
+}
+.choices .portrait .who { color: var(--indigo); }
+
+/* Ornate parchment panel — full column width, gold corner brackets. */
+.choices-panel {
+  position: relative;
+  min-width: 0;
+  min-height: calc(var(--portrait-size) + 10px);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--gold-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 12px 14px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.choices-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep));
+  background-repeat: no-repeat;
+  background-size: 12px 3px, 3px 12px, 12px 3px, 3px 12px,
+                   12px 3px, 3px 12px, 12px 3px, 3px 12px;
+  background-position:
+    left 5px top 5px,    left 5px top 5px,
+    right 5px top 5px,   right 5px top 5px,
+    left 5px bottom 5px, left 5px bottom 5px,
+    right 5px bottom 5px, right 5px bottom 5px;
+}
+.choices-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold-ink);
+  padding: 2px 8px 8px;
+}
+.choices-kicker::before,
+.choices-kicker::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, var(--gold-deep) 50%, transparent 50%) 0 0 / 8px 2px repeat-x;
+  opacity: .45;
+}
+.choice {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  font: 16px/1.45 var(--font-body);
+  color: var(--ink);
+  cursor: pointer;
+}
+.choice::before {
+  content: "▸";
+  font-family: var(--font-mono);
+  color: var(--ember-deep);
+  opacity: 0;
+}
+.choice-label { flex: 1 1 auto; min-width: 0; }
+.choice-key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  min-width: 12px;
+}
+.choice:hover,
+.choice:focus-visible {
+  background: rgba(64, 44, 18, .09);
+  border-color: var(--gold-deep);
+}
+.choice:hover::before,
+.choice:focus-visible::before {
+  opacity: 1;
+  animation: basm-blink .8s steps(1, end) infinite;
+}
+.choice:active { transform: translateY(2px); }
+.choice-hint {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* ── Avatars ─────────────────────────────────────────────────────── */
+/* Borderless static pixel portraits; activity is shown by light
+   (basm-glow), never frame animation. */
+
 .balaur-avatar {
   --avatar-size: 54px;
   width: var(--avatar-size);
@@ -376,41 +821,36 @@ textarea:focus-visible,
   image-rendering: pixelated;
 }
 
-/* Head tinting — deterministic hue offset per head applied via inline style
-   filter: hue-rotate(Ndeg). */
-.balaur-avatar-head img { filter: hue-rotate(0deg); /* overridden per head */ }
-
-/* data-state hooks: all activity shown via glow, not frame changes */
-.balaur-avatar[data-state="idle"] { /* no glow at rest */ }
-
-.msg-pending {
-  border-color: color-mix(in srgb, var(--gold-deep) 65%, var(--outline-2));
-}
-/* Activity is shown by light, not chrome: a breathing teal glow behind
-   the borderless sprite while Balaur thinks or works. */
+.msg-pending .msg-main { border-color: var(--gold-deep); }
+/* Activity is shown by light — the breathing teal glow behind the portrait. */
 .msg-pending .balaur-avatar,
 .balaur-avatar[data-state="thinking"],
 .balaur-avatar[data-state="working"] {
   animation: basm-glow 1.6s ease-in-out infinite;
 }
 @keyframes basm-glow {
-  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--teal) 25%, transparent); }
-  50%      { box-shadow: 0 0 26px color-mix(in srgb, var(--teal) 55%, transparent); }
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--teal-deep), 0 0 10px color-mix(in srgb, var(--teal) 30%, transparent); }
+  50%      { box-shadow: inset 0 0 0 2px var(--teal), 0 0 26px color-mix(in srgb, var(--teal) 60%, transparent); }
 }
 
-/* Sprite-sheet keyframes removed — avatars are now simple static 256px PNGs.
-   Activity state (thinking/working) is communicated via basm-glow only. */
+/* Compact table on small screens */
+@media (max-width: 640px) {
+  .chat { --portrait-size: 64px; --chat-gutter: 90px; }
+}
 
-/* ── Chatbar ─────────────────────────────────────────────────────── */
+/* ── Chatbar — wood ledge ────────────────────────────────────────── */
 
 .chatbar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: color-mix(in srgb, var(--bg) 94%, transparent);
-  border-top: 1px solid var(--hair);
-  padding: 14px 6vw;
+  background-color: var(--chrome);
+  background-image: var(--wood-planks), var(--grain-warm);
+  background-size: auto, 4px 4px;
+  border-top: 2px solid var(--outline-2);
+  box-shadow: inset 0 3px 0 var(--bevel-light);
+  padding: 14px 6vw 16px;
 }
 .chatbar .chat-form,
 .chatbar-setup {
@@ -423,24 +863,732 @@ textarea:focus-visible,
 .chatbar textarea[name="message"] {
   flex: 1;
   font: 16px/1.4 var(--font-body);
-  color: var(--on-surface);
-  background: var(--surface);
+  color: var(--surface);
+  caret-color: var(--gold);
+  background: rgba(0, 0, 0, .32);
   border: 2px solid var(--outline-2);
   border-radius: var(--radius);
+  box-shadow: inset 0 3px 0 rgba(0,0,0,.45), inset 0 -2px 0 var(--bevel-light);
   padding: 12px 14px;
 }
+.chatbar textarea[name="message"]::placeholder { color: var(--chrome-fg); opacity: .75; }
 .chatbar textarea[name="message"] {
   min-height: 56px;
   max-height: 28vh;
   resize: vertical;
 }
-.chatbar input[type="text"]:disabled,
-.chatbar textarea[name="message"]:disabled {
-  color: var(--muted);
-  opacity: 1;
+
+/* ── Native dialog — ornate parchment ────────────────────────────── */
+
+dialog {
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  border: 2px solid var(--gold-deep);
+  border-radius: var(--radius);
+  padding: 22px;
+  color: var(--ink);
+  width: min(560px, calc(100% - 48px));
+  max-height: min(78vh, 720px);
+  overflow-y: auto;
+  box-shadow: var(--parch-bevel);
+}
+dialog h1, dialog h2, dialog h3 { color: var(--ink); }
+dialog::backdrop {
+  background: rgba(10, 5, 1, .72);
+}
+.modal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.modal-head h2 { margin: 0; font-size: 24px; }
+.modal-card p { margin: 14px 0 0; }
+.modal-detail { color: var(--ink-muted); }
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.modal-actions form { margin: 0; }
+
+/* ── Theme toggle ────────────────────────────────────────────────── */
+
+.theme-toggle {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: none;
+  border: 1px solid var(--chrome-fg);
+  border-radius: var(--radius);
+  padding: 3px 9px;
+  color: var(--chrome-fg);
+  cursor: pointer;
+  margin-left: 10px;
+  flex-shrink: 0;
+  transition: color .1s, border-color .1s;
+  line-height: 1;
+}
+.theme-toggle:hover {
+  color: var(--gold);
+  border-color: var(--gold-deep);
 }
 
-/* ── Model switcher ──────────────────────────────────────────────── */
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn:hover, .btn:active { transition: none; transform: none; }
+  .msg-pending .balaur-avatar,
+  .balaur-avatar[data-state="thinking"],
+  .balaur-avatar[data-state="working"] { animation: none; }
+  .thinking-dots::after { animation: none; content: ""; }
+  .type-cursor { animation: none; opacity: 0; }
+  .choice:hover::before,
+  .choice:focus-visible::before { animation: none; opacity: 1; }
+  .capture-note { animation: none; }
+  .task-fresh { animation: none; }
+}
+
+/* ══ Section 6: Page patterns ═══════════════════════════════════════ */
+/* Basm page patterns — Hearthwood canon.
+   Knowledge cards, recap, tasks, life, day, profile on wood + parchment. */
+
+/* ── Knowledge pages ─────────────────────────────────────────────── */
+
+/* Page heading icon — bare pixel art beside the title; never boxed. */
+.h-icon {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+
+.k-section { padding: 26px 0; }
+.k-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  color: var(--fg-strong);
+}
+.k-heading::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, var(--hair) 50%, transparent 50%) 0 0 / 8px 2px repeat-x;
+}
+.k-heading-proposed { color: var(--gold); }
+.k-heading-proposed::after {
+  background-image: linear-gradient(to right, var(--gold-deep) 50%, transparent 50%);
+  opacity: .6;
+}
+.k-heading-muted { color: var(--muted); }
+.k-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chrome-fg);
+  background: var(--chrome);
+  border: 1px solid var(--outline-2);
+  border-radius: var(--radius);
+  padding: 1px 7px;
+}
+.k-sub   { color: var(--muted); margin-top: -4px; font-size: 14.5px; }
+.k-empty { color: var(--muted); font-size: 15px; }
+.k-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+}
+.k-grid-muted { opacity: .72; }
+.k-inline { margin: 10px 0; max-width: 480px; }
+/* In chat, an embedded record rides the message column: same left edge
+   and full width as the speech panels — same UI, same space. */
+.chat .k-inline { margin: 0 0 0 var(--chat-gutter, 124px); max-width: none; }
+.chat .k-inline .kcard { padding: 15px 18px; }
+
+.k-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+.k-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+  font: 14.5px/1.4 var(--font-body);
+  color: var(--ink);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 3px 0 rgba(64,44,18,.18);
+  padding: 9px 12px;
+}
+.k-search::placeholder { color: var(--ink-muted); }
+.k-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.k-tab {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--chrome-fg);
+  text-decoration: none;
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.k-tab:hover { color: var(--gold); }
+.k-tab-active {
+  color: #1c0d04;
+  background: var(--gold);
+  border-color: var(--outline-2);
+  box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
+}
+.k-tab input { display: none; }
+
+/* ── Knowledge cards (kcard) — parchment ─────────────────────────── */
+
+.kcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 15px 17px;
+}
+.kcard::after {
+  content: "";
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  background: var(--gold-ink);
+}
+
+/* Proposed — the decision moment: gold border + ornate corner brackets. */
+.kcard-proposed { border-color: var(--gold-deep); }
+.kcard-proposed::after { background: var(--ember-deep); }
+.kcard-proposed::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep)),
+    linear-gradient(var(--gold-deep), var(--gold-deep));
+  background-repeat: no-repeat;
+  background-size: 12px 3px, 3px 12px, 12px 3px, 3px 12px,
+                   12px 3px, 3px 12px, 12px 3px, 3px 12px;
+  background-position:
+    left 5px top 5px,    left 5px top 5px,
+    right 5px top 5px,   right 5px top 5px,
+    left 5px bottom 5px, left 5px bottom 5px,
+    right 5px bottom 5px, right 5px bottom 5px;
+}
+.kcard-archived { border-style: dashed; box-shadow: none; }
+
+.kcard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.kcard-kind {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--teal-ink);
+}
+.kcard-on {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--good-ink);
+}
+.kcard-pips { display: inline-flex; gap: 3px; }
+.pip {
+  width: 7px; height: 7px;
+  background: rgba(64, 44, 18, .14);
+  border: 1px solid var(--parch-edge);
+  display: inline-block;
+}
+.pip-on { background: var(--gold-ink); border-color: var(--gold-ink); }
+
+.kcard-title { font-size: 19px; margin: 0; color: var(--ink); font-family: var(--font-display); }
+.kcard-body  { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
+.kcard-when  { margin: 0; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); }
+.kcard-meta  { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); align-self: center; }
+.kcard-pre   { font-size: 12.5px; max-height: 220px; overflow-y: auto; white-space: pre-wrap;
+               background: var(--chrome-2); color: var(--chrome-fg); }
+
+.kcard-edit summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-muted);
+}
+.kcard-edit summary:hover { color: var(--ink); }
+.kcard-edit form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.kcard-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ink-muted);
+}
+.kcard-edit input,
+.kcard-edit textarea,
+.kcard-edit select {
+  font: 14px/1.4 var(--font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 rgba(64,44,18,.15);
+  padding: 7px 9px;
+}
+
+.kcard-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 4px;
+  border-top: 2px dotted var(--parch-edge);
+  padding-top: 12px;
+}
+.card-note {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  border: 1px solid var(--parch-edge);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.card-note-error { color: var(--ember-red); border-color: var(--ember-red); }
+
+/* ── Recap telescope — carved into the wood above the chat ───────── */
+
+.recap-zone { padding: 18px 0 6px; }
+.recap-hint {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--smoke);
+  text-align: center;
+}
+.recap-band { padding: 14px 0; }
+.recap-heading {
+  font-size: 15px;
+  font-family: var(--font-pixel);   /* intentional — section rune heading */
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.recap-rune { color: var(--teal); }
+.recap-card {
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  color: var(--chrome-fg);
+  border: 2px solid var(--outline-2);
+  border-left: 3px solid var(--teal-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--bevel-in);
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+.recap-card.recap-open { border-left-color: var(--gold); }
+.recap-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.recap-label {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--gold);
+}
+.recap-expand {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--chrome-fg);
+  background: none;
+  border: 1px solid var(--chrome-fg);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.recap-expand:hover { color: var(--gold); border-color: var(--gold-deep); }
+.recap-body    { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--chrome-fg); }
+.recap-children { margin-left: 14px; }
+.recap-children .msg { margin: 8px 0; font-size: 14px; }
+.recap-daylink {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-right: 8px;
+}
+
+/* ── Tasks ───────────────────────────────────────────────────────── */
+
+.t-views { margin-bottom: 18px; }
+
+/* Capture confirmation — Balaur's voice on a parchment strip when a task
+   is kept through the page composer (mirrors the chat task_add). */
+.capture-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 6px;
+  padding: 10px 14px;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--gold-deep);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  font-size: 15px;
+  animation: capture-rise var(--duration-fast) var(--ease-crisp);
+}
+.capture-note b { color: var(--gold-ink); font-weight: 700; }
+.capture-note-icon {
+  width: 22px; height: 22px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+@keyframes capture-rise {
+  from { transform: translateY(4px); opacity: 0; }
+  to   { transform: translateY(0);  opacity: 1; }
+}
+
+/* A newly captured card flares gold, then settles. */
+.task-fresh { animation: task-flare 1.6s var(--ease-crisp); }
+@keyframes task-flare {
+  0%   { filter: brightness(1.18); }
+  100% { filter: brightness(1); }
+}
+
+.tcard-due     { margin: 2px 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.tcard-overdue { color: var(--ember-deep); font-weight: 700; }
+.tcard-done .kcard-title,
+.tcard-dropped .kcard-title { color: var(--ink-muted); text-decoration: line-through; }
+.tcard-dropped { border-style: dashed; opacity: .8; box-shadow: none; }
+.tcard-snooze  { display: inline-flex; gap: 6px; align-items: center; }
+.tcard-snooze select {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+/* Calendar — parchment day cells on wood */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cal-label { margin: 0; }
+.cal-table { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }
+.cal-table th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4px 6px;
+  text-align: left;
+  font-weight: normal;
+}
+.cal-cell {
+  position: relative;
+  height: 86px;
+  padding: 6px;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  overflow: hidden;
+  vertical-align: top;
+}
+.cal-cell.cal-out { opacity: .45; }
+.cal-cell.cal-today { border-color: var(--gold-deep); box-shadow: inset 0 0 0 1px var(--gold-deep); }
+.cal-cell.cal-today::after {
+  content: "";
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 7px; height: 7px;
+  background: var(--gold-ink);
+}
+.cal-daynum {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  display: block;
+  margin-bottom: 4px;
+}
+.cal-item {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid var(--teal-ink);
+  padding-left: 5px;
+  margin: 2px 0;
+}
+.cal-recur { font-style: normal; color: var(--teal-ink); margin-right: 3px; }
+.cal-daylink { text-decoration: none; }
+.cal-daylink:hover .cal-daynum { color: var(--gold-ink); }
+
+/* Timeline */
+.tl .tl-day  { padding: 10px 0 4px; border-top: 2px dashed var(--hair); }
+.tl .tl-day:first-child { border-top: none; }
+.tl-today .tl-label { color: var(--gold); }
+.tl-label { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-strong); }
+.tl-items { list-style: none; margin: 0; padding: 0; }
+.tl-item  { padding: 3px 0; font-size: 15px; }
+.tl-time  { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: 8px; }
+.tl-quiet { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; color: var(--smoke); }
+
+/* ── Life page ───────────────────────────────────────────────────── */
+
+.habit-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.habit-tag   { font-size: 12px; padding: 5px 9px; }
+.life-stat   { margin: 4px 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--ink); }
+.life-unit   { font-family: var(--font-mono); font-size: 13px; color: var(--ink-muted); }
+.life-lastat { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+.life-change { margin: 4px 0 0; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.spark { display: block; margin-top: 2px; }
+.spark polyline { stroke: var(--teal-ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.spark circle   { fill: var(--gold-ink); }
+.life-lines { list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
+.life-lines li { padding: 3px 0; border-top: 1px dashed var(--parch-edge); }
+.life-lines li:first-child { border-top: none; }
+
+/* ── Day pages ───────────────────────────────────────────────────── */
+
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.day-title { margin: 0; }
+.day-nav-spacer { min-width: 72px; }
+.journal-list { margin-bottom: 12px; }
+.journal-entry {
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 10px 12px;
+  margin: 8px 0;
+  position: relative;
+}
+.journal-entry::after {
+  content: "";
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 6px; height: 6px;
+  background: var(--gold-ink);
+}
+.journal-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.journal-text { margin: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.6; }
+.journal-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.journal-form textarea {
+  width: 100%;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px dashed var(--parch-edge);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 10px 12px;
+}
+.journal-form textarea:focus {
+  border-style: solid;
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+/* ── Avatar picker — wood frames around dark portraits ───────────── */
+
+.avatar-choice-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  padding: 10px 4px 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.avatar-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  padding: 7px 6px 6px;
+  cursor: pointer;
+  transition: border-color .1s, filter .1s;
+}
+.avatar-choice img {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  object-fit: cover;
+}
+.avatar-choice span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--chrome-fg);
+}
+.avatar-choice:hover { border-color: var(--gold-deep); filter: brightness(1.12); }
+.avatar-choice-active {
+  border-color: var(--gold);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark),
+              0 0 0 1px var(--gold), var(--drop-hard);
+}
+.avatar-choice-active span { color: var(--gold); }
+
+/* ── Profile page ────────────────────────────────────────────────── */
+
+.profile-page {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 48px 5vw 120px;
+}
+.profile-page h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  margin: 0 0 6px;
+}
+.profile-lede {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+.profile-card {
+  position: relative;
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--parch-bevel);
+  padding: 20px 22px;
+  margin-bottom: 22px;
+}
+.profile-card::after {
+  content: "";
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 7px; height: 7px;
+  background: var(--gold-ink);
+}
+.profile-card-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.profile-hint {
+  color: var(--ink-muted);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+.profile-name-form label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-name-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.profile-name-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 380px;
+  font: 16px/1.4 var(--font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 rgba(64,44,18,.15);
+  padding: 12px 14px;
+}
+.profile-saved {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--good-ink);
+  margin: 10px 0 0;
+}
+.profile-avatar-grid { max-height: none; overflow-y: visible; }
+.profile-avatar-btn img {
+  width: 72px;
+  height: 72px;
+}
+.profile-avatar-btn span { font-size: 10.5px; }
+
+/* ── Model switcher — wood chips on the chatbar ──────────────────── */
 
 .model-switcher {
   display: flex;
@@ -466,28 +1614,8 @@ textarea:focus-visible,
 .model-current {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--muted);
+  color: var(--chrome-fg);
 }
-.model-switcher-manage {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--gold);
-  white-space: nowrap;
-}
-.model-switcher-manage:hover { color: var(--gold-deep); }
-.chatbar-download {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 200px;
-}
-.chatbar-download-label {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-}
-.chatbar-download .gguf-progress-bar { width: 100%; }
 .model-choice-list {
   display: flex;
   flex-wrap: wrap;
@@ -501,24 +1629,27 @@ textarea:focus-visible,
   gap: 1px 8px;
   min-width: 170px;
   padding: 8px 10px;
-  color: var(--fg);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  border: 1px solid var(--hair);
+  color: var(--chrome-fg);
+  background-color: var(--chrome-2);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
   border-radius: var(--radius);
+  box-shadow: var(--bevel-in);
   cursor: pointer;
   text-align: left;
 }
-.model-choice:hover { border-color: var(--steel); }
+.model-choice:hover { border-color: var(--gold-deep); }
 .model-choice-active {
-  color: var(--on-surface);
+  color: var(--gold);
   border-color: var(--gold-deep);
-  background: color-mix(in srgb, var(--surface-2) 82%, var(--gold) 18%);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
+  background-color: var(--chrome);
   cursor: default;
 }
 .model-choice-disabled { border-style: dashed; cursor: help; }
 .model-choice-disabled .model-name,
-.model-choice-disabled .model-detail { color: var(--muted); }
-.model-choice:disabled { opacity: 1; }
+.model-choice-disabled .model-detail { color: var(--smoke); }
 .model-name {
   grid-column: 1;
   font-family: var(--font-mono);
@@ -528,529 +1659,19 @@ textarea:focus-visible,
 .model-detail {
   grid-column: 1 / -1;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--smoke);
 }
 .model-choice .tag { grid-column: 2; grid-row: 1; align-self: start; }
-.model-switcher-empty {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 13px;
-}
-.model-error {
-  color: var(--ember-red);
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
 
-/* ── Native dialog (replaces .modal-backdrop + JS focus-trap) ────── */
+/* ══ Section 7: Carried forward (not in the Hearthwood export) ══════
+   Rules whose selectors are absent from Sections 1–6 above.
+   Raw color hex literals from Forest at Dusk are replaced with
+   Hearthwood token vars. */
 
-dialog {
-  background: var(--surface);
-  border: 2px solid var(--gold-deep);
-  border-radius: var(--radius);
-  padding: 20px;
-  color: var(--fg);
-  width: min(560px, calc(100% - 48px));
-  max-height: min(78vh, 720px);
-  overflow-y: auto;
-  box-shadow: var(--shadow-hard) color-mix(in srgb, var(--gold-deep) 35%, transparent);
-  position: relative;
-}
-dialog::after {
-  content: "";
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 8px; height: 8px;
-  background: var(--gold);
-}
-dialog::backdrop {
-  background: color-mix(in srgb, var(--bg) 76%, transparent);
-  backdrop-filter: blur(2px);
-}
-/* Legacy .modal-* classes — kept so server-rendered modal content still renders
-   correctly inside the <dialog>. The wrapper div is gone; the card styles remain. */
-.modal-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.modal-head h2 { margin: 0; font-size: 24px; }
-.modal-card p { margin: 14px 0 0; }
-.modal-detail { color: var(--muted); }
-.modal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-}
-.modal-actions form { margin: 0; }
-
-/* ── Knowledge pages and cards ───────────────────────────────────── */
-
-.k-section { padding: 26px 0; }
-.k-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 22px;
-}
-.k-heading-proposed { color: var(--gold); }
-.k-heading-muted    { color: var(--muted); }
-.k-count {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 1px 7px;
-}
-.k-sub   { color: var(--muted); margin-top: -4px; font-size: 14.5px; }
-.k-empty { color: var(--muted); font-size: 15px; }
-.k-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 14px;
-}
-.k-grid-muted { opacity: .66; }
-.k-inline { margin: 10px 0; max-width: 480px; }
-
-.k-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0 16px;
-}
-.k-search {
-  flex: 1;
-  min-width: 220px;
-  max-width: 380px;
-  font: 14.5px/1.4 var(--font-body);
-  color: var(--on-surface);
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  padding: 9px 12px;
-}
-.k-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
-.k-tab {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--muted);
-  text-decoration: none;
-  background: var(--surface);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 6px 11px;
-  cursor: pointer;
-}
-.k-tab:hover { color: var(--on-surface); border-color: var(--steel); }
-.k-tab-active {
-  color: #1a0e07;
-  background: var(--gold);
-  border-color: var(--gold-deep);
-}
-.k-tab input { display: none; }
-
-/* ── Knowledge cards (kcard) ─────────────────────────────────────── */
-
-.kcard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.kcard::after {
-  content: "";
-  position: absolute;
-  top: 6px; right: 6px;
-  width: 7px; height: 7px;
-  background: var(--gold);
-}
-.kcard-proposed {
-  border-color: var(--gold-deep);
-  box-shadow: var(--shadow-hard) color-mix(in srgb, var(--gold-deep) 25%, transparent);
-}
-.kcard-proposed::after { background: var(--ember); }
-.kcard-archived { border-style: dashed; }
-
-.kcard-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.kcard-kind {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--teal);
-}
-.kcard-on {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--good);
-}
-.kcard-pips { display: inline-flex; gap: 3px; }
-.pip {
-  width: 7px; height: 7px;
-  background: var(--surface-3);
-  border: 1px solid var(--hair);
-  display: inline-block;
-}
-.pip-on { background: var(--gold); border-color: var(--gold-deep); }
-
-.kcard-title { font-size: 17px; margin: 0; }
-.kcard-body  { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--fg); }
-.kcard-when  { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.kcard-meta  { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); align-self: center; }
-.kcard-pre   { font-size: 12.5px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; }
-
-.kcard-edit summary {
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--muted);
-}
-.kcard-edit summary:hover { color: var(--on-surface); }
-.kcard-edit form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-}
-.kcard-edit label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--muted);
-}
-.kcard-edit input,
-.kcard-edit textarea,
-.kcard-edit select {
-  font: 14px/1.4 var(--font-body);
-  color: var(--on-surface);
-  background: var(--surface-2);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  padding: 7px 9px;
-}
-
-.kcard-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-  border-top: 1px solid var(--hair);
-  padding-top: 10px;
-}
-.card-note {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 8px 10px;
-}
-.card-note-error { color: var(--ember-red); border-color: var(--ember-red); }
-
-/* ── Recap telescope ─────────────────────────────────────────────── */
-
-.recap-zone { padding: 18px 0 6px; }
-.recap-hint {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--smoke);
-  text-align: center;
-}
-.recap-band { padding: 14px 0; }
-.recap-heading {
-  font-size: 15px;
-  font-family: var(--font-pixel);   /* intentional — section rune heading */
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.recap-rune { color: var(--teal); }
-.recap-card {
-  background: var(--surface);
-  border: 1px dashed var(--hair);
-  border-left: 3px solid var(--teal-deep);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  margin: 8px 0;
-}
-.recap-card.recap-open { border-left-color: var(--gold); }
-.recap-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-.recap-label {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--gold);
-}
-.recap-expand {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--muted);
-  background: none;
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 2px 8px;
-  cursor: pointer;
-}
-.recap-expand:hover { color: var(--on-surface); border-color: var(--steel); }
-.recap-body    { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--fg); }
-.recap-children { margin-left: 14px; }
-.recap-children .msg { margin: 8px 0; font-size: 14px; }
-.recap-daylink {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  color: var(--teal);
-  margin-right: 8px;
-}
-
-/* ── Dev panel ───────────────────────────────────────────────────── */
-
-.dev-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 24px 0 10px;
-}
-.dev-panel h1 { margin: 0; }
-.dev-panel form { margin: 0; }
-
-/* ── Tasks ───────────────────────────────────────────────────────── */
-
-.t-views { margin-bottom: 18px; }
-
-.tcard-due     { margin: 2px 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.tcard-overdue { color: var(--ember); }
-.tcard-done .kcard-title,
-.tcard-dropped .kcard-title { color: var(--muted); text-decoration: line-through; }
-.tcard-dropped { border-style: dashed; opacity: .75; }
-.tcard-snooze  { display: inline-flex; gap: 6px; align-items: center; }
-.tcard-snooze select {
-  background: var(--surface-2);
-  color: var(--fg);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  padding: 4px 6px;
-}
-
-/* Calendar */
-.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.cal-label { margin: 0; }
-
-/* Calendar uses a semantic <table> */
-.cal-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.cal-table th {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 4px 6px;
-  text-align: left;
-  font-weight: normal;
-}
-.cal-cell {
-  position: relative;
-  height: 86px;
-  padding: 6px;
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  overflow: hidden;
-  vertical-align: top;
-}
-.cal-cell.cal-out { opacity: .45; }
-.cal-cell.cal-today { border-color: var(--gold); }
-.cal-cell.cal-today::after {
-  content: "";
-  position: absolute;
-  top: 4px; right: 4px;
-  width: 7px; height: 7px;
-  background: var(--gold);
-}
-.cal-daynum {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 4px;
-}
-.cal-item {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border-left: 2px solid var(--teal);
-  padding-left: 5px;
-  margin: 2px 0;
-}
-.cal-recur { font-style: normal; color: var(--teal); margin-right: 3px; }
-.cal-daylink { text-decoration: none; }
-.cal-daylink:hover .cal-daynum { color: var(--gold); }
-
-/* Timeline */
-.tl .tl-day  { padding: 10px 0 4px; border-top: 2px dashed var(--hair); }
-.tl .tl-day:first-child { border-top: none; }
-.tl-today .tl-label { color: var(--gold); }
-.tl-label { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-.tl-items { list-style: none; margin: 0; padding: 0; }
-.tl-item  { padding: 3px 0; font-size: 15px; }
-.tl-time  { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: 8px; }
-.tl-quiet { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; color: var(--smoke); }
-
-/* ── Life page ───────────────────────────────────────────────────── */
-
-.habit-strip { display: flex; flex-wrap: wrap; gap: 8px; }
-.habit-tag   { font-size: 12px; padding: 5px 9px; }
-.life-stat   { margin: 4px 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--on-surface); }
-.life-unit   { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
-.life-lastat { font-family: var(--font-mono); font-size: 11px; color: var(--smoke); }
-.life-change { margin: 4px 0 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.spark { display: block; margin-top: 2px; }
-.spark polyline { stroke: var(--teal); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.spark circle   { fill: var(--gold); }
-.life-lines { list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
-.life-lines li { padding: 3px 0; border-top: 1px dashed var(--hair); }
-.life-lines li:first-child { border-top: none; }
-
-/* ── Day pages ───────────────────────────────────────────────────── */
-
-.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.day-title { margin: 0; }
-.day-nav-spacer { min-width: 72px; }
-.journal-list { margin-bottom: 12px; }
-.journal-entry {
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  margin: 8px 0;
-  position: relative;
-}
-.journal-entry::after {
-  content: "";
-  position: absolute;
-  top: 5px; right: 5px;
-  width: 6px; height: 6px;
-  background: var(--gold);
-}
-.journal-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-.journal-text { margin: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.6; }
-.journal-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.journal-form textarea {
-  width: 100%;
-  background: var(--surface);
-  color: var(--fg);
-  border: 2px dashed var(--hair);
-  border-radius: var(--radius);
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
-  padding: 10px 12px;
-}
-.journal-form textarea:focus {
-  border-style: solid;
-  border-color: var(--gold-deep);
-  outline: none;
-}
-
-/* ── Responsive ──────────────────────────────────────────────────── */
-
-@media (max-width: 640px) {
-  .balaur-avatar { --avatar-size: 42px; }
-  .msg-with-avatar { gap: 10px; }
-  .model-switcher { align-items: stretch; flex-direction: column; }
-  .model-choice-list { justify-content: flex-start; }
-  .model-choice-form { flex: 1 1 180px; }
-  .model-choice { width: 100%; }
-}
-
-@media (max-width: 480px) {
-  .chatbar .chat-form,
-  .chatbar-setup { flex-wrap: wrap; }
-  .chatbar input[type="text"],
-  .chatbar textarea[name="message"] { flex-basis: 100%; }
-  .chatbar .btn { justify-content: center; width: 100%; }
-  .model-choice { min-width: 0; }
-  .model-detail { display: none; }
-  .topbar nav { gap: 12px; }
-  .topbar nav a { font-size: 11px; }
-}
-
-/* Calendar cramped on very small screens */
-@media (max-width: 540px) {
-  .cal-cell { height: 64px; }
-  .cal-item { display: none; }
-  .cal-item:first-of-type { display: block; }
-}
-
-/* ── Avatar picker ───────────────────────────────────────────────── */
-
-/* ── Chatbar profile link (replaces inline picker) ───────────────── */
-
-.chatbar-profile-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-top: 1px solid var(--hair);
-  padding: 10px 4px 4px;
-}
-.chatbar-profile-link .balaur-avatar {
-  --avatar-size: 28px;
-  flex-shrink: 0;
-}
-.chatbar-profile-href {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-  text-decoration: none;
-}
-.chatbar-profile-href:hover { color: var(--gold); }
+/* ── Avatar picker (detail/summary variant) ─────────────────────── */
 
 .avatar-picker {
-  border-top: 1px solid var(--hair);
+  border-top: 2px solid var(--outline-2);
   padding-top: 10px;
 }
 .avatar-picker summary {
@@ -1058,151 +1679,13 @@ dialog::backdrop {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: var(--muted);
+  color: var(--chrome-fg);
   cursor: pointer;
   user-select: none;
   list-style: none;
   padding: 2px 4px;
 }
-.avatar-picker summary:hover { color: var(--on-surface); }
-.avatar-choice-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  padding: 10px 4px 4px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-.avatar-choice {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  padding: 6px;
-  cursor: pointer;
-  transition: border-color .1s;
-}
-.avatar-choice img {
-  width: 48px;
-  height: 48px;
-  image-rendering: pixelated;
-  object-fit: cover;
-}
-.avatar-choice span {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--muted);
-}
-.avatar-choice:hover { border-color: var(--gold-deep); }
-.avatar-choice-active {
-  border-color: var(--gold);
-  box-shadow: var(--shadow-hard) var(--gold-deep);
-}
-.avatar-choice-active span { color: var(--gold); }
-
-/* ── Theme toggle ────────────────────────────────────────────────── */
-
-.theme-toggle {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  background: none;
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 3px 9px;
-  color: var(--muted);
-  cursor: pointer;
-  margin-left: 10px;
-  flex-shrink: 0;
-  transition: color .1s, border-color .1s;
-  line-height: 1;
-}
-.theme-toggle:hover {
-  color: var(--on-surface);
-  border-color: var(--gold-deep);
-}
-
-/* ── Profile page ────────────────────────────────────────────────── */
-
-.profile-page {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: 48px 5vw 120px;
-}
-.profile-page h1 {
-  font-family: var(--font-display);
-  font-size: 30px;
-  margin: 0 0 6px;
-}
-.profile-lede {
-  color: var(--muted);
-  font-size: 15px;
-  margin: 0 0 20px;
-}
-.profile-card {
-  position: relative;
-  background: var(--surface);
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  padding: 20px 22px;
-  margin-bottom: 20px;
-}
-.profile-card::after {
-  content: "";
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 7px; height: 7px;
-  background: var(--gold);
-}
-.profile-card-title {
-  font-family: var(--font-display);
-  font-size: 18px;
-  margin: 0 0 6px;
-  color: var(--on-surface);
-}
-.profile-hint {
-  color: var(--muted);
-  font-size: 14px;
-  margin: 0 0 16px;
-}
-.profile-name-form label {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 8px;
-}
-.profile-name-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.profile-name-row input[type="text"] {
-  flex: 1;
-  min-width: 0;
-  max-width: 380px;
-}
-.profile-saved {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--good);
-  margin: 10px 0 0;
-}
-/* Larger thumbnails on the profile page */
-.profile-avatar-grid { max-height: none; overflow-y: visible; }
-.profile-avatar-btn img {
-  width: 72px;
-  height: 72px;
-}
-.profile-avatar-btn span {
-  font-size: 11px;
-}
+.avatar-picker summary:hover { color: var(--gold); }
 
 /* ── Heads page ──────────────────────────────────────────────────── */
 
@@ -1227,21 +1710,101 @@ dialog::backdrop {
 .head-expires {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--chrome-fg);
 }
 .head-avatar-picker { margin-top: 14px; }
 
-/* ── Reduced motion ──────────────────────────────────────────────── */
+/* ── Head-chat context bar ───────────────────────────────────────── */
 
-@media (prefers-reduced-motion: reduce) {
-  .btn, .btn:hover, .btn:active { transition: none; transform: none; }
-  .msg-pending .balaur-avatar,
-  .balaur-avatar[data-state="thinking"],
-  .balaur-avatar[data-state="working"] { animation: none; }
-  .thinking-dots::after { animation: none; content: ""; }
+.chatbar-head-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chrome-fg);
+  max-width: var(--maxw);
+  margin: 0 auto 10px;
+}
+.head-name-label {
+  font-weight: 700;
+  color: var(--gold);
+}
+.chatbar-back-link {
+  font-size: 11px;
+  color: var(--chrome-fg);
+  text-decoration: none;
+  opacity: .75;
+}
+.chatbar-back-link:hover { color: var(--gold); opacity: 1; }
+
+/* ── Chatbar profile link ─────────────────────────────────────────── */
+
+.chatbar-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 2px solid var(--outline-2);
+  padding: 10px 4px 4px;
+}
+.chatbar-profile-link .balaur-avatar {
+  --avatar-size: 28px;
+  flex-shrink: 0;
+}
+.chatbar-profile-href {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--chrome-fg);
+  text-decoration: none;
+}
+.chatbar-profile-href:hover { color: var(--gold); }
+
+/* ── Chatbar download progress ───────────────────────────────────── */
+
+.chatbar-download {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+.chatbar-download-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chrome-fg);
+}
+.chatbar-download .gguf-progress-bar { width: 100%; }
+
+/* ── Model error ─────────────────────────────────────────────────── */
+
+.model-error {
+  color: var(--ember-red);
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
-/* ── Settings ──────────────────────────────────────────────────────── */
+/* ── Model switcher extras (not in DS pages) ─────────────────────── */
+
+.model-switcher-manage {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.model-switcher-manage:hover { color: var(--gold-deep); }
+
+.model-switcher-empty {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--chrome-fg);
+  font-size: 13px;
+}
+
+/* ── Settings page ───────────────────────────────────────────────── */
 
 .settings-page > h1 { margin-bottom: 20px; }
 
@@ -1271,24 +1834,28 @@ dialog::backdrop {
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: .05em;
-  color: var(--muted);
+  color: var(--chrome-fg);
   text-decoration: none;
-  background: var(--surface);
-  border: 1px solid var(--hair);
+  background-color: var(--chrome);
+  background-image: var(--grain-warm);
+  background-size: 4px 4px;
+  border: 2px solid var(--outline-2);
   border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
   padding: 6px 11px;
   cursor: pointer;
 }
 
-.settings-nav-link:hover { color: var(--on-surface); border-color: var(--steel); }
+.settings-nav-link:hover { color: var(--gold); border-color: var(--gold-deep); }
 
 .settings-nav-active {
-  color: #1a0e07;
+  color: #1c0d04;
   background: var(--gold);
-  border-color: var(--gold-deep);
+  border-color: var(--outline-2);
+  box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
 }
 
-/* ── GGUF downloads ── */
+/* ── GGUF downloads ──────────────────────────────────────────────── */
 
 progress.gguf-progress-bar {
   appearance: none;
@@ -1327,7 +1894,7 @@ progress.gguf-progress-bar::-moz-progress-bar {
 .gguf-download-name {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--on-surface);
+  color: var(--fg-strong);
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1337,7 +1904,7 @@ progress.gguf-progress-bar::-moz-progress-bar {
 .gguf-download-bytes {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--chrome-fg);
   white-space: nowrap;
 }
 
@@ -1353,15 +1920,17 @@ progress.gguf-progress-bar::-moz-progress-bar {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  background: var(--surface);
-  border: 1px solid var(--hair);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  border: 2px solid var(--parch-edge);
   border-radius: var(--radius);
 }
 
 .gguf-file-name {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--on-surface);
+  color: var(--ink);
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1373,7 +1942,78 @@ progress.gguf-progress-bar::-moz-progress-bar {
 }
 
 .gguf-done {
-  color: var(--muted);
+  color: var(--chrome-fg);
   font-size: 13px;
   padding: 6px 0;
 }
+
+/* ── Dev panel ───────────────────────────────────────────────────── */
+
+.dev-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 0 10px;
+}
+.dev-panel h1 { margin: 0; }
+.dev-panel form { margin: 0; }
+
+/* ── Responsive media queries ────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .balaur-avatar { --avatar-size: 42px; }
+  .msg-with-avatar { gap: 10px; }
+  .model-switcher { align-items: stretch; flex-direction: column; }
+  .model-choice-list { justify-content: flex-start; }
+  .model-choice-form { flex: 1 1 180px; }
+  .model-choice { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .chatbar .chat-form,
+  .chatbar-setup { flex-wrap: wrap; }
+  .chatbar input[type="text"],
+  .chatbar textarea[name="message"] { flex-basis: 100%; }
+  .chatbar .btn { justify-content: center; width: 100%; }
+  .model-choice { min-width: 0; }
+  .model-detail { display: none; }
+  .topbar nav { gap: 12px; }
+  .topbar nav a { font-size: 11px; }
+}
+
+/* Calendar cramped on very small screens */
+@media (max-width: 540px) {
+  .cal-cell { height: 64px; }
+  .cal-item { display: none; }
+  .cal-item:first-of-type { display: block; }
+}
+
+/* ── Life page extras (modifier on k-grid / kcard) ───────────────── */
+/* .life-grid and .life-card are layout/semantic modifiers;
+   all visual styling is inherited from .k-grid and .kcard. */
+
+/* ── Models page extras ──────────────────────────────────────────── */
+
+.model-card-active { border-color: var(--gold-deep); }
+.model-card-active .kcard-kind { color: var(--gold-ink); }
+.model-card-disabled { border-style: dashed; opacity: .8; }
+
+.model-detail-line {
+  margin: 2px 0 8px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.model-form-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+/* ── Muted utility ───────────────────────────────────────────────── */
+.muted { color: var(--ink-muted); }
+
+/* ── Recap-day modifier ──────────────────────────────────────────── */
+.recap-day { border-left-color: var(--gold); }
