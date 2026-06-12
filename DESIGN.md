@@ -128,6 +128,10 @@ and Balaur head picker (16 options) · a light/dark theme toggle in the topbar p
 tool-free chat channel per active head (/heads/{id}/chat), per-head
 Balaur avatars.
 
+typed card registry — 10 parameterized, server-rendered card resources under
+`/ui/cards/{type}` (the composition unit for boards and on-the-spot UI): today,
+quests, calendar, timeline, journal, measure, lines, memory, skills, heads.
+
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web).

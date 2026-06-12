@@ -1,0 +1,308 @@
+{{- /* cards.html — one {{define}} per card type + the /ui/cards palette.
+     Each card define receives its specific view-model struct (see internal/web/cards.go).
+     The root element carries id="ucard-{type}" so tests can assert presence.
+     Empty state: every card renders a .k-empty line rather than collapsing. */ -}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* today card — open tasks due/overdue today */ -}}
+{{- /* context: cardTodayView */ -}}
+{{define "ucard_today"}}
+<article class="kcard ucard ucard-today" id="ucard-today">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/scroll.png" alt="">Today</span>
+  </header>
+  {{if .Tasks}}
+  <ul class="ucard-list">
+    {{range .Tasks}}
+    <li class="ucard-row">
+      <span class="ucard-title">{{.Title}}</span>
+      {{with .DueLine}}<span class="tcard-due kcard-meta">{{.}}</span>{{end}}
+      {{if eq .Status "open"}}
+      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="closest li" hx-swap="delete">
+        <input type="hidden" name="to" value="done">
+        <button class="btn btn-ghost btn-sm" type="submit">✓</button>
+      </form>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">Nothing due today.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/tasks">all quests →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* quests card — task list filtered by status */ -}}
+{{- /* context: cardQuestsView */ -}}
+{{define "ucard_quests"}}
+<article class="kcard ucard ucard-quests" id="ucard-quests">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/scroll.png" alt="">Quest log</span>
+    {{with .ParamLine}}<span class="kcard-meta">{{.}}</span>{{end}}
+  </header>
+  {{if .Tasks}}
+  <ul class="ucard-list">
+    {{range .Tasks}}
+    <li class="ucard-row">
+      <span class="ucard-title">{{.Title}}</span>
+      {{with .DueLine}}<span class="kcard-meta tcard-due">{{.}}</span>{{end}}
+      {{if eq .Status "open"}}
+      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="closest li" hx-swap="delete">
+        <input type="hidden" name="to" value="done">
+        <button class="btn btn-ghost btn-sm" type="submit">✓</button>
+      </form>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No quests here yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/tasks">all quests →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* calendar card — compact month grid */ -}}
+{{- /* context: cardCalendarView (embeds calView) */ -}}
+{{define "ucard_calendar"}}
+<article class="kcard ucard ucard-calendar" id="ucard-calendar">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/hourglass.png" alt="">Calendar</span>
+    <span class="kcard-meta">{{.Cal.Label}}</span>
+  </header>
+  <div class="cal-compact">
+    <table class="cal-table">
+      <thead><tr>{{range .Cal.Weekdays}}<th scope="col">{{.}}</th>{{end}}</tr></thead>
+      <tbody>
+        {{range .Cal.Weeks}}
+        <tr>
+          {{range .}}
+          <td class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
+            <a class="cal-daylink" href="/day/{{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
+            {{range .Items}}<span class="cal-item" title="{{.Time}} {{.Title}}">{{.Time}}</span>{{end}}
+          </td>
+          {{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <footer class="kcard-actions"><a href="/tasks?view=calendar">full calendar →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* timeline card — compact forward day list */ -}}
+{{- /* context: cardTimelineView (embeds tlView) */ -}}
+{{define "ucard_timeline"}}
+<article class="kcard ucard ucard-timeline" id="ucard-timeline">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/hourglass.png" alt="">Timeline</span>
+    {{with .ParamLine}}<span class="kcard-meta">{{.}}</span>{{end}}
+  </header>
+  {{if .TL.Days}}
+  <ul class="ucard-list tl-items">
+    {{range .TL.Days}}{{if .Items}}
+    <li class="tl-day{{if .IsToday}} tl-today{{end}}">
+      <span class="tl-label">{{.Label}}</span>
+      <ul>{{range .Items}}<li class="tl-item">{{.Time}} {{.Title}}</li>{{end}}</ul>
+    </li>
+    {{end}}{{end}}
+    {{if not .TL.Days}}
+    <li class="k-empty">Nothing upcoming.</li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">Nothing upcoming in the window.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/tasks?view=timeline">full timeline →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* journal card — recent journal entries */ -}}
+{{- /* context: cardJournalView */ -}}
+{{define "ucard_journal"}}
+<article class="kcard ucard ucard-journal" id="ucard-journal">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/quill.png" alt="">Journal</span>
+    {{with .ParamLine}}<span class="kcard-meta">{{.}}</span>{{end}}
+  </header>
+  {{if .Entries}}
+  <ul class="ucard-list journal-lines">
+    {{range .Entries}}
+    <li class="journal-entry-row">
+      <span class="kcard-meta">{{.Time}}</span>
+      <p class="journal-text">{{.Text}}</p>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No journal entries yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/day/{{.TodayDate}}">today's page →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* measure card — sparkline for a numeric life kind */ -}}
+{{- /* context: cardMeasureView */ -}}
+{{define "ucard_measure"}}
+<article class="kcard ucard ucard-measure" id="ucard-measure">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/orb.png" alt="">Measure</span>
+    <span class="kcard-meta">{{.Kind}}</span>
+  </header>
+  {{if .Error}}
+  <div class="card-note card-note-error">{{.Error}}</div>
+  {{else if .HasData}}
+  <p class="life-stat">{{.LastVal}}{{with .Unit}} <span class="life-unit">{{.}}</span>{{end}} <span class="life-lastat">· {{.LastAt}}</span></p>
+  {{if .Points}}
+  <svg class="spark" viewBox="0 0 240 48" width="240" height="48" role="img" aria-label="{{.Kind}} trend">
+    <polyline points="{{.Points}}" fill="none"/>
+    <circle cx="{{.SparkLastX}}" cy="{{.SparkLastY}}" r="3"/>
+  </svg>
+  {{end}}
+  {{with .Change}}<p class="life-change">{{.}}</p>{{end}}
+  {{else}}
+  <p class="k-empty">No {{.Kind}} entries yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/life">life →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* lines card — recent text entries for a kind */ -}}
+{{- /* context: cardLinesView */ -}}
+{{define "ucard_lines"}}
+<article class="kcard ucard ucard-lines" id="ucard-lines">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/orb.png" alt="">Recent lines</span>
+    <span class="kcard-meta">{{.Kind}}</span>
+  </header>
+  {{if .Error}}
+  <div class="card-note card-note-error">{{.Error}}</div>
+  {{else if .Lines}}
+  <ul class="life-lines">
+    {{range .Lines}}<li>{{.}}</li>{{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No {{.Kind}} entries yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/life">life →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* memory card — active memories (compact read view) */ -}}
+{{- /* context: cardMemoryView */ -}}
+{{define "ucard_memory"}}
+<article class="kcard ucard ucard-memory" id="ucard-memory">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/tome.png" alt="">Memory</span>
+    {{with .ParamLine}}<span class="kcard-meta">{{.}}</span>{{end}}
+  </header>
+  {{if .Records}}
+  <ul class="ucard-list">
+    {{range .Records}}
+    <li class="ucard-row">
+      <span class="ucard-title"><a href="/memory">{{.Title}}</a></span>
+      <span class="kcard-meta">{{.Category}}</span>
+      <span class="kcard-pips" title="importance {{.Importance}}/5">
+        {{- $imp := .Importance -}}
+        {{- range $i := iter 5 -}}<i class="pip{{if lt $i $imp}} pip-on{{end}}"></i>{{- end -}}
+      </span>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No active memories yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/memory">all memories →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* skills card — active skills (compact read view) */ -}}
+{{- /* context: cardSkillsView */ -}}
+{{define "ucard_skills"}}
+<article class="kcard ucard ucard-skills" id="ucard-skills">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/key.png" alt="">Skills</span>
+    {{with .ParamLine}}<span class="kcard-meta">{{.}}</span>{{end}}
+  </header>
+  {{if .Records}}
+  <ul class="ucard-list">
+    {{range .Records}}
+    <li class="ucard-row">
+      <span class="ucard-title"><a href="/settings/skills">{{.Name}}</a></span>
+      {{if .Enabled}}<span class="kcard-on">enabled</span>{{end}}
+      {{with .Description}}<span class="kcard-meta">{{.}}</span>{{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No active skills yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/settings/skills">all skills →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* heads card — active heads with status tags */ -}}
+{{- /* context: cardHeadsView */ -}}
+{{define "ucard_heads"}}
+<article class="kcard ucard ucard-heads" id="ucard-heads">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/tome.png" alt="">Heads</span>
+  </header>
+  {{if .Heads}}
+  <ul class="ucard-list">
+    {{range .Heads}}
+    <li class="ucard-row">
+      <span class="ucard-title"><a href="/heads/{{.ID}}/chat">{{.Name}}</a></span>
+      <span class="tag">{{.Status}}</span>
+      {{with .Purpose}}<span class="kcard-meta">{{.}}</span>{{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No active heads yet.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/heads">all heads →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* palette — GET /ui/cards — human/agent index of all card types */ -}}
+{{- /* context: []cards.Spec */ -}}
+{{define "ucard_palette"}}
+<section class="k-section ucard-palette">
+  <h2 class="k-heading">Card palette</h2>
+  <ul class="ucard-list">
+    {{range .}}
+    <li class="ucard-row">
+      <span class="ucard-title">
+        <img class="tool-icon" src="/static/icons/{{.Icon}}.png" alt="">
+        <code>{{.Type}}</code> — {{.Label}}
+      </span>
+      <span class="kcard-meta">w={{.W}}</span>
+      {{if .Params}}
+      <ul class="ucard-params">
+        {{range .Params}}
+        <li>
+          <code>{{.Name}}</code>{{if .Required}} <span class="tag">required</span>{{end}}
+          {{with .Enum}} [{{range $i, $e := .}}{{if $i}}, {{end}}{{$e}}{{end}}]{{end}}
+          — {{.Doc}}
+        </li>
+        {{end}}
+      </ul>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
