@@ -17,8 +17,10 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - name: vet
         run: go vet ./...
-      - name: test
-        run: go test ./...
+      - name: test (race detector)
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race ./...
       - name: cross-compile (CGO disabled)
         env:
           CGO_ENABLED: "0"
@@ -27,3 +29,60 @@ jobs:
             GOOS="${target%/*}" GOARCH="${target#*/}" go build -o /dev/null .
             echo "$target OK"
           done
+
+  harness:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: build
+        env:
+          CGO_ENABLED: "0"
+        run: go build -o balaur .
+      - name: scripted turn through fake model
+        run: |
+          cat > /tmp/script.json <<'EOF'
+          [
+            {"tool": "task_add", "args": {"title": "Water the plants", "due": "2027-03-01"}},
+            {"text": "I've added watering the plants for March 1."}
+          ]
+          EOF
+          python3 scripts/fake-model.py /tmp/script.json &
+          FAKE_PID=$!
+          sleep 1
+
+          BOX=$(mktemp -d)
+
+          # Initialise the DB with a no-op command, then seed the fake OpenAI
+          # model via Python sqlite3 — the CLI uses DB-stored model config.
+          ./balaur --dir "$BOX" model > /dev/null
+          python3 - "$BOX/data.db" <<'PYEOF'
+          import sqlite3, sys
+          db = sqlite3.connect(sys.argv[1])
+          now = "2026-06-12 12:00:00.000Z"
+          db.execute("INSERT OR IGNORE INTO llm_providers (id,name,kind,base_url,api_key,local,enabled,created,updated) VALUES (?,?,?,?,?,?,?,?,?)",
+              ("fakeprovider000","Fake","openai","http://127.0.0.1:11435/v1","",0,1,now,now))
+          db.execute("INSERT OR IGNORE INTO llm_models (id,label,chat_model,embed_model,provider,enabled,created,updated) VALUES (?,?,?,?,?,?,?,?)",
+              ("fakemodel000000","Fake Model","fake","","fakeprovider000",1,now,now))
+          db.execute("INSERT OR REPLACE INTO llm_settings (id,key,active_model,created,updated) VALUES (?,?,?,?,?)",
+              ("fakesetting0000","default","fakemodel000000",now,now))
+          db.commit()
+          PYEOF
+
+          ./balaur --dir "$BOX" chat "remind me to water the plants on march 1" | tee /tmp/chat.json
+          grep -q '"task_add"' /tmp/chat.json
+          grep -q '"capture_succeeded"' /tmp/chat.json
+
+          ./balaur --dir "$BOX" verify | tee /tmp/verify.json
+          grep -q '"honest"' /tmp/verify.json
+
+          ./balaur --dir "$BOX" task list | tee /tmp/tasks.json
+          grep -q 'Water the plants' /tmp/tasks.json
+
+          ./balaur --dir "$BOX" audit --action task. | tee /tmp/audit.json
+          grep -q 'task.create' /tmp/audit.json
+
+          kill $FAKE_PID

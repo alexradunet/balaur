@@ -4,7 +4,7 @@ BALAUR_CONFIG_DIR ?= $(HOME)/.config/balaur
 SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
 SERVICE_NAME ?= balaur
 
-.PHONY: help dev run build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test fmt vet lint
+.PHONY: help dev run build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
 
 help:
 	@echo "make dev    # start Balaur with hot reload via air"
@@ -17,6 +17,7 @@ help:
 	@echo "make status-user-service    # show the service status"
 	@echo "make logs-user-service      # follow the service logs"
 	@echo "make test   # go test ./..."
+	@echo "make race   # go test -race ./... (requires CGO)"
 	@echo "make fmt    # gofmt -l ."
 	@echo "make vet    # go vet ./..."
 	@echo "make lint   # fmt + vet + test"
@@ -60,6 +61,9 @@ logs-user-service:
 
 test:
 	go test ./...
+
+race:
+	CGO_ENABLED=1 go test -race ./...
 
 fmt:
 	@[ "$(shell gofmt -l .)" = "" ]

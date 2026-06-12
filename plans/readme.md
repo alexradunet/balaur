@@ -20,7 +20,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 003 | Surface turn persistence + chat run errors | P2 | S | LOW | — | [#18](https://github.com/alexradunet/balaur/issues/18) | TODO |
 | 004 | Web handler HTTP test harness | P1 | M | LOW | — | [#19](https://github.com/alexradunet/balaur/issues/19) | TODO |
 | 005 | Origin/Host guard on the UI (CSRF + rebinding) | P1 | S–M | LOW–MED | 004 | [#20](https://github.com/alexradunet/balaur/issues/20) | TODO |
-| 006 | CI: race detector + fake-model e2e harness | P1 | M | LOW–MED | 001 (soft) | [#21](https://github.com/alexradunet/balaur/issues/21) | TODO |
+| 006 | CI: race detector + fake-model e2e harness | P1 | M | LOW–MED | 001 (soft) | [#21](https://github.com/alexradunet/balaur/issues/21) | DONE |
 | 007 | Docs truth sync (DESIGN/README/knowledge.md/env) | P1 | S | LOW | — | [#22](https://github.com/alexradunet/balaur/issues/22) | TODO |
 | 008 | AGENTS.md PocketBase-seam honesty | P2 | S | LOW | — | [#23](https://github.com/alexradunet/balaur/issues/23) | TODO |
 | 009 | Single-source chat fragments (stream = template) | P2 | M | MED | 004 | [#24](https://github.com/alexradunet/balaur/issues/24) | DONE |
