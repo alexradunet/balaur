@@ -58,6 +58,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 038 | Draft composer live-enable on model-ready | P3 | S | LOW–MED | 034 | — | DONE (reviewed; merged to main `3969109`) |
 | 039 | FTS5 memory recall: sidecar index, LIKE fallback | P2 | M–L | MED | — | — | DONE (reviewed; merged to main `c2b6472`; binary +15.2MB accepted — embedded SQLite-WASM) |
 | 040 | CLI as stable API: v1 envelope + balaur doctor | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `e8fd80d`; breaking JSON shape change, deliberate) |
+| 041 | Code tours: refreshed (00–06), extended (07–10), lint-tested | P2 | L | LOW | — | — | DONE (reviewed; merged to main `bb34927`) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -146,18 +147,15 @@ via `chore: merge` commits with `go test ./...` green on the merged tree.
   `grants.target` SelectField lacks `tasks`/`life_entries`/`journal` — any
   head-tools build needs a migration first).
 
-## Direction findings (not planned — ask the advisor to spec when wanted)
+## Direction findings — ALL RESOLVED (2026-06-12, sixth cycle)
 
-Status after the second cycle (2026-06-12, `b6b7f34`):
-
-- **A. Wire FTS5 recall** — still open; the `internal/search` spike locks
-  the driver decision; recall today is 3-longest-words LIKE; `Embed()` has
-  zero callers. (M–L)
-- **B. Sub-head chat route** — SHIPPED (commit 0afea7b); follow-ups became
-  plans 016–018. Its successor direction, scoped head tools, is plan 019.
-- **C. CLI as stable API** — still open; version field in every JSON output
-  + a `balaur doctor` preflight. (S–M)
-- **D. Tours as maintained artifact** — still open. (S)
+- **A. Wire FTS5 recall** — DONE: plan 039 (sidecar index, LIKE fallback;
+  embedding recall stays roadmap behind the same SearchActive seam).
+- **B. Sub-head chat route** — SHIPPED earlier (0afea7b); scoped head tools
+  design is plan 019 (doc).
+- **C. CLI as stable API** — DONE: plan 040 (v1 envelope + balaur doctor).
+- **D. Tours as maintained artifact** — DONE: plan 041 (tours 00–10 refreshed
+  /added; `tours_test.go` enforces anchors in `go test ./...`).
 
 ## Findings considered and rejected (do not re-audit)
 
