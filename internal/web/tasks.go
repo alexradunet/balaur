@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"time"
@@ -85,10 +86,12 @@ type questGroupView struct {
 }
 
 // questLogView is the full quest-log list template payload.
+// OOB is set to true when the view is rendered as an out-of-band HTMX swap.
 type questLogView struct {
 	Groups       []questGroupView
 	First        *taskView // first open task (for server-side panel pre-render)
 	DoneRecently []taskView
+	OOB          bool
 }
 
 // buildQuestLog groups open tasks by rhythm and returns the view.
@@ -355,7 +358,26 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	if err != nil {
 		return h.cardError(e, err)
 	}
-	return h.renderTaskCard(e, rec)
+	if err := h.renderTaskCard(e, rec); err != nil {
+		return err
+	}
+	// If the request originates from the /tasks list view, append an OOB
+	// re-render of the quest rail so the row moves/strikes immediately.
+	if currentURL := e.Request.Header.Get("HX-Current-URL"); currentURL != "" {
+		if u, err := url.Parse(currentURL); err == nil && u.Path == "/tasks" {
+			openRecs, _ := tasks.OpenTasks(h.app, nil)
+			var doneRecs []*core.Record
+			if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
+				doneRecs = dr
+			}
+			ql := buildQuestLog(openRecs, doneRecs, time.Now())
+			ql.OOB = true
+			if err := h.tmpl.ExecuteTemplate(e.Response, "quest_rail", ql); err != nil {
+				return e.InternalServerError("rendering quest rail oob", err)
+			}
+		}
+	}
+	return nil
 }
 
 // snoozeUntil maps the card's quick picks to concrete times.

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -171,4 +172,93 @@ func TestTasksListGroupOrder(t *testing.T) {
 		ExpectedContent: []string{"Dailies", "Rituals", "Quests", "Side quests"},
 	}
 	scenario.Test(t)
+}
+
+// TestTaskTransitionOOB verifies that a transition from the /tasks page
+// returns an OOB quest-rail fragment in addition to the card swap.
+func TestTaskTransitionOOB(t *testing.T) {
+	t.Run("from /tasks — response includes OOB quest-rail", func(t *testing.T) {
+		app := newWebApp(t)
+		// Seed two tasks so the rail has content after the transition.
+		rec := seedTaskWithRecur(t, app, "Complete me", "open", "daily", time.Time{})
+		seedTaskWithRecur(t, app, "Stay open", "open", "daily", time.Time{})
+
+		scenario := tests.ApiScenario{
+			Name:   "transition with HX-Current-URL=/tasks",
+			Method: "POST",
+			URL:    "/ui/tasks/" + rec.Id + "/transition",
+			Body:   strings.NewReader("to=done"),
+			Headers: map[string]string{
+				"Content-Type":   "application/x-www-form-urlencoded",
+				"HX-Current-URL": "http://127.0.0.1:8090/tasks",
+			},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`id="quest-rail"`, `hx-swap-oob="outerHTML"`, "tcard-"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("from /tasks — completed task absent from OOB rail open groups", func(t *testing.T) {
+		app := newWebApp(t)
+		rec := seedTaskWithRecur(t, app, "Finish this quest", "open", "", time.Now().Add(time.Hour))
+
+		scenario := tests.ApiScenario{
+			Name:   "completed task not in rail groups after transition",
+			Method: "POST",
+			URL:    "/ui/tasks/" + rec.Id + "/transition",
+			Body:   strings.NewReader("to=done"),
+			Headers: map[string]string{
+				"Content-Type":   "application/x-www-form-urlencoded",
+				"HX-Current-URL": "http://127.0.0.1:8090/tasks",
+			},
+			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus: 200,
+			// The OOB rail should be present; since the only task was completed, the
+			// open groups section shows the empty state (no quest-group sections).
+			ExpectedContent:    []string{`id="quest-rail"`, `hx-swap-oob="outerHTML"`, "No quests yet"},
+			NotExpectedContent: []string{`class="quest-group"`},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("no HX-Current-URL — no OOB quest-rail in response", func(t *testing.T) {
+		app := newWebApp(t)
+		rec := seedTaskWithRecur(t, app, "Board task", "open", "", time.Time{})
+
+		scenario := tests.ApiScenario{
+			Name:   "transition without HX-Current-URL — no OOB",
+			Method: "POST",
+			URL:    "/ui/tasks/" + rec.Id + "/transition",
+			Body:   strings.NewReader("to=done"),
+			Headers: map[string]string{
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"tcard-"},
+			NotExpectedContent: []string{`id="quest-rail"`},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("HX-Current-URL from chat — no OOB quest-rail in response", func(t *testing.T) {
+		app := newWebApp(t)
+		rec := seedTaskWithRecur(t, app, "Chat task", "open", "", time.Time{})
+
+		scenario := tests.ApiScenario{
+			Name:   "transition from chat URL — no OOB",
+			Method: "POST",
+			URL:    "/ui/tasks/" + rec.Id + "/transition",
+			Body:   strings.NewReader("to=dropped"),
+			Headers: map[string]string{
+				"Content-Type":   "application/x-www-form-urlencoded",
+				"HX-Current-URL": "http://127.0.0.1:8090/",
+			},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			NotExpectedContent: []string{`id="quest-rail"`},
+		}
+		scenario.Test(t)
+	})
 }
