@@ -1,7 +1,7 @@
 package web
 
-// boards.go — owner-composed dashboards of typed cards (plan 029).
-// Routes registered in web.go. Layout is server-defined (no drag/resize).
+// boards.go — owner-composed dashboards of typed cards (plan 029+032).
+// Routes registered in web.go. Layout persisted per board via drag/resize (plan 032).
 
 import (
 	"encoding/json"
@@ -30,30 +30,64 @@ type boardView struct {
 
 // boardRecord is the view-model for one board row.
 type boardRecord struct {
-	ID    string
-	Name  string
-	Sort  int
-	Cards []boardCardView
+	ID      string
+	Name    string
+	Sort    int
+	Cards   []boardCardView
+	FreeLay bool // true when at least one card has an explicit position stored
 }
 
 // boardCardView is one rendered slot in the grid.
 type boardCardView struct {
-	Type  string
-	W     int    // grid column span (from registry spec)
-	Query string // URL-encoded query string, e.g. "?status=open&limit=8"
-	Idx   int    // position in the cards array (for remove route)
+	Type   string
+	W      int    // grid column span (from registry spec or card layout)
+	H      int    // grid row span (from registry spec or card layout)
+	X      int    // 0-based column start (0 = flow mode)
+	Y      int    // 0-based row start (0 = flow mode)
+	X1     int    // X+1 for CSS grid-column start (precomputed)
+	Y1     int    // Y+1 for CSS grid-row start (precomputed)
+	HasPos bool   // true when explicit position was stored (free layout mode)
+	Query  string // URL-encoded query string, e.g. "?status=open&limit=8"
+	Idx    int    // position in the cards array (for remove route)
 }
 
-// boardCardViewsOf converts a []boardCard to []boardCardView, resolving
-// each card's grid span from the registry. Unknown types are silently kept
-// with W=4 so the page stays usable after a registry change.
-func boardCardViewsOf(bcs []boardCard) []boardCardView {
+// boardCardViewsOf converts a []boardCard to []boardCardView, resolving each
+// card's grid dimensions. If at least one card has an explicit position stored
+// (X>0 || Y>0 in its card record), all cards use free-layout positioning.
+// Legacy boards (no explicit position on any card) render with the old
+// flow-layout (grid-column: span W, no grid-row), so existing boards look
+// unchanged until the first drag. The second return value signals free mode.
+func boardCardViewsOf(bcs []boardCard) ([]boardCardView, bool) {
+	// Determine whether this board is in free-layout mode.
+	// A board is free if any card has X>0 or Y>0 or an explicit W or H.
+	freeLay := false
+	for _, bc := range bcs {
+		if bc.X > 0 || bc.Y > 0 || bc.W > 0 || bc.H > 0 {
+			freeLay = true
+			break
+		}
+	}
+
 	out := make([]boardCardView, 0, len(bcs))
 	for i, bc := range bcs {
-		w := 4
+		specW, specH := 4, 16
 		if spec, ok := cards.Get(bc.Type); ok {
-			w = spec.W
+			specW = spec.W
+			if spec.H > 0 {
+				specH = spec.H
+			}
 		}
+
+		// Resolve W and H: card value if >0 else spec default.
+		w := specW
+		if bc.W > 0 {
+			w = bc.W
+		}
+		h := specH
+		if bc.H > 0 {
+			h = bc.H
+		}
+
 		var q string
 		if len(bc.Params) > 0 {
 			vals := url.Values{}
@@ -62,25 +96,35 @@ func boardCardViewsOf(bcs []boardCard) []boardCardView {
 			}
 			q = "?" + vals.Encode()
 		}
+
+		hasPos := freeLay // all slots use free mode if any one card has explicit pos
 		out = append(out, boardCardView{
-			Type:  bc.Type,
-			W:     w,
-			Query: q,
-			Idx:   i,
+			Type:   bc.Type,
+			W:      w,
+			H:      h,
+			X:      bc.X,
+			Y:      bc.Y,
+			X1:     bc.X + 1,
+			Y1:     bc.Y + 1,
+			HasPos: hasPos,
+			Query:  q,
+			Idx:    i,
 		})
 	}
-	return out
+	return out, freeLay
 }
 
 // boardRecordOf builds a boardRecord from a PocketBase record.
 func boardRecordOf(rec *core.Record) *boardRecord {
 	var bcs []boardCard
 	_ = json.Unmarshal([]byte(rec.GetString("cards")), &bcs)
+	views, freeLay := boardCardViewsOf(bcs)
 	return &boardRecord{
-		ID:    rec.Id,
-		Name:  rec.GetString("name"),
-		Sort:  int(rec.GetFloat("sort")),
-		Cards: boardCardViewsOf(bcs),
+		ID:      rec.Id,
+		Name:    rec.GetString("name"),
+		Sort:    int(rec.GetFloat("sort")),
+		Cards:   views,
+		FreeLay: freeLay,
 	}
 }
 
@@ -410,4 +454,77 @@ func (h *handlers) boardsCardRemove(e *core.RequestEvent) error {
 		Current: current,
 		Specs:   cards.All(),
 	})
+}
+
+// layoutEntry is one slot update sent by the client to POST /ui/boards/{id}/layout.
+type layoutEntry struct {
+	Idx int `json:"idx"`
+	X   int `json:"x"`
+	Y   int `json:"y"`
+	W   int `json:"w"`
+	H   int `json:"h"`
+}
+
+// boardsLayout handles POST /ui/boards/{id}/layout.
+// Body: form field "layout" = JSON array of layoutEntry.
+// Rules:
+//   - idx must be in bounds (0..len(cards)-1)
+//   - entry count must match board's card count
+//   - type/params are NEVER modified — only x/y/w/h are touched
+//
+// Responds 204 No Content on success (the client already shows the result).
+func (h *handlers) boardsLayout(e *core.RequestEvent) error {
+	if err := e.Request.ParseForm(); err != nil {
+		return e.BadRequestError("invalid form", err)
+	}
+	id := e.Request.PathValue("id")
+	rec, err := h.app.FindRecordById("boards", id)
+	if err != nil {
+		return e.NotFoundError("board not found", nil)
+	}
+
+	rawLayout := e.Request.FormValue("layout")
+	if rawLayout == "" {
+		return e.BadRequestError("layout field required", nil)
+	}
+	var entries []layoutEntry
+	if err := json.Unmarshal([]byte(rawLayout), &entries); err != nil {
+		return e.BadRequestError("invalid layout JSON", err)
+	}
+
+	var bcs []boardCard
+	_ = json.Unmarshal([]byte(rec.GetString("cards")), &bcs)
+
+	if len(entries) != len(bcs) {
+		return e.BadRequestError("layout entry count mismatch", nil)
+	}
+
+	for _, le := range entries {
+		if le.Idx < 0 || le.Idx >= len(bcs) {
+			return e.BadRequestError("idx out of bounds", nil)
+		}
+	}
+
+	// Apply x/y/w/h — type and params are never touched.
+	for _, le := range entries {
+		bcs[le.Idx].X = le.X
+		bcs[le.Idx].Y = le.Y
+		bcs[le.Idx].W = le.W
+		bcs[le.Idx].H = le.H
+	}
+
+	// Validate (also clamps layout fields).
+	cleaned, err := cards.ValidateCards(bcs)
+	if err != nil {
+		return e.BadRequestError("invalid cards after layout update", err)
+	}
+
+	rawCards, _ := json.Marshal(cleaned)
+	rec.Set("cards", string(rawCards))
+	if err := h.app.Save(rec); err != nil {
+		return e.InternalServerError("saving board layout", err)
+	}
+
+	e.Response.WriteHeader(http.StatusNoContent)
+	return nil
 }

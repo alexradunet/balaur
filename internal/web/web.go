@@ -231,6 +231,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/boards/{id}/delete", h.boardsDelete)
 	se.Router.POST("/ui/boards/{id}/cards/add", h.boardsCardAdd)
 	se.Router.POST("/ui/boards/{id}/cards/{idx}/remove", h.boardsCardRemove)
+	se.Router.POST("/ui/boards/{id}/layout", h.boardsLayout)
 	return nil
 }
 

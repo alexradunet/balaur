@@ -27,6 +27,7 @@ type Spec struct {
 	Label  string      // "Today"
 	Icon   string      // icon file stem under /static/icons
 	W      int         // default grid span (of 12)
+	H      int         // default height in row units (row unit = 10px)
 	Params []ParamSpec // accepted query parameters
 }
 
@@ -43,6 +44,7 @@ func init() {
 			Label: "Today",
 			Icon:  "scroll",
 			W:     4,
+			H:     16,
 			// no params — open tasks due/overdue today
 		},
 		{
@@ -50,6 +52,7 @@ func init() {
 			Label: "Quest log",
 			Icon:  "scroll",
 			W:     8,
+			H:     30,
 			Params: []ParamSpec{
 				{Name: "status", Enum: []string{"open", "done", "all"}, Doc: "filter by task status (default: open)"},
 				{Name: "limit", Doc: "maximum rows to show (default 10, max 50)"},
@@ -60,6 +63,7 @@ func init() {
 			Label: "Calendar",
 			Icon:  "hourglass",
 			W:     4,
+			H:     26,
 			Params: []ParamSpec{
 				{Name: "month", Doc: "YYYY-MM month to display (default: current month)"},
 			},
@@ -69,6 +73,7 @@ func init() {
 			Label: "Timeline",
 			Icon:  "hourglass",
 			W:     8,
+			H:     26,
 			Params: []ParamSpec{
 				{Name: "days", Doc: "how many days to look ahead (default 14, max 31)"},
 			},
@@ -78,6 +83,7 @@ func init() {
 			Label: "Journal",
 			Icon:  "quill",
 			W:     4,
+			H:     18,
 			Params: []ParamSpec{
 				{Name: "limit", Doc: "number of recent journal entries to show (default 5, max 50)"},
 			},
@@ -87,6 +93,7 @@ func init() {
 			Label: "Measure",
 			Icon:  "orb",
 			W:     4,
+			H:     12,
 			Params: []ParamSpec{
 				{Name: "kind", Required: true, Doc: "a numeric life-entry kind (owner-defined)"},
 				{Name: "days", Doc: "look-back window in days (default 90, max 366)"},
@@ -97,6 +104,7 @@ func init() {
 			Label: "Recent lines",
 			Icon:  "orb",
 			W:     4,
+			H:     12,
 			Params: []ParamSpec{
 				{Name: "kind", Required: true, Doc: "a text life-entry kind (owner-defined)"},
 				{Name: "limit", Doc: "number of recent entries to show (default 5, max 50)"},
@@ -107,6 +115,7 @@ func init() {
 			Label: "Memory",
 			Icon:  "tome",
 			W:     4,
+			H:     20,
 			Params: []ParamSpec{
 				{Name: "query", Doc: "optional search terms to filter active memories"},
 				{Name: "limit", Doc: "number of memories to show (default 6, max 50)"},
@@ -117,6 +126,7 @@ func init() {
 			Label: "Skills",
 			Icon:  "key",
 			W:     4,
+			H:     14,
 			Params: []ParamSpec{
 				{Name: "limit", Doc: "number of skills to show (default 6, max 50)"},
 			},
@@ -126,6 +136,7 @@ func init() {
 			Label: "Heads",
 			Icon:  "tome",
 			W:     4,
+			H:     16,
 			// no params — all active heads
 		},
 	}
@@ -148,13 +159,26 @@ func Get(typ string) (Spec, bool) {
 // Card is a typed, parameterized card reference — the composition unit for
 // boards and on-the-spot UI. It matches the JSON shape stored in the boards
 // collection's cards field and produced by the board_compose tool.
+//
+// Layout fields (X, Y, W, H) are optional — zero means "use the spec default".
+// omitempty keeps the JSON shape backward-compatible with records that have no
+// stored layout.
 type Card struct {
 	Type   string            `json:"type"`
 	Params map[string]string `json:"params,omitempty"`
+	X      int               `json:"x,omitempty"` // 0-based col, 0..11
+	Y      int               `json:"y,omitempty"` // 0-based row unit
+	W      int               `json:"w,omitempty"` // col span 1..12; 0 = spec default
+	H      int               `json:"h,omitempty"` // row-unit span; 0 = spec default
 }
 
 // ValidateCards validates each entry via Validate and returns the cleaned list.
 // The first invalid card stops validation and returns an error.
+// Layout fields are clamped to their valid ranges:
+//   - X clamped to 0..11
+//   - W clamped to 0..12; X+W shrunk to keep it ≤ 12
+//   - Y clamped to 0..500
+//   - H clamped to 0..120
 func ValidateCards(cs []Card) ([]Card, error) {
 	out := make([]Card, 0, len(cs))
 	for i, c := range cs {
@@ -166,9 +190,33 @@ func ValidateCards(cs []Card) ([]Card, error) {
 		if len(cleaned) > 0 {
 			card.Params = cleaned
 		}
+		// Clamp layout fields.
+		card.X = clampLayout(c.X, 0, 11)
+		card.Y = clampLayout(c.Y, 0, 500)
+		card.W = clampLayout(c.W, 0, 12)
+		card.H = clampLayout(c.H, 0, 120)
+		// Ensure X+W ≤ 12 (shrink W if needed; 0 means "use spec default" so skip).
+		if card.W > 0 && card.X+card.W > 12 {
+			card.W = 12 - card.X
+			if card.W < 1 {
+				card.W = 1
+			}
+		}
 		out = append(out, card)
 	}
 	return out, nil
+}
+
+// clampLayout clamps n to [lo, hi]. Zero is a valid value meaning "use default",
+// so clamping always preserves zero when lo == 0.
+func clampLayout(n, lo, hi int) int {
+	if n < lo {
+		return lo
+	}
+	if n > hi {
+		return hi
+	}
+	return n
 }
 
 // Validate checks params against the spec for typ. Rules:

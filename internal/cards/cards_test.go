@@ -1,6 +1,8 @@
 package cards_test
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/alexradunet/balaur/internal/cards"
@@ -180,4 +182,120 @@ func TestNoWebImports(t *testing.T) {
 	// This test is a compile-time fact: the package has no internal/web imports.
 	// If you can run `go test ./internal/cards/...` without a cycle error, this passes.
 	t.Log("compile-time verified: internal/cards has no internal/web imports")
+}
+
+// TestSpecHasDefaultH verifies that every registered spec has a non-zero H.
+func TestSpecHasDefaultH(t *testing.T) {
+	for _, spec := range cards.All() {
+		if spec.H == 0 {
+			t.Errorf("spec %q has H=0; expected a non-zero default height", spec.Type)
+		}
+	}
+}
+
+// TestLayoutClamping verifies ValidateCards clamps layout fields to valid ranges.
+func TestLayoutClamping(t *testing.T) {
+	tests := []struct {
+		name  string
+		card  cards.Card
+		wantX int
+		wantY int
+		wantW int
+		wantH int
+	}{
+		{
+			name:  "all zeros pass through unchanged",
+			card:  cards.Card{Type: "today", X: 0, Y: 0, W: 0, H: 0},
+			wantX: 0, wantY: 0, wantW: 0, wantH: 0,
+		},
+		{
+			name:  "X clamped to 11",
+			card:  cards.Card{Type: "today", X: 99},
+			wantX: 11,
+		},
+		{
+			name:  "Y clamped to 500",
+			card:  cards.Card{Type: "today", Y: 9999},
+			wantY: 500,
+		},
+		{
+			name:  "W clamped to 12",
+			card:  cards.Card{Type: "today", W: 999},
+			wantW: 12,
+		},
+		{
+			name:  "H clamped to 120",
+			card:  cards.Card{Type: "today", H: 9999},
+			wantH: 120,
+		},
+		{
+			name:  "X+W shrunk to fit (X=8, W=6 → W=4)",
+			card:  cards.Card{Type: "today", X: 8, W: 6},
+			wantX: 8, wantW: 4,
+		},
+		{
+			name:  "X+W exactly 12 is fine",
+			card:  cards.Card{Type: "today", X: 8, W: 4},
+			wantX: 8, wantW: 4,
+		},
+		{
+			name:  "W=0 (use default) not shrunk even when X=8",
+			card:  cards.Card{Type: "today", X: 8, W: 0},
+			wantX: 8, wantW: 0,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := cards.ValidateCards([]cards.Card{tc.card})
+			if err != nil {
+				t.Fatalf("ValidateCards error: %v", err)
+			}
+			c := out[0]
+			if tc.wantX != 0 && c.X != tc.wantX {
+				t.Errorf("X = %d; want %d", c.X, tc.wantX)
+			}
+			if tc.wantY != 0 && c.Y != tc.wantY {
+				t.Errorf("Y = %d; want %d", c.Y, tc.wantY)
+			}
+			if tc.wantW != 0 && c.W != tc.wantW {
+				t.Errorf("W = %d; want %d", c.W, tc.wantW)
+			}
+			if tc.wantH != 0 && c.H != tc.wantH {
+				t.Errorf("H = %d; want %d", c.H, tc.wantH)
+			}
+		})
+	}
+}
+
+// TestLayoutJSONRoundTrip verifies that zero layout fields are omitted in JSON
+// (backward-compatible) and non-zero layout fields round-trip correctly.
+func TestLayoutJSONRoundTrip(t *testing.T) {
+	t.Run("zero layout omitted from JSON", func(t *testing.T) {
+		c := cards.Card{Type: "today"}
+		b, err := json.Marshal(c)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		s := string(b)
+		for _, key := range []string{`"x"`, `"y"`, `"w"`, `"h"`} {
+			if strings.Contains(s, key) {
+				t.Errorf("JSON contains %s but should be omitted when zero: %s", key, s)
+			}
+		}
+	})
+
+	t.Run("non-zero layout round-trips", func(t *testing.T) {
+		c := cards.Card{Type: "today", X: 2, Y: 5, W: 4, H: 16}
+		b, err := json.Marshal(c)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		var got cards.Card
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		if got.X != 2 || got.Y != 5 || got.W != 4 || got.H != 16 {
+			t.Errorf("round-trip mismatch: got %+v", got)
+		}
+	})
 }

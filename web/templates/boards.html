@@ -3,6 +3,7 @@
 <head>
   {{template "page_head" .}}
   <title>Boards · Balaur</title>
+  <script src="/static/board.js" defer></script>
 </head>
 <body>
   {{template "topbar" .}}
@@ -59,9 +60,19 @@
 {{end}}
 
 {{define "board_grid"}}
-<div class="board-grid" id="board-grid">
+<div class="board-grid{{if .Current.FreeLay}} board-grid-free{{end}}"
+     id="board-grid"
+     data-board-id="{{.Current.ID}}">
   {{range .Current.Cards}}
-  <div class="board-slot" style="grid-column: span {{.W}}">
+  <div class="board-slot"
+       data-idx="{{.Idx}}"
+       data-x="{{.X}}" data-y="{{.Y}}" data-w="{{.W}}" data-h="{{.H}}"
+       {{- if .HasPos}}
+       style="grid-column: {{.X1}} / span {{.W}}; grid-row: {{.Y1}} / span {{.H}}"
+       {{- else}}
+       style="grid-column: span {{.W}}"
+       {{- end}}>
+    <div class="board-slot-grip" title="drag to move">⠿</div>
     <div class="board-slot-inner"
          hx-get="/ui/cards/{{.Type}}{{.Query}}"
          hx-trigger="load"
@@ -76,6 +87,7 @@
           class="board-slot-remove">
       <button class="btn btn-ghost btn-sm" type="submit" title="Remove card">✕</button>
     </form>
+    <div class="board-slot-resize" aria-hidden="true"></div>
   </div>
   {{end}}
 

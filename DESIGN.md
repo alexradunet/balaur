@@ -136,9 +136,10 @@ timeline, journal, measure, lines, memory, skills, heads ·
 the candle (/journal): immersive writing page — free-hand or guided by one
 model-composed prompt line (deterministic fallback), entries shared with day
 pages · boards — owner-composed dashboards of typed cards at /boards
-(server-defined layout; Study/Quest log/Self/Balaur defaults); each board is a
-named, ordered list of card references in the `boards` collection; the page
-renders a 12-column CSS grid of HTMX slots that lazy-load cards ·
+(Study/Quest log/Self/Balaur defaults); each board is a named, ordered list of
+card references in the `boards` collection; the page renders a 12-column CSS
+grid of HTMX slots that lazy-load cards; cards drag and resize (pointer +
+12-col snap), layout persisted per board — compaction not implemented ·
 on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
 raises a new board from chat (both tools compose from the typed registry only —
 Balaur cannot author markup).

@@ -17,6 +17,7 @@ func TestEmbedAssetPresence(t *testing.T) {
 		"static/icons/shield.png",
 		"static/fonts/piazzolla.ttf",
 		"static/fonts/jersey-15.ttf",
+		"static/board.js",
 	}
 	for _, path := range assets {
 		f, err := FS.Open(path)
