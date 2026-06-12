@@ -188,8 +188,10 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
-	// Heads management — list active sub-heads and assign personalities.
+	// Heads management — list active sub-heads, assign personalities, chat.
 	se.Router.GET("/heads", h.headsPage)
+	se.Router.GET("/heads/{id}/chat", h.headChatPage)
+	se.Router.POST("/ui/heads/{id}/chat", h.headChat)
 	se.Router.POST("/ui/heads/{id}/avatar", h.setHeadAvatar)
 	return nil
 }

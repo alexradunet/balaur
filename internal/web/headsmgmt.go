@@ -2,11 +2,17 @@ package web
 
 import (
 	"fmt"
+	"html"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/turn"
 )
 
 // headView is the template payload for one head record on the /heads page.
@@ -79,6 +85,157 @@ func headViewFrom(app core.App, r *core.Record) headView {
 		AvatarURL:     store.HeadBalaurAvatarURL(app, r.Id),
 		BalaurOptions: buildBalaurHeadOptionsFor(pref), // roster lives in models.go
 	}
+}
+
+// headChatPage renders GET /heads/{id}/chat — the focused conversation channel
+// for a sub-head. The page is the head's own branch conversation.
+func (h *handlers) headChatPage(e *core.RequestEvent) error {
+	headID := e.Request.PathValue("id")
+	head, err := h.app.FindRecordById("heads", headID)
+	if err != nil {
+		return e.NotFoundError("head not found", nil)
+	}
+	if head.GetString("status") != "active" {
+		return e.ForbiddenError("head is not active", nil)
+	}
+
+	conv, err := conversation.ForHead(h.app, head)
+	if err != nil {
+		return e.InternalServerError("loading head conversation", err)
+	}
+
+	recs, _ := conversation.History(h.app, conv.Id, historyWindow)
+	history := h.messageViewsForHead(recs, head)
+
+	client, clientErr := h.clients.Active(h.app)
+	data := headChatData{
+		Title:           head.GetString("name") + " · Balaur",
+		HeadID:          headID,
+		HeadName:        head.GetString("name"),
+		HeadPurpose:     head.GetString("purpose"),
+		BalaurAvatarURL: store.HeadBalaurAvatarURL(h.app, headID),
+		SoulAvatarURL:   store.SoulAvatarURL(h.app),
+		OwnerName:       store.OwnerName(h.app),
+		History:         history,
+		ChatReady:       clientErr == nil && client != nil,
+	}
+	return h.render(e, "head-chat.html", data)
+}
+
+type headChatData struct {
+	Title           string
+	HeadID          string
+	HeadName        string
+	HeadPurpose     string
+	BalaurAvatarURL string
+	SoulAvatarURL   string
+	OwnerName       string
+	History         []messageView
+	ChatReady       bool
+}
+
+// headChat handles POST /ui/heads/{id}/chat — one turn in the head's conversation.
+func (h *handlers) headChat(e *core.RequestEvent) error {
+	headID := e.Request.PathValue("id")
+	msg := strings.TrimSpace(e.Request.FormValue("message"))
+	if msg == "" {
+		return e.BadRequestError("empty message", nil)
+	}
+
+	head, err := h.app.FindRecordById("heads", headID)
+	if err != nil {
+		return e.NotFoundError("head not found", nil)
+	}
+	if head.GetString("status") != "active" {
+		return e.ForbiddenError("head is not active", nil)
+	}
+
+	conv, err := conversation.ForHead(h.app, head)
+	if err != nil {
+		return e.InternalServerError("loading head conversation", err)
+	}
+
+	client, err := h.clients.Active(h.app)
+	if err != nil {
+		return h.renderError(e, err)
+	}
+
+	clientRendered := e.Request.FormValue("client_rendered") == "1"
+	balaURL := store.HeadBalaurAvatarURL(h.app, headID)
+	soulURL := store.SoulAvatarURL(h.app)
+	ownerName := store.OwnerName(h.app)
+	headName := head.GetString("name")
+
+	balaHTML := balaurAvatarHTML(balaURL)
+	soulHTML := soulAvatarHTML(soulURL)
+	assistantOpen := `<div class="msg msg-balaur msg-with-avatar">` + balaHTML +
+		`<div class="msg-main"><div class="who">` + html.EscapeString(headName) + `</div><div class="body">`
+
+	w := e.Response
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	flusher, _ := w.(http.Flusher)
+	flush := func() {
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+
+	if !clientRendered {
+		fmt.Fprintf(w,
+			`<div class="msg msg-user msg-with-avatar">%s`+
+				`<div class="msg-main"><div class="who">%s</div><div class="body">%s</div></div></div>`,
+			soulHTML, html.EscapeString(ownerName), html.EscapeString(msg))
+	}
+	fmt.Fprint(w, assistantOpen)
+	flush()
+
+	emitEv := func(ev agent.Event) {
+		switch ev.Kind {
+		case "text":
+			fmt.Fprint(w, html.EscapeString(ev.Text))
+			flush()
+		case "error":
+			fmt.Fprintf(w, `<span class="thinking">the thread snapped: %s</span>`,
+				html.EscapeString(ev.Err.Error()))
+			flush()
+		}
+	}
+
+	_, runErr := turn.RunFor(e.Request.Context(), h.app, client, conv,
+		headName, head.GetString("purpose"), msg, emitEv)
+
+	fmt.Fprint(w, messageCloseHTML)
+	flush()
+	if runErr != nil {
+		h.app.Logger().Warn("head chat: turn failed", "head", headID, "error", runErr)
+	}
+	return nil
+}
+
+// messageViewsForHead is like messageViews but uses the head's Balaur avatar
+// instead of the owner's preference, and the head's name for the "who" label.
+func (h *handlers) messageViewsForHead(recs []*core.Record, head *core.Record) []messageView {
+	soulURL := store.SoulAvatarURL(h.app)
+	headURL := store.HeadBalaurAvatarURL(h.app, head.Id)
+	ownerName := store.OwnerName(h.app)
+	out := make([]messageView, 0, len(recs))
+	for _, r := range recs {
+		mv := messageView{
+			Role:            r.GetString("role"),
+			Tool:            r.GetString("tool_name"),
+			Content:         r.GetString("content"),
+			Origin:          r.GetString("origin"),
+			SoulAvatarURL:   soulURL,
+			BalaurAvatarURL: headURL,
+			OwnerName:       ownerName,
+		}
+		if mv.Role == "assistant" && mv.Content == "" {
+			continue
+		}
+		out = append(out, mv)
+	}
+	return out
 }
 
 // setHeadAvatar handles POST /ui/heads/{id}/avatar — saves the head's

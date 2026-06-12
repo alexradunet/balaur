@@ -153,6 +153,55 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	return res, errors.Join(runErr, persistErr)
 }
 
+// RunFor drives one turn in a sub-head branch conversation. Unlike Run it:
+//   - Uses conv.Id instead of the master conversation.
+//   - Builds a focused system prompt from the head's name and purpose.
+//   - Carries no tools, no knowledge block, no today block — heads get a
+//     clean focused channel; scoped tools are a future slice.
+//   - Skips the honesty check (capture verification requires tool calls).
+func RunFor(ctx context.Context, app core.App, client llm.Client, conv *core.Record, headName, headPurpose, userText string, emit func(agent.Event)) (Result, error) {
+	if emit == nil {
+		emit = func(agent.Event) {}
+	}
+	var res Result
+
+	recent, err := conversation.RecentTurns(app, conv.Id, RecentTurnWindow)
+	if err != nil {
+		return res, err
+	}
+	if err := conversation.Append(app, conv.Id, llm.Message{Role: "user", Content: userText}, ""); err != nil {
+		return res, err
+	}
+
+	sysPrompt := "You are " + headName + ", a focused sub-agent of Balaur."
+	if headPurpose != "" {
+		sysPrompt += " Your purpose: " + headPurpose
+	}
+	sysPrompt += "\nSpeak directly and helpfully. This is a focused conversation channel.\n\n"
+	sysPrompt += nowLine(time.Now())
+
+	loop := &agent.Loop{Client: client, Tools: nil, MaxSteps: maxSteps()}
+	history := make([]llm.Message, 0, len(recent)+2)
+	history = append(history, llm.Message{Role: "system", Content: sysPrompt})
+	history = append(history, recent...)
+	history = append(history, llm.Message{Role: "user", Content: userText})
+	contextLen := len(history)
+
+	final, runErr := loop.Run(ctx, history, emit)
+	res.Turn = final[contextLen:]
+
+	var persistErr error
+	for _, m := range res.Turn {
+		if err := conversation.Append(app, conv.Id, m, ""); err != nil {
+			persistErr = fmt.Errorf("persisting head turn: %w", err)
+			break
+		}
+	}
+
+	res.Reply = verify.LastAssistantText(res.Turn)
+	return res, errors.Join(runErr, persistErr)
+}
+
 const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"Speak plainly and warmly, without flattery or hype. " +
 	"Use tools when they genuinely help; otherwise just answer.\n\n" +
