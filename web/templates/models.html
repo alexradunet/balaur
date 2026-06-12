@@ -70,6 +70,65 @@
     {{end}}
   </section>
 
+  {{if .Providers}}
+  <section class="k-section">
+    <div class="k-heading">
+      <h2>Saved providers</h2>
+    </div>
+    <div class="k-grid">
+      {{range .Providers}}
+      <article class="kcard">
+        <div class="kcard-head">
+          <div>
+            <div class="kcard-kind">{{.BaseURL}}{{if .KeySet}} · key set{{else}} · key not set{{end}}{{if .Local}} · self-hosted{{end}}</div>
+            <h3>{{.Name}}</h3>
+          </div>
+        </div>
+        {{if .Models}}
+        <ul class="k-sub" style="list-style:none;padding:0;margin:0.5rem 0">
+          {{$activeID := $.ActiveModelID}}
+          {{range .Models}}
+          <li style="display:flex;align-items:center;gap:0.5rem;margin:0.25rem 0">
+            <span>{{.Label}} <span class="k-sub">{{.ChatModel}}</span></span>
+            {{if eq .ModelID $activeID}}
+            <span class="tag">active</span>
+            {{else}}
+            <form hx-post="/ui/model/{{.ModelID}}/delete" hx-target="#models-panel" hx-swap="outerHTML"
+                  hx-confirm="Remove this model?" style="display:inline;margin:0">
+              <button class="btn btn-ghost btn-sm" type="submit">Remove</button>
+            </form>
+            {{end}}
+          </li>
+          {{end}}
+        </ul>
+        {{end}}
+        <div class="kcard-actions">
+          <details class="kcard-edit">
+            <summary>edit</summary>
+            <form hx-post="/ui/model/provider/{{.ID}}/save" hx-target="#models-panel" hx-swap="outerHTML">
+              <label>Provider name<input name="name" value="{{.Name}}" required></label>
+              <label>Base URL<input name="base_url" value="{{.BaseURL}}" required></label>
+              <label>API key
+                <input name="api_key" type="password" autocomplete="off" value="">
+                <span class="k-sub">Leave blank to keep the current key.</span>
+              </label>
+              <div class="model-form-checks">
+                <label><input type="checkbox" name="local" value="1"{{if .Local}} checked{{end}}> self-hosted/local endpoint</label>
+              </div>
+              <button class="btn btn-primary btn-sm" type="submit">Save changes</button>
+            </form>
+          </details>
+          <form hx-post="/ui/model/provider/{{.ID}}/delete" hx-target="#models-panel" hx-swap="outerHTML"
+                hx-confirm="Remove this provider and its models?" style="display:inline">
+            <button class="btn btn-ghost btn-sm" type="submit">Delete provider</button>
+          </form>
+        </div>
+      </article>
+      {{end}}
+    </div>
+  </section>
+  {{end}}
+
   <section class="k-section">
     <div class="k-heading">
       <h2>Local model files</h2>
