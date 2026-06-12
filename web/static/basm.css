@@ -468,6 +468,26 @@ textarea:focus-visible,
   font-size: 12px;
   color: var(--muted);
 }
+.model-switcher-manage {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.model-switcher-manage:hover { color: var(--gold-deep); }
+.chatbar-download {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+.chatbar-download-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.chatbar-download .gguf-progress-bar { width: 100%; }
 .model-choice-list {
   display: flex;
   flex-wrap: wrap;

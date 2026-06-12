@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alexradunet/balaur/internal/gguf"
 	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
@@ -51,8 +52,12 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Fatalf("chat_bar: %v", err)
 	}
 	out := b.String()
-	if !strings.Contains(out, "model-choice-list") || !strings.Contains(out, "Add OpenAI-compatible API") {
-		t.Error("chatbar should render the inline model chooser")
+	// The inline model chooser and the add-API form were moved to /settings/models.
+	if strings.Contains(out, "model-choice-list") || strings.Contains(out, "Add OpenAI-compatible API") {
+		t.Error("chatbar should no longer render the inline model chooser or add-API form")
+	}
+	if !strings.Contains(out, `href="/settings/models"`) {
+		t.Error("chatbar should link to /settings/models to manage models")
 	}
 	if !strings.Contains(out, `<textarea name="message"`) {
 		t.Error("chatbar should render the current textarea input when chat is ready")
@@ -65,6 +70,21 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	}
 	if strings.Contains(b.String(), `input type="text"`) {
 		t.Error("chatbar should not render the old disabled text input when chat is not ready")
+	}
+
+	// While a model is downloading, the chatbar shows a loading bar, not the form.
+	b.Reset()
+	data.ChatReady = false
+	data.Gguf = gguf.Progress{Active: true, BytesDone: 500, BytesTotal: 1000, Dest: "/models/x.llamafile"}
+	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
+		t.Fatalf("chat_bar downloading: %v", err)
+	}
+	dl := b.String()
+	if !strings.Contains(dl, "chatbar-download") || !strings.Contains(dl, "<progress") {
+		t.Error("chatbar should render a download progress bar while a model is downloading")
+	}
+	if strings.Contains(dl, `<textarea name="message"`) {
+		t.Error("chatbar should not render the chat input while downloading (not ready)")
 	}
 
 	b.Reset()

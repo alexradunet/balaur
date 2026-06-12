@@ -34,6 +34,7 @@ type homeData struct {
 	AvatarOptions   []AvatarOption // soul avatar picker roster
 	OwnerName       string         // display name for the "You" label in chat
 	BalaurAvatarURL string         // resolved Balaur head avatar URL
+	Gguf            gguf.Progress  // active model download, for the chatbar loading bar
 }
 
 // AvatarOption is one entry in an avatar picker (soul or Balaur head).
@@ -72,6 +73,7 @@ func (h *handlers) homeData() (homeData, error) {
 		return data, err
 	}
 	data.ModelChoices = choices
+	data.Gguf = h.gguf.Snapshot()
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
 	data.AvatarOptions = buildAvatarOptions(h.app)

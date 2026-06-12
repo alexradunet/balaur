@@ -176,68 +176,25 @@
 {{end}}
 
 {{define "model_switcher"}}
-<section class="model-switcher" aria-label="Model chooser">
+<section class="model-switcher" aria-label="Model">
   <div class="model-switcher-head">
     <span class="model-switcher-kicker">Model</span>
     {{if .ActiveModel}}<span class="model-current">{{.ActiveModel}}</span>{{end}}
+    <a class="model-switcher-manage" href="/settings/models">Manage models &amp; APIs →</a>
   </div>
-  {{if .ModelChoices}}
-  <div class="model-choice-list">
-    {{range .ModelChoices}}
-    {{if .Disabled}}
-    <div class="model-choice-form">
-      <button class="model-choice model-choice-disabled"
-              type="button"
-              hx-get="/ui/model/missing?key={{.Key}}"
-              hx-target="#model-modal"
-              hx-swap="innerHTML">
-        <span class="model-name">{{.Name}}</span>
-        <span class="model-detail">{{.Detail}}</span>
-        <span class="tag">{{.Badge}}</span>
-      </button>
+  {{if not .ChatReady}}
+    {{if .Gguf.Active}}
+    <div class="chatbar-download">
+      <span class="chatbar-download-label">Downloading model… {{fmtBytes .Gguf.BytesDone}}{{if .Gguf.BytesTotal}} / {{fmtBytes .Gguf.BytesTotal}}{{end}}</span>
+      <progress class="gguf-progress-bar"{{if .Gguf.BytesTotal}} value="{{.Gguf.BytesDone}}" max="{{.Gguf.BytesTotal}}"{{end}}></progress>
     </div>
     {{else}}
-    <form class="model-choice-form"
-          hx-post="/ui/model/select"
-          hx-target="#chatbar"
-          hx-swap="outerHTML"
-          hx-on::after-settle="document.querySelector('#chatbar [name=message]')?.focus()">
-      <input type="hidden" name="key" value="{{.Key}}">
-      <button class="model-choice {{if .Active}}model-choice-active{{end}}"
-              type="submit"
-              {{if .Active}}aria-current="true" disabled{{end}}>
-        <span class="model-name">{{.Name}}</span>
-        <span class="model-detail">{{.Detail}}</span>
-        <span class="tag">{{.Badge}}</span>
-      </button>
-    </form>
+    <div class="model-switcher-empty">
+      <span>{{if .Gguf.Err}}{{.Gguf.Err}}{{else if .ModelError}}{{.ModelError}}{{else}}No model is ready yet.{{end}}</span>
+      <a href="/settings/models">Set up a model →</a>
+    </div>
     {{end}}
-    {{end}}
-  </div>
-  {{else}}
-  <div class="model-switcher-empty">
-    <span>{{.ModelError}}</span>
-    {{if .ModelHint}}<code>{{.ModelHint}}</code>{{end}}
-  </div>
   {{end}}
-  <details class="model-add">
-    <summary>Add OpenAI-compatible API</summary>
-    {{if .ModelError}}<p class="model-error">{{.ModelError}}</p>{{end}}
-    <form class="model-provider-form"
-          hx-post="/ui/model/openai"
-          hx-target="#chatbar"
-          hx-swap="outerHTML">
-      <input name="name"        placeholder="Provider name, e.g. Ollama" required>
-      <input name="base_url"    placeholder="Base URL, e.g. http://localhost:11434/v1" required>
-      <input name="label"       placeholder="Display label, e.g. Llama 3.1 8B" required>
-      <input name="model"       placeholder="Chat model id" required>
-      <input name="embed_model" placeholder="Embedding model id (optional)">
-      <input name="api_key" type="password" placeholder="API key (optional; stored in PocketBase)">
-      <label><input type="checkbox" name="local" value="1"> self-hosted/local endpoint</label>
-      <label><input type="checkbox" name="use"   value="1" checked> use after saving</label>
-      <button class="btn btn-primary" type="submit">Save model</button>
-    </form>
-  </details>
 
   <div class="chatbar-profile-link">
     <span class="balaur-avatar balaur-avatar-soul" aria-hidden="true">
