@@ -10,12 +10,14 @@ package knowledge
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/store"
 )
 
@@ -221,12 +223,46 @@ func FilterActive(app core.App, kind Kind, query, category string) ([]*core.Reco
 	return app.FindRecordsByFilter(string(kind), filter, "-importance,-created", 0, 0, params)
 }
 
-// SearchActive finds active memories matching any of the given terms across
-// the fields the model would care about. Plain LIKE search: with the few
-// thousand memories a personal vault accumulates, SQLite scans this
-// instantly. FTS5/embedding recall is roadmap (see internal/search) — the
-// call site won't change.
+// SearchActive finds active memories matching any of the given terms.
+// When a FTS5 sidecar index is available in app.Store() (key
+// search.StoreKey), results are bm25-ranked by the index and the LIKE path
+// is skipped. On any error, a missing index, or zero FTS results, it falls
+// through to the plain LIKE body unchanged — deterministic, offline-safe.
 func SearchActive(app core.App, terms []string, limit int) ([]*core.Record, error) {
+	// --- FTS5 fast path ---
+	if raw, ok := app.Store().GetOk(search.StoreKey); ok {
+		if ix, ok := raw.(*search.Index); ok && ix != nil {
+			ids, err := ix.Query(terms, limit)
+			if err == nil && len(ids) > 0 {
+				recs, err := app.FindRecordsByIds(string(Memory), ids)
+				if err == nil {
+					// Filter defensively: only active (the index may lag briefly).
+					var active []*core.Record
+					for _, r := range recs {
+						if r.GetString("status") == StatusActive {
+							active = append(active, r)
+						}
+					}
+					if len(active) > 0 {
+						// Preserve FTS rank order (FindRecordsByIds returns unordered).
+						order := make(map[string]int, len(ids))
+						for i, id := range ids {
+							order[id] = i
+						}
+						sort.Slice(active, func(i, j int) bool {
+							return order[active[i].Id] < order[active[j].Id]
+						})
+						if len(active) > limit {
+							active = active[:limit]
+						}
+						return active, nil
+					}
+				}
+			}
+		}
+	}
+
+	// --- LIKE fallback (unchanged) ---
 	params := dbx.Params{}
 	var clauses []string
 	for i, t := range terms {

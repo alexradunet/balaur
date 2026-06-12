@@ -142,10 +142,12 @@ grid of HTMX slots that lazy-load cards; cards drag and resize (pointer +
 12-col snap), layout persisted per board — cards auto-pack upward after each move/resize ·
 on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
 raises a new board from chat; `board_add_card` amends an existing board (all three
-tools compose from the typed registry only — Balaur cannot author markup).
+tools compose from the typed registry only — Balaur cannot author markup) ·
+FTS5 memory recall (bm25-ranked sidecar index, rebuilt on boot, synced on
+write; LIKE fallback when the index is unavailable).
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
-mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
+mirror (one-way export + git) · embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web).
 
 ## 4. Visual system — Hearthwood (Basm v2)

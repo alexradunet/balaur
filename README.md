@@ -204,7 +204,7 @@ Optional environment variables:
 | `BALAUR_CHAT_MODEL` | (unset) | Path to a local model file (`.llamafile` or `.gguf`); overrides the default and the /models page choice |
 | `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-download of the default Qwen3.5-4B llamafile |
 | `BALAUR_LLAMAFILE` | (unset) | Path to the llamafile engine binary used to serve a bare `.gguf`; defaults to `pb_data/bin/llamafile`. Not needed for a fat `.llamafile`. |
-| `BALAUR_EMBED_MODEL` | (unset) | Path to a local embedding model GGUF (reserved for embedding recall; not yet wired — recall is LIKE-based today) |
+| `BALAUR_EMBED_MODEL` | (unset) | Path to a local embedding model GGUF (reserved for future embedding recall; lexical recall uses FTS5 today) |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
@@ -391,8 +391,8 @@ boundary) and `DESIGN.md` for the Basm design system.
 ## Roadmap (not shipped — honesty ledger)
 
 - Johnny Decimal Markdown vault mirror: one-way export + git history
-- FTS5/embedding recall (today: importance-gated upfront + LIKE-matched
-  recall; the `internal/search` spike holds the FTS5 driver decision)
+- Embedding recall (FTS5 lexical recall shipped; `Embed()` seam reserved
+  for a second ranking stage behind the same SearchActive call)
 - Sub-head merge-back and scoped head tools (branch chat shipped;
   merge and grant-scoped tools are the next slices)
 - Encrypted export

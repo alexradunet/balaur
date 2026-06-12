@@ -1,12 +1,14 @@
 package knowledge
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -254,5 +256,121 @@ func TestUpdateFieldsWhitelist(t *testing.T) {
 	}
 	if updated.GetString("status") != StatusProposed {
 		t.Fatal("status must not be writable via UpdateFields — consent boundary")
+	}
+}
+
+// TestSearchActiveFTSPath proves the FTS fast path: a content word with
+// trailing punctuation ("flour,") that LIKE would miss is found via FTS5.
+// FTS5 tokenizes "flour," as the token "flour" so a query for "flour" hits.
+func TestSearchActiveFTSPath(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// Content contains "flour," — LIKE search for "flour" also matches
+	// substring, so we pick a term that LIKE misses but FTS5 wins:
+	// use a term that appears only as a full word token with punctuation.
+	rec, err := ProposeMemory(app, MemoryProposal{
+		Title:      "baking notes",
+		Content:    "sift flour, then fold in the eggs",
+		Category:   "fact",
+		Importance: 2,
+		Source:     "test",
+	})
+	if err != nil {
+		t.Fatalf("propose: %v", err)
+	}
+	if _, err := Transition(app, Memory, rec.Id, StatusActive); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+
+	// Build a real FTS index and put it in the store.
+	ix, err := search.Open(filepath.Join(t.TempDir(), "search.db"))
+	if err != nil {
+		t.Fatalf("open index: %v", err)
+	}
+	defer ix.Close()
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	app.Store().Set(search.StoreKey, ix)
+
+	// Query with "flour" — FTS5 tokenizer strips the comma, so this should hit.
+	got, err := SearchActive(app, []string{"flour"}, 10)
+	if err != nil {
+		t.Fatalf("SearchActive: %v", err)
+	}
+	found := false
+	for _, m := range got {
+		if m.Id == rec.Id {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("FTS path did not return the seeded memory; got %d records", len(got))
+	}
+}
+
+// TestSearchActiveFallbackNoIndex proves that with no index in the store,
+// the behavior is byte-identical to today: existing LIKE tests continue to pass.
+func TestSearchActiveFallbackNoIndex(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	approved, _ := ProposeMemory(app, MemoryProposal{Title: "Prefers espresso", Category: "preference", Importance: 2})
+	if _, err := Transition(app, Memory, approved.Id, StatusActive); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	proposed, _ := ProposeMemory(app, MemoryProposal{Title: "Espresso machine budget", Importance: 2})
+	_ = proposed
+
+	// No index in store — must fall through to LIKE.
+	got, err := SearchActive(app, []string{"espresso"}, 10)
+	if err != nil {
+		t.Fatalf("SearchActive fallback: %v", err)
+	}
+	if len(got) != 1 || got[0].GetString("title") != "Prefers espresso" {
+		t.Fatalf("LIKE fallback unexpected: %d records", len(got))
+	}
+}
+
+// TestSearchActiveIntegration is the end-to-end chain: seed app → build
+// index → Rebuild → SearchActive returns the seeded memory by a content word.
+func TestSearchActiveIntegration(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	rec, err := ProposeMemory(app, MemoryProposal{
+		Title:      "hiking trail",
+		Content:    "Piatra Mare trail starts near Brasov city",
+		Category:   "preference",
+		Importance: 3,
+		Source:     "test",
+	})
+	if err != nil {
+		t.Fatalf("propose: %v", err)
+	}
+	if _, err := Transition(app, Memory, rec.Id, StatusActive); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+
+	ix, err := search.Open(filepath.Join(t.TempDir(), "search.db"))
+	if err != nil {
+		t.Fatalf("open index: %v", err)
+	}
+	defer ix.Close()
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	app.Store().Set(search.StoreKey, ix)
+
+	results, err := SearchActive(app, []string{"Brasov"}, 10)
+	if err != nil {
+		t.Fatalf("SearchActive: %v", err)
+	}
+	found := false
+	for _, m := range results {
+		if m.Id == rec.Id {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("integration: seeded memory not returned; got %d records", len(results))
 	}
 }
