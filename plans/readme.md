@@ -53,6 +53,9 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 033 | board_add_card: amend an existing board from chat | P3 | S | LOW | 030; after 032 merges | — | DONE (reviewed; merged to main `8f47b50`) |
 | 034 | Parchment draft composer in the chat flow, slim chatbar | P2 | M | MED | 026 | — | DONE (reviewed; merged to main `dfb62bb`) |
 | 035 | Quest-log /tasks: rhythm-grouped rail + sticky detail | P2 | M–L | MED | 025 | — | DONE (reviewed; merged to main `fdda5e4`) |
+| 036 | Board auto-compaction (pack upward after move/resize) | P3 | M | MED | 032 | — | TODO |
+| 037 | Quest rail OOB refresh after panel transitions | P3 | S–M | LOW–MED | 035 | — | TODO |
+| 038 | Draft composer live-enable on model-ready | P3 | S | LOW–MED | 034 | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
