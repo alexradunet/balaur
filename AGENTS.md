@@ -29,6 +29,7 @@ lean and high-signal — add a rule only when it changes a real decision.
   libraries, OAuth tokens, and runtime credentials out of git.
 - Prefer PocketBase-native mechanisms (collections, migrations, hooks, API
   rules, auth tokens) over parallel bespoke systems.
+- Migration timestamp prefixes must be unique and strictly increasing — duplicate prefixes sort by full filename, which is not a reliable ordering contract.
 - Keep host operating-system setup outside this repository; document only
   portable environment variables.
 
