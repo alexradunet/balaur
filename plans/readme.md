@@ -28,7 +28,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 011 | Boundary test gaps + shared llmtest fake | P2 | M | LOW | — | [#26](https://github.com/alexradunet/balaur/issues/26) | DONE |
 | 012 | Calendar-aware monthly streak lapse | P3 | S | LOW | — | [#27](https://github.com/alexradunet/balaur/issues/27) | DONE |
 | 013 | Deps hygiene (goja direct, tidy, kronk pin docs) | P3 | S | LOW–MED | run last on a branch train | [#28](https://github.com/alexradunet/balaur/issues/28) | DONE |
-| 014 | Migration timestamp collision (rename + guard) | P3 | S | MED | coordinate with 002/010 numbering | [#29](https://github.com/alexradunet/balaur/issues/29) | TODO |
+| 014 | Migration timestamp collision (rename + guard) | P3 | S | MED | coordinate with 002/010 numbering | [#29](https://github.com/alexradunet/balaur/issues/29) | DONE |
 | 015 | KISS cleanup (dead endpoint, rosters, day query, audit reader) | P3 | S–M | LOW | 009 first if both in flight | [#30](https://github.com/alexradunet/balaur/issues/30) | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
