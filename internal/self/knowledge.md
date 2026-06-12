@@ -93,9 +93,11 @@ self tool, which reports the actual registry):
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks, /life,
-/journal, /day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing CLI (chat, task, memory,
-skill, life, journal, day, recap, history, audit, verify, model, self)
-printing JSON for external harnesses; the PocketBase dashboard at /_/ is the
+/journal, /day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing
+CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
+audit, verify, model, self, ext) printing v1 JSON envelopes
+`{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
+preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
 
 The quest log (/tasks list view): rhythm groups Dailies/Rituals/Quests/Side quests in a left rail + sticky right detail panel; month calendar and 14-day timeline views unchanged.

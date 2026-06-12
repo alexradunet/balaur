@@ -128,6 +128,13 @@ and Balaur head picker (16 options) · a light/dark theme toggle in the topbar p
 tool-free chat channel per active head (/heads/{id}/chat), per-head
 Balaur avatars.
 
+the CLI speaks API v1 — every JSON output is enveloped `{v, kind, data}`
+where `kind` is `<command>.<subcommand>` (e.g. `"task.add"`, `"doctor"`) and
+`data` is the prior command value unchanged; additive fields inside `data`
+are free, renames or removals bump `v` · `balaur doctor` preflights the box
+with no model calls: data dir writable, core collections present, model
+readiness (non-fatal), OS-access gate state, extension count.
+
 dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in chat
 (keyboard 1–9); a choice posts as the owner's turn · typed card registry — 10
 parameterized, server-rendered card resources under `/ui/cards/{type}` (the
