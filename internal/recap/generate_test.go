@@ -2,7 +2,6 @@ package recap
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -12,29 +11,19 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
-// echoClient answers every summary request with a deterministic line and
-// counts calls — enough to prove wiring and idempotency without a model.
-type echoClient struct{ calls int }
-
-func (e *echoClient) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm.ToolSpec) (<-chan llm.Chunk, error) {
-	e.calls++
-	ch := make(chan llm.Chunk, 2)
-	go func() {
-		defer close(ch)
-		// Echo the period label (first line of the user turn) so tests can
-		// assert which period a summary belongs to.
+// newEchoClient returns a ScriptedClient that echoes the period label from the
+// last user turn so tests can assert which period a summary belongs to.
+func newEchoClient() *llmtest.ScriptedClient {
+	c := llmtest.New()
+	c.Respond = func(msgs []llm.Message) string {
 		label, _, _ := strings.Cut(msgs[len(msgs)-1].Content, ":")
-		ch <- llm.Chunk{Content: "Recap of " + label}
-		ch <- llm.Chunk{Done: true}
-	}()
-	return ch, nil
-}
-
-func (e *echoClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
-	return nil, fmt.Errorf("echo: no embeddings")
+		return "Recap of " + label
+	}
+	return c
 }
 
 // seedTurn appends a user/assistant pair, then backdates both rows. The
@@ -71,7 +60,7 @@ func TestEnsureSummariesHierarchy(t *testing.T) {
 	seedTurn(t, app, master.Id, "fixed the fence", time.Date(2026, 5, 5, 18, 0, 0, 0, loc))
 	seedTurn(t, app, master.Id, "started the grant draft", time.Date(2026, 5, 12, 9, 0, 0, 0, loc))
 
-	client := &echoClient{}
+	client := newEchoClient()
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, loc)
 	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
 		t.Fatalf("EnsureSummaries: %v", err)
@@ -108,12 +97,12 @@ func TestEnsureSummariesHierarchy(t *testing.T) {
 	}
 
 	// Idempotency: a second catch-up generates nothing new.
-	before := client.calls
+	before := client.Calls
 	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
 		t.Fatalf("EnsureSummaries rerun: %v", err)
 	}
-	if client.calls != before {
-		t.Fatalf("rerun made %d extra model calls", client.calls-before)
+	if client.Calls != before {
+		t.Fatalf("rerun made %d extra model calls", client.Calls-before)
 	}
 
 	// Advance past Q2: quarter and year summaries appear, fed bottom-up.

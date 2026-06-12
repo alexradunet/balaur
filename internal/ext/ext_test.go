@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -288,6 +289,56 @@ func TestProposeToolWritesFileAndLedger(t *testing.T) {
 	if _, err := tool.Execute(context.Background(),
 		`{"name":"greeter","description":"d","code":`+jsonString(greetJS)+`}`); err == nil {
 		t.Error("re-proposing over an active extension must be refused")
+	}
+}
+
+func TestContextCancellationInterruptsHandler(t *testing.T) {
+	setupDir(t)
+	app := storetest.NewApp(t)
+
+	// An infinite-loop handler — without interrupt it would block forever.
+	const loopJS = `// balaur-extension: infinite loop for interrupt test
+balaur.registerTool({
+	name: "loop",
+	description: "runs forever",
+	parameters: {type: "object"},
+	handler: function() { for (;;) {} }
+})
+`
+	write(t, app, "loop", loopJS)
+	Sync(app)
+	if _, err := Approve(app, "loop"); err != nil {
+		t.Fatalf("Approve: %v", err)
+	}
+
+	ts := Tools(app, map[string]bool{})
+	var tool *agent.Tool
+	for i := range ts {
+		if ts[i].Spec.Name == "loop" {
+			tool = &ts[i]
+			break
+		}
+	}
+	if tool == nil {
+		t.Fatal("loop tool not found after approval")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := tool.Execute(ctx, `{}`)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Error("infinite-loop handler should return an error on cancellation")
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("handler was not interrupted within 5s — vm.Interrupt may be broken")
 	}
 }
 

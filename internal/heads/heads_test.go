@@ -156,3 +156,122 @@ func TestResolveRejectsNonHeadTokens(t *testing.T) {
 		t.Fatal("user token resolved as a head")
 	}
 }
+
+func TestExpiredHeadDeniesAccess(t *testing.T) {
+	app := newApp(t)
+	seedMemory(t, app, "private note")
+
+	head, _, err := Spawn(app, "expiry-head", "will expire", time.Hour, []Grant{
+		{Target: "memories", Read: true},
+	})
+	if err != nil {
+		t.Fatalf("Spawn: %v", err)
+	}
+
+	// Back-date the expires field so the head is already expired.
+	head.Set("expires", time.Now().Add(-time.Minute).UTC())
+	if err := app.Save(head); err != nil {
+		t.Fatalf("back-dating head: %v", err)
+	}
+
+	if _, err := AsHead(app, head).Records("memories", "", "", 0, nil); err == nil {
+		t.Fatal("expired head should be denied")
+	}
+	if got := countAudit(t, app, "access.read", false); got < 1 {
+		t.Fatalf("expected at least 1 denied audit row, got %d", got)
+	}
+}
+
+func TestExpiredGrantDeniesAccess(t *testing.T) {
+	app := newApp(t)
+	seedMemory(t, app, "private note")
+
+	head, _, err := Spawn(app, "grant-expiry", "grant will expire", time.Hour, []Grant{
+		{Target: "memories", Read: true},
+	})
+	if err != nil {
+		t.Fatalf("Spawn: %v", err)
+	}
+
+	// Back-date the grant's expires field.
+	grants, err := app.FindRecordsByFilter("grants", "head = {:head}", "", 0, 0, dbx.Params{"head": head.Id})
+	if err != nil || len(grants) == 0 {
+		t.Fatalf("no grants found: %v", err)
+	}
+	grants[0].Set("expires", time.Now().Add(-time.Minute).UTC())
+	if err := app.Save(grants[0]); err != nil {
+		t.Fatalf("back-dating grant: %v", err)
+	}
+
+	if _, err := AsHead(app, head).Records("memories", "", "", 0, nil); err == nil {
+		t.Fatal("expired grant should be denied")
+	}
+	if got := countAudit(t, app, "access.read", false); got < 1 {
+		t.Fatalf("expected at least 1 denied audit row, got %d", got)
+	}
+}
+
+func TestCrossHeadIsolation(t *testing.T) {
+	app := newApp(t)
+
+	headA, _, err := Spawn(app, "head-a", "reads memories only", time.Hour, []Grant{
+		{Target: "memories", Read: true},
+	})
+	if err != nil {
+		t.Fatalf("Spawn A: %v", err)
+	}
+	headB, _, err := Spawn(app, "head-b", "reads skills only", time.Hour, []Grant{
+		{Target: "skills", Read: true},
+	})
+	if err != nil {
+		t.Fatalf("Spawn B: %v", err)
+	}
+
+	// A cannot read skills.
+	if _, err := AsHead(app, headA).Records("skills", "", "", 0, nil); err == nil {
+		t.Fatal("head A read skills without a grant")
+	}
+	// B cannot read memories.
+	if _, err := AsHead(app, headB).Records("memories", "", "", 0, nil); err == nil {
+		t.Fatal("head B read memories without a grant")
+	}
+	// A can read memories.
+	if _, err := AsHead(app, headA).Records("memories", "", "", 0, nil); err != nil {
+		t.Fatalf("head A cannot read memories: %v", err)
+	}
+	// B can read skills.
+	if _, err := AsHead(app, headB).Records("skills", "", "", 0, nil); err != nil {
+		t.Fatalf("head B cannot read skills: %v", err)
+	}
+}
+
+func TestRevokeClosesHead(t *testing.T) {
+	app := newApp(t)
+
+	head, token, err := Spawn(app, "revoke-me", "short-lived head", time.Hour, []Grant{
+		{Target: "memories", Read: true},
+	})
+	if err != nil {
+		t.Fatalf("Spawn: %v", err)
+	}
+
+	if err := Revoke(app, head.Id); err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
+
+	// Token no longer resolves.
+	if _, err := Resolve(app, token); err == nil {
+		t.Fatal("revoked head token still resolves")
+	}
+
+	// Scoped access fails even with stale in-memory record.
+	head.Set("status", "revoked")
+	if _, err := AsHead(app, head).Records("memories", "", "", 0, nil); err == nil {
+		t.Fatal("revoked head still reads")
+	}
+
+	// The revoke action is audited.
+	if got := countAudit(t, app, "head.revoke", true); got < 1 {
+		t.Fatalf("expected revoke audit row, got %d", got)
+	}
+}

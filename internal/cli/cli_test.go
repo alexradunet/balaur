@@ -2,12 +2,10 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -15,6 +13,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/ext"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -223,40 +222,6 @@ func TestLifeLogSeriesAndJournal(t *testing.T) {
 	}
 }
 
-// scriptedClient drives the chat command without a real model.
-type scriptedClient struct {
-	mu      sync.Mutex
-	replies []scriptedReply
-}
-
-type scriptedReply struct {
-	text  string
-	calls []llm.ToolCall
-}
-
-func (f *scriptedClient) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm.ToolSpec) (<-chan llm.Chunk, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	ch := make(chan llm.Chunk, 2)
-	if len(f.replies) == 0 {
-		ch <- llm.Chunk{Done: true}
-		close(ch)
-		return ch, nil
-	}
-	r := f.replies[0]
-	f.replies = f.replies[1:]
-	if r.text != "" {
-		ch <- llm.Chunk{Content: r.text}
-	}
-	ch <- llm.Chunk{Done: true, ToolCalls: r.calls}
-	close(ch)
-	return ch, nil
-}
-
-func (f *scriptedClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
-	return nil, nil
-}
-
 func withScriptedClient(t *testing.T, c llm.Client) {
 	t.Helper()
 	prev := chatClients
@@ -266,10 +231,10 @@ func withScriptedClient(t *testing.T, c llm.Client) {
 
 func TestChatReportsToolsAndVerdict(t *testing.T) {
 	app := storetest.NewApp(t)
-	withScriptedClient(t, &scriptedClient{replies: []scriptedReply{
-		{calls: []llm.ToolCall{{ID: "c1", Name: "task_add", Args: `{"title":"Water the plants","due":"2027-03-01"}`}}},
-		{text: "I've added watering the plants for March 1."},
-	}})
+	withScriptedClient(t, llmtest.New(
+		llmtest.ToolCall("c1", "task_add", `{"title":"Water the plants","due":"2027-03-01"}`),
+		llmtest.Text("I've added watering the plants for March 1."),
+	))
 
 	out, err := execute(t, chatCmd(app), "remind me to water the plants on march 1")
 	if err != nil {
@@ -307,10 +272,10 @@ func TestChatReportsToolsAndVerdict(t *testing.T) {
 
 func TestVerifyFlagsUnbackedClaim(t *testing.T) {
 	app := storetest.NewApp(t)
-	withScriptedClient(t, &scriptedClient{replies: []scriptedReply{
-		{text: "I've set the reminder for tomorrow morning."}, // lie
-		{text: "It is already set."},                          // repair pass lies again
-	}})
+	withScriptedClient(t, llmtest.New(
+		llmtest.Text("I've set the reminder for tomorrow morning."), // lie
+		llmtest.Text("It is already set."),                          // repair pass lies again
+	))
 
 	out, err := execute(t, chatCmd(app), "remind me tomorrow")
 	if err != nil {
@@ -337,9 +302,9 @@ func TestVerifyFlagsUnbackedClaim(t *testing.T) {
 
 func TestHistoryReadsPersistedTurn(t *testing.T) {
 	app := storetest.NewApp(t)
-	withScriptedClient(t, &scriptedClient{replies: []scriptedReply{
-		{text: "Hello. Quiet day on the book."},
-	}})
+	withScriptedClient(t, llmtest.New(
+		llmtest.Text("Hello. Quiet day on the book."),
+	))
 	if _, err := execute(t, chatCmd(app), "hello"); err != nil {
 		t.Fatalf("chat: %v", err)
 	}

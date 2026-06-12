@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -9,30 +8,9 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
-
-// fakeClient fakes the llm seam — tests never hit a real model (AGENTS.md).
-type fakeClient struct {
-	text string
-	err  error
-}
-
-func (f *fakeClient) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm.ToolSpec) (<-chan llm.Chunk, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	ch := make(chan llm.Chunk, 2)
-	ch <- llm.Chunk{Content: f.text}
-	ch <- llm.Chunk{Done: true}
-	close(ch)
-	return ch, nil
-}
-
-func (f *fakeClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
-	return nil, nil
-}
 
 func nudgeMessages(t *testing.T, app core.App) []*core.Record {
 	t.Helper()
@@ -106,7 +84,7 @@ func TestNudgeUsesComposedText(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	composed := "The notary is waiting on you — a good moment to call."
-	if err := Nudge(app, &fakeClient{text: composed}, now); err != nil {
+	if err := Nudge(app, llmtest.New(llmtest.Text(composed)), now); err != nil {
 		t.Fatalf("nudge: %v", err)
 	}
 	msgs := nudgeMessages(t, app)
@@ -122,7 +100,7 @@ func TestNudgeFallsBackWhenModelFails(t *testing.T) {
 	if _, err := Create(app, CreateOpts{Title: "Call notary", Due: now.Add(-time.Minute)}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if err := Nudge(app, &fakeClient{err: errors.New("model down")}, now); err != nil {
+	if err := Nudge(app, &llmtest.ScriptedClient{Err: errors.New("model down")}, now); err != nil {
 		t.Fatalf("nudge: %v", err)
 	}
 	msgs := nudgeMessages(t, app)

@@ -5,60 +5,22 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/ext"
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 	"github.com/alexradunet/balaur/internal/verify"
 )
 
-// fakeClient replays scripted replies, one per ChatStream call. Tests
-// never hit a real model (AGENTS.md).
-type fakeClient struct {
-	mu      sync.Mutex
-	replies []fakeReply
-	calls   int
-}
-
-type fakeReply struct {
-	text  string
-	calls []llm.ToolCall
-}
-
-func (f *fakeClient) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm.ToolSpec) (<-chan llm.Chunk, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.calls++
-	ch := make(chan llm.Chunk, 2)
-	if len(f.replies) == 0 {
-		ch <- llm.Chunk{Done: true}
-		close(ch)
-		return ch, nil
-	}
-	r := f.replies[0]
-	f.replies = f.replies[1:]
-	if r.text != "" {
-		ch <- llm.Chunk{Content: r.text}
-	}
-	ch <- llm.Chunk{Done: true, ToolCalls: r.calls}
-	close(ch)
-	return ch, nil
-}
-
-func (f *fakeClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
-	return nil, nil
-}
-
 func TestRunPersistsHonestCaptureTurn(t *testing.T) {
 	app := storetest.NewApp(t)
-	client := &fakeClient{replies: []fakeReply{
-		{calls: []llm.ToolCall{{ID: "c1", Name: "task_add", Args: `{"title":"Call the notary","due":"2026-06-12T10:00"}`}}},
-		{text: "I've added the notary call for tomorrow at 10."},
-	}}
+	client := llmtest.New(
+		llmtest.ToolCall("c1", "task_add", `{"title":"Call the notary","due":"2026-06-12T10:00"}`),
+		llmtest.Text("I've added the notary call for tomorrow at 10."),
+	)
 
 	var kinds []string
 	emit := func(ev agent.Event) { kinds = append(kinds, ev.Kind) }
@@ -108,10 +70,10 @@ func TestRunPersistsHonestCaptureTurn(t *testing.T) {
 
 func TestRunNotesUnbackedCaptureClaim(t *testing.T) {
 	app := storetest.NewApp(t)
-	client := &fakeClient{replies: []fakeReply{
-		{text: "I've set the reminder for tomorrow morning."}, // claim, no deed
-		{text: "It is already set."},                          // repair pass still lies
-	}}
+	client := llmtest.New(
+		llmtest.Text("I've set the reminder for tomorrow morning."), // claim, no deed
+		llmtest.Text("It is already set."),                          // repair pass still lies
+	)
 
 	res, err := Run(context.Background(), app, client, "remind me tomorrow", nil)
 	if err != nil {
@@ -120,8 +82,8 @@ func TestRunNotesUnbackedCaptureClaim(t *testing.T) {
 	if res.CheckNote != verify.Note {
 		t.Fatalf("check note = %q, want verify.Note", res.CheckNote)
 	}
-	if client.calls != 2 {
-		t.Errorf("repair pass should run exactly once: %d model calls", client.calls)
+	if client.Calls != 2 {
+		t.Errorf("repair pass should run exactly once: %d model calls", client.Calls)
 	}
 
 	// The note is on the record with its origin, so the owner sees it in
@@ -207,11 +169,11 @@ func TestMaxStepsEnvRaisesTheCap(t *testing.T) {
 	t.Setenv("BALAUR_MAX_STEPS", "1")
 	// Two tool rounds scripted against a cap of one: the loop must stop
 	// after the first round with the exceeded error.
-	client := &fakeClient{replies: []fakeReply{
-		{calls: []llm.ToolCall{{ID: "c1", Name: "task_list", Args: `{}`}}},
-		{calls: []llm.ToolCall{{ID: "c2", Name: "task_list", Args: `{}`}}},
-		{text: "never reached"},
-	}}
+	client := llmtest.New(
+		llmtest.ToolCall("c1", "task_list", `{}`),
+		llmtest.ToolCall("c2", "task_list", `{}`),
+		llmtest.Text("never reached"),
+	)
 	_, err := Run(context.Background(), app, client, "list everything twice", nil)
 	if err == nil || !strings.Contains(err.Error(), "exceeded 1 tool rounds") {
 		t.Errorf("cap of 1 must trip the loop, got %v", err)

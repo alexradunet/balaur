@@ -7,6 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -164,7 +165,7 @@ func TestBriefingUsesComposedText(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	composed := "A light day: rent at three, nothing else asks for you."
-	if err := Briefing(app, &fakeClient{text: composed}, at(10), 9); err != nil {
+	if err := Briefing(app, llmtest.New(llmtest.Text(composed)), at(10), 9); err != nil {
 		t.Fatalf("briefing: %v", err)
 	}
 	msgs := briefingMessages(t, app)
