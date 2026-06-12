@@ -29,6 +29,7 @@ type homeData struct {
 	HasRecap        bool
 	DevSeed         bool
 	ChatbarOOB      bool
+	DraftOOB        bool
 	NowMillis       int64          // nudge-poll cursor: only messages after page load
 	SoulAvatarURL   string         // resolved soul avatar URL
 	AvatarOptions   []AvatarOption // soul avatar picker roster
@@ -98,6 +99,15 @@ func (h *handlers) chatbar(e *core.RequestEvent) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.tmpl.ExecuteTemplate(e.Response, "chat_bar", data); err != nil {
 		return e.InternalServerError("rendering chatbar", err)
+	}
+	// When the model just became ready, push an OOB swap of the draft composer
+	// so the textarea enables without a full-page reload. Only sent when ready:
+	// re-sending a disabled draft every 2s while not ready is pointless noise.
+	if data.ChatReady {
+		data.DraftOOB = true
+		if err := h.tmpl.ExecuteTemplate(e.Response, "chat_draft", data); err != nil {
+			return e.InternalServerError("rendering draft oob", err)
+		}
 	}
 	return nil
 }
