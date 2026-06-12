@@ -80,10 +80,16 @@ lean and high-signal — add a rule only when it changes a real decision.
   is the running binary's own description of its architecture and
   capabilities; when a change alters either, update it in the same
   commit. A stale self-description makes Balaur lie about itself.
-- **One PocketBase seam.** Everything that touches PocketBase internals
-  (collections, records, tokens, rules) goes through `internal/store`.
-  PocketBase is pre-1.0 with breaking-change precedent (v0.23 rewrote the
-  whole API surface); when it breaks, the fix should be one package wide.
+- **PocketBase access, honestly scoped.** Domain packages (`conversation`,
+  `tasks`, `knowledge`, `heads`, `life`, `recap`, `ext`, `self`) own their
+  own PocketBase reads/writes — records are the domain model, not a layer
+  to hide. `internal/store` is the seam for CROSS-CUTTING concerns only:
+  audit, owner settings, LLM config, time formatting. Two consequences:
+  (1) new domain logic talks to PocketBase directly in its own package —
+  do not route it through store; (2) PocketBase is pre-1.0 with
+  breaking-change precedent (v0.23 rewrote the whole API surface), and
+  >20 files touch it directly — an upgrade is a REPO-WIDE change; budget
+  and test it as such, never as "one package wide".
 - **The rule boundary is sacred.** Go-side `app.Save`/`Find*` calls BYPASS
   collection API rules — this is documented PocketBase behavior, not a bug.
   Any code path acting *on behalf of a head* must enforce scope explicitly:
