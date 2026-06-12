@@ -71,6 +71,8 @@ var funcs = template.FuncMap{
 	// toolIcon returns a pixel icon filename for a tool name, used in chat-messages.html.
 	// The template renders <img src="/static/icons/{{toolIcon .Tool}}.png">.
 	"toolIcon": toolIconFile,
+	// addOne increments an integer by 1; used in chat-choices to show 1-based indices.
+	"addOne": func(i int) int { return i + 1 },
 	// base returns the last element of a path (filepath.Base), used in templates.
 	"base": filepath.Base,
 	// fmtBytes formats a byte count as a human-readable string (KB/MB/GB).

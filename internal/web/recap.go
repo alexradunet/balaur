@@ -170,9 +170,12 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			OwnerName:       ownerName,
 			WhoLabel:        "Balaur",
 		}
-		// Re-render marked cards that were created inline in chat.
+		// Re-render marked tool results. Choices degrade to inert plain text
+		// on reload — no live panel (avoids resubmitting stale decisions).
 		if mv.Role == "tool" {
-			if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
+			if _, _, modelText, ok := tools.ParseChoices(mv.Content); ok {
+				mv.Content = clipText(modelText, 2000)
+			} else if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
 				mv.CardURL, mv.Content = cardURL(kind, id), rest
 			}
 		}

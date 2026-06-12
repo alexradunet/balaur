@@ -14,6 +14,7 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 
 	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/tools"
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
@@ -42,6 +43,98 @@ func newFakeSSEServer(text string) *httptest.Server {
 		fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n\n", text)
 		fmt.Fprint(w, "data: [DONE]\n\n")
 	}))
+}
+
+// newChoicesSSEServer creates a two-turn fake model server. The first request
+// returns an offer_choices tool call; the second request (after tool execution)
+// returns plain text so the agent completes.
+func newChoicesSSEServer() *httptest.Server {
+	calls := 0
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat/completions" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		calls++
+		if calls == 1 {
+			// First turn: return an offer_choices tool call.
+			args := `{\"choices\":[{\"label\":\"Yes, do it\",\"hint\":\"recommended\"},{\"label\":\"Not now\"}]}`
+			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"tc1\",\"function\":{\"name\":\"offer_choices\",\"arguments\":\"\"}}]}}]}\n\n")
+			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"offer_choices\",\"arguments\":\"%s\"}}]}}]}\n\n", args)
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{}}],\"finish_reason\":\"tool_calls\"}\n\n")
+			fmt.Fprint(w, "data: [DONE]\n\n")
+		} else {
+			// Second turn: plain text reply after tool executes.
+			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"I have offered you two choices.\"}}]}\n\n")
+			fmt.Fprint(w, "data: [DONE]\n\n")
+		}
+	}))
+}
+
+func TestChatChoices(t *testing.T) {
+	sseSrv := newChoicesSSEServer()
+	t.Cleanup(func() { sseSrv.Close() })
+
+	newChoicesApp := func(tb testing.TB) *tests.TestApp {
+		app := newWebApp(tb)
+		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
+		store.SetActiveLLMModel(app, id, "test")
+		return app
+	}
+
+	t.Run("streamed choices yield live panel", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:            "chat choices panel streamed",
+			Method:          "POST",
+			URL:             "/ui/chat",
+			Body:            strings.NewReader("message=should+I+do+it"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  newChoicesApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`class="choices-panel"`, `class="choice"`, "Yes, do it", "Not now"},
+		}
+		scenario.Test(t)
+	})
+}
+
+// TestChoicesHistoryInert verifies that when a conversation containing a
+// choices tool result is loaded from history (page-load path), the choices
+// render as a plain inert tool row — no live panel, no clickable buttons.
+func TestChoicesHistoryInert(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	// Simulate what messageViews produces for a tool message that carried choices.
+	marked := tools.MarkChoices("Your word",
+		[]tools.Choice{{Label: "Option A"}, {Label: "Option B"}},
+		"offered choices: 1) Option A 2) Option B")
+
+	// Parse as messageViews would.
+	var content string
+	if _, _, modelText, ok := tools.ParseChoices(marked); ok {
+		content = clipText(modelText, 2000)
+	}
+
+	mv := messageView{
+		Role:    "tool",
+		Tool:    "offer_choices",
+		Content: content,
+	}
+
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
+		t.Fatalf("chat-msg-tool: %v", err)
+	}
+	out := b.String()
+	if strings.Contains(out, "choices-panel") {
+		t.Error("history render of choices tool result must not contain choices-panel (must be inert)")
+	}
+	if strings.Contains(out, `class="choice"`) {
+		t.Error("history render of choices tool result must not contain clickable choice buttons")
+	}
+	if !strings.Contains(out, "offered choices:") {
+		t.Errorf("history render missing model text 'offered choices:': %s", out)
+	}
 }
 
 func TestSettingsPages(t *testing.T) {

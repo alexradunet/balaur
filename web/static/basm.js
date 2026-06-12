@@ -98,3 +98,21 @@ document.body.addEventListener('click', (e) => {
     .forEach(t => t.classList.remove('k-tab-active'));
   tab.classList.add('k-tab-active');
 });
+
+// ── Dialogue choices keyboard shortcut (1–9) ───────────────────────
+// When no input is focused and no modifier is held, pressing a digit
+// clicks the matching choice in the last visible .choices panel.
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const n = parseInt(e.key, 10);
+  if (!n || n < 1 || n > 9) return;
+  const chat = document.getElementById('chat');
+  if (!chat) return;
+  const panels = chat.querySelectorAll('.choices');
+  if (!panels.length) return;
+  const last = panels[panels.length - 1];
+  const buttons = last.querySelectorAll('.choice');
+  const btn = buttons[n - 1];
+  if (btn) btn.click();
+});

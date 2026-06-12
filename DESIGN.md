@@ -128,6 +128,8 @@ and Balaur head picker (16 options) · a light/dark theme toggle in the topbar p
 tool-free chat channel per active head (/heads/{id}/chat), per-head
 Balaur avatars.
 
+dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in chat (keyboard 1–9); a choice posts as the owner's turn.
+
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
 multi-human accounts · channel adapters (Signal/WhatsApp/web).

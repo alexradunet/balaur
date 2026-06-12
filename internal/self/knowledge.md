@@ -89,6 +89,7 @@ self tool, which reports the actual registry):
   while the owner has approved exactly that file content (sha256-pinned);
   any change re-proposes it, and every invocation is audited. Extensions
   add verbs, not privileges — no filesystem, no shell, no npm.
+- Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks, /life,

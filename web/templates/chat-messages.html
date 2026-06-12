@@ -61,3 +61,30 @@
 
 {{- /* chat-msg-tool-end closes an open tool row; if CardURL is set it adds the inline card. */ -}}
 {{define "chat-msg-tool-end"}}</div></div>{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}{{end}}
+
+{{- /* chat-choices — live dialogue choices. Context: choicesView.
+     Each button posts the label as the owner's next turn; the panel removes
+     itself after the request so a choice can be taken once. */ -}}
+{{define "chat-choices"}}
+<div class="choices" id="choices-{{.Nonce}}">
+  <div class="choices-panel">
+    <div class="choices-kicker">{{.Prompt}}</div>
+    {{range $i, $c := .Choices}}
+    <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend"
+          hx-on::after-request="document.getElementById('choices-{{$.Nonce}}')?.remove()">
+      <input type="hidden" name="message" value="{{$c.Label}}">
+      <input type="hidden" name="client_rendered" value="0">
+      <button class="choice" type="submit">
+        <span class="choice-key">{{addOne $i}}</span>
+        <span class="choice-label">{{$c.Label}}</span>
+        {{with $c.Hint}}<span class="choice-hint">{{.}}</span>{{end}}
+      </button>
+    </form>
+    {{end}}
+  </div>
+  <figure class="portrait">
+    <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true"><img src="{{.SoulAvatarURL}}" alt="" decoding="async"></span>
+    <figcaption class="who">{{.OwnerName}}</figcaption>
+  </figure>
+</div>
+{{end}}

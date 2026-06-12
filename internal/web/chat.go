@@ -1,6 +1,8 @@
 package web
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"io"
@@ -15,10 +17,31 @@ import (
 	"github.com/alexradunet/balaur/internal/turn"
 )
 
+// choicesView is the template payload for the chat-choices fragment.
+type choicesView struct {
+	Prompt        string
+	Nonce         string // unique per render, used for element IDs
+	Choices       []tools.Choice
+	SoulAvatarURL string
+	OwnerName     string
+}
+
+// newNonce generates a random 8-byte hex string for unique element IDs.
+func newNonce() string {
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
+}
+
 // execFragment executes a named template fragment to w, silently ignoring
 // errors — the caller already owns the live stream and cannot un-write bytes.
 func (h *handlers) execFragment(w io.Writer, name string, data messageView) {
 	_ = h.tmpl.ExecuteTemplate(w, name, data)
+}
+
+// execChoicesFragment executes the chat-choices template fragment.
+func (h *handlers) execChoicesFragment(w io.Writer, cv choicesView) {
+	_ = h.tmpl.ExecuteTemplate(w, "chat-choices", cv)
 }
 
 // chat handles one user turn. The web layer is a gateway: it adapts the
@@ -78,6 +101,23 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			h.execFragment(w, "chat-msg-tool-start", messageView{Tool: ev.Tool})
 			flush()
 		case "tool_result":
+			// Check ParseChoices before ParseProposal — choices ride a tool_result.
+			if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
+				h.execFragment(w, "chat-msg-tool-end", messageView{Content: "choices offered"})
+				h.execChoicesFragment(w, choicesView{
+					Prompt:        prompt,
+					Nonce:         newNonce(),
+					Choices:       choices,
+					SoulAvatarURL: soulURL,
+					OwnerName:     ownerName,
+				})
+				h.execFragment(w, "chat-balaur-open", messageView{
+					BalaurAvatarURL: balaURL,
+					WhoLabel:        "Balaur",
+				})
+				flush()
+				break
+			}
 			kind, id, rest, ok := tools.ParseProposal(ev.Text)
 			var mv messageView
 			if ok {
