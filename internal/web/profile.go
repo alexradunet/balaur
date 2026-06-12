@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/alexradunet/balaur/internal/store"
@@ -25,9 +26,9 @@ func (h *handlers) buildProfileData(savedName bool) profileData {
 	}
 }
 
-// profilePage renders GET /profile.
+// profilePage redirects GET /profile → /settings/profile.
 func (h *handlers) profilePage(e *core.RequestEvent) error {
-	return h.render(e, "profile.html", h.buildProfileData(false))
+	return e.Redirect(http.StatusFound, "/settings/profile")
 }
 
 // saveName handles POST /ui/profile/name — persists the owner display name

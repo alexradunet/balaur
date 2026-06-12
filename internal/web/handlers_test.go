@@ -42,6 +42,74 @@ func newFakeSSEServer(text string) *httptest.Server {
 	}))
 }
 
+func TestSettingsPages(t *testing.T) {
+	scenarios := []tests.ApiScenario{
+		{
+			Name:           "GET /settings redirects",
+			Method:         "GET",
+			URL:            "/settings",
+			ExpectedStatus: 302,
+		},
+		{
+			Name:            "GET /settings/profile renders profile section",
+			Method:          "GET",
+			URL:             "/settings/profile",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"identity-card", "settings-nav"},
+		},
+		{
+			Name:            "GET /settings/models renders models section",
+			Method:          "GET",
+			URL:             "/settings/models",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"models-panel"},
+		},
+		{
+			Name:            "GET /settings/skills renders skills section",
+			Method:          "GET",
+			URL:             "/settings/skills",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"k-active-grid"},
+		},
+		{
+			Name:           "GET /settings/bogus redirects",
+			Method:         "GET",
+			URL:            "/settings/bogus",
+			ExpectedStatus: 302,
+		},
+		{
+			Name:           "GET /profile redirects",
+			Method:         "GET",
+			URL:            "/profile",
+			ExpectedStatus: 302,
+		},
+		{
+			Name:           "GET /models redirects",
+			Method:         "GET",
+			URL:            "/models",
+			ExpectedStatus: 302,
+		},
+		{
+			Name:           "GET /skills redirects",
+			Method:         "GET",
+			URL:            "/skills",
+			ExpectedStatus: 302,
+		},
+		{
+			Name:            "GET /memory still renders k-active-grid",
+			Method:          "GET",
+			URL:             "/memory",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"k-active-grid"},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		scenario.TestAppFactory = newWebApp
+		scenario.Test(t)
+	}
+}
+
 func TestHandlerHomePage(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{

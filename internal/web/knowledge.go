@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -37,19 +38,28 @@ func (h *handlers) memoryPage(e *core.RequestEvent) error {
 	})
 }
 
-func (h *handlers) skillsPage(e *core.RequestEvent) error {
-	q := e.Request.URL.Query().Get("q")
+// skillsData builds the template data map for the skills section.
+// Used by both skillsPage and settingsPage.
+func (h *handlers) skillsData(q string) map[string]any {
 	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusProposed)
 	active, _ := knowledge.FilterActive(h.app, knowledge.Skill, q, "")
 	archived, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusArchived)
-	return h.render(e, "knowledge.html", map[string]any{
+	return map[string]any{
 		"Title":    "Skills",
 		"Kind":     "skills",
 		"Proposed": proposed,
 		"Active":   active,
 		"Archived": archived,
 		"Query":    q,
-	})
+	}
+}
+
+func (h *handlers) skillsPage(e *core.RequestEvent) error {
+	q := e.Request.URL.Query().Get("q")
+	if q != "" {
+		return e.Redirect(http.StatusFound, "/settings/skills?q="+url.QueryEscape(q))
+	}
+	return e.Redirect(http.StatusFound, "/settings/skills")
 }
 
 // knowledgeGrid serves just the active-section grid — the HTMX target for
