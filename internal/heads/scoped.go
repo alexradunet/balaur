@@ -60,13 +60,15 @@ func (s *Scoped) check(target, mode string) bool {
 	return false
 }
 
+const maxScopedRecords = 500
+
 // Records lists records from a collection the head holds a read grant for.
 func (s *Scoped) Records(collection, filter, sort string, limit int, params dbx.Params) ([]*core.Record, error) {
 	if err := s.allow(collection, "read"); err != nil {
 		return nil, err
 	}
-	if limit <= 0 || limit > 10000 {
-		limit = 10000
+	if limit <= 0 || limit > maxScopedRecords {
+		limit = maxScopedRecords
 	}
 	return s.app.FindRecordsByFilter(collection, filter, sort, limit, 0, params)
 }
