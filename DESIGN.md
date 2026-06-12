@@ -132,7 +132,12 @@ dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in cha
 (keyboard 1–9); a choice posts as the owner's turn · typed card registry — 10
 parameterized, server-rendered card resources under `/ui/cards/{type}` (the
 composition unit for boards and on-the-spot UI): today, quests, calendar,
-timeline, journal, measure, lines, memory, skills, heads.
+timeline, journal, measure, lines, memory, skills, heads ·
+boards — owner-composed dashboards of typed cards at /boards (server-defined
+layout; Study/Quest log/Self/Balaur defaults); each board is a named, ordered
+list of card references in the `boards` collection; the page renders a
+12-column CSS grid of HTMX slots that lazy-load cards; plan 030 adds agent
+compose.
 
 **Roadmap — do not state as shipped:** Johnny Decimal Markdown vault
 mirror (one-way export + git) · FTS5/embedding recall · encrypted export ·
