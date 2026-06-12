@@ -41,7 +41,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 021 | Access Balaur over NetBird via host daemon (docs only) | P2 | S | LOW | — | — | TODO |
 | 022 | Settings page: sidebar shell for Profile/Skills/Models | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `431727e`) |
 | 023 | GGUF download manager (background, progress, cancel, delete) | P2 | M–L | MED | 022 | — | DONE (reviewed; merged to main `b47b451`) |
-| 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | TODO |
+| 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | DONE (reviewed; merged to main `bba4494`) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
