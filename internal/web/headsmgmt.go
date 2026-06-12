@@ -77,33 +77,8 @@ func headViewFrom(app core.App, r *core.Record) headView {
 		Status:        r.GetString("status"),
 		Expires:       exp,
 		AvatarURL:     store.HeadBalaurAvatarURL(app, r.Id),
-		BalaurOptions: buildBalaurHeadOptionsFor(app, pref),
+		BalaurOptions: buildBalaurHeadOptionsFor(pref), // roster lives in models.go
 	}
-}
-
-// buildBalaurHeadOptionsFor is like buildBalaurHeadOptions but takes an
-// explicit active key rather than reading from owner_settings.
-func buildBalaurHeadOptionsFor(_ core.App, activePref string) []AvatarOption {
-	roster := []struct{ key, label string }{
-		{"balaur-01", "Wise"}, {"balaur-02", "Ancient"},
-		{"balaur-03", "Guardian"}, {"balaur-04", "Scholar"},
-		{"balaur-05", "Wild"}, {"balaur-06", "Storm"},
-		{"balaur-07", "Night"}, {"balaur-08", "Young"},
-		{"balaur-09", "Ember"}, {"balaur-10", "Frost"},
-		{"balaur-11", "Healer"}, {"balaur-12", "Trickster"},
-		{"balaur-13", "Dreamer"}, {"balaur-14", "Forest"},
-		{"balaur-15", "Dawn"}, {"balaur-16", "Sage"},
-	}
-	opts := make([]AvatarOption, len(roster))
-	for i, r := range roster {
-		opts[i] = AvatarOption{
-			Key:    r.key,
-			Label:  r.label,
-			URL:    "/static/avatars/" + r.key + ".png",
-			Active: r.key == activePref,
-		}
-	}
-	return opts
 }
 
 // setHeadAvatar handles POST /ui/heads/{id}/avatar — saves the head's
