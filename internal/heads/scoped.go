@@ -65,6 +65,9 @@ func (s *Scoped) Records(collection, filter, sort string, limit int, params dbx.
 	if err := s.allow(collection, "read"); err != nil {
 		return nil, err
 	}
+	if limit <= 0 || limit > 10000 {
+		limit = 10000
+	}
 	return s.app.FindRecordsByFilter(collection, filter, sort, limit, 0, params)
 }
 

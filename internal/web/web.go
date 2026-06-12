@@ -181,7 +181,9 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/knowledge/{kind}/{id}/edit", h.knowledgeEdit)
 	se.Router.GET("/ui/recap/bands", h.recapBands)
 	se.Router.GET("/ui/recap/expand", h.recapExpand)
-	se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
+	if devSeedEnabled() {
+		se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
+	}
 	se.Router.POST("/ui/settings/avatar", h.setAvatarPref)
 	// Profile page and its sub-actions.
 	se.Router.GET("/profile", h.profilePage)

@@ -31,6 +31,16 @@ const invokeTimeout = 30 * time.Second
 // httpTimeout bounds one balaur.http request inside a handler.
 const httpTimeout = 15 * time.Second
 
+// extHTTPClient never follows redirects: an approved extension's reviewed
+// code is exactly what runs — a redirect chain must be followed explicitly
+// by the handler if it wants to. Local addresses stay deliberately
+// reachable (see httpBinding's comment).
+var extHTTPClient = &http.Client{
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
+
 // ToolDef is one tool an extension registers.
 type ToolDef struct {
 	Name        string
@@ -219,7 +229,7 @@ func httpBinding(ctx context.Context, vm *goja.Runtime) func(goja.FunctionCall) 
 				}
 			}
 		}
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := extHTTPClient.Do(req)
 		if err != nil {
 			panic(vm.NewGoError(err))
 		}
