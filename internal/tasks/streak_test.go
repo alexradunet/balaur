@@ -56,13 +56,53 @@ func TestStreakEdges(t *testing.T) {
 }
 
 func TestStreakMonthlyCalendarAware(t *testing.T) {
-	// Monthly streaks now use calendar-aware gaps instead of fixed 31 days
-	r, _ := Parse("monthly:15")
-	days := []time.Time{day(2026, 1, 15), day(2026, 2, 15)}
+	r31, _ := Parse("monthly:31")
+	r15, _ := Parse("monthly:15")
 
-	// Alive through next due (allowed gap: Jan 15 → Feb 15 = 31 days)
-	if got := Streak(r, days, day(2026, 2, 15)); got != 2 {
-		t.Errorf("monthly calendar-aware streak = %d, want 2", got)
+	// Case: month-end clamp survives.
+	// anchor Jan 31 → next Feb 28 → allowed 28 days; gap Jan31→Feb28=28 → alive
+	// anchor Feb 28 → next Mar 31 → allowed 31 days; gap Feb28→Mar31=31 → alive
+	{
+		days := []time.Time{day(2026, 1, 31), day(2026, 2, 28), day(2026, 3, 31)}
+		if got := Streak(r31, days, day(2026, 3, 31)); got != 3 {
+			t.Errorf("month-end clamp survives: got %d, want 3", got)
+		}
+	}
+
+	// Case: skipped April lapses.
+	// anchor Mar 31 → next Apr 30 → allowed 30 days; gap Mar31→May1=31 > 30 → lapsed
+	{
+		days := []time.Time{day(2026, 3, 31)}
+		if got := Streak(r31, days, day(2026, 5, 1)); got != 0 {
+			t.Errorf("skipped April lapses: got %d, want 0", got)
+		}
+	}
+
+	// Case: alive through next due.
+	// anchor Jan 15 → next Feb 15 → allowed 31 days; gap Jan15→Feb15=31 → alive
+	{
+		days := []time.Time{day(2026, 1, 15)}
+		if got := Streak(r15, days, day(2026, 2, 15)); got != 1 {
+			t.Errorf("alive through next due: got %d, want 1", got)
+		}
+	}
+
+	// Case: lapses day after next due.
+	// anchor Jan 15 → next Feb 15 → allowed 31 days; gap Jan15→today=32 > 31 → lapsed
+	{
+		days := []time.Time{day(2026, 1, 15)}
+		if got := Streak(r15, days, day(2026, 2, 16)); got != 0 {
+			t.Errorf("lapses day after next due: got %d, want 0", got)
+		}
+	}
+
+	// Case: consecutive across short month.
+	// Jan15→Feb15=31 ≤ 31 ok; Feb15→Mar15=28 ≤ 28 ok (Feb allowed gap=28); alive
+	{
+		days := []time.Time{day(2026, 1, 15), day(2026, 2, 15), day(2026, 3, 15)}
+		if got := Streak(r15, days, day(2026, 3, 15)); got != 3 {
+			t.Errorf("consecutive across short month: got %d, want 3", got)
+		}
 	}
 }
 
