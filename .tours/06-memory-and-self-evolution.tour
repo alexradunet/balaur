@@ -41,7 +41,7 @@
     },
     {
       "file": "internal/web/chat.go",
-      "line": 126,
+      "line": 84,
       "title": "6.7 — Inline approval cards (the Hyperagent pattern)",
       "description": "```go\nfmt.Fprintf(w,\n    `...<div class=\"k-inline\" hx-get=\"/ui/knowledge/%s/%s/card\" hx-trigger=\"load\" ...`)\n```\n\nWhen a proposal lands mid-stream, the chat injects a placeholder that HTMX fills on load from `/ui/knowledge/{kind}/{id}/card` — the **same template** the Memory and Skills pages use. One card definition, three surfaces.\n\nThe card carries live Approve / Dismiss / Edit forms targeting `hx-swap=\"outerHTML\"` — clicking Approve in chat is exactly the same server action as on /memory. The server stays the single source of truth; there is no client-side state to drift."
     },
