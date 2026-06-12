@@ -15,11 +15,11 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |
 |------|-------|----------|--------|------|------------|-------|--------|
-| 001 | Serialize nudge/recap/briefing background jobs | P1 | S | LOW | — | [#16](https://github.com/alexradunet/balaur/issues/16) | TODO |
-| 002 | Hot-query SQLite indexes (messages, tasks, audit) | P1 | S | LOW | — | [#17](https://github.com/alexradunet/balaur/issues/17) | TODO |
+| 001 | Serialize nudge/recap/briefing background jobs | P1 | S | LOW | — | [#16](https://github.com/alexradunet/balaur/issues/16) | DONE |
+| 002 | Hot-query SQLite indexes (messages, tasks, audit) | P1 | S | LOW | — | [#17](https://github.com/alexradunet/balaur/issues/17) | DONE |
 | 003 | Surface turn persistence + chat run errors | P2 | S | LOW | — | [#18](https://github.com/alexradunet/balaur/issues/18) | TODO |
-| 004 | Web handler HTTP test harness | P1 | M | LOW | — | [#19](https://github.com/alexradunet/balaur/issues/19) | TODO |
-| 005 | Origin/Host guard on the UI (CSRF + rebinding) | P1 | S–M | LOW–MED | 004 | [#20](https://github.com/alexradunet/balaur/issues/20) | TODO |
+| 004 | Web handler HTTP test harness | P1 | M | LOW | — | [#19](https://github.com/alexradunet/balaur/issues/19) | DONE |
+| 005 | Origin/Host guard on the UI (CSRF + rebinding) | P1 | S–M | LOW–MED | 004 | [#20](https://github.com/alexradunet/balaur/issues/20) | DONE |
 | 006 | CI: race detector + fake-model e2e harness | P1 | M | LOW–MED | 001 (soft) | [#21](https://github.com/alexradunet/balaur/issues/21) | DONE |
 | 007 | Docs truth sync (DESIGN/README/knowledge.md/env) | P1 | S | LOW | — | [#22](https://github.com/alexradunet/balaur/issues/22) | TODO |
 | 008 | AGENTS.md PocketBase-seam honesty | P2 | S | LOW | — | [#23](https://github.com/alexradunet/balaur/issues/23) | TODO |
