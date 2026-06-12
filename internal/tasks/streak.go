@@ -33,7 +33,7 @@ func periodDays(r Rule) int {
 // constants; monthly is calendar-aware (Feb≠July, clamped day-of-month).
 func allowedGapDays(r Rule, anchor time.Time) int {
 	if r.Kind == "monthly" {
-		next := monthlyOn(anchor.AddDate(0, 1, 0), r.MonthDay)
+		next := monthlyOn(time.Date(anchor.Year(), anchor.Month()+1, 1, 12, 0, 0, 0, anchor.Location()), r.MonthDay)
 		return daysBetween(anchor, next)
 	}
 	return periodDays(r)
