@@ -16,7 +16,11 @@ purego; no CGO), with optional OpenAI-compatible remote providers.
 The name is the Romanian fairy-tale dragon with many heads. There is one
 master conversation — the main head, persisted forever, summarized by
 the recap telescope. Focused work can run as temporary sub-heads with
-explicitly granted, audited data access (internal/heads).
+explicitly granted, audited data access (internal/heads). Each active
+head also has its own persistent branch conversation the owner can chat
+in at /heads/{id}/chat: turns are focused (the head's name and purpose
+as the system prompt), tool-free today (scoped tools are a future
+slice), and leave the master conversation untouched.
 
 Three governing principles:
 
@@ -86,7 +90,7 @@ self tool, which reports the actual registry):
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks, /life,
-/day/{date}, /profile, /heads); the machine-facing CLI (chat, task, memory,
+/day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing CLI (chat, task, memory,
 skill, life, journal, day, recap, history, audit, verify, model, self)
 printing JSON for external harnesses; the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
