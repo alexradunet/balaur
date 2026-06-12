@@ -110,7 +110,9 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			balaHTML, html.EscapeString(res.CheckNote))
 	}
 	flush()
-	_ = runErr
+	if runErr != nil {
+		h.app.Logger().Warn("chat: turn failed", "error", runErr)
+	}
 	return nil
 }
 

@@ -8,6 +8,7 @@ package turn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -60,9 +61,9 @@ type Result struct {
 // assemble context, run the agent loop (events stream to emit, which may
 // be nil), apply the verify honesty check with one self-repair pass, and
 // persist everything the loop appended. The Result reflects what was
-// persisted even when the loop erred mid-turn; the error is returned so
-// callers can report it (gateways will usually have surfaced it already
-// via the "error" event).
+// persisted even when the loop or persistence erred mid-turn; both loop and
+// persistence errors are joined and returned so callers can report them
+// (gateways will usually have surfaced them already via the "error" event).
 func Run(ctx context.Context, app core.App, client llm.Client, userText string, emit func(agent.Event)) (Result, error) {
 	if emit == nil {
 		emit = func(agent.Event) {}
@@ -120,6 +121,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	// Persist every turn the loop appended (assistant and tool rounds).
 	// Tool turns carry the call id; map it back to the tool's name from
 	// the preceding assistant turn so the record reads human.
+	var persistErr error
 	toolNames := map[string]string{}
 	for _, m := range res.Turn {
 		name := ""
@@ -130,7 +132,8 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 			toolNames[tc.ID] = tc.Name
 		}
 		if err := conversation.Append(app, master.Id, m, name); err != nil {
-			break // persistence failure must not break the caller's stream mid-reply
+			persistErr = fmt.Errorf("persisting turn: %w", err)
+			break // do not break the caller's stream mid-reply; the error travels in the return
 		}
 	}
 
@@ -140,12 +143,14 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	}
 
 	if res.CheckNote != "" {
-		_ = conversation.AppendOrigin(app, master.Id,
-			llm.Message{Role: "assistant", Content: res.CheckNote}, "", "check")
+		if err := conversation.AppendOrigin(app, master.Id,
+			llm.Message{Role: "assistant", Content: res.CheckNote}, "", "check"); err != nil {
+			persistErr = errors.Join(persistErr, fmt.Errorf("persisting check note: %w", err))
+		}
 	}
 
 	res.Reply = verify.LastAssistantText(res.Turn)
-	return res, runErr
+	return res, errors.Join(runErr, persistErr)
 }
 
 const systemPrompt = "You are Balaur, a wise personal companion. " +
