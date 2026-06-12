@@ -6,6 +6,10 @@ package web
 import (
 	"html/template"
 	"io/fs"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -74,6 +78,70 @@ var funcs = template.FuncMap{
 	"toolIcon": toolGlyph,
 }
 
+// guardLocalUI rejects browser-driven cross-site requests to Balaur's own
+// surfaces. Two checks, both scoped to Balaur paths (PocketBase's /api and
+// /_ keep their own auth):
+//   - Host must be a loopback address (DNS-rebinding defence). Owners who
+//     deliberately serve on a LAN name can allow it via BALAUR_ALLOWED_HOSTS
+//     (comma-separated host[:port] values).
+//   - On state-changing methods, an Origin header, when present, must match
+//     the request Host (cross-site form/fetch POST defence). Absent Origin
+//     (curl, CLI, same-origin GET) passes.
+func guardLocalUI(e *core.RequestEvent) error {
+	p := e.Request.URL.Path
+	if strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/_") {
+		return e.Next()
+	}
+	host := e.Request.Host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	if !isAllowedHost(host) {
+		return e.ForbiddenError("host not allowed", nil)
+	}
+	if e.Request.Method != http.MethodGet && e.Request.Method != http.MethodHead {
+		if origin := e.Request.Header.Get("Origin"); origin != "" && origin != "null" {
+			u, err := url.Parse(origin)
+			if err != nil || !sameHost(u.Host, e.Request.Host) {
+				return e.ForbiddenError("cross-origin request rejected", nil)
+			}
+		}
+	}
+	return e.Next()
+}
+
+func isAllowedHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		return true
+	}
+	allowed := os.Getenv("BALAUR_ALLOWED_HOSTS")
+	if allowed == "" {
+		return false
+	}
+	for _, h := range strings.Split(allowed, ",") {
+		if strings.TrimSpace(h) == host {
+			return true
+		}
+	}
+	return false
+}
+
+func sameHost(origin, request string) bool {
+	// Strip ports for comparison
+	origHost := origin
+	if h, _, err := net.SplitHostPort(origin); err == nil {
+		origHost = h
+	}
+	reqHost := request
+	if h, _, err := net.SplitHostPort(request); err == nil {
+		reqHost = h
+	}
+	return origHost == reqHost
+}
+
 // Register mounts the Balaur UI and static assets on the PocketBase router.
 func Register(se *core.ServeEvent) error {
 	tmpl := template.Must(template.New("").Funcs(funcs).ParseFS(webassets.FS, "templates/*.html"))
@@ -82,6 +150,10 @@ func Register(se *core.ServeEvent) error {
 	if err != nil {
 		panic("web: static assets missing from embed: " + err.Error())
 	}
+
+	// Bind the origin/host guard first, before any route registration.
+	se.Router.BindFunc(guardLocalUI)
+
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
 	h := &handlers{app: se.App, tmpl: tmpl}

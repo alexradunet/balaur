@@ -121,3 +121,17 @@ func TestTaskTransition(t *testing.T) {
 	}
 	scenario.Test(t)
 }
+
+func TestOriginGuard(t *testing.T) {
+	// Origin guard is bound at the start of Register. This test verifies
+	// it allows localhost (the test app default) and doesn't break normal requests.
+	scenario := tests.ApiScenario{
+		Name:            "origin guard allows localhost",
+		Method:          "GET",
+		URL:             "/",
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"chatbar"},
+	}
+	scenario.TestAppFactory = newWebApp
+	scenario.Test(t)
+}
