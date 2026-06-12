@@ -69,7 +69,7 @@ func taskAddCmd(app core.App) *cobra.Command {
 	cmd.Flags().BoolVar(&fromDone, "recur-from-done", false, "habit mode: next occurrence counts from completion")
 	cmd.Flags().StringVar(&notes, "notes", "", "context kept with the task")
 	_ = cmd.MarkFlagRequired("title")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "task.add", func(cmd *cobra.Command, args []string) (any, error) {
 		dueAt, err := when("due", due)
 		if err != nil {
 			return nil, err
@@ -99,7 +99,7 @@ func taskListCmd(app core.App) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&scope, "scope", "open", "open | today | overdue | all")
 	cmd.Flags().StringVar(&term, "term", "", "search term matched against title and notes")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "task.list", func(cmd *cobra.Command, args []string) (any, error) {
 		if scope == "all" {
 			recs, err := app.FindRecordsByFilter("tasks", "id != ''", "-updated", 200, 0)
 			if err != nil {
@@ -140,7 +140,7 @@ func taskDoneCmd(app core.App) *cobra.Command {
 		Short: "Mark a task done (recurring tasks roll forward)",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "task.done", func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := findTask(app, args[0])
 		if err != nil {
 			return nil, err
@@ -168,7 +168,7 @@ func taskSnoozeCmd(app core.App) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&until, "until", "", "when to be reminded instead: "+tools.DueFormats+" (required)")
 	_ = cmd.MarkFlagRequired("until")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "task.snooze", func(cmd *cobra.Command, args []string) (any, error) {
 		at, err := when("until", until)
 		if err != nil {
 			return nil, err
@@ -194,7 +194,7 @@ func taskDropCmd(app core.App) *cobra.Command {
 		Short: "Drop a task without marking it done",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "task.drop", func(cmd *cobra.Command, args []string) (any, error) {
 		rec, err := findTask(app, args[0])
 		if err != nil {
 			return nil, err

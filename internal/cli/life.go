@@ -51,7 +51,7 @@ func lifeLogCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&details, "details", "", "structured extras as a JSON object")
 	cmd.Flags().StringVar(&notedAt, "noted-at", "", "backdate: "+tools.DueFormats+" (defaults to now)")
 	_ = cmd.MarkFlagRequired("kind")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "life.log", func(cmd *cobra.Command, args []string) (any, error) {
 		at, err := when("noted-at", notedAt)
 		if err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ func lifeSeriesCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&kind, "kind", "", "tracker name (required; see `life kinds` for the inventory)")
 	cmd.Flags().IntVar(&days, "days", 30, "lookback window in days")
 	_ = cmd.MarkFlagRequired("kind")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "life.series", func(cmd *cobra.Command, args []string) (any, error) {
 		recs, err := life.Series(app, kind, time.Now().AddDate(0, 0, -days))
 		if err != nil {
 			return nil, err
@@ -121,7 +121,7 @@ func lifeKindsCmd(app core.App) *cobra.Command {
 		Short: "The inventory of what the owner tracks",
 		Args:  cobra.NoArgs,
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "life.kinds", func(cmd *cobra.Command, args []string) (any, error) {
 		kinds, err := life.Kinds(app)
 		if err != nil {
 			return nil, err
@@ -147,7 +147,7 @@ func lifeDropCmd(app core.App) *cobra.Command {
 		Short: "Delete one mistaken life-log entry (a correction)",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "life.drop", func(cmd *cobra.Command, args []string) (any, error) {
 		kind, err := life.Drop(app, args[0])
 		if err != nil {
 			return nil, err
@@ -169,7 +169,7 @@ func journalCmd(app core.App) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	write.Flags().StringVar(&notedAt, "noted-at", "", "which day this belongs to: "+tools.DueFormats+" (defaults to now)")
-	write.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	write.RunE = run(app, "journal.write", func(cmd *cobra.Command, args []string) (any, error) {
 		at, err := when("noted-at", notedAt)
 		if err != nil {
 			return nil, err
@@ -190,7 +190,7 @@ func dayCmd(app core.App) *cobra.Command {
 		Short: "Read one day: journal, log, completions, and the day recap",
 		Args:  cobra.ExactArgs(1),
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "day", func(cmd *cobra.Command, args []string) (any, error) {
 		ds, err := day(args[0])
 		if err != nil {
 			return nil, err

@@ -33,7 +33,7 @@ func historyCmd(app core.App) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&limit, "limit", 50, "max messages (most recent), ignored with --date")
 	cmd.Flags().StringVar(&date, "date", "", "one local day's transcript instead, YYYY-MM-DD")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "history", func(cmd *cobra.Command, args []string) (any, error) {
 		master, err := conversation.Master(app)
 		if err != nil {
 			return nil, err

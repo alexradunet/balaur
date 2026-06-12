@@ -23,7 +23,7 @@ func verifyCmd(app core.App) *cobra.Command {
 			"catch. Deterministic; no model.",
 		Args: cobra.NoArgs,
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "verify", func(cmd *cobra.Command, args []string) (any, error) {
 		master, err := conversation.Master(app)
 		if err != nil {
 			return nil, err

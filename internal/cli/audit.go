@@ -18,7 +18,7 @@ func auditCmd(app core.App) *cobra.Command {
 	cmd.Flags().IntVar(&limit, "limit", 50, "max rows (most recent first)")
 	cmd.Flags().StringVar(&action, "action", "", "filter: action contains this text (e.g. task., knowledge., os.)")
 	cmd.Flags().StringVar(&actor, "actor", "", "filter: exact actor (e.g. tasks, owner, model, journal)")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "audit", func(cmd *cobra.Command, args []string) (any, error) {
 		recs, err := store.ListAudit(app, action, actor, limit)
 		if err != nil {
 			return nil, err

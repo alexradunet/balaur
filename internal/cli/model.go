@@ -13,7 +13,7 @@ func modelCmd(app core.App) *cobra.Command {
 		Short: "Report the available and active model choices (a harness precondition check)",
 		Args:  cobra.NoArgs,
 	}
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "model", func(cmd *cobra.Command, args []string) (any, error) {
 		choices, active, err := turn.ModelChoices(app)
 		if err != nil {
 			return nil, err

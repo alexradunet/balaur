@@ -48,7 +48,7 @@ func chatCmd(app core.App) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 	}
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "turn deadline (local models can be slow)")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "chat", func(cmd *cobra.Command, args []string) (any, error) {
 		client, err := chatClients(app)
 		if err != nil {
 			return nil, err

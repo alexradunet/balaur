@@ -29,7 +29,7 @@ func recapEnsureCmd(app core.App) *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "catch-up deadline")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "recap.ensure", func(cmd *cobra.Command, args []string) (any, error) {
 		client, err := chatClients(app)
 		if err != nil {
 			return nil, err
@@ -57,7 +57,7 @@ func recapShowCmd(app core.App) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&period, "period", "day", "day | week | month | quarter | year")
 	cmd.Flags().StringVar(&date, "date", "", "a date the period contains, YYYY-MM-DD (defaults to today)")
-	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
+	cmd.RunE = run(app, "recap.show", func(cmd *cobra.Command, args []string) (any, error) {
 		at := time.Now()
 		if date != "" {
 			d, err := day(date)
