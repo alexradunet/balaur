@@ -1,0 +1,55 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "08 — HATEOAS: Cards, Boards & the Typed Registry",
+  "description": "Balaur's UI is built from server-rendered, typed card resources. This tour covers the card registry, the /ui/cards/{type} endpoint, board layout persistence, the three agent UI tools, and the fundamental rule: the model never authors markup.",
+  "steps": [
+    {
+      "file": "internal/cards/cards.go",
+      "line": 1,
+      "title": "8.1 — The typed card registry",
+      "description": "```go\n// Package cards is the typed card registry — the single source of truth for\n// every card type that Balaur can compose on-the-spot.\n```\n\nThe `cards` package defines 10 card types in a package-level `registry` slice, built in `init()`. Each `Spec` describes:\n- `Type` — the URL token (`\"today\"`, `\"quests\"`, `\"measure\"`, …)\n- `Label`, `Icon` — human-facing name and icon stem\n- `W`, `H` — default grid dimensions (of 12 columns, 10px rows)\n- `Params` — accepted query parameters with optional `Required`, `Enum`, and `Doc` fields\n\nCritically, **this package has zero imports of `internal/web`**. The agent tools (`internal/tools/ui.go`) call `cards.Get` and `cards.Validate` without creating an import cycle.\n\nOne source of truth: adding a new card type here is sufficient for it to appear in the card palette, board composition, and the agent tool descriptions — the tool description is built by iterating `cards.All()` at registration time."
+    },
+    {
+      "file": "internal/cards/cards.go",
+      "line": 233,
+      "title": "8.2 — Validate: forgiving by design",
+      "description": "```go\nfunc Validate(typ string, params map[string]string) (map[string]string, error) {\n    spec, ok := byType[typ]\n    if !ok {\n        return nil, fmt.Errorf(\"unknown card type %q\", typ)\n    }\n    // ... required checks, enum checks, numeric clamping ...\n    // Unknown keys are silently dropped.\n    return out, nil\n}\n```\n\n`Validate` enforces the registry contract while staying forgiving — the model composes these, so hard failures on minor mistakes would frustrate the interaction:\n- **Unknown type** → error (the agent must choose from the registry)\n- **Unknown param keys** → silently dropped (forward-compat; old boards work with new card types)\n- **Required params absent** → error\n- **Enum violations** → error\n- **Numeric params** (`limit`, `days`) → parsed and clamped to sane bounds; non-parseable values fall back silently\n\n`ValidateCards` runs `Validate` over a `[]Card` slice and also clamps the layout fields (`X`, `Y`, `W`, `H`). It is the gatekeeper for both the board editor and the agent tools."
+    },
+    {
+      "file": "internal/web/cards.go",
+      "line": 60,
+      "title": "8.3 — GET /ui/cards/{type}: the card endpoint",
+      "description": "```go\nfunc (h *handlers) uiCard(e *core.RequestEvent) error {\n    typ := e.Request.PathValue(\"type\")\n    spec, ok := cards.Get(typ)\n    if !ok {\n        return e.NotFoundError(\"no such card type\", nil)\n    }\n    params, err := cards.Validate(typ, queryToMap(e.Request.URL.Query()))\n    if err != nil {\n        // Render a card-note-error strip — HTTP 200 so HTMX still swaps it.\n        ...\n        return nil\n    }\n    switch typ {\n    case \"today\":\n        return h.renderCardToday(e, spec, params)\n    ...\n    }\n}\n```\n\nThis is the HATEOAS (Hypermedia as the Engine of Application State) design: every card is a **server-rendered resource** at a stable URL. The browser, board slots, and inline chat embeds all fetch the same URL. There is no client-side card rendering — the server owns the markup.\n\nValidation errors return HTTP 200 with an error strip: HTMX will still swap the content into the DOM, and the owner sees a plain error line rather than a broken slot. This is intentional — a 404 would leave the slot empty with no explanation.\n\nEach `renderCard*` method queries PocketBase, builds a tiny view struct, and executes the corresponding template. No app.Save calls — card endpoints are read-only GET handlers."
+    },
+    {
+      "file": "internal/web/boards.go",
+      "line": 54,
+      "title": "8.4 — boardCardViewsOf: flow vs free layout",
+      "description": "```go\n// If at least one card has an explicit position stored\n// (X>0 || Y>0 in its card record), all cards use free-layout positioning.\n// Legacy boards (no explicit position on any card) render with the old\n// flow-layout (grid-column: span W, no grid-row), so existing boards look\n// unchanged until the first drag.\nfunc boardCardViewsOf(bcs []boardCard) ([]boardCardView, bool) {\n```\n\nBoards have two rendering modes:\n- **Flow mode** (default): cards span their spec width, browser flow determines row placement. Legacy behavior — existing boards look the same as before the drag feature landed.\n- **Free mode**: each card has explicit `x`/`y` (column/row start) set by the owner after dragging. The CSS grid uses `grid-column` and `grid-row` for absolute positioning.\n\nThe transition from flow to free happens on the **first drag** via `pinAllSlots()` in `board.js` — it reads each slot's rendered position, assigns explicit data attributes, and persists the layout. From that point all slots are explicitly positioned.\n\nThe `FreeLay` boolean on `boardRecord` controls which CSS class the template uses — no JavaScript is needed to toggle the mode."
+    },
+    {
+      "file": "web/static/board.js",
+      "line": 1,
+      "title": "8.5 — board.js: drag, resize, pack",
+      "description": "Vanilla JS, no framework. The file is ~290 lines and loaded only by `boards.html` (deferred).\n\nGrid model: **12 columns**, row unit = **10px** (`grid-auto-rows: 10px`). The same numbers are used in the `cards.Spec` defaults and in `ValidateCards` clamping.\n\nThree operations:\n- **Drag to move**: pointer events track `pointermove` relative to the grid's column width; movement snaps to the nearest column start.\n- **Corner resize**: a `resize-handle` div in the slot corner tracks pointer deltas and snaps to column/row units.\n- **Pack (compaction)**: after every move or resize, `packLayout()` sorts all slots by `(y, x)` and walks each card upward until it hits another card or the top edge. Gaps are filled; the board stays dense. This runs entirely client-side and posts the final layout to `POST /ui/boards/{id}/layout`.\n\nThe server validates the posted layout and saves only `x`/`y`/`w`/`h` — `type` and `params` are never modified by the layout endpoint."
+    },
+    {
+      "file": "internal/tools/ui.go",
+      "line": 60,
+      "title": "8.6 — The three agent UI tools",
+      "description": "```go\nfunc UITools(app core.App) []agent.Tool {\n    return []agent.Tool{cardShowTool(app), boardComposeTool(app), boardAddCardTool(app)}\n}\n```\n\nThree tools, one principle: **the model never authors markup, only `{type, params}` validated by the registry**.\n\n- **`card_show`** — embeds any typed card inline in the conversation via the `UICardMarker` protocol. The tool calls `cards.Validate`, builds a `MarkUICard` result, and the web layer renders a `hx-get=\"/ui/cards/{type}?params\" hx-trigger=\"load\"` slot. The model provides `{type, params}` — the server fetches real data and renders the card.\n- **`board_compose`** — creates a new named board of up to 8 cards. Cards are validated by `cards.ValidateCards`. The board is saved to PocketBase and audited in `audit_log`.\n- **`board_add_card`** — adds one typed card to an existing board. Board resolution: exact id → case-insensitive exact name → case-insensitive substring match. Ambiguous or missing boards return a plain-text error listing all board names.\n\nAll three tools return plain text (not HTML) to the model. The web layer is responsible for the presentation transformation."
+    },
+    {
+      "file": "internal/tools/ui.go",
+      "line": 44,
+      "title": "8.7 — ParseUICard: the registry guard",
+      "description": "```go\nfunc ParseUICard(s string) (typ, query, rest string, ok bool) {\n    if !strings.HasPrefix(s, UICardMarker) {\n        return \"\", \"\", s, false\n    }\n    s = strings.TrimPrefix(s, UICardMarker)\n    head, rest, _ := strings.Cut(s, \"\\n\")\n    typ, query, _ = strings.Cut(head, \"?\")\n    if typ == \"\" {\n        return \"\", \"\", rest, false\n    }\n    if _, found := cards.Get(typ); !found {\n        return \"\", \"\", rest, false\n    }\n    return typ, query, rest, true\n}\n```\n\nThe registry check `cards.Get(typ)` is the guard: only a `type` string that appears in the registry passes through `ParseUICard` with `ok=true`. The web layer embeds `typ` directly into a URL path (`/ui/cards/\" + typ + \"?\" + query`) — so an unknown or forged type string would be rejected here before reaching the router.\n\nThis is the composition rule in practice: the model can only surface cards that the registry knows how to render. Free-form HTML from the model cannot reach the DOM via this path.\n\n**Why the model can't author markup:** there is no route that accepts model-generated HTML and injects it into the page. The only injection paths are (1) text content in chat messages (HTML-escaped), (2) card URLs fetched by HTMX from `/ui/cards/`, and (3) approval cards fetched from `/ui/knowledge/`. All three are server-rendered from typed, validated data."
+    },
+    {
+      "file": "internal/tools/choices.go",
+      "line": 58,
+      "title": "8.8 — offer_choices: dialogue choices",
+      "description": "```go\nfunc offerChoicesTool(_ core.App) agent.Tool {\n    return agent.Tool{\n        Spec: agent.ToolSpecOf(\"offer_choices\",\n            \"Offer the owner 2–5 concrete reply choices when a decision has clear options...\",\n            obj(map[string]any{\n                \"prompt\":  str(...),\n                \"choices\": ..., // 2–5 items, each with label + optional hint\n            }, \"choices\")),\n        Execute: func(ctx context.Context, argsJSON string) (string, error) {\n            ...\n            return MarkChoices(args.Prompt, args.Choices, modelText), nil\n        },\n    }\n}\n```\n\n`offer_choices` is not a UI composition tool — it's a **dialogue protocol**. The model calls it when a decision has 2–5 clear concrete options. The choices appear as numbered buttons in chat; clicking one posts it as the owner's next message.\n\nThe tool validates the choice count (2–5), builds model-facing text (\"offered choices: 1) A  2) B\"), and returns a `ChoicesMarker`-prefixed string. The web layer (`chat.go`) detects the marker, renders the `chat-choices` template with a random nonce for unique element IDs, and opens a new assistant bubble for the reply.\n\nThe owner may click a choice or type freely — choices are not exclusive. If the chat reconnects (page reload), the stale choice panel is inert but visible in the transcript."
+    }
+  ]
+}

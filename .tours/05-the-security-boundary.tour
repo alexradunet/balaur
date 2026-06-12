@@ -5,55 +5,55 @@
   "steps": [
     {
       "file": "internal/heads/heads.go",
-      "line": 22,
+      "line": 24,
       "title": "5.1 — Sentinel errors",
       "description": "```go\nvar ErrDenied = errors.New(\"heads: access denied\")\n```\n\nA **sentinel error** is a package-level error value that callers can check for *exactly*, using `errors.Is`:\n\n```go\nif errors.Is(err, heads.ErrDenied) {\n    // handle specifically\n}\n```\n\nCompare to checking `err.Error() == \"heads: access denied\"` — string comparison breaks if the message ever changes, and doesn't work through wrapped errors.\n\n`errors.Is` unwraps chains: when `scoped.go` does:\n```go\nreturn fmt.Errorf(\"%w: head %q may not %s %s\", ErrDenied, ...)\n```\nthe error carries both a descriptive message *and* the unwrappable sentinel. Callers get human-readable text AND machine-checkable identity — without compromising either."
     },
     {
       "file": "internal/heads/heads.go",
-      "line": 27,
+      "line": 44,
       "title": "5.2 — Multiple return values in practice",
-      "description": "```go\nfunc Spawn(\n    app core.App,\n    name, purpose string,\n    ttl time.Duration,\n    grants []Grant,\n) (*core.Record, string, error) {\n```\n\nThree return values: the head record, a token string, and an error. Go is unusual in making this ergonomic — no Result<> wrapper, no out-parameters, just a tuple.\n\nThe convention: the error is always last. On success, error is `nil`. On failure, the other values are zero (`nil`, `\"\"`).\n\nCalling code:\n```go\nhead, token, err := heads.Spawn(app, \"tax\", \"do taxes\", time.Hour, grants)\nif err != nil {\n    // handle\n}\n// head and token are valid here\n```\n\nIf you want to discard a return value: `head, _, err := Spawn(...)` — the `_` blank identifier drops it."
+      "description": "```go\nfunc Spawn(\n    app core.App,\n    name, purpose string,\n    ttl time.Duration,\n    grants []Grant,\n    opts ...SpawnOption,\n) (*core.Record, string, error) {\n```\n\nThree return values: the head record, a token string, and an error. Go is unusual in making this ergonomic — no Result<> wrapper, no out-parameters, just a tuple.\n\nThe convention: the error is always last. On success, error is `nil`. On failure, the other values are zero (`nil`, `\"\"`).\n\nCalling code:\n```go\nhead, token, err := heads.Spawn(app, \"tax\", \"do taxes\", time.Hour, grants)\nif err != nil {\n    // handle\n}\n// head and token are valid here\n```\n\nIf you want to discard a return value: `head, _, err := Spawn(...)` — the `_` blank identifier drops it."
     },
     {
       "file": "internal/heads/heads.go",
-      "line": 37,
-      "title": "5.3 — time.Duration and time arithmetic",
-      "description": "```go\nhead.Set(\"expires\", time.Now().Add(ttl).UTC())\n```\n\n`time.Duration` is an `int64` counting nanoseconds, but written as `1 * time.Hour` or `30 * time.Minute`. Constants like `time.Hour` are just named `Duration` values.\n\n`time.Now().Add(ttl)` adds the duration to the current time, returning a `time.Time`. `.UTC()` normalises it to UTC — good practice for anything stored or compared across timezones.\n\nThe `time` package is one of Go's strongest standard library highlights. You almost never need external date libraries."
-    },
-    {
-      "file": "internal/heads/heads.go",
-      "line": 87,
-      "title": "5.4 — Resolve: tokens as identity proofs",
+      "line": 110,
+      "title": "5.3 — Resolve: tokens as identity proofs",
       "description": "```go\nfunc Resolve(app core.App, token string) (*core.Record, error) {\n    head, err := app.FindAuthRecordByToken(token, core.TokenTypeAuth)\n    if err != nil {\n        return nil, fmt.Errorf(\"verifying head token: %w\", err)\n    }\n    if head.Collection().Name != \"heads\" {\n        return nil, ErrDenied\n    }\n    if head.GetString(\"status\") != \"active\" {\n        return nil, ErrDenied\n    }\n    return head, nil\n}\n```\n\nThree checks in sequence — each one **fails closed** (returns `ErrDenied`, not a descriptive error):\n\n1. Token must be cryptographically valid and unexpired\n2. Token must be from the `heads` collection (not `users` — a human owner's token must never resolve as a head)\n3. Head must be `active` (not merged or revoked)\n\nReturning `ErrDenied` for checks 2 and 3 rather than `fmt.Errorf(\"wrong collection\")` is intentional: don't tell callers *why* it failed. That's information leakage. Fail closed, give nothing away.\n\nThe test `TestResolveRejectsNonHeadTokens` in `heads_test.go` verifies check 2 directly."
     },
     {
       "file": "internal/heads/scoped.go",
-      "line": 13,
-      "title": "5.5 — The Scoped type: the only safe data path for heads",
+      "line": 15,
+      "title": "5.4 — The Scoped type: the only safe data path for heads",
       "description": "```go\n// Scoped is the ONLY sanctioned data path for code acting on behalf of a\n// head. It checks grants before touching records and audits every decision.\ntype Scoped struct {\n    app  core.App\n    head *core.Record\n}\n\nfunc AsHead(app core.App, head *core.Record) *Scoped {\n    return &Scoped{app: app, head: head}\n}\n```\n\nThis is the critical invariant documented in AGENTS.md:\n\n> Go-side `app.Save`/`Find*` calls **bypass** collection API rules — this is documented PocketBase behaviour, not a bug.\n\nAny code path acting *on behalf of a head* must go through `Scoped`. It never calls `app.FindRecordsByFilter` directly — it calls `s.allow(target, mode)` first, which checks grants and writes to `audit_log`.\n\n`AsHead` is a **constructor function** — Go's conventional name for a function that builds a struct. The struct fields are unexported (`app`, `head`) so callers can't bypass the grant checks."
     },
     {
       "file": "internal/heads/scoped.go",
-      "line": 34,
-      "title": "5.6 — check: fail-closed at every step",
+      "line": 36,
+      "title": "5.5 — check: fail-closed at every step",
       "description": "```go\nfunc (s *Scoped) check(target, mode string) bool {\n    if s.head.GetString(\"status\") != \"active\" {\n        return false\n    }\n    if exp := s.head.GetDateTime(\"expires\"); !exp.IsZero() && exp.Time().Before(time.Now()) {\n        return false\n    }\n    grants, err := s.app.FindRecordsByFilter(\n        \"grants\",\n        \"head = {:head} && target = {:target}\",\n        \"\", 0, 0,\n        dbx.Params{\"head\": s.head.Id, \"target\": target},\n    )\n    if err != nil {\n        return false // fail closed\n    }\n    ...\n}\n```\n\n**Fail closed** means: when uncertain, deny. Notice:\n- Status check fails? `return false`.\n- Token expired? `return false`.\n- Database query errors? `return false` — not `return true` \"because it was probably fine.\"\n\nThe `if exp := ...; condition` syntax is Go's **short variable declaration in an if statement**: declare and use a variable scoped only to the `if` block. It's idiomatic for values you only need for one check.\n\n`dbx.Params{\"head\": s.head.Id, \"target\": target}` are parameterised query placeholders — the `:head` in the filter string is replaced by the actual value. Never string-interpolate values into SQL; always use parameters."
     },
     {
       "file": "internal/heads/scoped.go",
-      "line": 62,
-      "title": "5.7 — Records and Save: the gated public API",
+      "line": 66,
+      "title": "5.6 — Records and Save: the gated public API",
       "description": "```go\nfunc (s *Scoped) Records(collection, filter, sort string, limit int, params dbx.Params) ([]*core.Record, error) {\n    if err := s.allow(collection, \"read\"); err != nil {\n        return nil, err\n    }\n    return s.app.FindRecordsByFilter(collection, filter, sort, limit, 0, params)\n}\n\nfunc (s *Scoped) Save(record *core.Record) error {\n    if err := s.allow(record.Collection().Name, \"write\"); err != nil {\n        return err\n    }\n    return s.app.Save(record)\n}\n```\n\nThese two methods are the *only* public data API on `Scoped`. Both call `allow` first, which:\n1. Checks status + expiry\n2. Queries the `grants` table\n3. **Writes to `audit_log` — for both allowed and denied access**\n4. Returns the decision\n\nIf denied, `allow` returns an error wrapping `ErrDenied`, and `Records`/`Save` return that error immediately. The caller never reaches the database.\n\nIf allowed, the underlying `app.Find*`/`app.Save` runs — but now we've verified the grant exists, so we're knowingly operating with elevated access."
     },
     {
-      "file": "internal/heads/heads_test.go",
-      "line": 57,
-      "title": "5.8 — The headline security test",
-      "description": "```go\nfunc TestScopedDeniesUngrantedAccess(t *testing.T) {\n    app := newApp(t)\n    seedMemory(t, app, \"secret journal\")\n\n    // Tax head: may read conversations, nothing else.\n    head, token, err := Spawn(app, \"tax\", \"do my taxes\", time.Hour, []Grant{\n        {Target: \"conversations\", Read: true},\n    })\n    ...\n\n    scoped := AsHead(app, head)\n\n    if _, err := scoped.Records(\"memories\", \"\", \"\", 0, nil); err == nil {\n        t.Fatal(\"tax head read memories without a grant\")\n    }\n    if got := countAudit(t, app, \"access.read\", false); got != 1 {\n        t.Fatalf(\"expected 1 denied audit row, got %d\", got)\n    }\n```\n\nThis test is the centrepiece of Balaur's NLnet application.\n\nIt proves:\n1. A head with a `conversations` grant **cannot** read `memories`\n2. The denial is **written to `audit_log`** — provable, not just asserted in code\n3. A head with the grant **can** read what it's granted (the test also checks the allowed path)\n\n`newApp(t)` creates a throwaway PocketBase app in `t.TempDir()` — a temp directory cleaned up automatically when the test finishes. `t.TempDir()` is Go 1.15+ and is the idiomatic way to get test-scoped temporary storage.\n\n**Run just this test:**\n```\ngo test ./internal/heads/ -v -run TestScopedDeniesUngrantedAccess\n```"
+      "file": "internal/tools/ui.go",
+      "line": 26,
+      "title": "5.7 — Markers are not a privilege boundary",
+      "description": "```go\nconst UICardMarker = \"\\x00balaur-uicard:\"\n```\n\nBalaur has three marker types embedded in tool results: `UICardMarker`, `ProposalMarker` (`\\x00balaur-proposal:`), and `ChoicesMarker` (`\\x00balaur-choices:`). Each is a NUL-prefixed tag the web layer peels off to render a specialized fragment.\n\n**Markers are a presentation protocol, not a security boundary.** They control what fragment the browser receives — not what data the model can access. A model that fabricates a marker string gets a rendering artifact, not elevated data access.\n\nThe actual security boundary is `Scoped`: data access for heads is checked and audited by the grant system, fully independent of what the model says in its tool results.\n\nThis separation is intentional: presentation concerns (\"show an approval card\") and access-control concerns (\"may this head read memories\") are different invariants enforced at different layers. Confusing them — e.g., treating a marker as an auth token — would be a category error."
     },
     {
       "file": "internal/heads/heads_test.go",
-      "line": 109,
+      "line": 58,
+      "title": "5.8 — The headline security test",
+      "description": "```go\nfunc TestScopedDeniesUngrantedAccess(t *testing.T) {\n    app := newApp(t)\n    seedMemory(t, app, \"secret journal\")\n\n    // Tax head: may read conversations, nothing else.\n    head, token, err := Spawn(app, \"tax\", \"do my taxes\", time.Hour, []Grant{\n        {Target: \"conversations\", Read: true},\n    })\n    ...\n\n    scoped := AsHead(app, head)\n\n    if _, err := scoped.Records(\"memories\", \"\", \"\", 0, nil); err == nil {\n        t.Fatal(\"tax head read memories without a grant\")\n    }\n    if got := countAudit(t, app, \"access.read\", false); got != 1 {\n        t.Fatalf(\"expected 1 denied audit row, got %d\", got)\n    }\n```\n\nThis test proves:\n1. A head with a `conversations` grant **cannot** read `memories`\n2. The denial is **written to `audit_log`** — provable, not just asserted in code\n3. A head with the grant **can** read what it's granted (the test also checks the allowed path)\n\n`newApp(t)` creates a throwaway PocketBase app in `t.TempDir()` — a temp directory cleaned up automatically when the test finishes. `t.TempDir()` is Go 1.15+ and is the idiomatic way to get test-scoped temporary storage.\n\n**Run just this test:**\n```\ngo test ./internal/heads/ -v -run TestScopedDeniesUngrantedAccess\n```"
+    },
+    {
+      "file": "internal/heads/heads_test.go",
+      "line": 110,
       "title": "5.9 — Testing that merge kills access",
       "description": "```go\nfunc TestMergeRevokesAccess(t *testing.T) {\n    ...\n    head, token, _ := Spawn(app, \"branch\", \"focused work\", time.Hour, []Grant{\n        {Target: \"memories\", Read: true},\n    })\n\n    Merge(app, head.Id)\n\n    // Token no longer resolves: status is the kill switch.\n    if _, err := Resolve(app, token); err == nil {\n        t.Fatal(\"merged head token still resolves\")\n    }\n\n    // Scoped path also fails closed with a stale record handle.\n    head.Set(\"status\", \"merged\")\n    if _, err := AsHead(app, head).Records(\"memories\", \"\", \"\", 0, nil); err == nil {\n        t.Fatal(\"merged head still reads\")\n    }\n}\n```\n\nAfter `Merge`:\n- The token fails `Resolve` (status check)\n- The `Scoped` path fails too, even with the in-memory record object (simulating a stale handle)\n\nBoth checks are necessary because:\n1. A leaked token might outlive the merge — `Resolve` must catch it\n2. A piece of code holding a `*core.Record` pointer from before the merge must also be blocked — the `check()` method re-reads status from the record each time, so `head.Set(\"status\", \"merged\")` reflects the persisted state\n\n**This is the architectural guarantee**: no code path bypasses the status check, because the only way to access data for a head is through `Scoped`, and `Scoped.check` always reads status fresh."
     }

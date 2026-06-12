@@ -149,6 +149,7 @@ lean and high-signal — add a rule only when it changes a real decision.
 
 - Tests use the standard `testing` package, table-driven where it helps
   readability, run with `go test ./...`. No assertion frameworks.
+- `.tours/` is a maintained artifact: `tours_test.go` fails the suite when a tour references a missing file or out-of-range line — when a change breaks a tour anchor, fix the tour in the same commit.
 - Cover pure helpers directly. For PocketBase-dependent logic, use the
   test helpers in `internal/store` (temp-dir app instances); for I/O use
   `t.TempDir()` and injected seams. Fake the `llm.Client` interface — tests

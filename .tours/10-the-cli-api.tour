@@ -1,0 +1,43 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "10 — The CLI API: Machine-Facing JSON Gateway",
+  "description": "balaur's CLI is the machine-facing surface for external harnesses — LLM agents, scripts, CI. This tour covers the v1 envelope, the emit function, the gateway rule, exit codes, and the balaur doctor preflight check.",
+  "steps": [
+    {
+      "file": "internal/cli/cli.go",
+      "line": 1,
+      "title": "10.1 — The gateway rule",
+      "description": "```go\n// Package cli is Balaur's machine-facing gateway: native subcommands on\n// the PocketBase root command, designed for external harnesses — including\n// LLM agents — that drive, inspect, seed, and verify a Balaur box without\n// scraping HTML. Every command prints one JSON envelope on stdout:\n//\n//  {\"v\":1,\"kind\":\"<command>.<subcommand>\",\"data\":<value>}\n//\n// The commands are thin wrappers over the same internal packages the web\n// gateway uses (capability lives there, never here), so what the CLI\n// observes is evidence about what the web UI does.\n```\n\nThe CLI is a **gateway**, not a reimplementation. Every `balaur task list`, `balaur memory recall`, or `balaur chat` call reaches the same `internal/turn`, `internal/tasks`, `internal/knowledge`, and `internal/conversation` packages the web UI uses. The CLI only renders the result as JSON instead of HTML.\n\nThis is the same rule as `internal/web`: gateways adapt, they never re-implement. A bug fixed in `internal/tasks` is fixed for both the web UI and the CLI without touching the CLI code."
+    },
+    {
+      "file": "internal/cli/cli.go",
+      "line": 95,
+      "title": "10.2 — envelope: the v1 wire shape",
+      "description": "```go\ntype envelope struct {\n    V    int    `json:\"v\"`\n    Kind string `json:\"kind\"`\n    Data any    `json:\"data\"`\n}\n\nfunc emit(w io.Writer, kind string, data any) error {\n    enc := json.NewEncoder(w)\n    enc.SetIndent(\"\", \"  \")\n    return enc.Encode(envelope{V: apiVersion, Kind: kind, Data: data})\n}\n```\n\nEvery command emits exactly one JSON object:\n- **`v`** — API version integer, currently `1`. Bumped only on breaking changes to the envelope shape or any command's `data` shape. Additive fields inside `data` are free without a bump.\n- **`kind`** — `<command>` or `<command>.<subcommand>` (e.g. `\"task.add\"`, `\"memory.recall\"`, `\"doctor\"`, `\"chat\"`). The discriminator for consumers switching on response type.\n- **`data`** — whatever the command emits. Shape is command-specific and documented in each command file.\n\n`json.SetIndent(\"\", \"  \")` makes the output human-readable — the few extra bytes are irrelevant for harness I/O, and readable JSON is easier to debug.\n\nFailures write `{\"v\":1,\"kind\":\"error\",\"data\":{\"error\":\"...\"}}` to **stderr** and exit non-zero. Stdout stays clean — parsers can pipe stdout without filtering stderr."
+    },
+    {
+      "file": "internal/cli/cli.go",
+      "line": 80,
+      "title": "10.3 — run: the command wrapper",
+      "description": "```go\nfunc run(app core.App, kind string, body func(cmd *cobra.Command, args []string) (any, error)) func(*cobra.Command, []string) error {\n    return func(cmd *cobra.Command, args []string) error {\n        cmd.SilenceUsage = true\n        cmd.SilenceErrors = true\n        if err := app.RunAllMigrations(); err != nil {\n            return failJSON(cmd, fmt.Errorf(\"applying migrations: %w\", err))\n        }\n        out, err := body(cmd, args)\n        if err != nil {\n            return failJSON(cmd, err)\n        }\n        return emit(cmd.OutOrStdout(), kind, out)\n    }\n}\n```\n\n`run` is a higher-order function: it takes a command body and returns a `cobra.Command`-compatible function. This is the CLI equivalent of HTTP middleware.\n\nTwo things it handles before every command:\n1. **Migration check** — `app.RunAllMigrations()` applies any pending migrations. CLI commands must work on a fresh `--dir` that has never been `serve`d; PocketBase only auto-migrates in `serve` or `migrate` modes.\n2. **Uniform output** — success calls `emit`, failure calls `failJSON` (which writes to stderr and sets the exit code).\n\n`SilenceUsage = true` prevents cobra from printing the usage message when a command returns an error — errors go through the JSON contract, not prose."
+    },
+    {
+      "file": "internal/cli/cli.go",
+      "line": 47,
+      "title": "10.4 — exitCode: atomic exit status",
+      "description": "```go\nvar exitCode atomic.Int32\n\nfunc ExitCode() int { return int(exitCode.Load()) }\n```\n\nPocketBase's `Execute()` discards `RunE` errors by design — the CLI owns its exit status. When a command fails, `failJSON` calls `exitCode.Store(1)`. After `app.Start()` returns (when the process is done), `main.go` reads the exit code:\n\n```go\nos.Exit(cli.ExitCode())\n```\n\n`atomic.Int32` is used because cobra commands may run on different goroutines in principle — the atomic ensures no data race even though in practice only one command runs at a time.\n\nExit code contract: `0` = success (all fatal checks passed), `1` = any command failed. `balaur doctor` sets the exit code to `1` when any **fatal** check fails, regardless of non-fatal check results."
+    },
+    {
+      "file": "internal/cli/doctor.go",
+      "line": 18,
+      "title": "10.5 — doctorCheck: fatal vs non-fatal",
+      "description": "```go\ntype doctorCheck struct {\n    Name   string `json:\"name\"`\n    OK     bool   `json:\"ok\"`\n    Detail string `json:\"detail\"`\n    Fatal  bool   `json:\"fatal\"`\n}\n```\n\n`balaur doctor` runs five checks:\n- `data_dir_writable` (Fatal: yes) — cannot serve if the data dir is unwritable\n- `collections_present` (Fatal: yes) — missing core collections means migrations didn't run\n- `model_ready` (Fatal: **no**) — a box without a model is healthy but not chat-ready\n- `os_access` (Fatal: **no**) — off is the expected default; informational\n- `extensions` (Fatal: **no**) — zero approved extensions is fine\n\nThe `Fatal` flag controls both the top-level `ok` boolean and the exit code. A harness can gate on exit code 0 to confirm the box is operable before issuing chat commands, while a missing model (non-fatal) gets a non-zero `model_ready.ok` without blocking the harness.\n\nNo model calls are made by `doctor` — it is safe to run at any time, including before the model is downloaded."
+    },
+    {
+      "file": "internal/cli/doctor.go",
+      "line": 133,
+      "title": "10.6 — doctorCmd: reading the output",
+      "description": "```go\ncmd.RunE = run(app, \"doctor\", func(...) (any, error) {\n    checks := doctorCheckers(app)\n    topOK := true\n    for _, ch := range checks {\n        if ch.Fatal && !ch.OK {\n            topOK = false\n            break\n        }\n    }\n    if !topOK {\n        exitCode.Store(1)\n    }\n    return map[string]any{\n        \"ok\":      topOK,\n        \"version\": version,\n        \"checks\":  checks,\n    }, nil\n})\n```\n\nSample output:\n```json\n{\n  \"v\": 1,\n  \"kind\": \"doctor\",\n  \"data\": {\n    \"ok\": true,\n    \"version\": {\"version\":\"dev\",\"commit\":\"abc1234\",...},\n    \"checks\": [\n      {\"name\":\"data_dir_writable\",\"ok\":true,\"detail\":\"pb_data\",\"fatal\":true},\n      {\"name\":\"model_ready\",\"ok\":false,\"detail\":\"no active model\",\"fatal\":false},\n      ...\n    ]\n  }\n}\n```\n\nA harness driving Balaur should:\n1. Run `balaur --dir <path> doctor`\n2. Check exit code: 0 = box is operable\n3. Inspect `data.checks` for `model_ready.ok` before sending chat turns\n\n`doctorCheckers` is a package-level var (not hardcoded) so tests can inject an alternative check list — e.g. with a deliberately missing collection — without modifying the production code."
+    }
+  ]
+}

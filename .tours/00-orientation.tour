@@ -1,61 +1,61 @@
 {
   "$schema": "https://aka.ms/codetour-schema",
   "title": "00 — Orientation: the whole project in 5 minutes",
-  "description": "Start here. This tour walks the project layout — main.go, migrations, each internal package, and the web layer — before you dive into the detailed concept tours.",
+  "description": "Start here. This tour walks the project layout — main.go, migrations, each internal package, and the web and CLI gateways — before you dive into the detailed concept tours.",
   "steps": [
     {
       "file": "main.go",
       "line": 1,
       "title": "0.1 — What Balaur is",
-      "description": "Balaur compiles to **one binary**. Run it with `go run . serve` (development) or build it with `CGO_ENABLED=0 go build -o balaur .` (release). The binary:\n\n- Embeds **PocketBase** as a Go library — a SQLite-backed data/auth engine\n- Serves the **HTMX web UI** from memory (no external server needed)\n- Runs **local LLM inference** through Kronk (llama.cpp loaded at runtime)\n- Can also talk to any **OpenAI-compatible endpoint** (Ollama, llama-server, remote)\n\nThe binary does not contain models — those are downloaded data. But all application code, templates, and CSS are embedded at compile time.\n\nSee `go.mod` for the dependency tree. Notice there's no web framework, no ORM, no router library — PocketBase provides the HTTP router; Go's standard library covers the rest."
+      "description": "Balaur compiles to **one binary**. Run it with `go run . serve` (development) or build it with `CGO_ENABLED=0 go build -o balaur .` (release). The binary:\n\n- Embeds **PocketBase** as a Go library — a SQLite-backed data/auth engine\n- Serves the **Hearthwood HTMX web UI** from memory (no external server needed)\n- Runs **local LLM inference** through a **llamafile subprocess** in `internal/llama` — the supervisor spawns the engine, health-probes it, and shuts it down when Balaur exits\n- Can also talk to any **OpenAI-compatible endpoint** over the same HTTP client, so `local` just means an endpoint Balaur spawns and tends itself\n\nThe binary does not contain models — those are downloaded data files. All application code, templates, and CSS are embedded at compile time.\n\nSee `go.mod` for the dependency tree. Notice there is no web framework, no ORM, no router library — PocketBase provides the HTTP router; Go's standard library covers the rest."
     },
     {
       "file": "main.go",
-      "line": 16,
-      "title": "0.2 — main.go: three lines of wiring",
-      "description": "```go\napp := pocketbase.New()\nmigratecmd.MustRegister(app, app.RootCmd, ...)\napp.OnServe().BindFunc(func(se *core.ServeEvent) error {\n    web.Register(se)\n    return se.Next()\n})\napp.Start()\n```\n\n`main.go` is intentionally thin — three concerns:\n\n1. **Create the app** — PocketBase with default SQLite storage\n2. **Register migrations** — the blank import `_ \"balaur/migrations\"` runs `init()` in that package, registering the schema\n3. **Mount routes** — `web.Register(se)` adds the HTMX UI routes after PocketBase's own routes\n\nEverything else lives in focused packages under `internal/`. AGENTS.md rule: *entrypoints stay focused on orchestration; move logic into `lib/*.go`*."
+      "line": 33,
+      "title": "0.2 — main.go: thin wiring",
+      "description": "```go\napp := pocketbase.New()\nmigratecmd.MustRegister(app, app.RootCmd, ...)\ncli.Register(app, app.RootCmd)        // machine-facing JSON gateway\napp.OnServe().BindFunc(func(se *core.ServeEvent) error {\n    web.Register(se)                   // Hearthwood web gateway\n    registerRecap(se.App)              // hourly summary cron\n    registerNudge(se.App)              // minute nudge cron\n    registerBriefing(se.App)           // daily briefing cron\n    registerSearchIndex(se.App)        // FTS5 sidecar boot\n    ...\n})\napp.Start()\n```\n\n`main.go` is intentionally thin — **orchestration only**. Four concerns:\n\n1. **Create the app** — PocketBase with default SQLite storage\n2. **Register migrations** — the blank import `_ \"balaur/migrations\"` runs `init()` in that package, registering the schema\n3. **Register gateways** — `cli.Register` (JSON) and `web.Register` (HTMX) both call `internal/turn` internally; they only render its events differently\n4. **Wire background jobs** — recap, nudge, briefing, and search index all registered after serve is established\n\nEverything else lives in focused packages under `internal/`. AGENTS.md rule: *gateways adapt; they never re-implement.*"
     },
     {
       "file": "migrations/1749600000_init.go",
       "line": 10,
       "title": "0.3 — Schema as code",
-      "description": "```go\nfunc init() {\n    m.Register(InitCollections, dropCollections)\n}\n```\n\n`init()` is a special Go function that runs automatically when the package is imported — before `main()`. Here it registers the migration with PocketBase's migration runner.\n\nThe filename prefix `1749600000` is a Unix timestamp — migrations run in filename order (alphabetically), so the timestamp ensures correct sequence as you add more migrations later.\n\n`InitCollections` creates all 7 collections: `conversations`, `messages`, `memories`, `skills`, `heads`, `grants`, `audit_log`. All with owner-only API rules — no anonymous or cross-user access.\n\n**Explore the schema:** open `pb_data/data.db` in any SQLite viewer after running the server once, and browse the `_collections` table."
+      "description": "```go\nfunc init() {\n    m.Register(InitCollections, dropCollections)\n}\n```\n\n`init()` is a special Go function that runs automatically when the package is imported — before `main()`. Here it registers the migration with PocketBase's migration runner.\n\nThe filename prefix `1749600000` is a Unix timestamp — migrations run in filename order (alphabetically), so the timestamp ensures correct sequence as you add more migrations later. There are currently **19 migration files** in the repo (the additional files after init add knowledge, summaries, LLM settings, tasks, trackers, extensions, boards, and more).\n\n`InitCollections` creates the foundational collections: `conversations`, `messages`, `memories`, `skills`, `heads`, `grants`, `audit_log`. All with owner-only API rules — no anonymous or cross-user access.\n\n**Explore the schema:** open `pb_data/data.db` in any SQLite viewer after running the server once, and browse the `_collections` table."
     },
     {
       "file": "internal/llm/llm.go",
-      "line": 41,
+      "line": 42,
       "title": "0.4 — Package map: internal/llm",
-      "description": "Balaur's single seam to language models. Two files:\n\n- `llm.go` — the `Client` interface and shared types (`Message`, `Chunk`, `ToolCall`, `ToolSpec`)\n- `kronk.go` — local inference: `KronkClient` loads a GGUF model in-process via Kronk\n- `openai.go` — remote inference: `OpenAIClient` talks to any OpenAI-compatible HTTP endpoint\n\nEverything above this package is provider-agnostic. The `Loop` in `internal/agent` holds a `llm.Client` — it never knows which implementation is running.\n\n**Tour 01** covers this package in depth.\n\nProvider choice is explicit (env vars `BALAUR_CHAT_MODEL` or `BALAUR_REMOTE_URL`). Balaur never auto-routes."
+      "description": "Balaur's single seam to language models. Three files:\n\n- `llm.go` — the `Client` interface and shared types (`Message`, `Chunk`, `ToolCall`, `ToolSpec`)\n- `env.go` — reads env-var config (`BALAUR_CHAT_MODEL`, default model URL/path)\n- `openai.go` — the one concrete client: talks to any OpenAI-compatible HTTP endpoint (local or remote)\n\nThere is no in-process inference library. Local inference is served by a **llamafile subprocess** in `internal/llama`, reached through the same `OpenAIClient` the remote providers use. The `Embed` method exists on the interface for future use; today only the chat path is exercised.\n\nEverything above this package is provider-agnostic. The `Loop` in `internal/agent` holds a `llm.Client` and never knows which implementation is running.\n\n**Tour 01** covers this package in depth."
+    },
+    {
+      "file": "internal/llama/supervisor.go",
+      "line": 37,
+      "title": "0.5 — Package map: internal/llama",
+      "description": "The llamafile subprocess supervisor. One file: `supervisor.go`.\n\n`Supervisor` owns at most one running llamafile process for the whole binary:\n\n- `EnsureServer` spawns the engine, health-probes `/health`, and returns the OpenAI base URL\n- `Stop` sends SIGKILL to the process group — called from `main.go`'s `OnTerminate` hook\n- `LocalClient` wraps `Supervisor` behind the `llm.Client` interface: it lazily calls `EnsureServer` on first chat, then delegates every `ChatStream` and `Embed` call to an `OpenAIClient` pointed at the running engine\n\nBoth fat llamafiles (`.llamafile` — engine + weights in one file, run via `/bin/sh`) and bare GGUFs (separate engine binary + `-m` flag) are supported.\n\n**Tour 02** covers the goroutine and channel patterns used here."
     },
     {
       "file": "internal/agent/agent.go",
       "line": 71,
-      "title": "0.5 — Package map: internal/agent",
-      "description": "The conversation loop: `messages → model → tool calls → tool results → model …` until the model answers in plain text.\n\n- `agent.go` — `Loop.Run()`, the orchestrator\n- `agent_test.go` — 4 tests with a `fakeClient`, no real model needed\n\nThe loop has no knowledge of PocketBase, HTTP, or the UI. It takes a `llm.Client`, a list of `Tool`s, and an `emit func(Event)` callback — then drives the conversation. The caller decides what to do with events (stream HTML, append to a slice, write to a database).\n\n**Tour 03** covers the loop step by step.\n**Tour 04** covers the tests."
+      "title": "0.6 — Package map: internal/agent",
+      "description": "The conversation loop: `messages → model → tool calls → tool results → model …` until the model answers in plain text.\n\n- `agent.go` — `Loop.Run()`, the orchestrator\n- `agent_test.go` — 4 tests with a `fakeClient`, no real model needed\n\nThe loop has no knowledge of PocketBase, HTTP, or the UI. It takes a `llm.Client`, a list of `Tool`s, and an `emit func(Event)` callback — then drives the conversation. The caller decides what to do with events (stream HTML fragments, append to a slice, write to a database).\n\nEvent kinds: `text`, `reasoning`, `tool_start`, `tool_result`, `done`, `error`.\n\n**Tour 03** covers the loop step by step.\n**Tour 04** covers the tests."
     },
     {
       "file": "internal/heads/heads.go",
       "line": 1,
-      "title": "0.6 — Package map: internal/heads",
+      "title": "0.7 — Package map: internal/heads",
       "description": "Sub-agent identity and the security boundary.\n\n- `heads.go` — `Spawn`, `Resolve`, `Merge`, `Revoke`: the lifecycle of a head (sub-agent)\n- `scoped.go` — `Scoped`: the **only** sanctioned data path for code acting as a head\n- `heads_test.go` — integration tests proving access denial works and is audited\n\nThe critical invariant: Go-side PocketBase access bypasses API rules. So tool code running as a head must call `AsHead(app, head).Records(...)` — not `app.FindRecordsByFilter(...)`. The `Scoped` type enforces this at the API level.\n\n**Tour 05** covers this in full, including running the security proof test."
-    },
-    {
-      "file": "internal/tools/os.go",
-      "line": 1,
-      "title": "0.7 — Package map: internal/tools",
-      "description": "The four OS access tools: `read`, `write`, `edit`, `bash`.\n\nAll four are **disabled by default**. Set `BALAUR_OS_ACCESS=1` to enable them. Every invocation is written to `audit_log` — both allowed and failed calls.\n\nEach tool is a `agent.Tool` struct with:\n- A `Spec` describing the tool to the model (name, description, JSON Schema for arguments)\n- An `Execute` function literal containing the actual OS operation\n\nThis file is a good place to see function literals, `encoding/json.Unmarshal` for parsing tool arguments, `exec.CommandContext` for running shell commands, and the audit pattern in practice."
     },
     {
       "file": "internal/web/web.go",
       "line": 1,
       "title": "0.8 — Package map: internal/web",
-      "description": "The HTMX UI layer.\n\n- `web.go` — `Register()` mounts routes; `handlers` struct holds app + templates\n- `chat.go` — `POST /ui/chat`: receives a user message, streams HTML fragments back\n\nThe UI is server-rendered `html/template` pages. HTMX swaps fragments into the DOM — no JS framework, no build step in the product path. The PocketBase admin dashboard stays at `/_/` for superuser data inspection.\n\nThe `web/` directory at the root holds the embedded assets:\n- `web/static/basm.css` — the canonical design token source (DESIGN.md)\n- `web/static/htmx.min.js` — vendored, no CDN at runtime\n- `web/templates/home.html` — the single-page shell\n- `web/embed.go` — exposes the `embed.FS` so the binary includes them"
+      "description": "The **Hearthwood** HTMX UI layer — one of two gateways over `internal/turn`.\n\n- `web.go` — `Register()` mounts routes; `handlers` struct holds app + templates; `guardLocalUI` is the DNS-rebinding + CSRF defence\n- `chat.go` — `POST /ui/chat`: streams HTML fragments back over chunked response\n- `cards.go` — `GET /ui/cards/{type}`: typed card registry endpoint (10 card types)\n- `boards.go` — `GET /boards/{id}`: owner-composed dashboards of typed cards\n- `tasks.go` — `questGroup`, the quest-log rail, OOB nudge and quest swaps\n- `knowledge.go`, `life.go`, `recap.go`, `day.go`, `journal.go`, `headsmgmt.go`, `profile.go`, `models.go` — domain pages\n\nThe `web/` directory at the root holds the embedded assets:\n- `web/static/basm.css` — the canonical Hearthwood design token source\n- `web/static/htmx.min.js` — vendored, no CDN at runtime\n- `web/static/board.js` — drag/resize/pack for boards\n- `web/templates/` — all html/template files\n- `web/embed.go` — exposes the `embed.FS` so the binary includes them\n\n**Tour 07** covers the Hearthwood gateway in depth.\n**Tour 08** covers the typed card/board stack."
     },
     {
-      "file": "internal/search/fts5_test.go",
+      "file": "internal/cli/cli.go",
       "line": 1,
-      "title": "0.9 — Package map: internal/search (spike)",
-      "description": "This package currently contains one thing: a **spike test** that proves FTS5 full-text search works under the `ncruces/go-sqlite3` driver.\n\nPocketBase's default driver (`modernc.org/sqlite`) does **not** ship with FTS5. The `ncruces` driver is WASM-based, CGO-free, and includes FTS5. When vault recall lands, the driver will be wired into PocketBase's `DBConnect` config (officially documented — Tour 01 step 1.7 mentions the pattern).\n\nUntil then, it's a test-only dependency that adds nothing to the binary. The test documents the decision and protects against regressions if the driver changes.\n\n**Run it:**\n```\ngo test ./internal/search/ -v\n```"
+      "title": "0.9 — Package map: internal/cli",
+      "description": "The machine-facing JSON gateway — the second surface over `internal/turn`.\n\nEvery command prints one JSON envelope on stdout:\n```json\n{\"v\":1,\"kind\":\"<command>.<subcommand>\",\"data\":{…}}\n```\n\n`v` is the CLI API version (integer; bumped only on breaking change). `kind` is `<command>` or `<command>.<subcommand>`. `data` is whatever the command emits. Additive fields inside `data` are free; renames or removals bump `v`.\n\nCommands: `chat`, `task`, `memory`, `skill`, `life`, `journal`, `day`, `recap`, `history`, `audit`, `verify`, `model`, `self`, `ext`, `doctor`.\n\n`balaur doctor` preflights the box with no model calls: data dir writable, core collections present, model readiness (non-fatal), OS-access gate state, extension count.\n\n**Tour 10** covers the CLI API in detail."
     }
   ]
 }

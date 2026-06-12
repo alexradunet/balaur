@@ -1,0 +1,49 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "09 — Recall & Search: FTS5 Memory Index",
+  "description": "How Balaur finds relevant memories for each conversation turn: two-tier context injection, the recallTerms heuristic, the FTS5 sidecar index lifecycle (boot rebuild, record hooks, disposability), and the LIKE fallback that keeps recall live even without the index.",
+  "steps": [
+    {
+      "file": "internal/knowledge/context.go",
+      "line": 9,
+      "title": "9.1 — Two-tier injection policy",
+      "description": "```\n// tier 1 (upfront): active memories with importance >= 4, capped.\n//   The things the companion should never forget: who you are, hard\n//   constraints, standing preferences.\n// tier 2 (recall): active memories matching the current user message,\n//   capped. Cheap LIKE relevance today; the seam stays put when FTS5 or\n//   embeddings land.\n//\n// Skills are indexed, not injected: ...\n```\n\nEvery turn pays two costs:\n- **Tier 1 (always-paid, upfront):** up to 12 active memories with importance ≥ 4. The importance pips on each memory card (1–5) are the owner's direct control over this budget — a pip-4 memory is always in context; a pip-2 memory only appears if recalled.\n- **Tier 2 (per-message, recall):** up to 6 active memories that match the current message. Cost is proportional to relevance — irrelevant turns pay nothing for recall.\n\nSkills are never injected into the prompt body: only `name + when_to_use` lines appear, and the `skill` tool loads the full content on demand. This keeps prompts inspectable and token budgets under owner control."
+    },
+    {
+      "file": "internal/knowledge/context.go",
+      "line": 89,
+      "title": "9.2 — recallTerms: cheapest possible relevance",
+      "description": "```go\nfunc recallTerms(msg string) []string {\n    words := strings.FieldsFunc(strings.ToLower(msg), func(r rune) bool {\n        return !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r >= 0x80)\n    })\n    // deduplicate, keep words ≥ 4 chars, sort longest first, keep top 3\n    ...\n}\n```\n\n`recallTerms` reduces a chat message to its 3 longest distinct words (≥4 characters). The assumption: longer words are more topically specific and pair well with both LIKE matching and FTS5 token matching.\n\nThis is deliberately a proxy, not a real relevance model. The comment says so: \"Replaced wholesale when real ranking lands; callers won't notice.\" The function is not exported — changing it is an internal decision that doesn't affect the `BuildContext` API.\n\nThe 4-character minimum filters out stop words (`the`, `and`, `for`) without maintaining a stop-word list. Unicode characters above `0x80` pass through — non-ASCII words are welcome."
+    },
+    {
+      "file": "internal/knowledge/knowledge.go",
+      "line": 231,
+      "title": "9.3 — SearchActive: FTS5 fast path + LIKE fallback",
+      "description": "```go\nfunc SearchActive(app core.App, terms []string, limit int) ([]*core.Record, error) {\n    // FTS5 fast path\n    if raw, ok := app.Store().GetOk(search.StoreKey); ok {\n        if ix, ok := raw.(*search.Index); ok && ix != nil {\n            ids, err := ix.Query(terms, limit)\n            if err == nil && len(ids) > 0 {\n                // fetch by ids, filter to active, preserve bm25 rank order\n                return active, nil\n            }\n        }\n    }\n    // LIKE fallback\n    params := dbx.Params{}\n    var clauses []string\n    for i, t := range terms {\n        clauses = append(clauses,\n            fmt.Sprintf(\"title ~ {:%[1]s} || content ~ {:%[1]s} || ...\", key))\n    }\n    ...\n}\n```\n\nTwo paths, one API:\n- **FTS5 fast path:** reads the `*search.Index` singleton from `app.Store()` (set by `registerSearchIndex` in `main.go`). The index holds `memories_fts` with bm25 ranking — results are returned in relevance order, not recency.\n- **LIKE fallback:** plain PocketBase `FindRecordsByFilter` with `||`-chained LIKE clauses. Slower (full-table scan), unranked, but always available.\n\nThe fallback is not a degraded mode — it's the original implementation, unchanged. The FTS5 path is purely additive. Deleting `pb_data/search.db` makes Balaur fall back to LIKE without any configuration change."
+    },
+    {
+      "file": "internal/search/index.go",
+      "line": 1,
+      "title": "9.4 — The FTS5 sidecar index",
+      "description": "```go\n// Package search provides the FTS5 memory recall index — a rebuildable\n// sidecar SQLite database backed by the ncruces/go-sqlite3 wazero driver\n// (CGO-free, FTS5 included).\n```\n\n`pb_data/search.db` is a **separate SQLite database** from PocketBase's `pb_data/data.db`. It holds one FTS5 virtual table:\n\n```sql\nCREATE VIRTUAL TABLE IF NOT EXISTS memories_fts\nUSING fts5(id UNINDEXED, title, content, when_to_use, category)\n```\n\nWhy a separate database? PocketBase's default SQLite driver (`modernc.org/sqlite`) does not ship with FTS5. The `ncruces/go-sqlite3` driver (WASM-based, CGO-free) does include FTS5 — but it must be registered as a separate `database/sql` driver. Running both drivers against the same database file would be unsafe.\n\nThe `ncruces` driver uses wazero (WebAssembly runtime in Go) — no C compiler, no llvm, no platform-specific build requirements. The WASM SQLite binary is embedded in the Go binary.\n\nThe index is **disposable**: it is rebuilt from PocketBase data on boot and stays eventually consistent via record hooks. Deleting it is always safe."
+    },
+    {
+      "file": "internal/search/index.go",
+      "line": 50,
+      "title": "9.5 — Rebuild: idempotent boot operation",
+      "description": "```go\nfunc (ix *Index) Rebuild(app core.App) error {\n    tx, err := ix.db.Begin()\n    ...\n    if _, err := tx.Exec(`DELETE FROM memories_fts`); err != nil { tx.Rollback(); ... }\n    recs, err := app.FindRecordsByFilter(\"memories\", \"status = 'active'\", ...)\n    ...\n    for _, r := range recs {\n        stmt.Exec(r.Id, r.GetString(\"title\"), ...)\n    }\n    return tx.Commit()\n}\n```\n\n`Rebuild` is idempotent: it drops all rows and refills from the current active memories. Safe to run on boot even after a partial write (crash mid-rebuild). The entire rebuild runs in one transaction — no partial state is visible.\n\nOnly `status = 'active'` memories are indexed. Proposed, archived, and rejected memories never appear in search results — consistent with the LIKE fallback's behaviour."
+    },
+    {
+      "file": "internal/search/index.go",
+      "line": 126,
+      "title": "9.6 — Query: bm25-ranked retrieval",
+      "description": "```go\nfunc (ix *Index) Query(terms []string, limit int) ([]string, error) {\n    // Build: \"term1\" OR \"term2\" (FTS5 match expression, double-quote-enclosed)\n    // Escape embedded double-quotes by doubling (FTS5 spec §3.1)\n    matchExpr := strings.Join(quoted, \" OR \")\n    rows, err := ix.db.Query(\n        `SELECT id FROM memories_fts WHERE memories_fts MATCH ? ORDER BY rank LIMIT ?`,\n        matchExpr, limit,\n    )\n    ...\n}\n```\n\nFTS5's `rank` column is a bm25 score (negative — smaller is better). `ORDER BY rank` returns the most relevant memories first.\n\nTerms are wrapped in double-quotes so FTS5 treats them as literal string tokens, not operators. Embedded double-quotes in a term are escaped by doubling (`\"foo\"bar\"` → `\"foo\"\"bar\"`). This prevents a user message containing an FTS5 operator keyword from injecting query syntax.\n\nThe result is a list of **memory IDs**, not records. `SearchActive` then calls `app.FindRecordsByIds` to fetch the full records, filters defensively to `status = 'active'` (the index may lag briefly after a status change), and re-sorts by the FTS rank order (since `FindRecordsByIds` returns unordered)."
+    },
+    {
+      "file": "main.go",
+      "line": 210,
+      "title": "9.7 — registerSearchIndex: boot + hooks",
+      "description": "```go\nfunc registerSearchIndex(app core.App) {\n    dbPath := filepath.Join(app.DataDir(), \"search.db\")\n\n    openAndRebuild := func() (*search.Index, error) {\n        ix, err := search.Open(dbPath)\n        ...\n        ix.Rebuild(app)\n        return ix, nil\n    }\n\n    ix, err := openAndRebuild()\n    if err != nil {\n        // Corrupt or unreadable — delete and retry once.\n        os.Remove(dbPath)\n        ix, err = openAndRebuild()\n        if err != nil {\n            // Give up — LIKE fallback active.\n            return\n        }\n    }\n\n    app.Store().Set(search.StoreKey, ix)\n\n    upsertHook := func(e *core.RecordEvent) error {\n        idx.Upsert(e.Record)\n        return e.Next()\n    }\n    deleteHook := func(e *core.RecordEvent) error {\n        idx.Delete(e.Record.Id)\n        return e.Next()\n    }\n\n    app.OnRecordAfterCreateSuccess(\"memories\").BindFunc(upsertHook)\n    app.OnRecordAfterUpdateSuccess(\"memories\").BindFunc(upsertHook)\n    app.OnRecordAfterDeleteSuccess(\"memories\").BindFunc(deleteHook)\n}\n```\n\nThe lifecycle:\n1. **Open** the sidecar database (creates if absent)\n2. **Rebuild** from active memories (full index from PocketBase)\n3. **Retry once** if the file was corrupt — delete and retry; if it fails again, log a warning and return without setting `StoreKey`. `SearchActive` will transparently use LIKE.\n4. **Store** the `*Index` singleton in `app.Store()` under `search.StoreKey`\n5. **Bind hooks** on the `memories` collection: create/update → `Upsert`, delete → `Delete`. Hooks keep the index eventually consistent between boots.\n\nThe `OnTerminate` hook in `main.go` calls `ix.Close()` to release the wazero runtime cleanly on shutdown."
+    }
+  ]
+}
