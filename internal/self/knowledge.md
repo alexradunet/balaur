@@ -98,6 +98,17 @@ skill, life, journal, day, recap, history, audit, verify, model, self)
 printing JSON for external harnesses; the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
 
+Typed card registry: Balaur's UI supports 10 parameterized card types at
+GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment
+(HATEOAS). The types are: today (open tasks due today), quests (task list,
+status param), calendar (month grid, month param), timeline (forward days,
+days param), journal (recent entries, limit param), measure (numeric sparkline
+for a life kind, kind required + days param), lines (text entries for a life
+kind, kind required + limit param), memory (active memories, query + limit
+params), skills (active skills, limit param), heads (active heads, no params).
+GET /ui/cards lists the full palette. The registry lives in internal/cards
+(no web imports); renderers live in internal/web/cards.go.
+
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. A local model (provider kind

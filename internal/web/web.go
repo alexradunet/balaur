@@ -217,6 +217,9 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/heads/{id}/chat", h.headChatPage)
 	se.Router.POST("/ui/heads/{id}/chat", h.headChat)
 	se.Router.POST("/ui/heads/{id}/avatar", h.setHeadAvatar)
+	// Typed card registry (plan 028) — parameterized server resources.
+	se.Router.GET("/ui/cards", h.uiCardPalette)
+	se.Router.GET("/ui/cards/{type}", h.uiCard)
 	return nil
 }
 
