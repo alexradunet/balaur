@@ -44,8 +44,8 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | DONE (reviewed; merged to main `bba4494`) |
 | 025 | Hearthwood (Basm v2) visual foundation: tokens, fonts, icons | P1 | M | LOW–MED | — | — | DONE (reviewed; merged to main `58658da`) |
 | 026 | Immersive chat: portraits, nameplates, parchment dialogue | P1 | M | MED | 025 | — | DONE (reviewed; merged to main `f5dd964`) |
-| 027 | Dialogue choices: numbered server-rendered replies | P2 | M | MED | 026 | — | TODO |
-| 028 | Typed card registry: /ui/cards/{type} (HATEOAS foundation) | P1 | L | MED | 025 | — | TODO |
+| 027 | Dialogue choices: numbered server-rendered replies | P2 | M | MED | 026 | — | DONE (reviewed; merged to main `3d68389`) |
+| 028 | Typed card registry: /ui/cards/{type} (HATEOAS foundation) | P1 | L | MED | 025 | — | DONE (reviewed; merged to main `895a66f`) |
 | 029 | Boards: owner-composed dashboards of typed cards | P2 | M–L | MED | 028 | — | TODO |
 | 030 | Agent UI tools: card_show + board_compose | P2 | M | MED | 028, 029 (027 soft) | — | TODO |
 | 031 | The candle: immersive /journal page (free + guided) | P3 | M | LOW | 025 | — | TODO |
