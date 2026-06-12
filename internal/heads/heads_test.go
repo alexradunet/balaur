@@ -245,6 +245,41 @@ func TestCrossHeadIsolation(t *testing.T) {
 	}
 }
 
+func TestRecordsCapResultSize(t *testing.T) {
+	app := newApp(t)
+
+	head, _, err := Spawn(app, "cap-head", "tests result cap", time.Hour, []Grant{
+		{Target: "memories", Read: true},
+	})
+	if err != nil {
+		t.Fatalf("Spawn: %v", err)
+	}
+	scoped := AsHead(app, head)
+
+	// Seed 3 memory records.
+	for _, title := range []string{"mem-a", "mem-b", "mem-c"} {
+		seedMemory(t, app, title)
+	}
+
+	// limit=0 maps to cap, not zero results.
+	rows, err := scoped.Records("memories", "", "", 0, nil)
+	if err != nil {
+		t.Fatalf("Records(limit=0): %v", err)
+	}
+	if len(rows) != 3 {
+		t.Errorf("expected 3 rows with limit=0 (uses cap), got %d", len(rows))
+	}
+
+	// limit=10_000 is silently capped to maxScopedRecords; 3 rows fit within cap.
+	rows2, err := scoped.Records("memories", "", "", 10_000, nil)
+	if err != nil {
+		t.Fatalf("Records(limit=10000): %v", err)
+	}
+	if len(rows2) > maxScopedRecords {
+		t.Errorf("result size %d exceeds maxScopedRecords=%d", len(rows2), maxScopedRecords)
+	}
+}
+
 func TestRevokeClosesHead(t *testing.T) {
 	app := newApp(t)
 
