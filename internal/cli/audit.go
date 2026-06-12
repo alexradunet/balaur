@@ -1,9 +1,10 @@
 package cli
 
 import (
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
+
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 func auditCmd(app core.App) *cobra.Command {
@@ -18,17 +19,7 @@ func auditCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&action, "action", "", "filter: action contains this text (e.g. task., knowledge., os.)")
 	cmd.Flags().StringVar(&actor, "actor", "", "filter: exact actor (e.g. tasks, owner, model, journal)")
 	cmd.RunE = run(app, func(cmd *cobra.Command, args []string) (any, error) {
-		filter := "id != ''"
-		params := dbx.Params{}
-		if action != "" {
-			filter += " && action ~ {:action}"
-			params["action"] = action
-		}
-		if actor != "" {
-			filter += " && actor = {:actor}"
-			params["actor"] = actor
-		}
-		recs, err := app.FindRecordsByFilter("audit_log", filter, "-@rowid", limit, 0, params)
+		recs, err := store.ListAudit(app, action, actor, limit)
 		if err != nil {
 			return nil, err
 		}

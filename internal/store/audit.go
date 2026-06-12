@@ -3,7 +3,10 @@
 // caller appears (suckless: one source of truth per concern).
 package store
 
-import "github.com/pocketbase/pocketbase/core"
+import (
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
+)
 
 // Audit appends one row to audit_log. headID may be empty for actions not
 // tied to a sub-agent. Auditing must never take the runtime down, so all
@@ -25,4 +28,21 @@ func Audit(app core.App, headID, actor, action, target string, allowed bool, det
 		rec.Set("detail", detail)
 	}
 	_ = app.Save(rec)
+}
+
+// ListAudit reads the audit log, newest first. action filters by
+// containment (matches the CLI's documented examples: task., os.);
+// actor by equality; both optional ("" skips).
+func ListAudit(app core.App, action, actor string, limit int) ([]*core.Record, error) {
+	filter := "id != ''"
+	params := dbx.Params{}
+	if action != "" {
+		filter += " && action ~ {:action}"
+		params["action"] = action
+	}
+	if actor != "" {
+		filter += " && actor = {:actor}"
+		params["actor"] = actor
+	}
+	return app.FindRecordsByFilter("audit_log", filter, "-@rowid", limit, 0, params)
 }
