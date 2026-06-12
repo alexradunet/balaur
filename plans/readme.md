@@ -38,7 +38,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 017 | Conversations partial-unique indexes + ForHead race retry | P2 | S–M | MED | 016, 020 | — | DONE (reviewed) |
 | 018 | Docs sync: knowledge.md/README/DESIGN ledger ← sub-head chat | P2 | S | LOW | — | — | DONE (reviewed; merged to main) |
 | 019 | Design spike: scoped head tools through grants (doc only) | P3 | M | LOW | — | — | DONE (reviewed; merged to main) |
-| 021 | Access Balaur over NetBird via host daemon (docs only) | P2 | S | LOW | — | — | TODO |
+| 021 | Access Balaur over NetBird via host daemon (docs only) | P2 | S | LOW | — | — | DONE (reviewed; merged to main `ae07f65`) |
 | 022 | Settings page: sidebar shell for Profile/Skills/Models | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `431727e`) |
 | 023 | GGUF download manager (background, progress, cancel, delete) | P2 | M–L | MED | 022 | — | DONE (reviewed; merged to main `b47b451`) |
 | 024 | OpenAI provider manager (list/edit/delete, key redacted) | P2 | M | MED | 022, 023 | — | DONE (reviewed; merged to main `bba4494`) |
@@ -56,6 +56,8 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 036 | Board auto-compaction (pack upward after move/resize) | P3 | M | MED | 032 | — | DONE (reviewed; merged to main `e2aba69`) |
 | 037 | Quest rail OOB refresh after panel transitions | P3 | S–M | LOW–MED | 035 | — | DONE (reviewed; merged to main `63947f1`) |
 | 038 | Draft composer live-enable on model-ready | P3 | S | LOW–MED | 034 | — | DONE (reviewed; merged to main `3969109`) |
+| 039 | FTS5 memory recall: sidecar index, LIKE fallback | P2 | M–L | MED | — | — | DONE (reviewed; merged to main `c2b6472`; binary +15.2MB accepted — embedded SQLite-WASM) |
+| 040 | CLI as stable API: v1 envelope + balaur doctor | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `e8fd80d`; breaking JSON shape change, deliberate) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
