@@ -2,8 +2,11 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/storetest"
@@ -332,5 +335,270 @@ func TestValidateCards(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "card[0]") {
 		t.Errorf("ValidateCards invalid type: error missing card index: %v", err)
+	}
+}
+
+// -- board_add_card tool tests --
+
+func TestBoardAddCardHappyPath(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	// Create a board first.
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"Trip","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose: %v", err)
+	}
+
+	// Add a card to it.
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"Trip","type":"quests","params":{"status":"open"}}`)
+	if err != nil {
+		t.Fatalf("board_add_card: unexpected Go error: %v", err)
+	}
+	if !strings.Contains(out, "Quest log") {
+		t.Errorf("board_add_card: result missing card label: %q", out)
+	}
+	if !strings.Contains(out, "Trip") {
+		t.Errorf("board_add_card: result missing board name: %q", out)
+	}
+	if !strings.Contains(out, "/boards/") {
+		t.Errorf("board_add_card: result missing /boards/ URL: %q", out)
+	}
+
+	// Verify the board now has 2 cards.
+	recs, findErr := app.FindRecordsByFilter("boards", "name = 'Trip'", "", 0, 0, nil)
+	if findErr != nil || len(recs) == 0 {
+		t.Fatal("board_add_card: board record not found")
+	}
+	var cardList []cards.Card
+	raw := recs[0].GetString("cards")
+	if jsonErr := json.Unmarshal([]byte(raw), &cardList); jsonErr != nil {
+		t.Fatalf("board_add_card: decoding cards JSON: %v", jsonErr)
+	}
+	if len(cardList) != 2 {
+		t.Errorf("board_add_card: expected 2 cards after append, got %d", len(cardList))
+	}
+	if cardList[0].Type != "today" {
+		t.Errorf("board_add_card: first card changed, want today, got %q", cardList[0].Type)
+	}
+	if cardList[1].Type != "quests" {
+		t.Errorf("board_add_card: second card wrong, want quests, got %q", cardList[1].Type)
+	}
+}
+
+func TestBoardAddCardWritesAuditLog(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"Audit board","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose: %v", err)
+	}
+
+	_, err = addTool.Execute(context.Background(),
+		`{"board":"Audit board","type":"heads"}`)
+	if err != nil {
+		t.Fatalf("board_add_card: unexpected Go error: %v", err)
+	}
+
+	recs, listErr := app.FindRecordsByFilter("audit_log", "action = 'board_add_card'", "", 0, 0, nil)
+	if listErr != nil {
+		t.Fatalf("audit_log query: %v", listErr)
+	}
+	if len(recs) == 0 {
+		t.Fatal("board_add_card: no audit_log record written")
+	}
+}
+
+func TestBoardAddCardResolveCaseInsensitive(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"My Board","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose: %v", err)
+	}
+
+	// Use lowercased name — should still resolve.
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"my board","type":"today"}`)
+	if err != nil {
+		t.Fatalf("board_add_card case-insensitive: unexpected Go error: %v", err)
+	}
+	if !strings.Contains(out, "My Board") {
+		t.Errorf("board_add_card case-insensitive: board not found, got: %q", out)
+	}
+}
+
+func TestBoardAddCardResolveBySubstring(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"Holiday Travel 2026","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose: %v", err)
+	}
+
+	// Match by substring "travel".
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"travel","type":"today"}`)
+	if err != nil {
+		t.Fatalf("board_add_card substring: unexpected Go error: %v", err)
+	}
+	if !strings.Contains(out, "Holiday Travel 2026") {
+		t.Errorf("board_add_card substring: board not found, got: %q", out)
+	}
+}
+
+func TestBoardAddCardAmbiguousNameReturnsText(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	// Create two boards whose names both contain "plan".
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"Trip plan","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose trip plan: %v", err)
+	}
+	_, err = composeTool.Execute(context.Background(),
+		`{"name":"Gym plan","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose gym plan: %v", err)
+	}
+
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"plan","type":"today"}`)
+	if err != nil {
+		t.Fatalf("board_add_card ambiguous: unexpected Go error: %v", err)
+	}
+	// Must return a text error, not succeed.
+	if !strings.Contains(out, "multiple") && !strings.Contains(out, "ambiguous") && !strings.Contains(out, "specific") {
+		t.Errorf("board_add_card ambiguous: expected disambiguation message, got: %q", out)
+	}
+	if strings.Contains(out, "/boards/") && !strings.Contains(out, "multiple") {
+		t.Errorf("board_add_card ambiguous: unexpectedly succeeded, got: %q", out)
+	}
+}
+
+func TestBoardAddCardUnknownBoardReturnsText(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	// Create one board so we get a useful listing.
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"Existing board","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose: %v", err)
+	}
+
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"nonexistent xyz","type":"today"}`)
+	if err != nil {
+		t.Fatalf("board_add_card unknown: unexpected Go error: %v", err)
+	}
+	if !strings.Contains(out, "no board matches") {
+		t.Errorf("board_add_card unknown: expected 'no board matches', got: %q", out)
+	}
+	// Must list existing boards.
+	if !strings.Contains(out, "Existing board") {
+		t.Errorf("board_add_card unknown: expected board listing, got: %q", out)
+	}
+}
+
+func TestBoardAddCardInvalidCardTypeReturnsText(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	composeTool := findTool(t, ts, "board_compose")
+	addTool := findTool(t, ts, "board_add_card")
+
+	_, err := composeTool.Execute(context.Background(),
+		`{"name":"My board","cards":[{"type":"today"}]}`)
+	if err != nil {
+		t.Fatalf("board_compose: %v", err)
+	}
+
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"My board","type":"nonexistent_type"}`)
+	if err != nil {
+		t.Fatalf("board_add_card invalid card: unexpected Go error: %v", err)
+	}
+	if strings.Contains(out, "/boards/") {
+		t.Errorf("board_add_card invalid card: unexpectedly succeeded, got: %q", out)
+	}
+	if !strings.Contains(out, "invalid card") && !strings.Contains(out, "unknown card type") {
+		t.Errorf("board_add_card invalid card: expected error text, got: %q", out)
+	}
+}
+
+func TestBoardAddCardLayoutFieldsPreserved(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := UITools(app)
+	addTool := findTool(t, ts, "board_add_card")
+
+	// Seed a board directly with a card that has layout fields x and w.
+	col, err := app.FindCollectionByNameOrId("boards")
+	if err != nil {
+		t.Fatalf("find boards collection: %v", err)
+	}
+	// Seed JSON includes a card with x=2,w=4 — plan 032 fields.
+	seedJSON := `[{"type":"today","x":2,"w":4}]`
+	rec := core.NewRecord(col)
+	rec.Set("name", "Layout board")
+	rec.Set("sort", 0)
+	rec.Set("cards", seedJSON)
+	if saveErr := app.Save(rec); saveErr != nil {
+		t.Fatalf("save board: %v", saveErr)
+	}
+
+	// Add a new card to the board.
+	out, err := addTool.Execute(context.Background(),
+		`{"board":"Layout board","type":"heads"}`)
+	if err != nil {
+		t.Fatalf("board_add_card layout: unexpected Go error: %v", err)
+	}
+	if !strings.Contains(out, "/boards/") {
+		t.Fatalf("board_add_card layout: unexpected failure: %q", out)
+	}
+
+	// Read back and verify x and w survive on the original card.
+	recs, findErr := app.FindRecordsByFilter("boards", "name = 'Layout board'", "", 0, 0, nil)
+	if findErr != nil || len(recs) == 0 {
+		t.Fatal("board_add_card layout: board record not found")
+	}
+	var cardList []cards.Card
+	raw := recs[0].GetString("cards")
+	if jsonErr := json.Unmarshal([]byte(raw), &cardList); jsonErr != nil {
+		t.Fatalf("board_add_card layout: decoding cards JSON: %v", jsonErr)
+	}
+	if len(cardList) != 2 {
+		t.Fatalf("board_add_card layout: expected 2 cards, got %d", len(cardList))
+	}
+	// Original card must retain its layout fields.
+	if cardList[0].X != 2 {
+		t.Errorf("board_add_card layout: x field lost, want 2, got %d", cardList[0].X)
+	}
+	if cardList[0].W != 4 {
+		t.Errorf("board_add_card layout: w field lost, want 4, got %d", cardList[0].W)
+	}
+	// New card is appended correctly.
+	if cardList[1].Type != "heads" {
+		t.Errorf("board_add_card layout: new card wrong type, want heads, got %q", cardList[1].Type)
 	}
 }

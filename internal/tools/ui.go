@@ -57,9 +57,9 @@ func ParseUICard(s string) (typ, query, rest string, ok bool) {
 	return typ, query, rest, true
 }
 
-// UITools returns the card_show and board_compose tools.
+// UITools returns the card_show, board_compose, and board_add_card tools.
 func UITools(app core.App) []agent.Tool {
-	return []agent.Tool{cardShowTool(app), boardComposeTool(app)}
+	return []agent.Tool{cardShowTool(app), boardComposeTool(app), boardAddCardTool(app)}
 }
 
 func cardShowTool(_ core.App) agent.Tool {
@@ -212,6 +212,126 @@ func boardComposeTool(app core.App) agent.Tool {
 				map[string]any{"name": name, "cards": len(cleaned)})
 
 			return fmt.Sprintf("board raised: %s (%d cards) — /boards/%s", name, len(cleaned), rec.Id), nil
+		},
+	}
+}
+
+func boardAddCardTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("board_add_card",
+			"Add one typed card to an existing board (e.g. 'add my weight to the trip board'). "+
+				"Use board_compose to create a new board instead.",
+			obj(map[string]any{
+				"board": str("Board name or id. Resolved by exact id, then case-insensitive exact name, then case-insensitive substring match."),
+				"type":  str("Card type from the registry (e.g. today, quests, measure)."),
+				"params": map[string]any{
+					"type":                 "object",
+					"description":          "Optional parameters for the card (string values).",
+					"additionalProperties": map[string]any{"type": "string"},
+				},
+			}, "board", "type")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				Board  string            `json:"board"`
+				Type   string            `json:"type"`
+				Params map[string]string `json:"params"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return fmt.Sprintf("board_add_card: bad arguments: %s", err), nil
+			}
+			if args.Params == nil {
+				args.Params = map[string]string{}
+			}
+
+			// Validate the card type and params first.
+			cleaned, err := cards.Validate(args.Type, args.Params)
+			if err != nil {
+				return fmt.Sprintf("board_add_card: invalid card: %s", err), nil
+			}
+
+			// Resolve the board: load all boards and match by id, then name, then substring.
+			all, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+
+			// Helper: build listing for error messages.
+			boardNames := func() string {
+				names := make([]string, 0, len(all))
+				for _, r := range all {
+					names = append(names, r.GetString("name"))
+				}
+				return strings.Join(names, ", ")
+			}
+
+			// Try exact id match first, then case-insensitive exact name, then substring.
+			var matched []*core.Record
+			lq := strings.ToLower(args.Board)
+			for _, r := range all {
+				if r.Id == args.Board {
+					matched = []*core.Record{r}
+					break
+				}
+			}
+
+			// Exact name match (case-insensitive).
+			if len(matched) == 0 {
+				for _, r := range all {
+					if strings.ToLower(r.GetString("name")) == lq {
+						matched = append(matched, r)
+					}
+				}
+			}
+
+			// Substring match (case-insensitive), only if no exact name match.
+			if len(matched) == 0 && lq != "" {
+				for _, r := range all {
+					if strings.Contains(strings.ToLower(r.GetString("name")), lq) {
+						matched = append(matched, r)
+					}
+				}
+			}
+
+			if len(matched) == 0 {
+				return fmt.Sprintf("board_add_card: no board matches %q — boards: %s", args.Board, boardNames()), nil
+			}
+			if len(matched) > 1 {
+				names := make([]string, 0, len(matched))
+				for _, r := range matched {
+					names = append(names, r.GetString("name"))
+				}
+				return fmt.Sprintf("board_add_card: %q matches multiple boards: %s — be more specific", args.Board, strings.Join(names, ", ")), nil
+			}
+			board := matched[0]
+
+			// Decode existing cards, append the new one, re-encode.
+			raw := board.GetString("cards")
+			var existing []cards.Card
+			if raw != "" {
+				if err := json.Unmarshal([]byte(raw), &existing); err != nil {
+					return fmt.Sprintf("board_add_card: decoding board cards: %s", err), nil
+				}
+			}
+
+			newCard := cards.Card{Type: args.Type}
+			if len(cleaned) > 0 {
+				newCard.Params = cleaned
+			}
+			existing = append(existing, newCard)
+
+			encoded, err := json.Marshal(existing)
+			if err != nil {
+				return fmt.Sprintf("board_add_card: encoding cards: %s", err), nil
+			}
+
+			board.Set("cards", string(encoded))
+			if err := app.Save(board); err != nil {
+				return fmt.Sprintf("board_add_card: saving board: %s", err), nil
+			}
+
+			// Audit the mutation.
+			spec, _ := cards.Get(args.Type)
+			store.Audit(app, "", "agent", "board_add_card", board.Id, true,
+				map[string]any{"card_type": args.Type, "board": board.GetString("name")})
+
+			return fmt.Sprintf("added %s to %s — /boards/%s", spec.Label, board.GetString("name"), board.Id), nil
 		},
 	}
 }

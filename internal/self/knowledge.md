@@ -146,6 +146,11 @@ registry — you never author markup, only {type, params} validated by the regis
   board immediately appears at /boards/{id}. Cards are validated by the same
   registry. Every board creation is audited in audit_log with action "board_compose".
   Return value is plain text: "board raised: <name> (<n> cards) — /boards/<id>".
+- board_add_card: adds one typed card to an existing board. Resolves the board
+  by exact id, then case-insensitive exact name, then case-insensitive substring
+  match; ambiguous or missing boards return a plain-text error listing board names.
+  The card is validated by the same registry. Audited in audit_log with action
+  "board_add_card". Return value is plain text: "added <label> to <board name> — /boards/<id>".
 
 The registry vocabulary for both tools is embedded in the tool description at
 registration time — when new card types are added the model sees them for free.
