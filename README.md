@@ -179,6 +179,10 @@ BALAUR_CHAT_MODEL=/path/to/model.gguf go run . serve
 # PocketBase; the active model is selected explicitly.
 ```
 
+**Kronk & llama.cpp**: kronk tracks llama.cpp head and has documented breakage windows upstream. When upstream breaks, set `KRONK_LIB_VERSION` to the last known-good llama.cpp build tag (see kronk's release notes) and document it here.
+
+**Extension engine**: Balaur uses goja (no tags; pins a master commit) for the JavaScript sandbox. Bumping it is a deliberate act—run `go test ./internal/ext/` after changing.
+
 API keys are never rendered back into the UI or audit log, but they live in
 the local PocketBase data directory and backups. Treat `pb_data/` as secret.
 
