@@ -119,18 +119,23 @@ func startServer(enginePath, modelPath string) (*server, error) {
 	}
 
 	serverArgs := []string{
-		"--server", "--nobrowser",
+		"--server",
 		"--host", "127.0.0.1",
 		"--port", strconv.Itoa(port),
 	}
 
-	// A fat llamafile is its own engine: exec it directly. A bare GGUF needs
-	// the separate engine binary and -m.
-	var bin string
+	// A fat llamafile is its own engine; a bare GGUF needs the separate engine
+	// binary and -m.
+	var name string
 	var args []string
 	if isFatLlamafile(modelPath) {
-		bin = modelPath
-		args = serverArgs
+		// A llamafile is an APE (Actually Portable Executable). A raw execve()
+		// of it fails with "exec format error" unless the host registered the
+		// APE binfmt; running it through /bin/sh lets its polyglot header
+		// bootstrap itself, which works everywhere a POSIX shell exists.
+		_ = os.Chmod(modelPath, 0o755)
+		name = "/bin/sh"
+		args = append([]string{modelPath}, serverArgs...)
 	} else {
 		if enginePath == "" {
 			return nil, fmt.Errorf("llamafile engine path is empty")
@@ -138,14 +143,13 @@ func startServer(enginePath, modelPath string) (*server, error) {
 		if _, err := os.Stat(enginePath); err != nil {
 			return nil, fmt.Errorf("llamafile engine not found at %s: set BALAUR_LLAMAFILE or install it under <data>/bin/llamafile", enginePath)
 		}
-		bin = enginePath
+		_ = os.Chmod(enginePath, 0o755)
+		name = enginePath
 		args = append(serverArgs, "-m", modelPath)
 	}
-	// Best effort: a freshly downloaded llamafile may not be executable.
-	_ = os.Chmod(bin, 0o755)
 
 	tail := &ringBuffer{max: 8 * 1024}
-	cmd := exec.Command(bin, args...)
+	cmd := exec.Command(name, args...)
 	cmd.Stdout = tail
 	cmd.Stderr = tail
 	// Own process group so stop() can reap any helper children llamafile spawns.
