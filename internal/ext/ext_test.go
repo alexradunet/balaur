@@ -255,6 +255,50 @@ balaur.registerTool({
 	}
 }
 
+func TestHTTPRedirectsAreNotFollowed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/a":
+			http.Redirect(w, r, "/b", http.StatusMovedPermanently)
+		case "/b":
+			w.WriteHeader(200)
+			_, _ = w.Write([]byte("final"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	setupDir(t)
+	app := storetest.NewApp(t)
+	write(t, app, "redirecttest", `// balaur-extension: tests redirect behaviour
+balaur.registerTool({
+	name: "fetch_a",
+	description: "Fetches /a which redirects to /b.",
+	parameters: {type: "object", properties: {}},
+	handler: function(args) {
+		var res = balaur.http({url: "`+srv.URL+`/a"})
+		return "" + res.status
+	}
+})
+`)
+	Sync(app)
+	if _, err := Approve(app, "redirecttest"); err != nil {
+		t.Fatal(err)
+	}
+	ts := Tools(app, map[string]bool{})
+	if len(ts) != 1 {
+		t.Fatalf("want the fetch_a tool, got %v", toolNames(ts))
+	}
+	out, err := ts[0].Execute(context.Background(), `{}`)
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if out != "301" {
+		t.Errorf("expected status 301 (redirect not followed), got %q", out)
+	}
+}
+
 func TestProposeToolWritesFileAndLedger(t *testing.T) {
 	setupDir(t)
 	app := storetest.NewApp(t)
