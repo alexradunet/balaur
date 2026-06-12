@@ -24,7 +24,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 007 | Docs truth sync (DESIGN/README/knowledge.md/env) | P1 | S | LOW | — | [#22](https://github.com/alexradunet/balaur/issues/22) | TODO |
 | 008 | AGENTS.md PocketBase-seam honesty | P2 | S | LOW | — | [#23](https://github.com/alexradunet/balaur/issues/23) | TODO |
 | 009 | Single-source chat fragments (stream = template) | P2 | M | MED | 004 | [#24](https://github.com/alexradunet/balaur/issues/24) | DONE |
-| 010 | Hardening bundle (api_key Hidden, dev-seed gate, ext redirects, Scoped cap) | P2 | S | LOW | — | [#25](https://github.com/alexradunet/balaur/issues/25) | TODO |
+| 010 | Hardening bundle (api_key Hidden, dev-seed gate, ext redirects, Scoped cap) | P2 | S | LOW | — | [#25](https://github.com/alexradunet/balaur/issues/25) | DONE |
 | 011 | Boundary test gaps + shared llmtest fake | P2 | M | LOW | — | [#26](https://github.com/alexradunet/balaur/issues/26) | DONE |
 | 012 | Calendar-aware monthly streak lapse | P3 | S | LOW | — | [#27](https://github.com/alexradunet/balaur/issues/27) | TODO |
 | 013 | Deps hygiene (goja direct, tidy, kronk pin docs) | P3 | S | LOW–MED | run last on a branch train | [#28](https://github.com/alexradunet/balaur/issues/28) | TODO |
