@@ -85,10 +85,11 @@ database you own and can open with any SQLite tool.
   at wake; quiet days stay quiet. `BALAUR_BRIEFING=0` disables. The model
   also sees a Today block of open commitments in every chat turn, so the
   companion knows your day unprompted.
-- **/tasks — life organization:** the operational list (cards with
-  Done / Snooze / Drop), a month calendar, and a 14-day timeline — the
-  forward mirror of the recap telescope. Calendar and timeline project
-  recurrence rules forward, read-only; actions live on the list cards.
+- **The quests focus — life organization:** the operational list (cards
+  with Done / Snooze / Drop) lives in the quests card's focus
+  (`/focus/quests`); a month calendar and a 14-day timeline are their own
+  cards — the forward mirror of the recap telescope. Calendar and timeline
+  project recurrence rules forward, read-only; actions live on the task cards.
 - **The life log — owner-defined:** Balaur does not decide what a life is
   made of. `log_entry` keeps whatever you track under kinds you invent
   (weight, mood, sleep, pages-read…), numeric or textual, backdatable;
