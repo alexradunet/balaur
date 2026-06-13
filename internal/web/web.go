@@ -268,9 +268,19 @@ func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
 const historyWindow = 60
 
 func (h *handlers) home(e *core.RequestEvent) error {
-	data, err := h.homeData()
+	data, err := h.dockData()
 	if err != nil {
 		return e.InternalServerError("loading home", err)
+	}
+	return h.render(e, "home.html", data)
+}
+
+// dockData assembles the companion-chat view-model (model state + history +
+// recap flag) shared by the home page and the board dock (chat_dock fragment).
+func (h *handlers) dockData() (homeData, error) {
+	data, err := h.homeData()
+	if err != nil {
+		return homeData{}, err
 	}
 	if master, err := conversation.Master(h.app); err == nil {
 		if recs, err := conversation.History(h.app, master.Id, historyWindow); err == nil {
@@ -283,5 +293,12 @@ func (h *handlers) home(e *core.RequestEvent) error {
 			data.HasRecap = oldest.Before(startOfToday)
 		}
 	}
-	return h.render(e, "home.html", data)
+	return data, nil
+}
+
+// isDatastarRequest reports whether the request is a Datastar @get/@post fetch
+// (which expects an SSE patch stream) rather than a full document load. A
+// Datastar fetch advertises Accept: text/event-stream.
+func isDatastarRequest(e *core.RequestEvent) bool {
+	return strings.Contains(e.Request.Header.Get("Accept"), "text/event-stream")
 }

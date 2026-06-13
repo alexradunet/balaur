@@ -2275,3 +2275,62 @@ progress.gguf-progress-bar::-moz-progress-bar {
 .chatbar-slim {
   padding: 8px 6vw;
 }
+
+/* ── Card-first shell: board canvas + persistent companion dock ─────────────
+   The dock is a fixed right rail mounting the master chat (chat_dock); #main
+   keeps clear of it via .with-sidebar. Switching boards patches only #main, so
+   the dock — and its live chat — survives. Below 900px the dock stacks under. */
+:root { --sidebar-w: 360px; }
+
+.with-sidebar { padding-right: calc(var(--sidebar-w) + 4vw); }
+
+#dock {
+  position: fixed;
+  top: 62px;                 /* below the sticky 62px topbar */
+  right: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--chrome-2);
+  background-image: var(--wood-planks), var(--grain-warm);
+  background-size: auto, 4px 4px;
+  border-left: 2px solid var(--outline-2);
+  box-shadow: inset 3px 0 0 var(--bevel-light);
+  z-index: 4;
+  overflow: hidden;
+}
+
+#dock .recap-zone { flex: 0 0 auto; margin: 0; }
+
+/* The chat scroll area fills the rail; avatars/gutter tighten for the width. */
+#dock .chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 12px 6px;
+  --portrait-size: 40px;
+  --chat-gutter: 54px;
+}
+
+#dock .msg-draft { flex: 0 0 auto; margin: 0 10px 8px; }
+
+#dock .chatbar,
+#dock .chatbar-slim {
+  flex: 0 0 auto;
+  position: static;
+  padding: 8px 12px;
+}
+
+#dock #nudge-poll { display: none; }
+
+@media (max-width: 900px) {
+  .with-sidebar { padding-right: 0; }
+  #dock {
+    position: static;
+    width: auto;
+    height: 72vh;
+    border-left: 0;
+    border-top: 2px solid var(--outline-2);
+  }
+}

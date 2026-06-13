@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/cards"
 )
@@ -254,7 +255,18 @@ func (h *handlers) boardsIndex(e *core.RequestEvent) error {
 	return e.Redirect(http.StatusFound, "/boards/"+boards[0].ID)
 }
 
-// boardsPage handles GET /boards/{id} — the full boards page.
+// boardPageData carries a board for the #main canvas plus the companion chat
+// for the persistent dock (chat_dock fragment).
+type boardPageData struct {
+	boardView
+	Title string
+	Dock  homeData
+}
+
+// boardsPage handles GET /boards/{id}. A normal load renders the full shell
+// (board canvas + persistent dock). A Datastar @get (board-tab switch) patches
+// only #main and reflects the URL — the dock, and its live chat, are never
+// touched, so switching boards keeps the conversation alive.
 func (h *handlers) boardsPage(e *core.RequestEvent) error {
 	if err := h.ensureDefaultBoards(); err != nil {
 		return e.InternalServerError("seeding default boards", err)
@@ -276,10 +288,37 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 		return e.NotFoundError("board not found", nil)
 	}
 
-	return h.render(e, "boards.html", boardView{
-		Boards:  boards,
-		Current: current,
-		Specs:   cards.All(),
+	bv := boardView{Boards: boards, Current: current, Specs: cards.All()}
+
+	// Datastar board switch: patch #main only; the dock persists.
+	if isDatastarRequest(e) {
+		sse := datastar.NewSSE(e.Response, e.Request)
+		var b strings.Builder
+		if err := h.tmpl.ExecuteTemplate(&b, "board_main", boardPageData{boardView: bv}); err != nil {
+			return e.InternalServerError("rendering board", err)
+		}
+		if err := sse.PatchElements(b.String(),
+			datastar.WithSelectorID("main"), datastar.WithModeInner()); err != nil {
+			return nil // client gone
+		}
+		if u, err := url.Parse("/boards/" + id); err == nil {
+			_ = sse.ReplaceURL(*u)
+		}
+		// The card slots lazy-load via htmx (hx-trigger="load"); htmx does not
+		// see Datastar-patched DOM, so process #main once. Drops out when the
+		// card registry migrates to Datastar.
+		_ = sse.ExecuteScript("window.htmx&&htmx.process(document.getElementById('main'))")
+		return nil
+	}
+
+	dock, err := h.dockData()
+	if err != nil {
+		return e.InternalServerError("loading companion dock", err)
+	}
+	return h.render(e, "boards.html", boardPageData{
+		boardView: bv,
+		Title:     current.Name + " · Balaur",
+		Dock:      dock,
 	})
 }
 
