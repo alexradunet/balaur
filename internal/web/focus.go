@@ -66,6 +66,8 @@ func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.
 		return h.knowledgeFocusHTML(knowledge.Memory)
 	case "skills":
 		return h.knowledgeFocusHTML(knowledge.Skill)
+	case "lifelog":
+		return h.lifelogFocusHTML()
 	}
 	return h.cardHTML(typ, params)
 }
