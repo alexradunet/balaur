@@ -51,9 +51,7 @@
       <summary class="btn btn-ghost btn-sm">Rename</summary>
       <form method="POST"
             action="/ui/boards/{{.Current.ID}}/rename"
-            hx-post="/ui/boards/{{.Current.ID}}/rename"
-            hx-target="#board-header"
-            hx-swap="outerHTML"
+            data-on:submit__prevent="@post('/ui/boards/{{.Current.ID}}/rename', {contentType:'form'})"
             class="board-rename-form">
         <input type="text" name="name" value="{{.Current.Name}}" maxlength="80" required autocomplete="off">
         <button class="btn btn-sm" type="submit">Save</button>
@@ -61,7 +59,7 @@
     </details>
     <form method="POST" action="/ui/boards/{{.Current.ID}}/delete"
           class="board-delete-form"
-          onsubmit="return confirm('Delete this board?')">
+          data-on:submit__prevent="confirm('Delete this board?') &amp;&amp; @post('/ui/boards/{{.Current.ID}}/delete')">
       <button class="btn btn-ghost btn-sm btn-danger" type="submit">Delete board</button>
     </form>
   </div>
@@ -85,9 +83,7 @@
     <div class="board-slot-inner">{{.Body}}</div>
     <form method="POST"
           action="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"
-          hx-post="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"
-          hx-target="#board-grid"
-          hx-swap="outerHTML"
+          data-on:submit__prevent="@post('/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove')"
           class="board-slot-remove">
       <button class="btn btn-ghost btn-sm" type="submit" title="Remove card">✕</button>
     </form>
@@ -103,9 +99,7 @@
         {{range .Specs}}
         <form method="POST"
               action="/ui/boards/{{$.Current.ID}}/cards/add"
-              hx-post="/ui/boards/{{$.Current.ID}}/cards/add"
-              hx-target="#board-grid"
-              hx-swap="outerHTML"
+              data-on:submit__prevent="@post('/ui/boards/{{$.Current.ID}}/cards/add', {contentType:'form'})"
               class="board-palette-entry">
           <input type="hidden" name="type" value="{{.Type}}">
           <div class="board-palette-label">

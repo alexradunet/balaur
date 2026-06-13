@@ -417,11 +417,21 @@ func (h *handlers) boardsRename(e *core.RequestEvent) error {
 			break
 		}
 	}
-	return h.render(e, "board_header", boardView{
+
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "board_header", boardView{
 		Boards:  boards,
 		Current: current,
 		Specs:   cards.All(),
-	})
+	}); err != nil {
+		return e.InternalServerError("rendering board header", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	if err := sse.PatchElements(b.String(),
+		datastar.WithSelectorID("board-header"), datastar.WithModeOuter()); err != nil {
+		return nil // client gone
+	}
+	return nil
 }
 
 // boardsDelete handles POST /ui/boards/{id}/delete.
@@ -442,7 +452,9 @@ func (h *handlers) boardsDelete(e *core.RequestEvent) error {
 	if err := h.app.Delete(rec); err != nil {
 		return e.InternalServerError("deleting board", err)
 	}
-	return e.Redirect(http.StatusFound, "/boards")
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.Redirect("/boards")
+	return nil
 }
 
 // boardsCardAdd handles POST /ui/boards/{id}/cards/add.
@@ -505,11 +517,21 @@ func (h *handlers) boardsCardAdd(e *core.RequestEvent) error {
 		}
 	}
 	h.renderBoardCards(current)
-	return h.render(e, "board_grid", boardView{
+
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "board_grid", boardView{
 		Boards:  boards,
 		Current: current,
 		Specs:   cards.All(),
-	})
+	}); err != nil {
+		return e.InternalServerError("rendering board grid", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	if err := sse.PatchElements(b.String(),
+		datastar.WithSelectorID("board-grid"), datastar.WithModeOuter()); err != nil {
+		return nil // client gone
+	}
+	return nil
 }
 
 // boardsCardRemove handles POST /ui/boards/{id}/cards/{idx}/remove.
@@ -554,11 +576,21 @@ func (h *handlers) boardsCardRemove(e *core.RequestEvent) error {
 		}
 	}
 	h.renderBoardCards(current)
-	return h.render(e, "board_grid", boardView{
+
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "board_grid", boardView{
 		Boards:  boards,
 		Current: current,
 		Specs:   cards.All(),
-	})
+	}); err != nil {
+		return e.InternalServerError("rendering board grid", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	if err := sse.PatchElements(b.String(),
+		datastar.WithSelectorID("board-grid"), datastar.WithModeOuter()); err != nil {
+		return nil // client gone
+	}
+	return nil
 }
 
 // layoutEntry is one slot update sent by the client to POST /ui/boards/{id}/layout.

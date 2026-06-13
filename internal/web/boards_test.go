@@ -116,12 +116,18 @@ func TestBoardsRename(t *testing.T) {
 	recs, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
 	id := recs[0].Id
 
+	// Datastar @post: the rename success path returns an SSE patch frame that
+	// wraps the re-rendered board_header (selector #board-header, outer mode).
+	// Status stays 200; the frame still contains "board-header" and the new name.
 	scenario := tests.ApiScenario{
-		Name:            "POST /ui/boards/{id}/rename re-renders header",
-		Method:          "POST",
-		URL:             "/ui/boards/" + id + "/rename",
-		Body:            strings.NewReader("name=Renamed"),
-		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		Name:   "POST /ui/boards/{id}/rename re-renders header",
+		Method: "POST",
+		URL:    "/ui/boards/" + id + "/rename",
+		Body:   strings.NewReader("name=Renamed"),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Accept":       "text/event-stream",
+		},
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"board-header", "Renamed"},
@@ -139,12 +145,17 @@ func TestBoardsCardAddValid(t *testing.T) {
 	recs, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
 	id := recs[0].Id
 
+	// Datastar @post: success returns an SSE patch frame wrapping board_grid
+	// (selector #board-grid, outer mode). Status 200; frame still has "board-grid".
 	scenario := tests.ApiScenario{
-		Name:            "POST /ui/boards/{id}/cards/add valid card",
-		Method:          "POST",
-		URL:             "/ui/boards/" + id + "/cards/add",
-		Body:            strings.NewReader("type=heads"),
-		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		Name:   "POST /ui/boards/{id}/cards/add valid card",
+		Method: "POST",
+		URL:    "/ui/boards/" + id + "/cards/add",
+		Body:   strings.NewReader("type=heads"),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Accept":       "text/event-stream",
+		},
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"board-grid"},
@@ -186,10 +197,13 @@ func TestBoardsCardRemove(t *testing.T) {
 	rec.Set("cards", string(raw))
 	app.Save(rec)
 
+	// Datastar @post: success returns an SSE patch frame wrapping board_grid
+	// (selector #board-grid, outer mode). Status 200; frame still has "board-grid".
 	scenario := tests.ApiScenario{
 		Name:            "POST /ui/boards/{id}/cards/{idx}/remove removes card",
 		Method:          "POST",
 		URL:             "/ui/boards/" + rec.Id + "/cards/0/remove",
+		Headers:         map[string]string{"Accept": "text/event-stream"},
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"board-grid"},
@@ -271,12 +285,17 @@ func TestBoardsDeleteWithMultiple(t *testing.T) {
 	rec2.Set("cards", "[]")
 	app.Save(rec2)
 
+	// Datastar @post: delete success now emits an SSE redirect (sse.Redirect),
+	// which is an ExecuteScript patch frame — status 200, and the body carries
+	// the redirect script `window.location.href = "/boards"`.
 	scenario := tests.ApiScenario{
-		Name:           "DELETE second board redirects",
-		Method:         "POST",
-		URL:            "/ui/boards/" + rec2.Id + "/delete",
-		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
-		ExpectedStatus: 302,
+		Name:            "DELETE second board redirects",
+		Method:          "POST",
+		URL:             "/ui/boards/" + rec2.Id + "/delete",
+		Headers:         map[string]string{"Accept": "text/event-stream"},
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"/boards", "window.location.href"},
 	}
 	scenario.Test(t)
 }
