@@ -277,7 +277,7 @@
   <ul class="ucard-list">
     {{range .Records}}
     <li class="ucard-row">
-      <span class="ucard-title"><a href="/memory">{{.Title}}</a></span>
+      <span class="ucard-title"><a href="/focus/memory">{{.Title}}</a></span>
       <span class="kcard-meta">{{.Category}}</span>
       <span class="kcard-pips" title="importance {{.Importance}}/5">
         {{- $imp := .Importance -}}
@@ -289,7 +289,7 @@
   {{else}}
   <p class="k-empty">No active memories yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/memory">all memories →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/memory">all memories →</a></footer>
 </article>
 {{end}}
 
