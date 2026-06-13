@@ -6,6 +6,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 )
 
 type profileData struct {
@@ -41,9 +42,14 @@ func (h *handlers) saveName(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "display_name", name); err != nil {
 		return e.InternalServerError("saving display name", err)
 	}
-	data := h.buildProfileData(true)
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	return h.tmpl.ExecuteTemplate(e.Response, "profile_identity_card", data)
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "profile_identity_card", h.buildProfileData(true)); err != nil {
+		return e.InternalServerError("rendering identity card", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(),
+		datastar.WithSelectorID("identity-card"), datastar.WithModeOuter())
+	return nil
 }
 
 // setSoulAvatarFromProfile handles POST /ui/profile/soul-avatar — saves the
@@ -57,9 +63,14 @@ func (h *handlers) setSoulAvatarFromProfile(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "soul_avatar", pref); err != nil {
 		return e.InternalServerError("saving avatar preference", err)
 	}
-	data := h.buildProfileData(false)
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	return h.tmpl.ExecuteTemplate(e.Response, "profile_soul_section", data)
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "profile_soul_section", h.buildProfileData(false)); err != nil {
+		return e.InternalServerError("rendering soul section", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(),
+		datastar.WithSelectorID("soul-section"), datastar.WithModeOuter())
+	return nil
 }
 
 // setBalaurAvatarPref handles POST /ui/profile/balaur-avatar — saves the
@@ -72,7 +83,12 @@ func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "balaur_avatar", pref); err != nil {
 		return e.InternalServerError("saving balaur avatar", err)
 	}
-	data := h.buildProfileData(false)
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	return h.tmpl.ExecuteTemplate(e.Response, "profile_balaur_section", data)
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "profile_balaur_section", h.buildProfileData(false)); err != nil {
+		return e.InternalServerError("rendering balaur section", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(),
+		datastar.WithSelectorID("balaur-section"), datastar.WithModeOuter())
+	return nil
 }

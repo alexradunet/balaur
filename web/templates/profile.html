@@ -9,9 +9,7 @@
   <h2 class="profile-card-title">Identity</h2>
   <p class="profile-hint">The name Balaur uses in the chat label when you speak.</p>
   <form class="profile-name-form"
-        hx-post="/ui/profile/name"
-        hx-target="#identity-card"
-        hx-swap="outerHTML">
+        data-on:submit__prevent="@post('/ui/profile/name', {contentType:'form'})">
     <label for="display_name">Your name</label>
     <div class="profile-name-row">
       <input id="display_name"
@@ -35,9 +33,7 @@
   <p class="profile-hint">Who appears in chat as you. 16 portraits from the Basm world.</p>
   <div class="avatar-choice-list profile-avatar-grid">
     {{range .AvatarOptions}}
-    <form hx-post="/ui/profile/soul-avatar"
-          hx-target="#soul-section"
-          hx-swap="outerHTML">
+    <form data-on:submit__prevent="@post('/ui/profile/soul-avatar', {contentType:'form'})">
       <input type="hidden" name="soul_avatar" value="{{.Key}}">
       <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
               type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
@@ -57,9 +53,7 @@
   <p class="profile-hint">Which Balaur personality you meet in chat. 16 heads, one companion.</p>
   <div class="avatar-choice-list profile-avatar-grid">
     {{range .BalaurOptions}}
-    <form hx-post="/ui/profile/balaur-avatar"
-          hx-target="#balaur-section"
-          hx-swap="outerHTML">
+    <form data-on:submit__prevent="@post('/ui/profile/balaur-avatar', {contentType:'form'})">
       <input type="hidden" name="balaur_avatar" value="{{.Key}}">
       <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
               type="submit" {{if .Active}}aria-current="true" disabled{{end}}>

@@ -59,7 +59,7 @@ func TestJournalWrite(t *testing.T) {
 			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{entryText, "journal-candle-body"},
+			ExpectedContent: []string{"datastar-patch-elements", entryText, "journal-candle-body"},
 		}
 		scenario.Test(t)
 	})
@@ -98,7 +98,7 @@ func TestJournalPrompt(t *testing.T) {
 			URL:             "/ui/journal/prompt",
 			TestAppFactory:  newPromptApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{promptLine, `class="candle-prompt"`},
+			ExpectedContent: []string{"datastar-patch-elements", promptLine, `class="candle-prompt"`},
 		}
 		scenario.Test(t)
 	})
@@ -120,7 +120,7 @@ func TestJournalPrompt(t *testing.T) {
 			URL:             "/ui/journal/prompt",
 			TestAppFactory:  newErrApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{candlePromptFallback, `class="candle-prompt"`},
+			ExpectedContent: []string{"datastar-patch-elements", candlePromptFallback, `class="candle-prompt"`},
 		}
 		scenario.Test(t)
 	})
@@ -132,7 +132,7 @@ func TestJournalPrompt(t *testing.T) {
 			URL:             "/ui/journal/prompt",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{candlePromptFallback, `class="candle-prompt"`},
+			ExpectedContent: []string{"datastar-patch-elements", candlePromptFallback, `class="candle-prompt"`},
 		}
 		scenario.Test(t)
 	})

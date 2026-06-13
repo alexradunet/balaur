@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
@@ -69,9 +70,12 @@ func (h *handlers) journalPrompt(e *core.RequestEvent) error {
 		}
 	}
 
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	// Escape text — never template.HTML from an LLM response.
-	_, _ = e.Response.Write([]byte(`<p class="candle-prompt">` + html.EscapeString(line) + `</p>`))
+	frag := `<p class="candle-prompt">` + html.EscapeString(line) + `</p>`
+	// Patch the prompt line into its target container by id (inner HTML).
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(frag,
+		datastar.WithSelectorID("candle-prompt"), datastar.WithModeInner())
 	return nil
 }
 
@@ -143,14 +147,18 @@ func (h *handlers) buildCandleData(now time.Time) (candleData, error) {
 }
 
 func (h *handlers) renderCandleBody(e *core.RequestEvent, now time.Time) error {
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	data, err := h.buildCandleData(now)
 	if err != nil {
 		return e.InternalServerError("rendering journal", err)
 	}
-	if err := h.tmpl.ExecuteTemplate(e.Response, "journal_candle_body", data); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "journal_candle_body", data); err != nil {
 		return e.InternalServerError("rendering candle body", err)
 	}
+	// All work succeeded — open the SSE and morph the body in place by its id.
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(),
+		datastar.WithSelectorID("journal-candle-body"), datastar.WithModeOuter())
 	return nil
 }
 

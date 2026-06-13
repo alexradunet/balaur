@@ -4,14 +4,11 @@
 
     <div class="k-tabs" role="tablist">
       <button class="k-tab k-tab-active" type="button"
-              hx-on:click="document.getElementById('candle-prompt').innerHTML='';this.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));this.classList.add('k-tab-active')">
+              data-on:click="document.getElementById('candle-prompt').innerHTML='';el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active')">
         free hand
       </button>
       <button class="k-tab" type="button"
-              hx-get="/ui/journal/prompt"
-              hx-target="#candle-prompt"
-              hx-swap="innerHTML"
-              hx-on:click="this.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));this.classList.add('k-tab-active')">
+              data-on:click="el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active');@get('/ui/journal/prompt')">
         guided
       </button>
     </div>
@@ -25,9 +22,7 @@
 {{define "journal_candle_body"}}
 <div id="journal-candle-body">
   <form class="journal-form"
-        hx-post="/ui/journal"
-        hx-target="#journal-candle-body"
-        hx-swap="outerHTML">
+        data-on:submit__prevent="@post('/ui/journal', {contentType:'form'})">
     <textarea name="text" rows="8" placeholder="What stays with you from this day?"></textarea>
     <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
   </form>
