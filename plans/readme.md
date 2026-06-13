@@ -67,7 +67,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 047 | Recap period math pinned to owner timezone | P3 | M | MED | — | — | DONE (reviewed; scope reconciled +cli/recap.go; default path byte-identical; merged to main) |
 | 048 | Model-seam test sweep (llm errors, Embed, selectModel, repair-success) | P2 | S–M | LOW | 042 (soft, same test file) | — | DONE (reviewed; llm 54%→74%; merged to main) |
 | 049 | Cleanup & docs (SyntheticClient, env truth, head-tools status) | P3 | S | LOW | 048 (soft, env.go) | — | DONE (reviewed; merged to main) |
-| 050 | Card focus mechanism — a card expands to the full canvas (Phase 0) | P1 | M | LOW–MED | 028, 029 | — | DONE (`/focus/{type}` dual-mode + ⤢ slot/palette controls + `cards.HasManage`; green bar clean; on `feature/card-first-kill-pages`, not yet merged) |
+| 050 | Card focus mechanism — a card expands to the full canvas (Phase 0) | P1 | M | LOW–MED | 028, 029 | — | DONE (reviewed; `/focus/{type}` dual-mode + ⤢ slot/palette controls + `cards.HasManage`; spec✅+quality✅; merged to main `f11d0c9`) |
 | 051 | Tasks: card-complete focus + retire `/tasks` (Phase 1) | P1 | M–L | MED | 050 | — | PLANNED (author vs post-050 tree) |
 | 052 | Journal + Day: focus editor + retire `/journal`,`/day` (Phase 2) | P2 | M | MED | 050 | — | PLANNED (author vs post-051 tree) |
 | 053 | Knowledge: memory+skills focus + retire `/memory`,`/skills` (Phase 3) | P2 | M | LOW–MED | 050 | — | PLANNED |
