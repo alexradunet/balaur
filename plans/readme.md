@@ -74,7 +74,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 054 | Heads: focus + dock conversation selector + retire `/heads`,`/heads/{id}/chat` (Phase 4) | P1 | L | HIGH | 050, 053 | — | DONE (heads roster is the heads card focus at `/focus/heads`; the dock learned to swap conversations — `GET /ui/dock/conversation[?head={id}]` patches only `#dock-convo` with the right history + a conversation-aware draft (`ConvPostURL`) + a "← back to main" header, leaving the dock shell/turn pipeline untouched; `head_card` moved to `heads-focus.html`, its "Open chat" opens the head branch in the dock; `/heads`+`/heads/{id}/chat` retired → 302 `/boards`, topbar Heads link dropped; `POST /ui/heads/{id}/chat`+`/avatar` kept; nudge-poll gated to master so branch chat never leaks master nudges (adversarial-review catch, fixed pre-merge); spec✅+quality✅+adversarial✅; merged to main `68e8ee7`) |
 | 055 | Life: new lifelog card (read-only overview) + retire `/life` (Phase 5) | P2 | M | LOW–MED | 050, 052 | — | DONE (reviewed; lifelog card tile + /focus/lifelog; /life retired → 302 /boards; no entry-create, chat logs entries; spec✅+quality✅; merged to main `1ed45b7`) |
 | 056 | Settings card (profile+models) + retire `/settings`,`/profile`,`/models` (Phase 6) | P2 | L | MED | 050, 053 | — | DONE (reviewed; settings card focus = the shell (profile+models); `/settings`,`/settings/{section}`,`/profile`,`/models` retired → 302 /boards; all write endpoints + section fragments kept; skills is its own card; spec✅+quality✅; merged to main `f31bb5a`) |
-| 057 | Cleanup: topbar nav, dead handlers/templates, DESIGN.md (Phase 7) | P2 | S–M | LOW | 051–056 | — | PLANNED |
+| 057 | Cleanup: dead handlers, stale HTMX comments, holistic card-first IA docs (Phase 7) | P2 | S–M | LOW | 051–056 | — | DONE (dropped dead `renderError`/`execFragment` (head-chat gateway retired) — no live caller, removed unused `io` import; retired stale HTMX comments in `web.go`/`home.html`/`cards.html` + source comments (chatstream/knowledge.go); topbar confirmed final (no change); holistic card-first IA pass over DESIGN.md/README.md/knowledge.md + the web-gateway tour (boards + cards + dock, no feature pages); completeness greps clean — no feature page render/template survives, no live `hx-*` attribute; `go test ./...`+vet+gofmt+CGO-free build green) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -100,6 +100,14 @@ foundation lands (exactly how cycles 1–7 were done).
 - Deviation from the spec's phase grouping: the **dock conversation selector**
   moves from "Phase 0 foundations" into **054 (Heads)**, where it is actually
   consumed — front-loading unused plumbing would violate AGENTS.md YAGNI.
+
+**Program complete:** plans 050–057 are all DONE — the card-first "kill the pages"
+program is finished. The UI is **boards + cards + a persistent dock chat**: every
+feature is a two-size card (tile on a board, full-canvas focus at `/focus/{type}`),
+the dock swaps conversations (master ↔ a head's branch), and every retired page
+route (`/tasks`, `/journal`, `/day`, `/memory`, `/skills`, `/life`, `/heads`,
+`/heads/{id}/chat`, `/models`, `/settings`, `/profile`) 302s → `/boards`. No
+feature page route, template, or render survives; the UI is Datastar end to end.
 
 ## Dependency notes
 

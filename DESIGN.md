@@ -13,7 +13,7 @@ web UI, and branded copy in the Go/PocketBase/Datastar shape.
 |---|---|---|
 | Identity | brand essence, character, heads, voice, messaging | this file |
 | Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
-| Product UI | Datastar + `html/template` pages served by the `balaur` binary | `web/templates/` |
+| Product UI | Datastar + `html/template` boards, cards & focuses served by the `balaur` binary | `web/templates/` |
 | Marks & avatars | crest, avatar library (soul + Balaur heads) | `web/static/` |
 
 If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
@@ -82,6 +82,21 @@ never flatter you, say it this way?
 
 All copy must match this. Update it the moment shape changes.
 
+**Information architecture — card-first, no feature pages.** The UI is three
+things: **boards**, **cards**, and a persistent **dock chat**. A *card* is a
+typed, parameterized, server-rendered HATEOAS resource (`/ui/cards/{type}`) that
+renders at two sizes — a **tile** on a board, and a full-canvas **focus**
+(`/focus/{type}`) reached by expanding it; the focus is what an old feature page
+used to be. *Boards* (`/boards`) are owner-composed dashboards of card tiles
+(drag/resize, persisted); the `/ui/cards` palette is the launcher that opens any
+feature in focus, and chat can compose cards/boards too (`card_show` /
+`board_compose`). The *dock chat* is the single persistent chat; it **swaps
+conversations** (the master head ↔ a sub-head's branch) without leaving the dock.
+There are no feature pages: the retired routes (`/tasks`, `/journal`, `/day`,
+`/memory`, `/skills`, `/life`, `/heads`, `/heads/{id}/chat`, `/models`,
+`/settings`, `/profile`) **302 → `/boards`**, while their write endpoints
+(`/ui/*`) live on, now driving card focuses.
+
 **True today:** single Go binary embedding PocketBase · Datastar web UI ·
 PocketBase collections for conversations, messages, memories, skills, heads,
 grants, audit log · local inference via a llamafile engine Balaur runs as a
@@ -119,7 +134,7 @@ and logs, with prev/next day nav — a read-only tile summary plus the full focu
 deep-linked from calendar cells and recap day cards · a runtime honesty check:
 capture claims without a successful tool call trigger one self-repair
 pass, then an owner-visible origin-tagged check note · a 16-option soul
-avatar picker in the profile page (stored in `owner_settings`) · a
+avatar picker in the settings card's profile focus (stored in `owner_settings`) · a
 16-personality Balaur head library under `web/static/avatars/balaur-01..16.png`
 · a Balaur head medallion favicon at `web/static/logo.png` wired via
 `<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
@@ -147,8 +162,8 @@ the candle (the journal card's focus, /focus/journal): immersive writing
 surface — free-hand or guided by one model-composed prompt line (deterministic
 fallback), entries shared with the day card · boards — owner-composed dashboards of typed cards at /boards
 (Study/Quest log/Self/Balaur defaults); each board is a named, ordered list of
-card references in the `boards` collection; the page renders a 12-column CSS
-grid of server-rendered card slots; cards drag and resize (pointer +
+card references in the `boards` collection; the `/boards` route renders a
+12-column CSS grid of server-rendered card slots; cards drag and resize (pointer +
 12-col snap), layout persisted per board — cards auto-pack upward after each move/resize ·
 on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
 raises a new board from chat; `board_add_card` amends an existing board (all three
@@ -305,7 +320,7 @@ Hearthwood ships **13 pixel-art PNG icons** under `web/static/icons/`:
 `orb` · `quill` · `rune_x` · `scroll` · `shield` · `tome`.
 
 Icons render at 18px (`img.tool-icon`) in tool rows and 26px (`.h-icon`)
-beside page headings. They are always bare pixel art — never boxed, never
+beside focus headings. They are always bare pixel art — never boxed, never
 bordered (the row or heading provides the frame context).
 
 **Tool → icon mapping** (implemented in `toolIconFile()`, `internal/web/web.go`):
@@ -321,7 +336,7 @@ bordered (the row or heading provides the frame context).
 | `os_*`, `*bash*`, `*shell*` | `shield` |
 | (fallback) | `orb` |
 
-**Page heading icons** (`.h-icon`, 26px): Tasks → `scroll`, Memory/Knowledge
+**Focus heading icons** (`.h-icon`, 26px): Tasks → `scroll`, Memory/Knowledge
 → `tome`, Life → `orb`, Heads → `tome`.
 
 The Unicode glyph language is retired; tool rows render pixel icons via the `toolIcon` template helper (`toolIconFile()` in `internal/web/web.go`).

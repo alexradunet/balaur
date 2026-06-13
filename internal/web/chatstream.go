@@ -161,7 +161,7 @@ func (s *chatStream) emit(ev agent.Event) {
 
 // handleToolResult mirrors the prior consumer order: uicard → choices →
 // proposal → plain. The open tool row's body is morphed with the result; an
-// inline card (when present) is appended and handed to htmx during migration.
+// inline card (when present) is appended server-rendered to the stream.
 func (s *chatStream) handleToolResult(ev agent.Event) {
 	if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
 		s.endTool(rest, s.h.uicardBody(typ, query))
