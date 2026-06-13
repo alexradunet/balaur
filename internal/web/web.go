@@ -182,7 +182,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
 	h := &handlers{app: se.App, tmpl: tmpl, gguf: gguf.Shared}
-	se.Router.GET("/", h.home)
+	se.Router.GET("/", h.boardHome)     // board-as-home (card-first landing)
+	se.Router.GET("/chat", h.home)      // immersive full chat
 	se.Router.GET("/models", h.modelsPage)
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
@@ -267,10 +268,17 @@ func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
 // recap telescope.
 const historyWindow = 60
 
+// boardHome lands the owner on the board dashboard (board-as-home). The board
+// page carries the companion in its dock; the immersive full chat is at /chat.
+func (h *handlers) boardHome(e *core.RequestEvent) error {
+	return e.Redirect(http.StatusFound, "/boards")
+}
+
+// home renders the immersive full-page chat (/chat).
 func (h *handlers) home(e *core.RequestEvent) error {
 	data, err := h.dockData()
 	if err != nil {
-		return e.InternalServerError("loading home", err)
+		return e.InternalServerError("loading chat", err)
 	}
 	return h.render(e, "home.html", data)
 }

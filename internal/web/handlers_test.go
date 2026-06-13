@@ -213,9 +213,15 @@ func TestSettingsPages(t *testing.T) {
 func TestHandlerHomePage(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			Name:            "home",
+			Name:           "/ redirects to the board dashboard (board-as-home)",
+			Method:         "GET",
+			URL:            "/",
+			ExpectedStatus: 302,
+		},
+		{
+			Name:            "/chat renders the immersive chat",
 			Method:          "GET",
-			URL:             "/",
+			URL:             "/chat",
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"chatbar"},
 		},
@@ -514,9 +520,9 @@ func TestGuardRejectsNonLoopbackHost(t *testing.T) {
 // present on Balaur's own surfaces (not PocketBase's /api or /_).
 func TestHardeningHeaders(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:            "GET / carries hardening headers",
+		Name:            "GET /chat carries hardening headers",
 		Method:          "GET",
-		URL:             "/",
+		URL:             "/chat",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"chatbar"},
@@ -541,7 +547,7 @@ func TestOriginGuard(t *testing.T) {
 	scenario := tests.ApiScenario{
 		Name:            "origin guard allows localhost",
 		Method:          "GET",
-		URL:             "/",
+		URL:             "/chat",
 		Headers:         map[string]string{"Host": "localhost"},
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"chatbar"},
