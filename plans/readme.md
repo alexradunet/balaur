@@ -59,7 +59,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 039 | FTS5 memory recall: sidecar index, LIKE fallback | P2 | M–L | MED | — | — | DONE (reviewed; merged to main `c2b6472`; binary +15.2MB accepted — embedded SQLite-WASM) |
 | 040 | CLI as stable API: v1 envelope + balaur doctor | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `e8fd80d`; breaking JSON shape change, deliberate) |
 | 041 | Code tours: refreshed (00–06), extended (07–10), lint-tested | P2 | L | LOW | — | — | DONE (reviewed; merged to main `bb34927`) |
-| 042 | Web hardening (escape card errors, drop example.com, headers, param caps) | P1 | S–M | LOW | — | — | TODO |
+| 042 | Web hardening (escape card errors, drop example.com, headers, param caps) | P1 | S–M | LOW | — | — | DONE (reviewed; merged to main) |
 | 043 | Board cards JSON: corrupt data aborts, never erases | P1 | S | LOW | — | — | TODO |
 | 044 | Error-swallow sweep (life.Day propagates; Touch/propose/chat log) | P2 | S | LOW | — | — | TODO |
 | 045 | llama supervisor failure-mode tests (fake engine) | P2 | M | LOW | — | — | TODO |
