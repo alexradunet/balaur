@@ -5,7 +5,6 @@ import (
 	"html"
 	"html/template"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -14,37 +13,18 @@ import (
 	"github.com/alexradunet/balaur/internal/knowledge"
 )
 
-// Knowledge pages: /memory and /skills render the proposed queue and the
-// active collection as Basm cards. Card actions post back tiny HTMX
-// fragments — the server is the single source of truth for state.
+// Knowledge: the proposed queue and the active collection render as Basm
+// cards inside the memory + skills card focuses (/focus/memory, /focus/skills)
+// and the /settings/skills section. Card actions post back tiny SSE fragments
+// — the server is the single source of truth for state.
 
 // memoryCategories mirrors migrations/1749700000_knowledge.go for the
 // filter tabs. Kept here (not exported from knowledge) until a third
 // consumer appears.
 var memoryCategories = []string{"fact", "preference", "person", "project", "context"}
 
-func (h *handlers) memoryPage(e *core.RequestEvent) error {
-	q := e.Request.URL.Query().Get("q")
-	cat := e.Request.URL.Query().Get("category")
-	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusProposed)
-	active, _ := knowledge.FilterActive(h.app, knowledge.Memory, q, cat)
-	archived, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusArchived)
-	dock, _ := h.dockData()
-	return h.render(e, "knowledge.html", map[string]any{
-		"Title":      "Memory",
-		"Dock":       dock,
-		"Kind":       "memories",
-		"Proposed":   proposed,
-		"Active":     active,
-		"Archived":   archived,
-		"Query":      q,
-		"Category":   cat,
-		"Categories": memoryCategories,
-	})
-}
-
 // skillsData builds the template data map for the skills section.
-// Used by both skillsPage and settingsPage.
+// Used by both the skills card focus (knowledgeFocusHTML) and settingsPage.
 func (h *handlers) skillsData(q string) map[string]any {
 	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusProposed)
 	active, _ := knowledge.FilterActive(h.app, knowledge.Skill, q, "")
@@ -57,14 +37,6 @@ func (h *handlers) skillsData(q string) map[string]any {
 		"Archived": archived,
 		"Query":    q,
 	}
-}
-
-func (h *handlers) skillsPage(e *core.RequestEvent) error {
-	q := e.Request.URL.Query().Get("q")
-	if q != "" {
-		return e.Redirect(http.StatusFound, "/settings/skills?q="+url.QueryEscape(q))
-	}
-	return e.Redirect(http.StatusFound, "/settings/skills")
 }
 
 // memoryData builds the knowledge_body data map for memories (mirrors

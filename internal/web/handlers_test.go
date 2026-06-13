@@ -190,28 +190,21 @@ func TestSettingsPages(t *testing.T) {
 			ExpectedStatus: 302,
 		},
 		{
-			Name:           "GET /skills redirects",
+			// Retired route (plan 053): the skills manager lives in the skills
+			// card focus + /settings/skills now. The old /skills 302s to /boards.
+			Name:           "GET /skills is retired (302 to /boards)",
 			Method:         "GET",
 			URL:            "/skills",
 			ExpectedStatus: 302,
 		},
 		{
-			Name:           "GET /memory still renders k-active-grid",
+			// Retired route (plan 053): the memory manager moved into the memory
+			// card focus (/focus/memory, covered by TestFocusMemoryShowsManager).
+			// The old /memory page 302s to /boards.
+			Name:           "GET /memory is retired (302 to /boards)",
 			Method:         "GET",
 			URL:            "/memory",
-			ExpectedStatus: 200,
-			ExpectedContent: []string{
-				"k-active-grid",
-				// Live search + category filter are Datastar-bound now.
-				"data-bind:q",
-				"data-on:input__debounce.250ms",
-				"data-signals:category",
-			},
-			// The htmx search/tab wiring is gone from the controls.
-			NotExpectedContent: []string{
-				`hx-get="/ui/knowledge/memories/grid"`,
-				"hx-include",
-			},
+			ExpectedStatus: 302,
 		},
 	}
 
@@ -513,12 +506,12 @@ func TestGuardRejectsNonLoopbackHost(t *testing.T) {
 // present on Balaur's own surfaces (not PocketBase's /api or /_).
 func TestHardeningHeaders(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:            "GET /memory carries hardening headers",
+		Name:            "GET /focus/memory carries hardening headers",
 		Method:          "GET",
-		URL:             "/memory",
+		URL:             "/focus/memory",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"Boards"},
+		ExpectedContent: []string{"k-active-grid"},
 		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
 			for _, hdr := range []struct{ name, want string }{
 				{"X-Content-Type-Options", "nosniff"},
@@ -540,10 +533,10 @@ func TestOriginGuard(t *testing.T) {
 	scenario := tests.ApiScenario{
 		Name:            "origin guard allows localhost",
 		Method:          "GET",
-		URL:             "/memory",
+		URL:             "/focus/memory",
 		Headers:         map[string]string{"Host": "localhost"},
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"Boards"},
+		ExpectedContent: []string{"k-active-grid"},
 	}
 	scenario.TestAppFactory = newWebApp
 	scenario.Test(t)
