@@ -1,7 +1,9 @@
 package tasks
 
 import (
+	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -92,13 +94,58 @@ func Streak(r Rule, days []time.Time, today time.Time) int {
 // StreakFor loads completions and computes the live streak for one task.
 // Errors read as 0 — a missing streak must never block a briefing.
 func StreakFor(app core.App, rec *core.Record, now time.Time) int {
-	rule, err := Parse(rec.GetString("recur"))
-	if err != nil || rule.IsZero() {
-		return 0
+	return StreaksFor(app, []*core.Record{rec}, now)[rec.Id]
+}
+
+// StreaksFor computes live streaks for many tasks with ONE completions
+// query (TodayBlock runs every turn — per-task queries were an N+1).
+// Keyed by task id; tasks without a recurrence rule are absent. Errors
+// read as an empty map — a missing streak must never block a briefing.
+func StreaksFor(app core.App, recs []*core.Record, now time.Time) map[string]int {
+	rules := make(map[string]Rule, len(recs))
+	var ids []string
+	for _, r := range recs {
+		rule, err := Parse(r.GetString("recur"))
+		if err != nil || rule.IsZero() {
+			continue
+		}
+		rules[r.Id] = rule
+		ids = append(ids, r.Id)
 	}
-	days, err := CompletionDays(app, rec.Id, now.Location())
+	if len(ids) == 0 {
+		return map[string]int{}
+	}
+
+	// kind = 'completion' && (task = {:t0} || task = {:t1} || …)
+	params := dbx.Params{}
+	conds := make([]string, len(ids))
+	for i, id := range ids {
+		key := fmt.Sprintf("t%d", i)
+		conds[i] = fmt.Sprintf("task = {:%s}", key)
+		params[key] = id
+	}
+	rows, err := app.FindRecordsByFilter("entries",
+		"kind = 'completion' && ("+strings.Join(conds, " || ")+")",
+		"noted_at", 0, 0, params)
 	if err != nil {
-		return 0
+		return map[string]int{}
 	}
-	return Streak(rule, days, now)
+
+	// Same day-folding as CompletionDays, grouped per task: rows arrive
+	// sorted by noted_at, so per-task subsequences stay ascending.
+	days := make(map[string][]time.Time, len(ids))
+	for _, r := range rows {
+		id := r.GetString("task")
+		d := noonOf(r.GetDateTime("noted_at").Time().In(now.Location()))
+		ds := days[id]
+		if len(ds) == 0 || !ds[len(ds)-1].Equal(d) {
+			days[id] = append(ds, d)
+		}
+	}
+
+	out := make(map[string]int, len(ids))
+	for id, rule := range rules {
+		out[id] = Streak(rule, days[id], now)
+	}
+	return out
 }
