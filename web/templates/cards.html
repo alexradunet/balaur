@@ -326,6 +326,26 @@
 {{end}}
 
 {{- /* ------------------------------------------------------------------ */ -}}
+{{- /* ucard_heads_manage — interactive heads fold (mode=manage): active heads
+     as self-targeting head_card partials (#head-{id}, personality picker
+     inline). context: cardHeadsManageView */ -}}
+{{define "ucard_heads_manage"}}
+<article class="kcard ucard ucard-manage ucard-heads-manage" id="ucard-heads-manage">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/tome.png" alt="">Heads</span>
+    <a class="kcard-meta" href="/heads">all heads →</a>
+  </header>
+  {{if .Heads}}
+  <div class="ucard-manage-list">
+    {{range .Heads}}{{template "head_card" .}}{{end}}
+  </div>
+  {{else}}
+  <p class="k-empty">No active heads — Balaur grows a head when focused work begins.</p>
+  {{end}}
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
 {{- /* palette — GET /ui/cards — human/agent index of all card types */ -}}
 {{- /* context: []cards.Spec */ -}}
 {{define "ucard_palette"}}

@@ -145,7 +145,9 @@ func init() {
 			Icon:  "tome",
 			W:     4,
 			H:     16,
-			// no params — all active heads
+			Params: []ParamSpec{
+				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (assign each head's personality inline)"},
+			},
 		},
 	}
 
