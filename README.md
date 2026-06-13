@@ -7,7 +7,7 @@
 
 Balaur is a personal AI companion that lives on a box you own: a single Go
 executable embedding [PocketBase](https://pocketbase.io) for data, auth and
-migrations, an HTMX web interface, and local LLM inference served by a
+migrations, a Datastar web interface, and local LLM inference served by a
 [llamafile](https://github.com/Mozilla-Ocho/llamafile) engine that Balaur runs
 as a subprocess and reaches over the OpenAI-compatible API — the same seam it
 uses for any remote provider.
@@ -28,7 +28,7 @@ database you own and can open with any SQLite tool.
 - **Data:** PocketBase collections — `conversations`, `messages`,
   `memories`, `skills`, `heads`, `grants`, `audit_log` — in plain SQLite
   under `pb_data/`.
-- **UI:** server-rendered Go templates + HTMX, styled by the Basm design
+- **UI:** server-rendered Go templates + Datastar, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
 - **Models:** out of the box, a self-contained **Qwen3.5-4B llamafile**
@@ -434,7 +434,7 @@ internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
 internal/self/     self-awareness: embedded self-knowledge + live inventory
 internal/ext/      balaur-extensions: consent-gated runtime tools (JS/goja)
-internal/web/      HTMX gateway: chat, memory & skills pages, cards, recap
+internal/web/      Datastar gateway: dock chat, boards, cards & focuses, recap
 internal/cli/      machine-facing gateway: balaur subcommands, JSON out
 web/               embedded templates and static assets (Basm CSS)
 ```
