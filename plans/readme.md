@@ -59,6 +59,14 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 039 | FTS5 memory recall: sidecar index, LIKE fallback | P2 | M–L | MED | — | — | DONE (reviewed; merged to main `c2b6472`; binary +15.2MB accepted — embedded SQLite-WASM) |
 | 040 | CLI as stable API: v1 envelope + balaur doctor | P2 | M | LOW–MED | — | — | DONE (reviewed; merged to main `e8fd80d`; breaking JSON shape change, deliberate) |
 | 041 | Code tours: refreshed (00–06), extended (07–10), lint-tested | P2 | L | LOW | — | — | DONE (reviewed; merged to main `bb34927`) |
+| 042 | Web hardening (escape card errors, drop example.com, headers, param caps) | P1 | S–M | LOW | — | — | TODO |
+| 043 | Board cards JSON: corrupt data aborts, never erases | P1 | S | LOW | — | — | TODO |
+| 044 | Error-swallow sweep (life.Day propagates; Touch/propose/chat log) | P2 | S | LOW | — | — | TODO |
+| 045 | llama supervisor failure-mode tests (fake engine) | P2 | M | LOW | — | — | TODO |
+| 046 | Batch streak completions query (TodayBlock N+1) | P2 | M | MED | — | — | TODO |
+| 047 | Recap period math pinned to owner timezone | P3 | M | MED | — | — | TODO |
+| 048 | Model-seam test sweep (llm errors, Embed, selectModel, repair-success) | P2 | S–M | LOW | 042 (soft, same test file) | — | TODO |
+| 049 | Cleanup & docs (SyntheticClient, env truth, head-tools status) | P3 | S | LOW | 048 (soft, env.go) | — | DONE (reviewed; merged to main) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -157,7 +165,83 @@ via `chore: merge` commits with `go test ./...` green on the merged tree.
 - **D. Tours as maintained artifact** — DONE: plan 041 (tours 00–10 refreshed
   /added; `tours_test.go` enforces anchors in `go test ./...`).
 
+## Seventh cycle (2026-06-12, full audit at `dd9e60b`): plans 042–049
+
+First full audit since `b6b7f34` — cycles 3–6 were owner-requested feature
+plans, so ~13k lines (Hearthwood UI, boards/cards, settings/GGUF/provider
+managers, FTS5 recall, CLI v1) had never been audited. Baseline at
+`dd9e60b`: gofmt clean, vet ok, `go test ./...` all 25 packages ok,
+CGO-free build ok. 61 raw findings → 36 survived adversarial verification
+→ 11 survived host vetting → 8 plans (owner selected all fix findings;
+direction items deferred to a future cycle by choice).
+
+Ordering notes:
+
+- **042 before 048 (soft)**: both add tests to
+  `internal/web/handlers_test.go`; 042 also changes the `newWebApp`
+  factory (test-only `BALAUR_ALLOWED_HOSTS` shim). Conflicts are additive
+  either way.
+- **048 before 049 (soft)**: 049 deletes dead code in
+  `internal/llm/env.go`; 048 adds tests in the same package.
+- **042 and 044 both touch `internal/web/chat.go`** — different functions
+  (042 none, actually; 044 only the fragment helpers). No real conflict.
+- 043, 045, 046, 047 are mutually independent.
+- 047 needs **no migration** (`owner_settings` is key/value); next free
+  migration timestamp remains `1750750000` for whoever needs one first.
+- Direction findings this cycle (all deferred by owner choice, evidence in
+  the audit): head-scoped tools first slice (design in
+  `docs/head-tools-design.md`, schema gap known), data-export thin slice
+  (`balaur export` Markdown dump), merge-back conversation compaction,
+  embedding recall second stage. Revisit next cycle.
+
 ## Findings considered and rejected (do not re-audit)
+
+Seventh cycle (`dd9e60b`):
+
+- **Recap telescope N+1** (`web/recap.go:69-82`, also `recapExpand`): real
+  pattern, but a lazy-loaded fragment doing ≤25 indexed point-queries on
+  local SQLite — measurement-first rule says no. Same verdict: **FTS5
+  rebuild chunking** (startup-only, idempotent) and **3 context queries
+  per turn** (indexed, trivial).
+- **Card-type dispatch consolidation / internal/web decomposition**:
+  adding a card type touches 3 files, mitigated by
+  `TestUiCardAllTypesRender`; handlers average 17 lines. Deferred again,
+  with `web/models.go` decomposition (handlers independent; shared
+  `modelsPanel` is a UI composition requirement).
+- **board.js/basm.js zero JS test coverage**: real gap (288 lines of grid
+  geometry untested), deferred by owner choice — any rig is dev-only
+  (repo forbids Node in the product path). Revisit if board geometry
+  regresses; option recorded: zero-dep `node --test` on extracted pure
+  functions.
+- **Tool-marker edge-case tests**: uncovered paths guard malformed
+  internal data that `MarkUICard`/`MarkChoices` can never produce.
+- **CSP header**: would break inline `<script>` in `home.html` /
+  `head-chat.html` and `hx-on:` handlers; deferred until templates
+  externalize scripts (042 ships nosniff/frame/referrer only).
+- **Conversation create race** (`Master`/`ForHead` retry): already solved
+  by the unique partial indexes from migration `1750720000` + concurrent
+  test. **GGUF dest traversal**: callers normalize via `filepath.Base`
+  (models.go:351-357) or use a constant path. **Provider key echo in
+  CLI**: `APIKey` blanked at `llm_settings.go:78` before any output.
+  **Audit-log forensics gap**: full tool args/results live in `messages`
+  (`tool_payload`); audit_log is summary-level by design.
+- **Rate-limiting on web endpoints**: guard already restricts to
+  loopback/allowlist; brute-force threat implausible without prior local
+  compromise. **OS-tool scoping** re-reported by the direction agent:
+  contradicts the cycle-1 rejection (path limits are theater while `bash`
+  ships in the same opt-in set) — still rejected.
+- **goja pseudo-version pin**: documented at README.md:198 as deliberate.
+  **Per-card-type templates "inline in Go"**: false — all 10 types render
+  via `{{define}}` blocks in `cards.html`. **Marker parse-order drift
+  chat vs recap**: false — both enforce uicard → choices → proposal →
+  plain. **`models.go` updateProvider key handling**: store layer tested
+  (`llm_settings_test.go:198-207`). **GGUF resume untested**: false —
+  `TestResumeAfterMidStreamDrop` covers Range resume.
+- **Honesty-check retry loses original claim**: false — repair messages
+  append to `res.Turn`; both originals persist.
+- **`recapBands` uses live `time.Now()` untested at midnight**: folded
+  into plan 047's scope notes; periods_test/generate_test already use
+  fixed dates.
 
 Second cycle (`b6b7f34`):
 
