@@ -195,6 +195,31 @@ func TestFocusMemoryShowsManager(t *testing.T) {
 	s.Test(t)
 }
 
+// TestFocusMemoryShowsProposed: a proposed memory surfaces in the focus with its
+// approve action — the consent queue ("Awaiting your word") renders in the card
+// focus, not just the active grid. Guards the new render path that folds
+// memory's old standalone proposed page into the expanded card.
+func TestFocusMemoryShowsProposed(t *testing.T) {
+	app := newWebApp(t)
+	seedProposedMemory(t, app, "Remembers the dog name")
+
+	s := tests.ApiScenario{
+		Name:           "GET /focus/memory shows the proposed queue",
+		Method:         "GET",
+		URL:            "/focus/memory",
+		TestAppFactory: func(testing.TB) *tests.TestApp { return app },
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			"Awaiting your word",       // the proposed-section heading
+			`k-heading-proposed`,       // the proposed section class
+			"Remembers the dog name",   // the seeded record's title
+			`name="to" value="active"`, // the approve form's transition payload
+			`<button class="btn btn-primary btn-sm" type="submit">Approve</button>`,
+		},
+	}
+	s.Test(t)
+}
+
 // TestFocusSkillsShowsManager: /focus/skills renders the skills manager.
 func TestFocusSkillsShowsManager(t *testing.T) {
 	s := tests.ApiScenario{
