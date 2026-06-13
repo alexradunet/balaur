@@ -17,11 +17,13 @@ import (
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
-// /tasks is the life-organization surface: the operational list (cards with
-// actions), a month calendar, and a forward timeline — the future-facing
-// mirror of the recap telescope (the telescope looks back, the timeline
-// looks ahead). Calendar and timeline are read-only projections of the
-// recurrence rules; actions live on the list cards.
+// tasks.go is the life-organization surface, now expressed as cards. The
+// operational list lives in the quests card's focus (questsFocusHTML — the
+// rhythm-grouped quest rail + detail, was /tasks?view=list). The month calendar
+// and forward timeline are their own cards (ucard_calendar/ucard_timeline, via
+// buildCalendar/buildTimelineN in cards.go) — the future-facing mirror of the
+// recap telescope. Calendar and timeline are read-only projections of the
+// recurrence rules; actions live on the task cards.
 
 // taskView is one task's template payload.
 type taskView struct {
@@ -159,34 +161,6 @@ func (h *handlers) questsFocusHTML() template.HTML {
 	return template.HTML(b.String())
 }
 
-func (h *handlers) tasksPage(e *core.RequestEvent) error {
-	view := e.Request.URL.Query().Get("view")
-	if view != "calendar" && view != "timeline" {
-		view = "list"
-	}
-	now := time.Now()
-	recs, err := tasks.OpenTasks(h.app, nil)
-	if err != nil {
-		return e.InternalServerError("loading tasks", err)
-	}
-
-	dock, _ := h.dockData()
-	data := map[string]any{"Title": "Tasks", "View": view, "Dock": dock}
-	switch view {
-	case "calendar":
-		data["Cal"] = buildCalendar(recs, e.Request.URL.Query().Get("m"), now)
-	case "timeline":
-		data["TL"] = buildTimeline(recs, now)
-	default:
-		var doneRecs []*core.Record
-		if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
-			doneRecs = dr
-		}
-		data["QuestLog"] = buildQuestLog(recs, doneRecs, now)
-	}
-	return h.render(e, "tasks.html", data)
-}
-
 // ---- calendar ----
 
 type calItem struct {
@@ -295,46 +269,10 @@ type tlView struct {
 	Days    []tlDay
 }
 
-func buildTimeline(recs []*core.Record, now time.Time) tlView {
-	loc := now.Location()
-	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-
-	var v tlView
-	bk := tasks.Bucket(recs, now)
-	v.Overdue = taskViewsOf(bk.Overdue, now)
-
-	for i := 0; i < timelineDays; i++ {
-		ds := dayStart.AddDate(0, 0, i)
-		de := ds.AddDate(0, 0, 1)
-		day := tlDay{IsToday: i == 0, Label: ds.Format("Monday, January 2")}
-		switch i {
-		case 0:
-			day.Label = "Today · " + day.Label
-		case 1:
-			day.Label = "Tomorrow · " + day.Label
-		}
-		for _, r := range recs {
-			rule, err := tasks.Parse(r.GetString("recur"))
-			if err != nil {
-				continue
-			}
-			due := r.GetDateTime("due").Time().In(loc)
-			for _, occ := range tasks.Occurrences(rule, due, ds, de) {
-				day.Items = append(day.Items, tlItem{
-					Time: occ.Format("15:04"), Title: r.GetString("title"), Recurring: !rule.IsZero(),
-				})
-			}
-		}
-		sort.Slice(day.Items, func(a, b int) bool { return day.Items[a].Time < day.Items[b].Time })
-		v.Days = append(v.Days, day)
-	}
-	return v
-}
-
 // ---- card + transitions ----
 
-// taskCard loads one task card into the /tasks quest-detail panel — the rail
-// row click is a Datastar @get that inner-patches #quest-detail.
+// taskCard loads one task card into the quests focus' quest-detail panel — the
+// rail row click is a Datastar @get that inner-patches #quest-detail.
 func (h *handlers) taskCard(e *core.RequestEvent) error {
 	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
 	if err != nil {

@@ -62,8 +62,9 @@ func seedTaskWithRecur(t testing.TB, app *tests.TestApp, title, status, recur st
 	return rec
 }
 
-// TestTasksListQuestLog verifies the /tasks list view renders quest groups.
-func TestTasksListQuestLog(t *testing.T) {
+// TestQuestsFocusQuestLog verifies the quests focus (GET /focus/quests, formerly
+// /tasks?view=list) renders the rhythm-grouped quest rail + detail.
+func TestQuestsFocusQuestLog(t *testing.T) {
 	t.Run("all four groups render in order with seeded tasks", func(t *testing.T) {
 		app := newWebApp(t)
 		// Seed one task per group.
@@ -79,9 +80,9 @@ func TestTasksListQuestLog(t *testing.T) {
 		_ = sideRec
 
 		scenario := tests.ApiScenario{
-			Name:           "GET /tasks list view — four groups in order",
+			Name:           "GET /focus/quests — four groups in order",
 			Method:         "GET",
-			URL:            "/tasks",
+			URL:            "/focus/quests",
 			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
@@ -100,7 +101,7 @@ func TestTasksListQuestLog(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:            "daily task under Dailies",
 			Method:          "GET",
-			URL:             "/tasks",
+			URL:             "/focus/quests",
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"Dailies", "Daily meditation"},
@@ -115,7 +116,7 @@ func TestTasksListQuestLog(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:            "quest-detail pre-rendered with first task",
 			Method:          "GET",
-			URL:             "/tasks",
+			URL:             "/focus/quests",
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"quest-detail", "tcard-" + rec.Id},
@@ -125,9 +126,9 @@ func TestTasksListQuestLog(t *testing.T) {
 
 	t.Run("zero tasks shows empty state", func(t *testing.T) {
 		scenario := tests.ApiScenario{
-			Name:            "GET /tasks empty — shows empty state",
+			Name:            "GET /focus/quests empty — shows empty state",
 			Method:          "GET",
-			URL:             "/tasks",
+			URL:             "/focus/quests",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"No quests yet"},
@@ -146,7 +147,7 @@ func TestTasksListQuestLog(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:            "fixed group order",
 			Method:          "GET",
-			URL:             "/tasks",
+			URL:             "/focus/quests",
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"Dailies", "Rituals", "Quests", "Side quests"},
@@ -155,8 +156,9 @@ func TestTasksListQuestLog(t *testing.T) {
 	})
 }
 
-// TestTasksListGroupOrder verifies that group names appear in the HTML output.
-func TestTasksListGroupOrder(t *testing.T) {
+// TestQuestsFocusGroupOrder verifies that group names appear in the HTML output
+// of the quests focus.
+func TestQuestsFocusGroupOrder(t *testing.T) {
 	app := newWebApp(t)
 	seedTaskWithRecur(t, app, "Side note", "open", "", time.Time{})
 	seedTaskWithRecur(t, app, "Due quest", "open", "", time.Now().Add(time.Hour))
@@ -166,7 +168,7 @@ func TestTasksListGroupOrder(t *testing.T) {
 	scenario := tests.ApiScenario{
 		Name:            "group order in HTML",
 		Method:          "GET",
-		URL:             "/tasks",
+		URL:             "/focus/quests",
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"Dailies", "Rituals", "Quests", "Side quests"},

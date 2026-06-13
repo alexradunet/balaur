@@ -199,7 +199,6 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/model/{id}/delete", h.deleteModelRecord)
 	se.Router.GET("/memory", h.memoryPage)
 	se.Router.GET("/skills", h.skillsPage)
-	se.Router.GET("/tasks", h.tasksPage)
 	se.Router.GET("/life", h.lifePage)
 	se.Router.GET("/journal", h.journalPage)
 	se.Router.POST("/ui/journal", h.journalWrite)
