@@ -88,7 +88,7 @@ grants, audit log · local inference via a llamafile engine Balaur runs as a
 subprocess and reaches over the OpenAI-compatible API · OpenAI-compatible
 remote providers by explicit choice · heads as auth records with grant-scoped, audited access ·
 OS access mode (read, write, edit, bash), off by default, fully audited ·
-memory & skill proposals with owner approval cards (chat, /memory, /skills) ·
+memory & skill proposals with owner approval cards (chat, the memory & skills card focuses) ·
 two-tier context injection (importance-gated upfront + per-message recall) ·
 skills index with on-demand loading via the `skill` tool · usage tracking
 (use count, last used) on approved knowledge · persisted master conversation
@@ -353,7 +353,8 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
 ### Knowledge cards (memory & skill approval)
 
 The growth surface: Balaur proposes, the owner decides. One card template
-per kind serves chat (inline, server-rendered), `/memory`, and `/skills`.
+per kind serves chat (inline, server-rendered) and the memory & skills card
+focuses (`/focus/memory`, `/focus/skills`).
 
 - **Proposed cards** pop: `--gold-deep` border, ornate gold corner brackets
   (`.ornate`), ember notch, Approve as the only primary button. The section
@@ -367,7 +368,7 @@ per kind serves chat (inline, server-rendered), `/memory`, and `/skills`.
 - Edit lives in a `<details>` fold on the card — no modals, no JS state.
 - Card actions are Datastar `@post` forms posting to lifecycle endpoints; the
   server patches the card in place (or removes it) by id. Approving in chat and
-  approving on /memory are the same server action.
+  approving in the memory focus are the same server action.
 
 ### Marks, avatars, imagery
 
