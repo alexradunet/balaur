@@ -174,6 +174,22 @@ func Get(typ string) (Spec, bool) {
 	return s, ok
 }
 
+// HasManage reports whether typ accepts mode=manage — i.e. it has a richer,
+// self-targeting interactive view that the focus surface should prefer over the
+// plain summary tile.
+func HasManage(typ string) bool {
+	s, ok := byType[typ]
+	if !ok {
+		return false
+	}
+	for _, p := range s.Params {
+		if p.Name == "mode" {
+			return enumContains(p.Enum, "manage")
+		}
+	}
+	return false
+}
+
 // Card is a typed, parameterized card reference — the composition unit for
 // boards and on-the-spot UI. It matches the JSON shape stored in the boards
 // collection's cards field and produced by the board_compose tool.
