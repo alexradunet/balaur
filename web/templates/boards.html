@@ -40,6 +40,7 @@
   {{if .Current}}
   {{template "board_header" .}}
   {{template "board_grid" .}}
+  {{template "board_add" .}}
   {{end}}
 {{end}}
 
@@ -77,7 +78,7 @@
        {{- if .HasPos}}
        style="grid-column: {{.X1}} / span {{.W}}; grid-row: {{.Y1}} / span {{.H}}"
        {{- else}}
-       style="grid-column: span {{.W}}"
+       style="grid-column: span {{.W}}; min-height: max(200px, calc({{.H}} * 10px))"
        {{- end}}>
     <div class="board-slot-grip" title="drag to move">⠿</div>
     <div class="board-slot-inner">{{.Body}}</div>
@@ -90,34 +91,38 @@
     <div class="board-slot-resize" aria-hidden="true"></div>
   </div>
   {{end}}
+</div>
+{{end}}
 
-  {{/* Add a card */}}
-  <div class="board-add-card" style="grid-column: span 12">
-    <details class="board-add-details">
-      <summary class="btn btn-ghost">+ add a card</summary>
-      <div class="board-palette">
-        {{range .Specs}}
-        <form method="POST"
-              action="/ui/boards/{{$.Current.ID}}/cards/add"
-              data-on:submit__prevent="@post('/ui/boards/{{$.Current.ID}}/cards/add', {contentType:'form'})"
-              class="board-palette-entry">
-          <input type="hidden" name="type" value="{{.Type}}">
-          <div class="board-palette-label">
-            <img class="h-icon-sm" src="/static/icons/{{.Icon}}.png" alt="">
-            <strong>{{.Label}}</strong>
-          </div>
-          {{range .Params}}
-          <div class="board-palette-param">
-            <label>{{.Name}}</label>
-            <input type="text" name="{{.Name}}" placeholder="{{.Doc}}"
-                   {{if .Required}}required{{end}} autocomplete="off">
-          </div>
-          {{end}}
-          <button class="btn btn-sm" type="submit">Add</button>
-        </form>
+{{- /* board_add — the "+ add a card" palette. A sibling below #board-grid, so
+     the grid can stretch its card rows to fill the canvas without ballooning
+     this control. Not patched on add/remove (only #board-grid is). */ -}}
+{{define "board_add"}}
+<div class="board-add-card">
+  <details class="board-add-details">
+    <summary class="btn btn-ghost">+ add a card</summary>
+    <div class="board-palette">
+      {{range .Specs}}
+      <form method="POST"
+            action="/ui/boards/{{$.Current.ID}}/cards/add"
+            data-on:submit__prevent="@post('/ui/boards/{{$.Current.ID}}/cards/add', {contentType:'form'})"
+            class="board-palette-entry">
+        <input type="hidden" name="type" value="{{.Type}}">
+        <div class="board-palette-label">
+          <img class="h-icon-sm" src="/static/icons/{{.Icon}}.png" alt="">
+          <strong>{{.Label}}</strong>
+        </div>
+        {{range .Params}}
+        <div class="board-palette-param">
+          <label>{{.Name}}</label>
+          <input type="text" name="{{.Name}}" placeholder="{{.Doc}}"
+                 {{if .Required}}required{{end}} autocomplete="off">
+        </div>
         {{end}}
-      </div>
-    </details>
-  </div>
+        <button class="btn btn-sm" type="submit">Add</button>
+      </form>
+      {{end}}
+    </div>
+  </details>
 </div>
 {{end}}

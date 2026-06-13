@@ -2077,7 +2077,16 @@ progress.gguf-progress-bar::-moz-progress-bar {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+/* Flow mode: rows size to each card's H spec (min-content carries the H-based
+   min-height set inline), but grow to 1fr when a sparse board leaves space —
+   so a few cards fill the canvas instead of stranding dead space below, while
+   a card-rich board keeps every card at its natural height. */
+.board-grid:not(.board-grid-free) {
+  grid-auto-rows: minmax(min-content, 1fr);
+  min-height: calc(100vh - 280px);
 }
 
 /* Free-layout mode: each row unit is 10px; cards use grid-column/grid-row. */
@@ -2098,6 +2107,9 @@ progress.gguf-progress-bar::-moz-progress-bar {
 .board-slot > .ucard { height: 100%; }
 
 .board-slot-inner { height: 100%; overflow: auto; }
+/* The card fills its slot so the parchment panel spans the slot's height
+   (flow slots size to the card's H spec; free slots to the dragged height). */
+.board-slot-inner > * { min-height: 100%; box-sizing: border-box; }
 
 /* Drag grip — top-left corner, mono braille pattern. */
 .board-slot-grip {
