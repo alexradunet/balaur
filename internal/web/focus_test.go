@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
 	_ "github.com/alexradunet/balaur/migrations"
@@ -95,6 +96,36 @@ func TestFocusCanonicalQuery(t *testing.T) {
 	if got := focusCanonicalQuery(url.Values{"from": {"abc"}}); got != "" {
 		t.Errorf("only-from query: got %q, want empty", got)
 	}
+}
+
+// TestFocusQuestsShowsRail: /focus/quests renders the rhythm rail (not the flat
+// manage list), so expanding the quests card gives the full quest-log surface.
+func TestFocusQuestsShowsRail(t *testing.T) {
+	app := newWebApp(t)
+	// Seed one open task so the rail has a group.
+	col, err := app.FindCollectionByNameOrId("tasks")
+	if err != nil {
+		t.Fatalf("tasks collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("title", "Walk the dog")
+	rec.Set("status", "open")
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("seed task: %v", err)
+	}
+	s := tests.ApiScenario{
+		Name:           "GET /focus/quests shows the quest rail",
+		Method:         "GET",
+		URL:            "/focus/quests",
+		TestAppFactory: func(testing.TB) *tests.TestApp { return app },
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="quest-rail"`,
+			`id="quest-detail"`,
+			"Walk the dog",
+		},
+	}
+	s.Test(t)
 }
 
 func TestFocusMissingRequiredParam(t *testing.T) {

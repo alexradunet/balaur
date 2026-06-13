@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"html/template"
 	"net/url"
 	"sort"
 	"strconv"
@@ -136,6 +137,26 @@ func buildQuestLog(openRecs []*core.Record, doneRecs []*core.Record, now time.Ti
 		First:        first,
 		DoneRecently: done,
 	}
+}
+
+// questsFocusHTML renders the quests card's focus body: the rhythm-grouped quest
+// rail + sticky detail — the surface formerly at /tasks?view=list. Tasks are
+// created in chat, so this view is read + transition only (strict parity).
+func (h *handlers) questsFocusHTML() template.HTML {
+	now := time.Now()
+	openRecs, _ := tasks.OpenTasks(h.app, nil)
+	var doneRecs []*core.Record
+	if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
+		doneRecs = dr
+	}
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "tasks_list", map[string]any{
+		"QuestLog": buildQuestLog(openRecs, doneRecs, now),
+	}); err != nil {
+		h.app.Logger().Warn("quests focus render failed", "err", err)
+		return cardErrorStrip("could not render the quest log")
+	}
+	return template.HTML(b.String())
 }
 
 func (h *handlers) tasksPage(e *core.RequestEvent) error {
