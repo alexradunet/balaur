@@ -326,7 +326,35 @@ func (h *handlers) renderCardLines(e *core.RequestEvent, _ cards.Spec, params ma
 	return h.tmpl.ExecuteTemplate(e.Response, "ucard_lines", view)
 }
 
+// manageCardView feeds the interactive knowledge card (mode=manage): the
+// proposed queue + active records, each rendered via the existing self-targeting
+// card-{memory,skill}.html partials (so several cards never collide).
+type manageCardView struct {
+	Kind     string // "memories" | "skills" — selects the card-*.html include
+	Label    string
+	Icon     string
+	Href     string
+	Proposed []*core.Record
+	Active   []*core.Record
+}
+
+// renderKnowledgeManage renders an interactive memory/skill card: proposed
+// (approve/reject inline) + a capped slice of active (archive/edit inline).
+func (h *handlers) renderKnowledgeManage(e *core.RequestEvent, kind knowledge.Kind, v manageCardView) error {
+	v.Proposed, _ = knowledge.ListByStatus(h.app, kind, knowledge.StatusProposed)
+	v.Active, _ = knowledge.FilterActive(h.app, kind, "", "")
+	if len(v.Active) > 8 {
+		v.Active = v.Active[:8]
+	}
+	return h.tmpl.ExecuteTemplate(e.Response, "ucard_knowledge_manage", v)
+}
+
 func (h *handlers) renderCardMemory(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+	if params["mode"] == "manage" {
+		return h.renderKnowledgeManage(e, knowledge.Memory, manageCardView{
+			Kind: "memories", Label: "Memory", Icon: "tome", Href: "/memory",
+		})
+	}
 	limit := intParam(params, "limit", 6)
 	query := params["query"]
 
@@ -355,6 +383,11 @@ func (h *handlers) renderCardMemory(e *core.RequestEvent, _ cards.Spec, params m
 }
 
 func (h *handlers) renderCardSkills(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+	if params["mode"] == "manage" {
+		return h.renderKnowledgeManage(e, knowledge.Skill, manageCardView{
+			Kind: "skills", Label: "Skills", Icon: "key", Href: "/skills",
+		})
+	}
 	limit := intParam(params, "limit", 6)
 
 	recs, _ := knowledge.FilterActive(h.app, knowledge.Skill, "", "")

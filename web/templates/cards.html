@@ -197,6 +197,34 @@
 {{end}}
 
 {{- /* ------------------------------------------------------------------ */ -}}
+{{- /* ucard_knowledge_manage — the interactive memory/skills fold (mode=manage).
+     Reuses the self-targeting card-{memory,skill}.html partials (each targets
+     its own #kcard-{id}), so multiple manage cards never cross-target.
+     Interactions stay htmx during coexistence; the board switch re-processes
+     #main so the lazy partials bind. context: manageCardView */ -}}
+{{define "ucard_knowledge_manage"}}
+<article class="kcard ucard ucard-manage ucard-{{.Kind}}-manage" id="ucard-{{.Kind}}-manage">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/{{.Icon}}.png" alt="">{{.Label}}</span>
+    <a class="kcard-meta" href="{{.Href}}">manage all →</a>
+  </header>
+  {{if .Proposed}}
+  <h4 class="k-heading k-heading-proposed">Awaiting your word</h4>
+  <div class="ucard-manage-list">
+    {{range .Proposed}}{{if eq $.Kind "memories"}}{{template "card-memory.html" .}}{{else}}{{template "card-skill.html" .}}{{end}}{{end}}
+  </div>
+  {{end}}
+  {{if .Active}}
+  <h4 class="k-heading k-heading-muted">Active</h4>
+  <div class="ucard-manage-list">
+    {{range .Active}}{{if eq $.Kind "memories"}}{{template "card-memory.html" .}}{{else}}{{template "card-skill.html" .}}{{end}}{{end}}
+  </div>
+  {{end}}
+  {{if and (not .Proposed) (not .Active)}}<p class="k-empty">Nothing yet — {{.Label}} appears as Balaur proposes.</p>{{end}}
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
 {{- /* memory card — active memories (compact read view) */ -}}
 {{- /* context: cardMemoryView */ -}}
 {{define "ucard_memory"}}

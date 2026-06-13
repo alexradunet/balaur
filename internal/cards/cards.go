@@ -122,6 +122,7 @@ func init() {
 			W:     4,
 			H:     20,
 			Params: []ParamSpec{
+				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (approve/archive inline)"},
 				{Name: "query", Doc: "optional search terms to filter active memories"},
 				{Name: "limit", Doc: "number of memories to show (default 6, max 50)"},
 			},
@@ -133,6 +134,7 @@ func init() {
 			W:     4,
 			H:     14,
 			Params: []ParamSpec{
+				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (approve/archive inline)"},
 				{Name: "limit", Doc: "number of skills to show (default 6, max 50)"},
 			},
 		},

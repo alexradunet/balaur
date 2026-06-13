@@ -2337,3 +2337,13 @@ progress.gguf-progress-bar::-moz-progress-bar {
     border-top: 2px solid var(--outline-2);
   }
 }
+
+/* Interactive knowledge fold (mode=manage): a stacked list of self-contained
+   memory/skill cards inside one board card. */
+.ucard-manage .k-heading { margin: 12px 0 6px; }
+.ucard-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ucard-manage-list .kcard { margin: 0; }
