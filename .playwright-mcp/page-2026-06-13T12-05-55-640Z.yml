@@ -1,0 +1,383 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - link "Balaur" [ref=e3] [cursor=pointer]:
+      - /url: /
+    - navigation [ref=e4]:
+      - link "Chat" [ref=e5] [cursor=pointer]:
+        - /url: /chat
+      - link "Boards" [ref=e6] [cursor=pointer]:
+        - /url: /boards
+      - link "Tasks" [ref=e7] [cursor=pointer]:
+        - /url: /tasks
+      - link "Life" [ref=e8] [cursor=pointer]:
+        - /url: /life
+      - link "Journal" [ref=e9] [cursor=pointer]:
+        - /url: /journal
+      - link "Memory" [ref=e10] [cursor=pointer]:
+        - /url: /memory
+      - link "Heads" [ref=e11] [cursor=pointer]:
+        - /url: /heads
+      - link "Settings" [ref=e12] [cursor=pointer]:
+        - /url: /settings
+      - link "Engine room" [ref=e13] [cursor=pointer]:
+        - /url: /_/
+    - button "Toggle light/dark mode" [ref=e14] [cursor=pointer]: ☼
+  - main [ref=e16]:
+    - navigation [ref=e17]:
+      - link "Quest log" [ref=e18] [cursor=pointer]:
+        - /url: /boards/dpz12y7dcxjz0ia
+      - link "Self" [ref=e19] [cursor=pointer]:
+        - /url: /boards/r9yr8kopcshefd5
+      - link "Balaur" [ref=e20] [cursor=pointer]:
+        - /url: /boards/88ktlu806h8nq5s
+      - group [ref=e21]:
+        - generic "+ board" [ref=e22] [cursor=pointer]
+    - generic [ref=e23]:
+      - heading "Quest log" [level=2] [ref=e24]
+      - generic [ref=e25]:
+        - group [ref=e26]:
+          - generic "Rename" [ref=e27] [cursor=pointer]
+        - button "Delete board" [ref=e29] [cursor=pointer]
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - generic "drag to move" [ref=e32]: ⠿
+        - article [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Quest log
+            - generic [ref=e37]: "status: open · limit: 20"
+          - paragraph [ref=e38]: No quests here yet.
+          - link "all quests →" [ref=e40] [cursor=pointer]:
+            - /url: /tasks
+        - button "✕" [ref=e42] [cursor=pointer]
+      - generic [ref=e44]:
+        - generic "drag to move" [ref=e45]: ⠿
+        - article [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]: Calendar
+            - generic [ref=e50]: June 2026
+          - table [ref=e52]:
+            - rowgroup [ref=e53]:
+              - row "Mon Tue Wed Thu Fri Sat Sun" [ref=e54]:
+                - columnheader "Mon" [ref=e55]
+                - columnheader "Tue" [ref=e56]
+                - columnheader "Wed" [ref=e57]
+                - columnheader "Thu" [ref=e58]
+                - columnheader "Fri" [ref=e59]
+                - columnheader "Sat" [ref=e60]
+                - columnheader "Sun" [ref=e61]
+            - rowgroup [ref=e62]:
+              - row "1 2 3 4 5 6 7" [ref=e63]:
+                - cell "1" [ref=e64]:
+                  - link "1" [ref=e65] [cursor=pointer]:
+                    - /url: /day/2026-06-01
+                    - generic [ref=e66]: "1"
+                - cell "2" [ref=e67]:
+                  - link "2" [ref=e68] [cursor=pointer]:
+                    - /url: /day/2026-06-02
+                    - generic [ref=e69]: "2"
+                - cell "3" [ref=e70]:
+                  - link "3" [ref=e71] [cursor=pointer]:
+                    - /url: /day/2026-06-03
+                    - generic [ref=e72]: "3"
+                - cell "4" [ref=e73]:
+                  - link "4" [ref=e74] [cursor=pointer]:
+                    - /url: /day/2026-06-04
+                    - generic [ref=e75]: "4"
+                - cell "5" [ref=e76]:
+                  - link "5" [ref=e77] [cursor=pointer]:
+                    - /url: /day/2026-06-05
+                    - generic [ref=e78]: "5"
+                - cell "6" [ref=e79]:
+                  - link "6" [ref=e80] [cursor=pointer]:
+                    - /url: /day/2026-06-06
+                    - generic [ref=e81]: "6"
+                - cell "7" [ref=e82]:
+                  - link "7" [ref=e83] [cursor=pointer]:
+                    - /url: /day/2026-06-07
+                    - generic [ref=e84]: "7"
+              - row "8 9 10 11 12 13 14" [ref=e85]:
+                - cell "8" [ref=e86]:
+                  - link "8" [ref=e87] [cursor=pointer]:
+                    - /url: /day/2026-06-08
+                    - generic [ref=e88]: "8"
+                - cell "9" [ref=e89]:
+                  - link "9" [ref=e90] [cursor=pointer]:
+                    - /url: /day/2026-06-09
+                    - generic [ref=e91]: "9"
+                - cell "10" [ref=e92]:
+                  - link "10" [ref=e93] [cursor=pointer]:
+                    - /url: /day/2026-06-10
+                    - generic [ref=e94]: "10"
+                - cell "11" [ref=e95]:
+                  - link "11" [ref=e96] [cursor=pointer]:
+                    - /url: /day/2026-06-11
+                    - generic [ref=e97]: "11"
+                - cell "12" [ref=e98]:
+                  - link "12" [ref=e99] [cursor=pointer]:
+                    - /url: /day/2026-06-12
+                    - generic [ref=e100]: "12"
+                - cell "13" [ref=e101]:
+                  - link "13" [ref=e102] [cursor=pointer]:
+                    - /url: /day/2026-06-13
+                    - generic [ref=e103]: "13"
+                - cell "14" [ref=e104]:
+                  - link "14" [ref=e105] [cursor=pointer]:
+                    - /url: /day/2026-06-14
+                    - generic [ref=e106]: "14"
+              - row "15 16 17 18 19 20 21" [ref=e107]:
+                - cell "15" [ref=e108]:
+                  - link "15" [ref=e109] [cursor=pointer]:
+                    - /url: /day/2026-06-15
+                    - generic [ref=e110]: "15"
+                - cell "16" [ref=e111]:
+                  - link "16" [ref=e112] [cursor=pointer]:
+                    - /url: /day/2026-06-16
+                    - generic [ref=e113]: "16"
+                - cell "17" [ref=e114]:
+                  - link "17" [ref=e115] [cursor=pointer]:
+                    - /url: /day/2026-06-17
+                    - generic [ref=e116]: "17"
+                - cell "18" [ref=e117]:
+                  - link "18" [ref=e118] [cursor=pointer]:
+                    - /url: /day/2026-06-18
+                    - generic [ref=e119]: "18"
+                - cell "19" [ref=e120]:
+                  - link "19" [ref=e121] [cursor=pointer]:
+                    - /url: /day/2026-06-19
+                    - generic [ref=e122]: "19"
+                - cell "20" [ref=e123]:
+                  - link "20" [ref=e124] [cursor=pointer]:
+                    - /url: /day/2026-06-20
+                    - generic [ref=e125]: "20"
+                - cell "21" [ref=e126]:
+                  - link "21" [ref=e127] [cursor=pointer]:
+                    - /url: /day/2026-06-21
+                    - generic [ref=e128]: "21"
+              - row "22 23 24 25 26 27 28" [ref=e129]:
+                - cell "22" [ref=e130]:
+                  - link "22" [ref=e131] [cursor=pointer]:
+                    - /url: /day/2026-06-22
+                    - generic [ref=e132]: "22"
+                - cell "23" [ref=e133]:
+                  - link "23" [ref=e134] [cursor=pointer]:
+                    - /url: /day/2026-06-23
+                    - generic [ref=e135]: "23"
+                - cell "24" [ref=e136]:
+                  - link "24" [ref=e137] [cursor=pointer]:
+                    - /url: /day/2026-06-24
+                    - generic [ref=e138]: "24"
+                - cell "25" [ref=e139]:
+                  - link "25" [ref=e140] [cursor=pointer]:
+                    - /url: /day/2026-06-25
+                    - generic [ref=e141]: "25"
+                - cell "26" [ref=e142]:
+                  - link "26" [ref=e143] [cursor=pointer]:
+                    - /url: /day/2026-06-26
+                    - generic [ref=e144]: "26"
+                - cell "27" [ref=e145]:
+                  - link "27" [ref=e146] [cursor=pointer]:
+                    - /url: /day/2026-06-27
+                    - generic [ref=e147]: "27"
+                - cell "28" [ref=e148]:
+                  - link "28" [ref=e149] [cursor=pointer]:
+                    - /url: /day/2026-06-28
+                    - generic [ref=e150]: "28"
+              - row "29 30 1 2 3 4 5" [ref=e151]:
+                - cell "29" [ref=e152]:
+                  - link "29" [ref=e153] [cursor=pointer]:
+                    - /url: /day/2026-06-29
+                    - generic [ref=e154]: "29"
+                - cell "30" [ref=e155]:
+                  - link "30" [ref=e156] [cursor=pointer]:
+                    - /url: /day/2026-06-30
+                    - generic [ref=e157]: "30"
+                - cell "1" [ref=e158]:
+                  - link "1" [ref=e159] [cursor=pointer]:
+                    - /url: /day/2026-07-01
+                    - generic [ref=e160]: "1"
+                - cell "2" [ref=e161]:
+                  - link "2" [ref=e162] [cursor=pointer]:
+                    - /url: /day/2026-07-02
+                    - generic [ref=e163]: "2"
+                - cell "3" [ref=e164]:
+                  - link "3" [ref=e165] [cursor=pointer]:
+                    - /url: /day/2026-07-03
+                    - generic [ref=e166]: "3"
+                - cell "4" [ref=e167]:
+                  - link "4" [ref=e168] [cursor=pointer]:
+                    - /url: /day/2026-07-04
+                    - generic [ref=e169]: "4"
+                - cell "5" [ref=e170]:
+                  - link "5" [ref=e171] [cursor=pointer]:
+                    - /url: /day/2026-07-05
+                    - generic [ref=e172]: "5"
+          - link "full calendar →" [ref=e174] [cursor=pointer]:
+            - /url: /tasks?view=calendar
+        - button "✕" [ref=e176] [cursor=pointer]
+      - group [ref=e179]:
+        - generic "+ add a card" [ref=e180] [cursor=pointer]
+  - complementary [ref=e181]:
+    - generic [ref=e183]:
+      - generic [ref=e184]:
+        - figure "Cico" [ref=e185]:
+          - generic [ref=e187]: Cico
+        - generic [ref=e189]: Hello Sir
+      - generic [ref=e190]:
+        - figure "Cico" [ref=e191]:
+          - generic [ref=e193]: Cico
+        - generic [ref=e195]: "Reply with exactly: BALAUR_LLAMAFILE_OK"
+      - generic [ref=e196]:
+        - figure "Cico" [ref=e197]:
+          - generic [ref=e199]: Cico
+        - generic [ref=e201]: hello
+      - generic [ref=e202]:
+        - figure "Cico" [ref=e203]:
+          - generic [ref=e205]: Cico
+        - generic [ref=e207]: Who are you?
+      - generic [ref=e208]:
+        - figure "Cico" [ref=e209]:
+          - generic [ref=e211]: Cico
+        - generic [ref=e213]: sddasd
+      - generic [ref=e214]:
+        - figure "Cico" [ref=e215]:
+          - generic [ref=e217]: Cico
+        - generic [ref=e219]: "Reply with exactly the token: BALAUR_LLAMAFILE_OK"
+      - generic [ref=e220]:
+        - figure "Cico" [ref=e221]:
+          - generic [ref=e223]: Cico
+        - generic [ref=e225]: In one short sentence, what are you?
+      - generic [ref=e226]:
+        - figure "Cico" [ref=e227]:
+          - generic [ref=e229]: Cico
+        - generic [ref=e231]: Hello
+      - generic [ref=e232]:
+        - figure "Cico" [ref=e233]:
+          - generic [ref=e235]: Cico
+        - generic [ref=e237]: In one short sentence, what are you?
+      - generic [ref=e238]:
+        - figure "Cico" [ref=e239]:
+          - generic [ref=e241]: Cico
+        - generic [ref=e243]: Hello
+      - generic [ref=e244]:
+        - figure "Cico" [ref=e245]:
+          - generic [ref=e247]: Cico
+        - generic [ref=e249]: Say hello in one short sentence.
+      - generic [ref=e250]:
+        - figure "Balaur" [ref=e251]:
+          - generic [ref=e253]: Balaur
+        - generic [ref=e255]: Hello! How can I assist you today?
+      - generic [ref=e256]:
+        - figure "Cico" [ref=e257]:
+          - generic [ref=e259]: Cico
+        - generic [ref=e261]: What can you do?
+      - generic [ref=e262]:
+        - figure "Balaur" [ref=e263]:
+          - generic [ref=e265]: Balaur
+        - generic [ref=e267]: I am Balaur, a personal companion who helps manage your tasks, track life events, keep journals, and remember important details about you.
+      - generic [ref=e268]:
+        - figure "Cico" [ref=e269]:
+          - generic [ref=e271]: Cico
+        - generic [ref=e273]: My name is Alex
+      - generic [ref=e274]:
+        - generic [ref=e275]:
+          - img [ref=e276]
+          - text: tool · remember
+        - text: Memory proposal "Owner's name" sent to the owner for approval. It is NOT yet part of your memory.
+      - article [ref=e278]:
+        - generic [ref=e279]:
+          - generic [ref=e280]: ▪ person
+          - generic "importance 3/5" [ref=e281]
+        - heading "Owner's name" [level=3] [ref=e287]
+        - paragraph [ref=e288]: Alex's name is Alex.
+        - group [ref=e289]:
+          - generic "Edit" [ref=e290] [cursor=pointer]
+          - option "fact"
+          - option "preference"
+          - option "person" [selected]
+          - option "project"
+          - option "context"
+        - generic [ref=e291]:
+          - button "Archive" [ref=e293] [cursor=pointer]
+          - generic [ref=e294]: used ×1
+      - generic [ref=e295]:
+        - figure "Balaur" [ref=e296]:
+          - generic [ref=e298]: Balaur
+        - generic [ref=e300]: <think> </think> Hello, Alex! I've noted your name. How can I help you today?
+      - generic [ref=e301]:
+        - figure "Cico" [ref=e302]:
+          - generic [ref=e304]: Cico
+        - generic [ref=e306]: Let's get to know each other
+      - generic [ref=e307]:
+        - generic [ref=e308]:
+          - img [ref=e309]
+          - text: tool · recall
+        - text: "- [person] Owner's name: Alex's name is Alex."
+      - generic [ref=e310]:
+        - figure "Balaur" [ref=e311]:
+          - generic [ref=e313]: Balaur
+        - generic [ref=e315]: That’s great, Alex! I’m Balaur, your personal companion. I help you organize tasks, track habits and milestones, keep a journal of your thoughts, and remember important details about your life. You can think of me as a thoughtful assistant who’s always ready to listen and support. What part of our conversation would you like to start with? Maybe we could talk about your goals, current projects, or something on your mind lately.
+      - generic [ref=e316]:
+        - figure "Cico" [ref=e317]:
+          - generic [ref=e319]: Cico
+        - generic [ref=e321]: hello
+      - generic [ref=e322]:
+        - figure "Cico" [ref=e323]:
+          - generic [ref=e325]: Cico
+        - generic [ref=e327]: How are you?
+      - generic [ref=e328]:
+        - figure "Balaur" [ref=e329]:
+          - generic [ref=e331]: Balaur
+        - generic [ref=e333]: I'm doing well, Alex! How are you feeling today?
+      - generic [ref=e334]:
+        - figure "Cico" [ref=e335]:
+          - generic [ref=e337]: Cico
+        - generic [ref=e339]: Nice. I just came back from the city with my friends
+      - generic [ref=e340]:
+        - figure "Cico" [ref=e341]:
+          - generic [ref=e343]: Cico
+        - generic [ref=e345]: hello there
+      - generic [ref=e346]:
+        - figure "Cico" [ref=e347]:
+          - generic [ref=e349]: Cico
+        - generic [ref=e351]: Say hello in exactly three words.
+      - generic [ref=e352]:
+        - figure "Balaur" [ref=e353]:
+          - generic [ref=e355]: Balaur
+        - generic [ref=e357]: Hello Alex! Nice to see you.
+      - generic [ref=e358]:
+        - figure "Cico" [ref=e359]:
+          - generic [ref=e361]: Cico
+        - generic [ref=e363]: hi
+      - generic [ref=e364]:
+        - figure "Cico" [ref=e365]:
+          - generic [ref=e367]: Cico
+        - generic [ref=e369]: "Reply with exactly one word: ok"
+      - generic [ref=e370]:
+        - figure "Balaur" [ref=e371]:
+          - generic [ref=e373]: Balaur
+        - generic [ref=e375]: ok
+      - generic [ref=e376]:
+        - figure "Cico" [ref=e377]:
+          - generic [ref=e379]: Cico
+        - generic [ref=e381]: yo
+      - generic [ref=e382]:
+        - figure "Cico" [ref=e383]:
+          - generic [ref=e385]: Cico
+        - generic [ref=e387]: yo
+      - generic [ref=e388]:
+        - figure "Cico" [ref=e389]:
+          - generic [ref=e391]: Cico
+        - generic [ref=e393]: yo
+    - generic [ref=e396]:
+      - textbox "Speak with Balaur via Local Qwen3.5 4B..." [active] [ref=e397]
+      - generic [ref=e398]:
+        - generic [ref=e399]: enter to speak · shift+enter for a new line
+        - button "Speak" [ref=e400] [cursor=pointer]
+    - region "Model" [ref=e402]:
+      - generic [ref=e403]:
+        - generic [ref=e404]: Model
+        - generic [ref=e405]: Local Qwen3.5 4B
+        - link "Manage models & APIs →" [ref=e406] [cursor=pointer]:
+          - /url: /settings/models
+      - link "Your avatar & profile →" [ref=e409] [cursor=pointer]:
+        - /url: /profile

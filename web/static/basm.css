@@ -2301,10 +2301,10 @@ progress.gguf-progress-bar::-moz-progress-bar {
   overflow: hidden;
 }
 
-/* Cap + scroll the recap telescope in the narrow rail so an expanded,
-   multi-band telescope can't grow past the composer/chatbar (clipped by the
-   fixed #dock). On /chat the page scrolls, so this only applies in the dock. */
-#dock .recap-zone { flex: 0 1 auto; max-height: 38%; overflow-y: auto; margin: 0; }
+/* The dock is the live-chat rail — suppress the recap telescope here (it lives
+   on /chat and, later, a recap card). Both the sentinel and its loaded bands go,
+   so an expanded telescope can't crush the message list. */
+#dock .recap-zone, #dock .recap-band { display: none; }
 
 /* The chat scroll area fills the rail; avatars/gutter tighten for the width. */
 #dock .chat {
@@ -2316,7 +2316,12 @@ progress.gguf-progress-bar::-moz-progress-bar {
   --chat-gutter: 54px;
 }
 
-#dock .msg-draft { flex: 0 0 auto; margin: 0 10px 8px; }
+/* Compact composer in the rail: drop the avatar column and the chat-bubble
+   min-height (which was stretching the portrait to the full row), leaving just
+   the textarea + send row. */
+#dock .msg-draft { flex: 0 0 auto; margin: 8px 10px; }
+#dock .msg-draft .portrait { display: none; }
+#dock .msg-draft .msg-main { min-height: 0; }
 
 #dock .chatbar,
 #dock .chatbar-slim {
