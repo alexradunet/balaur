@@ -1,0 +1,19 @@
+{{- /* journal-focus.html — the "candle" as the journal card's focus body
+     (free/guided write + history). Was /journal. The focus header (Back +
+     "Journal") is supplied by focus_main; this is the inner body. */ -}}
+{{define "journal_focus"}}
+<div class="candle-focus">
+  <div class="k-tabs" role="tablist">
+    <button class="k-tab k-tab-active" type="button"
+            data-on:click="document.getElementById('candle-prompt').innerHTML='';el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active')">
+      free hand
+    </button>
+    <button class="k-tab" type="button"
+            data-on:click="el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active');@get('/ui/journal/prompt')">
+      guided
+    </button>
+  </div>
+  <div id="candle-prompt"></div>
+  {{template "journal_candle_body" .}}
+</div>
+{{end}}

@@ -57,6 +57,8 @@ func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.
 	switch typ {
 	case "quests":
 		return h.questsFocusHTML()
+	case "journal":
+		return h.journalFocusHTML()
 	}
 	return h.cardHTML(typ, params)
 }

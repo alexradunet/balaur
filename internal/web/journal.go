@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"html/template"
 	"strings"
 	"time"
 
@@ -160,6 +161,22 @@ func (h *handlers) renderCandleBody(e *core.RequestEvent, now time.Time) error {
 	_ = sse.PatchElements(b.String(),
 		datastar.WithSelectorID("journal-candle-body"), datastar.WithModeOuter())
 	return nil
+}
+
+// journalFocusHTML renders the journal card's focus body: the candle
+// (free/guided write + guided prompt + today's history). Was the /journal page.
+func (h *handlers) journalFocusHTML() template.HTML {
+	data, err := h.buildCandleData(time.Now())
+	if err != nil {
+		h.app.Logger().Warn("journal focus render failed", "err", err)
+		return cardErrorStrip("could not open the journal")
+	}
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "journal_focus", data); err != nil {
+		h.app.Logger().Warn("journal focus template failed", "err", err)
+		return cardErrorStrip("could not render the journal")
+	}
+	return template.HTML(b.String())
 }
 
 // journalPageDayEntries returns journal entries for a day, for use by the

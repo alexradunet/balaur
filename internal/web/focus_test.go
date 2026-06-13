@@ -128,6 +128,24 @@ func TestFocusQuestsShowsRail(t *testing.T) {
 	s.Test(t)
 }
 
+// TestFocusJournalShowsCandle: /focus/journal renders the candle (write form +
+// guided tab), so expanding the journal card gives the full writing surface.
+func TestFocusJournalShowsCandle(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:           "GET /focus/journal shows the candle",
+		Method:         "GET",
+		URL:            "/focus/journal",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`@post('/ui/journal'`, // write form
+			`/ui/journal/prompt`,  // guided tab
+			`id="journal-candle-body"`,
+		},
+	}
+	s.Test(t)
+}
+
 func TestFocusMissingRequiredParam(t *testing.T) {
 	s := tests.ApiScenario{
 		Name:            "GET /focus/measure without kind → 400",
