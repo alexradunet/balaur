@@ -72,31 +72,38 @@ func (h *handlers) lifePage(e *core.RequestEvent) error {
 		views = append(views, v)
 	}
 
-	var habits []lifeHabitView
-	if recs, err := tasks.OpenTasks(h.app, nil); err == nil {
-		var recurring []*core.Record
-		recurLines := make(map[string]string)
-		for _, r := range recs {
-			rule, err := tasks.Parse(r.GetString("recur"))
-			if err != nil || rule.IsZero() {
-				continue
-			}
-			recurring = append(recurring, r)
-			recurLines[r.Id] = tasks.Describe(rule)
-		}
-		streaks := tasks.StreaksFor(h.app, recurring, now)
-		for _, r := range recurring {
-			habits = append(habits, lifeHabitView{
-				Title:     r.GetString("title"),
-				Streak:    streaks[r.Id],
-				RecurLine: recurLines[r.Id],
-			})
-		}
-	}
-
 	return h.render(e, "life.html", map[string]any{
-		"Title": "Life", "Kinds": views, "Habits": habits,
+		"Title": "Life", "Kinds": views, "Habits": h.buildHabits(now),
 	})
+}
+
+// buildHabits returns the owner's recurring tasks with their current streak,
+// shared by the /life page and the habits card.
+func (h *handlers) buildHabits(now time.Time) []lifeHabitView {
+	recs, err := tasks.OpenTasks(h.app, nil)
+	if err != nil {
+		return nil
+	}
+	var recurring []*core.Record
+	recurLines := make(map[string]string)
+	for _, r := range recs {
+		rule, err := tasks.Parse(r.GetString("recur"))
+		if err != nil || rule.IsZero() {
+			continue
+		}
+		recurring = append(recurring, r)
+		recurLines[r.Id] = tasks.Describe(rule)
+	}
+	streaks := tasks.StreaksFor(h.app, recurring, now)
+	habits := make([]lifeHabitView, 0, len(recurring))
+	for _, r := range recurring {
+		habits = append(habits, lifeHabitView{
+			Title:     r.GetString("title"),
+			Streak:    streaks[r.Id],
+			RecurLine: recurLines[r.Id],
+		})
+	}
+	return habits
 }
 
 func numericValues(recs []*core.Record) []float64 {

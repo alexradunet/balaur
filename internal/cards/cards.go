@@ -149,6 +149,14 @@ func init() {
 				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (assign each head's personality inline)"},
 			},
 		},
+		{
+			Type:  "habits",
+			Label: "Habits",
+			Icon:  "flame",
+			W:     4,
+			H:     14,
+			// no params — recurring tasks with their current streak
+		},
 	}
 
 	byType = make(map[string]Spec, len(registry))

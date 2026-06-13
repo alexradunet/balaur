@@ -12,7 +12,7 @@ import (
 // multiple sub-tests to ensure the registry is complete and consistent.
 var allTypes = []string{
 	"today", "quests", "calendar", "timeline",
-	"journal", "measure", "lines", "memory", "skills", "heads",
+	"journal", "measure", "lines", "memory", "skills", "heads", "habits",
 }
 
 func TestAll(t *testing.T) {

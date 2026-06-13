@@ -98,8 +98,21 @@ func (h *handlers) uiCard(e *core.RequestEvent) error {
 		return h.renderCardSkills(e, spec, params)
 	case "heads":
 		return h.renderCardHeads(e, spec, params)
+	case "habits":
+		return h.renderCardHabits(e, spec, params)
 	}
 	return e.NotFoundError("unhandled card type", nil)
+}
+
+// cardHabitsView feeds the read-only habits card: recurring tasks + streaks.
+type cardHabitsView struct {
+	Habits []lifeHabitView
+}
+
+func (h *handlers) renderCardHabits(e *core.RequestEvent, _ cards.Spec, _ map[string]string) error {
+	return h.tmpl.ExecuteTemplate(e.Response, "ucard_habits", cardHabitsView{
+		Habits: h.buildHabits(time.Now()),
+	})
 }
 
 // ---- view-model structs ----

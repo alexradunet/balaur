@@ -346,6 +346,31 @@
 {{end}}
 
 {{- /* ------------------------------------------------------------------ */ -}}
+{{- /* habits card — recurring tasks with their current streak (read-only).
+     context: cardHabitsView */ -}}
+{{define "ucard_habits"}}
+<article class="kcard ucard ucard-habits" id="ucard-habits">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/flame.png" alt="">Habits</span>
+  </header>
+  {{if .Habits}}
+  <ul class="ucard-list">
+    {{range .Habits}}
+    <li class="ucard-row">
+      <span class="ucard-title">{{.Title}}</span>
+      {{with .RecurLine}}<span class="kcard-meta">{{.}}</span>{{end}}
+      <span class="habit-streak" title="current streak">{{.Streak}}d</span>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="k-empty">No habits yet — add a recurring task in chat.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/life">life →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
 {{- /* palette — GET /ui/cards — human/agent index of all card types */ -}}
 {{- /* context: []cards.Spec */ -}}
 {{define "ucard_palette"}}
