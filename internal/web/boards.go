@@ -316,10 +316,11 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 		}
 		// Only #main was patched, so sync the tab title explicitly.
 		_ = sse.ExecuteScript(fmt.Sprintf("document.title=%q", current.Name+" · Balaur"))
-		// The card slots lazy-load via htmx (hx-trigger="load"); htmx does not
-		// see Datastar-patched DOM, so process #main once. Drops out when the
-		// card registry migrates to Datastar.
-		_ = sse.ExecuteScript("window.htmx&&htmx.process(document.getElementById('main'))")
+		// The card slots lazy-load via htmx (hx-trigger="load"). After a Datastar
+		// morph, htmx must PROCESS the new slots and then be told to FIRE their
+		// load trigger — process alone won't re-fire "load" on morphed nodes.
+		// Drops out when the card registry renders server-side / moves to Datastar.
+		_ = sse.ExecuteScript(`(function(m){if(!window.htmx||!m)return;htmx.process(m);m.querySelectorAll('.board-slot-inner[hx-get]').forEach(function(s){htmx.trigger(s,'load')});})(document.getElementById('main'))`)
 		return nil
 	}
 
