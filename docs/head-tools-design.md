@@ -1,5 +1,9 @@
 # Head tools design: scoped tool access through the grants boundary
 
+> **Status: design for future work — not shipped.** Sub-head chat is
+> tool-free today (`turn.RunFor` passes no tools); this document specifies
+> how scoped tools would be granted when that slice is built.
+
 ## Goal
 
 Allow a sub-head's chat turns to call a limited set of tools, where that

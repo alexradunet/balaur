@@ -2,7 +2,6 @@ package llm
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -17,10 +16,6 @@ const (
 	DefaultChatModelName = "Qwen3.5 4B"
 	DefaultChatModelFile = "Qwen3.5-4B-Q5_K_S.llamafile"
 	DefaultChatModelURL  = "https://huggingface.co/mozilla-ai/llamafile_0.10/resolve/main/Qwen3.5-4B-Q5_K_S.llamafile"
-
-	SyntheticBaseURL    = "https://api.synthetic.new/v1"
-	SyntheticSmallModel = "syn:small:text"
-	SyntheticLargeModel = "syn:large:text"
 )
 
 // DefaultChatModelPath is where Balaur keeps its default local model file.
@@ -32,24 +27,6 @@ func DefaultChatModelPath(dataDir string) string {
 // the default model is missing. Balaur also fetches it automatically on serve.
 func DefaultChatModelDownloadCommand(dataDir string) string {
 	return fmt.Sprintf("curl -L -o %s %s", filepath.Join(dataDir, "models", DefaultChatModelFile), DefaultChatModelURL)
-}
-
-// SyntheticAPIKey reads the internal/experimental synthetic API credentials.
-// BALAUR_SYNTHETIC_API_KEY and SYNTHETIC_API_KEY are undocumented, reserved
-// for testing and internal development (SyntheticClient has no production callers).
-func SyntheticAPIKey() string {
-	if key := os.Getenv("BALAUR_SYNTHETIC_API_KEY"); key != "" {
-		return key
-	}
-	return os.Getenv("SYNTHETIC_API_KEY")
-}
-
-func SyntheticClient(model string) *OpenAIClient {
-	return &OpenAIClient{
-		BaseURL: SyntheticBaseURL,
-		APIKey:  SyntheticAPIKey(),
-		Model:   model,
-	}
 }
 
 // Collect drains a ChatStream into the full text reply. For background
