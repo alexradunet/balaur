@@ -26,8 +26,10 @@ func (h *handlers) memoryPage(e *core.RequestEvent) error {
 	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusProposed)
 	active, _ := knowledge.FilterActive(h.app, knowledge.Memory, q, cat)
 	archived, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusArchived)
+	dock, _ := h.dockData()
 	return h.render(e, "knowledge.html", map[string]any{
 		"Title":      "Memory",
+		"Dock":       dock,
 		"Kind":       "memories",
 		"Proposed":   proposed,
 		"Active":     active,

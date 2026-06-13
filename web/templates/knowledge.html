@@ -1,18 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>{{.Title}} · Balaur</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main>
-    <h1><img class="h-icon" src="/static/icons/tome.png" alt="">{{.Title}}</h1>
-    {{template "knowledge_body" .}}
-  </main>
-</body>
-</html>
+{{template "shell_open" .}}
+  <h1><img class="h-icon" src="/static/icons/tome.png" alt="">{{.Title}}</h1>
+  {{template "knowledge_body" .}}
+{{template "shell_close" .}}
 
 {{define "knowledge_body"}}
     {{if .Proposed}}

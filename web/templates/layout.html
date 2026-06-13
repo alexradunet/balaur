@@ -38,3 +38,21 @@
           aria-label="Toggle light/dark mode">◑</button>
 </header>
 {{end}}
+
+{{- /* shell_open/shell_close — the card-first page shell: topbar + a swappable
+     #main + the persistent companion dock. Any page renders
+     {{template "shell_open" .}} <content> {{template "shell_close" .}} and must
+     provide .Title and .Dock (homeData). */ -}}
+{{define "shell_open"}}<!DOCTYPE html>
+<html lang="en">
+<head>{{template "page_head" .}}<title>{{.Title}} · Balaur</title></head>
+<body>
+{{template "topbar" .}}
+<div class="with-sidebar">
+<main id="main">{{end}}
+
+{{define "shell_close"}}</main>
+</div>
+<aside id="dock">{{template "chat_dock" .Dock}}</aside>
+</body>
+</html>{{end}}
