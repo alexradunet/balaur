@@ -13,7 +13,9 @@ import (
 	"github.com/alexradunet/balaur/internal/turn"
 )
 
-// headView is the template payload for one head record on the /heads page.
+// headView is the template payload for one head record in the heads card
+// (ucard_heads_manage / head_card) — the heads roster lives as a card focus and
+// each head's branch chat opens in the dock (plan 054).
 type headView struct {
 	ID            string
 	Name          string
@@ -22,40 +24,6 @@ type headView struct {
 	Expires       string // human-readable; empty when not set
 	AvatarURL     string
 	BalaurOptions []AvatarOption
-}
-
-type headsData struct {
-	Title     string
-	MainClass string
-	Dock      homeData
-	Heads     []headView
-}
-
-// headsPage renders GET /heads — lists all non-revoked heads.
-func (h *handlers) headsPage(e *core.RequestEvent) error {
-	data, err := h.buildHeadsData()
-	if err != nil {
-		return e.InternalServerError("loading heads", err)
-	}
-	return h.render(e, "heads.html", data)
-}
-
-func (h *handlers) buildHeadsData() (headsData, error) {
-	recs, err := h.app.FindRecordsByFilter(
-		"heads",
-		"status = 'active'",
-		"-@rowid", 0, 0,
-	)
-	if err != nil {
-		return headsData{}, fmt.Errorf("listing heads: %w", err)
-	}
-	views := make([]headView, 0, len(recs))
-	for _, r := range recs {
-		hv := headViewFrom(h.app, r)
-		views = append(views, hv)
-	}
-	dock, _ := h.dockData()
-	return headsData{Title: "Heads", MainClass: "profile-page", Dock: dock, Heads: views}, nil
 }
 
 func headViewFrom(app core.App, r *core.Record) headView {
@@ -86,53 +54,6 @@ func headViewFrom(app core.App, r *core.Record) headView {
 		AvatarURL:     store.HeadBalaurAvatarURL(app, r.Id),
 		BalaurOptions: buildBalaurHeadOptionsFor(pref), // roster lives in models.go
 	}
-}
-
-// headChatPage renders GET /heads/{id}/chat — the focused conversation channel
-// for a sub-head. The page is the head's own branch conversation.
-func (h *handlers) headChatPage(e *core.RequestEvent) error {
-	headID := e.Request.PathValue("id")
-	head, err := h.app.FindRecordById("heads", headID)
-	if err != nil {
-		return e.NotFoundError("head not found", nil)
-	}
-	if head.GetString("status") != "active" {
-		return e.ForbiddenError("head is not active", nil)
-	}
-
-	conv, err := conversation.ForHead(h.app, head)
-	if err != nil {
-		return e.InternalServerError("loading head conversation", err)
-	}
-
-	recs, _ := conversation.History(h.app, conv.Id, historyWindow)
-	history := h.messageViewsForHead(recs, head)
-
-	client, clientErr := h.clients.Active(h.app)
-	data := headChatData{
-		Title:           head.GetString("name") + " · Balaur",
-		HeadID:          headID,
-		HeadName:        head.GetString("name"),
-		HeadPurpose:     head.GetString("purpose"),
-		BalaurAvatarURL: store.HeadBalaurAvatarURL(h.app, headID),
-		SoulAvatarURL:   store.SoulAvatarURL(h.app),
-		OwnerName:       store.OwnerName(h.app),
-		History:         history,
-		ChatReady:       clientErr == nil && client != nil,
-	}
-	return h.render(e, "head-chat.html", data)
-}
-
-type headChatData struct {
-	Title           string
-	HeadID          string
-	HeadName        string
-	HeadPurpose     string
-	BalaurAvatarURL string
-	SoulAvatarURL   string
-	OwnerName       string
-	History         []messageView
-	ChatReady       bool
 }
 
 // headChat handles POST /ui/heads/{id}/chat — one turn in the head's

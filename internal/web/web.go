@@ -224,9 +224,9 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
-	// Heads management — list active sub-heads, assign personalities, chat.
-	se.Router.GET("/heads", h.headsPage)
-	se.Router.GET("/heads/{id}/chat", h.headChatPage)
+	// Heads management — the roster is a card focus; a head's branch chat opens
+	// in the dock (GET /ui/dock/conversation?head={id}). The /heads and
+	// /heads/{id}/chat pages were retired (plan 054).
 	se.Router.POST("/ui/heads/{id}/chat", h.headChat)
 	se.Router.POST("/ui/heads/{id}/avatar", h.setHeadAvatar)
 	// Typed card registry (plan 028) — parameterized server resources.
