@@ -346,13 +346,12 @@ func TestSparkPointsScaling(t *testing.T) {
 	}
 }
 
-// TestChatbarOOBDraftOnReady verifies that the chatbar poll response carries
-// an OOB swap of chat_draft when the model is ready, and nothing about the
-// draft when the model is not ready.
-func TestChatbarOOBDraftOnReady(t *testing.T) {
+// TestChatbarPollAndDraft verifies the chatbar carries the 2s Datastar poll
+// only while no model is ready (so it stops once ready) and the ready draft is
+// enabled — no htmx OOB attributes remain.
+func TestChatbarPollAndDraft(t *testing.T) {
 	tmpl := parseTemplates(t)
 
-	// Model ready: chatbar + OOB draft both present.
 	ready := homeData{
 		ChatReady:       true,
 		ActiveModel:     "TestModel",
@@ -360,41 +359,38 @@ func TestChatbarOOBDraftOnReady(t *testing.T) {
 		SoulAvatarURL:   "/static/avatars/soul.png",
 		OwnerName:       "Alex",
 	}
-
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "chat_bar", ready); err != nil {
+	var rb strings.Builder
+	if err := tmpl.ExecuteTemplate(&rb, "chat_bar", ready); err != nil {
 		t.Fatalf("chat_bar ready: %v", err)
 	}
-	// Simulate what chatbar handler does: also render chat_draft with DraftOOB=true.
-	ready.DraftOOB = true
-	if err := tmpl.ExecuteTemplate(&b, "chat_draft", ready); err != nil {
-		t.Fatalf("chat_draft OOB: %v", err)
+	if err := tmpl.ExecuteTemplate(&rb, "chat_draft", ready); err != nil {
+		t.Fatalf("chat_draft ready: %v", err)
 	}
-	out := b.String()
+	readyOut := rb.String()
+	if !strings.Contains(readyOut, `id="chatbar"`) {
+		t.Error("ready chatbar must contain id=\"chatbar\"")
+	}
+	if strings.Contains(readyOut, "data-on:interval") {
+		t.Error("ready chatbar must NOT poll — the 2s interval stops once a model is ready")
+	}
+	if !strings.Contains(readyOut, `id="chat-draft"`) {
+		t.Error("ready response must contain the draft composer")
+	}
+	if strings.Contains(readyOut, "disabled") {
+		t.Error("ready draft must not be disabled")
+	}
+	if strings.Contains(readyOut, "hx-") {
+		t.Error("no htmx attributes may remain on the chatbar/draft")
+	}
 
-	if !strings.Contains(out, `id="chat-draft"`) {
-		t.Error("ready response must contain id=\"chat-draft\"")
-	}
-	if !strings.Contains(out, `hx-swap-oob="outerHTML"`) {
-		t.Error("ready response must contain hx-swap-oob=\"outerHTML\" on the draft")
-	}
-	if strings.Contains(out, "disabled") {
-		t.Error("ready response must not contain disabled attributes")
-	}
-
-	// Model not ready: only chatbar, no draft element at all.
-	notReady := homeData{
-		ChatReady:     false,
-		SoulAvatarURL: "/static/avatars/soul.png",
-		OwnerName:     "Alex",
-	}
-	b.Reset()
-	if err := tmpl.ExecuteTemplate(&b, "chat_bar", notReady); err != nil {
+	// Not ready: the chatbar carries the 2s Datastar poll.
+	notReady := homeData{ChatReady: false, SoulAvatarURL: "/static/avatars/soul.png", OwnerName: "Alex"}
+	var nb strings.Builder
+	if err := tmpl.ExecuteTemplate(&nb, "chat_bar", notReady); err != nil {
 		t.Fatalf("chat_bar not ready: %v", err)
 	}
-	barOnly := b.String()
-	if strings.Contains(barOnly, "chat-draft") {
-		t.Error("not-ready chatbar response must not contain chat-draft")
+	if !strings.Contains(nb.String(), `data-on:interval__duration.2s="@get('/ui/chatbar')"`) {
+		t.Error("not-ready chatbar must poll every 2s via Datastar")
 	}
 }
 

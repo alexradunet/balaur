@@ -44,60 +44,30 @@ function basmSyncChatbarSpace() {
   );
 }
 
-(function watchChatbar() {
+// Datastar replaces #chatbar (and #chat-draft) wholesale when the model state
+// changes, so re-sync the spacing and re-observe the new node when it appears.
+// Tracking the observed node avoids stacking ResizeObservers on every patch.
+let basmChatbarObserved = null;
+function basmWatchChatbar() {
   const bar = document.getElementById('chatbar');
   if (!bar) return;
   basmSyncChatbarSpace();
-  if (!window.ResizeObserver) return;
+  if (bar === basmChatbarObserved || !window.ResizeObserver) return;
+  basmChatbarObserved = bar;
   new ResizeObserver(basmSyncChatbarSpace).observe(bar);
-})();
-
-window.addEventListener('resize', basmSyncChatbarSpace);
-
-// ── Chatbar re-watch after HTMX OOB swap ──────────────────────────
-document.body.addEventListener('htmx:oobAfterSwap', (e) => {
-  if (e.detail?.target?.id === 'chatbar') {
-    basmSyncChatbarSpace();
-    const bar = document.getElementById('chatbar');
-    if (bar && window.ResizeObserver) {
-      new ResizeObserver(basmSyncChatbarSpace).observe(bar);
-    }
-  }
-});
-
-// ── Native <dialog> for model modal ───────────────────────────────
-document.body.addEventListener('htmx:afterSwap', (e) => {
-  const el = e.detail?.target;
-  if (el && el.id === 'model-modal' && el.tagName === 'DIALOG') {
-    if (!el.open) el.showModal();
-  }
-});
-
-// ── Avatar state via HTMX lifecycle ───────────────────────────────
-function basmSetAvatarState(kind, state) {
-  document.querySelectorAll(`.balaur-avatar[data-kind="${kind}"]`).forEach(el => {
-    el.dataset.state = state;
-  });
 }
 
-document.body.addEventListener('htmx:beforeRequest', (e) => {
-  if (e.target.closest?.('.chat-form')) {
-    basmSetAvatarState('balaur', 'thinking');
-  }
-});
-document.body.addEventListener('htmx:afterSettle', () => {
-  basmSetAvatarState('balaur', 'idle');
+window.addEventListener('resize', basmSyncChatbarSpace);
+document.addEventListener('DOMContentLoaded', () => {
+  basmWatchChatbar();
+  // The dock is never swapped, but its #chatbar/#chat-draft are patched.
+  const dock = document.getElementById('dock') || document.body;
+  new MutationObserver(basmWatchChatbar).observe(dock, { childList: true, subtree: true });
 });
 
-// ── Knowledge tab active state ─────────────────────────────────────
-document.body.addEventListener('click', (e) => {
-  const tab = e.target.closest('.k-tab[hx-get]');
-  if (!tab) return;
-  tab.closest('.k-tabs, nav')
-    ?.querySelectorAll('.k-tab')
-    .forEach(t => t.classList.remove('k-tab-active'));
-  tab.classList.add('k-tab-active');
-});
+// The model modal (<dialog>) opens itself: the SSE handler that patches its
+// content runs showModal() via ExecuteScript. The knowledge tab active-state
+// is driven by Datastar data-class. No htmx lifecycle hooks remain.
 
 // ── Dialogue choices keyboard shortcut (1–9) ───────────────────────
 // When no input is focused and no modifier is held, pressing a digit

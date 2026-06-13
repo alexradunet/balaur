@@ -45,11 +45,10 @@
 
   {{template "chat_draft" .}}
 
-  <!-- Nudge poll — agent-initiated messages while the dock is open -->
-  <div id="nudge-poll"
-       hx-get="/ui/chat/nudges?since={{.NowMillis}}"
-       hx-trigger="every 30s"
-       hx-swap="none"></div>
+  <!-- Nudge poll — agent-initiated messages while the dock is open. The
+       cursor lives in a signal the handler advances after each batch. -->
+  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}"
+       data-on:interval__duration.30s="@get('/ui/chat/nudges?since='+$nudgeSince)"></div>
 
   {{template "chat_bar" .}}
 
@@ -59,15 +58,13 @@
 
 {{define "chat_bar"}}
 <div class="chatbar chatbar-slim" id="chatbar"
-     {{if .ChatbarOOB}}hx-swap-oob="outerHTML"{{end}}
-     {{if not .ChatReady}}hx-get="/ui/chatbar" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+     {{if not .ChatReady}}data-on:interval__duration.2s="@get('/ui/chatbar')"{{end}}>
   {{template "model_switcher" .}}
 </div>
 {{end}}
 
 {{define "chat_draft"}}
-<div class="msg msg-user msg-draft" id="chat-draft" data-signals:message="''"
-     {{if .DraftOOB}}hx-swap-oob="outerHTML"{{end}}>
+<div class="msg msg-user msg-draft" id="chat-draft" data-signals:message="''">
   <figure class="portrait">
     <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
       <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
@@ -133,7 +130,7 @@
 {{if .Error}}<p class="model-error">{{.Error}}</p>{{end}}
 <div class="modal-actions">
   {{if .CanDownload}}
-  <form hx-post="/ui/model/download" hx-target="#model-modal" hx-swap="innerHTML">
+  <form data-on:submit__prevent="@post('/ui/model/download', {contentType:'form'})">
     <input type="hidden" name="key" value="{{.Key}}">
     <button class="btn btn-primary" type="submit" autofocus>Download and use</button>
   </form>
@@ -142,8 +139,4 @@
           {{if not .CanDownload}}autofocus{{end}}
           onclick="balaurCloseModal()">Not now</button>
 </div>
-{{end}}
-
-{{define "model_modal_close"}}
-{{template "chat_bar" .}}
 {{end}}

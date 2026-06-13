@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/gguf"
 	"github.com/alexradunet/balaur/internal/llm"
@@ -28,8 +29,6 @@ type homeData struct {
 	History         []messageView
 	HasRecap        bool
 	DevSeed         bool
-	ChatbarOOB      bool
-	DraftOOB        bool
 	NowMillis       int64          // nudge-poll cursor: only messages after page load
 	SoulAvatarURL   string         // resolved soul avatar URL
 	AvatarOptions   []AvatarOption // soul avatar picker roster
@@ -96,18 +95,32 @@ func (h *handlers) chatbar(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("loading chatbar", err)
 	}
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "chat_bar", data); err != nil {
+	sse := datastar.NewSSE(e.Response, e.Request)
+	if err := h.patchChatbar(sse, data); err != nil {
 		return e.InternalServerError("rendering chatbar", err)
 	}
-	// When the model just became ready, push an OOB swap of the draft composer
-	// so the textarea enables without a full-page reload. Only sent when ready:
-	// re-sending a disabled draft every 2s while not ready is pointless noise.
+	return nil
+}
+
+// patchChatbar patches #chatbar and, once a model is ready, #chat-draft so the
+// composer enables without a reload. The chatbar carries the 2s poll only while
+// not ready; the re-rendered (ready) chatbar drops the interval, so polling
+// stops. Shared by the 2s poll and the model-setup flows.
+func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data homeData) error {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
+		return err
+	}
+	if err := sse.PatchElements(b.String(),
+		datastar.WithSelectorID("chatbar"), datastar.WithModeOuter()); err != nil {
+		return nil // client gone
+	}
 	if data.ChatReady {
-		data.DraftOOB = true
-		if err := h.tmpl.ExecuteTemplate(e.Response, "chat_draft", data); err != nil {
-			return e.InternalServerError("rendering draft oob", err)
+		var d strings.Builder
+		if err := h.tmpl.ExecuteTemplate(&d, "chat_draft", data); err != nil {
+			return err
 		}
+		_ = sse.PatchElements(d.String(), datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
 	}
 	return nil
 }
@@ -150,10 +163,12 @@ func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
 	if msg != "" {
 		data.ModelError = msg
 	}
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "models_panel", data); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "models_panel", data); err != nil {
 		return e.InternalServerError("rendering models", err)
 	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
 	return nil
 }
 
@@ -226,11 +241,11 @@ func (h *handlers) downloadModel(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("loading chatbar", err)
 	}
-	data.ChatbarOOB = true
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "model_modal_close", data); err != nil {
-		return e.InternalServerError("rendering model chooser", err)
+	sse := datastar.NewSSE(e.Response, e.Request)
+	if err := h.patchChatbar(sse, data); err != nil {
+		return e.InternalServerError("rendering chatbar", err)
 	}
+	_ = sse.ExecuteScript("window.balaurCloseModal&&balaurCloseModal()")
 	return nil
 }
 
@@ -276,8 +291,8 @@ func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
 			return e.InternalServerError("loading chatbar", loadErr)
 		}
 		data.ModelError = err.Error()
-		e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if renderErr := h.tmpl.ExecuteTemplate(e.Response, "chat_bar", data); renderErr != nil {
+		sse := datastar.NewSSE(e.Response, e.Request)
+		if renderErr := h.patchChatbar(sse, data); renderErr != nil {
 			return e.InternalServerError("rendering chatbar", renderErr)
 		}
 		return nil
@@ -328,10 +343,15 @@ func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 }
 
 func (h *handlers) renderModelModal(e *core.RequestEvent, data modelModalData) error {
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "model_modal", data); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "model_modal", data); err != nil {
 		return e.InternalServerError("rendering model prompt", err)
 	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("model-modal"), datastar.WithModeInner())
+	// The <dialog> opens itself once its content lands (replaces basm.js's old
+	// htmx:afterSwap showModal hook).
+	_ = sse.ExecuteScript("(function(d){if(d&&!d.open)d.showModal()})(document.getElementById('model-modal'))")
 	return nil
 }
 
@@ -381,10 +401,12 @@ func (h *handlers) ggufDownload(e *core.RequestEvent) error {
 // ggufProgress renders the progress fragment.
 func (h *handlers) ggufProgress(e *core.RequestEvent) error {
 	snap := h.gguf.Snapshot()
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "gguf_progress", snap); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "gguf_progress", snap); err != nil {
 		return e.InternalServerError("rendering gguf progress", err)
 	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("gguf-progress"), datastar.WithModeOuter())
 	return nil
 }
 

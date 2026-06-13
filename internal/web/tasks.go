@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -448,18 +447,20 @@ func (h *handlers) chatNudges(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("loading nudges", err)
 	}
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if len(recs) == 0 {
-		e.Response.WriteHeader(http.StatusOK)
-		return nil
+		return nil // nothing new — the poller keeps its cursor
 	}
 	last := recs[len(recs)-1].GetDateTime("created").Time().UnixMilli()
-	fmt.Fprint(e.Response, `<div hx-swap-oob="beforeend:#chat">`)
-	if err := h.tmpl.ExecuteTemplate(e.Response, "chat-messages.html", h.messageViews(recs)); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "chat-messages.html", h.messageViews(recs)); err != nil {
 		return e.InternalServerError("rendering nudges", err)
 	}
-	fmt.Fprintf(e.Response,
-		`</div><div id="nudge-poll" hx-swap-oob="outerHTML" hx-get="/ui/chat/nudges?since=%d" hx-trigger="every 30s" hx-swap="none"></div>`,
-		last)
+	// Append the new agent messages to the chat and advance the poller's cursor
+	// signal so the next poll only asks for what's newer.
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
+	_ = sse.MarshalAndPatchSignals(struct {
+		NudgeSince int64 `json:"nudgeSince"`
+	}{last})
 	return nil
 }

@@ -4,8 +4,8 @@
 */ -}}
 
 {{define "gguf_progress"}}
-{{- /* Renders inside #models-panel via hx-swap="outerHTML" on itself. */ -}}
-<div id="gguf-progress"{{if .Active}} hx-get="/ui/model/gguf/progress" hx-trigger="every 1s" hx-swap="outerHTML"{{end}}>
+{{- /* #gguf-progress patches itself (outer) while a download is active. */ -}}
+<div id="gguf-progress"{{if .Active}} data-on:interval__duration.1s="@get('/ui/model/gguf/progress')"{{end}}>
   {{if .Active}}
   <div class="gguf-download-row">
     <span class="gguf-download-name">{{.Dest | base}}</span>
@@ -13,7 +13,7 @@
     {{if .BytesTotal}}
     <progress class="gguf-progress-bar" value="{{.BytesDone}}" max="{{.BytesTotal}}"></progress>
     {{end}}
-    <form hx-post="/ui/model/gguf/cancel" hx-target="#models-panel" hx-swap="outerHTML" style="display:inline">
+    <form data-on:submit__prevent="@post('/ui/model/gguf/cancel')" style="display:inline">
       <button class="btn btn-ghost btn-sm" type="submit">Cancel</button>
     </form>
   </div>
@@ -47,7 +47,7 @@
         <p class="model-detail-line">{{.Detail}}</p>
         <div class="kcard-actions">
           {{if .Disabled}}
-          <form hx-post="/ui/model/download" hx-target="#models-panel" hx-swap="outerHTML">
+          <form data-on:submit__prevent="@post('/ui/model/download', {contentType:'form'})">
             <input type="hidden" name="target" value="models">
             <input type="hidden" name="key" value="{{.Key}}">
             <button class="btn btn-primary btn-sm" type="submit">Download and use</button>
@@ -55,7 +55,7 @@
           {{else if .Active}}
           <button class="btn btn-ghost btn-sm" type="button" disabled>In use</button>
           {{else}}
-          <form hx-post="/ui/model/select" hx-target="#models-panel" hx-swap="outerHTML">
+          <form data-on:submit__prevent="@post('/ui/model/select', {contentType:'form'})">
             <input type="hidden" name="target" value="models">
             <input type="hidden" name="key" value="{{.Key}}">
             <button class="btn btn-primary btn-sm" type="submit">Use this model</button>
@@ -93,8 +93,8 @@
             {{if eq .ModelID $activeID}}
             <span class="tag">active</span>
             {{else}}
-            <form hx-post="/ui/model/{{.ModelID}}/delete" hx-target="#models-panel" hx-swap="outerHTML"
-                  hx-confirm="Remove this model?" style="display:inline;margin:0">
+            <form data-on:submit__prevent="confirm('Remove this model?') &amp;&amp; @post('/ui/model/{{.ModelID}}/delete')"
+                  style="display:inline;margin:0">
               <button class="btn btn-ghost btn-sm" type="submit">Remove</button>
             </form>
             {{end}}
@@ -105,7 +105,7 @@
         <div class="kcard-actions">
           <details class="kcard-edit">
             <summary>edit</summary>
-            <form hx-post="/ui/model/provider/{{.ID}}/save" hx-target="#models-panel" hx-swap="outerHTML">
+            <form data-on:submit__prevent="@post('/ui/model/provider/{{.ID}}/save', {contentType:'form'})">
               <label>Provider name<input name="name" value="{{.Name}}" required></label>
               <label>Base URL<input name="base_url" value="{{.BaseURL}}" required></label>
               <label>API key
@@ -118,8 +118,8 @@
               <button class="btn btn-primary btn-sm" type="submit">Save changes</button>
             </form>
           </details>
-          <form hx-post="/ui/model/provider/{{.ID}}/delete" hx-target="#models-panel" hx-swap="outerHTML"
-                hx-confirm="Remove this provider and its models?" style="display:inline">
+          <form data-on:submit__prevent="confirm('Remove this provider and its models?') &amp;&amp; @post('/ui/model/provider/{{.ID}}/delete')"
+                style="display:inline">
             <button class="btn btn-ghost btn-sm" type="submit">Delete provider</button>
           </form>
         </div>
@@ -140,8 +140,8 @@
       <div class="gguf-file-row">
         <span class="gguf-file-name">{{.Name}}</span>
         <span class="gguf-file-size k-sub">{{fmtBytes .Size}}</span>
-        <form hx-post="/ui/model/gguf/delete" hx-target="#models-panel" hx-swap="outerHTML"
-              hx-confirm="Delete this model file from disk?" style="display:inline">
+        <form data-on:submit__prevent="confirm('Delete this model file from disk?') &amp;&amp; @post('/ui/model/gguf/delete', {contentType:'form'})"
+              style="display:inline">
           <input type="hidden" name="name" value="{{.Name}}">
           <button class="btn btn-ghost btn-sm" type="submit">Delete</button>
         </form>
@@ -151,7 +151,7 @@
     {{else}}
     <p class="k-sub">No GGUF files in the models directory.</p>
     {{end}}
-    <form class="card model-provider-form" hx-post="/ui/model/gguf/download" hx-target="#models-panel" hx-swap="outerHTML">
+    <form class="card model-provider-form" data-on:submit__prevent="@post('/ui/model/gguf/download', {contentType:'form'})">
       <label>Model URL
         <input name="url" placeholder="https://huggingface.co/…/resolve/main/model.gguf">
         <span class="k-sub">Leave blank to download the default Qwen3.6 35B A3B GGUF.</span>
@@ -168,7 +168,7 @@
       <h2>Add OpenAI-compatible API</h2>
     </div>
     <p class="k-sub">Works with Ollama, llama-server, LM Studio, OpenAI, Synthetic, and other OpenAI-compatible endpoints.</p>
-    <form class="card model-provider-form" hx-post="/ui/model/openai" hx-target="#models-panel" hx-swap="outerHTML">
+    <form class="card model-provider-form" data-on:submit__prevent="@post('/ui/model/openai', {contentType:'form'})">
       <input type="hidden" name="target" value="models">
       <label>Provider name<input name="name" placeholder="Ollama" required></label>
       <label>Base URL<input name="base_url" placeholder="http://localhost:11434/v1" required></label>
