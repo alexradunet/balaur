@@ -174,32 +174,34 @@ func TestTasksListGroupOrder(t *testing.T) {
 	scenario.Test(t)
 }
 
-// TestTaskTransitionOOB verifies that a transition from the /tasks page
-// returns an OOB quest-rail fragment in addition to the card swap.
-func TestTaskTransitionOOB(t *testing.T) {
-	t.Run("from /tasks — response includes OOB quest-rail", func(t *testing.T) {
+// TestTaskTransitionRailRefresh verifies that a transition from the /tasks list
+// view emits a Datastar patch of the quest-rail in addition to the card patch,
+// while board and chat contexts get only the card patch. A Datastar @post sends
+// no HX-Current-URL, so the page is identified by the Referer instead.
+func TestTaskTransitionRailRefresh(t *testing.T) {
+	t.Run("from /tasks — response patches the quest-rail", func(t *testing.T) {
 		app := newWebApp(t)
 		// Seed two tasks so the rail has content after the transition.
 		rec := seedTaskWithRecur(t, app, "Complete me", "open", "daily", time.Time{})
 		seedTaskWithRecur(t, app, "Stay open", "open", "daily", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition with HX-Current-URL=/tasks",
+			Name:   "transition with Referer=/tasks",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
 			Headers: map[string]string{
-				"Content-Type":   "application/x-www-form-urlencoded",
-				"HX-Current-URL": "http://127.0.0.1:8090/tasks",
+				"Content-Type": "application/x-www-form-urlencoded",
+				"Referer":      "http://127.0.0.1:8090/tasks",
 			},
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`id="quest-rail"`, `hx-swap-oob="outerHTML"`, "tcard-"},
+			ExpectedContent: []string{"datastar-patch-elements", `id="quest-rail"`, "tcard-"},
 		}
 		scenario.Test(t)
 	})
 
-	t.Run("from /tasks — completed task absent from OOB rail open groups", func(t *testing.T) {
+	t.Run("from /tasks — completed task absent from rail open groups", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Finish this quest", "open", "", time.Now().Add(time.Hour))
 
@@ -209,25 +211,25 @@ func TestTaskTransitionOOB(t *testing.T) {
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
 			Headers: map[string]string{
-				"Content-Type":   "application/x-www-form-urlencoded",
-				"HX-Current-URL": "http://127.0.0.1:8090/tasks",
+				"Content-Type": "application/x-www-form-urlencoded",
+				"Referer":      "http://127.0.0.1:8090/tasks",
 			},
 			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus: 200,
-			// The OOB rail should be present; since the only task was completed, the
-			// open groups section shows the empty state (no quest-group sections).
-			ExpectedContent:    []string{`id="quest-rail"`, `hx-swap-oob="outerHTML"`, "No quests yet"},
+			// The rail patch should be present; since the only task was completed,
+			// the open-groups section shows the empty state (no quest-group sections).
+			ExpectedContent:    []string{`id="quest-rail"`, "No quests yet"},
 			NotExpectedContent: []string{`class="quest-group"`},
 		}
 		scenario.Test(t)
 	})
 
-	t.Run("no HX-Current-URL — no OOB quest-rail in response", func(t *testing.T) {
+	t.Run("no Referer — no quest-rail patch", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Board task", "open", "", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition without HX-Current-URL — no OOB",
+			Name:   "transition without Referer — no rail",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
@@ -242,22 +244,44 @@ func TestTaskTransitionOOB(t *testing.T) {
 		scenario.Test(t)
 	})
 
-	t.Run("HX-Current-URL from chat — no OOB quest-rail in response", func(t *testing.T) {
+	t.Run("Referer from chat — no quest-rail patch", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Chat task", "open", "", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition from chat URL — no OOB",
+			Name:   "transition from chat URL — no rail",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=dropped"),
 			Headers: map[string]string{
-				"Content-Type":   "application/x-www-form-urlencoded",
-				"HX-Current-URL": "http://127.0.0.1:8090/",
+				"Content-Type": "application/x-www-form-urlencoded",
+				"Referer":      "http://127.0.0.1:8090/",
 			},
 			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:     200,
 			NotExpectedContent: []string{`id="quest-rail"`},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("board ✓ row — remove patch, no card or rail", func(t *testing.T) {
+		app := newWebApp(t)
+		rec := seedTaskWithRecur(t, app, "Row task", "open", "", time.Time{})
+
+		// A board today/quests ✓ sends src=today|quests; the handler removes the
+		// matching row by a server-built id rather than rendering the card.
+		scenario := tests.ApiScenario{
+			Name:   "transition with src=today removes the row",
+			Method: "POST",
+			URL:    "/ui/tasks/" + rec.Id + "/transition",
+			Body:   strings.NewReader("to=done&src=today"),
+			Headers: map[string]string{
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"datastar-patch-elements", "mode remove", "urow-today-" + rec.Id},
+			NotExpectedContent: []string{"tcard-", `id="quest-rail"`},
 		}
 		scenario.Test(t)
 	})

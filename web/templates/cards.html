@@ -14,12 +14,13 @@
   {{if .Tasks}}
   <ul class="ucard-list">
     {{range .Tasks}}
-    <li class="ucard-row">
+    <li class="ucard-row" id="urow-today-{{.ID}}">
       <span class="ucard-title">{{.Title}}</span>
       {{with .DueLine}}<span class="tcard-due kcard-meta">{{.}}</span>{{end}}
       {{if eq .Status "open"}}
-      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="closest li" hx-swap="delete">
+      <form data-on:submit__prevent="@post('/ui/tasks/{{.ID}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="done">
+        <input type="hidden" name="src" value="today">
         <button class="btn btn-ghost btn-sm" type="submit">✓</button>
       </form>
       {{end}}
@@ -45,12 +46,13 @@
   {{if .Tasks}}
   <ul class="ucard-list">
     {{range .Tasks}}
-    <li class="ucard-row">
+    <li class="ucard-row" id="urow-quests-{{.ID}}">
       <span class="ucard-title">{{.Title}}</span>
       {{with .DueLine}}<span class="kcard-meta tcard-due">{{.}}</span>{{end}}
       {{if eq .Status "open"}}
-      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="closest li" hx-swap="delete">
+      <form data-on:submit__prevent="@post('/ui/tasks/{{.ID}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="done">
+        <input type="hidden" name="src" value="quests">
         <button class="btn btn-ghost btn-sm" type="submit">✓</button>
       </form>
       {{end}}

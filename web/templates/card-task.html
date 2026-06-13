@@ -17,11 +17,11 @@
 
   <footer class="kcard-actions">
     {{if eq .Status "open"}}
-      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="#tcard-{{.ID}}" hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/tasks/{{.ID}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="done">
         <button class="btn btn-primary btn-sm" type="submit">Done</button>
       </form>
-      <form class="tcard-snooze" hx-post="/ui/tasks/{{.ID}}/transition" hx-target="#tcard-{{.ID}}" hx-swap="outerHTML">
+      <form class="tcard-snooze" data-on:submit__prevent="@post('/ui/tasks/{{.ID}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="snooze">
         <select name="until" aria-label="Snooze until">
           <option value="1h">+1 hour</option>
@@ -30,7 +30,7 @@
         </select>
         <button class="btn btn-ghost btn-sm" type="submit">Snooze</button>
       </form>
-      <form hx-post="/ui/tasks/{{.ID}}/transition" hx-target="#tcard-{{.ID}}" hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/tasks/{{.ID}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="dropped">
         <button class="btn btn-ghost btn-sm" type="submit">Drop</button>
       </form>

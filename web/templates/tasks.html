@@ -13,14 +13,14 @@
 {{template "shell_close" .}}
 
 {{define "quest_rail"}}
-<nav class="quest-rail" id="quest-rail"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>
+<nav class="quest-rail" id="quest-rail">
   {{range .Groups}}
   <section class="quest-group">
     <h3 class="quest-group-title">{{.Name}} <span class="k-count">{{len .Tasks}}</span></h3>
     <ul>
       {{range .Tasks}}
       <li><button class="quest-row{{if .Overdue}} quest-overdue{{end}}"
-            hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
+            data-on:click="@get('/ui/tasks/{{.ID}}/card')">
           {{.Title}}{{with .DueLine}}<span class="quest-due">{{.}}</span>{{end}}
       </button></li>
       {{end}}
@@ -36,7 +36,7 @@
     <ul>
       {{range .DoneRecently}}
       <li><button class="quest-row"
-            hx-get="/ui/tasks/{{.ID}}/card" hx-target="#quest-detail" hx-swap="innerHTML">
+            data-on:click="@get('/ui/tasks/{{.ID}}/card')">
           {{.Title}}
       </button></li>
       {{end}}

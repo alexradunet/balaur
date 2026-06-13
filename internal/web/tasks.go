@@ -6,10 +6,12 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
@@ -86,12 +88,10 @@ type questGroupView struct {
 }
 
 // questLogView is the full quest-log list template payload.
-// OOB is set to true when the view is rendered as an out-of-band HTMX swap.
 type questLogView struct {
 	Groups       []questGroupView
 	First        *taskView // first open task (for server-side panel pre-render)
 	DoneRecently []taskView
-	OOB          bool
 }
 
 // buildQuestLog groups open tasks by rhythm and returns the view.
@@ -313,20 +313,30 @@ func buildTimeline(recs []*core.Record, now time.Time) tlView {
 
 // ---- card + transitions ----
 
+// taskCard loads one task card into the /tasks quest-detail panel — the rail
+// row click is a Datastar @get that inner-patches #quest-detail.
 func (h *handlers) taskCard(e *core.RequestEvent) error {
 	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
 	if err != nil {
 		return h.cardError(e, err)
 	}
-	return h.renderTaskCard(e, rec)
-}
-
-func (h *handlers) renderTaskCard(e *core.RequestEvent, rec *core.Record) error {
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "card-task.html", taskViewOf(rec, time.Now())); err != nil {
+	html, err := h.taskCardHTML(rec)
+	if err != nil {
 		return e.InternalServerError("rendering task card", err)
 	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(html, datastar.WithSelectorID("quest-detail"), datastar.WithModeInner())
 	return nil
+}
+
+// taskCardHTML renders the card-task.html partial for one record to a string,
+// for embedding in an SSE patch.
+func (h *handlers) taskCardHTML(rec *core.Record) (string, error) {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "card-task.html", taskViewOf(rec, time.Now())); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 func (h *handlers) taskTransition(e *core.RequestEvent) error {
@@ -359,22 +369,44 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	if err != nil {
 		return h.cardError(e, err)
 	}
-	if err := h.renderTaskCard(e, rec); err != nil {
-		return err
+
+	// All validation passed — open the SSE patch stream.
+	sse := datastar.NewSSE(e.Response, e.Request)
+
+	// A compact board row (the today/quests card ✓) removes itself outright.
+	// The caller names its source (a validated enum) so the row id is built
+	// server-side — we never trust a free-form selector from the form.
+	if src := e.Request.FormValue("src"); src == "today" || src == "quests" {
+		_ = sse.PatchElements("",
+			datastar.WithSelectorID("urow-"+src+"-"+rec.Id), datastar.WithModeRemove())
+		return nil
 	}
-	// If the request originates from the /tasks list view, append an OOB
-	// re-render of the quest rail so the row moves/strikes immediately.
-	if currentURL := e.Request.Header.Get("HX-Current-URL"); currentURL != "" {
-		if u, err := url.Parse(currentURL); err == nil && u.Path == "/tasks" {
-			openRecs, _ := tasks.OpenTasks(h.app, nil)
-			var doneRecs []*core.Record
-			if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
-				doneRecs = dr
-			}
-			ql := buildQuestLog(openRecs, doneRecs, time.Now())
-			ql.OOB = true
-			if err := h.tmpl.ExecuteTemplate(e.Response, "quest_rail", ql); err != nil {
-				return e.InternalServerError("rendering quest rail oob", err)
+
+	// Otherwise the full task card replaces itself in place (#tcard-{id}).
+	html, err := h.taskCardHTML(rec)
+	if err != nil {
+		return e.InternalServerError("rendering task card", err)
+	}
+	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
+
+	// On the /tasks list view, also refresh the rail so the row moves/strikes.
+	// htmx auto-sent HX-Current-URL; a Datastar @post is a plain fetch, so the
+	// page is identified by the Referer instead. Only the list view has a rail
+	// (the timeline/calendar views embed card-task.html but no #quest-rail).
+	if ref := e.Request.Header.Get("Referer"); ref != "" {
+		if u, err := url.Parse(ref); err == nil && u.Path == "/tasks" {
+			if view := u.Query().Get("view"); view == "" || view == "list" {
+				openRecs, _ := tasks.OpenTasks(h.app, nil)
+				var doneRecs []*core.Record
+				if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
+					doneRecs = dr
+				}
+				var rb strings.Builder
+				if err := h.tmpl.ExecuteTemplate(&rb, "quest_rail", buildQuestLog(openRecs, doneRecs, now)); err != nil {
+					return e.InternalServerError("rendering quest rail", err)
+				}
+				_ = sse.PatchElements(rb.String(),
+					datastar.WithSelectorID("quest-rail"), datastar.WithModeOuter())
 			}
 		}
 	}
