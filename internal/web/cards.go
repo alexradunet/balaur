@@ -111,6 +111,8 @@ func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) e
 		return h.renderCardHeads(w, params)
 	case "habits":
 		return h.renderCardHabits(w, params)
+	case "lifelog":
+		return h.renderCardLifelog(w, params)
 	}
 	return fmt.Errorf("unhandled card type %q", typ)
 }
@@ -184,6 +186,18 @@ func (h *handlers) renderCardHabits(w io.Writer, _ map[string]string) error {
 	return h.tmpl.ExecuteTemplate(w, "ucard_habits", cardHabitsView{
 		Habits: h.buildHabits(time.Now()),
 	})
+}
+
+// cardLifelogView feeds the read-only lifelog card: the life overview (habits +
+// every tracked kind) as a compact tile.
+type cardLifelogView struct {
+	Habits []lifeHabitView
+	Kinds  []lifeKindView
+}
+
+func (h *handlers) renderCardLifelog(w io.Writer, _ map[string]string) error {
+	kinds, habits := h.lifeOverview(time.Now())
+	return h.tmpl.ExecuteTemplate(w, "ucard_lifelog", cardLifelogView{Habits: habits, Kinds: kinds})
 }
 
 // ---- view-model structs ----

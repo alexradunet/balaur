@@ -3,6 +3,7 @@ package web
 import (
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -173,6 +174,36 @@ func TestUiCardDayTile(t *testing.T) {
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"ucard-day", "journal", `/focus/day?date=`},
+	}
+	s.Test(t)
+}
+
+// TestUiCardLifelogTile: the lifelog tile renders, linking to its focus.
+func TestUiCardLifelogTile(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:            "GET /ui/cards/lifelog renders the tile",
+		Method:          "GET",
+		URL:             "/ui/cards/lifelog",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"ucard-lifelog", `/focus/lifelog`},
+	}
+	s.Test(t)
+}
+
+// TestFocusLifelogShowsOverview: /focus/lifelog renders the life overview body.
+// A fresh app has no life kinds, so seed one numeric kind to surface the tracked
+// grid (life-grid) rather than the empty state.
+func TestFocusLifelogShowsOverview(t *testing.T) {
+	app := newWebApp(t)
+	seedLifeEntry(t, app, "weight", 72.5, "", time.Now().Add(-time.Hour))
+	s := tests.ApiScenario{
+		Name:            "GET /focus/lifelog shows the overview",
+		Method:          "GET",
+		URL:             "/focus/lifelog",
+		TestAppFactory:  func(testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"life-grid", "weight"},
 	}
 	s.Test(t)
 }
