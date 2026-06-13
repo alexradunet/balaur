@@ -70,7 +70,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 050 | Card focus mechanism — a card expands to the full canvas (Phase 0) | P1 | M | LOW–MED | 028, 029 | — | DONE (reviewed; `/focus/{type}` dual-mode + ⤢ slot/palette controls + `cards.HasManage`; spec✅+quality✅; merged to main `f11d0c9`) |
 | 051 | Tasks: quest-log focus + retire `/tasks` (Phase 1, strict parity) | P1 | M | MED | 050 | — | DONE (reviewed; quest-log now the quests focus at `/focus/quests`; `/tasks` retired → 302 /boards, topbar link dropped; spec✅+quality✅; merged to main `7ed5b2e`) |
 | 052 | Journal focus + new Day card + retire `/journal`,`/day` (Phase 2) | P1 | L | MED–HIGH | 050, 051 | — | DONE (reviewed; journal card focus = the candle at `/focus/journal`; new `day` card — day-of-life tile + `/focus/day?date=…` focus with prev/next; both pages retired → 302 /boards, topbar Journal link dropped; all five inbound links re-pointed; spec✅+quality✅; merged to main `e39303e`) |
-| 053 | Knowledge: memory+skills focus + retire `/memory`,`/skills` (Phase 3) | P2 | M | LOW–MED | 050 | — | PLANNED |
+| 053 | Knowledge: memory+skills focus + retire `/memory`,`/skills` (Phase 3) | P1 | M | MED | 050, 052 | — | TODO (authored — `plans/053-knowledge-focus.md`; both cards per owner; `knowledge_body` moved so `/settings/skills` keeps working) |
 | 054 | Heads: focus + dock conversation selector + retire `/heads`,`/heads/{id}/chat` (Phase 4) | P1 | L | MED–HIGH | 050 | — | PLANNED |
 | 055 | Life: lifelog focus + entry create + retire `/life` (Phase 5) | P2 | M | LOW–MED | 050 | — | PLANNED |
 | 056 | Settings+Profile+Models cards + retire `/settings`,`/profile`,`/models` (Phase 6) | P2 | M–L | MED | 050 | — | PLANNED |
