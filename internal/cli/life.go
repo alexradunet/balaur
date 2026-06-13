@@ -201,7 +201,10 @@ func dayCmd(app core.App) *cobra.Command {
 		if master, err := conversation.Master(app); err == nil {
 			convID = master.Id
 		}
-		dayData, _ := life.Day(app, convID, ds)
+		dayData, err := life.Day(app, convID, ds)
+		if err != nil {
+			return nil, err
+		}
 
 		// Journal entries
 		journal := make([]map[string]any, 0, len(dayData.Journal))

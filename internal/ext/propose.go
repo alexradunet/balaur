@@ -90,7 +90,9 @@ func ProposeTool(app core.App) agent.Tool {
 			}
 			if rec.GetString("source") == "" || rec.GetString("source") == "discovered" {
 				rec.Set("source", "chat")
-				_ = app.Save(rec)
+				if err := app.Save(rec); err != nil {
+					app.Logger().Warn("ext proposal source update failed", "name", args.Name, "err", err)
+				}
 			}
 			store.Audit(app, "", "model", "ext.propose", args.Name, true, map[string]any{"sha256": sum})
 

@@ -192,7 +192,9 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 func Touch(app core.App, kind Kind, rec *core.Record) {
 	rec.Set("use_count", rec.GetInt("use_count")+1)
 	rec.Set("last_used", time.Now().UTC())
-	_ = app.Save(rec)
+	if err := app.Save(rec); err != nil {
+		app.Logger().Warn("knowledge touch failed", "kind", string(kind), "id", rec.Id, "err", err)
+	}
 }
 
 // ListByStatus returns records of one kind in one status, newest first.

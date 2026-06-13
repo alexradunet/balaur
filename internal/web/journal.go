@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"strings"
 	"time"
@@ -32,7 +33,10 @@ type candleData struct {
 
 func (h *handlers) journalPage(e *core.RequestEvent) error {
 	now := time.Now()
-	data := h.buildCandleData(now)
+	data, err := h.buildCandleData(now)
+	if err != nil {
+		return e.InternalServerError("loading journal", err)
+	}
 	return h.render(e, "journal.html", data)
 }
 
@@ -105,7 +109,7 @@ func composeJournalPrompt(client llm.Client) string {
 	return text
 }
 
-func (h *handlers) buildCandleData(now time.Time) candleData {
+func (h *handlers) buildCandleData(now time.Time) (candleData, error) {
 	today := dayStartOf(now)
 	loc := now.Location()
 
@@ -113,13 +117,16 @@ func (h *handlers) buildCandleData(now time.Time) candleData {
 	if master, err := conversation.Master(h.app); err == nil {
 		convID = master.Id
 	}
-	dayData, _ := life.Day(h.app, convID, today)
+	dd, err := life.Day(h.app, convID, today)
+	if err != nil {
+		return candleData{}, fmt.Errorf("buildCandleData: %w", err)
+	}
 
 	data := candleData{
 		Title: "Journal",
 		Today: today.Format(dayLayout),
 	}
-	for _, r := range dayData.Journal {
+	for _, r := range dd.Journal {
 		data.Journal = append(data.Journal, candleJournalView{
 			ID:   r.Id,
 			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
@@ -127,12 +134,15 @@ func (h *handlers) buildCandleData(now time.Time) candleData {
 			Date: today.Format(dayLayout),
 		})
 	}
-	return data
+	return data, nil
 }
 
 func (h *handlers) renderCandleBody(e *core.RequestEvent, now time.Time) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	data := h.buildCandleData(now)
+	data, err := h.buildCandleData(now)
+	if err != nil {
+		return e.InternalServerError("rendering journal", err)
+	}
 	if err := h.tmpl.ExecuteTemplate(e.Response, "journal_candle_body", data); err != nil {
 		return e.InternalServerError("rendering candle body", err)
 	}

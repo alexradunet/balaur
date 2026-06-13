@@ -50,10 +50,14 @@ func (h *handlers) dayPage(e *core.RequestEvent) error {
 	if d.After(today) {
 		return e.Redirect(http.StatusFound, "/day/"+today.Format(dayLayout))
 	}
-	return h.render(e, "day.html", h.buildDay(d, now))
+	data, err := h.buildDay(d, now)
+	if err != nil {
+		return e.InternalServerError("loading day", err)
+	}
+	return h.render(e, "day.html", data)
 }
 
-func (h *handlers) buildDay(d, now time.Time) dayData {
+func (h *handlers) buildDay(d, now time.Time) (dayData, error) {
 	loc := now.Location()
 	today := dayStartOf(now)
 
@@ -74,10 +78,13 @@ func (h *handlers) buildDay(d, now time.Time) dayData {
 	if master, err := conversation.Master(h.app); err == nil {
 		convID = master.Id
 	}
-	dayData, _ := life.Day(h.app, convID, d)
+	dd, err := life.Day(h.app, convID, d)
+	if err != nil {
+		return data, fmt.Errorf("buildDay: %w", err)
+	}
 
 	// Build journal view
-	for _, r := range dayData.Journal {
+	for _, r := range dd.Journal {
 		data.Journal = append(data.Journal, dayJournalView{
 			ID:   r.Id,
 			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
@@ -86,7 +93,7 @@ func (h *handlers) buildDay(d, now time.Time) dayData {
 	}
 
 	// Build done view: tasks + completions
-	for _, r := range dayData.Done {
+	for _, r := range dd.Done {
 		coll := r.Collection()
 		timeField := "done_at"
 		if coll.Name == "entries" {
@@ -100,7 +107,7 @@ func (h *handlers) buildDay(d, now time.Time) dayData {
 	sort.Slice(data.Done, func(i, j int) bool { return data.Done[i].Time < data.Done[j].Time })
 
 	// Build logs view: everything tracked
-	for _, r := range dayData.Logged {
+	for _, r := range dd.Logged {
 		text := r.GetString("kind")
 		if v := r.GetFloat("value_num"); v != 0 {
 			text = fmt.Sprintf("%s: %g %s", text, v, r.GetString("unit"))
@@ -114,11 +121,11 @@ func (h *handlers) buildDay(d, now time.Time) dayData {
 	}
 
 	// Day recap
-	if dayData.Recap != nil {
-		data.Recap = dayData.Recap.GetString("content")
+	if dd.Recap != nil {
+		data.Recap = dd.Recap.GetString("content")
 	}
 
-	return data
+	return data, nil
 }
 
 // dayJournalWrite handles the page form: writing the day, on the day page.
@@ -158,10 +165,13 @@ func (h *handlers) renderDayJournal(e *core.RequestEvent, d, now time.Time) erro
 	if master, err := conversation.Master(h.app); err == nil {
 		convID = master.Id
 	}
-	dayData, _ := life.Day(h.app, convID, d)
+	dd, err := life.Day(h.app, convID, d)
+	if err != nil {
+		return e.InternalServerError("loading day journal", err)
+	}
 	loc := now.Location()
-	journal := make([]dayJournalView, 0, len(dayData.Journal))
-	for _, r := range dayData.Journal {
+	journal := make([]dayJournalView, 0, len(dd.Journal))
+	for _, r := range dd.Journal {
 		journal = append(journal, dayJournalView{
 			ID:   r.Id,
 			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),

@@ -900,3 +900,17 @@ func TestGgufHandlers(t *testing.T) {
 		progressScenario.Test(t)
 	})
 }
+
+// TestDayPageRendersOnEmptyDB verifies that GET /day/{date} returns 200 even
+// when the database contains no entries or tasks — blank day must not 500.
+func TestDayPageRendersOnEmptyDB(t *testing.T) {
+	scenario := tests.ApiScenario{
+		Name:            "GET /day/2026-01-15 renders 200 on empty DB",
+		Method:          "GET",
+		URL:             "/day/2026-01-15",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"day-title", "January"},
+	}
+	scenario.Test(t)
+}

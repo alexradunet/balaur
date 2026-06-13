@@ -1,6 +1,7 @@
 package life
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -25,32 +26,41 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 	data := DayData{}
 
 	// Journal entries: kind='journal', noted_at in [ds, de)
-	if recs, err := app.FindRecordsByFilter("entries",
+	recs, err := app.FindRecordsByFilter("entries",
 		"kind = 'journal' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		data.Journal = recs
+		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	if err != nil {
+		return data, fmt.Errorf("day journal query: %w", err)
 	}
+	data.Journal = recs
 
 	// Logged entries: kind != 'completion' && kind != 'journal', noted_at in [ds, de)
-	if recs, err := app.FindRecordsByFilter("entries",
+	recs, err = app.FindRecordsByFilter("entries",
 		"kind != 'completion' && kind != 'journal' && noted_at >= {:s} && noted_at < {:e}",
 		"noted_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		data.Logged = recs
+		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	if err != nil {
+		return data, fmt.Errorf("day logged query: %w", err)
 	}
+	data.Logged = recs
 
 	// Done tasks: status='done', done_at in [ds, de)
 	// Also include completions (kind='completion') from entries
-	if recs, err := app.FindRecordsByFilter("tasks",
+	recs, err = app.FindRecordsByFilter("tasks",
 		"status = 'done' && done_at >= {:s} && done_at < {:e}", "done_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		data.Done = recs
+		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	if err != nil {
+		return data, fmt.Errorf("day done-tasks query: %w", err)
 	}
-	if recs, err := app.FindRecordsByFilter("entries",
+	data.Done = recs
+
+	recs, err = app.FindRecordsByFilter("entries",
 		"kind = 'completion' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)}); err == nil {
-		data.Done = append(data.Done, recs...)
+		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	if err != nil {
+		return data, fmt.Errorf("day completions query: %w", err)
 	}
+	data.Done = append(data.Done, recs...)
 
 	// Day recap, when available
 	if rec := recap.Find(app, conversationID, recap.Day(d)); rec != nil {
