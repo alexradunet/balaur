@@ -313,19 +313,21 @@ func seedHeadRec(t testing.TB, app *tests.TestApp, name, status string) *core.Re
 	return rec
 }
 
-func TestHeadsPage(t *testing.T) {
+// TestHeadsFocus: the heads roster is a card focus (plan 054 retired GET
+// /heads). The active head appears in the heads focus body.
+func TestHeadsFocus(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			Name:   "active head appears on /heads",
+			Name:   "active head appears on /focus/heads",
 			Method: "GET",
-			URL:    "/heads",
+			URL:    "/focus/heads",
 			TestAppFactory: func(tb testing.TB) *tests.TestApp {
 				app := newWebApp(tb)
 				seedHeadRec(tb, app, "Scout", "active")
 				return app
 			},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Scout"},
+			ExpectedContent: []string{"Scout", "head-"},
 		},
 	}
 	for _, scenario := range scenarios {
@@ -333,43 +335,32 @@ func TestHeadsPage(t *testing.T) {
 	}
 }
 
-func TestHeadChatPage(t *testing.T) {
-	// URLs contain record IDs that must be seeded first, so we run subtests
-	// rather than an ApiScenario table.
-	t.Run("active head", func(t *testing.T) {
+// TestRetiredHeadsPages: plan 054 deleted the GET /heads and
+// GET /heads/{id}/chat page routes. The roster now lives at /focus/heads and a
+// head's branch chat opens in the dock (GET /ui/dock/conversation?head={id},
+// covered by TestDockConversationBranch). The old page routes no longer exist;
+// unmatched UI paths fall through to the board-home redirect (302 → /boards), so
+// old bookmarks self-heal onto the boards dashboard.
+func TestRetiredHeadsPages(t *testing.T) {
+	t.Run("GET /heads is retired", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:           "GET /heads retired (302 to /boards)",
+			Method:         "GET",
+			URL:            "/heads",
+			TestAppFactory: newWebApp,
+			ExpectedStatus: 302,
+		}
+		scenario.Test(t)
+	})
+	t.Run("GET /heads/{id}/chat is retired", func(t *testing.T) {
 		app := newWebApp(t)
 		head := seedHeadRec(t, app, "Scout", "active")
 		scenario := tests.ApiScenario{
-			Name:            "active head renders chat page",
-			Method:          "GET",
-			URL:             "/heads/" + head.Id + "/chat",
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"Scout"},
-		}
-		scenario.Test(t)
-	})
-	t.Run("merged head is forbidden", func(t *testing.T) {
-		app := newWebApp(t)
-		head := seedHeadRec(t, app, "OldHead", "merged")
-		scenario := tests.ApiScenario{
-			Name:            "merged head is forbidden",
-			Method:          "GET",
-			URL:             "/heads/" + head.Id + "/chat",
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  403,
-			ExpectedContent: []string{"not active"},
-		}
-		scenario.Test(t)
-	})
-	t.Run("unknown id is not found", func(t *testing.T) {
-		scenario := tests.ApiScenario{
-			Name:            "unknown head id is 404",
-			Method:          "GET",
-			URL:             "/heads/nope/chat",
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  404,
-			ExpectedContent: []string{"not found"},
+			Name:           "GET /heads/{id}/chat retired (302 to /boards)",
+			Method:         "GET",
+			URL:            "/heads/" + head.Id + "/chat",
+			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus: 302,
 		}
 		scenario.Test(t)
 	})

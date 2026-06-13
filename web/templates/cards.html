@@ -331,7 +331,7 @@
   <ul class="ucard-list">
     {{range .Heads}}
     <li class="ucard-row">
-      <span class="ucard-title"><a href="/heads/{{.ID}}/chat">{{.Name}}</a></span>
+      <span class="ucard-title"><a href="/focus/heads">{{.Name}}</a></span>
       <span class="tag">{{.Status}}</span>
       {{with .Purpose}}<span class="kcard-meta">{{.}}</span>{{end}}
     </li>
@@ -340,7 +340,7 @@
   {{else}}
   <p class="k-empty">No active heads yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/heads">all heads →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/heads">all heads →</a></footer>
 </article>
 {{end}}
 
@@ -352,7 +352,7 @@
 <article class="kcard ucard ucard-manage ucard-heads-manage" id="ucard-heads-manage">
   <header class="kcard-head">
     <span class="kcard-kind"><img class="tool-icon" src="/static/icons/tome.png" alt="">Heads</span>
-    <a class="kcard-meta" href="/heads">all heads →</a>
+    <a class="kcard-meta" href="/focus/heads">all heads →</a>
   </header>
   {{if .Heads}}
   <div class="ucard-manage-list">

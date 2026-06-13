@@ -40,8 +40,8 @@ database you own and can open with any SQLite tool.
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
   access fails. Each active head also has a persistent, focused,
-  tool-free chat channel at `/heads/{id}/chat`, kept as a branch
-  conversation separate from the master.
+  tool-free chat channel — a branch conversation separate from the
+  master, opened in the dock from the heads card focus.
 - **Memory & skills with consent:** the model proposes (`remember`,
   `propose_skill`); proposals render as cards — in chat and in the memory
   & skills card focuses — that the owner approves, edits, or dismisses. Nothing

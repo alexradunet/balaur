@@ -406,40 +406,8 @@ func TestChatbarPollAndDraft(t *testing.T) {
 	}
 }
 
-// TestHeadChatDraftIdDecollided verifies that head-chat.html uses
-// id="head-chat-draft" and not id="chat-draft", so that an OOB swap
-// targeting #chat-draft from /ui/chatbar cannot clobber the head page's form.
-func TestHeadChatDraftIdDecollided(t *testing.T) {
-	tmpl := parseTemplates(t)
-
-	data := headChatData{
-		Title:           "TestHead · Balaur",
-		HeadID:          "abc123",
-		HeadName:        "TestHead",
-		SoulAvatarURL:   "/static/avatars/soul.png",
-		BalaurAvatarURL: "/static/avatars/balaur-01.png",
-		OwnerName:       "Alex",
-		ChatReady:       true,
-	}
-
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "head-chat.html", data); err != nil {
-		t.Fatalf("head-chat.html: %v", err)
-	}
-	out := b.String()
-
-	if strings.Contains(out, `id="chat-draft"`) {
-		t.Error("head-chat.html must not use id=\"chat-draft\" (collision hazard with home OOB swap)")
-	}
-	if !strings.Contains(out, `id="head-chat-draft"`) {
-		t.Error("head-chat.html must use id=\"head-chat-draft\"")
-	}
-	// The composer is now driven by Datastar, not htmx: the form posts via
-	// @post on data-on:submit and there must be no leftover hx-* attributes.
-	if !strings.Contains(out, `data-on:submit="@post('/ui/heads/abc123/chat')"`) {
-		t.Error("head-chat.html composer must use data-on:submit=\"@post(...)\"")
-	}
-	if strings.Contains(out, "hx-post") {
-		t.Error("head-chat.html must not use hx-post (Datastar migration)")
-	}
-}
+// The head-chat.html page was retired (plan 054): a head's branch chat now
+// opens in the dock via GET /ui/dock/conversation?head={id}, which reuses the
+// shared chat_draft (#chat-draft). The dock swap patches only #dock-convo and
+// is covered by TestDockConversationMaster/Branch in dock_test.go, so the old
+// TestHeadChatDraftIdDecollided guard for the deleted page is gone.

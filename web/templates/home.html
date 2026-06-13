@@ -16,22 +16,53 @@
   </div>
   {{end}}
 
+  <div id="dock-convo">{{template "dock_convo" .}}</div>
+
+  <!-- Nudge poll — agent-initiated messages while the dock is open. The
+       cursor lives in a signal the handler advances after each batch. -->
+  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}" data-signals:dockMaster="true"
+       data-on:interval__duration.30s="$dockMaster && @get('/ui/chat/nudges?since='+$nudgeSince)"></div>
+
+  {{template "chat_bar" .}}
+
+  <!-- Native dialog — showModal() called by basm.js after swap -->
+  <dialog id="model-modal" aria-labelledby="model-modal-title"></dialog>
+{{end}}
+
+{{- /* dock_convo — the swappable conversation region inside #dock-convo:
+     the back header (branch only), #chat history/greeting, and the draft.
+     GET /ui/dock/conversation patches ONLY this fragment; the dock shell
+     (grip, full-screen, recap, nudge-poll, chat_bar, dialog) is never
+     touched, which keeps the chat surface alive across the swap. For the
+     master model (ConvBack=false) the markup is byte-identical to the
+     original chat_dock render. Context: homeData. */ -}}
+{{define "dock_convo"}}
+  {{if .ConvBack}}
+  <header class="dock-convo-head">
+    <span class="head-name-label">{{.ConvHeadName}}</span>
+    <button class="chatbar-back-link" type="button"
+            data-on:click="@get('/ui/dock/conversation')">← back to main</button>
+  </header>
+  {{end}}
+
   <section class="chat" id="chat" aria-live="polite">
     {{if .History}}
       {{template "chat-messages.html" .History}}
     {{else}}
+    {{if not .ConvBack}}
     <img class="hearth-crest" src="/static/crest.png"
          alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
+    {{end}}
     <div class="msg msg-balaur msg-with-avatar">
       <figure class="portrait">
         <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
           <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
         </span>
-        <figcaption class="who">Balaur</figcaption>
+        <figcaption class="who">{{if .ConvHeadName}}{{.ConvHeadName}}{{else}}Balaur{{end}}</figcaption>
       </figure>
       <div class="msg-main">
         {{if .ChatReady}}
-        <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
+        <div class="body">{{if .ConvBack}}Ready. What shall we focus on?{{else}}I am here. The hearth is lit and your words stay on this box. What shall we weigh today?{{end}}</div>
         {{else}}
         <div class="body">
           <p>{{.ModelError}}</p>
@@ -44,16 +75,6 @@
   </section>
 
   {{template "chat_draft" .}}
-
-  <!-- Nudge poll — agent-initiated messages while the dock is open. The
-       cursor lives in a signal the handler advances after each batch. -->
-  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}"
-       data-on:interval__duration.30s="@get('/ui/chat/nudges?since='+$nudgeSince)"></div>
-
-  {{template "chat_bar" .}}
-
-  <!-- Native dialog — showModal() called by basm.js after swap -->
-  <dialog id="model-modal" aria-labelledby="model-modal-title"></dialog>
 {{end}}
 
 {{define "chat_bar"}}
@@ -72,7 +93,7 @@
     <figcaption class="who">{{.OwnerName}}</figcaption>
   </figure>
   <div class="msg-main">
-    <form class="chat-form" data-on:submit="@post('/ui/chat')">
+    <form class="chat-form" data-on:submit="@post('{{.ConvPostURL}}')">
       <textarea name="message" data-bind:message placeholder="{{.ChatPlaceholder}}" rows="2"
                 autocomplete="off" autofocus required
                 {{if not .ChatReady}}disabled{{end}}

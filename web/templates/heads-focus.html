@@ -1,20 +1,8 @@
-{{template "shell_open" .}}
-    <h1><img class="h-icon" src="/static/icons/tome.png" alt="">Heads</h1>
-    <p class="profile-lede">Focused sub-agents that grow from the main Balaur. Each head can carry its own Balaur personality.</p>
-    <div class="stitch"></div>
-
-    {{if not .Heads}}
-    <article class="profile-card">
-      <p class="profile-hint">No active heads right now. A new head wakes when a focused branch opens.</p>
-    </article>
-    {{else}}
-    {{range .Heads}}
-      {{template "head_card" .}}
-    {{end}}
-    {{end}}
-
-{{template "shell_close" .}}
-
+{{- /* heads-focus.html — the heads roster lives as a card focus. head_card is
+     the shared partial for one active head: it is rendered by ucard_heads_manage
+     (the heads card / focus, cards.html) and re-rendered by setHeadAvatar
+     (#head-{id}) after a personality change. "Open chat" opens that head's
+     branch conversation in the dock via GET /ui/dock/conversation?head={id}. */ -}}
 {{define "head_card"}}
 {{$h := .}}
 <article class="profile-card" id="head-{{.ID}}">
@@ -26,7 +14,8 @@
       <div class="head-status-row">
         <span class="tag">{{.Status}}</span>
         {{if .Expires}}<span class="head-expires">expires {{.Expires}}</span>{{end}}
-        <a href="/heads/{{.ID}}/chat" class="btn btn-ghost" style="margin-left:auto">Open chat →</a>
+        <button class="btn btn-ghost" style="margin-left:auto" type="button"
+                data-on:click="@get('/ui/dock/conversation?head={{$h.ID}}')">Open chat →</button>
       </div>
     </div>
   </div>

@@ -126,8 +126,9 @@ avatar picker in the profile page (stored in `owner_settings`) · a
 profile page (`/profile`) with display name, soul avatar picker (16 options),
 and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
 `localStorage` · sub-head branch conversations with a focused,
-tool-free chat channel per active head (/heads/{id}/chat), per-head
-Balaur avatars.
+tool-free chat channel per active head, opened in the dock via
+`GET /ui/dock/conversation?head={id}` (the heads roster is the heads card
+focus at `/focus/heads`), per-head Balaur avatars.
 
 the CLI speaks API v1 — every JSON output is enveloped `{v, kind, data}`
 where `kind` is `<command>.<subcommand>` (e.g. `"task.add"`, `"doctor"`) and

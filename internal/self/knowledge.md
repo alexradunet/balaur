@@ -19,9 +19,11 @@ master conversation — the main head, persisted forever, summarized by
 the recap telescope. Focused work can run as temporary sub-heads with
 explicitly granted, audited data access (internal/heads). Each active
 head also has its own persistent branch conversation the owner can chat
-in at /heads/{id}/chat: turns are focused (the head's name and purpose
-as the system prompt), tool-free today (scoped tools are a future
-slice), and leave the master conversation untouched.
+in: the dock swaps to it via GET /ui/dock/conversation?head={id} (opened
+from the heads card focus), and the turn endpoint is POST
+/ui/heads/{id}/chat. Turns are focused (the head's name and purpose as
+the system prompt), tool-free today (scoped tools are a future slice),
+and leave the master conversation untouched.
 
 Three governing principles:
 
@@ -95,7 +97,8 @@ self tool, which reports the actual registry):
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /models, /focus/memory, /focus/skills, /focus/quests,
-/focus/journal, /focus/day?date={date}, /life, /profile, /heads, /heads/{id}/chat); the machine-facing
+/focus/heads, /focus/journal, /focus/day?date={date}, /life, /profile; a head's branch
+chat opens in the dock via /ui/dock/conversation?head={id}); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
