@@ -482,7 +482,7 @@ func (h *handlers) renderKnowledgeManage(w io.Writer, kind knowledge.Kind, v man
 func (h *handlers) renderCardMemory(w io.Writer, params map[string]string) error {
 	if params["mode"] == "manage" {
 		return h.renderKnowledgeManage(w, knowledge.Memory, manageCardView{
-			Kind: "memories", Label: "Memory", Icon: "tome", Href: "/memory",
+			Kind: "memories", Label: "Memory", Icon: "tome", Href: "/focus/memory",
 		})
 	}
 	limit := intParam(params, "limit", 6)
@@ -515,7 +515,7 @@ func (h *handlers) renderCardMemory(w io.Writer, params map[string]string) error
 func (h *handlers) renderCardSkills(w io.Writer, params map[string]string) error {
 	if params["mode"] == "manage" {
 		return h.renderKnowledgeManage(w, knowledge.Skill, manageCardView{
-			Kind: "skills", Label: "Skills", Icon: "key", Href: "/skills",
+			Kind: "skills", Label: "Skills", Icon: "key", Href: "/focus/skills",
 		})
 	}
 	limit := intParam(params, "limit", 6)

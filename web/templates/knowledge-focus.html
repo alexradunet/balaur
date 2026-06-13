@@ -1,8 +1,6 @@
-{{template "shell_open" .}}
-  <h1><img class="h-icon" src="/static/icons/tome.png" alt="">{{.Title}}</h1>
-  {{template "knowledge_body" .}}
-{{template "shell_close" .}}
-
+{{- /* knowledge-focus.html — the knowledge manager body (proposed + searchable
+     active grid + archived). The memory/skills card focuses and the
+     /settings/skills section all render this single `knowledge_body` define. */ -}}
 {{define "knowledge_body"}}
     {{if .Proposed}}
     <section class="k-section">

@@ -43,8 +43,8 @@ database you own and can open with any SQLite tool.
   tool-free chat channel at `/heads/{id}/chat`, kept as a branch
   conversation separate from the master.
 - **Memory & skills with consent:** the model proposes (`remember`,
-  `propose_skill`); proposals render as cards — in chat and on `/memory`
-  and `/skills` — that the owner approves, edits, or dismisses. Nothing
+  `propose_skill`); proposals render as cards — in chat and in the memory
+  & skills card focuses — that the owner approves, edits, or dismisses. Nothing
   enters context without approval. Injection is two-tier: high-importance
   memories always, message-matched recall per turn, plus a compact skills
   index loaded on demand via the `skill` tool. Every lifecycle step is

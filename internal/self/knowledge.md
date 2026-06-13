@@ -94,7 +94,7 @@ self tool, which reports the actual registry):
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI at / (chat, /models, /memory, /skills, /focus/quests,
+Surfaces: the web UI at / (chat, /models, /focus/memory, /focus/skills, /focus/quests,
 /focus/journal, /focus/day?date={date}, /life, /profile, /heads, /heads/{id}/chat); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes
