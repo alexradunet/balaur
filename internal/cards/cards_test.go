@@ -208,6 +208,19 @@ func TestValidateFreeStringParamCap(t *testing.T) {
 	}
 }
 
+func TestHasManage(t *testing.T) {
+	for _, typ := range []string{"quests", "memory", "skills", "heads"} {
+		if !cards.HasManage(typ) {
+			t.Errorf("HasManage(%q) = false, want true", typ)
+		}
+	}
+	for _, typ := range []string{"today", "calendar", "journal", "habits", "timeline", "nope"} {
+		if cards.HasManage(typ) {
+			t.Errorf("HasManage(%q) = true, want false", typ)
+		}
+	}
+}
+
 func TestNoWebImports(t *testing.T) {
 	// This test is a compile-time fact: the package has no internal/web imports.
 	// If you can run `go test ./internal/cards/...` without a cycle error, this passes.

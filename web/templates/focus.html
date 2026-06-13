@@ -1,0 +1,19 @@
+{{- /* focus.html — one card expanded to the full canvas (plan 050). In the
+     card-first UI a "page" is just a card at full size. focus_main is the
+     swappable #main inner (patched by a Datastar @get on /focus/{type});
+     focus_page is the full document for a direct browser load. The dock is
+     rendered by shell_close and is never patched, so the chat persists. */ -}}
+
+{{define "focus_main"}}
+<div class="focus" id="focus">
+  <header class="focus-header">
+    <a class="btn btn-ghost btn-sm focus-back"
+       href="{{.BackHref}}"
+       data-on:click__prevent="@get('{{.BackHref}}')">← Back</a>
+    <h2 class="focus-title">{{.Label}}</h2>
+  </header>
+  <div class="focus-body">{{.Body}}</div>
+</div>
+{{end}}
+
+{{define "focus_page"}}{{template "shell_open" .}}{{template "focus_main" .}}{{template "shell_close" .}}{{end}}

@@ -2162,6 +2162,48 @@ progress.gguf-progress-bar::-moz-progress-bar {
   z-index: 1;
 }
 
+/* Focus view — a card expanded to the full canvas (plan 050). */
+.focus {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+.focus-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.focus-title { margin: 0; }
+.focus-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ⤢ expand affordance — reveals on slot hover, like the grip/resize handle;
+   sits just left of the remove button (top:6px right:6px). */
+.board-slot-expand {
+  position: absolute;
+  top: 6px;
+  right: 36px;
+  z-index: 2;
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-crisp);
+}
+.board-slot:hover .board-slot-expand { opacity: 1; }
+
+/* ⤢ open — the palette's full-canvas launcher link. */
+.board-palette-open {
+  color: var(--muted);
+  text-decoration: none;
+  opacity: .7;
+  transition: opacity var(--duration-fast) var(--ease-crisp);
+}
+.board-palette-open:hover { opacity: 1; }
+
 .board-loading { padding: 16px; text-align: center; color: var(--muted); }
 
 .board-add-card { padding: 4px 0; }

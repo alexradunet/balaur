@@ -81,6 +81,9 @@
        style="grid-column: span {{.W}}; min-height: max(200px, calc({{.H}} * 10px))"
        {{- end}}>
     <div class="board-slot-grip" title="drag to move">⠿</div>
+    <a class="board-slot-expand" title="Expand to full canvas"
+       href="{{.FocusHref}}"
+       data-on:click__prevent="@get('{{.FocusHref}}')">⤢</a>
     <div class="board-slot-inner">{{.Body}}</div>
     <form method="POST"
           action="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"
@@ -112,6 +115,12 @@
           <img class="h-icon-sm" src="/static/icons/{{.Icon}}.png" alt="">
           <strong>{{.Label}}</strong>
         </div>
+        {{/* ⤢ open: opens focus with DEFAULT params only — the param inputs
+             above are not included. Per-feature phases (051+) replace this
+             with a smart link that carries the entered values. */}}
+        <a class="board-palette-open" title="Open in full canvas"
+           href="/focus/{{.Type}}"
+           data-on:click__prevent="@get('/focus/{{.Type}}?from={{$.Current.ID}}')">⤢ open</a>
         {{range .Params}}
         <div class="board-palette-param">
           <label>{{.Name}}</label>
