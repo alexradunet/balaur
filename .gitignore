@@ -22,3 +22,7 @@ tmp/
 
 # Claude Code local state (settings.local.json, locks, worktrees)
 .claude/
+
+# Browser-in-the-loop debug artifacts (Playwright snapshots, scratch screenshots)
+.playwright-mcp/
+/*.png
