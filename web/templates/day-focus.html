@@ -1,0 +1,50 @@
+{{- /* day-focus.html — the day-of-life view as the day card's focus body
+     (journal + recap/transcript + done + logs). Was /day/{date}. Prev/next
+     navigate the focus in place. */ -}}
+{{define "day_focus"}}
+<div class="day-focus">
+  <div class="day-nav">
+    <a class="btn btn-ghost btn-sm" href="/focus/day?date={{.Prev}}"
+       data-on:click__prevent="@get('/focus/day?date={{.Prev}}')">◂ prev</a>
+    <h2 class="day-title">{{.Label}}{{if .IsToday}} <span class="tag">today</span>{{end}}</h2>
+    {{if .Next}}<a class="btn btn-ghost btn-sm" href="/focus/day?date={{.Next}}"
+       data-on:click__prevent="@get('/focus/day?date={{.Next}}')">next ▸</a>{{else}}<span class="day-nav-spacer"></span>{{end}}
+  </div>
+
+  {{template "day_journal" .}}
+
+  <div class="stitch"></div>
+  <section class="k-section">
+    <h2 class="k-heading">The day in summary</h2>
+    {{if .Recap}}<p class="recap-body">{{.Recap}}</p>
+    {{else if .IsToday}}<p class="k-sub">Today is still being written.</p>
+    {{else}}<p class="k-sub">No summary kept for this day.</p>{{end}}
+    {{if not .IsToday}}
+    <article class="recap-card recap-day">
+      <header class="recap-head">
+        <span class="recap-label">The conversation, preserved</span>
+        <button class="recap-expand" type="button"
+                data-on:click="el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start={{.RecapStart}}')">
+          transcript
+        </button>
+      </header>
+      <div class="recap-children" id="recap-children-day-{{.RecapStart}}"></div>
+    </article>
+    {{end}}
+  </section>
+
+  <div class="stitch"></div>
+  <section class="k-section">
+    <h2 class="k-heading">What got done</h2>
+    {{if .Done}}<ul class="tl-items">{{range .Done}}<li class="tl-item"><span class="tl-time">{{.Time}}</span> {{.Text}}</li>{{end}}</ul>
+    {{else}}<p class="k-sub">Nothing marked done this day.</p>{{end}}
+  </section>
+
+  <div class="stitch"></div>
+  <section class="k-section">
+    <h2 class="k-heading">The day's log</h2>
+    {{if .Logs}}<ul class="tl-items">{{range .Logs}}<li class="tl-item"><span class="tl-time">{{.Time}}</span> {{.Text}}</li>{{end}}</ul>
+    {{else}}<p class="k-sub">Nothing logged this day.</p>{{end}}
+  </section>
+</div>
+{{end}}

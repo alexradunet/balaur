@@ -95,6 +95,16 @@ func init() {
 			},
 		},
 		{
+			Type:  "day",
+			Label: "Day",
+			Icon:  "scroll",
+			W:     4,
+			H:     22,
+			Params: []ParamSpec{
+				{Name: "date", Doc: "YYYY-MM-DD to show (default: today)"},
+			},
+		},
+		{
 			Type:  "measure",
 			Label: "Measure",
 			Icon:  "orb",

@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"sort"
 	"strings"
@@ -128,6 +129,30 @@ func (h *handlers) buildDay(d, now time.Time) (dayData, error) {
 	}
 
 	return data, nil
+}
+
+// dayFocusHTML renders the day card's focus body: the full day-of-life view for
+// the date param (default today), with prev/next navigating the focus. Was the
+// /day/{date} page.
+func (h *handlers) dayFocusHTML(params map[string]string) template.HTML {
+	now := time.Now()
+	d := dayStartOf(now)
+	if s := params["date"]; s != "" {
+		if t, err := time.ParseInLocation(dayLayout, s, now.Location()); err == nil {
+			d = dayStartOf(t)
+		}
+	}
+	data, err := h.buildDay(d, now)
+	if err != nil {
+		h.app.Logger().Warn("day focus render failed", "err", err)
+		return cardErrorStrip("could not open the day")
+	}
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "day_focus", data); err != nil {
+		h.app.Logger().Warn("day focus template failed", "err", err)
+		return cardErrorStrip("could not render the day")
+	}
+	return template.HTML(b.String())
 }
 
 // dayJournalWrite handles the page form: writing the day, on the day page.
