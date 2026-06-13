@@ -9,24 +9,7 @@
 
   <main class="settings-page">
     <h1>Settings</h1>
-    <div class="settings-layout">
-      <nav class="settings-nav" aria-label="Settings sections">
-        <a class="settings-nav-link{{if eq .Section "profile"}} settings-nav-active{{end}}" href="/settings/profile">Profile</a>
-        <a class="settings-nav-link{{if eq .Section "skills"}} settings-nav-active{{end}}" href="/settings/skills">Skills</a>
-        <a class="settings-nav-link{{if eq .Section "models"}} settings-nav-active{{end}}" href="/settings/models">Models</a>
-      </nav>
-      <div class="settings-content">
-        {{if eq .Section "profile"}}
-          {{template "profile_identity_card" .Profile}}
-          {{template "profile_soul_section" .Profile}}
-          {{template "profile_balaur_section" .Profile}}
-        {{else if eq .Section "skills"}}
-          {{template "knowledge_body" .Skills}}
-        {{else if eq .Section "models"}}
-          {{template "models_panel" .Models}}
-        {{end}}
-      </div>
-    </div>
+    {{template "settings_body" .}}
   </main>
 </body>
 </html>

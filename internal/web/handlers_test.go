@@ -165,11 +165,14 @@ func TestSettingsPages(t *testing.T) {
 			ExpectedContent: []string{"models-panel"},
 		},
 		{
-			Name:            "GET /settings/skills renders skills section",
-			Method:          "GET",
-			URL:             "/settings/skills",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"k-active-grid"},
+			// Skills left settings (plan 053/056): the skills manager is the
+			// skills card focus now (TestFocusSkillsShowsManager). The settings
+			// shell carries only Profile + Models, so /settings/skills is no
+			// longer a known section and redirects like any other unknown one.
+			Name:           "GET /settings/skills no longer a section (redirects)",
+			Method:         "GET",
+			URL:            "/settings/skills",
+			ExpectedStatus: 302,
 		},
 		{
 			Name:           "GET /settings/bogus redirects",

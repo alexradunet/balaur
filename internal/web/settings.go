@@ -1,7 +1,9 @@
 package web
 
 import (
+	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -11,7 +13,6 @@ type settingsData struct {
 	Section string
 	Profile profileData
 	Models  modelsPageData
-	Skills  map[string]any
 }
 
 // settingsPage renders GET /settings/{section}.
@@ -28,9 +29,6 @@ func (h *handlers) settingsPage(e *core.RequestEvent) error {
 		if err != nil {
 			return e.InternalServerError("loading models", err)
 		}
-	case "skills":
-		q := e.Request.URL.Query().Get("q")
-		data.Skills = h.skillsData(q)
 	default:
 		return e.Redirect(http.StatusFound, "/settings/profile")
 	}
@@ -41,4 +39,32 @@ func (h *handlers) settingsPage(e *core.RequestEvent) error {
 // settingsRoot redirects GET /settings → /settings/profile.
 func (h *handlers) settingsRoot(e *core.RequestEvent) error {
 	return e.Redirect(http.StatusFound, "/settings/profile")
+}
+
+// settingsFocusHTML renders the settings card's focus body (Profile + Models).
+// Was /settings/{section}. The section param defaults to profile; Skills is the
+// skills card now.
+func (h *handlers) settingsFocusHTML(params map[string]string) template.HTML {
+	section := params["section"]
+	if section != "models" {
+		section = "profile"
+	}
+	data := settingsData{Section: section}
+	switch section {
+	case "models":
+		m, err := h.modelsData()
+		if err != nil {
+			h.app.Logger().Warn("settings focus models failed", "err", err)
+			return cardErrorStrip("could not load models")
+		}
+		data.Models = m
+	default:
+		data.Profile = h.buildProfileData(false)
+	}
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "settings_body", data); err != nil {
+		h.app.Logger().Warn("settings focus render failed", "err", err)
+		return cardErrorStrip("could not open settings")
+	}
+	return template.HTML(b.String())
 }
