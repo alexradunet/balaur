@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -126,10 +125,6 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 		_ = sse.PatchElements(d.String(), datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
 	}
 	return nil
-}
-
-func (h *handlers) modelsPage(e *core.RequestEvent) error {
-	return e.Redirect(http.StatusFound, "/settings/models")
 }
 
 func (h *handlers) modelsData() (modelsPageData, error) {

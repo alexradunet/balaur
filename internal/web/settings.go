@@ -2,43 +2,16 @@ package web
 
 import (
 	"html/template"
-	"net/http"
 	"strings"
-
-	"github.com/pocketbase/pocketbase/core"
 )
 
+// settingsData feeds the settings card focus (settings_body): the Profile +
+// Models sections of the settings shell. Skills left settings (plan 053/056) —
+// it is its own card now.
 type settingsData struct {
-	Title   string
 	Section string
 	Profile profileData
 	Models  modelsPageData
-}
-
-// settingsPage renders GET /settings/{section}.
-func (h *handlers) settingsPage(e *core.RequestEvent) error {
-	section := e.Request.PathValue("section")
-	data := settingsData{Title: "Settings", Section: section}
-
-	switch section {
-	case "profile":
-		data.Profile = h.buildProfileData(false)
-	case "models":
-		var err error
-		data.Models, err = h.modelsData()
-		if err != nil {
-			return e.InternalServerError("loading models", err)
-		}
-	default:
-		return e.Redirect(http.StatusFound, "/settings/profile")
-	}
-
-	return h.render(e, "settings.html", data)
-}
-
-// settingsRoot redirects GET /settings → /settings/profile.
-func (h *handlers) settingsRoot(e *core.RequestEvent) error {
-	return e.Redirect(http.StatusFound, "/settings/profile")
 }
 
 // settingsFocusHTML renders the settings card's focus body (Profile + Models).

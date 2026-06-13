@@ -23,8 +23,9 @@ import (
 // consumer appears.
 var memoryCategories = []string{"fact", "preference", "person", "project", "context"}
 
-// skillsData builds the template data map for the skills section.
-// Used by both the skills card focus (knowledgeFocusHTML) and settingsPage.
+// skillsData builds the template data map for the skills manager.
+// Used by the skills card focus (knowledgeFocusHTML); skills left the settings
+// shell in plan 056.
 func (h *handlers) skillsData(q string) map[string]any {
 	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusProposed)
 	active, _ := knowledge.FilterActive(h.app, knowledge.Skill, q, "")

@@ -183,7 +183,6 @@ func Register(se *core.ServeEvent) error {
 
 	h := &handlers{app: se.App, tmpl: tmpl, gguf: gguf.Shared}
 	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
-	se.Router.GET("/models", h.modelsPage)
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/dock/conversation", h.dockConversation)
 	se.Router.GET("/ui/chatbar", h.chatbar)
@@ -214,12 +213,11 @@ func Register(se *core.ServeEvent) error {
 	if devSeedEnabled() {
 		se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
 	}
-	// Settings shell — sidebar with profile, skills, models sections.
-	se.Router.GET("/settings", h.settingsRoot)
-	se.Router.GET("/settings/{section}", h.settingsPage)
-	// Legacy redirects — old bookmarks keep working.
-	// Profile page and its sub-actions.
-	se.Router.GET("/profile", h.profilePage)
+	// Settings shell, profile, and models are the settings card focus now
+	// (plan 056: /focus/settings?section=profile|models). The /settings,
+	// /settings/{section}, /profile, and /models page routes were retired.
+	// The profile + model write endpoints below stay — the focus reuses the
+	// same fragment templates and SSE patch targets.
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
