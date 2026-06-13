@@ -16,8 +16,7 @@
 
   <details class="kcard-edit">
     <summary>Edit</summary>
-    <form hx-post="/ui/knowledge/skills/{{.Id}}/edit"
-          hx-target="#kcard-{{.Id}}" hx-swap="outerHTML">
+    <form data-on:submit__prevent="@post('/ui/knowledge/skills/{{.Id}}/edit', {contentType:'form'})">
       <label>Name <input type="text" name="name" value="{{.GetString "name"}}"></label>
       <label>Description <input type="text" name="description" value="{{.GetString "description"}}"></label>
       <label>Procedure <textarea name="content" rows="6">{{.GetString "content"}}</textarea></label>
@@ -29,22 +28,22 @@
   <footer class="kcard-actions">
     {{$status := .GetString "status"}}
     {{if eq $status "proposed"}}
-      <form hx-post="/ui/knowledge/skills/{{.Id}}/transition" hx-target="#kcard-{{.Id}}" hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/knowledge/skills/{{.Id}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="active">
         <button class="btn btn-primary btn-sm" type="submit">Approve</button>
       </form>
-      <form hx-post="/ui/knowledge/skills/{{.Id}}/transition" hx-target="#kcard-{{.Id}}" hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/knowledge/skills/{{.Id}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="rejected">
         <button class="btn btn-ghost btn-sm" type="submit">Dismiss</button>
       </form>
     {{else if eq $status "active"}}
-      <form hx-post="/ui/knowledge/skills/{{.Id}}/transition" hx-target="#kcard-{{.Id}}" hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/knowledge/skills/{{.Id}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="archived">
         <button class="btn btn-ghost btn-sm" type="submit">Archive</button>
       </form>
       {{with .GetInt "use_count"}}<span class="kcard-meta">used ×{{.}}</span>{{end}}
     {{else if eq $status "archived"}}
-      <form hx-post="/ui/knowledge/skills/{{.Id}}/transition" hx-target="#kcard-{{.Id}}" hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/knowledge/skills/{{.Id}}/transition', {contentType:'form'})">
         <input type="hidden" name="to" value="active">
         <button class="btn btn-ghost btn-sm" type="submit">Restore</button>
       </form>

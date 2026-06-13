@@ -5,8 +5,10 @@ import (
 	"html"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/knowledge"
 )
@@ -96,8 +98,9 @@ func kindFromPath(e *core.RequestEvent) (knowledge.Kind, error) {
 	return "", fmt.Errorf("unknown kind")
 }
 
-// transition handles approve / dismiss / archive / restore from cards.
-// Returns the re-rendered card (or empty swap when the card disappears).
+// transition handles approve / dismiss / archive / restore from cards via
+// Datastar SSE element patches. Validation runs first and returns a normal
+// HTTP error (cardError) before any SSE is opened.
 func (h *handlers) knowledgeTransition(e *core.RequestEvent) error {
 	kind, err := kindFromPath(e)
 	if err != nil {
@@ -111,12 +114,20 @@ func (h *handlers) knowledgeTransition(e *core.RequestEvent) error {
 		return h.cardError(e, err)
 	}
 
+	sse := datastar.NewSSE(e.Response, e.Request)
 	// Approved/restored cards re-render in place; dismissed and archived
-	// cards vanish from their section (HTMX swaps the empty response).
+	// cards vanish from their section (the client removes the element).
 	if to == knowledge.StatusActive {
-		return h.renderCard(e, kind, rec)
+		buf, err := h.renderCardHTML(kind, rec)
+		if err != nil {
+			return e.InternalServerError("rendering card", err)
+		}
+		_ = sse.PatchElements(buf,
+			datastar.WithSelectorID("kcard-"+rec.Id), datastar.WithModeOuter())
+		return nil
 	}
-	e.Response.WriteHeader(http.StatusOK)
+	_ = sse.PatchElements("",
+		datastar.WithSelectorID("kcard-"+id), datastar.WithModeRemove())
 	return nil
 }
 
@@ -139,7 +150,34 @@ func (h *handlers) knowledgeEdit(e *core.RequestEvent) error {
 	if err != nil {
 		return h.cardError(e, err)
 	}
-	return h.renderCard(e, kind, rec)
+
+	buf, err := h.renderCardHTML(kind, rec)
+	if err != nil {
+		return e.InternalServerError("rendering card", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(buf,
+		datastar.WithSelectorID("kcard-"+rec.Id), datastar.WithModeOuter())
+	return nil
+}
+
+// cardTemplateName picks the per-record card partial for a kind, mirroring
+// renderCard's choice (the chat-embed htmx path).
+func cardTemplateName(kind knowledge.Kind) string {
+	if kind == knowledge.Skill {
+		return "card-skill.html"
+	}
+	return "card-memory.html"
+}
+
+// renderCardHTML renders one knowledge card partial to a string for SSE
+// patching. Errors are returned so the caller can fail before opening a stream.
+func (h *handlers) renderCardHTML(kind knowledge.Kind, rec *core.Record) (string, error) {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, cardTemplateName(kind), rec); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 // knowledgeCard serves one card fragment — used by the chat stream to embed
