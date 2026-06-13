@@ -10,12 +10,21 @@ import (
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
 )
+
+// ping is the Datastar bootstrap proof (plan 050, Phase 0): a button with
+// data-on-click="@get('/ui/ping')" patches #ping to "pong" over SSE. Removed
+// once the chat stream proves the same path end-to-end in Phase 1.
+func (h *handlers) ping(e *core.RequestEvent) error {
+	sse := datastar.NewSSE(e.Response, e.Request)
+	return sse.PatchElements(`<span id="ping">pong</span>`, datastar.WithSelectorID("ping"))
+}
 
 // choicesView is the template payload for the chat-choices fragment.
 type choicesView struct {
