@@ -116,3 +116,38 @@ document.addEventListener('keydown', (e) => {
   const btn = buttons[n - 1];
   if (btn) btn.click();
 });
+
+// ── Chat helpers (master chat dock) ────────────────────────────────
+// Moved here from home.html so the chat works wherever the dock is
+// mounted (home main today, the board sidebar next). Datastar drives the
+// stream; these handle scroll, enter-to-send, and the model modal.
+window.balaurScrollToLatest = function () {
+  const chat = document.getElementById('chat');
+  // A docked #chat scrolls itself; the full-width home #chat scrolls the page.
+  if (chat && chat.scrollHeight > chat.clientHeight + 4) {
+    chat.scrollTop = chat.scrollHeight;
+  } else {
+    scrollTo(0, document.documentElement.scrollHeight || document.body.scrollHeight);
+  }
+};
+
+window.balaurSubmitOnEnter = function (event) {
+  if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
+      event.ctrlKey || event.metaKey || event.isComposing) return;
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
+};
+
+window.balaurCloseModal = function () {
+  const d = document.getElementById('model-modal');
+  if (d) { d.close(); d.innerHTML = ''; }
+};
+
+// Datastar appends/morphs #chat directly (no htmx swap events), so watch the
+// chat node and keep the latest message in view.
+document.addEventListener('DOMContentLoaded', () => {
+  const chat = document.getElementById('chat');
+  if (!chat) return;
+  balaurScrollToLatest();
+  new MutationObserver(balaurScrollToLatest).observe(chat, { childList: true, subtree: true });
+});

@@ -3,79 +3,54 @@
 <head>
   {{template "page_head" .}}
   <title>{{.Title}}</title>
-  <script>
-    // ── Chat scroll helpers ────────────────────────────────────────
-    function balaurScrollToLatest() {
-      // basm.js already syncs --chatbar-space; just scroll.
-      scrollTo(0, document.documentElement.scrollHeight || document.body.scrollHeight);
-    }
-
-    function balaurSubmitOnEnter(event) {
-      if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
-          event.ctrlKey || event.metaKey || event.isComposing) return;
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-    }
-
-    // ── Modal close (native <dialog>) ─────────────────────────────
-    function balaurCloseModal() {
-      const d = document.getElementById('model-modal');
-      if (d) { d.close(); d.innerHTML = ''; }
-    }
-  </script>
 </head>
 <body>
   {{template "topbar" .}}
+  <main>{{template "chat_dock" .}}</main>
+</body>
+</html>
 
-  <main>
-    {{if .HasRecap}}
-    <div id="recap" class="recap-zone"
-         hx-get="/ui/recap/bands" hx-trigger="revealed" hx-swap="outerHTML">
-      <p class="recap-hint">◇ further back…</p>
+{{- /* chat_dock — the full companion chat column. Rendered as the home
+     page's main today; the persistent board sidebar mounts the same fragment
+     next. Context: homeData. */ -}}
+{{define "chat_dock"}}
+  {{if .HasRecap}}
+  <div id="recap" class="recap-zone"
+       hx-get="/ui/recap/bands" hx-trigger="revealed" hx-swap="outerHTML">
+    <p class="recap-hint">◇ further back…</p>
+  </div>
+  {{end}}
+
+  <section class="chat" id="chat" aria-live="polite">
+    {{if .History}}
+      {{template "chat-messages.html" .History}}
+    {{else}}
+    <img class="hearth-crest" src="/static/crest.png"
+         alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
+    <div class="msg msg-balaur msg-with-avatar">
+      <figure class="portrait">
+        <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
+          <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
+        </span>
+        <figcaption class="who">Balaur</figcaption>
+      </figure>
+      <div class="msg-main">
+        {{if .ChatReady}}
+        <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
+        {{else}}
+        <div class="body">
+          <p>{{.ModelError}}</p>
+          {{if .ModelHint}}<p><code>{{.ModelHint}}</code></p>{{end}}
+        </div>
+        {{end}}
+      </div>
     </div>
     {{end}}
+  </section>
 
-    <section class="chat" id="chat" aria-live="polite">
-      {{if .History}}
-        {{template "chat-messages.html" .History}}
-      {{else}}
-      <img class="hearth-crest" src="/static/crest.png"
-           alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
-      <div class="msg msg-balaur msg-with-avatar">
-        <figure class="portrait">
-          <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
-            <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
-          </span>
-          <figcaption class="who">Balaur</figcaption>
-        </figure>
-        <div class="msg-main">
-          {{if .ChatReady}}
-          <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
-          {{else}}
-          <div class="body">
-            <p>{{.ModelError}}</p>
-            {{if .ModelHint}}<p><code>{{.ModelHint}}</code></p>{{end}}
-          </div>
-          {{end}}
-        </div>
-      </div>
-      {{end}}
-    </section>
-    {{template "chat_draft" .}}
-  </main>
+  {{template "chat_draft" .}}
 
-  <script>
-    addEventListener('DOMContentLoaded', () => {
-      balaurScrollToLatest();
-      // Datastar appends/morphs #chat directly (no htmx swap events), so watch
-      // the chat node and scroll to the latest on any change.
-      const chat = document.getElementById('chat');
-      if (chat) new MutationObserver(balaurScrollToLatest)
-        .observe(chat, { childList: true, subtree: true });
-    });
-  </script>
-
-  <!-- Nudge poll — agent-initiated messages while page is open -->
+  <!-- Nudge poll — agent-initiated messages while the dock is open -->
   <div id="nudge-poll"
        hx-get="/ui/chat/nudges?since={{.NowMillis}}"
        hx-trigger="every 30s"
@@ -83,10 +58,9 @@
 
   {{template "chat_bar" .}}
 
-  <!-- Native dialog — showModal() called by basm.js after HTMX swap -->
+  <!-- Native dialog — showModal() called by basm.js after swap -->
   <dialog id="model-modal" aria-labelledby="model-modal-title"></dialog>
-</body>
-</html>
+{{end}}
 
 {{define "chat_bar"}}
 <div class="chatbar chatbar-slim" id="chatbar"
