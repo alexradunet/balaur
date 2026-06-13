@@ -174,8 +174,8 @@
 {{- /* day card — a day-of-life summary tile (journal/done/log counts) */ -}}
 {{- /* context: cardDayView */ -}}
 {{define "ucard_day"}}
-<article class="kcard ucard ucard-day">
-  <header class="kcard-head"><span class="kcard-kind">▪ day</span>
+<article class="kcard ucard ucard-day" id="ucard-day">
+  <header class="kcard-head"><span class="kcard-kind"><img class="tool-icon" src="/static/icons/scroll.png" alt="">day</span>
     <span class="tag">{{.Label}}</span></header>
   <ul class="ucard-stats">
     <li>{{.JournalN}} journal</li>

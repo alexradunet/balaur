@@ -170,29 +170,3 @@ func (h *handlers) journalFocusHTML() template.HTML {
 	}
 	return template.HTML(b.String())
 }
-
-// journalPageDayEntries returns journal entries for a day, for use by the
-// integration assertion in tests (the candle write path and day page share
-// the same underlying journal records).
-func (h *handlers) journalPageDayEntries(d time.Time) ([]candleJournalView, error) {
-	now := time.Now()
-	loc := now.Location()
-	var convID string
-	if master, err := conversation.Master(h.app); err == nil {
-		convID = master.Id
-	}
-	dayData, err := life.Day(h.app, convID, d)
-	if err != nil {
-		return nil, err
-	}
-	views := make([]candleJournalView, 0, len(dayData.Journal))
-	for _, r := range dayData.Journal {
-		views = append(views, candleJournalView{
-			ID:   r.Id,
-			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-			Text: r.GetString("text"),
-			Date: d.Format(dayLayout),
-		})
-	}
-	return views, nil
-}
