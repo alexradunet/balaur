@@ -275,3 +275,43 @@ func TestFocusMissingRequiredParam(t *testing.T) {
 	}
 	s.Test(t)
 }
+
+// TestUiCardSettingsTile: the settings tile renders with section links.
+func TestUiCardSettingsTile(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:            "GET /ui/cards/settings renders the tile",
+		Method:          "GET",
+		URL:             "/ui/cards/settings",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"ucard-settings", `/focus/settings?section=models`},
+	}
+	s.Test(t)
+}
+
+// TestFocusSettingsProfile: /focus/settings renders the profile section by default.
+func TestFocusSettingsProfile(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:               "GET /focus/settings → profile section",
+		Method:             "GET",
+		URL:                "/focus/settings",
+		TestAppFactory:     newWebApp,
+		ExpectedStatus:     200,
+		ExpectedContent:    []string{`id="identity-card"`, "settings-nav"},
+		NotExpectedContent: []string{">Skills<"},
+	}
+	s.Test(t)
+}
+
+// TestFocusSettingsModels: ?section=models renders the models panel.
+func TestFocusSettingsModels(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:            "GET /focus/settings?section=models → models panel",
+		Method:          "GET",
+		URL:             "/focus/settings?section=models",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"settings-nav", `id="models-panel"`},
+	}
+	s.Test(t)
+}

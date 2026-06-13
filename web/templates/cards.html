@@ -412,6 +412,19 @@
 {{end}}
 
 {{- /* ------------------------------------------------------------------ */ -}}
+{{- /* settings card — static tile linking into the settings shell focus */ -}}
+{{define "ucard_settings"}}
+<article class="kcard ucard ucard-settings" id="ucard-settings">
+  <header class="kcard-head"><span class="kcard-kind"><img class="tool-icon" src="/static/icons/key.png" alt="">Settings</span></header>
+  <ul class="ucard-stats">
+    <li><a href="/focus/settings?section=profile">Profile</a></li>
+    <li><a href="/focus/settings?section=models">Models &amp; APIs</a></li>
+  </ul>
+  <footer class="kcard-actions"><a href="/focus/settings">open settings →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
 {{- /* palette — GET /ui/cards — human/agent index of all card types */ -}}
 {{- /* context: []cards.Spec */ -}}
 {{define "ucard_palette"}}

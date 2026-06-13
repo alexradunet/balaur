@@ -113,6 +113,8 @@ func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) e
 		return h.renderCardHabits(w, params)
 	case "lifelog":
 		return h.renderCardLifelog(w, params)
+	case "settings":
+		return h.renderCardSettings(w, params)
 	}
 	return fmt.Errorf("unhandled card type %q", typ)
 }
@@ -198,6 +200,12 @@ type cardLifelogView struct {
 func (h *handlers) renderCardLifelog(w io.Writer, _ map[string]string) error {
 	kinds, habits := h.lifeOverview(time.Now())
 	return h.tmpl.ExecuteTemplate(w, "ucard_lifelog", cardLifelogView{Habits: habits, Kinds: kinds})
+}
+
+// renderCardSettings renders the settings tile — static links into the settings
+// shell focus (Profile + Models). No data fetch; the sections load on focus.
+func (h *handlers) renderCardSettings(w io.Writer, _ map[string]string) error {
+	return h.tmpl.ExecuteTemplate(w, "ucard_settings", nil)
 }
 
 // ---- view-model structs ----

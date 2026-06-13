@@ -12,7 +12,7 @@ import (
 // multiple sub-tests to ensure the registry is complete and consistent.
 var allTypes = []string{
 	"today", "quests", "calendar", "timeline",
-	"journal", "day", "measure", "lines", "memory", "skills", "heads", "habits", "lifelog",
+	"journal", "day", "measure", "lines", "memory", "skills", "heads", "habits", "lifelog", "settings",
 }
 
 func TestAll(t *testing.T) {
@@ -214,7 +214,7 @@ func TestHasManage(t *testing.T) {
 			t.Errorf("HasManage(%q) = false, want true", typ)
 		}
 	}
-	for _, typ := range []string{"today", "calendar", "journal", "day", "habits", "lifelog", "timeline", "nope"} {
+	for _, typ := range []string{"today", "calendar", "journal", "day", "habits", "lifelog", "timeline", "settings", "nope"} {
 		if cards.HasManage(typ) {
 			t.Errorf("HasManage(%q) = true, want false", typ)
 		}
