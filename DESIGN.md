@@ -109,9 +109,9 @@ habit streaks derived from the entries log) · a Today block of open
 commitments and a present-moment line (date, time, timezone) injected
 into every chat turn, so relative dates resolve against the box's clock ·
 the owner-defined life log (`log_entry` / `entry_series` / `entry_drop`,
-free-form kinds, numeric or textual, backdatable, audited) and the /life
-page mirroring what is actually logged — sparklines for numeric kinds,
-recent lines for text kinds, live habit streaks · a one-line yesterday
+free-form kinds, numeric or textual, backdatable, audited) and the lifelog
+card (tile + /focus/lifelog) mirroring what is actually logged — sparklines
+for numeric kinds, recent lines for text kinds, live habit streaks · a one-line yesterday
 reflection in the briefing · the day card and its focus (/focus/day?date={date}):
 the owner's journal (verbatim via journal_write in chat or the focus form,
 focus-side removal only), the day's recap with transcript expand, completions,
