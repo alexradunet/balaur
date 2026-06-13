@@ -49,7 +49,7 @@
 <body>
 {{template "topbar" .}}
 <div class="with-sidebar">
-<main id="main">{{end}}
+<main id="main"{{with .MainClass}} class="{{.}}"{{end}}>{{end}}
 
 {{define "shell_close"}}</main>
 </div>

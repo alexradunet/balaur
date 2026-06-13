@@ -72,8 +72,9 @@ func (h *handlers) lifePage(e *core.RequestEvent) error {
 		views = append(views, v)
 	}
 
+	dock, _ := h.dockData()
 	return h.render(e, "life.html", map[string]any{
-		"Title": "Life", "Kinds": views, "Habits": h.buildHabits(now),
+		"Title": "Life", "Dock": dock, "Kinds": views, "Habits": h.buildHabits(now),
 	})
 }
 

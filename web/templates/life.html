@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>{{.Title}} · Balaur</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main>
+{{template "shell_open" .}}
     <h1><img class="h-icon" src="/static/icons/orb.png" alt="">Life</h1>
 
     {{if .Habits}}
@@ -54,6 +45,4 @@
     {{else}}
     <p class="k-empty">Nothing tracked yet. Tell Balaur what matters — a weight, a mood, a practice, a milestone — and it appears here. The kinds are yours to invent.</p>
     {{end}}
-  </main>
-</body>
-</html>
+{{template "shell_close" .}}

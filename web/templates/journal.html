@@ -1,14 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>{{.Title}} · Balaur</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main class="candle-page">
-
+{{template "shell_open" .}}
     <img class="hearth-crest candle-crest" src="/static/crest.png"
          alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
 
@@ -30,9 +20,7 @@
 
     {{template "journal_candle_body" .}}
 
-  </main>
-</body>
-</html>
+{{template "shell_close" .}}
 
 {{define "journal_candle_body"}}
 <div id="journal-candle-body">

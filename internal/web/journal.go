@@ -26,9 +26,11 @@ type candleJournalView struct {
 }
 
 type candleData struct {
-	Title   string
-	Today   string // YYYY-MM-DD, for the write form target
-	Journal []candleJournalView
+	Title     string
+	MainClass string
+	Dock      homeData
+	Today     string // YYYY-MM-DD, for the write form target
+	Journal   []candleJournalView
 }
 
 func (h *handlers) journalPage(e *core.RequestEvent) error {
@@ -122,9 +124,12 @@ func (h *handlers) buildCandleData(now time.Time) (candleData, error) {
 		return candleData{}, fmt.Errorf("buildCandleData: %w", err)
 	}
 
+	dock, _ := h.dockData()
 	data := candleData{
-		Title: "Journal",
-		Today: today.Format(dayLayout),
+		Title:     "Journal",
+		MainClass: "candle-page",
+		Dock:      dock,
+		Today:     today.Format(dayLayout),
 	}
 	for _, r := range dd.Journal {
 		data.Journal = append(data.Journal, candleJournalView{

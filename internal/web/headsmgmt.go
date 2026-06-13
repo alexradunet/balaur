@@ -27,8 +27,10 @@ type headView struct {
 }
 
 type headsData struct {
-	Title string
-	Heads []headView
+	Title     string
+	MainClass string
+	Dock      homeData
+	Heads     []headView
 }
 
 // headsPage renders GET /heads — lists all non-revoked heads.
@@ -54,7 +56,8 @@ func (h *handlers) buildHeadsData() (headsData, error) {
 		hv := headViewFrom(h.app, r)
 		views = append(views, hv)
 	}
-	return headsData{Title: "Heads", Heads: views}, nil
+	dock, _ := h.dockData()
+	return headsData{Title: "Heads", MainClass: "profile-page", Dock: dock, Heads: views}, nil
 }
 
 func headViewFrom(app core.App, r *core.Record) headView {

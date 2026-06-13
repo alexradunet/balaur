@@ -150,7 +150,8 @@ func (h *handlers) tasksPage(e *core.RequestEvent) error {
 		return e.InternalServerError("loading tasks", err)
 	}
 
-	data := map[string]any{"Title": "Tasks", "View": view}
+	dock, _ := h.dockData()
+	data := map[string]any{"Title": "Tasks", "View": view, "Dock": dock}
 	switch view {
 	case "calendar":
 		data["Cal"] = buildCalendar(recs, e.Request.URL.Query().Get("m"), now)

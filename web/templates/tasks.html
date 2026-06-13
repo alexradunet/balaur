@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>{{.Title}} · Balaur</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main>
+{{template "shell_open" .}}
     <h1><img class="h-icon" src="/static/icons/scroll.png" alt="">Tasks</h1>
 
     <nav class="k-tabs t-views">
@@ -19,9 +10,7 @@
     {{if eq .View "calendar"}}{{template "tasks_calendar" .Cal}}{{end}}
     {{if eq .View "timeline"}}{{template "tasks_timeline" .TL}}{{end}}
     {{if eq .View "list"}}{{template "tasks_list" .}}{{end}}
-  </main>
-</body>
-</html>
+{{template "shell_close" .}}
 
 {{define "quest_rail"}}
 <nav class="quest-rail" id="quest-rail"{{if .OOB}} hx-swap-oob="outerHTML"{{end}}>

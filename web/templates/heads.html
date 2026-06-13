@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>Heads · Balaur</title>
-</head>
-<body>
-  {{template "topbar" .}}
-
-  <main class="profile-page">
+{{template "shell_open" .}}
     <h1><img class="h-icon" src="/static/icons/tome.png" alt="">Heads</h1>
     <p class="profile-lede">Focused sub-agents that grow from the main Balaur. Each head can carry its own Balaur personality.</p>
     <div class="stitch"></div>
@@ -22,9 +13,7 @@
     {{end}}
     {{end}}
 
-  </main>
-</body>
-</html>
+{{template "shell_close" .}}
 
 {{define "head_card"}}
 {{$h := .}}
