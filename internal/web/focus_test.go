@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -77,9 +78,33 @@ func TestFocusUnknownType(t *testing.T) {
 		URL:            "/focus/nope",
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 404,
-		// PocketBase requires an assertion on a non-empty body; the 404 carries a
-		// JSON error from e.NotFoundError("no such card type", …).
+		// PocketBase's JSON error serializer sentence-cases the message:
+		// "no such card type" is emitted as "No such card type" in the body.
 		ExpectedContent: []string{"No such card type"},
+	}
+	s.Test(t)
+}
+
+func TestFocusCanonicalQuery(t *testing.T) {
+	// from is transient: it must never appear in the reflected canonical URL.
+	q := url.Values{"status": {"open"}, "from": {"abc"}}
+	if got := focusCanonicalQuery(q); got != "status=open" {
+		t.Errorf("focusCanonicalQuery(%v) = %q; want %q", q, got, "status=open")
+	}
+	// Only-from query → empty string (no trailing "?").
+	if got := focusCanonicalQuery(url.Values{"from": {"abc"}}); got != "" {
+		t.Errorf("only-from query: got %q, want empty", got)
+	}
+}
+
+func TestFocusMissingRequiredParam(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:            "GET /focus/measure without kind → 400",
+		Method:          "GET",
+		URL:             "/focus/measure",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  400,
+		ExpectedContent: []string{"kind"},
 	}
 	s.Test(t)
 }
