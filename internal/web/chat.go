@@ -3,7 +3,6 @@ package web
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"io"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -27,15 +26,6 @@ func newNonce() string {
 	var b [8]byte
 	_, _ = rand.Read(b[:])
 	return hex.EncodeToString(b[:])
-}
-
-// execFragment executes a named template fragment to w, silently ignoring
-// errors — the caller already owns the live stream and cannot un-write bytes.
-// Used by the head-chat gateway, which still streams chunked HTML.
-func (h *handlers) execFragment(w io.Writer, name string, data messageView) {
-	if err := h.tmpl.ExecuteTemplate(w, name, data); err != nil {
-		h.app.Logger().Warn("chat fragment render failed", "fragment", name, "err", err)
-	}
 }
 
 // chat handles one user turn in the master conversation. The web layer is a
@@ -105,17 +95,4 @@ func (h *handlers) chatErrText(err error) string {
 		return "the model is unreachable — check the active provider in Settings"
 	}
 	return err.Error()
-}
-
-// renderError writes a plain assistant error bubble. Used by the head-chat
-// gateway (still chunked HTML).
-func (h *handlers) renderError(e *core.RequestEvent, err error) error {
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	balaURL := store.BalaurAvatarURL(h.app)
-	h.execFragment(e.Response, "chat-msg-balaur", messageView{
-		BalaurAvatarURL: balaURL,
-		WhoLabel:        "Balaur",
-		Content:         err.Error(),
-	})
-	return nil
 }
