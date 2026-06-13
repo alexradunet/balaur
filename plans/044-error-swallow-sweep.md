@@ -7,7 +7,7 @@
 > in `plans/readme.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat dd9e60b..HEAD -- internal/life/day.go internal/cli/life.go internal/web/day.go internal/knowledge/knowledge.go internal/ext/propose.go internal/web/chat.go`
+> **Drift check (run first)**: `git diff --stat dd9e60b..HEAD -- internal/life/day.go internal/cli/life.go internal/web/day.go internal/web/journal.go internal/knowledge/knowledge.go internal/ext/propose.go internal/web/chat.go`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -74,6 +74,12 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 - `internal/web/day.go:161`: `dayData, _ := life.Day(h.app, convID, d)` —
   inside the day-journal fragment refresh path (open the file and read the
   enclosing handler before editing).
+- `internal/web/journal.go:116`: `dayData, _ := life.Day(h.app, convID, today)` —
+  inside `buildCandleData(now time.Time) candleData` (the journal/candle
+  page assembly). Swallows the error.
+- `internal/web/journal.go:152`: `dayData, err := life.Day(h.app, convID, d)`
+  — inside `journalPageDayEntries`; this one **already checks and returns
+  the error**. Leave it as-is; it is the in-file exemplar.
 
 ### C. `internal/knowledge/knowledge.go:188-196`
 
@@ -142,6 +148,7 @@ the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 - `internal/life/day.go` (+ its test file `internal/life/day_test.go` — create if absent)
 - `internal/cli/life.go`
 - `internal/web/day.go`
+- `internal/web/journal.go`
 - `internal/knowledge/knowledge.go`
 - `internal/ext/propose.go`
 - `internal/web/chat.go`
@@ -211,7 +218,26 @@ Do the same error-check at the second call site (line 161) using that
 handler's existing error style. Update any other `buildDay` callers the
 compiler reveals.
 
-**Verify**: `go test ./internal/web/` → existing day tests pass.
+Then the journal/candle page, the same shape. In `internal/web/journal.go`,
+`buildCandleData(now time.Time) candleData` (line 108) swallows `life.Day`
+at line 116. Change its signature to `(candleData, error)`, return the
+wrapped `life.Day` error, and update its two callers — both are handler
+methods that already return `error`:
+
+- `journalPage` (line 33, `data := h.buildCandleData(now)`):
+  ```go
+	data, err := h.buildCandleData(now)
+	if err != nil {
+		return e.InternalServerError("loading journal", err)
+	}
+  ```
+- `renderCandleBody` (line 135, same `data := h.buildCandleData(now)`):
+  same error-check, returning `e.InternalServerError("rendering journal", err)`.
+
+Leave `journalPageDayEntries` (line 152) untouched — it already checks and
+returns the error.
+
+**Verify**: `go test ./internal/web/` → existing day + journal tests pass.
 
 ### Step 4: Log-only sites
 
@@ -244,9 +270,13 @@ compiler reveals.
    the app is not practical here; the propagation paths are
    compiler-enforced. Do not contrive a failure-injection seam.)
 2. In `internal/web` (day tests file): assert `GET /day/2026-01-15` still
-   renders 200 on an empty database (proves blank ≠ error).
+   renders 200 on an empty database (proves blank ≠ error). If the journal
+   page has a straightforward render test pattern to copy, add a parallel
+   `GET /journal` renders-200-on-empty-DB assertion; if not, skip it (the
+   buildCandleData propagation is compiler-enforced and covered by existing
+   journal tests staying green).
 
-**Verify**: `go test ./internal/life/ ./internal/web/ -run 'TestDay|Day'` → ok.
+**Verify**: `go test ./internal/life/ ./internal/web/ -run 'TestDay|Day|Journal'` → ok.
 
 ### Step 6: Full gate
 
@@ -266,7 +296,7 @@ compiler reveals.
 Machine-checkable. ALL must hold:
 
 - [ ] `grep -n 'err == nil' internal/life/day.go` → no matches
-- [ ] `grep -n 'life.Day' internal/cli/life.go internal/web/day.go | xargs -I{} true` — manually: no `, _ :=` remains on those calls: `grep -n ', _ := life.Day\|, _ = life.Day' internal/cli/life.go internal/web/day.go` → no matches
+- [ ] `grep -n ', _ := life.Day\|, _ = life.Day' internal/cli/life.go internal/web/day.go internal/web/journal.go` → no matches
 - [ ] `grep -n '_ = app.Save' internal/knowledge/knowledge.go internal/ext/propose.go` → no matches
 - [ ] `grep -n '_ = h.tmpl.ExecuteTemplate' internal/web/chat.go` → no matches
 - [ ] `go test ./...` exits 0
@@ -279,8 +309,9 @@ Machine-checkable. ALL must hold:
 Stop and report back (do not improvise) if:
 
 - The excerpts don't match the live code (drift).
-- `buildDay` turns out to have more than the two visible call sites and
-  one of them cannot sensibly handle an error (report which).
+- `buildDay` or `buildCandleData` turns out to have more call sites than
+  this plan lists and one of them cannot sensibly handle an error (report
+  which).
 - Any existing test depends on `Day` returning nil error on a broken
   database (would mean someone relies on the silent behavior).
 - The CLI `day` command's enclosing function does not return an error
