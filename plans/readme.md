@@ -65,7 +65,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 045 | llama supervisor failure-mode tests (fake engine) | P2 | M | LOW | — | — | DONE (reviewed; 31%→75% cov; merged to main) |
 | 046 | Batch streak completions query (TodayBlock N+1) | P2 | M | MED | — | — | DONE (reviewed; parity test green; merged to main) |
 | 047 | Recap period math pinned to owner timezone | P3 | M | MED | — | — | DONE (reviewed; scope reconciled +cli/recap.go; default path byte-identical; merged to main) |
-| 048 | Model-seam test sweep (llm errors, Embed, selectModel, repair-success) | P2 | S–M | LOW | 042 (soft, same test file) | — | TODO |
+| 048 | Model-seam test sweep (llm errors, Embed, selectModel, repair-success) | P2 | S–M | LOW | 042 (soft, same test file) | — | DONE (reviewed; llm 54%→74%; merged to main) |
 | 049 | Cleanup & docs (SyntheticClient, env truth, head-tools status) | P3 | S | LOW | 048 (soft, env.go) | — | DONE (reviewed; merged to main) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
@@ -174,6 +174,19 @@ managers, FTS5 recall, CLI v1) had never been audited. Baseline at
 CGO-free build ok. 61 raw findings → 36 survived adversarial verification
 → 11 survived host vetting → 8 plans (owner selected all fix findings;
 direction items deferred to a future cycle by choice).
+
+**ALL 8 EXECUTED & MERGED (2026-06-13).** Each ran via a dispatched sonnet
+executor in an isolated worktree, reviewed (done criteria re-run, scope +
+diff + test assertions audited) before APPROVE, then merged to main and
+pushed. Execution order: 049, 042, 043, 044, 045, 046, 047, 048. Two plans
+were reconciled at dispatch time when a precondition check found a gap: 044
+(+`internal/web/journal.go` — `buildCandleData` also swallowed `life.Day`)
+and 047 (+`internal/cli/recap.go:43` + `recapExpand:117` — two more
+`EnsureSummaries`/`time.Local` sites). Coverage lifts: `internal/llama`
+31%→75% (045), `internal/llm` 54%→74% (048). One transient flake observed
+once in `TestEnsureServerSurfacesEngineCrash` (045) could not be reproduced
+in 40+ runs; `cmd.Wait()` flushes stderr before `doneCh` closes, so no race
+found — left as a watch item, not a defect.
 
 Ordering notes:
 
