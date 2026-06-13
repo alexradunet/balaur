@@ -62,7 +62,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 042 | Web hardening (escape card errors, drop example.com, headers, param caps) | P1 | S–M | LOW | — | — | DONE (reviewed; merged to main) |
 | 043 | Board cards JSON: corrupt data aborts, never erases | P1 | S | LOW | — | — | DONE (reviewed; merged to main) |
 | 044 | Error-swallow sweep (life.Day propagates; Touch/propose/chat log) | P2 | S | LOW | — | — | DONE (reviewed; scope reconciled +journal.go; merged to main) |
-| 045 | llama supervisor failure-mode tests (fake engine) | P2 | M | LOW | — | — | TODO |
+| 045 | llama supervisor failure-mode tests (fake engine) | P2 | M | LOW | — | — | DONE (reviewed; 31%→75% cov; merged to main) |
 | 046 | Batch streak completions query (TodayBlock N+1) | P2 | M | MED | — | — | TODO |
 | 047 | Recap period math pinned to owner timezone | P3 | M | MED | — | — | TODO |
 | 048 | Model-seam test sweep (llm errors, Embed, selectModel, repair-success) | P2 | S–M | LOW | 042 (soft, same test file) | — | TODO |
