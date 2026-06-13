@@ -96,8 +96,9 @@ self tool, which reports the actual registry):
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI at / (chat, /models, /focus/memory, /focus/skills, /focus/quests,
-/focus/heads, /focus/journal, /focus/day?date={date}, /focus/lifelog, /profile; a head's branch
+Surfaces: the web UI at / (chat, /focus/memory, /focus/skills, /focus/quests,
+/focus/heads, /focus/journal, /focus/day?date={date}, /focus/lifelog,
+/focus/settings?section=profile|models; a head's branch
 chat opens in the dock via /ui/dock/conversation?head={id}); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes

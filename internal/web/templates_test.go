@@ -54,12 +54,13 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Fatalf("chat_bar: %v", err)
 	}
 	out := b.String()
-	// The inline model chooser and the add-API form were moved to /settings/models.
+	// The inline model chooser and the add-API form were moved to the settings
+	// card's models focus.
 	if strings.Contains(out, "model-choice-list") || strings.Contains(out, "Add OpenAI-compatible API") {
 		t.Error("chatbar should no longer render the inline model chooser or add-API form")
 	}
-	if !strings.Contains(out, `href="/settings/models"`) {
-		t.Error("chatbar should link to /settings/models to manage models")
+	if !strings.Contains(out, `href="/focus/settings?section=models"`) {
+		t.Error("chatbar should link to the settings models focus to manage models")
 	}
 	// The form now lives in chat_draft, not in the chatbar.
 	if strings.Contains(out, `name="message"`) {
@@ -115,16 +116,18 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Error("chat_draft: textarea/button must be disabled when chat is not ready")
 	}
 
+	// The settings shell is the settings card focus now (plan 056): the models
+	// section renders via the shared settings_body define.
 	b.Reset()
-	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
-	settingsModels := settingsData{Title: "Settings", Section: "models", Models: models}
-	if err := tmpl.ExecuteTemplate(&b, "settings.html", settingsModels); err != nil {
-		t.Fatalf("settings.html models: %v", err)
+	models := modelsPageData{ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
+	settingsModels := settingsData{Section: "models", Models: models}
+	if err := tmpl.ExecuteTemplate(&b, "settings_body", settingsModels); err != nil {
+		t.Fatalf("settings_body models: %v", err)
 	}
 	out = b.String()
 	for _, want := range []string{"Available models", "Add OpenAI-compatible API", "Local Qwen3.6 35B A3B"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("models page missing %q", want)
+			t.Errorf("models section missing %q", want)
 		}
 	}
 }

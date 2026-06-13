@@ -113,7 +113,7 @@
   <div class="model-switcher-head">
     <span class="model-switcher-kicker">Model</span>
     {{if .ActiveModel}}<span class="model-current">{{.ActiveModel}}</span>{{end}}
-    <a class="model-switcher-manage" href="/settings/models">Manage models &amp; APIs →</a>
+    <a class="model-switcher-manage" href="/focus/settings?section=models">Manage models &amp; APIs →</a>
   </div>
   {{if not .ChatReady}}
     {{if .Gguf.Active}}
@@ -124,7 +124,7 @@
     {{else}}
     <div class="model-switcher-empty">
       <span>{{if .Gguf.Err}}{{.Gguf.Err}}{{else if .ModelError}}{{.ModelError}}{{else}}No model is ready yet.{{end}}</span>
-      <a href="/settings/models">Set up a model →</a>
+      <a href="/focus/settings?section=models">Set up a model →</a>
     </div>
     {{end}}
   {{end}}
@@ -133,7 +133,7 @@
     <span class="balaur-avatar balaur-avatar-soul" aria-hidden="true">
       <img class="px" src="{{.SoulAvatarURL}}" alt="" decoding="async">
     </span>
-    <a href="/profile" class="chatbar-profile-href">Your avatar &amp; profile →</a>
+    <a href="/focus/settings?section=profile" class="chatbar-profile-href">Your avatar &amp; profile →</a>
   </div>
 </section>
 {{end}}

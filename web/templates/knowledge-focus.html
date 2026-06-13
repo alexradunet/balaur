@@ -1,6 +1,7 @@
 {{- /* knowledge-focus.html — the knowledge manager body (proposed + searchable
-     active grid + archived). The memory/skills card focuses and the
-     /settings/skills section all render this single `knowledge_body` define. */ -}}
+     active grid + archived). The memory and skills card focuses render this
+     single `knowledge_body` define; skills is its own card now (no longer a
+     settings section). */ -}}
 {{define "knowledge_body"}}
     {{if .Proposed}}
     <section class="k-section">

@@ -123,7 +123,8 @@ avatar picker in the profile page (stored in `owner_settings`) · a
 16-personality Balaur head library under `web/static/avatars/balaur-01..16.png`
 · a Balaur head medallion favicon at `web/static/logo.png` wired via
 `<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
-profile page (`/profile`) with display name, soul avatar picker (16 options),
+profile section (the settings card focus, `/focus/settings?section=profile`)
+with display name, soul avatar picker (16 options),
 and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
 `localStorage` · sub-head branch conversations with a focused,
 tool-free chat channel per active head, opened in the dock via
@@ -408,7 +409,8 @@ reference this file. The owner picker writes the choice to `owner_settings`
 and the server resolves the URL dynamically; `soul.png` stays as a stable
 fallback equal to `soul-01`.
 
-The picker lives on the profile page (`/profile`) as a set of option buttons,
+The picker lives in the profile section of the settings card focus
+(`/focus/settings?section=profile`) as a set of option buttons,
 one Datastar `@post` form per option, posting to `/ui/profile/soul-avatar`.
 Selection takes effect immediately and persists.
 

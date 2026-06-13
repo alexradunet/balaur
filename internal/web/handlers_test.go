@@ -145,46 +145,54 @@ func TestChoicesHistoryInert(t *testing.T) {
 func TestSettingsPages(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			Name:           "GET /settings redirects",
+			// The settings shell is the settings card focus now (plan 056).
+			Name:            "GET /focus/settings?section=profile renders profile section",
+			Method:          "GET",
+			URL:             "/focus/settings?section=profile",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"identity-card", "settings-nav"},
+		},
+		{
+			Name:            "GET /focus/settings?section=models renders models section",
+			Method:          "GET",
+			URL:             "/focus/settings?section=models",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"models-panel"},
+		},
+		{
+			// Retired route (plan 056): the settings shell is the settings card
+			// focus now (/focus/settings, covered by TestFocusSettings*). The old
+			// /settings page 302s to /boards.
+			Name:           "GET /settings is retired (302)",
 			Method:         "GET",
 			URL:            "/settings",
 			ExpectedStatus: 302,
 		},
 		{
-			Name:            "GET /settings/profile renders profile section",
-			Method:          "GET",
-			URL:             "/settings/profile",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"identity-card", "settings-nav"},
-		},
-		{
-			Name:            "GET /settings/models renders models section",
-			Method:          "GET",
-			URL:             "/settings/models",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"models-panel"},
-		},
-		{
-			Name:            "GET /settings/skills renders skills section",
-			Method:          "GET",
-			URL:             "/settings/skills",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"k-active-grid"},
-		},
-		{
-			Name:           "GET /settings/bogus redirects",
+			// Retired route (plan 056): the section pages folded into the focus.
+			Name:           "GET /settings/profile is retired (302)",
 			Method:         "GET",
-			URL:            "/settings/bogus",
+			URL:            "/settings/profile",
 			ExpectedStatus: 302,
 		},
 		{
-			Name:           "GET /profile redirects",
+			Name:           "GET /settings/models is retired (302)",
+			Method:         "GET",
+			URL:            "/settings/models",
+			ExpectedStatus: 302,
+		},
+		{
+			// Retired route (plan 056): /profile folded into the settings focus
+			// (/focus/settings?section=profile).
+			Name:           "GET /profile is retired (302)",
 			Method:         "GET",
 			URL:            "/profile",
 			ExpectedStatus: 302,
 		},
 		{
-			Name:           "GET /models redirects",
+			// Retired route (plan 056): /models folded into the settings focus
+			// (/focus/settings?section=models).
+			Name:           "GET /models is retired (302)",
 			Method:         "GET",
 			URL:            "/models",
 			ExpectedStatus: 302,
@@ -579,12 +587,12 @@ func TestProviderManager(t *testing.T) {
 		return app, prov1ID, mid1, prov2ID, mid2
 	}
 
-	t.Run("GET /settings/models shows provider name and key set, not secret", func(t *testing.T) {
+	t.Run("GET /focus/settings?section=models shows provider name and key set, not secret", func(t *testing.T) {
 		app, _, _, _, _ := newProviderApp(t)
 		scenario := tests.ApiScenario{
-			Name:               "models page shows provider",
+			Name:               "models focus shows provider",
 			Method:             "GET",
-			URL:                "/settings/models",
+			URL:                "/focus/settings?section=models",
 			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:     200,
 			ExpectedContent:    []string{"Prov1", "key set"},

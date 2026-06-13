@@ -175,6 +175,16 @@ func init() {
 			H:     24,
 			// no params — the full tracked overview + habits
 		},
+		{
+			Type:  "settings",
+			Label: "Settings",
+			Icon:  "key",
+			W:     6,
+			H:     24,
+			Params: []ParamSpec{
+				{Name: "section", Enum: []string{"profile", "models"}, Doc: "settings section (default profile)"},
+			},
+		},
 	}
 
 	byType = make(map[string]Spec, len(registry))

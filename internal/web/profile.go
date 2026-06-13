@@ -1,7 +1,6 @@
 package web
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/alexradunet/balaur/internal/store"
@@ -10,7 +9,6 @@ import (
 )
 
 type profileData struct {
-	Title         string
 	OwnerName     string
 	AvatarOptions []AvatarOption // soul avatar roster
 	BalaurOptions []AvatarOption // Balaur head roster
@@ -19,17 +17,11 @@ type profileData struct {
 
 func (h *handlers) buildProfileData(savedName bool) profileData {
 	return profileData{
-		Title:         "Profile",
 		OwnerName:     store.OwnerName(h.app),
 		AvatarOptions: buildAvatarOptions(h.app),
 		BalaurOptions: buildBalaurHeadOptions(h.app),
 		SavedName:     savedName,
 	}
-}
-
-// profilePage redirects GET /profile → /settings/profile.
-func (h *handlers) profilePage(e *core.RequestEvent) error {
-	return e.Redirect(http.StatusFound, "/settings/profile")
 }
 
 // saveName handles POST /ui/profile/name — persists the owner display name
