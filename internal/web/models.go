@@ -48,7 +48,6 @@ type AvatarOption struct {
 }
 
 type modelsPageData struct {
-	Title         string
 	ModelChoices  []turn.ModelChoice
 	ActiveModel   string
 	ActiveModelID string
@@ -128,7 +127,7 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 }
 
 func (h *handlers) modelsData() (modelsPageData, error) {
-	data := modelsPageData{Title: "Models", ModelHint: llm.DefaultChatModelDownloadCommand(h.app.DataDir())}
+	data := modelsPageData{ModelHint: llm.DefaultChatModelDownloadCommand(h.app.DataDir())}
 	choices, active, err := turn.ModelChoices(h.app)
 	if err != nil {
 		return data, err

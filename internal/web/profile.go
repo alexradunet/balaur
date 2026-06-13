@@ -9,7 +9,6 @@ import (
 )
 
 type profileData struct {
-	Title         string
 	OwnerName     string
 	AvatarOptions []AvatarOption // soul avatar roster
 	BalaurOptions []AvatarOption // Balaur head roster
@@ -18,7 +17,6 @@ type profileData struct {
 
 func (h *handlers) buildProfileData(savedName bool) profileData {
 	return profileData{
-		Title:         "Profile",
 		OwnerName:     store.OwnerName(h.app),
 		AvatarOptions: buildAvatarOptions(h.app),
 		BalaurOptions: buildBalaurHeadOptions(h.app),

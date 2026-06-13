@@ -119,7 +119,7 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	// The settings shell is the settings card focus now (plan 056): the models
 	// section renders via the shared settings_body define.
 	b.Reset()
-	models := modelsPageData{Title: "Models", ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
+	models := modelsPageData{ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
 	settingsModels := settingsData{Section: "models", Models: models}
 	if err := tmpl.ExecuteTemplate(&b, "settings_body", settingsModels); err != nil {
 		t.Fatalf("settings_body models: %v", err)
