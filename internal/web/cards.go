@@ -10,6 +10,7 @@ package web
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -70,7 +71,7 @@ func (h *handlers) uiCard(e *core.RequestEvent) error {
 		// Validation error: render a card-note-error strip, HTTP 200.
 		e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 		e.Response.WriteHeader(http.StatusOK)
-		fmt.Fprintf(e.Response, `<div class="card-note card-note-error" id="ucard-%s">%s</div>`, typ, err.Error())
+		fmt.Fprintf(e.Response, `<div class="card-note card-note-error" id="ucard-%s">%s</div>`, typ, html.EscapeString(err.Error()))
 		return nil
 	}
 

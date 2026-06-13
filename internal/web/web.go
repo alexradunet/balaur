@@ -123,7 +123,7 @@ func guardLocalUI(e *core.RequestEvent) error {
 }
 
 func isAllowedHost(host string) bool {
-	if host == "localhost" || host == "example.com" {
+	if host == "localhost" {
 		return true
 	}
 	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
@@ -165,6 +165,19 @@ func Register(se *core.ServeEvent) error {
 
 	// Bind the origin/host guard first, before any route registration.
 	se.Router.BindFunc(guardLocalUI)
+
+	// Hardening headers on Balaur's own surfaces. PocketBase's /api and /_
+	// manage their own; CSP is deferred — templates still use inline scripts.
+	se.Router.BindFunc(func(e *core.RequestEvent) error {
+		p := e.Request.URL.Path
+		if !strings.HasPrefix(p, "/api/") && !strings.HasPrefix(p, "/_") {
+			h := e.Response.Header()
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("X-Frame-Options", "DENY")
+			h.Set("Referrer-Policy", "same-origin")
+		}
+		return e.Next()
+	})
 
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 

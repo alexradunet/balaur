@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
@@ -20,6 +21,9 @@ import (
 
 func newWebApp(t testing.TB) *tests.TestApp {
 	t.Helper()
+	// httptest requests default to Host "example.com"; allow it for tests
+	// only — production allows loopback + BALAUR_ALLOWED_HOSTS.
+	t.Setenv("BALAUR_ALLOWED_HOSTS", "example.com")
 	app, err := tests.NewTestApp(t.TempDir())
 	if err != nil {
 		t.Fatalf("test app: %v", err)
@@ -465,6 +469,76 @@ func TestSetHeadAvatar(t *testing.T) {
 		}
 		scenario.Test(t)
 	})
+}
+
+// TestGuardRejectsNonLoopbackHost verifies the DNS-rebinding guard rejects a
+// non-loopback host that is not in BALAUR_ALLOWED_HOSTS (set to "example.com"
+// by newWebApp), and allows a loopback IP.
+//
+// ApiScenario always builds requests with Host "example.com" (httptest default),
+// so we drive the router directly to control req.Host.
+func TestGuardRejectsNonLoopbackHost(t *testing.T) {
+	// serveRequest builds the router from a newWebApp app and fires a single
+	// GET "/" with the given host, returning the HTTP status code.
+	serveRequest := func(t *testing.T, host string) int {
+		t.Helper()
+		app := newWebApp(t)
+		defer app.Cleanup()
+
+		baseRouter, err := apis.NewRouter(app)
+		if err != nil {
+			t.Fatalf("NewRouter: %v", err)
+		}
+		se := &core.ServeEvent{App: app, Router: baseRouter}
+		if err := app.OnServe().Trigger(se, func(e *core.ServeEvent) error { return nil }); err != nil {
+			t.Fatalf("OnServe trigger: %v", err)
+		}
+		mux, err := se.Router.BuildMux()
+		if err != nil {
+			t.Fatalf("BuildMux: %v", err)
+		}
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Host = host
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec.Result().StatusCode
+	}
+
+	t.Run("evil.test host is rejected with 403", func(t *testing.T) {
+		if got := serveRequest(t, "evil.test"); got != http.StatusForbidden {
+			t.Errorf("expected 403 for evil.test, got %d", got)
+		}
+	})
+	t.Run("loopback IP host passes guard", func(t *testing.T) {
+		if got := serveRequest(t, "127.0.0.1:8090"); got == http.StatusForbidden {
+			t.Errorf("expected non-403 for 127.0.0.1:8090, got %d", got)
+		}
+	})
+}
+
+// TestHardeningHeaders verifies the three hardening response headers are
+// present on Balaur's own surfaces (not PocketBase's /api or /_).
+func TestHardeningHeaders(t *testing.T) {
+	scenario := tests.ApiScenario{
+		Name:            "GET / carries hardening headers",
+		Method:          "GET",
+		URL:             "/",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"chatbar"},
+		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
+			for _, hdr := range []struct{ name, want string }{
+				{"X-Content-Type-Options", "nosniff"},
+				{"X-Frame-Options", "DENY"},
+				{"Referrer-Policy", "same-origin"},
+			} {
+				if got := res.Header.Get(hdr.name); got != hdr.want {
+					tb.Errorf("header %s = %q; want %q", hdr.name, got, hdr.want)
+				}
+			}
+		},
+	}
+	scenario.Test(t)
 }
 
 func TestOriginGuard(t *testing.T) {
