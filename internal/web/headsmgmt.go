@@ -71,14 +71,6 @@ func (h *handlers) headChat(e *core.RequestEvent) error {
 	if err != nil {
 		return e.NotFoundError("head not found", nil)
 	}
-	if head.GetString("status") != "active" {
-		return e.ForbiddenError("head is not active", nil)
-	}
-
-	conv, err := conversation.ForHead(h.app, head)
-	if err != nil {
-		return e.InternalServerError("loading head conversation", err)
-	}
 
 	balaURL := store.HeadBalaurAvatarURL(h.app, headID)
 	soulURL := store.SoulAvatarURL(h.app)
@@ -86,6 +78,23 @@ func (h *handlers) headChat(e *core.RequestEvent) error {
 	headName := head.GetString("name")
 
 	cs := h.newChatStream(e, balaURL, headName, soulURL, ownerName)
+
+	// The branch may have closed since the dock opened it. A bare 403 here would
+	// patch nothing (the @post fails silently). Instead, clear the stuck draft and
+	// explain — the "← back to main" control returns the owner to the main thread.
+	if head.GetString("status") != "active" {
+		_ = cs.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
+		cs.note("", "This conversation has closed — its head is no longer active. Use “← back to main” to return to your main thread.")
+		return nil
+	}
+
+	conv, err := conversation.ForHead(h.app, head)
+	if err != nil {
+		_ = cs.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
+		cs.note("", "This conversation could not be opened. Use “← back to main” to return to your main thread.")
+		h.app.Logger().Warn("head chat: ForHead failed", "head", headID, "error", err)
+		return nil
+	}
 
 	client, err := h.clients.Active(h.app)
 	if err != nil {

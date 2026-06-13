@@ -1,6 +1,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -74,6 +75,26 @@ func TestDockConversationMergedForbidden(t *testing.T) {
 		TestAppFactory:  func(testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  403,
 		ExpectedContent: []string{"not active"},
+	}
+	s.Test(t)
+}
+
+// TestHeadChatInactiveShowsNote: posting to an inactive head's branch does NOT
+// silently 403 — it opens a 200 SSE that clears the draft and appends a note
+// explaining the branch has closed (the @post must patch something, not fail
+// silently with a bare 403).
+func TestHeadChatInactiveShowsNote(t *testing.T) {
+	app := newWebApp(t)
+	head := seedHeadRec(t, app, "Scribe", "merged") // "merged" is not "active"
+	s := tests.ApiScenario{
+		Name:            "POST /ui/heads/{id}/chat to a closed head shows a note",
+		Method:          "POST",
+		URL:             "/ui/heads/" + head.Id + "/chat",
+		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		Body:            strings.NewReader("message=hi"),
+		TestAppFactory:  func(testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"datastar-patch-elements", "no longer active"},
 	}
 	s.Test(t)
 }
