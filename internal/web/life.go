@@ -74,15 +74,22 @@ func (h *handlers) lifePage(e *core.RequestEvent) error {
 
 	var habits []lifeHabitView
 	if recs, err := tasks.OpenTasks(h.app, nil); err == nil {
+		var recurring []*core.Record
+		recurLines := make(map[string]string)
 		for _, r := range recs {
 			rule, err := tasks.Parse(r.GetString("recur"))
 			if err != nil || rule.IsZero() {
 				continue
 			}
+			recurring = append(recurring, r)
+			recurLines[r.Id] = tasks.Describe(rule)
+		}
+		streaks := tasks.StreaksFor(h.app, recurring, now)
+		for _, r := range recurring {
 			habits = append(habits, lifeHabitView{
 				Title:     r.GetString("title"),
-				Streak:    tasks.StreakFor(h.app, r, now),
-				RecurLine: tasks.Describe(rule),
+				Streak:    streaks[r.Id],
+				RecurLine: recurLines[r.Id],
 			})
 		}
 	}

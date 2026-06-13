@@ -85,23 +85,34 @@ func Briefing(app core.App, client llm.Client, now time.Time, hour int) error {
 // dayLines renders the day's material: overdue first (most overdue first),
 // then today by time. Shared by the briefing and the Today context block.
 func dayLines(app core.App, bk Buckets, now time.Time) []string {
-	var lines []string
+	// Build the capped slice we will actually render (mirrors the old loop
+	// bounds exactly) so we can batch-fetch streaks in one query.
+	var capped []*core.Record
+	overdueCount := 0
 	for i, r := range bk.Overdue {
 		if i >= briefingOverdueCap {
 			break
 		}
-		lines = append(lines, dayLine(app, r, now, true))
+		capped = append(capped, r)
+		overdueCount++
 	}
 	for _, r := range bk.Today {
-		if len(lines) >= briefingOverdueCap+briefingTodayCap {
+		if len(capped) >= briefingOverdueCap+briefingTodayCap {
 			break
 		}
-		lines = append(lines, dayLine(app, r, now, false))
+		capped = append(capped, r)
+	}
+
+	streaks := StreaksFor(app, capped, now)
+
+	var lines []string
+	for i, r := range capped {
+		lines = append(lines, dayLine(r, now, i < overdueCount, streaks[r.Id]))
 	}
 	return lines
 }
 
-func dayLine(app core.App, r *core.Record, now time.Time, overdue bool) string {
+func dayLine(r *core.Record, now time.Time, overdue bool, streak int) string {
 	var b strings.Builder
 	due := r.GetDateTime("due").Time()
 	if overdue {
@@ -110,7 +121,7 @@ func dayLine(app core.App, r *core.Record, now time.Time, overdue bool) string {
 		fmt.Fprintf(&b, "today %s: %s", due.In(now.Location()).Format("15:04"), r.GetString("title"))
 	}
 	if rule, err := Parse(r.GetString("recur")); err == nil && !rule.IsZero() {
-		if streak := StreakFor(app, r, now); streak > 1 {
+		if streak > 1 {
 			fmt.Fprintf(&b, " — habit, streak %d", streak)
 		} else {
 			b.WriteString(" — habit")

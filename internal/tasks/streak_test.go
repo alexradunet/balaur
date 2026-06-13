@@ -3,6 +3,10 @@ package tasks
 import (
 	"testing"
 	"time"
+
+	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/alexradunet/balaur/internal/storetest"
 )
 
 func day(y int, m time.Month, d int) time.Time {
@@ -119,5 +123,88 @@ func TestDaysBetweenAcrossDST(t *testing.T) {
 	b = time.Date(2026, 10, 25, 9, 0, 0, 0, loc)
 	if got := daysBetween(a, b); got != 1 {
 		t.Errorf("daysBetween across fall DST = %d, want 1", got)
+	}
+}
+
+// TestStreaksForMatchesStreakFor is the parity safety net: StreaksFor must
+// return the exact same value per task that StreakFor returns one-at-a-time.
+// Any divergence here is a STOP condition — streak semantics are owner-visible.
+func TestStreaksForMatchesStreakFor(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := time.Now()
+
+	// Task 1: daily habit, 3-day run ending today → streak 3.
+	daily, err := Create(app, CreateOpts{Title: "Stretch", Recur: "daily", Due: now})
+	if err != nil {
+		t.Fatalf("create daily: %v", err)
+	}
+	for d := 2; d >= 0; d-- {
+		if err := addEntry(app, "completion", daily.Id, nil, "Stretch", now.AddDate(0, 0, -d)); err != nil {
+			t.Fatalf("entry daily d=%d: %v", d, err)
+		}
+	}
+
+	// Task 2: weekly habit (every Saturday), last completion 3 weeks ago → lapsed, streak 0.
+	// Find a Saturday relative to now so the rule matches.
+	weeklyDue := now
+	for weeklyDue.Weekday() != time.Saturday {
+		weeklyDue = weeklyDue.AddDate(0, 0, 1)
+	}
+	weekly, err := Create(app, CreateOpts{Title: "Long run", Recur: "weekly:sat", Due: weeklyDue})
+	if err != nil {
+		t.Fatalf("create weekly: %v", err)
+	}
+	if err := addEntry(app, "completion", weekly.Id, nil, "Long run", now.AddDate(0, 0, -21)); err != nil {
+		t.Fatalf("entry weekly: %v", err)
+	}
+
+	// Task 3: no recurrence rule — must be absent from the batch map.
+	oneoff, err := Create(app, CreateOpts{Title: "One-off task", Due: now})
+	if err != nil {
+		t.Fatalf("create one-off: %v", err)
+	}
+
+	all := []*core.Record{daily, weekly, oneoff}
+
+	// Reload the records as StreakFor and StreaksFor would see them.
+	for i, r := range all {
+		reloaded, err := app.FindRecordById("tasks", r.Id)
+		if err != nil {
+			t.Fatalf("reload %d: %v", i, err)
+		}
+		all[i] = reloaded
+	}
+	daily, weekly, oneoff = all[0], all[1], all[2]
+
+	batch := StreaksFor(app, all, now)
+
+	// Parity: batch must match individual calls.
+	for _, tc := range []struct {
+		name string
+		rec  *core.Record
+	}{
+		{"daily", daily},
+		{"weekly", weekly},
+	} {
+		want := StreakFor(app, tc.rec, now)
+		got := batch[tc.rec.Id]
+		if got != want {
+			t.Errorf("PARITY DIVERGENCE %s: StreaksFor=%d, StreakFor=%d — STOP", tc.name, got, want)
+		}
+	}
+
+	// No-recurrence task must be absent from the batch map.
+	if _, present := batch[oneoff.Id]; present {
+		t.Errorf("no-recurrence task should be absent from StreaksFor map, got streak %d", batch[oneoff.Id])
+	}
+	// StreakFor on a no-recurrence task returns 0 (zero-value map lookup is consistent).
+	if got := StreakFor(app, oneoff, now); got != 0 {
+		t.Errorf("StreakFor on no-recurrence task = %d, want 0", got)
+	}
+
+	// Empty input → empty map (not nil).
+	empty := StreaksFor(app, []*core.Record{}, now)
+	if len(empty) != 0 {
+		t.Errorf("empty input: want empty map, got len=%d", len(empty))
 	}
 }
