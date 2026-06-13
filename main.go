@@ -28,6 +28,10 @@ import (
 	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/web"
 	_ "github.com/alexradunet/balaur/migrations"
+
+	// Embedded tzdata: owner_settings "timezone" must resolve on hosts
+	// without /usr/share/zoneinfo (static binary on a minimal box). ~450KB.
+	_ "time/tzdata"
 )
 
 func main() {
@@ -133,7 +137,7 @@ func registerRecap(app core.App) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
-		if err := recap.EnsureSummaries(ctx, app, client, master.Id, time.Now()); err != nil {
+		if err := recap.EnsureSummaries(ctx, app, client, master.Id, time.Now().In(store.OwnerLocation(app))); err != nil {
 			app.Logger().Warn("recap: catch-up stopped", "error", err)
 		}
 	}

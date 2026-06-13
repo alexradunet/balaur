@@ -10,6 +10,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/recap"
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 func recapCmd(app core.App) *cobra.Command {
@@ -40,7 +41,7 @@ func recapEnsureCmd(app core.App) *cobra.Command {
 		}
 		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 		defer cancel()
-		if err := recap.EnsureSummaries(ctx, app, client, master.Id, time.Now()); err != nil {
+		if err := recap.EnsureSummaries(ctx, app, client, master.Id, time.Now().In(store.OwnerLocation(app))); err != nil {
 			return nil, err
 		}
 		return map[string]any{"ensured": true}, nil

@@ -219,6 +219,31 @@ Optional environment variables:
 | `BALAUR_BRIEFING_HOUR` | `9` | Hour (0–23) to open the day with a briefing |
 | `BALAUR_DEV_SEED` | `0` | Set to `1` to enable the `/ui/dev/seed-recaps` endpoint for testing |
 
+### Pinning recap periods to a timezone
+
+By default, recap period boundaries (daily, weekly, monthly…) follow the
+box's local clock. If the box ever moves to a different timezone — laptop
+travels, VPS migrated, `TZ` reconfigured — the period boundaries shift, and
+old summaries stop matching the new boundaries.
+
+To keep boundaries stable across box moves, add a record to the
+`owner_settings` collection (PocketBase dashboard → `owner_settings` →
+`+`):
+
+| key        | value (example)    |
+|------------|--------------------|
+| `timezone` | `Europe/Bucharest` |
+
+The value must be a valid IANA timezone name (e.g. `America/New_York`,
+`Asia/Tokyo`). Balaur resolves it per cron tick — a dashboard edit takes
+effect on the next hourly run without a restart. An unrecognised name falls
+back silently to the box clock.
+
+**Note on existing summaries**: changing the `timezone` key re-anchors
+*future* period boundaries only. Summaries generated under the previous zone
+keep their original boundaries and remain visible; you may see a one-time
+seam at the change date. No migration of historical summaries is attempted.
+
 To reach Balaur from a NetBird network without embedding any VPN code into
 the binary, see [docs/netbird.md](docs/netbird.md).
 
