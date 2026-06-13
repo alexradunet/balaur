@@ -114,10 +114,29 @@ func boardCardViewsOf(bcs []boardCard) ([]boardCardView, bool) {
 	return out, freeLay
 }
 
+// boardCardsOf decodes the record's cards JSON. A blank field (including
+// PocketBase's JSON-encoded empty string "\"\"") is an empty board; anything
+// else that fails to parse is corruption the caller must surface — proceeding
+// would overwrite the owner's composition.
+func boardCardsOf(rec *core.Record) ([]boardCard, error) {
+	raw := rec.GetString("cards")
+	trimmed := strings.TrimSpace(raw)
+	// PocketBase stores an empty JSON field as the literal "" (a JSON-encoded
+	// empty string). An empty or blank raw value also means no cards.
+	if trimmed == "" || trimmed == `""` {
+		return nil, nil
+	}
+	var bcs []boardCard
+	if err := json.Unmarshal([]byte(raw), &bcs); err != nil {
+		return nil, fmt.Errorf("decoding board %s cards: %w", rec.Id, err)
+	}
+	return bcs, nil
+}
+
 // boardRecordOf builds a boardRecord from a PocketBase record.
 func boardRecordOf(rec *core.Record) *boardRecord {
-	var bcs []boardCard
-	_ = json.Unmarshal([]byte(rec.GetString("cards")), &bcs)
+	// corrupt cards render as an empty board; loadBoards logs it.
+	bcs, _ := boardCardsOf(rec)
 	views, freeLay := boardCardViewsOf(bcs)
 	return &boardRecord{
 		ID:      rec.Id,
@@ -136,6 +155,9 @@ func (h *handlers) loadBoards() ([]*boardRecord, error) {
 	}
 	out := make([]*boardRecord, 0, len(recs))
 	for _, r := range recs {
+		if _, err := boardCardsOf(r); err != nil {
+			h.app.Logger().Warn("board cards corrupted", "board", r.Id, "err", err)
+		}
 		out = append(out, boardRecordOf(r))
 	}
 	return out, nil
@@ -383,8 +405,10 @@ func (h *handlers) boardsCardAdd(e *core.RequestEvent) error {
 		return e.BadRequestError(err.Error(), nil)
 	}
 
-	var bcs []boardCard
-	_ = json.Unmarshal([]byte(rec.GetString("cards")), &bcs)
+	bcs, err := boardCardsOf(rec)
+	if err != nil {
+		return e.InternalServerError("board cards are corrupted; fix the record in the dashboard", err)
+	}
 
 	newCard := boardCard{Type: typ}
 	if len(cleaned) > 0 {
@@ -392,7 +416,10 @@ func (h *handlers) boardsCardAdd(e *core.RequestEvent) error {
 	}
 	bcs = append(bcs, newCard)
 
-	raw, _ := json.Marshal(bcs)
+	raw, err := json.Marshal(bcs)
+	if err != nil {
+		return e.InternalServerError("encoding board cards", err)
+	}
 	rec.Set("cards", string(raw))
 	if err := h.app.Save(rec); err != nil {
 		return e.InternalServerError("saving board", err)
@@ -427,15 +454,20 @@ func (h *handlers) boardsCardRemove(e *core.RequestEvent) error {
 		return e.NotFoundError("board not found", nil)
 	}
 
-	var bcs []boardCard
-	_ = json.Unmarshal([]byte(rec.GetString("cards")), &bcs)
+	bcs, err := boardCardsOf(rec)
+	if err != nil {
+		return e.InternalServerError("board cards are corrupted; fix the record in the dashboard", err)
+	}
 
 	if idx < 0 || idx >= len(bcs) {
 		return e.BadRequestError("index out of bounds", nil)
 	}
 
 	bcs = append(bcs[:idx], bcs[idx+1:]...)
-	raw, _ := json.Marshal(bcs)
+	raw, err := json.Marshal(bcs)
+	if err != nil {
+		return e.InternalServerError("encoding board cards", err)
+	}
 	rec.Set("cards", string(raw))
 	if err := h.app.Save(rec); err != nil {
 		return e.InternalServerError("saving board", err)
@@ -492,8 +524,10 @@ func (h *handlers) boardsLayout(e *core.RequestEvent) error {
 		return e.BadRequestError("invalid layout JSON", err)
 	}
 
-	var bcs []boardCard
-	_ = json.Unmarshal([]byte(rec.GetString("cards")), &bcs)
+	bcs, err := boardCardsOf(rec)
+	if err != nil {
+		return e.InternalServerError("board cards are corrupted; fix the record in the dashboard", err)
+	}
 
 	if len(entries) != len(bcs) {
 		return e.BadRequestError("layout entry count mismatch", nil)
@@ -519,7 +553,10 @@ func (h *handlers) boardsLayout(e *core.RequestEvent) error {
 		return e.BadRequestError("invalid cards after layout update", err)
 	}
 
-	rawCards, _ := json.Marshal(cleaned)
+	rawCards, err := json.Marshal(cleaned)
+	if err != nil {
+		return e.InternalServerError("encoding board cards", err)
+	}
 	rec.Set("cards", string(rawCards))
 	if err := h.app.Save(rec); err != nil {
 		return e.InternalServerError("saving board layout", err)
