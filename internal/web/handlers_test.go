@@ -206,6 +206,15 @@ func TestSettingsPages(t *testing.T) {
 			URL:            "/memory",
 			ExpectedStatus: 302,
 		},
+		{
+			// Retired route (plan 055): the life overview moved into the lifelog
+			// card focus (/focus/lifelog, covered by TestFocusLifelogShowsOverview).
+			// The old /life page 302s to /boards.
+			Name:           "GET /life is retired (302 to /boards)",
+			Method:         "GET",
+			URL:            "/life",
+			ExpectedStatus: 302,
+		},
 	}
 
 	for _, scenario := range scenarios {
