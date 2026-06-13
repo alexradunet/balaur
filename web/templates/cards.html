@@ -240,8 +240,8 @@
 {{- /* ucard_knowledge_manage — the interactive memory/skills fold (mode=manage).
      Reuses the self-targeting card-{memory,skill}.html partials (each targets
      its own #kcard-{id}), so multiple manage cards never cross-target.
-     Interactions stay htmx during coexistence; the board switch re-processes
-     #main so the lazy partials bind. context: manageCardView */ -}}
+     Each row's actions are Datastar @post forms that self-patch #kcard-{id},
+     so a transition or edit updates just that card. context: manageCardView */ -}}
 {{define "ucard_knowledge_manage"}}
 <article class="kcard ucard ucard-manage ucard-{{.Kind}}-manage" id="ucard-{{.Kind}}-manage">
   <header class="kcard-head">

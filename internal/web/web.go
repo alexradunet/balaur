@@ -1,4 +1,4 @@
-// Package web serves Balaur's HTMX interface: server-rendered html/template
+// Package web serves Balaur's Datastar interface: server-rendered html/template
 // pages with fragment swaps. The PocketBase admin dashboard stays the
 // superuser engine room; this is the product surface.
 package web

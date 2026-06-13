@@ -174,7 +174,7 @@ func (h *handlers) knowledgeEdit(e *core.RequestEvent) error {
 }
 
 // cardTemplateName picks the per-record card partial for a kind, mirroring
-// renderCard's choice (the chat-embed htmx path).
+// renderCard's choice (the chat-embed path).
 func cardTemplateName(kind knowledge.Kind) string {
 	if kind == knowledge.Skill {
 		return "card-skill.html"
@@ -193,7 +193,7 @@ func (h *handlers) renderCardHTML(kind knowledge.Kind, rec *core.Record) (string
 }
 
 // knowledgeCard serves one card fragment — used by the chat stream to embed
-// live proposal cards via hx-get on load.
+// live proposal cards, server-rendered into the stream.
 func (h *handlers) knowledgeCard(e *core.RequestEvent) error {
 	kind, err := kindFromPath(e)
 	if err != nil {
