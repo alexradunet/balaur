@@ -51,6 +51,24 @@ func TestFocusDatastarPatch(t *testing.T) {
 	s.Test(t)
 }
 
+func TestFocusBackHrefRejectsUnsafe(t *testing.T) {
+	for _, from := range []string{
+		`x') ;alert(1);('`,
+		`a/b`,
+		`a b`,
+		`"`,
+		`../evil`,
+		``,
+	} {
+		if got := focusBackHref(from); got != "/boards" {
+			t.Errorf("focusBackHref(%q) = %q, want /boards (unsafe must fall back)", from, got)
+		}
+	}
+	if got := focusBackHref("abc123"); got != "/boards/abc123" {
+		t.Errorf("focusBackHref(%q) = %q, want /boards/abc123", "abc123", got)
+	}
+}
+
 // TestFocusUnknownType: an unregistered card type 404s.
 func TestFocusUnknownType(t *testing.T) {
 	s := tests.ApiScenario{

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -32,11 +33,18 @@ type focusView struct {
 	BackHref  string        // where "← Back" returns
 }
 
+// safeBoardID accepts only a board-id-shaped value (the charset PocketBase
+// record ids use). The focus "from" param is the one attacker-controllable
+// input that reaches the Back control; constraining it here keeps the safety
+// self-evident instead of relying solely on html/template's JS escaping.
+var safeBoardID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,255}$`)
+
 // focusBackHref returns the board to return to. A focus opened from a board
-// carries ?from={boardID}; one opened from the launcher has none, so we fall
-// back to /boards (which redirects to the first board).
+// carries ?from={boardID}; one opened from the launcher, or with a
+// malformed/forged from, falls back to /boards (which redirects to the first
+// board).
 func focusBackHref(from string) string {
-	if from == "" {
+	if !safeBoardID.MatchString(from) {
 		return "/boards"
 	}
 	return "/boards/" + from
