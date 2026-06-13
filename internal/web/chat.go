@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -59,7 +60,7 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 			SoulAvatarURL: soulURL, OwnerName: ownerName, Content: msg,
 		})
 		_ = cs.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
-		cs.note("", err.Error())
+		cs.note("", h.chatErrText(err))
 		return nil
 	}
 
@@ -86,7 +87,24 @@ func clipText(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return s[:n] + "…"
+	// Truncate on a rune boundary so multi-byte tool output never renders a
+	// broken replacement char in the morphed row.
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
+}
+
+// chatErrText returns an owner-facing chat error, replacing anything that looks
+// like a provider endpoint with a generic line (AGENTS.md: do not leak private
+// URLs) and logging the raw detail. Shared by the chat gateway and the stream.
+func (h *handlers) chatErrText(err error) string {
+	h.app.Logger().Warn("chat: surfaced error", "error", err)
+	if strings.Contains(err.Error(), "://") {
+		return "the model is unreachable — check the active provider in Settings"
+	}
+	return err.Error()
 }
 
 // renderError writes a plain assistant error bubble. Used by the head-chat

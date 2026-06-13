@@ -150,7 +150,10 @@ func (s *chatStream) emit(ev agent.Event) {
 		s.handleToolResult(ev)
 		s.openBubble()
 	case "error":
-		s.buf.WriteString(" — the thread snapped: " + ev.Err.Error())
+		if s.buf.Len() > 0 {
+			s.buf.WriteString(" — ")
+		}
+		s.buf.WriteString("the thread snapped: " + s.h.chatErrText(ev.Err))
 		s.morph("chat-balaur-body", messageView{BodyID: s.bodyID, Content: s.buf.String()})
 	}
 }

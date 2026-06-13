@@ -102,8 +102,18 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ layout: JSON.stringify(serializeLayout(grid)) }),
-    }).then(function (res) { if (!res.ok) location.reload(); })
-      .catch(function () { location.reload(); });
+    }).then(function (res) { if (!res.ok) resyncBoard(); })
+      .catch(function () { resyncBoard(); });
+  }
+
+  // resyncBoard re-pulls the current board into #main via the active Datastar
+  // tab, so a rejected layout save (e.g. a grid another tab already changed)
+  // refreshes the canvas WITHOUT a full-page reload that would tear down the
+  // dock and kill its live chat stream. Falls back to reload only if no tab.
+  function resyncBoard() {
+    var tab = document.querySelector('.board-tabs .k-tab-active');
+    if (tab) tab.click();
+    else location.reload();
   }
 
   // ── Delegated drag (move) ──────────────────────────────────────────────
@@ -136,15 +146,17 @@
     }
     function onUp() {
       slot.classList.remove('dragging');
-      grip.removeEventListener('pointermove', onMove);
-      grip.removeEventListener('pointerup', onUp);
-      grip.removeEventListener('pointercancel', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       packAndApply(grid);
       persistLayout(grid);
     }
-    grip.addEventListener('pointermove', onMove);
-    grip.addEventListener('pointerup', onUp);
-    grip.addEventListener('pointercancel', onUp);
+    // Listen on document, not the grip: a mid-drag #main swap can detach the
+    // grip, but document is stable, so pointerup still fires and persists.
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   });
 
   // ── Delegated resize ───────────────────────────────────────────────────
@@ -176,14 +188,14 @@
     }
     function onUp() {
       slot.classList.remove('dragging');
-      handle.removeEventListener('pointermove', onMove);
-      handle.removeEventListener('pointerup', onUp);
-      handle.removeEventListener('pointercancel', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       packAndApply(grid);
       persistLayout(grid);
     }
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', onUp);
-    handle.addEventListener('pointercancel', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   });
 }());

@@ -284,14 +284,24 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 			break
 		}
 	}
+
+	ds := isDatastarRequest(e)
+
 	if current == nil {
+		// A board deleted in another tab: a Datastar @get can't apply a plain
+		// 404 body, which would freeze the stale tab. Self-heal by redirecting.
+		if ds {
+			sse := datastar.NewSSE(e.Response, e.Request)
+			_ = sse.Redirect("/boards")
+			return nil
+		}
 		return e.NotFoundError("board not found", nil)
 	}
 
 	bv := boardView{Boards: boards, Current: current, Specs: cards.All()}
 
 	// Datastar board switch: patch #main only; the dock persists.
-	if isDatastarRequest(e) {
+	if ds {
 		sse := datastar.NewSSE(e.Response, e.Request)
 		var b strings.Builder
 		if err := h.tmpl.ExecuteTemplate(&b, "board_main", boardPageData{boardView: bv}); err != nil {
@@ -304,6 +314,8 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 		if u, err := url.Parse("/boards/" + id); err == nil {
 			_ = sse.ReplaceURL(*u)
 		}
+		// Only #main was patched, so sync the tab title explicitly.
+		_ = sse.ExecuteScript(fmt.Sprintf("document.title=%q", current.Name+" · Balaur"))
 		// The card slots lazy-load via htmx (hx-trigger="load"); htmx does not
 		// see Datastar-patched DOM, so process #main once. Drops out when the
 		// card registry migrates to Datastar.

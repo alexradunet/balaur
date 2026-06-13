@@ -2301,7 +2301,10 @@ progress.gguf-progress-bar::-moz-progress-bar {
   overflow: hidden;
 }
 
-#dock .recap-zone { flex: 0 0 auto; margin: 0; }
+/* Cap + scroll the recap telescope in the narrow rail so an expanded,
+   multi-band telescope can't grow past the composer/chatbar (clipped by the
+   fixed #dock). On /chat the page scrolls, so this only applies in the dock. */
+#dock .recap-zone { flex: 0 1 auto; max-height: 38%; overflow-y: auto; margin: 0; }
 
 /* The chat scroll area fills the rail; avatars/gutter tighten for the width. */
 #dock .chat {
