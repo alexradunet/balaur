@@ -24,11 +24,102 @@ func seedProposedMemory(t testing.TB, app *tests.TestApp, title string) string {
 	return rec.Id
 }
 
+// seedActiveMemory creates an approved (active) memory record so the grid
+// endpoint has something to filter over.
+func seedActiveMemory(t testing.TB, app *tests.TestApp, title, category string) string {
+	t.Helper()
+	rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
+		Title:      title,
+		Content:    "seed body",
+		Category:   category,
+		Importance: 3,
+	})
+	if err != nil {
+		t.Fatalf("propose memory: %v", err)
+	}
+	if _, err := knowledge.Transition(app, knowledge.Memory, rec.Id, knowledge.StatusActive); err != nil {
+		t.Fatalf("activate memory: %v", err)
+	}
+	return rec.Id
+}
+
 // sseHeaders marks a request as a Datastar @post fetch (Accept: text/event-stream)
 // carrying a form body, matching the card forms' {contentType:'form'} posts.
 var sseHeaders = map[string]string{
 	"Content-Type": "application/x-www-form-urlencoded",
 	"Accept":       "text/event-stream",
+}
+
+// sseGetHeaders marks a request as a Datastar @get fetch (Accept:
+// text/event-stream), matching the live-search / category-tab grid refetch.
+var sseGetHeaders = map[string]string{
+	"Accept": "text/event-stream",
+}
+
+// TestKnowledgeGridDatastar: the live-search/category grid refetch returns an
+// inner-mode patch into #k-active-grid carrying the matching cards.
+func TestKnowledgeGridDatastar(t *testing.T) {
+	app := newWebApp(t)
+	seedActiveMemory(t, app, "Prefers espresso", "preference")
+	seedActiveMemory(t, app, "Loves tea", "preference")
+
+	scenario := tests.ApiScenario{
+		Name:           "grid search emits an inner patch into #k-active-grid",
+		Method:         "GET",
+		URL:            "/ui/knowledge/memories/grid?q=espresso&category=",
+		Headers:        sseGetHeaders,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			"datastar-patch-elements",
+			"selector #k-active-grid",
+			"mode inner",
+			"Prefers espresso",
+		},
+		// The non-matching card must be filtered out of the patch.
+		NotExpectedContent: []string{"Loves tea"},
+		TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+	}
+	scenario.Test(t)
+}
+
+// TestKnowledgeGridNoMatchDatastar: a query with no hits still patches the
+// grid, this time with the empty-state copy.
+func TestKnowledgeGridNoMatchDatastar(t *testing.T) {
+	app := newWebApp(t)
+	seedActiveMemory(t, app, "Prefers espresso", "preference")
+
+	scenario := tests.ApiScenario{
+		Name:           "grid no-match patches the empty state",
+		Method:         "GET",
+		URL:            "/ui/knowledge/memories/grid?q=zzznope&category=",
+		Headers:        sseGetHeaders,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			"datastar-patch-elements",
+			"selector #k-active-grid",
+			"Nothing matches",
+		},
+		NotExpectedContent: []string{"Prefers espresso"},
+		TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+	}
+	scenario.Test(t)
+}
+
+// TestKnowledgeGridBadKindIsHTTPError: an unknown kind fails BEFORE any SSE is
+// opened, returning a normal 400 (no datastar patch).
+func TestKnowledgeGridBadKindIsHTTPError(t *testing.T) {
+	app := newWebApp(t)
+
+	scenario := tests.ApiScenario{
+		Name:               "unknown grid kind returns a 400, not an SSE patch",
+		Method:             "GET",
+		URL:                "/ui/knowledge/bogus/grid",
+		Headers:            sseGetHeaders,
+		ExpectedStatus:     400,
+		NotExpectedContent: []string{"datastar-patch-elements"},
+		TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+	}
+	scenario.Test(t)
 }
 
 // TestKnowledgeTransitionApproveDatastar: approve (to=active) re-renders the

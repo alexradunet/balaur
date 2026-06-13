@@ -31,13 +31,11 @@
         <header class="recap-head">
           <span class="recap-label">The conversation, preserved</span>
           <button class="recap-expand" type="button"
-                  hx-get="/ui/recap/expand?type=day&start={{.RecapStart}}"
-                  hx-target="next .recap-children" hx-swap="innerHTML"
-                  hx-on:click="this.closest('.recap-card').classList.add('recap-open'); this.remove()">
+                  data-on:click="el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start={{.RecapStart}}')">
             transcript
           </button>
         </header>
-        <div class="recap-children"></div>
+        <div class="recap-children" id="recap-children-day-{{.RecapStart}}"></div>
       </article>
       {{end}}
     </section>
@@ -78,8 +76,7 @@
     <article class="journal-entry">
       <div class="journal-meta">
         <span class="tl-time">{{.Time}}</span>
-        <form hx-post="/ui/day/journal/{{.ID}}/drop?date={{$.Date}}"
-              hx-target="#day-journal" hx-swap="outerHTML">
+        <form data-on:submit__prevent="@post('/ui/day/journal/{{.ID}}/drop?date={{$.Date}}')">
           <button class="btn btn-ghost btn-sm" type="submit">remove</button>
         </form>
       </div>
@@ -89,8 +86,7 @@
   </div>
   {{end}}
   <form class="journal-form"
-        hx-post="/ui/day/{{.Date}}/journal"
-        hx-target="#day-journal" hx-swap="outerHTML">
+        data-on:submit__prevent="@post('/ui/day/{{.Date}}/journal', {contentType:'form'})">
     <textarea name="text" rows="3" placeholder="What stays with you from this day?" required></textarea>
     <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
   </form>

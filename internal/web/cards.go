@@ -139,6 +139,40 @@ func cardErrorStrip(msg string) template.HTML {
 	return template.HTML(`<div class="card-note card-note-error">` + html.EscapeString(msg) + `</div>`)
 }
 
+// uicardBody server-renders a registry card ("/ui/cards/{type}?query") for inline
+// chat embeds — so the chat stream and reloaded history carry the card directly,
+// with no lazy htmx mount.
+func (h *handlers) uicardBody(typ, query string) template.HTML {
+	vals, _ := url.ParseQuery(query)
+	return h.cardHTML(typ, queryToMap(vals))
+}
+
+// proposalBody server-renders an approval/proposal card (a task, or a knowledge
+// record) for inline chat embeds. Returns "" when the record can't be loaded, so
+// the tool row degrades to plain text rather than a broken card.
+func (h *handlers) proposalBody(kind, id string) template.HTML {
+	if kind == "tasks" {
+		rec, err := h.app.FindRecordById("tasks", id)
+		if err != nil {
+			return ""
+		}
+		s, err := h.taskCardHTML(rec)
+		if err != nil {
+			return ""
+		}
+		return template.HTML(s)
+	}
+	rec, err := h.app.FindRecordById(kind, id) // collection name == kind ("memories"/"skills")
+	if err != nil {
+		return ""
+	}
+	s, err := h.renderCardHTML(knowledge.Kind(kind), rec)
+	if err != nil {
+		return ""
+	}
+	return template.HTML(s)
+}
+
 // cardHabitsView feeds the read-only habits card: recurring tasks + streaks.
 type cardHabitsView struct {
 	Habits []lifeHabitView

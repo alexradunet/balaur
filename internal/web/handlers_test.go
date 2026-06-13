@@ -196,11 +196,22 @@ func TestSettingsPages(t *testing.T) {
 			ExpectedStatus: 302,
 		},
 		{
-			Name:            "GET /memory still renders k-active-grid",
-			Method:          "GET",
-			URL:             "/memory",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"k-active-grid"},
+			Name:           "GET /memory still renders k-active-grid",
+			Method:         "GET",
+			URL:            "/memory",
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				"k-active-grid",
+				// Live search + category filter are Datastar-bound now.
+				"data-bind:q",
+				"data-on:input__debounce.250ms",
+				"data-signals:category",
+			},
+			// The htmx search/tab wiring is gone from the controls.
+			NotExpectedContent: []string{
+				`hx-get="/ui/knowledge/memories/grid"`,
+				"hx-include",
+			},
 		},
 	}
 
@@ -715,52 +726,54 @@ func TestChatCardShow(t *testing.T) {
 
 	t.Run("streamed card_show yields k-inline embed", func(t *testing.T) {
 		scenario := tests.ApiScenario{
-			Name:            "chat card_show inline embed",
-			Method:          "POST",
-			URL:             "/ui/chat",
-			Body:            strings.NewReader("message=show+me+today"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  newCardShowApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{`hx-get="/ui/cards/today`, `class="k-inline"`},
+			Name:           "chat card_show inline embed",
+			Method:         "POST",
+			URL:            "/ui/chat",
+			Body:           strings.NewReader("message=show+me+today"),
+			Headers:        map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory: newCardShowApp,
+			ExpectedStatus: 200,
+			// The card is now server-rendered inline (no lazy hx-get mount).
+			ExpectedContent: []string{`class="k-inline"`, `id="ucard-today"`},
 		}
 		scenario.Test(t)
 	})
 }
 
-// TestUICardHistoryRendersCardURL verifies that when a conversation containing a
-// uicard tool result is loaded from history (page-load path), the messageViews
-// function sets CardURL so the template embeds the k-inline div.
-func TestUICardHistoryRendersCardURL(t *testing.T) {
-	tmpl := parseTemplates(t)
+// TestUICardHistoryRendersCardInline verifies that a uicard tool result loaded
+// from history embeds the card SERVER-RENDERED inline (the k-inline div carries
+// the card markup directly — no lazy hx-get mount).
+func TestUICardHistoryRendersCardInline(t *testing.T) {
+	app := newWebApp(t)
+	h := &handlers{app: app, tmpl: parseTemplates(t)}
 
 	// Simulate what messageViews produces for a uicard-marked tool result.
 	marked := tools.MarkUICard("today", map[string]string{}, "showing the owner the Today card")
-
-	// Parse as messageViews would.
 	typ, query, rest, ok := tools.ParseUICard(marked)
 	if !ok {
 		t.Fatal("ParseUICard: ok=false on well-formed marked text")
 	}
-	cardURL := "/ui/cards/" + typ + "?" + query
 
 	mv := messageView{
-		Role:    "tool",
-		Tool:    "card_show",
-		Content: rest,
-		CardURL: cardURL,
+		Role:     "tool",
+		Tool:     "card_show",
+		Content:  rest,
+		CardBody: h.uicardBody(typ, query),
 	}
 
 	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
+	if err := h.tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
 		t.Fatalf("chat-msg-tool: %v", err)
 	}
 	out := b.String()
-	if !strings.Contains(out, `hx-get="/ui/cards/today`) {
-		t.Errorf("history uicard render: k-inline embed missing or wrong hx-get. output:\n%s", out)
-	}
 	if !strings.Contains(out, `class="k-inline"`) {
-		t.Errorf("history uicard render: missing k-inline class. output:\n%s", out)
+		t.Errorf("history uicard render: missing k-inline wrapper. output:\n%s", out)
+	}
+	if !strings.Contains(out, `id="ucard-today"`) {
+		t.Errorf("history uicard render: card not embedded inline. output:\n%s", out)
+	}
+	if strings.Contains(out, "hx-get") {
+		t.Errorf("history uicard render: stale lazy hx-get mount present. output:\n%s", out)
 	}
 }
 

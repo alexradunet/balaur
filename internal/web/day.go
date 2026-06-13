@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
@@ -160,7 +162,6 @@ func (h *handlers) dayJournalDrop(e *core.RequestEvent) error {
 }
 
 func (h *handlers) renderDayJournal(e *core.RequestEvent, d, now time.Time) error {
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var convID string
 	if master, err := conversation.Master(h.app); err == nil {
 		convID = master.Id
@@ -182,9 +183,12 @@ func (h *handlers) renderDayJournal(e *core.RequestEvent, d, now time.Time) erro
 		Date    string
 		Journal []dayJournalView
 	}{d.Format(dayLayout), journal}
-	if err := h.tmpl.ExecuteTemplate(e.Response, "day_journal", data); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "day_journal", data); err != nil {
 		return e.InternalServerError("rendering journal", err)
 	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("day-journal"), datastar.WithModeOuter())
 	return nil
 }
 

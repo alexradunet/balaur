@@ -66,8 +66,10 @@ func (h *handlers) skillsPage(e *core.RequestEvent) error {
 	return e.Redirect(http.StatusFound, "/settings/skills")
 }
 
-// knowledgeGrid serves just the active-section grid — the HTMX target for
-// live search and category tabs.
+// knowledgeGrid serves just the active-section grid — the Datastar target for
+// live search and category tabs. Validation runs first (a normal HTTP error)
+// before any SSE is opened; on success the grid fragment morphs the inner HTML
+// of #k-active-grid in place.
 func (h *handlers) knowledgeGrid(e *core.RequestEvent) error {
 	kind, err := kindFromPath(e)
 	if err != nil {
@@ -77,14 +79,18 @@ func (h *handlers) knowledgeGrid(e *core.RequestEvent) error {
 	cat := e.Request.URL.Query().Get("category")
 	active, _ := knowledge.FilterActive(h.app, kind, q, cat)
 
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "knowledge-grid.html", map[string]any{
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "knowledge-grid.html", map[string]any{
 		"Kind":   string(kind),
 		"Active": active,
 		"Query":  q,
 	}); err != nil {
 		return e.InternalServerError("rendering grid", err)
 	}
+
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(),
+		datastar.WithSelectorID("k-active-grid"), datastar.WithModeInner())
 	return nil
 }
 

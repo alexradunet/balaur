@@ -20,31 +20,30 @@
     <section class="k-section">
       <h2 class="k-heading">Active <span class="k-count">{{len .Active}}</span></h2>
 
-      <div class="k-controls">
+      <div class="k-controls"
+           data-signals:q="'{{.Query | js}}'"
+           data-signals:category="'{{.Category | js}}'">
         <input class="k-search"
                type="search"
                name="q"
                value="{{.Query}}"
                placeholder="Search {{.Title | lower}}…"
                autocomplete="off"
-               hx-get="/ui/knowledge/{{.Kind}}/grid"
-               hx-trigger="input changed delay:250ms, search"
-               hx-target="#k-active-grid"
-               hx-include=".k-tab-active [name='category']">
+               data-bind:q
+               data-on:input__debounce.250ms="@get('/ui/knowledge/{{.Kind}}/grid?q='+encodeURIComponent($q)+'&category='+encodeURIComponent($category))">
         {{if .Categories}}
         <nav class="k-tabs" id="k-tabs">
-          {{/* Tab clicks are handled by basm.js; no inline selectTab() needed */}}
-          <a class="k-tab{{if not .Category}} k-tab-active{{end}}"
-             hx-get="/ui/knowledge/{{.Kind}}/grid"
-             hx-target="#k-active-grid"
-             hx-include=".k-search"
-             href="/{{.Kind}}">all<input type="hidden" name="category" value=""></a>
+          {{/* Tab clicks set the category signal + refetch; the active class
+               tracks $category so the highlight follows without a re-render. */}}
+          <a class="k-tab"
+             data-class:k-tab-active="$category === ''"
+             data-on:click__prevent="$category=''; @get('/ui/knowledge/{{.Kind}}/grid?q='+encodeURIComponent($q)+'&category=')"
+             href="/{{.Kind}}">all</a>
           {{range $c := .Categories}}
-          <a class="k-tab{{if eq $c $.Category}} k-tab-active{{end}}"
-             hx-get="/ui/knowledge/{{$.Kind}}/grid?category={{$c}}"
-             hx-target="#k-active-grid"
-             hx-include=".k-search"
-             href="/{{$.Kind}}?category={{$c}}">{{$c}}<input type="hidden" name="category" value="{{$c}}"></a>
+          <a class="k-tab"
+             data-class:k-tab-active="$category === '{{$c | js}}'"
+             data-on:click__prevent="$category='{{$c | js}}'; @get('/ui/knowledge/{{$.Kind}}/grid?q='+encodeURIComponent($q)+'&category={{$c | urlquery}}')"
+             href="/{{$.Kind}}?category={{$c}}">{{$c}}</a>
           {{end}}
         </nav>
         {{end}}

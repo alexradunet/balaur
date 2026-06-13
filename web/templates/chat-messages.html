@@ -36,7 +36,7 @@
   <div class="who"><img class="tool-icon" src="/static/icons/{{toolIcon .Tool}}.png" alt="" aria-hidden="true">tool · {{.Tool}}</div>
   <div class="body">{{.Content}}</div>
 </div>
-{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}
+{{if .CardBody}}<div class="k-inline">{{.CardBody}}</div>{{end}}
 {{end}}
 
 {{- /* chat-balaur-open emits the assistant bubble prefix only — the streaming
@@ -59,8 +59,8 @@
   <div class="who"><img class="tool-icon" src="/static/icons/{{toolIcon .Tool}}.png" alt="" aria-hidden="true">tool · {{.Tool}}</div>
   <div class="body">{{end}}
 
-{{- /* chat-msg-tool-end closes an open tool row; if CardURL is set it adds the inline card. */ -}}
-{{define "chat-msg-tool-end"}}</div></div>{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}{{end}}
+{{- /* chat-msg-tool-end closes an open tool row; if a card is attached it embeds it server-rendered. */ -}}
+{{define "chat-msg-tool-end"}}</div></div>{{if .CardBody}}<div class="k-inline">{{.CardBody}}</div>{{end}}{{end}}
 
 {{- /* ── Datastar streaming fragments (master chat dock) ──────────────────────
      Unlike the open/close pair above, these are COMPLETE elements carrying a
@@ -90,9 +90,9 @@
 </div>
 {{end}}
 
-{{- /* chat-inline-card — lazy card mount appended after a tool result. Still
-     htmx-driven during the migration; the SSE handler calls htmx.process on it. */ -}}
-{{define "chat-inline-card"}}<div class="k-inline" id="{{.BubbleID}}" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}
+{{- /* chat-inline-card — a tool-result card appended after the row, server-rendered
+     inline (no lazy mount). The id lets the stream target it if needed. */ -}}
+{{define "chat-inline-card"}}<div class="k-inline" id="{{.BubbleID}}">{{.CardBody}}</div>{{end}}
 
 {{- /* chat-choices — live dialogue choices. Context: choicesView.
      Each button posts the label as the owner's next turn; the panel removes

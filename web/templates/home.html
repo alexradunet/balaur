@@ -11,7 +11,7 @@
   </header>
   {{if .HasRecap}}
   <div id="recap" class="recap-zone"
-       hx-get="/ui/recap/bands" hx-trigger="revealed" hx-swap="outerHTML">
+       data-on:intersect__once="@get('/ui/recap/bands')">
     <p class="recap-hint">◇ further back…</p>
   </div>
   {{end}}

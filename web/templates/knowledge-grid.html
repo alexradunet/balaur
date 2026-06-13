@@ -1,6 +1,7 @@
 {{- /* Active-section grid fragment. Context: Kind, Active, Query.
      Used by knowledge.html on first render AND by /ui/knowledge/{kind}/grid
-     for HTMX live filtering — one markup source for both paths. */ -}}
+     for Datastar live filtering (SSE inner-patch into #k-active-grid) —
+     one markup source for both paths. */ -}}
 {{if .Active}}
 <div class="k-grid">
   {{range .Active}}

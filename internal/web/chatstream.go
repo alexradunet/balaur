@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"html/template"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -163,7 +164,7 @@ func (s *chatStream) emit(ev agent.Event) {
 // inline card (when present) is appended and handed to htmx during migration.
 func (s *chatStream) handleToolResult(ev agent.Event) {
 	if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
-		s.endTool(rest, "/ui/cards/"+typ+"?"+query)
+		s.endTool(rest, s.h.uicardBody(typ, query))
 		return
 	}
 	if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
@@ -172,24 +173,20 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		return
 	}
 	if kind, id, rest, ok := tools.ParseProposal(ev.Text); ok {
-		s.endTool(rest, cardURL(kind, id))
+		s.endTool(rest, s.h.proposalBody(kind, id))
 		return
 	}
 	s.endTool(clipText(ev.Text, 2000), "")
 }
 
-// endTool morphs the open tool row with its result and, if a card is attached,
-// appends the lazy mount and asks htmx to process it (htmx still loads during
-// the migration; the card endpoints stay HTML).
-func (s *chatStream) endTool(content, card string) {
+// endTool morphs the open tool row with its result and, when a card is attached,
+// appends it server-rendered (no lazy mount, no htmx) so it survives in history.
+func (s *chatStream) endTool(content string, card template.HTML) {
 	s.morph("chat-tool-row", messageView{
 		Tool: s.toolName, BubbleID: s.toolID, BodyID: s.toolBody, Content: content,
 	})
 	if card != "" {
-		cardID := s.toolID + "-card"
-		s.appendChat("chat-inline-card", messageView{BubbleID: cardID, CardURL: card})
-		_ = s.sse.ExecuteScript(fmt.Sprintf(
-			"window.htmx&&htmx.process(document.getElementById('%s'))", cardID))
+		s.appendChat("chat-inline-card", messageView{BubbleID: s.toolID + "-card", CardBody: card})
 	}
 }
 

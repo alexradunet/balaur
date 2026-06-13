@@ -2,11 +2,13 @@ package web
 
 import (
 	"fmt"
-	"net/http"
+	"html/template"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/recap"
@@ -55,8 +57,7 @@ func (h *handlers) recapBands(e *core.RequestEvent) error {
 	}
 	oldest, ok := conversation.OldestMessageTime(h.app, master.Id)
 	if !ok {
-		e.Response.WriteHeader(http.StatusOK)
-		return nil // no history, nothing further back
+		return nil // no history, nothing further back — leave the sentinel hint
 	}
 	// Same timezone as generation (store.OwnerLocation).
 	loc := store.OwnerLocation(h.app)
@@ -82,10 +83,14 @@ func (h *handlers) recapBands(e *core.RequestEvent) error {
 		}
 	}
 
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "recap-bands.html", view); err != nil {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "recap-bands.html", view); err != nil {
 		return e.InternalServerError("rendering recap", err)
 	}
+	// The #recap sentinel (data-on:intersect__once) stays as the container; the
+	// bands fill its inner so the once-fired sentinel is never re-armed.
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("recap"), datastar.WithModeInner())
 	return nil
 }
 
@@ -111,35 +116,47 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 		return e.InternalServerError("master conversation", err)
 	}
 	periodType := e.Request.URL.Query().Get("type")
+	switch periodType {
+	case "day", "week", "month", "quarter", "year":
+	default:
+		return e.BadRequestError("bad period type", nil)
+	}
 	unix, err := strconv.ParseInt(e.Request.URL.Query().Get("start"), 10, 64)
 	if err != nil {
 		return e.BadRequestError("bad start", err)
 	}
 	p := recap.Containing(periodType, time.Unix(unix, 0).In(store.OwnerLocation(h.app)))
 
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// The expand patches the card's own children container, whose id is built
+	// from the (validated) period type + start — the same id the template emits.
+	targetID := fmt.Sprintf("recap-children-%s-%d", periodType, unix)
+	sse := datastar.NewSSE(e.Response, e.Request)
+	var b strings.Builder
 
-	// Days expand to their preserved transcript.
+	// Days expand to their preserved transcript; everything else to child cards.
 	if p.Type == "day" {
 		msgs, err := conversation.MessagesBetween(h.app, master.Id, p.Start, p.End)
 		if err != nil {
 			return e.InternalServerError("loading day", err)
 		}
-		return h.tmpl.ExecuteTemplate(e.Response, "chat-messages.html", h.messageViews(msgs))
-	}
-
-	// Everything else expands to its child summaries.
-	var cards []recapView
-	for _, child := range recap.Children(p) {
-		if rec := recap.Find(h.app, master.Id, child); rec != nil {
-			cards = append(cards, h.recapCard(child, rec))
+		if err := h.tmpl.ExecuteTemplate(&b, "chat-messages.html", h.messageViews(msgs)); err != nil {
+			return e.InternalServerError("rendering day transcript", err)
+		}
+	} else {
+		var cards []recapView
+		for _, child := range recap.Children(p) {
+			if rec := recap.Find(h.app, master.Id, child); rec != nil {
+				cards = append(cards, h.recapCard(child, rec))
+			}
+		}
+		if len(cards) == 0 {
+			b.WriteString(`<p class="k-empty">Nothing recorded in this stretch.</p>`)
+		} else if err := h.tmpl.ExecuteTemplate(&b, "recap-cards.html", cards); err != nil {
+			return e.InternalServerError("rendering recap cards", err)
 		}
 	}
-	if len(cards) == 0 {
-		fmt.Fprint(e.Response, `<p class="k-empty">Nothing recorded in this stretch.</p>`)
-		return nil
-	}
-	return h.tmpl.ExecuteTemplate(e.Response, "recap-cards.html", cards)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID(targetID), datastar.WithModeInner())
+	return nil
 }
 
 // messageView is one chat message's template payload (history + day expand).
@@ -147,12 +164,13 @@ type messageView struct {
 	Role            string
 	Tool            string
 	Content         string
-	Origin          string // agent-initiated marker: "nudge" | "briefing"; "" = chat
-	CardURL         string // inline card embed endpoint, when the tool result carried one
-	SoulAvatarURL   string // resolved soul avatar URL (same for all views in one call)
-	BalaurAvatarURL string // resolved Balaur head avatar URL
-	OwnerName       string // display name for the "You" label
-	WhoLabel        string // assistant display name ("Balaur", or head name for branch chats)
+	Origin          string        // agent-initiated marker: "nudge" | "briefing"; "" = chat
+	CardURL         string        // inline card embed endpoint (legacy; kept for the lazy-mount tests)
+	CardBody        template.HTML // server-rendered inline card, embedded directly (no lazy mount)
+	SoulAvatarURL   string        // resolved soul avatar URL (same for all views in one call)
+	BalaurAvatarURL string        // resolved Balaur head avatar URL
+	OwnerName       string        // display name for the "You" label
+	WhoLabel        string        // assistant display name ("Balaur", or head name for branch chats)
 
 	// Datastar streaming fields (master chat dock). BubbleID/BodyID give a
 	// streamed element a stable id so the SSE handler can morph it in place;
@@ -187,12 +205,12 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 		// proposal: renders an approval card on first view and on reload.
 		if mv.Role == "tool" {
 			if typ, query, rest, ok := tools.ParseUICard(mv.Content); ok {
-				mv.CardURL = "/ui/cards/" + typ + "?" + query
+				mv.CardBody = h.uicardBody(typ, query)
 				mv.Content = rest
 			} else if _, _, modelText, ok := tools.ParseChoices(mv.Content); ok {
 				mv.Content = clipText(modelText, 2000)
 			} else if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
-				mv.CardURL, mv.Content = cardURL(kind, id), rest
+				mv.CardBody, mv.Content = h.proposalBody(kind, id), rest
 			}
 		}
 		if mv.Role == "assistant" && mv.Content == "" {

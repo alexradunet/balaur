@@ -1228,6 +1228,9 @@ dialog::backdrop {
   margin: 8px 0;
 }
 .recap-card.recap-open { border-left-color: var(--gold); }
+/* Once expanded, the trigger collapses (Datastar adds .recap-open on click;
+   the old htmx path removed the button outright). */
+.recap-card.recap-open > .recap-head .recap-expand { display: none; }
 .recap-head {
   display: flex;
   align-items: baseline;
