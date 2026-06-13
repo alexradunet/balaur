@@ -41,18 +41,19 @@ type boardRecord struct {
 
 // boardCardView is one rendered slot in the grid.
 type boardCardView struct {
-	Type   string
-	W      int               // grid column span (from registry spec or card layout)
-	H      int               // grid row span (from registry spec or card layout)
-	X      int               // 0-based column start (0 = flow mode)
-	Y      int               // 0-based row start (0 = flow mode)
-	X1     int               // X+1 for CSS grid-column start (precomputed)
-	Y1     int               // Y+1 for CSS grid-row start (precomputed)
-	HasPos bool              // true when explicit position was stored (free layout mode)
-	Query  string            // URL-encoded query string, e.g. "?status=open&limit=8"
-	Params map[string]string // raw params, for server-rendering Body
-	Idx    int               // position in the cards array (for remove route)
-	Body   template.HTML     // server-rendered card HTML (filled by renderBoardCards)
+	Type      string
+	W         int               // grid column span (from registry spec or card layout)
+	H         int               // grid row span (from registry spec or card layout)
+	X         int               // 0-based column start (0 = flow mode)
+	Y         int               // 0-based row start (0 = flow mode)
+	X1        int               // X+1 for CSS grid-column start (precomputed)
+	Y1        int               // Y+1 for CSS grid-row start (precomputed)
+	HasPos    bool              // true when explicit position was stored (free layout mode)
+	Query     string            // URL-encoded query string, e.g. "?status=open&limit=8"
+	FocusHref string            // /focus/{type}?{params}&from={boardID}
+	Params    map[string]string // raw params, for server-rendering Body
+	Idx       int               // position in the cards array (for remove route)
+	Body      template.HTML     // server-rendered card HTML (filled by renderBoardCards)
 }
 
 // boardCardViewsOf converts a []boardCard to []boardCardView, resolving each
@@ -61,7 +62,7 @@ type boardCardView struct {
 // Legacy boards (no explicit position on any card) render with the old
 // flow-layout (grid-column: span W, no grid-row), so existing boards look
 // unchanged until the first drag. The second return value signals free mode.
-func boardCardViewsOf(bcs []boardCard) ([]boardCardView, bool) {
+func boardCardViewsOf(bcs []boardCard, boardID string) ([]boardCardView, bool) {
 	// Determine whether this board is in free-layout mode.
 	// A board is free if any card has X>0 or Y>0 or an explicit W or H.
 	freeLay := false
@@ -101,19 +102,27 @@ func boardCardViewsOf(bcs []boardCard) ([]boardCardView, bool) {
 			q = "?" + vals.Encode()
 		}
 
+		fparams := url.Values{}
+		for k, v := range bc.Params {
+			fparams.Set(k, v)
+		}
+		fparams.Set("from", boardID)
+		focusHref := "/focus/" + bc.Type + "?" + fparams.Encode()
+
 		hasPos := freeLay // all slots use free mode if any one card has explicit pos
 		out = append(out, boardCardView{
-			Type:   bc.Type,
-			W:      w,
-			H:      h,
-			X:      bc.X,
-			Y:      bc.Y,
-			X1:     bc.X + 1,
-			Y1:     bc.Y + 1,
-			HasPos: hasPos,
-			Query:  q,
-			Params: bc.Params,
-			Idx:    i,
+			Type:      bc.Type,
+			W:         w,
+			H:         h,
+			X:         bc.X,
+			Y:         bc.Y,
+			X1:        bc.X + 1,
+			Y1:        bc.Y + 1,
+			HasPos:    hasPos,
+			Query:     q,
+			FocusHref: focusHref,
+			Params:    bc.Params,
+			Idx:       i,
 		})
 	}
 	return out, freeLay
@@ -142,7 +151,7 @@ func boardCardsOf(rec *core.Record) ([]boardCard, error) {
 func boardRecordOf(rec *core.Record) *boardRecord {
 	// corrupt cards render as an empty board; loadBoards logs it.
 	bcs, _ := boardCardsOf(rec)
-	views, freeLay := boardCardViewsOf(bcs)
+	views, freeLay := boardCardViewsOf(bcs, rec.Id)
 	return &boardRecord{
 		ID:      rec.Id,
 		Name:    rec.GetString("name"),
