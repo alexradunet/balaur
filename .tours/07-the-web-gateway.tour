@@ -41,7 +41,7 @@
     },
     {
       "file": "internal/web/tasks.go",
-      "line": 424,
+      "line": 396,
       "title": "7.7 — Out-of-band swaps: nudge poll + quest rail",
       "description": "```go\nfmt.Fprint(e.Response, `<div hx-swap-oob=\"beforeend:#chat\">`)\n// … render nudge messages …\nfmt.Fprintf(e.Response,\n    `</div><div id=\"nudge-poll\" hx-swap-oob=\"outerHTML\" hx-get=\"/ui/chat/nudges?since=%d\" ...></div>`,\n    ...)\n```\n\n**Out-of-band (OOB) HTMX swaps** let a single HTTP response update multiple parts of the DOM simultaneously — the primary target gets the main body; elements with `hx-swap-oob` are applied to their target IDs regardless of where in the response they appear.\n\nTwo OOB patterns here:\n1. **Nudge poll** — the nudge endpoint returns task-reminder messages as chat rows (appended to `#chat`) plus a self-refreshing poll div (`outerHTML #nudge-poll`) so the next poll fires 30 seconds later. No WebSocket, no long-poll — plain polling, idempotent.\n2. **Quest rail** — when a task action (done/snooze/drop) originates from the `/tasks` list view, the response appends an OOB `questLogView` swap so the left rail reflects the change immediately without a full page reload.\n\nOOB swaps are the HTMX equivalent of partial page updates. The server stays the single source of truth — there is no client-side state to reconcile."
     }

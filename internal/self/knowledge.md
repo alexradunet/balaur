@@ -94,7 +94,7 @@ self tool, which reports the actual registry):
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI at / (chat, /models, /memory, /skills, /tasks, /life,
+Surfaces: the web UI at / (chat, /models, /memory, /skills, /focus/quests, /life,
 /journal, /day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes
@@ -102,7 +102,7 @@ audit, verify, model, self, ext) printing v1 JSON envelopes
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
 
-The quest log (/tasks list view): rhythm groups Dailies/Rituals/Quests/Side quests in a left rail + sticky right detail panel; month calendar and 14-day timeline views unchanged.
+The quest log (the quests card's focus at /focus/quests): rhythm groups Dailies/Rituals/Quests/Side quests in a left rail + sticky right detail panel; month calendar and 14-day timeline are their own cards.
 
 The candle (/journal): an immersive writing page — free-hand (default) or
 guided by one model-composed prompt line (deterministic fallback:

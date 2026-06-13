@@ -50,6 +50,17 @@ func focusBackHref(from string) string {
 	return "/boards/" + from
 }
 
+// focusBodyHTML renders a card's focus body. A few card types have a bespoke,
+// richer focus view (the surface of the page they replace); every other type
+// falls back to the generic registry render (manage mode where available).
+func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.HTML {
+	switch typ {
+	case "quests":
+		return h.questsFocusHTML()
+	}
+	return h.cardHTML(typ, params)
+}
+
 // focusParams validates the card params and, for cards that have a richer
 // interactive view, defaults the focus surface to mode=manage. Per-feature
 // phases (051+) replace this generic focus body with a bespoke full view.
@@ -93,7 +104,7 @@ func (h *handlers) focusPage(e *core.RequestEvent) error {
 	view := focusView{
 		Type:     typ,
 		Label:    spec.Label,
-		Body:     h.cardHTML(typ, params),
+		Body:     h.focusBodyHTML(typ, params),
 		BackHref: focusBackHref(q.Get("from")),
 	}
 

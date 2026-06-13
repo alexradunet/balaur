@@ -129,17 +129,22 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	}
 }
 
-func TestTasksPageViewsRender(t *testing.T) {
+// TestQuestsFocusListRenders renders the quests focus body (tasks_list) — the
+// surface formerly at /tasks?view=list. tasks_list reads .QuestLog, so it must
+// be passed via map[string]any{"QuestLog": ...}. The calendar/timeline views
+// are now their own cards (covered by cards_test.go's TestUiCardAllTypesRender).
+func TestQuestsFocusListRenders(t *testing.T) {
 	tmpl := parseTemplates(t)
 	now := time.Now()
-	for name, data := range map[string]map[string]any{
-		"list":     {"Title": "Tasks", "View": "list", "QuestLog": questLogView{}},
-		"calendar": {"Title": "Tasks", "View": "calendar", "Cal": buildCalendar(nil, "", now)},
-		"timeline": {"Title": "Tasks", "View": "timeline", "TL": buildTimeline(nil, now)},
-	} {
-		var b strings.Builder
-		if err := tmpl.ExecuteTemplate(&b, "tasks.html", data); err != nil {
-			t.Errorf("tasks.html %s view: %v", name, err)
+	ql := buildQuestLog(nil, nil, now)
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "tasks_list", map[string]any{"QuestLog": ql}); err != nil {
+		t.Fatalf("tasks_list: %v", err)
+	}
+	out := b.String()
+	for _, want := range []string{`id="quest-rail"`, `id="quest-detail"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("tasks_list missing %q", want)
 		}
 	}
 }
@@ -225,9 +230,11 @@ func TestDayPageRenders(t *testing.T) {
 func TestCalendarCellsLinkToDayPages(t *testing.T) {
 	tmpl := parseTemplates(t)
 	var b strings.Builder
-	data := map[string]any{"Title": "Tasks", "View": "calendar", "Cal": buildCalendar(nil, "2026-06", time.Date(2026, 6, 11, 12, 0, 0, 0, time.Local))}
-	if err := tmpl.ExecuteTemplate(&b, "tasks.html", data); err != nil {
-		t.Fatalf("tasks.html calendar: %v", err)
+	// The calendar surface is now the calendar card (ucard_calendar); its cells
+	// link to day pages just as the retired /tasks calendar view did.
+	cal := buildCalendar(nil, "2026-06", time.Date(2026, 6, 11, 12, 0, 0, 0, time.Local))
+	if err := tmpl.ExecuteTemplate(&b, "ucard_calendar", calendarCardView{Cal: cal}); err != nil {
+		t.Fatalf("ucard_calendar: %v", err)
 	}
 	if !strings.Contains(b.String(), `href="/day/2026-06-11"`) {
 		t.Error("calendar cells do not link to day pages")

@@ -536,8 +536,8 @@ func (h *handlers) renderCardHeads(w io.Writer, params map[string]string) error 
 	return h.tmpl.ExecuteTemplate(w, "ucard_heads", cardHeadsView{Heads: heads})
 }
 
-// buildTimelineN is like buildTimeline but takes an explicit day count,
-// used by the timeline card. buildTimeline in tasks.go hardcodes timelineDays.
+// buildTimelineN builds the forward timeline over an explicit number of days
+// (falling back to timelineDays when days <= 0) for the timeline card.
 func buildTimelineN(recs []*core.Record, now time.Time, days int) tlView {
 	if days <= 0 {
 		days = timelineDays
