@@ -53,33 +53,36 @@
 {{- /* chat-balaur-close closes what chat-balaur-open opened. */ -}}
 {{define "chat-balaur-close"}}</div></div></div>{{end}}
 
-{{- /* chat-msg-tool-start opens a tool row for the streaming path: who-line + open body. */ -}}
-{{define "chat-msg-tool-start"}}
-<div class="msg msg-tool">
-  <div class="who"><img class="tool-icon" src="/static/icons/{{toolIcon .Tool}}.png" alt="" aria-hidden="true">tool · {{.Tool}}</div>
-  <div class="body">{{end}}
-
-{{- /* chat-msg-tool-end closes an open tool row; if CardURL is set it adds the inline card. */ -}}
-{{define "chat-msg-tool-end"}}</div></div>{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}{{end}}
+{{- /* chat-balaur-bubble — a complete assistant bubble for the Datastar chat
+     stream (plan 050). PatchElements morphs by id, so the streaming path
+     appends this self-contained element into #chat, then morphs its body
+     (#bubble-{Nonce}-body, inner mode) as tokens accumulate. The avatar
+     glows via data-state="thinking" until chat.go clears it at turn end.
+     Context: messageView with Nonce + BalaurAvatarURL + WhoLabel set. */ -}}
+{{define "chat-balaur-bubble"}}
+<div class="msg msg-balaur msg-with-avatar" id="bubble-{{.Nonce}}">
+  <figure class="portrait">
+    <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" data-state="thinking" aria-hidden="true"><img src="{{.BalaurAvatarURL}}" alt="" decoding="async"></span>
+    <figcaption class="who">{{.WhoLabel}}{{with .Origin}} · {{.}}{{end}}</figcaption>
+  </figure>
+  <div class="msg-main"><div class="body" id="bubble-{{.Nonce}}-body"><span class="thinking thinking-dots">thinking</span></div></div>
+</div>
+{{end}}
 
 {{- /* chat-choices — live dialogue choices. Context: choicesView.
-     Each button posts the label as the owner's next turn; the panel removes
-     itself after the request so a choice can be taken once. */ -}}
+     Each button sets the message signal to its label, posts it as the owner's
+     next turn (Datastar SSE), then removes the panel so a choice is taken once. */ -}}
 {{define "chat-choices"}}
 <div class="choices" id="choices-{{.Nonce}}">
   <div class="choices-panel">
     <div class="choices-kicker">{{.Prompt}}</div>
     {{range $i, $c := .Choices}}
-    <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend"
-          hx-on::after-request="document.getElementById('choices-{{$.Nonce}}')?.remove()">
-      <input type="hidden" name="message" value="{{$c.Label}}">
-      <input type="hidden" name="client_rendered" value="0">
-      <button class="choice" type="submit">
-        <span class="choice-key">{{addOne $i}}</span>
-        <span class="choice-label">{{$c.Label}}</span>
-        {{with $c.Hint}}<span class="choice-hint">{{.}}</span>{{end}}
-      </button>
-    </form>
+    <button class="choice" type="button" data-label="{{$c.Label}}"
+            data-on-click="$message = el.dataset.label; @post('/ui/chat'); $message = ''; el.closest('.choices')?.remove()">
+      <span class="choice-key">{{addOne $i}}</span>
+      <span class="choice-label">{{$c.Label}}</span>
+      {{with $c.Hint}}<span class="choice-hint">{{.}}</span>{{end}}
+    </button>
     {{end}}
   </div>
   <figure class="portrait">

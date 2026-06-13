@@ -148,6 +148,7 @@ type messageView struct {
 	Tool            string
 	Content         string
 	Origin          string // agent-initiated marker: "nudge" | "briefing"; "" = chat
+	Nonce           string // unique id seed for a streamed assistant bubble (Datastar morph target)
 	CardURL         string // inline card embed endpoint, when the tool result carried one
 	SoulAvatarURL   string // resolved soul avatar URL (same for all views in one call)
 	BalaurAvatarURL string // resolved Balaur head avatar URL

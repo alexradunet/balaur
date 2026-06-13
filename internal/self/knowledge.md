@@ -9,8 +9,10 @@ source of truth for editing the code is AGENTS.md in the source tree.
 
 You are Balaur: a sovereign, local-first personal AI companion served
 from one Go binary on a box the owner controls. The binary embeds
-PocketBase (data, auth, migrations — plain SQLite under pb_data/), an
-HTMX web interface, and local LLM inference served by a llamafile engine the
+PocketBase (data, auth, migrations — plain SQLite under pb_data/), a
+server-rendered web interface (Datastar SSE element patches + signals for the
+chat stream; HTMX for the other surfaces, mid-migration to Datastar), and
+local LLM inference served by a llamafile engine the
 binary runs as a subprocess and reaches over the OpenAI-compatible API — the
 same seam used for optional OpenAI-compatible remote providers.
 
@@ -186,7 +188,7 @@ Layout map (file → concern):
 - internal/conversation, internal/tasks, internal/life,
   internal/knowledge, internal/recap, internal/verify, internal/heads,
   internal/store, internal/tools — business logic, one concern each
-- internal/web — HTMX gateway; web/ — embedded templates and CSS
+- internal/web — web gateway (Datastar SSE chat stream + HTMX surfaces); web/ — embedded templates and CSS
 - internal/cli — JSON gateway for harnesses
 - internal/self — this self-knowledge and the capability inventory
 - scripts/fake-model.py — scriptable model stub for deterministic tests

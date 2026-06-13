@@ -329,6 +329,33 @@ func TestChatStreamingBalancedDivs(t *testing.T) {
 	}
 }
 
+// TestChatBalaurBubbleWellFormed guards the Datastar streaming bubble
+// (plan 050): it is a self-contained element (not an open/close pair), so it
+// must be balanced on its own, carry the stable #bubble-{Nonce} morph target
+// and its #bubble-{Nonce}-body, and show the thinking placeholder until the
+// first token morphs the body.
+func TestChatBalaurBubbleWellFormed(t *testing.T) {
+	tmpl := parseTemplates(t)
+	mv := messageView{
+		Nonce:           "abc123",
+		BalaurAvatarURL: "/static/avatars/balaur-01.png",
+		WhoLabel:        "Balaur",
+	}
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "chat-balaur-bubble", mv); err != nil {
+		t.Fatalf("chat-balaur-bubble: %v", err)
+	}
+	out := b.String()
+	if got, want := strings.Count(out, "<div"), strings.Count(out, "</div"); got != want {
+		t.Errorf("chat-balaur-bubble: unbalanced divs: %d <div> vs %d </div>\nHTML:\n%s", got, want, out)
+	}
+	for _, want := range []string{`id="bubble-abc123"`, `id="bubble-abc123-body"`, "thinking-dots"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("chat-balaur-bubble missing %q\nHTML:\n%s", want, out)
+		}
+	}
+}
+
 func TestSparkPointsScaling(t *testing.T) {
 	points, _, ly := sparkPoints([]float64{1, 2, 3}, 240, 48)
 	if points == "" {

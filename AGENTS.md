@@ -15,8 +15,10 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Prefer direct, practical implementation steps.
 - Keep solutions KISS, inspectable, and reversible.
 - Use Go for all Balaur product runtime code. The user-facing UI is
-  server-rendered `html/template` + HTMX; no SPA framework, no Node build
-  step in the product path.
+  server-rendered `html/template`; the chat stream is delivered by **Datastar**
+  (SSE-patched hypermedia + client signals), with the remaining surfaces on
+  HTMX during an in-progress migration to Datastar. No SPA framework, no Node
+  build step in the product path (Datastar is one self-hosted ~34 KB script).
 - Use the standard Go command surface: `go build`, `go run .`, `go test ./...`,
   `go vet ./...`. Builds must work with `CGO_ENABLED=0`.
 - For local development, prefer `make run` (single run) and `make dev`
@@ -75,7 +77,8 @@ lean and high-signal — add a rule only when it changes a real decision.
   `internal/llm` (provider interface + clients), `internal/turn` (the
   shared turn pipeline + model resolution), `internal/tools` (agent
   tools), `internal/self` (self-knowledge + capability inventory),
-  `internal/web` (HTMX gateway), `internal/cli` (JSON gateway),
+  `internal/web` (web gateway: Datastar SSE chat stream + HTMX surfaces),
+  `internal/cli` (JSON gateway),
   `internal/heads` (sub-agent identity + grants), `migrations` (schema).
   Treat a package past ~500 lines as a smell to decompose, not extend.
 - **Self-knowledge is part of the change.** `internal/self/knowledge.md`

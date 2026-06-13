@@ -5,7 +5,8 @@ Balaur's design language is **Basm** (Romanian for *fairy tale*): a pixel-art,
 tactile, storybook, and hand-built.
 
 This file is the source of truth for Balaur's identity, voice, visual system,
-web UI, and branded copy in the Go/PocketBase/HTMX shape.
+web UI, and branded copy in the Go/PocketBase/hypermedia shape (Datastar +
+HTMX; see "Hypermedia surface conventions" below).
 
 ## Source of truth
 
@@ -13,7 +14,7 @@ web UI, and branded copy in the Go/PocketBase/HTMX shape.
 |---|---|---|
 | Identity | brand essence, character, heads, voice, messaging | this file |
 | Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
-| Product UI | HTMX + `html/template` pages served by the `balaur` binary | `web/templates/` |
+| Product UI | `html/template` pages — Datastar SSE for the chat stream, HTMX for the other surfaces (migration in progress) — served by the `balaur` binary | `web/templates/` |
 | Marks & avatars | crest, avatar library (soul + Balaur heads) | `web/static/` |
 
 If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
@@ -82,7 +83,10 @@ never flatter you, say it this way?
 
 All copy must match this. Update it the moment shape changes.
 
-**True today:** single Go binary embedding PocketBase · HTMX web UI ·
+**True today:** single Go binary embedding PocketBase · server-rendered
+`html/template` web UI — the chat stream is delivered by Datastar (self-hosted
+client, SSE element patches + signals), the other surfaces are HTMX during an
+in-progress migration to Datastar ·
 PocketBase collections for conversations, messages, memories, skills, heads,
 grants, audit log · local inference via a llamafile engine Balaur runs as a
 subprocess and reaches over the OpenAI-compatible API · OpenAI-compatible
@@ -323,16 +327,24 @@ bordered (the row or heading provides the frame context).
 
 The Unicode glyph language is retired; tool rows render pixel icons via the `toolIcon` template helper (`toolIconFile()` in `internal/web/web.go`).
 
-### HTMX surface conventions
+### Hypermedia surface conventions (HTMX → Datastar)
 
-- Server renders complete HTML; HTMX swaps fragments. Design states
-  (thinking, streaming, tool-running) are server-driven classes on
-  fragments, not client-side framework state.
-- Chat replies stream from the server as one chunked HTML fragment that
-  HTMX swaps in when the turn completes; the optimistic pending bubble
-  (client-rendered from a `<template>`) carries the thinking state in the
-  meantime. The thinking state is `--teal`, the assistant nameplate
-  `--gold`, the user hue `--indigo`.
+- Server renders complete HTML. Design states (thinking, streaming,
+  tool-running) are server-driven — classes and `data-state` hooks on
+  server-rendered markup, never client-side framework state — whether the
+  delivery is an HTMX fragment swap or a Datastar element patch.
+- **Chat stream (Datastar):** the composer posts via `data-on-submit`
+  (`@post('/ui/chat')`, the message carried in a signal); the server opens an
+  SSE generator and patches the chat: it appends a self-contained assistant
+  bubble (stable `#bubble-{nonce}` id) and morphs token text into its body
+  (inner mode) as the turn streams. The thinking state shows in the bubble
+  until the first token; the avatar glows (`data-state="thinking"`) until the
+  turn completes. The thinking state is `--teal`, the assistant nameplate
+  `--gold`, the user hue `--indigo`. View transitions only behind
+  `prefers-reduced-motion: no-preference`.
+- **Other surfaces (HTMX, migrating):** still render complete HTML that HTMX
+  swaps as fragments. Both libraries coexist on a page during the migration;
+  never mix `hx-` and `data-on-` directives on the same element.
 - **Activity is shown by light, not chrome:** while Balaur thinks or works,
   the avatar breathes a teal glow (`basm-glow` keyframes on `box-shadow`,
   driven by the `msg-pending` class and the `data-state="thinking"/"working"`

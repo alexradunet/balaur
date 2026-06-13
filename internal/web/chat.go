@@ -3,10 +3,8 @@ package web
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"html"
 	"io"
-	"net/http"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -35,6 +33,13 @@ type choicesView struct {
 	OwnerName     string
 }
 
+// chatSignals is the Datastar signal payload the composer and the dialogue-
+// choice buttons post: {"message": "..."} (read via datastar.ReadSignals,
+// replacing the old form FormValue).
+type chatSignals struct {
+	Message string `json:"message"`
+}
+
 // newNonce generates a random 8-byte hex string for unique element IDs.
 func newNonce() string {
 	var b [8]byte
@@ -44,140 +49,162 @@ func newNonce() string {
 
 // execFragment executes a named template fragment to w, silently ignoring
 // errors — the caller already owns the live stream and cannot un-write bytes.
+// Still used by the head-chat gateway (headsmgmt.go), which remains on HTMX.
 func (h *handlers) execFragment(w io.Writer, name string, data messageView) {
 	if err := h.tmpl.ExecuteTemplate(w, name, data); err != nil {
 		h.app.Logger().Warn("chat fragment render failed", "fragment", name, "err", err)
 	}
 }
 
-// execChoicesFragment executes the chat-choices template fragment.
-func (h *handlers) execChoicesFragment(w io.Writer, cv choicesView) {
-	if err := h.tmpl.ExecuteTemplate(w, "chat-choices", cv); err != nil {
-		h.app.Logger().Warn("chat fragment render failed", "fragment", "chat-choices", "err", err)
+// fragment renders a named template fragment to a string for Datastar
+// PatchElements. Render errors are logged, not fatal — a malformed fragment
+// must not tear down the live SSE stream.
+func (h *handlers) fragment(name string, data any) string {
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, name, data); err != nil {
+		h.app.Logger().Warn("chat fragment render failed", "fragment", name, "err", err)
 	}
+	return b.String()
 }
 
-// chat handles one user turn. The web layer is a gateway: it adapts the
-// shared turn pipeline (internal/turn) to a streamed chunked response that
-// HTMX appends to the chat (hx-swap beforeend). The fragment shape is
-// defined once in chat-messages.html and executed here and on page-load.
+// chat handles one owner turn. The web layer is a gateway: it adapts the shared
+// turn pipeline (internal/turn) to Datastar SSE patches. PatchElements morphs by
+// id, so each assistant reply is a self-contained bubble appended into #chat;
+// streamed tokens are morphed into its body (inner mode). turn.Run and the
+// fragment markup are unchanged — only the delivery idiom moves from HTMX
+// chunked-append swaps to SSE patches. "Gateways adapt; they never re-implement."
 func (h *handlers) chat(e *core.RequestEvent) error {
-	msg := strings.TrimSpace(e.Request.FormValue("message"))
+	var sig chatSignals
+	if err := datastar.ReadSignals(e.Request, &sig); err != nil {
+		return e.BadRequestError("invalid signals", err)
+	}
+	msg := strings.TrimSpace(sig.Message)
 	if msg == "" {
 		return e.BadRequestError("empty message", nil)
 	}
-
-	client, err := h.clients.Active(h.app)
-	if err != nil {
-		return h.renderError(e, err)
-	}
-	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
 	soulURL := store.SoulAvatarURL(h.app)
 	balaURL := store.BalaurAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
 
-	w := e.Response
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-	flusher, _ := w.(http.Flusher)
-	flush := func() {
-		if flusher != nil {
-			flusher.Flush()
+	sse := datastar.NewSSE(e.Response, e.Request)
+	appendChat := func(htmlStr string) {
+		sse.PatchElements(htmlStr, datastar.WithSelectorID("chat"), datastar.WithModeAppend())
+	}
+	scroll := func() { sse.ExecuteScript("window.balaurScrollToLatest&&balaurScrollToLatest()") }
+
+	// Echo the owner's turn — there is no client-side optimistic clone anymore.
+	appendChat(h.fragment("chat-msg-user", messageView{
+		SoulAvatarURL: soulURL, OwnerName: ownerName, Content: msg,
+	}))
+
+	client, err := h.clients.Active(h.app)
+	if err != nil {
+		appendChat(h.fragment("chat-msg-balaur", messageView{
+			BalaurAvatarURL: balaURL, WhoLabel: "Balaur", Content: err.Error(),
+		}))
+		scroll()
+		return nil
+	}
+
+	// Streaming-bubble state. Each bubble is self-contained with a stable id;
+	// after a tool row we open a fresh bubble (mirrors the old open-after-tool
+	// behavior). buf accumulates the current bubble's text for inner morphs.
+	var (
+		buf         strings.Builder
+		bubbleID    string
+		bodyID      string
+		hasText     bool
+		pendingTool string
+	)
+	startBubble := func() {
+		buf.Reset()
+		hasText = false
+		nonce := newNonce()
+		bubbleID = "bubble-" + nonce
+		bodyID = bubbleID + "-body"
+		appendChat(h.fragment("chat-balaur-bubble", messageView{
+			Nonce: nonce, BalaurAvatarURL: balaURL, WhoLabel: "Balaur",
+		}))
+	}
+	// dropEmptyBubble removes a bubble that never received text — it would be
+	// stuck on the "thinking" placeholder. Called before a tool row and at end.
+	dropEmptyBubble := func() {
+		if bubbleID != "" && !hasText {
+			sse.RemoveElementByID(bubbleID)
+			bubbleID = ""
 		}
 	}
-
-	// When the browser optimistically rendered the user row, this response
-	// replaces only the pending Balaur row. Without JS, echo the user row first.
-	if !clientRendered {
-		h.execFragment(w, "chat-msg-user", messageView{
-			SoulAvatarURL: soulURL,
-			OwnerName:     ownerName,
-			Content:       msg,
-		})
+	streamBody := func(extra string) {
+		sse.PatchElements(html.EscapeString(buf.String())+extra,
+			datastar.WithSelectorID(bodyID), datastar.WithModeInner())
 	}
 
-	// Open the assistant bubble; token text streams into its open body div.
-	h.execFragment(w, "chat-balaur-open", messageView{
-		BalaurAvatarURL: balaURL,
-		WhoLabel:        "Balaur",
-	})
-	flush()
+	startBubble()
+	scroll()
 
 	emitEv := func(ev agent.Event) {
 		switch ev.Kind {
 		case "text":
-			fmt.Fprint(w, html.EscapeString(ev.Text))
-			flush()
+			hasText = true
+			buf.WriteString(ev.Text)
+			streamBody("")
 		case "tool_start":
-			h.execFragment(w, "chat-balaur-close", messageView{})
-			h.execFragment(w, "chat-msg-tool-start", messageView{Tool: ev.Tool})
-			flush()
+			pendingTool = ev.Tool
+			dropEmptyBubble()
 		case "tool_result":
-			// Consumer order: uicard → choices → proposal → plain.
-			// uicard: re-renders on reload (lazy-fetches live data — safe).
-			// choices: inert on reload (no live panel for stale decisions).
-			// proposal: renders an approval card on first view and reload.
+			// Consumer order matches history rendering: uicard → choices →
+			// proposal → plain.
 			if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
-				mv := messageView{Content: rest, CardURL: "/ui/cards/" + typ + "?" + query}
-				h.execFragment(w, "chat-msg-tool-end", mv)
-				h.execFragment(w, "chat-balaur-open", messageView{
-					BalaurAvatarURL: balaURL,
-					WhoLabel:        "Balaur",
-				})
-				flush()
+				appendChat(h.fragment("chat-msg-tool", messageView{
+					Tool: pendingTool, Content: rest, CardURL: "/ui/cards/" + typ + "?" + query,
+				}))
+				startBubble()
+				scroll()
 				break
 			}
-			// Check ParseChoices before ParseProposal — choices ride a tool_result.
+			// ParseChoices before ParseProposal — choices ride a tool_result.
 			if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
-				h.execFragment(w, "chat-msg-tool-end", messageView{Content: "choices offered"})
-				h.execChoicesFragment(w, choicesView{
-					Prompt:        prompt,
-					Nonce:         newNonce(),
-					Choices:       choices,
-					SoulAvatarURL: soulURL,
-					OwnerName:     ownerName,
-				})
-				h.execFragment(w, "chat-balaur-open", messageView{
-					BalaurAvatarURL: balaURL,
-					WhoLabel:        "Balaur",
-				})
-				flush()
+				appendChat(h.fragment("chat-msg-tool", messageView{
+					Tool: pendingTool, Content: "choices offered",
+				}))
+				appendChat(h.fragment("chat-choices", choicesView{
+					Prompt: prompt, Nonce: newNonce(), Choices: choices,
+					SoulAvatarURL: soulURL, OwnerName: ownerName,
+				}))
+				startBubble()
+				scroll()
 				break
 			}
 			kind, id, rest, ok := tools.ParseProposal(ev.Text)
-			var mv messageView
+			mv := messageView{Tool: pendingTool}
 			if ok {
-				mv = messageView{Content: rest, CardURL: cardURL(kind, id)}
+				mv.Content = rest
+				mv.CardURL = cardURL(kind, id)
 			} else {
-				mv = messageView{Content: clipText(ev.Text, 2000)}
+				mv.Content = clipText(ev.Text, 2000)
 			}
-			h.execFragment(w, "chat-msg-tool-end", mv)
-			h.execFragment(w, "chat-balaur-open", messageView{
-				BalaurAvatarURL: balaURL,
-				WhoLabel:        "Balaur",
-			})
-			flush()
+			appendChat(h.fragment("chat-msg-tool", mv))
+			startBubble()
+			scroll()
 		case "error":
-			fmt.Fprintf(w,
-				`<span class="thinking">the thread snapped: %s</span>`,
-				html.EscapeString(ev.Err.Error()))
-			flush()
+			hasText = true
+			streamBody(`<span class="thinking">the thread snapped: ` +
+				html.EscapeString(ev.Err.Error()) + `</span>`)
 		}
 	}
 
 	res, runErr := turn.Run(e.Request.Context(), h.app, client, msg, emitEv)
 
-	h.execFragment(w, "chat-balaur-close", messageView{})
+	dropEmptyBubble()
 	if res.CheckNote != "" {
-		h.execFragment(w, "chat-msg-balaur", messageView{
-			BalaurAvatarURL: balaURL,
-			WhoLabel:        "Balaur",
-			Origin:          "check",
-			Content:         res.CheckNote,
-		})
+		appendChat(h.fragment("chat-msg-balaur", messageView{
+			BalaurAvatarURL: balaURL, WhoLabel: "Balaur", Origin: "check", Content: res.CheckNote,
+		}))
 	}
-	flush()
+	// Calm the avatars once the turn is done: drop the thinking/working glow.
+	sse.ExecuteScript(`document.querySelectorAll('#chat .balaur-avatar[data-state]').forEach(function(a){a.removeAttribute('data-state')})`)
+	scroll()
 	if runErr != nil {
 		h.app.Logger().Warn("chat: turn failed", "error", runErr)
 	}
@@ -198,6 +225,8 @@ func clipText(s string, n int) string {
 	return s[:n] + "…"
 }
 
+// renderError writes a Balaur error bubble as a plain HTML fragment. Still used
+// by the head-chat gateway (headsmgmt.go), which remains on HTMX this phase.
 func (h *handlers) renderError(e *core.RequestEvent, err error) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	balaURL := store.BalaurAvatarURL(h.app)
