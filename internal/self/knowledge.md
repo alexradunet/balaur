@@ -94,8 +94,8 @@ self tool, which reports the actual registry):
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI at / (chat, /models, /memory, /skills, /focus/quests, /life,
-/journal, /day/{date}, /profile, /heads, /heads/{id}/chat); the machine-facing
+Surfaces: the web UI at / (chat, /models, /memory, /skills, /focus/quests,
+/focus/journal, /focus/day?date={date}, /life, /profile, /heads, /heads/{id}/chat); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
@@ -104,22 +104,30 @@ owner's engine room, never your surface.
 
 The quest log (the quests card's focus at /focus/quests): rhythm groups Dailies/Rituals/Quests/Side quests in a left rail + sticky right detail panel; month calendar and 14-day timeline are their own cards.
 
-The candle (/journal): an immersive writing page — free-hand (default) or
-guided by one model-composed prompt line (deterministic fallback:
-"Write what the day left behind. I am listening." — returned on any error or
-no active model). Entries written here are the same journal records as the
-chat journal_write tool and the day pages; they appear on /day/{date} as well.
-The guided prompt is the only LLM call on the page and is strictly opt-in
-(the owner clicks the "guided" button).
+The candle (the journal card's focus at /focus/journal): an immersive writing
+surface — free-hand (default) or guided by one model-composed prompt line
+(deterministic fallback: "Write what the day left behind. I am listening." —
+returned on any error or no active model). Entries written here are the same
+journal records as the chat journal_write tool and the day card; they appear in
+/focus/day?date={date} as well. The guided prompt is the only LLM call on the
+surface and is strictly opt-in (the owner clicks the "guided" button).
 
-Typed card registry: Balaur's UI supports 10 parameterized card types at
+The day card (its focus at /focus/day?date={date}): a day-of-life aggregation —
+the owner's journal (writable + removable here), the day's recap with its
+preserved transcript, what got done, and what was logged, with prev/next day
+nav. The tile is a read-only summary (journal/done/log counts); calendar cells
+and recap day cards deep-link into the focus.
+
+Typed card registry: Balaur's UI supports 12 parameterized card types at
 GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment
 (HATEOAS). The types are: today (open tasks due today), quests (task list,
 status param), calendar (month grid, month param), timeline (forward days,
-days param), journal (recent entries, limit param), measure (numeric sparkline
+days param), journal (recent entries, limit param), day (a day-of-life summary
+tile + full focus, date param), measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
 kind, kind required + limit param), memory (active memories, query + limit
-params), skills (active skills, limit param), heads (active heads, no params).
+params), skills (active skills, limit param), heads (active heads, no params),
+habits (recurring tasks with their streak, no params).
 GET /ui/cards lists the full palette. The registry lives in internal/cards
 (no web imports); renderers live in internal/web/cards.go.
 

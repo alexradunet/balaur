@@ -2,7 +2,7 @@ package web
 
 import (
 	"fmt"
-	"net/http"
+	"html/template"
 	"sort"
 	"strings"
 	"time"
@@ -14,10 +14,11 @@ import (
 	"github.com/alexradunet/balaur/internal/life"
 )
 
-// /day/{date}: where one day of the owner's life lives — their journal
-// (writable here and from chat), the day's recap with its preserved
-// transcript, what got done, and what was logged. Assembled entirely from
-// what other features already keep; the page imposes nothing.
+// The day card's focus: where one day of the owner's life lives — their journal
+// (writable here and from chat), the day's recap with its preserved transcript,
+// what got done, and what was logged. Assembled entirely from what other
+// features already keep; the surface imposes nothing. (dayFocusHTML renders this
+// body; the standalone /day/{date} page is retired.)
 
 const dayLayout = "2006-01-02"
 
@@ -40,23 +41,6 @@ type dayData struct {
 	RecapStart string // unix seconds for the transcript expander
 	Done       []dayLineView
 	Logs       []dayLineView
-}
-
-func (h *handlers) dayPage(e *core.RequestEvent) error {
-	now := time.Now()
-	d, err := time.ParseInLocation(dayLayout, e.Request.PathValue("date"), now.Location())
-	if err != nil {
-		return e.BadRequestError("bad date — want YYYY-MM-DD", err)
-	}
-	today := dayStartOf(now)
-	if d.After(today) {
-		return e.Redirect(http.StatusFound, "/day/"+today.Format(dayLayout))
-	}
-	data, err := h.buildDay(d, now)
-	if err != nil {
-		return e.InternalServerError("loading day", err)
-	}
-	return h.render(e, "day.html", data)
 }
 
 func (h *handlers) buildDay(d, now time.Time) (dayData, error) {
@@ -128,6 +112,30 @@ func (h *handlers) buildDay(d, now time.Time) (dayData, error) {
 	}
 
 	return data, nil
+}
+
+// dayFocusHTML renders the day card's focus body: the full day-of-life view for
+// the date param (default today), with prev/next navigating the focus. Was the
+// /day/{date} page.
+func (h *handlers) dayFocusHTML(params map[string]string) template.HTML {
+	now := time.Now()
+	d := dayStartOf(now)
+	if s := params["date"]; s != "" {
+		if t, err := time.ParseInLocation(dayLayout, s, now.Location()); err == nil {
+			d = dayStartOf(t)
+		}
+	}
+	data, err := h.buildDay(d, now)
+	if err != nil {
+		h.app.Logger().Warn("day focus render failed", "err", err)
+		return cardErrorStrip("could not open the day")
+	}
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "day_focus", data); err != nil {
+		h.app.Logger().Warn("day focus template failed", "err", err)
+		return cardErrorStrip("could not render the day")
+	}
+	return template.HTML(b.String())
 }
 
 // dayJournalWrite handles the page form: writing the day, on the day page.

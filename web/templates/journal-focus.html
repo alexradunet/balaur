@@ -1,0 +1,43 @@
+{{- /* journal-focus.html — the "candle" as the journal card's focus body
+     (free/guided write + history). Was /journal. The focus header (Back +
+     "Journal") is supplied by focus_main; this is the inner body. */ -}}
+{{define "journal_focus"}}
+<div class="candle-focus">
+  <div class="k-tabs" role="tablist">
+    <button class="k-tab k-tab-active" type="button"
+            data-on:click="document.getElementById('candle-prompt').innerHTML='';el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active')">
+      free hand
+    </button>
+    <button class="k-tab" type="button"
+            data-on:click="el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active');@get('/ui/journal/prompt')">
+      guided
+    </button>
+  </div>
+  <div id="candle-prompt"></div>
+  {{template "journal_candle_body" .}}
+</div>
+{{end}}
+
+{{define "journal_candle_body"}}
+<div id="journal-candle-body">
+  <form class="journal-form"
+        data-on:submit__prevent="@post('/ui/journal', {contentType:'form'})">
+    <textarea name="text" rows="8" placeholder="What stays with you from this day?"></textarea>
+    <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
+  </form>
+
+  {{if .Journal}}
+  <div class="journal-list">
+    {{range .Journal}}
+    <article class="journal-entry">
+      <div class="journal-meta">
+        <span class="tl-time">{{.Time}}</span>
+        <a class="btn btn-ghost btn-sm" href="/focus/day?date={{.Date}}">→ this day</a>
+      </div>
+      <p class="journal-text">{{.Text}}</p>
+    </article>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}

@@ -104,7 +104,7 @@
         <tr>
           {{range .}}
           <td class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
-            <a class="cal-daylink" href="/day/{{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
+            <a class="cal-daylink" href="/focus/day?date={{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
             {{range .Items}}<span class="cal-item" title="{{.Time}} {{.Title}}">{{.Time}}</span>{{end}}
           </td>
           {{end}}
@@ -166,7 +166,24 @@
   {{else}}
   <p class="k-empty">No journal entries yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/day/{{.TodayDate}}">today's page →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/day?date={{.TodayDate}}">today's page →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* day card — a day-of-life summary tile (journal/done/log counts) */ -}}
+{{- /* context: cardDayView */ -}}
+{{define "ucard_day"}}
+<article class="kcard ucard ucard-day" id="ucard-day">
+  <header class="kcard-head"><span class="kcard-kind"><img class="tool-icon" src="/static/icons/scroll.png" alt="">day</span>
+    <span class="tag">{{.Label}}</span></header>
+  <ul class="ucard-stats">
+    <li>{{.JournalN}} journal</li>
+    <li>{{.DoneN}} done</li>
+    <li>{{.LogN}} logged</li>
+    <li>{{if .HasRecap}}recap kept{{else if .IsToday}}still being written{{else}}no recap{{end}}</li>
+  </ul>
+  <footer class="kcard-actions"><a href="/focus/day?date={{.Date}}">open the day →</a></footer>
 </article>
 {{end}}
 

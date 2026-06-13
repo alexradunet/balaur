@@ -80,7 +80,7 @@ func TestUiCardPalette(t *testing.T) {
 		URL:             "/ui/cards",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-palette", "today", "quests", "calendar", "timeline", "journal", "measure", "lines", "memory", "skills", "heads"},
+		ExpectedContent: []string{"ucard-palette", "today", "quests", "calendar", "timeline", "journal", "day", "measure", "lines", "memory", "skills", "heads"},
 	}
 	scenario.Test(t)
 }
@@ -166,6 +166,7 @@ func TestUiCardAllTypesRender(t *testing.T) {
 		{"calendar", ""},
 		{"timeline", ""},
 		{"journal", ""},
+		{"day", ""},
 		{"measure", "?kind=weight"},
 		{"lines", "?kind=notes"},
 		{"memory", ""},

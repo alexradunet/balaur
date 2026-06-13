@@ -36,14 +36,17 @@ func newFakeErrorServer() *httptest.Server {
 	}))
 }
 
+// TestJournalPage: the candle now lives in the journal card's focus
+// (/focus/journal). The standalone /journal page is retired; this asserts the
+// write surface renders there.
 func TestJournalPage(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:            "GET /journal returns candle page",
+		Name:            "GET /focus/journal returns candle surface",
 		Method:          "GET",
-		URL:             "/journal",
+		URL:             "/focus/journal",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"candle-page", "Keep it", "journal-form"},
+		ExpectedContent: []string{"candle-focus", "Keep it", "journal-form"},
 	}
 	scenario.Test(t)
 }
@@ -139,8 +142,8 @@ func TestJournalPrompt(t *testing.T) {
 }
 
 // TestJournalCandleIntegration proves that an entry written via POST /ui/journal
-// appears in GET /day/{today} — the candle and day pages share the same
-// underlying journal records.
+// appears in the day card's focus (GET /focus/day?date={today}) — the candle and
+// the day surface share the same underlying journal records.
 func TestJournalCandleIntegration(t *testing.T) {
 	const entryText = "The river was quiet at dawn and the fog had not yet lifted."
 
@@ -159,14 +162,32 @@ func TestJournalCandleIntegration(t *testing.T) {
 
 	today := now.Format(dayLayout)
 
-	// The entry must appear on the day page.
+	// The entry must appear in the day focus for today.
 	scenario := tests.ApiScenario{
-		Name:            "entry written via candle path appears on day page",
+		Name:            "entry written via candle path appears in the day focus",
 		Method:          "GET",
-		URL:             "/day/" + today,
+		URL:             "/focus/day?date=" + today,
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
 		ExpectedContent: []string{entryText},
 	}
 	scenario.Test(t)
+}
+
+// TestJournalAndDayRoutesRetired guards against accidental re-registration of
+// the standalone /journal and /day pages. Like TestTasksRouteRetired: the routes
+// are unregistered, so PocketBase's index fallback redirects them to the board
+// home (302 → /boards) rather than serving their own page. Their write paths
+// (/ui/journal, /ui/day/…) and the journal/day card focuses live on.
+func TestJournalAndDayRoutesRetired(t *testing.T) {
+	for _, url := range []string{"/journal", "/day/2026-01-15"} {
+		s := tests.ApiScenario{
+			Name:           "GET " + url + " is retired (302 → /boards via index fallback)",
+			Method:         "GET",
+			URL:            url,
+			TestAppFactory: newWebApp,
+			ExpectedStatus: 302,
+		}
+		s.Test(t)
+	}
 }

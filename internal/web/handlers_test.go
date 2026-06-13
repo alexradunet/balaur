@@ -896,13 +896,14 @@ func TestGgufHandlers(t *testing.T) {
 	})
 }
 
-// TestDayPageRendersOnEmptyDB verifies that GET /day/{date} returns 200 even
-// when the database contains no entries or tasks — blank day must not 500.
+// TestDayPageRendersOnEmptyDB verifies that the day focus
+// (GET /focus/day?date=…) returns 200 even when the database contains no entries
+// or tasks — a blank day must not 500. (The standalone /day page is retired.)
 func TestDayPageRendersOnEmptyDB(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:            "GET /day/2026-01-15 renders 200 on empty DB",
+		Name:            "GET /focus/day?date=2026-01-15 renders 200 on empty DB",
 		Method:          "GET",
-		URL:             "/day/2026-01-15",
+		URL:             "/focus/day?date=2026-01-15",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"day-title", "January"},

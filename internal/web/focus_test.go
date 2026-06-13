@@ -128,6 +128,55 @@ func TestFocusQuestsShowsRail(t *testing.T) {
 	s.Test(t)
 }
 
+// TestFocusJournalShowsCandle: /focus/journal renders the candle (write form +
+// guided tab), so expanding the journal card gives the full writing surface.
+func TestFocusJournalShowsCandle(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:           "GET /focus/journal shows the candle",
+		Method:         "GET",
+		URL:            "/focus/journal",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`@post('/ui/journal'`, // write form
+			`/ui/journal/prompt`,  // guided tab
+			`id="journal-candle-body"`,
+		},
+	}
+	s.Test(t)
+}
+
+// TestFocusDayShowsSections: /focus/day renders the day-of-life sections.
+func TestFocusDayShowsSections(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:           "GET /focus/day shows the day view",
+		Method:         "GET",
+		URL:            "/focus/day",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="day-journal"`,
+			"What got done",
+			"The day's log",
+			`@post('/ui/day/`, // the day journal write form
+		},
+	}
+	s.Test(t)
+}
+
+// TestUiCardDayTile: the day tile renders the day-of-life summary.
+func TestUiCardDayTile(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:            "GET /ui/cards/day renders the tile",
+		Method:          "GET",
+		URL:             "/ui/cards/day",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"ucard-day", "journal", `/focus/day?date=`},
+	}
+	s.Test(t)
+}
+
 func TestFocusMissingRequiredParam(t *testing.T) {
 	s := tests.ApiScenario{
 		Name:            "GET /focus/measure without kind → 400",

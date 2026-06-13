@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"html/template"
 	"strings"
 	"time"
 
@@ -15,9 +16,10 @@ import (
 	"github.com/alexradunet/balaur/internal/llm"
 )
 
-// /journal — the candle: an immersive writing page for the owner's own words.
-// Free-hand (default) or guided by one model-composed prompt line.
-// Entries are the same journal records as the day pages and chat tool.
+// The candle — the journal card's focus: an immersive writing surface for the
+// owner's own words. Free-hand (default) or guided by one model-composed prompt
+// line. Entries are the same journal records as the day card and chat tool.
+// (journalFocusHTML renders this body; the standalone /journal page is retired.)
 
 const candlePromptFallback = "Write what the day left behind. I am listening."
 const candlePromptTimeout = 30 * time.Second
@@ -32,15 +34,6 @@ type candleData struct {
 	Dock      homeData
 	Today     string // YYYY-MM-DD, for the write form target
 	Journal   []candleJournalView
-}
-
-func (h *handlers) journalPage(e *core.RequestEvent) error {
-	now := time.Now()
-	data, err := h.buildCandleData(now)
-	if err != nil {
-		return e.InternalServerError("loading journal", err)
-	}
-	return h.render(e, "journal.html", data)
 }
 
 // journalWrite handles POST /ui/journal: writes an entry for today, then
@@ -162,28 +155,18 @@ func (h *handlers) renderCandleBody(e *core.RequestEvent, now time.Time) error {
 	return nil
 }
 
-// journalPageDayEntries returns journal entries for a day, for use by the
-// integration assertion in tests (the candle write path and day page share
-// the same underlying journal records).
-func (h *handlers) journalPageDayEntries(d time.Time) ([]candleJournalView, error) {
-	now := time.Now()
-	loc := now.Location()
-	var convID string
-	if master, err := conversation.Master(h.app); err == nil {
-		convID = master.Id
-	}
-	dayData, err := life.Day(h.app, convID, d)
+// journalFocusHTML renders the journal card's focus body: the candle
+// (free/guided write + guided prompt + today's history). Was the /journal page.
+func (h *handlers) journalFocusHTML() template.HTML {
+	data, err := h.buildCandleData(time.Now())
 	if err != nil {
-		return nil, err
+		h.app.Logger().Warn("journal focus render failed", "err", err)
+		return cardErrorStrip("could not open the journal")
 	}
-	views := make([]candleJournalView, 0, len(dayData.Journal))
-	for _, r := range dayData.Journal {
-		views = append(views, candleJournalView{
-			ID:   r.Id,
-			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-			Text: r.GetString("text"),
-			Date: d.Format(dayLayout),
-		})
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "journal_focus", data); err != nil {
+		h.app.Logger().Warn("journal focus template failed", "err", err)
+		return cardErrorStrip("could not render the journal")
 	}
-	return views, nil
+	return template.HTML(b.String())
 }

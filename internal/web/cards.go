@@ -97,6 +97,8 @@ func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) e
 		return h.renderCardTimeline(w, params)
 	case "journal":
 		return h.renderCardJournal(w, params)
+	case "day":
+		return h.renderCardDay(w, params)
 	case "measure":
 		return h.renderCardMeasure(w, params)
 	case "lines":
@@ -369,6 +371,36 @@ func (h *handlers) renderCardJournal(w io.Writer, params map[string]string) erro
 		Entries:   entries,
 		TodayDate: now.Format(dayLayout),
 		ParamLine: fmt.Sprintf("last %d", limit),
+	})
+}
+
+type cardDayView struct {
+	Date, Label           string
+	IsToday               bool
+	JournalN, DoneN, LogN int
+	HasRecap              bool
+}
+
+func (h *handlers) renderCardDay(w io.Writer, params map[string]string) error {
+	now := time.Now()
+	d := dayStartOf(now)
+	if s := params["date"]; s != "" {
+		if t, err := time.ParseInLocation(dayLayout, s, now.Location()); err == nil {
+			d = dayStartOf(t)
+		}
+	}
+	dd, err := h.buildDay(d, now)
+	if err != nil {
+		return err
+	}
+	return h.tmpl.ExecuteTemplate(w, "ucard_day", cardDayView{
+		Date:     dd.Date,
+		Label:    dd.Label,
+		IsToday:  dd.IsToday,
+		JournalN: len(dd.Journal),
+		DoneN:    len(dd.Done),
+		LogN:     len(dd.Logs),
+		HasRecap: dd.Recap != "",
 	})
 }
 
