@@ -383,8 +383,12 @@ func TestHeadChat(t *testing.T) {
 		return app, head
 	}
 
-	t.Run("message without client_rendered includes user bubble", func(t *testing.T) {
+	t.Run("streams Datastar element patches with user bubble", func(t *testing.T) {
 		app, head := newHeadChatApp(t)
+		// Like the master chat, the head chat now streams Datastar element
+		// patches: the server echoes the owner's bubble, then morphs the
+		// assistant body with the model's text. Both ride inside
+		// datastar-patch-elements SSE events.
 		scenario := tests.ApiScenario{
 			Name:            "head chat basic",
 			Method:          "POST",
@@ -393,22 +397,7 @@ func TestHeadChat(t *testing.T) {
 			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Hello from Scout", "msg msg-user"},
-		}
-		scenario.Test(t)
-	})
-	t.Run("message with client_rendered=1 skips user bubble", func(t *testing.T) {
-		app, head := newHeadChatApp(t)
-		scenario := tests.ApiScenario{
-			Name:               "head chat client rendered",
-			Method:             "POST",
-			URL:                "/ui/heads/" + head.Id + "/chat",
-			Body:               strings.NewReader("message=hello&client_rendered=1"),
-			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:     200,
-			ExpectedContent:    []string{"Hello from Scout"},
-			NotExpectedContent: []string{"msg msg-user"},
+			ExpectedContent: []string{"datastar-patch-elements", "Hello from Scout", "msg msg-user"},
 		}
 		scenario.Test(t)
 	})

@@ -34,9 +34,7 @@
     <summary>Choose personality</summary>
     <div class="avatar-choice-list profile-avatar-grid" style="max-height:none">
       {{range .BalaurOptions}}
-      <form hx-post="/ui/heads/{{$h.ID}}/avatar"
-            hx-target="#head-{{$h.ID}}"
-            hx-swap="outerHTML">
+      <form data-on:submit__prevent="@post('/ui/heads/{{$h.ID}}/avatar', {contentType:'form'})">
         <input type="hidden" name="balaur_avatar" value="{{.Key}}">
         <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
                 type="submit" {{if .Active}}aria-current="true" disabled{{end}}>

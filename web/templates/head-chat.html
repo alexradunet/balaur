@@ -3,74 +3,9 @@
 <head>
   {{template "page_head" .}}
   <title>{{.Title}}</title>
-  <script>
-    function balaurScrollToLatest() {
-      scrollTo(0, document.documentElement.scrollHeight || document.body.scrollHeight);
-    }
-
-    function balaurSubmitOnEnter(event) {
-      if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
-          event.ctrlKey || event.metaKey || event.isComposing) return;
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-    }
-
-    function balaurPrepareChat(form) {
-      const input = form.elements.message;
-      const msg   = input.value.trim();
-      if (!msg) return false;
-
-      const chat      = document.getElementById('chat');
-      const pendingID = 'pending-' + Date.now().toString(36) +
-                        Math.random().toString(36).slice(2);
-
-      const userFrag = document.getElementById('t-msg-user').content.cloneNode(true);
-      userFrag.querySelector('.body').textContent = msg;
-
-      const pendingFrag = document.getElementById('t-msg-pending').content.cloneNode(true);
-      const pendingDiv  = pendingFrag.querySelector('.msg-balaur');
-      pendingDiv.id = pendingID;
-
-      chat.append(userFrag, pendingFrag);
-      balaurScrollToLatest();
-
-      form.setAttribute('hx-target', '#' + pendingID);
-      form.setAttribute('hx-swap',   'outerHTML');
-      form.elements.client_rendered.value = '1';
-      setTimeout(() => { input.value = ''; }, 0);
-      return true;
-    }
-  </script>
 </head>
 <body>
   {{template "topbar" .}}
-
-  <template id="t-msg-user">
-    <div class="msg msg-user msg-with-avatar">
-      <figure class="portrait">
-        <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
-          <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
-        </span>
-        <figcaption class="who">{{.OwnerName}}</figcaption>
-      </figure>
-      <div class="msg-main">
-        <div class="body"></div>
-      </div>
-    </div>
-  </template>
-  <template id="t-msg-pending">
-    <div class="msg msg-balaur msg-pending msg-with-avatar">
-      <figure class="portrait">
-        <span class="balaur-avatar balaur-avatar-balaur balaur-avatar-live" data-kind="balaur" aria-hidden="true">
-          <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
-        </span>
-        <figcaption class="who">{{.HeadName}}</figcaption>
-      </figure>
-      <div class="msg-main">
-        <div class="body"><span class="thinking thinking-dots">thinking</span></div>
-      </div>
-    </div>
-  </template>
 
   <main>
     <section class="chat" id="chat" aria-live="polite">
@@ -97,17 +32,9 @@
     {{template "head_chat_draft" .}}
   </main>
 
-  <script>
-    addEventListener('DOMContentLoaded', () => { balaurScrollToLatest(); });
-    addEventListener('htmx:afterSwap', (event) => {
-      const target = event.detail?.target;
-      if (target?.id === 'chat' ||
-          target?.classList?.contains('msg-pending') ||
-          target?.closest?.('#chat')) {
-        balaurScrollToLatest();
-      }
-    });
-  </script>
+  {{- /* Scroll is handled by basm.js: its DOMContentLoaded handler scrolls
+         #chat into view and attaches a MutationObserver to #chat that keeps
+         the latest streamed message visible. basm.js is loaded via page_head. */ -}}
 
   <div class="chatbar chatbar-slim" id="chatbar">
     <div class="chatbar-head-context">
@@ -122,7 +49,7 @@
 </html>
 
 {{define "head_chat_draft"}}
-<div class="msg msg-user msg-draft" id="head-chat-draft">
+<div class="msg msg-user msg-draft" id="head-chat-draft" data-signals:message="''">
   <figure class="portrait">
     <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
       <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
@@ -130,10 +57,8 @@
     <figcaption class="who">{{.OwnerName}}</figcaption>
   </figure>
   <div class="msg-main">
-    <form class="chat-form" hx-post="/ui/heads/{{.HeadID}}/chat" hx-target="#chat" hx-swap="beforeend"
-          hx-on::after-request="this.reset()" onsubmit="return balaurPrepareChat(this)">
-      <input type="hidden" name="client_rendered" value="0">
-      <textarea name="message" placeholder="Message {{.HeadName}}…" rows="2"
+    <form class="chat-form" data-on:submit="@post('/ui/heads/{{.HeadID}}/chat')">
+      <textarea name="message" data-bind:message placeholder="Message {{.HeadName}}…" rows="2"
                 autocomplete="off" autofocus required
                 {{if not .ChatReady}}disabled{{end}}
                 onkeydown="balaurSubmitOnEnter(event)"></textarea>

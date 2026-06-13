@@ -2,14 +2,12 @@ package web
 
 import (
 	"fmt"
-	"html"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
-	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -137,10 +135,13 @@ type headChatData struct {
 	ChatReady       bool
 }
 
-// headChat handles POST /ui/heads/{id}/chat — one turn in the head's conversation.
+// headChat handles POST /ui/heads/{id}/chat — one turn in the head's
+// conversation. It mirrors the master chat gateway (chat.go): the shared turn
+// pipeline (internal/turn) stays the source of truth and its agent.Event stream
+// is adapted into a Datastar SSE stream of element patches via chatStream.
 func (h *handlers) headChat(e *core.RequestEvent) error {
 	headID := e.Request.PathValue("id")
-	msg := strings.TrimSpace(e.Request.FormValue("message"))
+	msg := readChatMessage(e)
 	if msg == "" {
 		return e.BadRequestError("empty message", nil)
 	}
@@ -158,57 +159,27 @@ func (h *handlers) headChat(e *core.RequestEvent) error {
 		return e.InternalServerError("loading head conversation", err)
 	}
 
-	client, err := h.clients.Active(h.app)
-	if err != nil {
-		return h.renderError(e, err)
-	}
-
-	clientRendered := e.Request.FormValue("client_rendered") == "1"
 	balaURL := store.HeadBalaurAvatarURL(h.app, headID)
 	soulURL := store.SoulAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
 	headName := head.GetString("name")
 
-	w := e.Response
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-	flusher, _ := w.(http.Flusher)
-	flush := func() {
-		if flusher != nil {
-			flusher.Flush()
-		}
-	}
+	cs := h.newChatStream(e, balaURL, headName, soulURL, ownerName)
 
-	if !clientRendered {
-		h.execFragment(w, "chat-msg-user", messageView{
-			SoulAvatarURL: soulURL,
-			OwnerName:     ownerName,
-			Content:       msg,
+	client, err := h.clients.Active(h.app)
+	if err != nil {
+		cs.appendChat("chat-msg-user", messageView{
+			SoulAvatarURL: soulURL, OwnerName: ownerName, Content: msg,
 		})
-	}
-	h.execFragment(w, "chat-balaur-open", messageView{
-		BalaurAvatarURL: balaURL,
-		WhoLabel:        headName,
-	})
-	flush()
-
-	emitEv := func(ev agent.Event) {
-		switch ev.Kind {
-		case "text":
-			fmt.Fprint(w, html.EscapeString(ev.Text))
-			flush()
-		case "error":
-			fmt.Fprintf(w, `<span class="thinking">the thread snapped: %s</span>`,
-				html.EscapeString(ev.Err.Error()))
-			flush()
-		}
+		_ = cs.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
+		cs.note("", h.chatErrText(err))
+		return nil
 	}
 
+	cs.start(msg)
 	_, runErr := turn.RunFor(e.Request.Context(), h.app, client, conv,
-		headName, head.GetString("purpose"), msg, emitEv)
-
-	h.execFragment(w, "chat-balaur-close", messageView{})
-	flush()
+		headName, head.GetString("purpose"), msg, cs.emit)
+	cs.finish()
 	if runErr != nil {
 		h.app.Logger().Warn("head chat: turn failed", "head", headID, "error", runErr)
 	}
@@ -258,6 +229,12 @@ func (h *handlers) setHeadAvatar(e *core.RequestEvent) error {
 		return e.InternalServerError("reloading head", err)
 	}
 	hv := headViewFrom(h.app, r)
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	return h.tmpl.ExecuteTemplate(e.Response, "head_card", hv)
+
+	var buf strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&buf, "head_card", hv); err != nil {
+		return e.InternalServerError("rendering head card", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	return sse.PatchElements(buf.String(),
+		datastar.WithSelectorID("head-"+headID), datastar.WithModeOuter())
 }

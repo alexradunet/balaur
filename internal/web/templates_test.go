@@ -426,4 +426,12 @@ func TestHeadChatDraftIdDecollided(t *testing.T) {
 	if !strings.Contains(out, `id="head-chat-draft"`) {
 		t.Error("head-chat.html must use id=\"head-chat-draft\"")
 	}
+	// The composer is now driven by Datastar, not htmx: the form posts via
+	// @post on data-on:submit and there must be no leftover hx-* attributes.
+	if !strings.Contains(out, `data-on:submit="@post('/ui/heads/abc123/chat')"`) {
+		t.Error("head-chat.html composer must use data-on:submit=\"@post(...)\"")
+	}
+	if strings.Contains(out, "hx-post") {
+		t.Error("head-chat.html must not use hx-post (Datastar migration)")
+	}
 }
