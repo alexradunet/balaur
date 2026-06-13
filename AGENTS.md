@@ -1,7 +1,7 @@
 # Balaur project instructions
 
 This repository is the source for Balaur, a local-first personal AI companion
-shipped as a single Go binary: PocketBase as an embedded framework, an HTMX
+shipped as a single Go binary: PocketBase as an embedded framework, a Datastar
 web interface, and local LLM inference via a llamafile engine Balaur runs as a
 subprocess and reaches over the OpenAI-compatible API.
 
@@ -15,8 +15,9 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Prefer direct, practical implementation steps.
 - Keep solutions KISS, inspectable, and reversible.
 - Use Go for all Balaur product runtime code. The user-facing UI is
-  server-rendered `html/template` + HTMX; no SPA framework, no Node build
-  step in the product path.
+  server-rendered `html/template` driven by **Datastar** (SSE-patched
+  hypermedia + client signals); no SPA framework, no Node build step in the
+  product path.
 - Use the standard Go command surface: `go build`, `go run .`, `go test ./...`,
   `go vet ./...`. Builds must work with `CGO_ENABLED=0`.
 - For local development, prefer `make run` (single run) and `make dev`
@@ -39,7 +40,7 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Balaur ships as a standalone executable named `balaur` that embeds
   PocketBase as a Go library and serves the web UI from `embed.FS`.
 - **The PocketBase admin dashboard is the superuser engine room** — never the
-  product surface. Balaur's face is its own HTMX UI under `/`.
+  product surface. Balaur's face is its own Datastar UI under `/`.
 - **No MCP.** Capability is exposed as Go tools in the agent loop,
   balaur-extensions, vault entries, or Markdown skills — not as MCP
   servers.
@@ -75,7 +76,7 @@ lean and high-signal — add a rule only when it changes a real decision.
   `internal/llm` (provider interface + clients), `internal/turn` (the
   shared turn pipeline + model resolution), `internal/tools` (agent
   tools), `internal/self` (self-knowledge + capability inventory),
-  `internal/web` (HTMX gateway), `internal/cli` (JSON gateway),
+  `internal/web` (Datastar gateway), `internal/cli` (JSON gateway),
   `internal/heads` (sub-agent identity + grants), `migrations` (schema).
   Treat a package past ~500 lines as a smell to decompose, not extend.
 - **Self-knowledge is part of the change.** `internal/self/knowledge.md`

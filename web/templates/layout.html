@@ -13,8 +13,7 @@
   <script>(function(){var d=document.documentElement,t=localStorage.getItem('basm-theme');if(t)d.classList.add(t);if(localStorage.getItem('basm-dock-full')==='1')d.classList.add('dock-full');var w=parseInt(localStorage.getItem('basm-dock-w'),10);if(w>=280&&w<=720)d.style.setProperty('--sidebar-w',w+'px');}());</script>
   <link rel="icon" href="/static/logo.png" type="image/png">
   <link rel="apple-touch-icon" href="/static/logo.png">
-  <script src="/static/htmx.min.js" defer></script>
-  <!-- Datastar drives SSE-patched hypermedia + client signals (migrating off HTMX, surface by surface). -->
+  <!-- Datastar drives the whole UI: SSE-patched hypermedia + client signals. -->
   <script type="module" src="/static/datastar.js"></script>
   <script src="/static/basm.js" defer></script>
 {{end}}

@@ -5,7 +5,7 @@ Balaur's design language is **Basm** (Romanian for *fairy tale*): a pixel-art,
 tactile, storybook, and hand-built.
 
 This file is the source of truth for Balaur's identity, voice, visual system,
-web UI, and branded copy in the Go/PocketBase/HTMX shape.
+web UI, and branded copy in the Go/PocketBase/Datastar shape.
 
 ## Source of truth
 
@@ -13,7 +13,7 @@ web UI, and branded copy in the Go/PocketBase/HTMX shape.
 |---|---|---|
 | Identity | brand essence, character, heads, voice, messaging | this file |
 | Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
-| Product UI | HTMX + `html/template` pages served by the `balaur` binary | `web/templates/` |
+| Product UI | Datastar + `html/template` pages served by the `balaur` binary | `web/templates/` |
 | Marks & avatars | crest, avatar library (soul + Balaur heads) | `web/static/` |
 
 If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
@@ -82,7 +82,7 @@ never flatter you, say it this way?
 
 All copy must match this. Update it the moment shape changes.
 
-**True today:** single Go binary embedding PocketBase · HTMX web UI ·
+**True today:** single Go binary embedding PocketBase · Datastar web UI ·
 PocketBase collections for conversations, messages, memories, skills, heads,
 grants, audit log · local inference via a llamafile engine Balaur runs as a
 subprocess and reaches over the OpenAI-compatible API · OpenAI-compatible
@@ -145,7 +145,7 @@ model-composed prompt line (deterministic fallback), entries shared with day
 pages · boards — owner-composed dashboards of typed cards at /boards
 (Study/Quest log/Self/Balaur defaults); each board is a named, ordered list of
 card references in the `boards` collection; the page renders a 12-column CSS
-grid of HTMX slots that lazy-load cards; cards drag and resize (pointer +
+grid of server-rendered card slots; cards drag and resize (pointer +
 12-col snap), layout persisted per board — cards auto-pack upward after each move/resize ·
 on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
 raises a new board from chat; `board_add_card` amends an existing board (all three
@@ -323,16 +323,18 @@ bordered (the row or heading provides the frame context).
 
 The Unicode glyph language is retired; tool rows render pixel icons via the `toolIcon` template helper (`toolIconFile()` in `internal/web/web.go`).
 
-### HTMX surface conventions
+### Datastar surface conventions
 
-- Server renders complete HTML; HTMX swaps fragments. Design states
-  (thinking, streaming, tool-running) are server-driven classes on
-  fragments, not client-side framework state.
-- Chat replies stream from the server as one chunked HTML fragment that
-  HTMX swaps in when the turn completes; the optimistic pending bubble
-  (client-rendered from a `<template>`) carries the thinking state in the
-  meantime. The thinking state is `--teal`, the assistant nameplate
-  `--gold`, the user hue `--indigo`.
+- Server renders complete HTML; **Datastar** patches the DOM over SSE
+  (`PatchElements` by stable id) and carries fine-grained reactive state in
+  client signals. Design states (thinking, streaming, tool-running) stay
+  server-driven classes on patched fragments, not client-side framework state.
+- Chat replies stream from the server as Datastar SSE patches: the handler
+  appends a complete assistant bubble with a stable id, then morphs its body
+  by id as tokens arrive (the **append-then-morph** model — Datastar patches
+  whole elements, it does not stream into a half-open tag). A server-echoed
+  pending bubble carries the thinking state. The thinking state is `--teal`,
+  the assistant nameplate `--gold`, the user hue `--indigo`.
 - **Activity is shown by light, not chrome:** while Balaur thinks or works,
   the avatar breathes a teal glow (`basm-glow` keyframes on `box-shadow`,
   driven by the `msg-pending` class and the `data-state="thinking"/"working"`
@@ -350,7 +352,7 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
 ### Knowledge cards (memory & skill approval)
 
 The growth surface: Balaur proposes, the owner decides. One card template
-per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
+per kind serves chat (inline, server-rendered), `/memory`, and `/skills`.
 
 - **Proposed cards** pop: `--gold-deep` border, ornate gold corner brackets
   (`.ornate`), ember notch, Approve as the only primary button. The section
@@ -362,8 +364,8 @@ per kind serves chat (inline, via lazy `hx-get`), `/memory`, and `/skills`.
   memory's importance. The pips are the context-budget dial — importance
   ≥ 4 means always injected, so the visual weight matches the token cost.
 - Edit lives in a `<details>` fold on the card — no modals, no JS state.
-- Card actions are plain HTMX forms posting to lifecycle endpoints; the
-  server re-renders the card (or removes it). Approving in chat and
+- Card actions are Datastar `@post` forms posting to lifecycle endpoints; the
+  server patches the card in place (or removes it) by id. Approving in chat and
   approving on /memory are the same server action.
 
 ### Marks, avatars, imagery
@@ -404,8 +406,8 @@ and the server resolves the URL dynamically; `soul.png` stays as a stable
 fallback equal to `soul-01`.
 
 The picker lives on the profile page (`/profile`) as a set of option buttons,
-one HTMX form per option, POSTing to `/ui/profile/soul-avatar`. Selection
-takes effect immediately and persists.
+one Datastar `@post` form per option, posting to `/ui/profile/soul-avatar`.
+Selection takes effect immediately and persists.
 
 **Group 1 — Basm folk world:**
 

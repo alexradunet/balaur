@@ -333,13 +333,10 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 		if u, err := url.Parse("/boards/" + id); err == nil {
 			_ = sse.ReplaceURL(*u)
 		}
-		// Only #main was patched, so sync the tab title explicitly.
+		// Only #main was patched, so sync the tab title explicitly. The board
+		// and every card inside it are pure Datastar now — newly-patched nodes
+		// bind via Datastar's own observer, so no htmx re-processing is needed.
 		_ = sse.ExecuteScript(fmt.Sprintf("document.title=%q", current.Name+" · Balaur"))
-		// Cards are server-rendered now, but the interactive "manage" cards still
-		// carry hx-post controls inside; a Datastar morph leaves those unbound, so
-		// htmx must PROCESS the freshly-patched #main. (Drops out once every card's
-		// own actions move to Datastar — then htmx.min.js goes too.)
-		_ = sse.ExecuteScript(`(function(m){if(window.htmx&&m)htmx.process(m)})(document.getElementById('main'))`)
 		return nil
 	}
 
