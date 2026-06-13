@@ -2,9 +2,12 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -124,5 +127,100 @@ func TestSSEDisconnectWithoutDone(t *testing.T) {
 	}
 	if text != "partial" {
 		t.Errorf("got %q, want %q", text, "partial")
+	}
+}
+
+// Step 1: post error mapping via ChatStream
+func TestChatStreamErrorStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "upstream says no", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	_, err := openaiClient(srv.URL).ChatStream(context.Background(), nil, nil)
+	if err == nil {
+		t.Fatal("expected error for 503, got nil")
+	}
+	if !strings.Contains(err.Error(), "503") {
+		t.Errorf("error should contain 503: %v", err)
+	}
+	if !strings.Contains(err.Error(), "upstream says no") {
+		t.Errorf("error should contain response body: %v", err)
+	}
+}
+
+// Step 2: Embed happy path + error paths
+
+func TestEmbedReordersByIndex(t *testing.T) {
+	// Server returns two embeddings in reverse order (index 1 before index 0).
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data":[{"index":1,"embedding":[0.2]},{"index":0,"embedding":[0.1]}]}`)
+	}))
+	defer srv.Close()
+
+	vecs, err := openaiClient(srv.URL).Embed(context.Background(), []string{"a", "b"})
+	if err != nil {
+		t.Fatalf("Embed: %v", err)
+	}
+	if len(vecs) != 2 {
+		t.Fatalf("want 2 vecs, got %d", len(vecs))
+	}
+	if vecs[0][0] != 0.1 {
+		t.Errorf("vecs[0][0] = %v, want 0.1", vecs[0][0])
+	}
+	if vecs[1][0] != 0.2 {
+		t.Errorf("vecs[1][0] = %v, want 0.2", vecs[1][0])
+	}
+}
+
+func TestEmbedIndexOutOfRange(t *testing.T) {
+	// Server returns index 5 for a single-input request (index 0 is the only valid one).
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data":[{"index":5,"embedding":[0.1]}]}`)
+	}))
+	defer srv.Close()
+
+	_, err := openaiClient(srv.URL).Embed(context.Background(), []string{"only one input"})
+	if err == nil {
+		t.Fatal("expected out-of-range error, got nil")
+	}
+	if !strings.Contains(err.Error(), "out of range") {
+		t.Errorf("error should mention out of range: %v", err)
+	}
+}
+
+func TestEmbedUsesEmbedModelFallback(t *testing.T) {
+	// Server captures the request body to inspect the model field.
+	var capturedModel string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req struct {
+			Model string `json:"model"`
+		}
+		json.Unmarshal(body, &req)
+		capturedModel = req.Model
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data":[{"index":0,"embedding":[0.5]}]}`)
+	}))
+	defer srv.Close()
+
+	// When EmbedModel is empty, falls back to Model.
+	c := &OpenAIClient{BaseURL: srv.URL, Model: "chat-m", EmbedModel: ""}
+	if _, err := c.Embed(context.Background(), []string{"test"}); err != nil {
+		t.Fatalf("Embed (fallback): %v", err)
+	}
+	if capturedModel != "chat-m" {
+		t.Errorf("expected model=chat-m (fallback), got %q", capturedModel)
+	}
+
+	// When EmbedModel is set, uses it instead.
+	c.EmbedModel = "emb-m"
+	if _, err := c.Embed(context.Background(), []string{"test"}); err != nil {
+		t.Fatalf("Embed (explicit): %v", err)
+	}
+	if capturedModel != "emb-m" {
+		t.Errorf("expected model=emb-m (explicit), got %q", capturedModel)
 	}
 }
