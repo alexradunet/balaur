@@ -167,6 +167,14 @@ func init() {
 			H:     14,
 			// no params — recurring tasks with their current streak
 		},
+		{
+			Type:  "lifelog",
+			Label: "Life",
+			Icon:  "orb",
+			W:     6,
+			H:     24,
+			// no params — the full tracked overview + habits
+		},
 	}
 
 	byType = make(map[string]Spec, len(registry))

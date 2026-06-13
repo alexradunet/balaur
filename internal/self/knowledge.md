@@ -97,7 +97,7 @@ self tool, which reports the actual registry):
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI at / (chat, /models, /focus/memory, /focus/skills, /focus/quests,
-/focus/heads, /focus/journal, /focus/day?date={date}, /life, /profile; a head's branch
+/focus/heads, /focus/journal, /focus/day?date={date}, /focus/lifelog, /profile; a head's branch
 chat opens in the dock via /ui/dock/conversation?head={id}); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes

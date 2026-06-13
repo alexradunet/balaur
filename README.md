@@ -93,9 +93,10 @@ database you own and can open with any SQLite tool.
 - **The life log — owner-defined:** Balaur does not decide what a life is
   made of. `log_entry` keeps whatever you track under kinds you invent
   (weight, mood, sleep, pages-read…), numeric or textual, backdatable;
-  `entry_series` reads trends, `entry_drop` corrects. `/life` mirrors what
-  exists: sparklines for numeric kinds, recent lines for the rest, live
-  habit streaks on top. Nothing is predefined; the briefing reflects
+  `entry_series` reads trends, `entry_drop` corrects. The lifelog card
+  (`/focus/lifelog`) mirrors what exists: sparklines for numeric kinds,
+  recent lines for the rest, live habit streaks on top. Nothing is
+  predefined; the briefing reflects
   yesterday's log in one line.
 - **The day card — where a day lives:** the `day` card's focus
   (`/focus/day?date={date}`) assembles your journal (written in chat via

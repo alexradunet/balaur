@@ -210,7 +210,7 @@
   {{else}}
   <p class="k-empty">No {{.Kind}} entries yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/life">life →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/lifelog">life →</a></footer>
 </article>
 {{end}}
 
@@ -232,7 +232,7 @@
   {{else}}
   <p class="k-empty">No {{.Kind}} entries yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/life">life →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/lifelog">life →</a></footer>
 </article>
 {{end}}
 
@@ -385,7 +385,29 @@
   {{else}}
   <p class="k-empty">No habits yet — add a recurring task in chat.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/life">life →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/lifelog">life →</a></footer>
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{- /* lifelog card — compact life overview: habit strip + tracked-kind tags */ -}}
+{{- /* context: cardLifelogView */ -}}
+{{define "ucard_lifelog"}}
+<article class="kcard ucard ucard-lifelog" id="ucard-lifelog">
+  <header class="kcard-head"><span class="kcard-kind"><img class="tool-icon" src="/static/icons/orb.png" alt="">Life</span></header>
+  {{if .Habits}}
+  <div class="habit-strip">
+    {{range .Habits}}<span class="tag habit-tag" title="{{.RecurLine}}">{{.Title}}{{if gt .Streak 0}} · {{.Streak}}{{end}}</span>{{end}}
+  </div>
+  {{end}}
+  {{if .Kinds}}
+  <ul class="ucard-stats">
+    {{range .Kinds}}<li>{{.Kind}} <span class="kcard-meta">{{.Count}}</span></li>{{end}}
+  </ul>
+  {{else}}
+  <p class="k-sub">Nothing tracked yet — tell Balaur what matters.</p>
+  {{end}}
+  <footer class="kcard-actions"><a href="/focus/lifelog">open life →</a></footer>
 </article>
 {{end}}
 

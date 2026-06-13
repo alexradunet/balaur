@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"html/template"
 	"strings"
 	"time"
 
@@ -11,10 +12,11 @@ import (
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
-// /life mirrors what the owner actually logs — nothing is predefined.
-// Numeric kinds chart as sparklines, text kinds list their recent lines,
-// open habits show their live streaks. A kind exists because the owner
-// logged it; the page imposes no taxonomy.
+// The life overview mirrors what the owner actually logs — nothing is
+// predefined. Numeric kinds chart as sparklines, text kinds list their recent
+// lines, open habits show their live streaks. A kind exists because the owner
+// logged it; the overview imposes no taxonomy. It surfaces as the lifelog card
+// (tile + focus); entries are logged via chat, never a web form.
 
 const (
 	lifeWindowDays = 90
@@ -38,48 +40,58 @@ type lifeHabitView struct {
 	RecurLine string
 }
 
-func (h *handlers) lifePage(e *core.RequestEvent) error {
-	now := time.Now()
-	kinds, err := life.Kinds(h.app)
-	if err != nil {
-		return e.InternalServerError("loading life", err)
-	}
-
-	views := make([]lifeKindView, 0, len(kinds))
-	for _, k := range kinds {
-		recs, err := life.Series(h.app, k.Kind, now.AddDate(0, 0, -lifeWindowDays))
-		if err != nil {
-			continue
-		}
-		v := lifeKindView{Kind: k.Kind, Unit: k.Unit, Count: k.Count}
-		if s := life.Summarize(recs); s.Points > 0 {
-			v.Numeric = true
-			v.LastVal = fmt.Sprintf("%g", s.Last)
-			v.LastAt = s.LastAt.In(now.Location()).Format("Jan 2")
-			if s.Points > 1 {
-				v.Change = fmt.Sprintf("%+.4g over %dd", s.Last-s.First, lifeWindowDays)
-				v.Points, v.SparkLastX, v.SparkLastY = sparkPoints(numericValues(recs), sparkW, sparkH)
+// lifeOverview builds the life-overview view-models (tracked kinds + habits) —
+// the data behind the lifelog card tile and focus, and formerly the /life page.
+func (h *handlers) lifeOverview(now time.Time) (kinds []lifeKindView, habits []lifeHabitView) {
+	ks, err := life.Kinds(h.app)
+	if err == nil {
+		for _, k := range ks {
+			recs, err := life.Series(h.app, k.Kind, now.AddDate(0, 0, -lifeWindowDays))
+			if err != nil {
+				continue
 			}
-		} else {
-			for i := len(recs) - 1; i >= 0 && len(v.Recent) < 5; i-- {
-				line := recs[i].GetDateTime("noted_at").Time().In(now.Location()).Format("Jan 2")
-				if t := recs[i].GetString("text"); t != "" {
-					line += " — " + clipText(t, 120)
+			v := lifeKindView{Kind: k.Kind, Unit: k.Unit, Count: k.Count}
+			if s := life.Summarize(recs); s.Points > 0 {
+				v.Numeric = true
+				v.LastVal = fmt.Sprintf("%g", s.Last)
+				v.LastAt = s.LastAt.In(now.Location()).Format("Jan 2")
+				if s.Points > 1 {
+					v.Change = fmt.Sprintf("%+.4g over %dd", s.Last-s.First, lifeWindowDays)
+					v.Points, v.SparkLastX, v.SparkLastY = sparkPoints(numericValues(recs), sparkW, sparkH)
 				}
-				v.Recent = append(v.Recent, line)
+			} else {
+				for i := len(recs) - 1; i >= 0 && len(v.Recent) < 5; i-- {
+					line := recs[i].GetDateTime("noted_at").Time().In(now.Location()).Format("Jan 2")
+					if t := recs[i].GetString("text"); t != "" {
+						line += " — " + clipText(t, 120)
+					}
+					v.Recent = append(v.Recent, line)
+				}
 			}
+			kinds = append(kinds, v)
 		}
-		views = append(views, v)
 	}
+	return kinds, h.buildHabits(now)
+}
 
-	dock, _ := h.dockData()
-	return h.render(e, "life.html", map[string]any{
-		"Title": "Life", "Dock": dock, "Kinds": views, "Habits": h.buildHabits(now),
-	})
+// lifelogFocusHTML renders the lifelog card's focus body: the full life overview
+// (habits + every tracked kind). Was the /life page. Read-only — entries are
+// logged via chat.
+func (h *handlers) lifelogFocusHTML() template.HTML {
+	now := time.Now()
+	kinds, habits := h.lifeOverview(now)
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "life_body", map[string]any{
+		"Kinds": kinds, "Habits": habits,
+	}); err != nil {
+		h.app.Logger().Warn("lifelog focus render failed", "err", err)
+		return cardErrorStrip("could not open the life overview")
+	}
+	return template.HTML(b.String())
 }
 
 // buildHabits returns the owner's recurring tasks with their current streak,
-// shared by the /life page and the habits card.
+// shared by the lifelog card (overview) and the habits card.
 func (h *handlers) buildHabits(now time.Time) []lifeHabitView {
 	recs, err := tasks.OpenTasks(h.app, nil)
 	if err != nil {

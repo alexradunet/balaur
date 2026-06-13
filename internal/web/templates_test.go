@@ -149,14 +149,15 @@ func TestQuestsFocusListRenders(t *testing.T) {
 	}
 }
 
-func TestLifePageRenders(t *testing.T) {
+// TestLifeBodyRenders: the life overview body (life_body) — now the lifelog
+// card's focus, formerly the /life page — renders both populated and empty.
+func TestLifeBodyRenders(t *testing.T) {
 	tmpl := parseTemplates(t)
 	points, lx, ly := sparkPoints([]float64{83, 82.6, 82.5}, sparkW, sparkH)
 	if points == "" || lx == "" || ly == "" {
 		t.Fatalf("sparkPoints empty: %q %q %q", points, lx, ly)
 	}
 	data := map[string]any{
-		"Title":  "Life",
 		"Habits": []lifeHabitView{{Title: "Stretch", Streak: 5, RecurLine: "repeats daily"}},
 		"Kinds": []lifeKindView{
 			{Kind: "weight", Unit: "kg", Count: 3, Numeric: true, LastVal: "82.5", LastAt: "Jun 11",
@@ -165,19 +166,19 @@ func TestLifePageRenders(t *testing.T) {
 		},
 	}
 	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "life.html", data); err != nil {
-		t.Fatalf("life.html: %v", err)
+	if err := tmpl.ExecuteTemplate(&b, "life_body", data); err != nil {
+		t.Fatalf("life_body: %v", err)
 	}
 	out := b.String()
-	for _, want := range []string{"weight", "82.5", "polyline", "gratitude", "streak 5"} {
+	for _, want := range []string{"weight", "82.5", "polyline", "gratitude", "streak 5", "life-grid"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("life page missing %q", want)
+			t.Errorf("life body missing %q", want)
 		}
 	}
 	// Empty state renders too.
 	b.Reset()
-	if err := tmpl.ExecuteTemplate(&b, "life.html", map[string]any{"Title": "Life"}); err != nil {
-		t.Fatalf("life.html empty: %v", err)
+	if err := tmpl.ExecuteTemplate(&b, "life_body", map[string]any{}); err != nil {
+		t.Fatalf("life_body empty: %v", err)
 	}
 	if !strings.Contains(b.String(), "yours to invent") {
 		t.Error("empty state missing")

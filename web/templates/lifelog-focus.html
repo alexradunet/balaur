@@ -1,6 +1,6 @@
-{{template "shell_open" .}}
-    <h1><img class="h-icon" src="/static/icons/orb.png" alt="">Life</h1>
-
+{{- /* lifelog-focus.html — the life overview (habits + tracked kinds) as the
+     lifelog card's focus body. Read-only; entries are logged via chat. */ -}}
+{{define "life_body"}}
     {{if .Habits}}
     <section class="k-section">
       <h2 class="k-heading">Habits</h2>
@@ -45,4 +45,4 @@
     {{else}}
     <p class="k-empty">Nothing tracked yet. Tell Balaur what matters — a weight, a mood, a practice, a milestone — and it appears here. The kinds are yours to invent.</p>
     {{end}}
-{{template "shell_close" .}}
+{{end}}
