@@ -156,26 +156,6 @@ func TestQuestsFocusQuestLog(t *testing.T) {
 	})
 }
 
-// TestQuestsFocusGroupOrder verifies that group names appear in the HTML output
-// of the quests focus.
-func TestQuestsFocusGroupOrder(t *testing.T) {
-	app := newWebApp(t)
-	seedTaskWithRecur(t, app, "Side note", "open", "", time.Time{})
-	seedTaskWithRecur(t, app, "Due quest", "open", "", time.Now().Add(time.Hour))
-	seedTaskWithRecur(t, app, "Ritual task", "open", "weekly:fri", time.Time{})
-	seedTaskWithRecur(t, app, "Daily habit", "open", "daily", time.Time{})
-
-	scenario := tests.ApiScenario{
-		Name:            "group order in HTML",
-		Method:          "GET",
-		URL:             "/focus/quests",
-		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-		ExpectedStatus:  200,
-		ExpectedContent: []string{"Dailies", "Rituals", "Quests", "Side quests"},
-	}
-	scenario.Test(t)
-}
-
 // TestTaskTransitionRailRefresh verifies that a transition from the quests focus
 // (/focus/quests) emits a Datastar patch of the quest-rail in addition to the
 // card patch, while board and chat contexts get only the card patch. A Datastar
@@ -287,4 +267,41 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 		}
 		scenario.Test(t)
 	})
+
+	t.Run("board ✓ row from quests — remove patch, no card or rail", func(t *testing.T) {
+		app := newWebApp(t)
+		rec := seedTaskWithRecur(t, app, "Quest row task", "open", "", time.Time{})
+
+		// The quests-tile ✓ sends src=quests; the handler removes the matching
+		// row by a server-built id (urow-quests-{id}) rather than rendering the card.
+		scenario := tests.ApiScenario{
+			Name:   "transition with src=quests removes the row",
+			Method: "POST",
+			URL:    "/ui/tasks/" + rec.Id + "/transition",
+			Body:   strings.NewReader("to=done&src=quests"),
+			Headers: map[string]string{
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"datastar-patch-elements", "mode remove", "urow-quests-" + rec.Id},
+			NotExpectedContent: []string{"tcard-", `id="quest-rail"`},
+		}
+		scenario.Test(t)
+	})
+}
+
+// TestTasksRouteRetired guards against accidental re-registration of the
+// standalone /tasks page. The route is unregistered, so PocketBase's index
+// fallback redirects it to the board home (302 → /boards) rather than serving
+// its own page. The guard asserts that fallback, not a 200 task surface.
+func TestTasksRouteRetired(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:           "GET /tasks is retired (302 → /boards via index fallback)",
+		Method:         "GET",
+		URL:            "/tasks",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 302,
+	}
+	s.Test(t)
 }

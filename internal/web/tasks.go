@@ -96,6 +96,19 @@ type questLogView struct {
 	DoneRecently []taskView
 }
 
+// doneRecentlyCap bounds the "Done recently" tail shown under the quest rail.
+const doneRecentlyCap = 6
+
+// loadQuestLogRecs loads the open tasks and the recently-done tail that feed the
+// quest-log rail (the quests focus and the post-transition rail refresh).
+func (h *handlers) loadQuestLogRecs() (open, done []*core.Record) {
+	open, _ = tasks.OpenTasks(h.app, nil)
+	if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", doneRecentlyCap, 0); err == nil {
+		done = dr
+	}
+	return
+}
+
 // buildQuestLog groups open tasks by rhythm and returns the view.
 func buildQuestLog(openRecs []*core.Record, doneRecs []*core.Record, now time.Time) questLogView {
 	groups := map[string]*questGroupView{
@@ -146,11 +159,7 @@ func buildQuestLog(openRecs []*core.Record, doneRecs []*core.Record, now time.Ti
 // created in chat, so this view is read + transition only (strict parity).
 func (h *handlers) questsFocusHTML() template.HTML {
 	now := time.Now()
-	openRecs, _ := tasks.OpenTasks(h.app, nil)
-	var doneRecs []*core.Record
-	if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
-		doneRecs = dr
-	}
+	openRecs, doneRecs := h.loadQuestLogRecs()
 	var b strings.Builder
 	if err := h.tmpl.ExecuteTemplate(&b, "tasks_list", map[string]any{
 		"QuestLog": buildQuestLog(openRecs, doneRecs, now),
@@ -353,11 +362,7 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	// cards carry no "src", so they reach here (board tiles returned above).
 	if ref := e.Request.Header.Get("Referer"); ref != "" {
 		if u, err := url.Parse(ref); err == nil && u.Path == "/focus/quests" {
-			openRecs, _ := tasks.OpenTasks(h.app, nil)
-			var doneRecs []*core.Record
-			if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
-				doneRecs = dr
-			}
+			openRecs, doneRecs := h.loadQuestLogRecs()
 			var rb strings.Builder
 			if err := h.tmpl.ExecuteTemplate(&rb, "quest_rail", buildQuestLog(openRecs, doneRecs, now)); err != nil {
 				return e.InternalServerError("rendering quest rail", err)
