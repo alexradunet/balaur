@@ -41,8 +41,13 @@ func (h *handlers) dockConversation(e *core.RequestEvent) error {
 		}
 		recs, _ := conversation.History(h.app, conv.Id, historyWindow)
 		client, clientErr := h.clients.Active(h.app)
+		modelErr := ""
+		if clientErr != nil {
+			modelErr = h.chatErrText(clientErr)
+		}
 		data = homeData{
 			ChatReady:       clientErr == nil && client != nil,
+			ModelError:      modelErr,
 			History:         h.messageViewsForHead(recs, head),
 			SoulAvatarURL:   store.SoulAvatarURL(h.app),
 			OwnerName:       store.OwnerName(h.app),
@@ -63,5 +68,11 @@ func (h *handlers) dockConversation(e *core.RequestEvent) error {
 		datastar.WithSelectorID("dock-convo"), datastar.WithModeInner()); err != nil {
 		return nil // client gone
 	}
+	// The nudge poll appends master-only nudges into #chat; gate it so it stops
+	// once a branch is open (and resumes when master returns). headID == "" is
+	// master.
+	_ = sse.MarshalAndPatchSignals(struct {
+		DockMaster bool `json:"dockMaster"`
+	}{headID == ""})
 	return nil
 }

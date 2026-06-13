@@ -20,8 +20,8 @@
 
   <!-- Nudge poll — agent-initiated messages while the dock is open. The
        cursor lives in a signal the handler advances after each batch. -->
-  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}"
-       data-on:interval__duration.30s="@get('/ui/chat/nudges?since='+$nudgeSince)"></div>
+  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}" data-signals:dockMaster="true"
+       data-on:interval__duration.30s="$dockMaster && @get('/ui/chat/nudges?since='+$nudgeSince)"></div>
 
   {{template "chat_bar" .}}
 

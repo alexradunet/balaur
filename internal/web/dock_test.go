@@ -22,6 +22,8 @@ func TestDockConversationMaster(t *testing.T) {
 			"selector #dock-convo",
 			// SSE element payloads JSON-escape forward slashes (\/).
 			`@post('\/ui\/chat')`,
+			// The swap re-enables the master-only nudge poll.
+			`"dockMaster":true`,
 		},
 		NotExpectedContent: []string{"back to main"},
 	}
@@ -47,7 +49,15 @@ func TestDockConversationBranch(t *testing.T) {
 			`@post('\/ui\/heads\/` + head.Id + `\/chat')`,
 			"back to main",
 			"Scribe",
+			// The swap silences the master-only nudge poll on a branch.
+			`"dockMaster":false`,
+			// No model is configured in the test app, so the greeting must
+			// surface the model-unavailable error — not a blank <p></p>.
+			"no active model is available",
 		},
+		// The branch greeting must render the model error, never an empty
+		// paragraph (the bug this fix closes).
+		NotExpectedContent: []string{"<p></p>"},
 	}
 	s.Test(t)
 }
