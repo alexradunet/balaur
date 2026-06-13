@@ -3,15 +3,10 @@ package web
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
-	"html"
 	"io"
-	"net/http"
-	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -35,140 +30,45 @@ func newNonce() string {
 
 // execFragment executes a named template fragment to w, silently ignoring
 // errors — the caller already owns the live stream and cannot un-write bytes.
+// Used by the head-chat gateway, which still streams chunked HTML.
 func (h *handlers) execFragment(w io.Writer, name string, data messageView) {
 	if err := h.tmpl.ExecuteTemplate(w, name, data); err != nil {
 		h.app.Logger().Warn("chat fragment render failed", "fragment", name, "err", err)
 	}
 }
 
-// execChoicesFragment executes the chat-choices template fragment.
-func (h *handlers) execChoicesFragment(w io.Writer, cv choicesView) {
-	if err := h.tmpl.ExecuteTemplate(w, "chat-choices", cv); err != nil {
-		h.app.Logger().Warn("chat fragment render failed", "fragment", "chat-choices", "err", err)
-	}
-}
-
-// chat handles one user turn. The web layer is a gateway: it adapts the
-// shared turn pipeline (internal/turn) to a streamed chunked response that
-// HTMX appends to the chat (hx-swap beforeend). The fragment shape is
-// defined once in chat-messages.html and executed here and on page-load.
+// chat handles one user turn in the master conversation. The web layer is a
+// gateway: it adapts the shared turn pipeline (internal/turn) into a Datastar
+// SSE stream of element patches. Fragment markup lives in chat-messages.html;
+// the streaming lifecycle lives in chatStream (chatstream.go).
 func (h *handlers) chat(e *core.RequestEvent) error {
-	msg := strings.TrimSpace(e.Request.FormValue("message"))
+	msg := readChatMessage(e)
 	if msg == "" {
 		return e.BadRequestError("empty message", nil)
 	}
-
-	client, err := h.clients.Active(h.app)
-	if err != nil {
-		return h.renderError(e, err)
-	}
-	clientRendered := e.Request.FormValue("client_rendered") == "1"
 
 	soulURL := store.SoulAvatarURL(h.app)
 	balaURL := store.BalaurAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
 
-	w := e.Response
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
-	flusher, _ := w.(http.Flusher)
-	flush := func() {
-		if flusher != nil {
-			flusher.Flush()
-		}
-	}
+	cs := h.newChatStream(e, balaURL, "Balaur", soulURL, ownerName)
 
-	// When the browser optimistically rendered the user row, this response
-	// replaces only the pending Balaur row. Without JS, echo the user row first.
-	if !clientRendered {
-		h.execFragment(w, "chat-msg-user", messageView{
-			SoulAvatarURL: soulURL,
-			OwnerName:     ownerName,
-			Content:       msg,
+	client, err := h.clients.Active(h.app)
+	if err != nil {
+		cs.appendChat("chat-msg-user", messageView{
+			SoulAvatarURL: soulURL, OwnerName: ownerName, Content: msg,
 		})
+		_ = cs.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
+		cs.note("", err.Error())
+		return nil
 	}
 
-	// Open the assistant bubble; token text streams into its open body div.
-	h.execFragment(w, "chat-balaur-open", messageView{
-		BalaurAvatarURL: balaURL,
-		WhoLabel:        "Balaur",
-	})
-	flush()
-
-	emitEv := func(ev agent.Event) {
-		switch ev.Kind {
-		case "text":
-			fmt.Fprint(w, html.EscapeString(ev.Text))
-			flush()
-		case "tool_start":
-			h.execFragment(w, "chat-balaur-close", messageView{})
-			h.execFragment(w, "chat-msg-tool-start", messageView{Tool: ev.Tool})
-			flush()
-		case "tool_result":
-			// Consumer order: uicard → choices → proposal → plain.
-			// uicard: re-renders on reload (lazy-fetches live data — safe).
-			// choices: inert on reload (no live panel for stale decisions).
-			// proposal: renders an approval card on first view and reload.
-			if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
-				mv := messageView{Content: rest, CardURL: "/ui/cards/" + typ + "?" + query}
-				h.execFragment(w, "chat-msg-tool-end", mv)
-				h.execFragment(w, "chat-balaur-open", messageView{
-					BalaurAvatarURL: balaURL,
-					WhoLabel:        "Balaur",
-				})
-				flush()
-				break
-			}
-			// Check ParseChoices before ParseProposal — choices ride a tool_result.
-			if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
-				h.execFragment(w, "chat-msg-tool-end", messageView{Content: "choices offered"})
-				h.execChoicesFragment(w, choicesView{
-					Prompt:        prompt,
-					Nonce:         newNonce(),
-					Choices:       choices,
-					SoulAvatarURL: soulURL,
-					OwnerName:     ownerName,
-				})
-				h.execFragment(w, "chat-balaur-open", messageView{
-					BalaurAvatarURL: balaURL,
-					WhoLabel:        "Balaur",
-				})
-				flush()
-				break
-			}
-			kind, id, rest, ok := tools.ParseProposal(ev.Text)
-			var mv messageView
-			if ok {
-				mv = messageView{Content: rest, CardURL: cardURL(kind, id)}
-			} else {
-				mv = messageView{Content: clipText(ev.Text, 2000)}
-			}
-			h.execFragment(w, "chat-msg-tool-end", mv)
-			h.execFragment(w, "chat-balaur-open", messageView{
-				BalaurAvatarURL: balaURL,
-				WhoLabel:        "Balaur",
-			})
-			flush()
-		case "error":
-			fmt.Fprintf(w,
-				`<span class="thinking">the thread snapped: %s</span>`,
-				html.EscapeString(ev.Err.Error()))
-			flush()
-		}
-	}
-
-	res, runErr := turn.Run(e.Request.Context(), h.app, client, msg, emitEv)
-
-	h.execFragment(w, "chat-balaur-close", messageView{})
+	cs.start(msg)
+	res, runErr := turn.Run(e.Request.Context(), h.app, client, msg, cs.emit)
+	cs.finish()
 	if res.CheckNote != "" {
-		h.execFragment(w, "chat-msg-balaur", messageView{
-			BalaurAvatarURL: balaURL,
-			WhoLabel:        "Balaur",
-			Origin:          "check",
-			Content:         res.CheckNote,
-		})
+		cs.note("check", res.CheckNote)
 	}
-	flush()
 	if runErr != nil {
 		h.app.Logger().Warn("chat: turn failed", "error", runErr)
 	}
@@ -189,6 +89,8 @@ func clipText(s string, n int) string {
 	return s[:n] + "…"
 }
 
+// renderError writes a plain assistant error bubble. Used by the head-chat
+// gateway (still chunked HTML).
 func (h *handlers) renderError(e *core.RequestEvent, err error) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	balaURL := store.BalaurAvatarURL(h.app)

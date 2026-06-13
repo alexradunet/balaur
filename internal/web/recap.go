@@ -153,6 +153,13 @@ type messageView struct {
 	BalaurAvatarURL string // resolved Balaur head avatar URL
 	OwnerName       string // display name for the "You" label
 	WhoLabel        string // assistant display name ("Balaur", or head name for branch chats)
+
+	// Datastar streaming fields (master chat dock). BubbleID/BodyID give a
+	// streamed element a stable id so the SSE handler can morph it in place;
+	// Pending marks the live "thinking" state on an assistant bubble.
+	BubbleID string
+	BodyID   string
+	Pending  bool
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {

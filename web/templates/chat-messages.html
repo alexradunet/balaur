@@ -62,6 +62,38 @@
 {{- /* chat-msg-tool-end closes an open tool row; if CardURL is set it adds the inline card. */ -}}
 {{define "chat-msg-tool-end"}}</div></div>{{if .CardURL}}<div class="k-inline" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}{{end}}
 
+{{- /* ── Datastar streaming fragments (master chat dock) ──────────────────────
+     Unlike the open/close pair above, these are COMPLETE elements carrying a
+     stable id. The SSE handler (internal/web/chatstream.go) appends a bubble,
+     then morphs its body by id as tokens accumulate — Datastar patches whole
+     elements, it does not stream into a half-open <div>. ── */ -}}
+
+{{- /* chat-balaur-bubble — complete assistant bubble; body is morphed per token. */ -}}
+{{define "chat-balaur-bubble"}}
+<div class="msg msg-balaur msg-with-avatar{{if .Pending}} msg-pending{{end}}" id="{{.BubbleID}}">
+  <figure class="portrait">
+    <span class="balaur-avatar balaur-avatar-balaur{{if .Pending}} balaur-avatar-live{{end}}" data-kind="balaur" aria-hidden="true"><img src="{{.BalaurAvatarURL}}" alt="" decoding="async"></span>
+    <figcaption class="who">{{.WhoLabel}}{{with .Origin}} · {{.}}{{end}}</figcaption>
+  </figure>
+  <div class="msg-main">{{template "chat-balaur-body" .}}</div>
+</div>
+{{end}}
+
+{{- /* chat-balaur-body — the morph target: replaced by id on each token. */ -}}
+{{define "chat-balaur-body"}}<div class="body" id="{{.BodyID}}">{{if .Content}}{{.Content}}{{else if .Pending}}<span class="thinking thinking-dots">thinking</span>{{end}}</div>{{end}}
+
+{{- /* chat-tool-row — complete tool row; its body is morphed with the result. */ -}}
+{{define "chat-tool-row"}}
+<div class="msg msg-tool" id="{{.BubbleID}}">
+  <div class="who"><img class="tool-icon" src="/static/icons/{{toolIcon .Tool}}.png" alt="" aria-hidden="true">tool · {{.Tool}}</div>
+  <div class="body" id="{{.BodyID}}">{{.Content}}</div>
+</div>
+{{end}}
+
+{{- /* chat-inline-card — lazy card mount appended after a tool result. Still
+     htmx-driven during the migration; the SSE handler calls htmx.process on it. */ -}}
+{{define "chat-inline-card"}}<div class="k-inline" id="{{.BubbleID}}" hx-get="{{.CardURL}}" hx-trigger="load" hx-swap="innerHTML"></div>{{end}}
+
 {{- /* chat-choices — live dialogue choices. Context: choicesView.
      Each button posts the label as the owner's next turn; the panel removes
      itself after the request so a choice can be taken once. */ -}}
@@ -70,16 +102,15 @@
   <div class="choices-panel">
     <div class="choices-kicker">{{.Prompt}}</div>
     {{range $i, $c := .Choices}}
-    <form hx-post="/ui/chat" hx-target="#chat" hx-swap="beforeend"
-          hx-on::after-request="document.getElementById('choices-{{$.Nonce}}')?.remove()">
-      <input type="hidden" name="message" value="{{$c.Label}}">
-      <input type="hidden" name="client_rendered" value="0">
-      <button class="choice" type="submit">
-        <span class="choice-key">{{addOne $i}}</span>
-        <span class="choice-label">{{$c.Label}}</span>
-        {{with $c.Hint}}<span class="choice-hint">{{.}}</span>{{end}}
-      </button>
-    </form>
+    {{- /* The label rides in data-label (html/template escapes it safely) and
+         the Datastar expression reads it via el.dataset.label — no JS-string
+         escaping hazard. The next turn's handler clears stale .choices panels. */ -}}
+    <button class="choice" type="button" data-label="{{$c.Label}}"
+            data-on-click="$message = el.dataset.label; @post('/ui/chat')">
+      <span class="choice-key">{{addOne $i}}</span>
+      <span class="choice-label">{{$c.Label}}</span>
+      {{with $c.Hint}}<span class="choice-hint">{{.}}</span>{{end}}
+    </button>
     {{end}}
   </div>
   <figure class="portrait">

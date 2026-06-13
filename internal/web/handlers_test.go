@@ -243,23 +243,16 @@ func TestChatHandler(t *testing.T) {
 
 	scenarios := []tests.ApiScenario{
 		{
-			Name:            "chat with client_rendered=0",
+			// The master chat now streams Datastar element patches: the server
+			// echoes the owner's bubble, then morphs the assistant body with the
+			// model's text. Both ride inside datastar-patch-elements SSE events.
+			Name:            "chat streams Datastar element patches",
 			Method:          "POST",
 			URL:             "/ui/chat",
 			Body:            strings.NewReader("message=hello"),
 			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Hello from the fake model", "msg msg-user"},
-		},
-		{
-			Name:               "chat with client_rendered=1",
-			Method:             "POST",
-			URL:                "/ui/chat",
-			Body:               strings.NewReader("message=hello&client_rendered=1"),
-			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			ExpectedStatus:     200,
-			ExpectedContent:    []string{"Hello from the fake model"},
-			NotExpectedContent: []string{"msg msg-user"},
+			ExpectedContent: []string{"datastar-patch-elements", "Hello from the fake model", "msg msg-user", "msg msg-balaur"},
 		},
 		{
 			Name:            "chat empty message",
