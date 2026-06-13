@@ -23,10 +23,14 @@ func TestDockConversationMaster(t *testing.T) {
 			"selector #dock-convo",
 			// SSE element payloads JSON-escape forward slashes (\/).
 			`@post('\/ui\/chat')`,
-			// The swap re-enables the master-only nudge poll.
+			// The swap re-enables the master-only nudge poll and resets the
+			// streaming gate (clears any stale true from an in-flight stream).
 			`"dockMaster":true`,
+			`"streaming":false`,
 		},
-		NotExpectedContent: []string{"back to main"},
+		// The master dock render must stay byte-identical: no back affordance and
+		// no $streaming gate leaking into the master markup.
+		NotExpectedContent: []string{"back to main", "$streaming"},
 	}
 	s.Test(t)
 }
@@ -50,8 +54,10 @@ func TestDockConversationBranch(t *testing.T) {
 			`@post('\/ui\/heads\/` + head.Id + `\/chat')`,
 			"back to main",
 			"Scribe",
-			// The swap silences the master-only nudge poll on a branch.
+			// The swap silences the master-only nudge poll on a branch and
+			// resets the streaming gate.
 			`"dockMaster":false`,
+			`"streaming":false`,
 			// No model is configured in the test app, so the greeting must
 			// surface the model-unavailable error — not a blank <p></p>.
 			"no active model is available",
@@ -77,6 +83,34 @@ func TestDockConversationMergedForbidden(t *testing.T) {
 		ExpectedContent: []string{"not active"},
 	}
 	s.Test(t)
+}
+
+// TestDockConvoBackButtonStreamingGate: the branch back button carries the
+// Datastar disabled binding so it is inert while a turn streams, and the
+// nudge-poll initializes the $streaming signal (it lives outside #dock-convo).
+func TestDockConvoBackButtonStreamingGate(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	// Branch render: ConvBack=true surfaces the back affordance.
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "dock_convo", homeData{
+		ConvBack: true, ConvHeadName: "Scribe",
+	}); err != nil {
+		t.Fatalf("dock_convo: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `data-attr:disabled="$streaming"`) {
+		t.Errorf("branch back button must carry data-attr:disabled=\"$streaming\"; got:\n%s", out)
+	}
+
+	// The nudge-poll (in chat_dock, outside #dock-convo) initializes the signal.
+	var shell strings.Builder
+	if err := tmpl.ExecuteTemplate(&shell, "chat_dock", homeData{}); err != nil {
+		t.Fatalf("chat_dock: %v", err)
+	}
+	if !strings.Contains(shell.String(), `data-signals:streaming="false"`) {
+		t.Errorf("#nudge-poll must initialize data-signals:streaming=\"false\"; got:\n%s", shell.String())
+	}
 }
 
 // TestHeadChatInactiveShowsNote: posting to an inactive head's branch does NOT

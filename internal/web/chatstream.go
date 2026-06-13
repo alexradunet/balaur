@@ -99,6 +99,12 @@ func (s *chatStream) start(userMsg string) {
 		SoulAvatarURL: s.soulURL, OwnerName: s.ownerName, Content: userMsg,
 	})
 	s.openBubble()
+	// Mark the turn in-flight so the branch "← back to main" control disables
+	// while tokens stream (otherwise a swap leaves the open head stream
+	// appending head-styled tokens into the now-master #chat).
+	_ = s.sse.MarshalAndPatchSignals(struct {
+		Streaming bool `json:"streaming"`
+	}{true})
 }
 
 // openBubble appends a fresh pending assistant bubble and points the stream at
@@ -211,5 +217,10 @@ func (s *chatStream) note(origin, content string) {
 	})
 }
 
-// finish closes the last open bubble.
-func (s *chatStream) finish() { s.finalizeBubble() }
+// finish closes the last open bubble and clears the streaming signal.
+func (s *chatStream) finish() {
+	s.finalizeBubble()
+	_ = s.sse.MarshalAndPatchSignals(struct {
+		Streaming bool `json:"streaming"`
+	}{false})
+}

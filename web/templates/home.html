@@ -20,7 +20,7 @@
 
   <!-- Nudge poll — agent-initiated messages while the dock is open. The
        cursor lives in a signal the handler advances after each batch. -->
-  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}" data-signals:dockMaster="true"
+  <div id="nudge-poll" data-signals:nudgeSince="{{.NowMillis}}" data-signals:dockMaster="true" data-signals:streaming="false"
        data-on:interval__duration.30s="$dockMaster && @get('/ui/chat/nudges?since='+$nudgeSince)"></div>
 
   {{template "chat_bar" .}}
@@ -41,6 +41,7 @@
   <header class="dock-convo-head">
     <span class="head-name-label">{{.ConvHeadName}}</span>
     <button class="chatbar-back-link" type="button"
+            data-attr:disabled="$streaming"
             data-on:click="@get('/ui/dock/conversation')">← back to main</button>
   </header>
   {{end}}

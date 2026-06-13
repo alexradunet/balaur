@@ -73,6 +73,7 @@ func (h *handlers) dockConversation(e *core.RequestEvent) error {
 	// master.
 	_ = sse.MarshalAndPatchSignals(struct {
 		DockMaster bool `json:"dockMaster"`
-	}{headID == ""})
+		Streaming  bool `json:"streaming"`
+	}{DockMaster: headID == "", Streaming: false})
 	return nil
 }
