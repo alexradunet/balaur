@@ -112,10 +112,11 @@ the owner-defined life log (`log_entry` / `entry_series` / `entry_drop`,
 free-form kinds, numeric or textual, backdatable, audited) and the /life
 page mirroring what is actually logged — sparklines for numeric kinds,
 recent lines for text kinds, live habit streaks · a one-line yesterday
-reflection in the briefing · day pages (/day/{date}): the owner's journal
-(verbatim via journal_write in chat or the page form, page-side removal
-only), the day's recap with transcript expand, completions, and logs —
-linked from calendar cells and recap day cards · a runtime honesty check:
+reflection in the briefing · the day card and its focus (/focus/day?date={date}):
+the owner's journal (verbatim via journal_write in chat or the focus form,
+focus-side removal only), the day's recap with transcript expand, completions,
+and logs, with prev/next day nav — a read-only tile summary plus the full focus;
+deep-linked from calendar cells and recap day cards · a runtime honesty check:
 capture claims without a successful tool call trigger one self-repair
 pass, then an owner-visible origin-tagged check note · a 16-option soul
 avatar picker in the profile page (stored in `owner_settings`) · a
@@ -136,13 +137,13 @@ with no model calls: data dir writable, core collections present, model
 readiness (non-fatal), OS-access gate state, extension count.
 
 dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in chat
-(keyboard 1–9); a choice posts as the owner's turn · typed card registry — 10
+(keyboard 1–9); a choice posts as the owner's turn · typed card registry — 12
 parameterized, server-rendered card resources under `/ui/cards/{type}` (the
 composition unit for boards and on-the-spot UI): today, quests, calendar,
-timeline, journal, measure, lines, memory, skills, heads ·
-the candle (/journal): immersive writing page — free-hand or guided by one
-model-composed prompt line (deterministic fallback), entries shared with day
-pages · boards — owner-composed dashboards of typed cards at /boards
+timeline, journal, day, measure, lines, memory, skills, heads, habits ·
+the candle (the journal card's focus, /focus/journal): immersive writing
+surface — free-hand or guided by one model-composed prompt line (deterministic
+fallback), entries shared with the day card · boards — owner-composed dashboards of typed cards at /boards
 (Study/Quest log/Self/Balaur defaults); each board is a named, ordered list of
 card references in the `boards` collection; the page renders a 12-column CSS
 grid of server-rendered card slots; cards drag and resize (pointer +

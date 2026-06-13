@@ -97,11 +97,12 @@ database you own and can open with any SQLite tool.
   exists: sparklines for numeric kinds, recent lines for the rest, live
   habit streaks on top. Nothing is predefined; the briefing reflects
   yesterday's log in one line.
-- **Day pages — where a day lives:** `/day/{date}` assembles your journal
-  (written in chat via `journal_write` — your words, verbatim — or on the
-  page itself), the day's recap with its preserved transcript, what got
-  done, and what was logged. Prev/next navigation; calendar cells and
-  recap day cards link in. Journal entries are removable on the page —
+- **The day card — where a day lives:** the `day` card's focus
+  (`/focus/day?date={date}`) assembles your journal (written in chat via
+  `journal_write` — your words, verbatim — or in the focus itself), the day's
+  recap with its preserved transcript, what got done, and what was logged.
+  Prev/next navigation; calendar cells and recap day cards deep-link in. The
+  tile is a read-only summary. Journal entries are removable in the focus —
   the owner's right over their own words, never a model verb.
 - **OS access mode:** the four classic tools — `read`, `write`, `edit`,
   `bash` — exist but ship **disabled**. Set `BALAUR_OS_ACCESS=1` to enable;
