@@ -409,25 +409,23 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	}
 	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
 
-	// On the /tasks list view, also refresh the rail so the row moves/strikes.
-	// htmx auto-sent HX-Current-URL; a Datastar @post is a plain fetch, so the
-	// page is identified by the Referer instead. Only the list view has a rail
-	// (the timeline/calendar views embed card-task.html but no #quest-rail).
+	// The quest-log surface (now the quests focus at /focus/quests) shows a rail
+	// that must re-render after a transition so the row moves/strikes. A Datastar
+	// @post is a plain fetch, so we identify the surface by Referer. Detail-panel
+	// cards carry no "src", so they reach here (board tiles returned above).
 	if ref := e.Request.Header.Get("Referer"); ref != "" {
-		if u, err := url.Parse(ref); err == nil && u.Path == "/tasks" {
-			if view := u.Query().Get("view"); view == "" || view == "list" {
-				openRecs, _ := tasks.OpenTasks(h.app, nil)
-				var doneRecs []*core.Record
-				if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
-					doneRecs = dr
-				}
-				var rb strings.Builder
-				if err := h.tmpl.ExecuteTemplate(&rb, "quest_rail", buildQuestLog(openRecs, doneRecs, now)); err != nil {
-					return e.InternalServerError("rendering quest rail", err)
-				}
-				_ = sse.PatchElements(rb.String(),
-					datastar.WithSelectorID("quest-rail"), datastar.WithModeOuter())
+		if u, err := url.Parse(ref); err == nil && u.Path == "/focus/quests" {
+			openRecs, _ := tasks.OpenTasks(h.app, nil)
+			var doneRecs []*core.Record
+			if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", 6, 0); err == nil {
+				doneRecs = dr
 			}
+			var rb strings.Builder
+			if err := h.tmpl.ExecuteTemplate(&rb, "quest_rail", buildQuestLog(openRecs, doneRecs, now)); err != nil {
+				return e.InternalServerError("rendering quest rail", err)
+			}
+			_ = sse.PatchElements(rb.String(),
+				datastar.WithSelectorID("quest-rail"), datastar.WithModeOuter())
 		}
 	}
 	return nil

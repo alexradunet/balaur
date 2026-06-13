@@ -174,25 +174,25 @@ func TestTasksListGroupOrder(t *testing.T) {
 	scenario.Test(t)
 }
 
-// TestTaskTransitionRailRefresh verifies that a transition from the /tasks list
-// view emits a Datastar patch of the quest-rail in addition to the card patch,
-// while board and chat contexts get only the card patch. A Datastar @post sends
-// no HX-Current-URL, so the page is identified by the Referer instead.
+// TestTaskTransitionRailRefresh verifies that a transition from the quests focus
+// (/focus/quests) emits a Datastar patch of the quest-rail in addition to the
+// card patch, while board and chat contexts get only the card patch. A Datastar
+// @post sends no HX-Current-URL, so the surface is identified by the Referer.
 func TestTaskTransitionRailRefresh(t *testing.T) {
-	t.Run("from /tasks — response patches the quest-rail", func(t *testing.T) {
+	t.Run("from /focus/quests — response patches the quest-rail", func(t *testing.T) {
 		app := newWebApp(t)
 		// Seed two tasks so the rail has content after the transition.
 		rec := seedTaskWithRecur(t, app, "Complete me", "open", "daily", time.Time{})
 		seedTaskWithRecur(t, app, "Stay open", "open", "daily", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition with Referer=/tasks",
+			Name:   "transition with Referer=/focus/quests",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
 			Headers: map[string]string{
 				"Content-Type": "application/x-www-form-urlencoded",
-				"Referer":      "http://127.0.0.1:8090/tasks",
+				"Referer":      "http://127.0.0.1:8090/focus/quests",
 			},
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
@@ -201,7 +201,7 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 		scenario.Test(t)
 	})
 
-	t.Run("from /tasks — completed task absent from rail open groups", func(t *testing.T) {
+	t.Run("from /focus/quests — completed task absent from rail open groups", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Finish this quest", "open", "", time.Now().Add(time.Hour))
 
@@ -212,7 +212,7 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 			Body:   strings.NewReader("to=done"),
 			Headers: map[string]string{
 				"Content-Type": "application/x-www-form-urlencoded",
-				"Referer":      "http://127.0.0.1:8090/tasks",
+				"Referer":      "http://127.0.0.1:8090/focus/quests",
 			},
 			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus: 200,
