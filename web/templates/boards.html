@@ -26,7 +26,7 @@
     {{range .Boards}}
     <a class="k-tab{{if eq .ID $.Current.ID}} k-tab-active{{end}}"
        href="/boards/{{.ID}}"
-       data-on-click__prevent="@get('/boards/{{.ID}}')">{{.Name}}</a>
+       data-on:click__prevent="@get('/boards/{{.ID}}')">{{.Name}}</a>
     {{end}}
     <details class="board-new-details">
       <summary class="btn btn-ghost btn-sm">+ board</summary>

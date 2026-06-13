@@ -1,0 +1,220 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - link "Balaur" [ref=e3] [cursor=pointer]:
+      - /url: /
+    - navigation [ref=e4]:
+      - link "Chat" [ref=e5] [cursor=pointer]:
+        - /url: /chat
+      - link "Boards" [ref=e6] [cursor=pointer]:
+        - /url: /boards
+      - link "Tasks" [ref=e7] [cursor=pointer]:
+        - /url: /tasks
+      - link "Life" [ref=e8] [cursor=pointer]:
+        - /url: /life
+      - link "Journal" [ref=e9] [cursor=pointer]:
+        - /url: /journal
+      - link "Memory" [ref=e10] [cursor=pointer]:
+        - /url: /memory
+      - link "Heads" [ref=e11] [cursor=pointer]:
+        - /url: /heads
+      - link "Settings" [ref=e12] [cursor=pointer]:
+        - /url: /settings
+      - link "Engine room" [ref=e13] [cursor=pointer]:
+        - /url: /_/
+    - button "Toggle light/dark mode" [ref=e14] [cursor=pointer]: ☼
+  - main [ref=e16]:
+    - navigation [ref=e17]:
+      - link "Study" [ref=e18] [cursor=pointer]:
+        - /url: /boards/sl2mkwzqt8w3ojg
+      - link "Quest log" [ref=e19] [cursor=pointer]:
+        - /url: /boards/dpz12y7dcxjz0ia
+      - link "Self" [ref=e20] [cursor=pointer]:
+        - /url: /boards/r9yr8kopcshefd5
+      - link "Balaur" [ref=e21] [cursor=pointer]:
+        - /url: /boards/88ktlu806h8nq5s
+      - group [ref=e22]:
+        - generic "+ board" [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - heading "Study" [level=2] [ref=e25]
+      - generic [ref=e26]:
+        - group [ref=e27]:
+          - generic "Rename" [ref=e28] [cursor=pointer]
+        - button "Delete board" [ref=e30] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - generic "drag to move" [ref=e33]: ⠿
+        - article [ref=e35]:
+          - generic [ref=e37]: Today
+          - paragraph [ref=e38]: Nothing due today.
+          - link "all quests →" [ref=e40] [cursor=pointer]:
+            - /url: /tasks
+        - button "✕" [ref=e42] [cursor=pointer]
+      - generic [ref=e44]:
+        - generic "drag to move" [ref=e45]: ⠿
+        - article [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]: Recent lines
+            - generic [ref=e50]: sadsad
+          - paragraph [ref=e51]: No sadsad entries yet.
+          - link "life →" [ref=e53] [cursor=pointer]:
+            - /url: /life
+        - button "✕" [ref=e55] [cursor=pointer]
+      - group [ref=e58]:
+        - generic "+ add a card" [ref=e59] [cursor=pointer]
+  - complementary [ref=e60]:
+    - generic [ref=e61]:
+      - heading "◇ Earlier this week" [level=2] [ref=e62]
+      - article [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e65]: Friday, June 12 2026
+          - link "visit" [ref=e66] [cursor=pointer]:
+            - /url: /day/2026-06-12
+          - button "transcript" [ref=e67] [cursor=pointer]
+        - paragraph [ref=e68]: You returned home from a city trip with friends and greeted me warmly. We briefly introduced ourselves; you told me your name is Alex, and I confirmed my role as your personal companion for tasks, memory, and journaling. You asked how I was doing, and we exchanged friendly pleasantries before pausing. Nothing major was decided today, but the connection felt solid. Tomorrow, I hope to help you unpack your travels or plan your next move.
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - figure "Cico" [ref=e71]:
+          - generic [ref=e73]: Cico
+        - generic [ref=e75]: Hello Sir
+      - generic [ref=e76]:
+        - figure "Cico" [ref=e77]:
+          - generic [ref=e79]: Cico
+        - generic [ref=e81]: "Reply with exactly: BALAUR_LLAMAFILE_OK"
+      - generic [ref=e82]:
+        - figure "Cico" [ref=e83]:
+          - generic [ref=e85]: Cico
+        - generic [ref=e87]: hello
+      - generic [ref=e88]:
+        - figure "Cico" [ref=e89]:
+          - generic [ref=e91]: Cico
+        - generic [ref=e93]: Who are you?
+      - generic [ref=e94]:
+        - figure "Cico" [ref=e95]:
+          - generic [ref=e97]: Cico
+        - generic [ref=e99]: sddasd
+      - generic [ref=e100]:
+        - figure "Cico" [ref=e101]:
+          - generic [ref=e103]: Cico
+        - generic [ref=e105]: "Reply with exactly the token: BALAUR_LLAMAFILE_OK"
+      - generic [ref=e106]:
+        - figure "Cico" [ref=e107]:
+          - generic [ref=e109]: Cico
+        - generic [ref=e111]: In one short sentence, what are you?
+      - generic [ref=e112]:
+        - figure "Cico" [ref=e113]:
+          - generic [ref=e115]: Cico
+        - generic [ref=e117]: Hello
+      - generic [ref=e118]:
+        - figure "Cico" [ref=e119]:
+          - generic [ref=e121]: Cico
+        - generic [ref=e123]: In one short sentence, what are you?
+      - generic [ref=e124]:
+        - figure "Cico" [ref=e125]:
+          - generic [ref=e127]: Cico
+        - generic [ref=e129]: Hello
+      - generic [ref=e130]:
+        - figure "Cico" [ref=e131]:
+          - generic [ref=e133]: Cico
+        - generic [ref=e135]: Say hello in one short sentence.
+      - generic [ref=e136]:
+        - figure "Balaur" [ref=e137]:
+          - generic [ref=e139]: Balaur
+        - generic [ref=e141]: Hello! How can I assist you today?
+      - generic [ref=e142]:
+        - figure "Cico" [ref=e143]:
+          - generic [ref=e145]: Cico
+        - generic [ref=e147]: What can you do?
+      - generic [ref=e148]:
+        - figure "Balaur" [ref=e149]:
+          - generic [ref=e151]: Balaur
+        - generic [ref=e153]: I am Balaur, a personal companion who helps manage your tasks, track life events, keep journals, and remember important details about you.
+      - generic [ref=e154]:
+        - figure "Cico" [ref=e155]:
+          - generic [ref=e157]: Cico
+        - generic [ref=e159]: My name is Alex
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - img [ref=e162]
+          - text: tool · remember
+        - text: Memory proposal "Owner's name" sent to the owner for approval. It is NOT yet part of your memory.
+      - article [ref=e164]:
+        - generic [ref=e165]:
+          - generic [ref=e166]: ▪ person
+          - generic "importance 3/5" [ref=e167]
+        - heading "Owner's name" [level=3] [ref=e173]
+        - paragraph [ref=e174]: Alex's name is Alex.
+        - group [ref=e175]:
+          - generic "Edit" [ref=e176] [cursor=pointer]
+          - option "fact"
+          - option "preference"
+          - option "person" [selected]
+          - option "project"
+          - option "context"
+        - generic [ref=e177]:
+          - button "Archive" [ref=e179] [cursor=pointer]
+          - generic [ref=e180]: used ×1
+      - generic [ref=e181]:
+        - figure "Balaur" [ref=e182]:
+          - generic [ref=e184]: Balaur
+        - generic [ref=e186]: <think> </think> Hello, Alex! I've noted your name. How can I help you today?
+      - generic [ref=e187]:
+        - figure "Cico" [ref=e188]:
+          - generic [ref=e190]: Cico
+        - generic [ref=e192]: Let's get to know each other
+      - generic [ref=e193]:
+        - generic [ref=e194]:
+          - img [ref=e195]
+          - text: tool · recall
+        - text: "- [person] Owner's name: Alex's name is Alex."
+      - generic [ref=e196]:
+        - figure "Balaur" [ref=e197]:
+          - generic [ref=e199]: Balaur
+        - generic [ref=e201]: That’s great, Alex! I’m Balaur, your personal companion. I help you organize tasks, track habits and milestones, keep a journal of your thoughts, and remember important details about your life. You can think of me as a thoughtful assistant who’s always ready to listen and support. What part of our conversation would you like to start with? Maybe we could talk about your goals, current projects, or something on your mind lately.
+      - generic [ref=e202]:
+        - figure "Cico" [ref=e203]:
+          - generic [ref=e205]: Cico
+        - generic [ref=e207]: hello
+      - generic [ref=e208]:
+        - figure "Cico" [ref=e209]:
+          - generic [ref=e211]: Cico
+        - generic [ref=e213]: How are you?
+      - generic [ref=e214]:
+        - figure "Balaur" [ref=e215]:
+          - generic [ref=e217]: Balaur
+        - generic [ref=e219]: I'm doing well, Alex! How are you feeling today?
+      - generic [ref=e220]:
+        - figure "Cico" [ref=e221]:
+          - generic [ref=e223]: Cico
+        - generic [ref=e225]: Nice. I just came back from the city with my friends
+      - generic [ref=e226]:
+        - figure "Cico" [ref=e227]:
+          - generic [ref=e229]: Cico
+        - generic [ref=e231]: hello there
+      - generic [ref=e232]:
+        - figure "Cico" [ref=e233]:
+          - generic [ref=e235]: Cico
+        - generic [ref=e237]: Say hello in exactly three words.
+      - generic [ref=e238]:
+        - figure "Balaur" [ref=e239]:
+          - generic [ref=e241]: Balaur
+        - generic [ref=e243]: Hello Alex! Nice to see you.
+      - generic [ref=e244]:
+        - figure "Cico" [ref=e245]:
+          - generic [ref=e247]: Cico
+        - generic [ref=e249]: hi
+    - generic [ref=e250]:
+      - figure "Cico" [ref=e251]:
+        - generic [ref=e253]: Cico
+      - generic [ref=e255]:
+        - textbox "Speak with Balaur via Local Qwen3.5 4B..." [active] [ref=e256]
+        - generic [ref=e257]:
+          - generic [ref=e258]: enter to speak · shift+enter for a new line
+          - button "Speak" [ref=e259] [cursor=pointer]
+    - region "Model" [ref=e261]:
+      - generic [ref=e262]:
+        - generic [ref=e263]: Model
+        - generic [ref=e264]: Local Qwen3.5 4B
+        - link "Manage models & APIs →" [ref=e265] [cursor=pointer]:
+          - /url: /settings/models
+      - link "Your avatar & profile →" [ref=e268] [cursor=pointer]:
+        - /url: /profile

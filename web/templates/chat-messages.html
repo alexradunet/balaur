@@ -106,7 +106,7 @@
          the Datastar expression reads it via el.dataset.label — no JS-string
          escaping hazard. The next turn's handler clears stale .choices panels. */ -}}
     <button class="choice" type="button" data-label="{{$c.Label}}"
-            data-on-click="$message = el.dataset.label; @post('/ui/chat')">
+            data-on:click="$message = el.dataset.label; @post('/ui/chat')">
       <span class="choice-key">{{addOne $i}}</span>
       <span class="choice-label">{{$c.Label}}</span>
       {{with $c.Hint}}<span class="choice-hint">{{.}}</span>{{end}}

@@ -71,7 +71,7 @@
 {{end}}
 
 {{define "chat_draft"}}
-<div class="msg msg-user msg-draft" id="chat-draft" data-signals-message="''"
+<div class="msg msg-user msg-draft" id="chat-draft" data-signals:message="''"
      {{if .DraftOOB}}hx-swap-oob="outerHTML"{{end}}>
   <figure class="portrait">
     <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
@@ -80,8 +80,8 @@
     <figcaption class="who">{{.OwnerName}}</figcaption>
   </figure>
   <div class="msg-main">
-    <form class="chat-form" data-on-submit="@post('/ui/chat')">
-      <textarea name="message" data-bind-message placeholder="{{.ChatPlaceholder}}" rows="2"
+    <form class="chat-form" data-on:submit="@post('/ui/chat')">
+      <textarea name="message" data-bind:message placeholder="{{.ChatPlaceholder}}" rows="2"
                 autocomplete="off" autofocus required
                 {{if not .ChatReady}}disabled{{end}}
                 onkeydown="balaurSubmitOnEnter(event)"></textarea>
