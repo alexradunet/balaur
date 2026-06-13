@@ -475,3 +475,93 @@ func TestBoardsFreeLayoutRender(t *testing.T) {
 	}
 	scenario.Test(t)
 }
+
+// TestBoardCardAddRejectsCorruptCards verifies that POST /ui/boards/{id}/cards/add
+// returns 500 and does NOT overwrite the stored cards when the board's JSON is corrupt.
+func TestBoardCardAddRejectsCorruptCards(t *testing.T) {
+	app := newWebApp(t)
+	col, _ := app.FindCollectionByNameOrId("boards")
+	rec := core.NewRecord(col)
+	rec.Set("name", "CorruptBoard")
+	rec.Set("sort", 0)
+	// Store a value that is not a valid JSON array. PocketBase's JSONField
+	// normalizes bare strings into JSON-encoded strings on Set; capture the
+	// stored representation via GetString so the AfterTestFunc can assert the
+	// record was not overwritten.
+	rec.Set("cards", "{not json")
+	app.Save(rec)
+
+	// Capture the stored cards string BEFORE the request — PocketBase's
+	// JSONField will have normalized the raw value, so we compare against what
+	// GetString actually returns (not the original literal we passed to Set).
+	storedBefore := rec.GetString("cards")
+
+	scenario := tests.ApiScenario{
+		Name:            "POST /ui/boards/{id}/cards/add with corrupt cards returns 500",
+		Method:          "POST",
+		URL:             "/ui/boards/" + rec.Id + "/cards/add",
+		Body:            strings.NewReader("type=heads"),
+		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  500,
+		ExpectedContent: []string{"corrupted"},
+		AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
+			// Re-fetch to confirm the stored cards field was NOT overwritten.
+			updated, err := app.FindRecordById("boards", rec.Id)
+			if err != nil {
+				t.Fatalf("re-fetching board: %v", err)
+			}
+			if updated.GetString("cards") != storedBefore {
+				t.Errorf("corrupt cards were overwritten: got %q, want %q",
+					updated.GetString("cards"), storedBefore)
+			}
+		},
+	}
+	scenario.Test(t)
+}
+
+// TestBoardCardsOfBlankIsEmpty is a unit test for the boardCardsOf helper.
+// - blank field → nil, nil (empty board, not corruption)
+// - valid JSON   → round-trips correctly
+// - corrupt JSON → non-nil error
+func TestBoardCardsOfBlankIsEmpty(t *testing.T) {
+	app := newWebApp(t)
+	col, _ := app.FindCollectionByNameOrId("boards")
+
+	t.Run("blank field is nil with no error", func(t *testing.T) {
+		rec := core.NewRecord(col)
+		rec.Set("cards", "")
+		bcs, err := boardCardsOf(rec)
+		if err != nil {
+			t.Fatalf("unexpected error for blank field: %v", err)
+		}
+		if bcs != nil {
+			t.Errorf("expected nil slice for blank field, got %v", bcs)
+		}
+	})
+
+	t.Run("valid JSON round-trips", func(t *testing.T) {
+		rec := core.NewRecord(col)
+		raw, _ := json.Marshal([]boardCard{{Type: "heads"}, {Type: "today"}})
+		rec.Set("cards", string(raw))
+		bcs, err := boardCardsOf(rec)
+		if err != nil {
+			t.Fatalf("unexpected error for valid JSON: %v", err)
+		}
+		if len(bcs) != 2 {
+			t.Fatalf("expected 2 cards, got %d", len(bcs))
+		}
+		if bcs[0].Type != "heads" || bcs[1].Type != "today" {
+			t.Errorf("unexpected card types: %v", bcs)
+		}
+	})
+
+	t.Run("corrupt JSON returns error", func(t *testing.T) {
+		rec := core.NewRecord(col)
+		rec.Set("cards", "{not json")
+		_, err := boardCardsOf(rec)
+		if err == nil {
+			t.Error("expected error for corrupt JSON, got nil")
+		}
+	})
+}
