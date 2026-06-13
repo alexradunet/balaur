@@ -36,12 +36,16 @@ func newNonce() string {
 // execFragment executes a named template fragment to w, silently ignoring
 // errors — the caller already owns the live stream and cannot un-write bytes.
 func (h *handlers) execFragment(w io.Writer, name string, data messageView) {
-	_ = h.tmpl.ExecuteTemplate(w, name, data)
+	if err := h.tmpl.ExecuteTemplate(w, name, data); err != nil {
+		h.app.Logger().Warn("chat fragment render failed", "fragment", name, "err", err)
+	}
 }
 
 // execChoicesFragment executes the chat-choices template fragment.
 func (h *handlers) execChoicesFragment(w io.Writer, cv choicesView) {
-	_ = h.tmpl.ExecuteTemplate(w, "chat-choices", cv)
+	if err := h.tmpl.ExecuteTemplate(w, "chat-choices", cv); err != nil {
+		h.app.Logger().Warn("chat fragment render failed", "fragment", "chat-choices", "err", err)
+	}
 }
 
 // chat handles one user turn. The web layer is a gateway: it adapts the
