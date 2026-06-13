@@ -72,7 +72,7 @@
     <figcaption class="who">{{.OwnerName}}</figcaption>
   </figure>
   <div class="msg-main">
-    <form class="chat-form" data-on:submit="@post('/ui/chat')">
+    <form class="chat-form" data-on:submit="@post('{{.ConvPostURL}}')">
       <textarea name="message" data-bind:message placeholder="{{.ChatPlaceholder}}" rows="2"
                 autocomplete="off" autofocus required
                 {{if not .ChatReady}}disabled{{end}}
