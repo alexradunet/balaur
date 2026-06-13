@@ -204,6 +204,7 @@ Optional environment variables:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `BALAUR_ALLOWED_HOSTS` | (unset) | Comma-separated `host[:port]` values allowed as the Host header beyond loopback (LAN names, NetBird — see [docs/netbird.md](docs/netbird.md)) |
 | `BALAUR_CHAT_MODEL` | (unset) | Path to a local model file (`.llamafile` or `.gguf`); overrides the default and the /models page choice |
 | `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-download of the default Qwen3.5-4B llamafile |
 | `BALAUR_LLAMAFILE` | (unset) | Path to the llamafile engine binary used to serve a bare `.gguf`; defaults to `pb_data/bin/llamafile`. Not needed for a fat `.llamafile`. |
