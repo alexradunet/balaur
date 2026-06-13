@@ -59,6 +59,7 @@ func init() {
 			W:     8,
 			H:     30,
 			Params: []ParamSpec{
+				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (Done/Snooze/Drop inline)"},
 				{Name: "status", Enum: []string{"open", "done", "all"}, Doc: "filter by task status (default: open)"},
 				{Name: "limit", Doc: "maximum rows to show (default 10, max 50)"},
 			},

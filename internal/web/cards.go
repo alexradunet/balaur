@@ -197,8 +197,24 @@ func (h *handlers) renderCardToday(e *core.RequestEvent, _ cards.Spec, _ map[str
 	return h.tmpl.ExecuteTemplate(e.Response, "ucard_today", cardTodayView{Tasks: rows})
 }
 
+// cardQuestsManageView feeds the interactive quests card (mode=manage): open
+// tasks rendered via the self-targeting card-task.html partial (#tcard-{id}).
+type cardQuestsManageView struct {
+	Tasks []taskView
+}
+
 func (h *handlers) renderCardQuests(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
 	now := time.Now()
+	if params["mode"] == "manage" {
+		recs, _ := tasks.OpenTasks(h.app, nil)
+		limit := intParam(params, "limit", 12)
+		if len(recs) > limit {
+			recs = recs[:limit]
+		}
+		return h.tmpl.ExecuteTemplate(e.Response, "ucard_quests_manage", cardQuestsManageView{
+			Tasks: taskViewsOf(recs, now),
+		})
+	}
 	status := params["status"]
 	if status == "" {
 		status = "open"

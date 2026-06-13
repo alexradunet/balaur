@@ -65,6 +65,27 @@
 {{end}}
 
 {{- /* ------------------------------------------------------------------ */ -}}
+{{- /* ucard_quests_manage — interactive quests fold (mode=manage): open tasks
+     as self-targeting card-task.html partials (#tcard-{id}, Done/Snooze/Drop
+     inline). taskTransition only OOB-re-renders the rail on /tasks, so on a
+     board it simply swaps the card in place. context: cardQuestsManageView */ -}}
+{{define "ucard_quests_manage"}}
+<article class="kcard ucard ucard-manage ucard-quests-manage" id="ucard-quests-manage">
+  <header class="kcard-head">
+    <span class="kcard-kind"><img class="tool-icon" src="/static/icons/scroll.png" alt="">Quest log</span>
+    <a class="kcard-meta" href="/tasks">all quests →</a>
+  </header>
+  {{if .Tasks}}
+  <div class="ucard-manage-list">
+    {{range .Tasks}}{{template "card-task.html" .}}{{end}}
+  </div>
+  {{else}}
+  <p class="k-empty">No open quests — add one in chat.</p>
+  {{end}}
+</article>
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
 {{- /* calendar card — compact month grid */ -}}
 {{- /* context: cardCalendarView (embeds calView) */ -}}
 {{define "ucard_calendar"}}
