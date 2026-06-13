@@ -177,6 +177,37 @@ func TestUiCardDayTile(t *testing.T) {
 	s.Test(t)
 }
 
+// TestFocusMemoryShowsManager: /focus/memory renders the full knowledge manager
+// (active section + search), not the compact manage tile.
+func TestFocusMemoryShowsManager(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:           "GET /focus/memory shows the manager",
+		Method:         "GET",
+		URL:            "/focus/memory",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="k-active-grid"`,
+			"Active",
+			`/ui/knowledge/memories/grid`, // the live-search control
+		},
+	}
+	s.Test(t)
+}
+
+// TestFocusSkillsShowsManager: /focus/skills renders the skills manager.
+func TestFocusSkillsShowsManager(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:            "GET /focus/skills shows the manager",
+		Method:          "GET",
+		URL:             "/focus/skills",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{`id="k-active-grid"`, `/ui/knowledge/skills/grid`},
+	}
+	s.Test(t)
+}
+
 func TestFocusMissingRequiredParam(t *testing.T) {
 	s := tests.ApiScenario{
 		Name:            "GET /focus/measure without kind → 400",

@@ -16,6 +16,7 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/cards"
+	"github.com/alexradunet/balaur/internal/knowledge"
 )
 
 // focusView is the template data for focus_main / focus_page.
@@ -61,6 +62,10 @@ func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.
 		return h.journalFocusHTML()
 	case "day":
 		return h.dayFocusHTML(params)
+	case "memory":
+		return h.knowledgeFocusHTML(knowledge.Memory)
+	case "skills":
+		return h.knowledgeFocusHTML(knowledge.Skill)
 	}
 	return h.cardHTML(typ, params)
 }
