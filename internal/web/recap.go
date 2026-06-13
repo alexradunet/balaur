@@ -58,15 +58,16 @@ func (h *handlers) recapBands(e *core.RequestEvent) error {
 		e.Response.WriteHeader(http.StatusOK)
 		return nil // no history, nothing further back
 	}
-	// Same timezone as generation (see recap.EnsureSummaries).
-	oldest = oldest.In(time.Local)
+	// Same timezone as generation (store.OwnerLocation).
+	loc := store.OwnerLocation(h.app)
+	oldest = oldest.In(loc)
 
 	type bandView struct {
 		Heading string
 		Cards   []recapView
 	}
 	var view []bandView
-	for _, band := range recap.Bands(time.Now(), oldest) {
+	for _, band := range recap.Bands(time.Now().In(loc), oldest) {
 		bv := bandView{Heading: bandHeading(band.Type)}
 		for _, p := range band.Periods {
 			rec := recap.Find(h.app, master.Id, p)
@@ -114,7 +115,7 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 	if err != nil {
 		return e.BadRequestError("bad start", err)
 	}
-	p := recap.Containing(periodType, time.Unix(unix, 0).In(time.Local))
+	p := recap.Containing(periodType, time.Unix(unix, 0).In(store.OwnerLocation(h.app)))
 
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 
