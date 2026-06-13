@@ -1,19 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  {{template "page_head" .}}
-  <title>{{.Title}}</title>
-</head>
-<body>
-  {{template "topbar" .}}
-  <main>{{template "chat_dock" .}}</main>
-</body>
-</html>
+{{- /* home.html holds the companion-chat fragments shared by the board dock.
+     There is no standalone chat page — the dock (#dock) is the only chat
+     surface, shown as a resizable rail with a full-screen mode. */ -}}
 
-{{- /* chat_dock — the full companion chat column. Rendered as the home
-     page's main today; the persistent board sidebar mounts the same fragment
-     next. Context: homeData. */ -}}
+{{- /* chat_dock — the companion chat column mounted in #dock. Context: homeData. */ -}}
 {{define "chat_dock"}}
+  <div class="dock-grip" title="drag to resize" aria-hidden="true"></div>
+  <header class="dock-head">
+    <button class="dock-btn dock-full-btn" type="button"
+            onclick="basmToggleDockFull()" aria-label="Toggle full-screen chat"></button>
+  </header>
   {{if .HasRecap}}
   <div id="recap" class="recap-zone"
        hx-get="/ui/recap/bands" hx-trigger="revealed" hx-swap="outerHTML">

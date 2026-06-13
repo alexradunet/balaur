@@ -151,3 +151,37 @@ document.addEventListener('DOMContentLoaded', () => {
   balaurScrollToLatest();
   new MutationObserver(balaurScrollToLatest).observe(chat, { childList: true, subtree: true });
 });
+
+// ── Dock: full-screen toggle + drag-to-resize the rail ─────────────
+// State lives on <html> (applied early by the page_head inline script to avoid
+// a flash) and persists in localStorage.
+window.basmToggleDockFull = function () {
+  const on = document.documentElement.classList.toggle('dock-full');
+  localStorage.setItem('basm-dock-full', on ? '1' : '0');
+  balaurScrollToLatest();
+};
+
+// Drag the left grip to resize the rail. Delegated from document so it survives
+// #main swaps (the dock itself is never swapped). Disabled in full-screen mode.
+document.addEventListener('pointerdown', (e) => {
+  const grip = e.target.closest('.dock-grip');
+  if (!grip || document.documentElement.classList.contains('dock-full')) return;
+  e.preventDefault();
+  grip.setPointerCapture(e.pointerId);
+  grip.classList.add('dragging');
+  const onMove = (ev) => {
+    const w = Math.max(280, Math.min(720, window.innerWidth - ev.clientX));
+    document.documentElement.style.setProperty('--sidebar-w', w + 'px');
+  };
+  const onUp = () => {
+    grip.classList.remove('dragging');
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    const w = parseInt(document.documentElement.style.getPropertyValue('--sidebar-w'), 10);
+    if (w) localStorage.setItem('basm-dock-w', String(w));
+  };
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
+});

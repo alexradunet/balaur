@@ -2332,6 +2332,50 @@ progress.gguf-progress-bar::-moz-progress-bar {
 
 #dock #nudge-poll { display: none; }
 
+/* Dock header — holds the full-screen toggle. */
+.dock-head {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: flex-end;
+  height: 26px; padding: 0 6px;
+  background-color: var(--chrome-2);
+  background-image: var(--grain-warm); background-size: 4px 4px;
+  border-bottom: 1px solid var(--outline-2);
+}
+.dock-btn {
+  background: none; border: 0; cursor: pointer; padding: 2px 6px;
+  color: var(--chrome-fg); font: 15px/1 var(--font-mono);
+}
+.dock-btn:hover { color: var(--gold); }
+.dock-full-btn::before { content: "\2922"; }     /* ⤢ expand */
+.dock-full .dock-full-btn::before { content: "\2921"; } /* ⤡ minimise */
+
+/* Left-edge resize grip (rail mode only). */
+.dock-grip {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 7px;
+  cursor: ew-resize; z-index: 3; touch-action: none;
+}
+.dock-grip::after {
+  content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px;
+  background-color: var(--gold-deep); opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-crisp);
+}
+.dock-grip:hover::after, .dock-grip.dragging::after { opacity: .8; }
+
+/* Full-screen mode: the dock overlays the content area (board stays mounted
+   behind it); content centres for readability and the recap telescope — hidden
+   in the rail — returns. Toggled by basmToggleDockFull (class on <html>). */
+.dock-full .with-sidebar { padding-right: 0; }
+.dock-full #dock { left: 0; width: auto; z-index: 50; border-left: 0; box-shadow: none; }
+.dock-full #dock .dock-grip { display: none; }
+.dock-full #dock .chat,
+.dock-full #dock .msg-draft,
+.dock-full #dock .chatbar,
+.dock-full #dock .dock-head,
+.dock-full #dock .recap-zone,
+.dock-full #dock .recap-band { width: auto; max-width: 940px; margin-left: auto; margin-right: auto; }
+.dock-full #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 24px 8px; }
+.dock-full #dock .recap-zone, .dock-full #dock .recap-band { display: block; }
+
 @media (max-width: 900px) {
   .with-sidebar { padding-right: 0; }
   #dock {
@@ -2341,6 +2385,9 @@ progress.gguf-progress-bar::-moz-progress-bar {
     border-left: 0;
     border-top: 2px solid var(--outline-2);
   }
+  .dock-grip { display: none; }
+  /* full mode still overlays on small screens (wins on specificity) */
+  .dock-full #dock { position: fixed; inset: 62px 0 0 0; width: auto; height: auto; }
 }
 
 /* Interactive knowledge fold (mode=manage): a stacked list of self-contained
