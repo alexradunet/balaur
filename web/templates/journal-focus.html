@@ -17,3 +17,27 @@
   {{template "journal_candle_body" .}}
 </div>
 {{end}}
+
+{{define "journal_candle_body"}}
+<div id="journal-candle-body">
+  <form class="journal-form"
+        data-on:submit__prevent="@post('/ui/journal', {contentType:'form'})">
+    <textarea name="text" rows="8" placeholder="What stays with you from this day?"></textarea>
+    <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
+  </form>
+
+  {{if .Journal}}
+  <div class="journal-list">
+    {{range .Journal}}
+    <article class="journal-entry">
+      <div class="journal-meta">
+        <span class="tl-time">{{.Time}}</span>
+        <a class="btn btn-ghost btn-sm" href="/focus/day?date={{.Date}}">→ this day</a>
+      </div>
+      <p class="journal-text">{{.Text}}</p>
+    </article>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}

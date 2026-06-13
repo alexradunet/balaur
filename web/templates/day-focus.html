@@ -48,3 +48,29 @@
   </section>
 </div>
 {{end}}
+
+{{define "day_journal"}}
+<section class="k-section" id="day-journal">
+  <h2 class="k-heading">Your thoughts</h2>
+  {{if .Journal}}
+  <div class="journal-list">
+    {{range .Journal}}
+    <article class="journal-entry">
+      <div class="journal-meta">
+        <span class="tl-time">{{.Time}}</span>
+        <form data-on:submit__prevent="@post('/ui/day/journal/{{.ID}}/drop?date={{$.Date}}')">
+          <button class="btn btn-ghost btn-sm" type="submit">remove</button>
+        </form>
+      </div>
+      <p class="journal-text">{{.Text}}</p>
+    </article>
+    {{end}}
+  </div>
+  {{end}}
+  <form class="journal-form"
+        data-on:submit__prevent="@post('/ui/day/{{.Date}}/journal', {contentType:'form'})">
+    <textarea name="text" rows="3" placeholder="What stays with you from this day?" required></textarea>
+    <button class="btn btn-primary btn-sm" type="submit">Keep it</button>
+  </form>
+</section>
+{{end}}

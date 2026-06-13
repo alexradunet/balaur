@@ -16,9 +16,10 @@ import (
 	"github.com/alexradunet/balaur/internal/llm"
 )
 
-// /journal — the candle: an immersive writing page for the owner's own words.
-// Free-hand (default) or guided by one model-composed prompt line.
-// Entries are the same journal records as the day pages and chat tool.
+// The candle — the journal card's focus: an immersive writing surface for the
+// owner's own words. Free-hand (default) or guided by one model-composed prompt
+// line. Entries are the same journal records as the day card and chat tool.
+// (journalFocusHTML renders this body; the standalone /journal page is retired.)
 
 const candlePromptFallback = "Write what the day left behind. I am listening."
 const candlePromptTimeout = 30 * time.Second
@@ -33,15 +34,6 @@ type candleData struct {
 	Dock      homeData
 	Today     string // YYYY-MM-DD, for the write form target
 	Journal   []candleJournalView
-}
-
-func (h *handlers) journalPage(e *core.RequestEvent) error {
-	now := time.Now()
-	data, err := h.buildCandleData(now)
-	if err != nil {
-		return e.InternalServerError("loading journal", err)
-	}
-	return h.render(e, "journal.html", data)
 }
 
 // journalWrite handles POST /ui/journal: writes an entry for today, then

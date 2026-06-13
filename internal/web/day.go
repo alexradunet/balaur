@@ -3,7 +3,6 @@ package web
 import (
 	"fmt"
 	"html/template"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -15,10 +14,11 @@ import (
 	"github.com/alexradunet/balaur/internal/life"
 )
 
-// /day/{date}: where one day of the owner's life lives — their journal
-// (writable here and from chat), the day's recap with its preserved
-// transcript, what got done, and what was logged. Assembled entirely from
-// what other features already keep; the page imposes nothing.
+// The day card's focus: where one day of the owner's life lives — their journal
+// (writable here and from chat), the day's recap with its preserved transcript,
+// what got done, and what was logged. Assembled entirely from what other
+// features already keep; the surface imposes nothing. (dayFocusHTML renders this
+// body; the standalone /day/{date} page is retired.)
 
 const dayLayout = "2006-01-02"
 
@@ -41,23 +41,6 @@ type dayData struct {
 	RecapStart string // unix seconds for the transcript expander
 	Done       []dayLineView
 	Logs       []dayLineView
-}
-
-func (h *handlers) dayPage(e *core.RequestEvent) error {
-	now := time.Now()
-	d, err := time.ParseInLocation(dayLayout, e.Request.PathValue("date"), now.Location())
-	if err != nil {
-		return e.BadRequestError("bad date — want YYYY-MM-DD", err)
-	}
-	today := dayStartOf(now)
-	if d.After(today) {
-		return e.Redirect(http.StatusFound, "/day/"+today.Format(dayLayout))
-	}
-	data, err := h.buildDay(d, now)
-	if err != nil {
-		return e.InternalServerError("loading day", err)
-	}
-	return h.render(e, "day.html", data)
 }
 
 func (h *handlers) buildDay(d, now time.Time) (dayData, error) {

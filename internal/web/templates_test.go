@@ -184,6 +184,9 @@ func TestLifePageRenders(t *testing.T) {
 	}
 }
 
+// TestDayPageRenders: the day view is now the day card's focus body (day_focus).
+// The standalone day.html doc is retired, so this renders the body fragment and
+// asserts its sections; prev/next deep-link into the focus (/focus/day?date=…).
 func TestDayPageRenders(t *testing.T) {
 	tmpl := parseTemplates(t)
 	data := dayData{
@@ -197,24 +200,25 @@ func TestDayPageRenders(t *testing.T) {
 		Logs:       []dayLineView{{Time: "08:00", Text: "weight: 82.5 kg"}},
 	}
 	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "day.html", data); err != nil {
-		t.Fatalf("day.html: %v", err)
+	if err := tmpl.ExecuteTemplate(&b, "day_focus", data); err != nil {
+		t.Fatalf("day_focus: %v", err)
 	}
 	out := b.String()
 	for _, want := range []string{
 		"A good, quiet day.", "remove", "Keep it", "notary papers",
-		"transcript", "Call notary", "weight: 82.5 kg", "/day/2026-06-09", "/day/2026-06-11",
+		"transcript", "Call notary", "weight: 82.5 kg",
+		"/focus/day?date=2026-06-09", "/focus/day?date=2026-06-11",
 	} {
 		if !strings.Contains(out, want) {
-			t.Errorf("day page missing %q", want)
+			t.Errorf("day focus missing %q", want)
 		}
 	}
 
 	// Today: no next link, no transcript expander, honest empty states.
 	b.Reset()
 	today := dayData{Title: "t", Date: "2026-06-11", Label: "Thursday, June 11 2026", IsToday: true, Prev: "2026-06-10"}
-	if err := tmpl.ExecuteTemplate(&b, "day.html", today); err != nil {
-		t.Fatalf("day.html today: %v", err)
+	if err := tmpl.ExecuteTemplate(&b, "day_focus", today); err != nil {
+		t.Fatalf("day_focus today: %v", err)
 	}
 	out = b.String()
 	if strings.Contains(out, "transcript") {
@@ -222,7 +226,7 @@ func TestDayPageRenders(t *testing.T) {
 	}
 	for _, want := range []string{"still being written", "Nothing marked done", "Nothing logged"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("today page missing %q", want)
+			t.Errorf("today focus missing %q", want)
 		}
 	}
 }
