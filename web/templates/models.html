@@ -18,9 +18,9 @@
     </form>
   </div>
   {{else if .Err}}
-  <p class="model-error">{{.Err}} — <a href="/settings/models">reload</a></p>
+  <p class="model-error">{{.Err}} — <a href="/focus/settings?section=models">reload</a></p>
   {{else if .Done}}
-  <p class="gguf-done">Download finished. <a href="/settings/models">Reload</a></p>
+  <p class="gguf-done">Download finished. <a href="/focus/settings?section=models">Reload</a></p>
   {{end}}
 </div>
 {{end}}

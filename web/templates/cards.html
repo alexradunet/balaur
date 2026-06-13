@@ -306,7 +306,7 @@
   <ul class="ucard-list">
     {{range .Records}}
     <li class="ucard-row">
-      <span class="ucard-title"><a href="/settings/skills">{{.Name}}</a></span>
+      <span class="ucard-title"><a href="/focus/skills">{{.Name}}</a></span>
       {{if .Enabled}}<span class="kcard-on">enabled</span>{{end}}
       {{with .Description}}<span class="kcard-meta">{{.}}</span>{{end}}
     </li>
@@ -315,7 +315,7 @@
   {{else}}
   <p class="k-empty">No active skills yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/settings/skills">all skills →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/skills">all skills →</a></footer>
 </article>
 {{end}}
 

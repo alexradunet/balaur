@@ -54,12 +54,13 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Fatalf("chat_bar: %v", err)
 	}
 	out := b.String()
-	// The inline model chooser and the add-API form were moved to /settings/models.
+	// The inline model chooser and the add-API form were moved to the settings
+	// card's models focus.
 	if strings.Contains(out, "model-choice-list") || strings.Contains(out, "Add OpenAI-compatible API") {
 		t.Error("chatbar should no longer render the inline model chooser or add-API form")
 	}
-	if !strings.Contains(out, `href="/settings/models"`) {
-		t.Error("chatbar should link to /settings/models to manage models")
+	if !strings.Contains(out, `href="/focus/settings?section=models"`) {
+		t.Error("chatbar should link to the settings models focus to manage models")
 	}
 	// The form now lives in chat_draft, not in the chatbar.
 	if strings.Contains(out, `name="message"`) {
