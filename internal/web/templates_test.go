@@ -231,13 +231,14 @@ func TestCalendarCellsLinkToDayPages(t *testing.T) {
 	tmpl := parseTemplates(t)
 	var b strings.Builder
 	// The calendar surface is now the calendar card (ucard_calendar); its cells
-	// link to day pages just as the retired /tasks calendar view did.
+	// deep-link into the day card's focus (/focus/day?date=…), which replaced the
+	// retired /day page.
 	cal := buildCalendar(nil, "2026-06", time.Date(2026, 6, 11, 12, 0, 0, 0, time.Local))
 	if err := tmpl.ExecuteTemplate(&b, "ucard_calendar", calendarCardView{Cal: cal}); err != nil {
 		t.Fatalf("ucard_calendar: %v", err)
 	}
-	if !strings.Contains(b.String(), `href="/day/2026-06-11"`) {
-		t.Error("calendar cells do not link to day pages")
+	if !strings.Contains(b.String(), `href="/focus/day?date=2026-06-11"`) {
+		t.Error("calendar cells do not link to the day focus")
 	}
 }
 

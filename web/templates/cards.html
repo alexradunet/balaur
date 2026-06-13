@@ -104,7 +104,7 @@
         <tr>
           {{range .}}
           <td class="cal-cell{{if not .InMonth}} cal-out{{end}}{{if .IsToday}} cal-today{{end}}">
-            <a class="cal-daylink" href="/day/{{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
+            <a class="cal-daylink" href="/focus/day?date={{.Date}}"><span class="cal-daynum">{{.Day}}</span></a>
             {{range .Items}}<span class="cal-item" title="{{.Time}} {{.Title}}">{{.Time}}</span>{{end}}
           </td>
           {{end}}
@@ -166,7 +166,7 @@
   {{else}}
   <p class="k-empty">No journal entries yet.</p>
   {{end}}
-  <footer class="kcard-actions"><a href="/day/{{.TodayDate}}">today's page →</a></footer>
+  <footer class="kcard-actions"><a href="/focus/day?date={{.TodayDate}}">today's page →</a></footer>
 </article>
 {{end}}
 
