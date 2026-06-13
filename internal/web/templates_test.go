@@ -415,3 +415,27 @@ func TestChatbarPollAndDraft(t *testing.T) {
 // shared chat_draft (#chat-draft). The dock swap patches only #dock-convo and
 // is covered by TestDockConversationMaster/Branch in dock_test.go, so the old
 // TestHeadChatDraftIdDecollided guard for the deleted page is gone.
+
+// TestHeadCardOpenChatStreamingGate: the heads card's "Open chat" button also
+// swaps the dock (GET /ui/dock/conversation?head={id}), so — like the dock's
+// back-to-main button — it must be gated on $streaming. Without the gate,
+// clicking another head's "Open chat" mid-stream swaps the dock without
+// aborting the in-flight POST, leaking head-styled tokens into the master
+// #chat (same race the back-button gate closed, plan 058).
+func TestHeadCardOpenChatStreamingGate(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	var b strings.Builder
+	hv := headView{ID: "h1", Name: "Scribe", Status: "active"}
+	if err := tmpl.ExecuteTemplate(&b, "head_card", hv); err != nil {
+		t.Fatalf("head_card: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `data-attr:disabled="$streaming"`) {
+		t.Errorf("Open chat button must carry data-attr:disabled=\"$streaming\"; got:\n%s", out)
+	}
+	// The click action must be guarded so it is inert while a turn streams.
+	if !strings.Contains(out, `!$streaming && @get('/ui/dock/conversation?head=h1')`) {
+		t.Errorf("Open chat click must be guarded by !$streaming; got:\n%s", out)
+	}
+}

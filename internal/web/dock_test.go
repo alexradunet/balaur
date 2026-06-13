@@ -1,6 +1,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -22,10 +23,14 @@ func TestDockConversationMaster(t *testing.T) {
 			"selector #dock-convo",
 			// SSE element payloads JSON-escape forward slashes (\/).
 			`@post('\/ui\/chat')`,
-			// The swap re-enables the master-only nudge poll.
+			// The swap re-enables the master-only nudge poll and resets the
+			// streaming gate (clears any stale true from an in-flight stream).
 			`"dockMaster":true`,
+			`"streaming":false`,
 		},
-		NotExpectedContent: []string{"back to main"},
+		// The master dock render must stay byte-identical: no back affordance and
+		// no $streaming gate leaking into the master markup.
+		NotExpectedContent: []string{"back to main", "$streaming"},
 	}
 	s.Test(t)
 }
@@ -49,8 +54,10 @@ func TestDockConversationBranch(t *testing.T) {
 			`@post('\/ui\/heads\/` + head.Id + `\/chat')`,
 			"back to main",
 			"Scribe",
-			// The swap silences the master-only nudge poll on a branch.
+			// The swap silences the master-only nudge poll on a branch and
+			// resets the streaming gate.
 			`"dockMaster":false`,
+			`"streaming":false`,
 			// No model is configured in the test app, so the greeting must
 			// surface the model-unavailable error — not a blank <p></p>.
 			"no active model is available",
@@ -74,6 +81,54 @@ func TestDockConversationMergedForbidden(t *testing.T) {
 		TestAppFactory:  func(testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  403,
 		ExpectedContent: []string{"not active"},
+	}
+	s.Test(t)
+}
+
+// TestDockConvoBackButtonStreamingGate: the branch back button carries the
+// Datastar disabled binding so it is inert while a turn streams, and the
+// nudge-poll initializes the $streaming signal (it lives outside #dock-convo).
+func TestDockConvoBackButtonStreamingGate(t *testing.T) {
+	tmpl := parseTemplates(t)
+
+	// Branch render: ConvBack=true surfaces the back affordance.
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "dock_convo", homeData{
+		ConvBack: true, ConvHeadName: "Scribe",
+	}); err != nil {
+		t.Fatalf("dock_convo: %v", err)
+	}
+	out := b.String()
+	if !strings.Contains(out, `data-attr:disabled="$streaming"`) {
+		t.Errorf("branch back button must carry data-attr:disabled=\"$streaming\"; got:\n%s", out)
+	}
+
+	// The nudge-poll (in chat_dock, outside #dock-convo) initializes the signal.
+	var shell strings.Builder
+	if err := tmpl.ExecuteTemplate(&shell, "chat_dock", homeData{}); err != nil {
+		t.Fatalf("chat_dock: %v", err)
+	}
+	if !strings.Contains(shell.String(), `data-signals:streaming="false"`) {
+		t.Errorf("#nudge-poll must initialize data-signals:streaming=\"false\"; got:\n%s", shell.String())
+	}
+}
+
+// TestHeadChatInactiveShowsNote: posting to an inactive head's branch does NOT
+// silently 403 — it opens a 200 SSE that clears the draft and appends a note
+// explaining the branch has closed (the @post must patch something, not fail
+// silently with a bare 403).
+func TestHeadChatInactiveShowsNote(t *testing.T) {
+	app := newWebApp(t)
+	head := seedHeadRec(t, app, "Scribe", "merged") // "merged" is not "active"
+	s := tests.ApiScenario{
+		Name:            "POST /ui/heads/{id}/chat to a closed head shows a note",
+		Method:          "POST",
+		URL:             "/ui/heads/" + head.Id + "/chat",
+		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		Body:            strings.NewReader("message=hi"),
+		TestAppFactory:  func(testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"datastar-patch-elements", "no longer active"},
 	}
 	s.Test(t)
 }

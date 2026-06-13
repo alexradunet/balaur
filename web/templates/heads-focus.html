@@ -15,7 +15,8 @@
         <span class="tag">{{.Status}}</span>
         {{if .Expires}}<span class="head-expires">expires {{.Expires}}</span>{{end}}
         <button class="btn btn-ghost" style="margin-left:auto" type="button"
-                data-on:click="@get('/ui/dock/conversation?head={{$h.ID}}')">Open chat →</button>
+                data-attr:disabled="$streaming"
+                data-on:click="!$streaming && @get('/ui/dock/conversation?head={{$h.ID}}')">Open chat →</button>
       </div>
     </div>
   </div>
