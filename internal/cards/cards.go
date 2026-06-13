@@ -31,6 +31,11 @@ type Spec struct {
 	Params []ParamSpec // accepted query parameters
 }
 
+// maxParamLen is the maximum byte length for free-string card params.
+// Model-composable params are capped here to prevent tool calls from bloating
+// stored board JSON without bound.
+const maxParamLen = 256
+
 // registry holds the canonical set of card specs, in definition order.
 var registry []Spec
 
@@ -274,6 +279,12 @@ func Validate(typ string, params map[string]string) (map[string]string, error) {
 			continue
 		}
 
+		// Free-string params are model-composable; cap them so a tool call
+		// cannot bloat stored board JSON. Truncation, not rejection — cards
+		// must stay forgiving.
+		if len(v) > maxParamLen {
+			v = v[:maxParamLen]
+		}
 		out[ps.Name] = v
 	}
 

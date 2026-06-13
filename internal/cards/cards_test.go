@@ -178,6 +178,36 @@ func TestValidateKindForMeasurePresent(t *testing.T) {
 	}
 }
 
+func TestValidateFreeStringParamCap(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantLen int
+	}{
+		{
+			name:    "1000-char kind is truncated to 256",
+			input:   strings.Repeat("x", 1000),
+			wantLen: 256,
+		},
+		{
+			name:    "10-char kind is unchanged",
+			input:   strings.Repeat("a", 10),
+			wantLen: 10,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := cards.Validate("measure", map[string]string{"kind": tc.input})
+			if err != nil {
+				t.Fatalf("Validate error: %v", err)
+			}
+			if got := len(out["kind"]); got != tc.wantLen {
+				t.Errorf("len(kind) = %d; want %d", got, tc.wantLen)
+			}
+		})
+	}
+}
+
 func TestNoWebImports(t *testing.T) {
 	// This test is a compile-time fact: the package has no internal/web imports.
 	// If you can run `go test ./internal/cards/...` without a cycle error, this passes.

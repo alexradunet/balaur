@@ -288,6 +288,30 @@ func TestUiCardHeads(t *testing.T) {
 	scenario.Test(t)
 }
 
+// ---- quests: bad status value → card-note-error with escaped payload ----
+
+func TestUiCardQuestsBadStatusEscaped(t *testing.T) {
+	// A crafted status value containing HTML markup must arrive escaped in the
+	// error strip — never as raw markup. ApiScenario.ExpectedContent checks for
+	// substring presence; we also assert absence of the raw tag.
+	scenario := tests.ApiScenario{
+		Name:            "quests?status=<img src=x onerror=x> → escaped in error",
+		Method:          "GET",
+		URL:             "/ui/cards/quests?status=%3Cimg+src%3Dx+onerror%3Dx%3E",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"card-note-error", "&lt;img"},
+		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
+			raw, _ := io.ReadAll(res.Body)
+			body := string(raw)
+			if strings.Contains(body, "<img") {
+				tb.Errorf("raw <img> tag found in error response body — not escaped:\n%s", body)
+			}
+		},
+	}
+	scenario.Test(t)
+}
+
 // ---- no Save call in cards.go (compile-time: verified by grep in done criteria) ----
 
 func TestCardHandlersReadOnly(t *testing.T) {
