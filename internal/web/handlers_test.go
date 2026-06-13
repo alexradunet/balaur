@@ -16,6 +16,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
+	"github.com/alexradunet/balaur/internal/turn"
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
@@ -913,4 +914,92 @@ func TestDayPageRendersOnEmptyDB(t *testing.T) {
 		ExpectedContent: []string{"day-title", "January"},
 	}
 	scenario.Test(t)
+}
+
+// TestSelectModel covers the POST /ui/model/select handler for the three
+// key paths: missing key, unknown key, and valid key.
+func TestSelectModel(t *testing.T) {
+	// Seed a provider+model so there is at least one choice available.
+	newModelApp := func(tb testing.TB) (*tests.TestApp, string) {
+		tb.Helper()
+		app := newWebApp(tb)
+		mid, err := store.SaveOpenAIModel(app, "Prov1", "https://p1.example.com/v1", "sk-test", "Model A", "model-a", "", false)
+		if err != nil {
+			tb.Fatalf("SaveOpenAIModel: %v", err)
+		}
+		return app, mid
+	}
+
+	t.Run("missing key returns 400", func(t *testing.T) {
+		app, _ := newModelApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "select model missing key",
+			Method:          "POST",
+			URL:             "/ui/model/select",
+			Body:            strings.NewReader(""),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Missing model key"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("unknown key returns 400", func(t *testing.T) {
+		app, _ := newModelApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "select model unknown key",
+			Method:          "POST",
+			URL:             "/ui/model/select",
+			Body:            strings.NewReader("key=no-such-model"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  400,
+			ExpectedContent: []string{"Model is not available"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("valid key activates model and returns 200", func(t *testing.T) {
+		app, _ := newModelApp(t)
+
+		// Derive the real key by calling ModelChoices — do not hardcode the format.
+		choices, _, err := turn.ModelChoices(app)
+		if err != nil {
+			t.Fatalf("ModelChoices: %v", err)
+		}
+		// The openai model is not local so it is not Disabled (no file check).
+		var validKey string
+		for _, c := range choices {
+			if !c.Disabled {
+				validKey = c.Key
+				break
+			}
+		}
+		if validKey == "" {
+			t.Fatal("no enabled model choice found in test app; cannot test valid key path")
+		}
+
+		scenario := tests.ApiScenario{
+			Name:            "select model valid key",
+			Method:          "POST",
+			URL:             "/ui/model/select",
+			Body:            strings.NewReader("key=" + validKey),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"chatbar"},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				// Verify the model is now active.
+				_, active, err := turn.ModelChoices(a)
+				if err != nil {
+					tb.Fatalf("ModelChoices after select: %v", err)
+				}
+				if active.Key != validKey {
+					tb.Errorf("active key = %q, want %q", active.Key, validKey)
+				}
+			},
+		}
+		scenario.Test(t)
+	})
 }

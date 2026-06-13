@@ -104,6 +104,48 @@ func TestRunNotesUnbackedCaptureClaim(t *testing.T) {
 	}
 }
 
+func TestRunRepairPassSucceeds(t *testing.T) {
+	// The model first claims capture without a deed, then on the repair pass
+	// actually performs the tool call. The honesty check must see the deed and
+	// leave CheckNote empty.
+	app := storetest.NewApp(t)
+	client := llmtest.New(
+		llmtest.Text("I've set the reminder for tomorrow morning."), // claim, no deed — triggers repair
+		llmtest.ToolCall("c1", "task_add", `{"title":"Call the notary","due":"2026-06-12T10:00"}`),
+		llmtest.Text("Saved it for tomorrow."), // repair completes
+	)
+
+	res, err := Run(context.Background(), app, client, "remind me to call the notary tomorrow at 10", nil)
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.CheckNote != "" {
+		t.Errorf("repair-success must not set CheckNote, got %q", res.CheckNote)
+	}
+	if client.Calls != 3 {
+		t.Errorf("repair pass must run exactly once (3 total calls): %d model calls", client.Calls)
+	}
+
+	// The deed happened: the task row exists.
+	tasks, err := app.FindRecordsByFilter("tasks", "title = 'Call the notary'", "", 2, 0)
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("want exactly one task, got %d (err %v)", len(tasks), err)
+	}
+
+	// No check-origin message must be persisted (repair succeeded — no note).
+	notes, err := app.FindRecordsByFilter("messages", "origin = 'check'", "", 0, 0)
+	if err != nil || len(notes) != 0 {
+		t.Errorf("repair-success must not persist any check note, got %d (err %v)", len(notes), err)
+	}
+
+	// The correction scaffolding must never be persisted.
+	scaffold, err := app.FindRecordsByFilter("messages",
+		"role = 'user' && content ~ 'runtime check'", "", 0, 0)
+	if err != nil || len(scaffold) != 0 {
+		t.Errorf("verify.Correction must never persist, found %d rows", len(scaffold))
+	}
+}
+
 func TestToolsRespectsOSAccessGate(t *testing.T) {
 	app := storetest.NewApp(t)
 	// Hermetic against the session: when Balaur runs this suite through
