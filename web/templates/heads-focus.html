@@ -1,0 +1,38 @@
+{{- /* heads-focus.html — the heads roster lives as a card focus. head_card is
+     the shared partial for one active head: it is rendered by ucard_heads_manage
+     (the heads card / focus, cards.html) and re-rendered by setHeadAvatar
+     (#head-{id}) after a personality change. "Open chat" opens that head's
+     branch conversation in the dock via GET /ui/dock/conversation?head={id}. */ -}}
+{{define "head_card"}}
+{{$h := .}}
+<article class="profile-card" id="head-{{.ID}}">
+  <div class="head-meta">
+    <span class="head-avatar-preview"><img class="px" src="{{.AvatarURL}}" alt="" decoding="async"></span>
+    <div class="head-info">
+      <h2 class="profile-card-title">{{.Name}}</h2>
+      {{if .Purpose}}<p class="profile-hint" style="margin:0">{{.Purpose}}</p>{{end}}
+      <div class="head-status-row">
+        <span class="tag">{{.Status}}</span>
+        {{if .Expires}}<span class="head-expires">expires {{.Expires}}</span>{{end}}
+        <button class="btn btn-ghost" style="margin-left:auto" type="button"
+                data-on:click="@get('/ui/dock/conversation?head={{$h.ID}}')">Open chat →</button>
+      </div>
+    </div>
+  </div>
+  <details class="avatar-picker head-avatar-picker">
+    <summary>Choose personality</summary>
+    <div class="avatar-choice-list profile-avatar-grid" style="max-height:none">
+      {{range .BalaurOptions}}
+      <form data-on:submit__prevent="@post('/ui/heads/{{$h.ID}}/avatar', {contentType:'form'})">
+        <input type="hidden" name="balaur_avatar" value="{{.Key}}">
+        <button class="avatar-choice profile-avatar-btn{{if .Active}} avatar-choice-active{{end}}"
+                type="submit" {{if .Active}}aria-current="true" disabled{{end}}>
+          <img class="px" src="{{.URL}}" alt="" decoding="async">
+          <span>{{.Label}}</span>
+        </button>
+      </form>
+      {{end}}
+    </div>
+  </details>
+</article>
+{{end}}
