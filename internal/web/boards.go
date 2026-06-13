@@ -6,6 +6,7 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -41,15 +42,17 @@ type boardRecord struct {
 // boardCardView is one rendered slot in the grid.
 type boardCardView struct {
 	Type   string
-	W      int    // grid column span (from registry spec or card layout)
-	H      int    // grid row span (from registry spec or card layout)
-	X      int    // 0-based column start (0 = flow mode)
-	Y      int    // 0-based row start (0 = flow mode)
-	X1     int    // X+1 for CSS grid-column start (precomputed)
-	Y1     int    // Y+1 for CSS grid-row start (precomputed)
-	HasPos bool   // true when explicit position was stored (free layout mode)
-	Query  string // URL-encoded query string, e.g. "?status=open&limit=8"
-	Idx    int    // position in the cards array (for remove route)
+	W      int               // grid column span (from registry spec or card layout)
+	H      int               // grid row span (from registry spec or card layout)
+	X      int               // 0-based column start (0 = flow mode)
+	Y      int               // 0-based row start (0 = flow mode)
+	X1     int               // X+1 for CSS grid-column start (precomputed)
+	Y1     int               // Y+1 for CSS grid-row start (precomputed)
+	HasPos bool              // true when explicit position was stored (free layout mode)
+	Query  string            // URL-encoded query string, e.g. "?status=open&limit=8"
+	Params map[string]string // raw params, for server-rendering Body
+	Idx    int               // position in the cards array (for remove route)
+	Body   template.HTML     // server-rendered card HTML (filled by renderBoardCards)
 }
 
 // boardCardViewsOf converts a []boardCard to []boardCardView, resolving each
@@ -109,6 +112,7 @@ func boardCardViewsOf(bcs []boardCard) ([]boardCardView, bool) {
 			Y1:     bc.Y + 1,
 			HasPos: hasPos,
 			Query:  q,
+			Params: bc.Params,
 			Idx:    i,
 		})
 	}
@@ -145,6 +149,19 @@ func boardRecordOf(rec *core.Record) *boardRecord {
 		Sort:    int(rec.GetFloat("sort")),
 		Cards:   views,
 		FreeLay: freeLay,
+	}
+}
+
+// renderBoardCards server-renders each card's body into the board record so the
+// grid template can emit it inline — no lazy-load, no per-card round-trip. Done
+// only for the board actually being shown (never for the whole list), so the
+// cost stays proportional to one board. A nil board is a no-op.
+func (h *handlers) renderBoardCards(b *boardRecord) {
+	if b == nil {
+		return
+	}
+	for i := range b.Cards {
+		b.Cards[i].Body = h.cardHTML(b.Cards[i].Type, b.Cards[i].Params)
 	}
 }
 
@@ -298,6 +315,8 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 		return e.NotFoundError("board not found", nil)
 	}
 
+	// Server-render the current board's cards into their slots (no lazy-load).
+	h.renderBoardCards(current)
 	bv := boardView{Boards: boards, Current: current, Specs: cards.All()}
 
 	// Datastar board switch: patch #main only; the dock persists.
@@ -316,11 +335,11 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 		}
 		// Only #main was patched, so sync the tab title explicitly.
 		_ = sse.ExecuteScript(fmt.Sprintf("document.title=%q", current.Name+" · Balaur"))
-		// The card slots lazy-load via htmx (hx-trigger="load"). After a Datastar
-		// morph, htmx must PROCESS the new slots and then be told to FIRE their
-		// load trigger — process alone won't re-fire "load" on morphed nodes.
-		// Drops out when the card registry renders server-side / moves to Datastar.
-		_ = sse.ExecuteScript(`(function(m){if(!window.htmx||!m)return;htmx.process(m);m.querySelectorAll('.board-slot-inner[hx-get]').forEach(function(s){htmx.trigger(s,'load')});})(document.getElementById('main'))`)
+		// Cards are server-rendered now, but the interactive "manage" cards still
+		// carry hx-post controls inside; a Datastar morph leaves those unbound, so
+		// htmx must PROCESS the freshly-patched #main. (Drops out once every card's
+		// own actions move to Datastar — then htmx.min.js goes too.)
+		_ = sse.ExecuteScript(`(function(m){if(window.htmx&&m)htmx.process(m)})(document.getElementById('main'))`)
 		return nil
 	}
 
@@ -485,6 +504,7 @@ func (h *handlers) boardsCardAdd(e *core.RequestEvent) error {
 			break
 		}
 	}
+	h.renderBoardCards(current)
 	return h.render(e, "board_grid", boardView{
 		Boards:  boards,
 		Current: current,
@@ -533,6 +553,7 @@ func (h *handlers) boardsCardRemove(e *core.RequestEvent) error {
 			break
 		}
 	}
+	h.renderBoardCards(current)
 	return h.render(e, "board_grid", boardView{
 		Boards:  boards,
 		Current: current,

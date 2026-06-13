@@ -82,12 +82,7 @@
        style="grid-column: span {{.W}}"
        {{- end}}>
     <div class="board-slot-grip" title="drag to move">⠿</div>
-    <div class="board-slot-inner"
-         hx-get="/ui/cards/{{.Type}}{{.Query}}"
-         hx-trigger="load"
-         hx-swap="innerHTML">
-      <div class="k-empty board-loading">Loading…</div>
-    </div>
+    <div class="board-slot-inner">{{.Body}}</div>
     <form method="POST"
           action="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"
           hx-post="/ui/boards/{{$.Current.ID}}/cards/{{.Idx}}/remove"

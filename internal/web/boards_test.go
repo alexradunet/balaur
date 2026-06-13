@@ -60,8 +60,9 @@ func TestBoardsDefaultsCreated(t *testing.T) {
 	})
 }
 
-// TestBoardsPageRenders verifies GET /boards/{id} returns 200 and contains
-// the board-grid and at least one hx-get="/ui/cards/ attribute.
+// TestBoardsPageRenders verifies GET /boards/{id} returns 200 and contains the
+// board-grid with its cards server-rendered inline (no lazy-load): the Study
+// board's "today" card must be present in the slot, not a Loading… placeholder.
 func TestBoardsPageRenders(t *testing.T) {
 	app := newWebApp(t)
 	h := &handlers{app: app}
@@ -80,7 +81,7 @@ func TestBoardsPageRenders(t *testing.T) {
 		URL:             "/boards/" + id,
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"board-grid", `hx-get="/ui/cards/`},
+		ExpectedContent: []string{"board-grid", `class="board-slot-inner"`, `id="ucard-today"`},
 	}
 	scenario.Test(t)
 }

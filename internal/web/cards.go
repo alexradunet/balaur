@@ -11,9 +11,12 @@ package web
 import (
 	"fmt"
 	"html"
+	"html/template"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -61,8 +64,7 @@ func (h *handlers) uiCardPalette(e *core.RequestEvent) error {
 // uiCard handles GET /ui/cards/{type}?params — one rendered card fragment.
 func (h *handlers) uiCard(e *core.RequestEvent) error {
 	typ := e.Request.PathValue("type")
-	spec, ok := cards.Get(typ)
-	if !ok {
+	if _, ok := cards.Get(typ); !ok {
 		return e.NotFoundError("no such card type", nil)
 	}
 
@@ -76,32 +78,65 @@ func (h *handlers) uiCard(e *core.RequestEvent) error {
 	}
 
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return h.cardInto(e.Response, typ, params)
+}
 
+// cardInto renders one card of the given (already-validated) type into w. It is
+// the single dispatch shared by the HTTP endpoint (w = e.Response) and the
+// board grid (w = an in-process buffer, via cardHTML) — so a card is rendered
+// the same way whether it's lazily fetched or server-rendered inline.
+func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) error {
 	switch typ {
 	case "today":
-		return h.renderCardToday(e, spec, params)
+		return h.renderCardToday(w, params)
 	case "quests":
-		return h.renderCardQuests(e, spec, params)
+		return h.renderCardQuests(w, params)
 	case "calendar":
-		return h.renderCardCalendar(e, spec, params)
+		return h.renderCardCalendar(w, params)
 	case "timeline":
-		return h.renderCardTimeline(e, spec, params)
+		return h.renderCardTimeline(w, params)
 	case "journal":
-		return h.renderCardJournal(e, spec, params)
+		return h.renderCardJournal(w, params)
 	case "measure":
-		return h.renderCardMeasure(e, spec, params)
+		return h.renderCardMeasure(w, params)
 	case "lines":
-		return h.renderCardLines(e, spec, params)
+		return h.renderCardLines(w, params)
 	case "memory":
-		return h.renderCardMemory(e, spec, params)
+		return h.renderCardMemory(w, params)
 	case "skills":
-		return h.renderCardSkills(e, spec, params)
+		return h.renderCardSkills(w, params)
 	case "heads":
-		return h.renderCardHeads(e, spec, params)
+		return h.renderCardHeads(w, params)
 	case "habits":
-		return h.renderCardHabits(e, spec, params)
+		return h.renderCardHabits(w, params)
 	}
-	return e.NotFoundError("unhandled card type", nil)
+	return fmt.Errorf("unhandled card type %q", typ)
+}
+
+// cardHTML server-renders one card to HTML for inline embedding in a board grid.
+// It validates the stored params (defending against hand-edited board JSON) and
+// renders the same error strip the HTTP endpoint uses on failure, so a single
+// bad card never blanks the whole board.
+func (h *handlers) cardHTML(typ string, params map[string]string) template.HTML {
+	if _, ok := cards.Get(typ); !ok {
+		return cardErrorStrip("no such card type: " + typ)
+	}
+	cleaned, err := cards.Validate(typ, params)
+	if err != nil {
+		return cardErrorStrip(err.Error())
+	}
+	var b strings.Builder
+	if err := h.cardInto(&b, typ, cleaned); err != nil {
+		h.app.Logger().Warn("board card render failed", "type", typ, "err", err)
+		return cardErrorStrip("could not render this card")
+	}
+	return template.HTML(b.String())
+}
+
+// cardErrorStrip is the inline card-error fragment (no id — several cards of the
+// same type may coexist on a board, and the slot already scopes it).
+func cardErrorStrip(msg string) template.HTML {
+	return template.HTML(`<div class="card-note card-note-error">` + html.EscapeString(msg) + `</div>`)
 }
 
 // cardHabitsView feeds the read-only habits card: recurring tasks + streaks.
@@ -109,8 +144,8 @@ type cardHabitsView struct {
 	Habits []lifeHabitView
 }
 
-func (h *handlers) renderCardHabits(e *core.RequestEvent, _ cards.Spec, _ map[string]string) error {
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_habits", cardHabitsView{
+func (h *handlers) renderCardHabits(w io.Writer, _ map[string]string) error {
+	return h.tmpl.ExecuteTemplate(w, "ucard_habits", cardHabitsView{
 		Habits: h.buildHabits(time.Now()),
 	})
 }
@@ -195,7 +230,7 @@ type cardHeadsView struct {
 
 // ---- per-type renderers ----
 
-func (h *handlers) renderCardToday(e *core.RequestEvent, _ cards.Spec, _ map[string]string) error {
+func (h *handlers) renderCardToday(w io.Writer, _ map[string]string) error {
 	now := time.Now()
 	recs, _ := tasks.OpenTasks(h.app, nil)
 	bk := tasks.Bucket(recs, now)
@@ -207,7 +242,7 @@ func (h *handlers) renderCardToday(e *core.RequestEvent, _ cards.Spec, _ map[str
 			DueLine: v.DueLine, Overdue: v.Overdue,
 		})
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_today", cardTodayView{Tasks: rows})
+	return h.tmpl.ExecuteTemplate(w, "ucard_today", cardTodayView{Tasks: rows})
 }
 
 // cardQuestsManageView feeds the interactive quests card (mode=manage): open
@@ -216,7 +251,7 @@ type cardQuestsManageView struct {
 	Tasks []taskView
 }
 
-func (h *handlers) renderCardQuests(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardQuests(w io.Writer, params map[string]string) error {
 	now := time.Now()
 	if params["mode"] == "manage" {
 		recs, _ := tasks.OpenTasks(h.app, nil)
@@ -224,7 +259,7 @@ func (h *handlers) renderCardQuests(e *core.RequestEvent, _ cards.Spec, params m
 		if len(recs) > limit {
 			recs = recs[:limit]
 		}
-		return h.tmpl.ExecuteTemplate(e.Response, "ucard_quests_manage", cardQuestsManageView{
+		return h.tmpl.ExecuteTemplate(w, "ucard_quests_manage", cardQuestsManageView{
 			Tasks: taskViewsOf(recs, now),
 		})
 	}
@@ -258,31 +293,31 @@ func (h *handlers) renderCardQuests(e *core.RequestEvent, _ cards.Spec, params m
 			DueLine: v.DueLine, Overdue: v.Overdue,
 		})
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_quests", cardQuestsView{
+	return h.tmpl.ExecuteTemplate(w, "ucard_quests", cardQuestsView{
 		Tasks:     rows,
 		ParamLine: fmt.Sprintf("status: %s · limit: %d", status, limit),
 	})
 }
 
-func (h *handlers) renderCardCalendar(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardCalendar(w io.Writer, params map[string]string) error {
 	now := time.Now()
 	recs, _ := tasks.OpenTasks(h.app, nil)
 	cal := buildCalendar(recs, params["month"], now)
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_calendar", calendarCardView{Cal: cal})
+	return h.tmpl.ExecuteTemplate(w, "ucard_calendar", calendarCardView{Cal: cal})
 }
 
-func (h *handlers) renderCardTimeline(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardTimeline(w io.Writer, params map[string]string) error {
 	days := intParam(params, "days", timelineDays)
 	now := time.Now()
 	recs, _ := tasks.OpenTasks(h.app, nil)
 	tl := buildTimelineN(recs, now, days)
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_timeline", timelineCardView{
+	return h.tmpl.ExecuteTemplate(w, "ucard_timeline", timelineCardView{
 		TL:        tl,
 		ParamLine: fmt.Sprintf("%d days", days),
 	})
 }
 
-func (h *handlers) renderCardJournal(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardJournal(w io.Writer, params map[string]string) error {
 	limit := intParam(params, "limit", 5)
 	recs, _ := h.app.FindRecordsByFilter("entries",
 		"kind = 'journal'", "-noted_at", limit, 0)
@@ -296,14 +331,14 @@ func (h *handlers) renderCardJournal(e *core.RequestEvent, _ cards.Spec, params 
 			Text: clipText(r.GetString("text"), 200),
 		})
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_journal", cardJournalView{
+	return h.tmpl.ExecuteTemplate(w, "ucard_journal", cardJournalView{
 		Entries:   entries,
 		TodayDate: now.Format(dayLayout),
 		ParamLine: fmt.Sprintf("last %d", limit),
 	})
 }
 
-func (h *handlers) renderCardMeasure(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardMeasure(w io.Writer, params map[string]string) error {
 	kind := params["kind"]
 	days := intParam(params, "days", lifeWindowDays)
 	since := time.Now().AddDate(0, 0, -days)
@@ -312,7 +347,7 @@ func (h *handlers) renderCardMeasure(e *core.RequestEvent, _ cards.Spec, params 
 	recs, err := life.Series(h.app, kind, since)
 	if err != nil {
 		view.Error = "could not load series: " + err.Error()
-		return h.tmpl.ExecuteTemplate(e.Response, "ucard_measure", view)
+		return h.tmpl.ExecuteTemplate(w, "ucard_measure", view)
 	}
 
 	s := life.Summarize(recs)
@@ -326,10 +361,10 @@ func (h *handlers) renderCardMeasure(e *core.RequestEvent, _ cards.Spec, params 
 			view.Points, view.SparkLastX, view.SparkLastY = sparkPoints(numericValues(recs), sparkW, sparkH)
 		}
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_measure", view)
+	return h.tmpl.ExecuteTemplate(w, "ucard_measure", view)
 }
 
-func (h *handlers) renderCardLines(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardLines(w io.Writer, params map[string]string) error {
 	kind := params["kind"]
 	limit := intParam(params, "limit", 5)
 	since := time.Now().AddDate(-1, 0, 0) // look back up to one year
@@ -338,7 +373,7 @@ func (h *handlers) renderCardLines(e *core.RequestEvent, _ cards.Spec, params ma
 	recs, err := life.Series(h.app, kind, since)
 	if err != nil {
 		view.Error = "could not load series: " + err.Error()
-		return h.tmpl.ExecuteTemplate(e.Response, "ucard_lines", view)
+		return h.tmpl.ExecuteTemplate(w, "ucard_lines", view)
 	}
 
 	loc := time.Now().Location()
@@ -352,7 +387,7 @@ func (h *handlers) renderCardLines(e *core.RequestEvent, _ cards.Spec, params ma
 		view.Lines = append(view.Lines, line)
 		count++
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_lines", view)
+	return h.tmpl.ExecuteTemplate(w, "ucard_lines", view)
 }
 
 // manageCardView feeds the interactive knowledge card (mode=manage): the
@@ -369,18 +404,18 @@ type manageCardView struct {
 
 // renderKnowledgeManage renders an interactive memory/skill card: proposed
 // (approve/reject inline) + a capped slice of active (archive/edit inline).
-func (h *handlers) renderKnowledgeManage(e *core.RequestEvent, kind knowledge.Kind, v manageCardView) error {
+func (h *handlers) renderKnowledgeManage(w io.Writer, kind knowledge.Kind, v manageCardView) error {
 	v.Proposed, _ = knowledge.ListByStatus(h.app, kind, knowledge.StatusProposed)
 	v.Active, _ = knowledge.FilterActive(h.app, kind, "", "")
 	if len(v.Active) > 8 {
 		v.Active = v.Active[:8]
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_knowledge_manage", v)
+	return h.tmpl.ExecuteTemplate(w, "ucard_knowledge_manage", v)
 }
 
-func (h *handlers) renderCardMemory(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardMemory(w io.Writer, params map[string]string) error {
 	if params["mode"] == "manage" {
-		return h.renderKnowledgeManage(e, knowledge.Memory, manageCardView{
+		return h.renderKnowledgeManage(w, knowledge.Memory, manageCardView{
 			Kind: "memories", Label: "Memory", Icon: "tome", Href: "/memory",
 		})
 	}
@@ -405,15 +440,15 @@ func (h *handlers) renderCardMemory(e *core.RequestEvent, _ cards.Spec, params m
 	if query != "" {
 		paramLine += " · q: " + query
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_memory", cardMemoryView{
+	return h.tmpl.ExecuteTemplate(w, "ucard_memory", cardMemoryView{
 		Records:   rows,
 		ParamLine: paramLine,
 	})
 }
 
-func (h *handlers) renderCardSkills(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardSkills(w io.Writer, params map[string]string) error {
 	if params["mode"] == "manage" {
-		return h.renderKnowledgeManage(e, knowledge.Skill, manageCardView{
+		return h.renderKnowledgeManage(w, knowledge.Skill, manageCardView{
 			Kind: "skills", Label: "Skills", Icon: "key", Href: "/skills",
 		})
 	}
@@ -432,7 +467,7 @@ func (h *handlers) renderCardSkills(e *core.RequestEvent, _ cards.Spec, params m
 			Enabled:     r.GetBool("enabled"),
 		})
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_skills", cardSkillsView{
+	return h.tmpl.ExecuteTemplate(w, "ucard_skills", cardSkillsView{
 		Records:   rows,
 		ParamLine: fmt.Sprintf("limit: %d", limit),
 	})
@@ -444,7 +479,7 @@ type cardHeadsManageView struct {
 	Heads []headView
 }
 
-func (h *handlers) renderCardHeads(e *core.RequestEvent, _ cards.Spec, params map[string]string) error {
+func (h *handlers) renderCardHeads(w io.Writer, params map[string]string) error {
 	recs, _ := h.app.FindRecordsByFilter("heads", "status = 'active'", "-@rowid", 0, 0)
 
 	if params["mode"] == "manage" {
@@ -452,7 +487,7 @@ func (h *handlers) renderCardHeads(e *core.RequestEvent, _ cards.Spec, params ma
 		for _, r := range recs {
 			views = append(views, headViewFrom(h.app, r))
 		}
-		return h.tmpl.ExecuteTemplate(e.Response, "ucard_heads_manage", cardHeadsManageView{Heads: views})
+		return h.tmpl.ExecuteTemplate(w, "ucard_heads_manage", cardHeadsManageView{Heads: views})
 	}
 
 	var heads []headRow
@@ -464,7 +499,7 @@ func (h *handlers) renderCardHeads(e *core.RequestEvent, _ cards.Spec, params ma
 			Purpose: r.GetString("purpose"),
 		})
 	}
-	return h.tmpl.ExecuteTemplate(e.Response, "ucard_heads", cardHeadsView{Heads: heads})
+	return h.tmpl.ExecuteTemplate(w, "ucard_heads", cardHeadsView{Heads: heads})
 }
 
 // buildTimelineN is like buildTimeline but takes an explicit day count,
