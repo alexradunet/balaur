@@ -23,6 +23,7 @@ const ollamaPinnedTag = "v0.30.8"
 
 // assetName is the release asset for this host. The linux-amd64 asset ships as
 // .tar.zst (confirmed from the v0.30.8 release assets).
+// Only linux/amd64 release naming is supported (the deployment target); macOS/Windows assets use different naming.
 func assetName() string {
 	return fmt.Sprintf("ollama-%s-%s.tar.zst", runtime.GOOS, runtime.GOARCH)
 }
@@ -106,7 +107,10 @@ func extractOllama(archivePath, dest string) error {
 // dest. Returns dest on success.
 func installBinary(ctx context.Context, dest string) (string, error) {
 	tmp := dest + ".tar.download"
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL(), nil)
+	if err != nil {
+		return "", err
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("downloading ollama: %w", err)
@@ -126,7 +130,9 @@ func installBinary(ctx context.Context, dest string) (string, error) {
 		out.Close()
 		return "", err
 	}
-	out.Close()
+	if err := out.Close(); err != nil {
+		return "", err
+	}
 	defer os.Remove(tmp)
 	if err := extractOllama(tmp, dest); err != nil {
 		return "", err

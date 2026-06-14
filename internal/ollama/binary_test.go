@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestBinaryPathPrefersEnv(t *testing.T) {
@@ -58,4 +60,42 @@ func writeTestTgz(t *testing.T, path, name string, data []byte) {
 	tw.Write(data)
 	tw.Close()
 	gz.Close()
+}
+
+func writeTestZst(t *testing.T, path, name string, data []byte) {
+	t.Helper()
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	zw, err := zstd.NewWriter(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tw := tar.NewWriter(zw)
+	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(data)), Typeflag: tar.TypeReg}); err != nil {
+		t.Fatal(err)
+	}
+	tw.Write(data)
+	tw.Close()
+	zw.Close()
+}
+
+func TestExtractZst(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "o.tar.zst")
+	writeTestZst(t, archive, "bin/ollama", []byte("ELF-fake-zst"))
+	dest := filepath.Join(dir, "out", "ollama")
+	if err := extractOllama(archive, dest); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(dest)
+	if err != nil || string(b) != "ELF-fake-zst" {
+		t.Fatalf("extracted = %q, err=%v", b, err)
+	}
+	info, _ := os.Stat(dest)
+	if info.Mode()&0o100 == 0 {
+		t.Fatal("extracted binary is not executable")
+	}
 }
