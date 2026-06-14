@@ -1,0 +1,23 @@
+{
+  "// note": "Shared, committed. Aligns the editor with the repo's gofmt standard (make fmt) and the Claude Code gofmt hook.",
+
+  // Go: format on save with plain gofmt (not gofumpt/goimports) to match `make fmt`.
+  "go.useLanguageServer": true,
+  "go.formatTool": "gofmt",
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "golang.go"
+  },
+  "gopls": {
+    "formatting.gofumpt": false
+  },
+
+  // CodeTour reads tours from .tours/ by default; recorded markers stay visible.
+  "codetour.showMarkers": true,
+  "codetour.promptForWorkspaceTours": true,
+
+  // Builds must work CGO-free (AGENTS.md); keep the editor's build/vet consistent.
+  "go.toolsEnvVars": {
+    "CGO_ENABLED": "0"
+  }
+}

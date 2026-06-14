@@ -1,0 +1,8 @@
+{
+  "// note": "Shared, committed. VS Code prompts to install these when the repo is opened.",
+  "recommendations": [
+    "golang.go",
+    "vsls-contrib.codetour"
+  ],
+  "unwantedRecommendations": []
+}
