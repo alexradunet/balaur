@@ -81,6 +81,7 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 061 | board_compose/board_add_card surface board-load query errors | P2 | S | MED | — | — | DONE (reviewed; both `FindRecordsByFilter("boards")` sites now return a model-facing error; no negative test — no failure-injection precedent in harness; merged to main `f570fdc`) |
 | 062 | web board handlers surface loadBoards() errors (nil-deref guard) | P2 | S | MED | — | — | DONE (reviewed; all 4 swallow sites — boardsCreate/Rename/CardAdd/CardRemove — now `return e.InternalServerError("loading boards", err)`, no helper extraction per the standing web-decomposition deferral; merged to main `e4eddd7`) |
 | 063 | CLI v1 envelope: recover panics into error envelope + contract test | P2 | S | MED | — | — | DONE (reviewed; `run()` recovers panics → v1 error envelope + non-zero exit via named return; `TestEnvelopePanicRecovered` green, existing envelope tests still pass; merged to main `cb95583`) |
+| 064 | Restore Windows cross-compile: split llama supervisor syscalls by build tag | P1 | S | LOW–MED | — | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -150,6 +151,20 @@ the project has repeatedly declined `internal/web` decomposition), and TECHDEBT-
 as solid: nearly all security findings were rejected by the verifier as by-design
 (PocketBase API rules + the router-wide `guardLocalUI` already enforce access;
 prior hardening bundles 010/042 cover headers/CSRF/key-hiding).
+
+**Verification-baseline finding (064), found post-merge.** Reproducing the CI
+cross-compile matrix after 059–063 landed revealed `main`'s CI was already **red**
+on the `058` baseline (`7b16063`): `internal/llama/supervisor.go` uses Unix-only
+`syscall.Setpgid`/`syscall.Kill` with no build tags, so the `windows/amd64`
+cross-compile step fails (the four `unix` targets pass). `make lint`/`go test`
+miss it (host = Linux). It predates and is unrelated to 059–063 (none touch that
+file), but a red baseline outranks everything, so it was fixed as plan 064: split
+the two syscalls into `setProcessGroup`/`killProcessGroup` helpers across
+`supervisor_unix.go` (`//go:build unix`, byte-identical behavior) and
+`supervisor_windows.go` (`//go:build windows`, compile-only no-op — Windows is not
+a runtime target). The audit's deps-dx finder missed it by reading CI config
+statically instead of running the matrix; future audits should run
+`GOOS=windows … go build ./...` as a baseline check.
 
 ## Dependency notes
 
