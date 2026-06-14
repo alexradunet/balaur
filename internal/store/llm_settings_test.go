@@ -8,7 +8,7 @@ import (
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
-func TestEnsureDefaultLLMConfigRegistersAndActivatesTag(t *testing.T) {
+func TestEnsureDefaultLLMConfigRegistersDefaultWithoutActivating(t *testing.T) {
 	app := storetest.NewApp(t)
 	t.Setenv("BALAUR_CHAT_MODEL", "")
 	if err := EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
@@ -18,15 +18,13 @@ func TestEnsureDefaultLLMConfigRegistersAndActivatesTag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
-	if len(models) != 1 || models[0].Kind != "local" || models[0].ChatModel != ollama.DefaultChatModel {
+	if len(models) != 1 || models[0].Kind != "local" ||
+		models[0].ChatModel != ollama.DefaultChatModel || models[0].EmbedModel != ollama.DefaultEmbedModel {
 		t.Fatalf("default models = %#v, want one local tag model", models)
 	}
-	cfg, ok, err := ActiveLLMConfig(app)
-	if err != nil || !ok {
-		t.Fatalf("active = %v, %v; want activated", ok, err)
-	}
-	if cfg.ChatModel != ollama.DefaultChatModel || cfg.EmbedModel != ollama.DefaultEmbedModel {
-		t.Fatalf("active config = %#v", cfg)
+	// Registered but NOT auto-activated — activation happens only after a pull.
+	if _, ok, err := ActiveLLMConfig(app); err != nil || ok {
+		t.Fatalf("active = %v, %v; want no active model before pull", ok, err)
 	}
 }
 

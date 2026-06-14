@@ -35,10 +35,10 @@ func (c LLMConfig) DisplayName() string {
 }
 
 // EnsureDefaultLLMConfig makes sure the "Local model" provider and Balaur's
-// default local model (an Ollama tag) exist, and activates the default when no
-// model is active yet. The model is served by a local Ollama over /v1. Whether
-// the tag is actually pulled is surfaced by the turn layer (ollama.IsPulled),
-// not here — this stays free of network I/O. The dataDir param is retained for
+// default local model (an Ollama tag) exist. It does NOT activate the default:
+// a local model becomes active only after it is actually pulled (see
+// main.ensureLocalDefault and the web pull handler), so a fresh box never
+// reports an unpulled model as ready. The dataDir param is retained for
 // call-site compatibility.
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
 	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
@@ -50,15 +50,10 @@ func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
 	if tag != ollama.DefaultChatModel {
 		label = "Local " + tag
 	}
-	model, err := findOrCreateLLMModel(app, provider.Id, label, tag, ollama.EmbedModel(), true)
-	if err != nil {
+	if _, err := findOrCreateLLMModel(app, provider.Id, label, tag, ollama.EmbedModel(), true); err != nil {
 		return err
 	}
-	settings, err := app.FindFirstRecordByData("llm_settings", "key", llmSettingsKey)
-	if err == nil && settings.GetString("active_model") != "" {
-		return nil
-	}
-	return SetActiveLLMModel(app, model.Id, "system")
+	return nil
 }
 
 func ListLLMModels(app core.App) ([]LLMConfig, error) {
