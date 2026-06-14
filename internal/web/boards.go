@@ -379,7 +379,10 @@ func (h *handlers) boardsCreate(e *core.RequestEvent) error {
 	}
 
 	// Determine next sort value.
-	existing, _ := h.loadBoards()
+	existing, err := h.loadBoards()
+	if err != nil {
+		return e.InternalServerError("loading boards", err)
+	}
 	nextSort := len(existing)
 
 	rec := core.NewRecord(col)
@@ -415,7 +418,10 @@ func (h *handlers) boardsRename(e *core.RequestEvent) error {
 		return e.InternalServerError("saving board", err)
 	}
 
-	boards, _ := h.loadBoards()
+	boards, err := h.loadBoards()
+	if err != nil {
+		return e.InternalServerError("loading boards", err)
+	}
 	var current *boardRecord
 	for _, b := range boards {
 		if b.ID == id {
@@ -514,7 +520,10 @@ func (h *handlers) boardsCardAdd(e *core.RequestEvent) error {
 		return e.InternalServerError("saving board", err)
 	}
 
-	boards, _ := h.loadBoards()
+	boards, err := h.loadBoards()
+	if err != nil {
+		return e.InternalServerError("loading boards", err)
+	}
 	var current *boardRecord
 	for _, b := range boards {
 		if b.ID == id {
@@ -573,7 +582,10 @@ func (h *handlers) boardsCardRemove(e *core.RequestEvent) error {
 		return e.InternalServerError("saving board", err)
 	}
 
-	boards, _ := h.loadBoards()
+	boards, err := h.loadBoards()
+	if err != nil {
+		return e.InternalServerError("loading boards", err)
+	}
 	var current *boardRecord
 	for _, b := range boards {
 		if b.ID == id {
