@@ -2,7 +2,9 @@ package ollama
 
 import (
 	"context"
+	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +37,7 @@ func TestE2EToolCall(t *testing.T) {
 		t.Fatal(err)
 	}
 	var sawToolCall bool
+	var toolArgs string
 	for chunk := range ch {
 		if chunk.Err != nil {
 			t.Fatalf("stream error: %v", chunk.Err)
@@ -44,9 +47,19 @@ func TestE2EToolCall(t *testing.T) {
 			if chunk.ToolCalls[0].Name != "get_weather" {
 				t.Errorf("tool name = %q", chunk.ToolCalls[0].Name)
 			}
+			toolArgs = chunk.ToolCalls[0].Args
 		}
 	}
 	if !sawToolCall {
 		t.Fatal("model did not emit a structured tool_call for an explicit tool request")
+	}
+	// The arguments must be valid JSON carrying the city we asked about.
+	var args map[string]any
+	if err := json.Unmarshal([]byte(toolArgs), &args); err != nil {
+		t.Fatalf("tool args not valid JSON: %q (%v)", toolArgs, err)
+	}
+	city, _ := args["city"].(string)
+	if !strings.Contains(strings.ToLower(city), "paris") {
+		t.Fatalf("city arg = %q, want it to contain Paris (full args: %q)", city, toolArgs)
 	}
 }
