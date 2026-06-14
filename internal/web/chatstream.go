@@ -182,6 +182,13 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		s.endTool(rest, s.h.proposalBody(kind, id))
 		return
 	}
+	if types, rest, ok := tools.ParseRefresh(ev.Text); ok {
+		s.endTool(clipText(rest, 2000), "")
+		for _, typ := range types {
+			s.refreshCard(typ)
+		}
+		return
+	}
 	s.endTool(clipText(ev.Text, 2000), "")
 }
 
@@ -194,6 +201,15 @@ func (s *chatStream) endTool(content string, card template.HTML) {
 	if card != "" {
 		s.appendChat("chat-inline-card", messageView{BubbleID: s.toolID + "-card", CardBody: card})
 	}
+}
+
+// refreshCard re-renders one registry card from live data and morphs it in
+// place by its ucard-{type} root id. Selector-less PatchElements is a blind
+// patch-if-present: it updates the card if it's on screen and silently no-ops
+// otherwise (an off-board or focus-view owner is unaffected). nil params render
+// the card's default — safe for non-parameterized cards (today).
+func (s *chatStream) refreshCard(typ string) {
+	_ = s.sse.PatchElements(string(s.h.cardHTML(typ, nil)))
 }
 
 // appendChoices appends a live dialogue-choice panel.
