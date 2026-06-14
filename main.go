@@ -18,9 +18,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
-	"github.com/alexradunet/balaur/internal/gguf"
-	"github.com/alexradunet/balaur/internal/llama"
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/store"
@@ -53,15 +51,15 @@ func main() {
 		registerRecap(se.App)
 		registerNudge(se.App)
 		registerBriefing(se.App)
-		ensureDefaultModel(se.App)
+		ensureLocalDefault(se.App)
 		registerSearchIndex(se.App)
 		return se.Next()
 	})
 
-	// Tear down the local llamafile server (if one was started) on shutdown
-	// so it does not outlive the Balaur process.
+	// Tear down the Ollama server (if Balaur spawned one) on shutdown so it
+	// does not outlive the Balaur process.
 	app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
-		llama.Default.Stop()
+		ollama.Default.Stop()
 		// Close the FTS5 sidecar index if it was opened.
 		if raw, ok := app.Store().GetOk(search.StoreKey); ok {
 			if ix, ok := raw.(*search.Index); ok && ix != nil {
@@ -79,36 +77,72 @@ func main() {
 	os.Exit(cli.ExitCode())
 }
 
-// ensureDefaultModel fetches Balaur's hardcoded default model (the Qwen3.5-27B
-// llamafile) in the background on serve start, so a fresh box is usable out of
-// the box. No-op when the owner pinned BALAUR_CHAT_MODEL, the file is already
-// present, or BALAUR_AUTO_MODEL=0. The ~19 GB download runs through gguf.Shared
-// — the same manager the /models page polls — so progress is visible there.
-func ensureDefaultModel(app core.App) {
-	if os.Getenv("BALAUR_AUTO_MODEL") == "0" || os.Getenv("BALAUR_CHAT_MODEL") != "" {
+// ensureLocalDefault makes a fresh box usable out of the box: install the
+// Ollama binary if absent, ensure the daemon is running, pull Balaur's default
+// Gemma 4 chat + embedding models in the background, and activate the chat
+// model. No-op when BALAUR_AUTO_MODEL=0. Progress is the same snapshot the
+// /models card polls.
+func ensureLocalDefault(app core.App) {
+	if os.Getenv("BALAUR_AUTO_MODEL") == "0" {
 		return
 	}
-	dest := llm.DefaultChatModelPath(app.DataDir())
-	if _, err := os.Stat(dest); err == nil {
-		return // already downloaded
-	}
-	onDone := func(path string) {
-		id, err := store.SaveLocalGGUFModel(app, "", path)
-		if err != nil {
-			app.Logger().Error("default model: save", "err", err)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+		if _, err := ollama.Default.EnsureInstalled(ctx, app.DataDir()); err != nil {
+			app.Logger().Warn("ollama: install skipped", "err", err)
 			return
 		}
-		if err := store.SetActiveLLMModel(app, id, "system"); err != nil {
-			app.Logger().Error("default model: activate", "err", err)
+		if err := ollama.Default.EnsureRunning(ctx); err != nil {
+			app.Logger().Warn("ollama: not running", "err", err)
+			return
+		}
+		// Embedding model first (small), then the chat model.
+		if pulled, _ := ollama.Default.IsPulled(ollama.EmbedModel()); !pulled {
+			if err := ollama.Default.Pull(ollama.EmbedModel(), nil); err != nil {
+				app.Logger().Warn("ollama: embed pull not started", "err", err)
+			}
+			waitPull(ctx)
+		}
+		tag := ollama.ChatModel()
+		if pulled, _ := ollama.Default.IsPulled(tag); pulled {
+			activateLocal(app, tag)
+			return
+		}
+		onDone := func(tag string) { activateLocal(app, tag) }
+		if err := ollama.Default.Pull(tag, onDone); err != nil {
+			app.Logger().Warn("ollama: chat pull not started", "err", err)
+			return
+		}
+		app.Logger().Info("ollama: pulling default model on first serve", "tag", tag)
+		store.Audit(app, "", "system", "llm.model.pull", tag, true, map[string]any{"auto": true})
+	}()
+}
+
+// waitPull blocks until the active pull finishes or ctx ends (sequences the
+// embed pull before the chat pull, since the Manager runs one slot at a time).
+func waitPull(ctx context.Context) {
+	for {
+		if !ollama.Default.Snapshot().Active {
+			return
+		}
+		select {
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			return
 		}
 	}
-	if err := gguf.Shared.Start(llm.DefaultChatModelURL, dest, onDone); err != nil {
-		app.Logger().Warn("default model: download not started", "err", err)
+}
+
+func activateLocal(app core.App, tag string) {
+	id, err := store.SaveLocalModel(app, tag, ollama.EmbedModel())
+	if err != nil {
+		app.Logger().Error("default model: save", "err", err)
 		return
 	}
-	app.Logger().Info("default model: downloading on first serve", "url", llm.DefaultChatModelURL, "dest", dest)
-	store.Audit(app, "", "system", "llm.gguf.download", llm.DefaultChatModelURL, true,
-		map[string]any{"dest": dest, "auto": true})
+	if err := store.SetActiveLLMModel(app, id, "system"); err != nil {
+		app.Logger().Error("default model: activate", "err", err)
+	}
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve
