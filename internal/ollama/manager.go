@@ -70,8 +70,8 @@ func (m *Manager) EnsureInstalled(ctx context.Context, dataDir string) (string, 
 	if _, err := exec.LookPath(path); err == nil {
 		return path, nil
 	}
-	// BinaryPath returned the install target (<dataDir>/bin/ollama); download it.
-	return installBinary(ctx, path)
+	// Binary absent — install the full release (bin/ + lib/) into <dataDir>.
+	return installBinary(ctx, dataDir)
 }
 
 func (m *Manager) spawn(ctx context.Context) error {
