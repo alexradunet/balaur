@@ -66,7 +66,12 @@ race:
 	CGO_ENABLED=1 go test -race ./...
 
 fmt:
-	@[ "$(shell gofmt -l .)" = "" ]
+	@unformatted="$$(gofmt -l .)"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "These files need gofmt -w:"; \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi
 
 vet:
 	go vet ./...
