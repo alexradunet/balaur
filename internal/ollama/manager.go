@@ -1,20 +1,23 @@
 package ollama
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
+
+	api "github.com/ollama/ollama/api"
 )
 
-// maxLoad bounds how long EnsureRunning waits for a freshly spawned `ollama
-// serve` to answer /api/tags before giving up.
-const maxLoad = 60 * time.Second
+// Model is one model present in Ollama's local store. Path is always empty
+// (Ollama owns the blob store); kept so existing templates bind unchanged.
+type Model struct {
+	Name string
+	Size int64
+	Path string
+}
 
 // PullSnapshot is the observable state of the single background pull. Field
 // names mirror the retired gguf.Progress so existing templates bind unchanged;
@@ -30,16 +33,11 @@ type PullSnapshot struct {
 }
 
 // Manager owns Balaur's relationship with one Ollama server for the whole
-// binary: detect-or-spawn lifecycle, a single observable background pull, and
-// model list/delete. It never performs inference (that is llm.OpenAIClient).
+// binary: a single observable background pull and model list/delete. It is a
+// pure control client over the official ollama/api package; it never spawns a
+// server and never performs inference (that is llm.OpenAIClient).
 type Manager struct {
 	mu sync.Mutex
-
-	// lifecycle
-	dataDir string
-	cmd     *exec.Cmd
-	spawned bool
-	tail    *ringBuffer
 
 	// single-slot pull
 	cancel   context.CancelFunc
@@ -54,147 +52,27 @@ type Manager struct {
 // Default is the process-wide manager shared by every caller.
 var Default = &Manager{}
 
-func (m *Manager) apiClient() *api { return newAPI() }
-
-// EnsureRunning makes a local Ollama reachable: it adopts an already-running
-// instance (GET /api/tags), else spawns `ollama serve` and waits for ready.
-// Balaur owns the lifecycle only of a server it spawned (see Stop).
-func (m *Manager) EnsureRunning(ctx context.Context) error {
-	a := m.apiClient()
-	if a.up(ctx) {
-		return nil
-	}
-	return m.spawn(ctx)
+func (m *Manager) apiClient() *api.Client {
+	return api.NewClient(&url.URL{Scheme: "http", Host: Host()}, &http.Client{})
 }
 
-// EnsureInstalled ensures the ollama binary exists, installing the pinned
-// release into <dataDir>/bin/ollama when absent. Returns the binary path.
-func (m *Manager) EnsureInstalled(ctx context.Context, dataDir string) (string, error) {
-	m.mu.Lock()
-	m.dataDir = dataDir
-	m.mu.Unlock()
-	path := BinaryPath(dataDir)
-	if _, err := exec.LookPath(path); err == nil {
-		return path, nil
+// fetchModels lists local models via the official client and maps them onto
+// Balaur's Model type.
+func (m *Manager) fetchModels(ctx context.Context) ([]Model, error) {
+	resp, err := m.apiClient().List(ctx)
+	if err != nil {
+		return nil, err
 	}
-	// Binary absent — install the full release (bin/ + lib/) into <dataDir>.
-	return installBinary(ctx, dataDir)
-}
-
-func (m *Manager) spawn(ctx context.Context) error {
-	m.mu.Lock()
-	if m.cmd != nil {
-		m.mu.Unlock()
-		return nil
+	out := make([]Model, 0, len(resp.Models))
+	for _, lm := range resp.Models {
+		out = append(out, Model{Name: lm.Name, Size: lm.Size})
 	}
-	bin := BinaryPath(m.dataDir) // set by EnsureInstalled; falls back to PATH when empty
-	tail := &ringBuffer{max: 8 * 1024}
-	cmd := exec.Command(bin, "serve")
-	cmd.Stdout = tail
-	cmd.Stderr = tail
-	cmd.Env = append(cmd.Environ(), "OLLAMA_HOST="+Host())
-	setProcessGroup(cmd)
-	if err := cmd.Start(); err != nil {
-		m.mu.Unlock()
-		return fmt.Errorf("starting ollama serve: %w", err)
-	}
-	m.cmd = cmd
-	m.spawned = true
-	m.tail = tail
-	m.mu.Unlock() // release before the readiness poll so Snapshot/Pull/Cancel aren't blocked
-
-	a := m.apiClient()
-	deadline := time.Now().Add(maxLoad)
-	for time.Now().Before(deadline) {
-		if a.up(ctx) {
-			return nil
-		}
-		select {
-		case <-time.After(300 * time.Millisecond):
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	return fmt.Errorf("ollama serve did not become ready in %s\n%s", maxLoad, tail.String())
-}
-
-// Stop tears down the server only if Balaur spawned it.
-func (m *Manager) Stop() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.cmd == nil || !m.spawned || m.cmd.Process == nil {
-		return
-	}
-	killProcessGroup(m.cmd)
-	_ = m.cmd.Process.Kill()
-	m.cmd = nil
-	m.spawned = false
-}
-
-const defaultMinFreeGB = 12
-
-// minFreeGB is the free-space floor (GB) required before a pull, overridable
-// via BALAUR_OLLAMA_MIN_FREE_GB.
-func minFreeGB() int {
-	if v := os.Getenv("BALAUR_OLLAMA_MIN_FREE_GB"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-			return n
-		}
-	}
-	return defaultMinFreeGB
-}
-
-// modelStorePath is the directory Ollama stores models in (OLLAMA_MODELS or
-// ~/.ollama), resolved to its nearest existing ancestor for the free-space
-// check (the store may not exist before the first pull).
-func modelStorePath() string {
-	dir := os.Getenv("OLLAMA_MODELS")
-	if dir == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			dir = filepath.Join(home, ".ollama")
-		} else {
-			dir = "."
-		}
-	}
-	for {
-		if _, err := os.Stat(dir); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "."
-		}
-		dir = parent
-	}
-}
-
-// checkDiskSpace returns an error when free is below minGB gigabytes. Pure, for
-// testability; the OS probe is freeBytes.
-func checkDiskSpace(minGB int, free uint64) error {
-	if minGB <= 0 {
-		return nil
-	}
-	// Clamp to avoid uint64 overflow on an absurd operator-set value.
-	if minGB > 1<<24 {
-		minGB = 1 << 24
-	}
-	need := uint64(minGB) * 1024 * 1024 * 1024
-	if free < need {
-		return fmt.Errorf("insufficient disk space: %d GB free, need ≥ %d GB (set BALAUR_OLLAMA_MIN_FREE_GB to override)", free/(1024*1024*1024), minGB)
-	}
-	return nil
+	return out, nil
 }
 
 // Pull starts a single background `ollama pull tag`. Only one pull runs at a
 // time. onDone is called with the tag on success.
 func (m *Manager) Pull(tag string, onDone func(tag string)) error {
-	// Fail fast on a near-full disk rather than mid-download. A probe error
-	// (statfs failure) is non-fatal — fall through and let the pull proceed.
-	if free, err := freeBytes(modelStorePath()); err == nil {
-		if err := checkDiskSpace(minFreeGB(), free); err != nil {
-			return err
-		}
-	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.progress.Active {
@@ -209,15 +87,15 @@ func (m *Manager) Pull(tag string, onDone func(tag string)) error {
 }
 
 func (m *Manager) runPull(ctx context.Context, tag string) {
-	a := m.apiClient()
-	err := a.pull(ctx, tag, func(p PullProgress) {
+	err := m.apiClient().Pull(ctx, &api.PullRequest{Model: tag}, func(p api.ProgressResponse) error {
 		if p.Total <= 0 {
-			return // status-only line (e.g. "success"); keep the last byte counts
+			return nil // status-only line (e.g. "success"); keep the last byte counts
 		}
 		m.mu.Lock()
 		m.progress.BytesDone = p.Completed
 		m.progress.BytesTotal = p.Total
 		m.mu.Unlock()
+		return nil
 	})
 	var cb func(string)
 	m.mu.Lock()
@@ -267,7 +145,7 @@ func (m *Manager) Snapshot() PullSnapshot {
 // spawns a server; this is the one readiness seam callers use to surface
 // "start Ollama" guidance.
 func (m *Manager) Reachable(ctx context.Context) bool {
-	return m.apiClient().up(ctx)
+	return m.apiClient().Heartbeat(ctx) == nil
 }
 
 const tagsTTL = 3 * time.Second
@@ -284,7 +162,7 @@ func (m *Manager) cachedTags() ([]Model, error) {
 	}
 	m.mu.Unlock()
 
-	models, err := m.apiClient().tags(context.Background())
+	models, err := m.fetchModels(context.Background())
 	if err != nil {
 		return nil, err // do not cache errors
 	}
@@ -310,7 +188,7 @@ func (m *Manager) List() ([]Model, error) {
 
 // Delete removes a model tag from Ollama's store and invalidates the tags cache.
 func (m *Manager) Delete(tag string) error {
-	if err := m.apiClient().delete(context.Background(), tag); err != nil {
+	if err := m.apiClient().Delete(context.Background(), &api.DeleteRequest{Model: tag}); err != nil {
 		return err
 	}
 	m.invalidateTags()
@@ -331,27 +209,4 @@ func (m *Manager) IsPulled(tag string) (bool, error) {
 		}
 	}
 	return false, nil
-}
-
-// ringBuffer keeps the last max bytes written, for crash diagnostics.
-type ringBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-	max int
-}
-
-func (r *ringBuffer) Write(p []byte) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.buf.Write(p)
-	if r.buf.Len() > r.max {
-		r.buf.Next(r.buf.Len() - r.max)
-	}
-	return len(p), nil
-}
-
-func (r *ringBuffer) String() string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.buf.String()
 }
