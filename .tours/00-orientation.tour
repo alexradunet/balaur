@@ -40,12 +40,6 @@
       "description": "The conversation loop: `messages → model → tool calls → tool results → model …` until the model answers in plain text.\n\n- `agent.go` — `Loop.Run()`, the orchestrator\n- `agent_test.go` — 4 tests with a `fakeClient`, no real model needed\n\nThe loop has no knowledge of PocketBase, HTTP, or the UI. It takes a `llm.Client`, a list of `Tool`s, and an `emit func(Event)` callback — then drives the conversation. The caller decides what to do with events (stream HTML fragments, append to a slice, write to a database).\n\nEvent kinds: `text`, `reasoning`, `tool_start`, `tool_result`, `done`, `error`.\n\n**Tour 03** covers the loop step by step.\n**Tour 04** covers the tests."
     },
     {
-      "file": "internal/heads/heads.go",
-      "line": 1,
-      "title": "0.7 — Package map: internal/heads",
-      "description": "Sub-agent identity and the security boundary.\n\n- `heads.go` — `Spawn`, `Resolve`, `Merge`, `Revoke`: the lifecycle of a head (sub-agent)\n- `scoped.go` — `Scoped`: the **only** sanctioned data path for code acting as a head\n- `heads_test.go` — integration tests proving access denial works and is audited\n\nThe critical invariant: Go-side PocketBase access bypasses API rules. So tool code running as a head must call `AsHead(app, head).Records(...)` — not `app.FindRecordsByFilter(...)`. The `Scoped` type enforces this at the API level.\n\n**Tour 05** covers this in full, including running the security proof test."
-    },
-    {
       "file": "internal/web/web.go",
       "line": 1,
       "title": "0.8 — Package map: internal/web",
