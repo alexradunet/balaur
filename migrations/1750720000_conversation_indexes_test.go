@@ -8,10 +8,11 @@ import (
 
 func TestConversationIndexesExist(t *testing.T) {
 	app := storetest.NewApp(t)
+	// idx_conversations_open_branch_head and idx_conversations_head were dropped
+	// by the heads-as-personas migration (branch conversations retired); only the
+	// open-master and tasks-done indexes survive.
 	for _, idx := range []string{
-		"idx_conversations_open_branch_head",
 		"idx_conversations_open_master",
-		"idx_conversations_head",
 		"idx_tasks_done_at",
 	} {
 		var name string

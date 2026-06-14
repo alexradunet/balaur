@@ -29,7 +29,7 @@ type doctorCheck struct {
 var coreCollections = []string{
 	"messages", "memories", "tasks", "boards",
 	"conversations", "skills", "entries", "summaries",
-	"heads", "grants", "llm_providers", "llm_models",
+	"heads", "llm_providers", "llm_models",
 	"llm_settings", "extensions", "audit_log",
 }
 

@@ -279,7 +279,7 @@ type cardSkillsView struct {
 }
 
 type headRow struct {
-	ID, Name, Status, Purpose string
+	ID, Name, Purpose string
 }
 
 type cardHeadsView struct {
@@ -562,13 +562,12 @@ func (h *handlers) renderCardSkills(w io.Writer, params map[string]string) error
 }
 
 func (h *handlers) renderCardHeads(w io.Writer, _ map[string]string) error {
-	recs, _ := h.app.FindRecordsByFilter("heads", "status = 'active'", "-@rowid", 0, 0)
+	recs, _ := h.app.FindRecordsByFilter("heads", "", "created", 0, 0)
 	var heads []headRow
 	for _, r := range recs {
 		heads = append(heads, headRow{
 			ID:      r.Id,
 			Name:    r.GetString("name"),
-			Status:  r.GetString("status"),
 			Purpose: r.GetString("purpose"),
 		})
 	}

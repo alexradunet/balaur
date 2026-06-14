@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -310,8 +309,8 @@ func TestTaskTransition(t *testing.T) {
 	scenario.Test(t)
 }
 
-// seedHeadRec creates an active head record for web handler tests.
-func seedHeadRec(t testing.TB, app *tests.TestApp, name, status string) *core.Record {
+// seedHeadRec creates a custom head record for web handler tests.
+func seedHeadRec(t testing.TB, app *tests.TestApp, name, _ string) *core.Record {
 	t.Helper()
 	col, err := app.FindCollectionByNameOrId("heads")
 	if err != nil {
@@ -319,9 +318,6 @@ func seedHeadRec(t testing.TB, app *tests.TestApp, name, status string) *core.Re
 	}
 	rec := core.NewRecord(col)
 	rec.Set("name", name)
-	rec.Set("status", status)
-	rec.SetEmail(fmt.Sprintf("head-%d@balaur.local", time.Now().UnixNano()))
-	rec.SetRandomPassword()
 	if err := app.Save(rec); err != nil {
 		t.Fatalf("saving head: %v", err)
 	}
