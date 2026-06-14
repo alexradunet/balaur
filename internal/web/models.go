@@ -2,17 +2,14 @@ package web
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
-	"github.com/alexradunet/balaur/internal/gguf"
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
@@ -28,15 +25,15 @@ type homeData struct {
 	History         []messageView
 	HasRecap        bool
 	DevSeed         bool
-	NowMillis       int64          // nudge-poll cursor: only messages after page load
-	SoulAvatarURL   string         // resolved soul avatar URL
-	AvatarOptions   []AvatarOption // soul avatar picker roster
-	OwnerName       string         // display name for the "You" label in chat
-	BalaurAvatarURL string         // resolved Balaur head avatar URL
-	Gguf            gguf.Progress  // active model download, for the chatbar loading bar
-	ConvPostURL     string         // dock draft @post target: /ui/chat (master) or /ui/heads/{id}/chat
-	ConvHeadName    string         // active head's name; "" = master (no back affordance)
-	ConvBack        bool           // show "← back to main" (true in a branch)
+	NowMillis       int64               // nudge-poll cursor: only messages after page load
+	SoulAvatarURL   string              // resolved soul avatar URL
+	AvatarOptions   []AvatarOption      // soul avatar picker roster
+	OwnerName       string              // display name for the "You" label in chat
+	BalaurAvatarURL string              // resolved Balaur head avatar URL
+	Gguf            ollama.PullSnapshot // active model download, for the chatbar loading bar
+	ConvPostURL     string              // dock draft @post target: /ui/chat (master) or /ui/heads/{id}/chat
+	ConvHeadName    string              // active head's name; "" = master (no back affordance)
+	ConvBack        bool                // show "← back to main" (true in a branch)
 }
 
 // AvatarOption is one entry in an avatar picker (soul or Balaur head).
@@ -53,8 +50,8 @@ type modelsPageData struct {
 	ActiveModelID string
 	ModelError    string
 	ModelHint     string
-	Gguf          gguf.Progress
-	GgufFiles     []gguf.FileInfo
+	Gguf          ollama.PullSnapshot
+	GgufFiles     []ollama.Model
 	Providers     []store.ProviderView
 }
 
@@ -74,15 +71,15 @@ func (h *handlers) homeData() (homeData, error) {
 		return data, err
 	}
 	data.ModelChoices = choices
-	data.Gguf = h.gguf.Snapshot()
+	data.Gguf = h.ollama.Snapshot()
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
 	data.AvatarOptions = buildAvatarOptions(h.app)
 	data.OwnerName = store.OwnerName(h.app)
 	data.BalaurAvatarURL = store.BalaurAvatarURL(h.app)
 	if active.Key == "" {
-		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
-		data.ModelHint = llm.DefaultChatModelDownloadCommand(h.app.DataDir())
+		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
+		data.ModelHint = ollama.PullCommand()
 		return data, nil
 	}
 	data.ActiveModel = active.Name
@@ -127,7 +124,7 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 }
 
 func (h *handlers) modelsData() (modelsPageData, error) {
-	data := modelsPageData{ModelHint: llm.DefaultChatModelDownloadCommand(h.app.DataDir())}
+	data := modelsPageData{ModelHint: ollama.PullCommand()}
 	choices, active, err := turn.ModelChoices(h.app)
 	if err != nil {
 		return data, err
@@ -136,11 +133,10 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	if active.Key != "" {
 		data.ActiveModel = active.Name
 	} else {
-		data.ModelError = "No active model is available. Download the local GGUF or add an OpenAI-compatible provider."
+		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
 	}
-	data.Gguf = h.gguf.Snapshot()
-	modelsDir := filepath.Join(h.app.DataDir(), "models")
-	if files, err := gguf.List(modelsDir); err == nil {
+	data.Gguf = h.ollama.Snapshot()
+	if files, err := h.ollama.List(); err == nil {
 		data.GgufFiles = files
 	}
 	if providers, err := store.ListOpenAIProviders(h.app); err == nil {
@@ -204,36 +200,35 @@ func (h *handlers) missingModelModal(e *core.RequestEvent) error {
 	return h.renderModelModal(e, modal)
 }
 
-func (h *handlers) downloadModel(e *core.RequestEvent) error {
-	if e.Request.FormValue("target") == "models" {
-		return h.downloadModelFromPage(e)
-	}
-	modal, err := h.missingModelModalData(e.Request.FormValue("key"))
-	if err != nil {
-		return e.BadRequestError("model is not available", err)
-	}
-	if !modal.CanDownload {
-		return h.renderModelModal(e, modal)
-	}
-	dest := llm.DefaultChatModelPath(h.app.DataDir())
-	onDone := func(path string) {
-		id, err := store.SaveLocalGGUFModel(h.app, "", path)
+// modelPull starts a background pull of the default local model and activates
+// it when done. Used by the missing-model modal and the models card.
+func (h *handlers) modelPull(e *core.RequestEvent) error {
+	tag := ollama.ChatModel()
+	onDone := func(tag string) {
+		id, err := store.SaveLocalModel(h.app, tag, ollama.EmbedModel())
 		if err != nil {
-			h.app.Logger().Error("gguf onDone: save model", "err", err)
+			h.app.Logger().Error("pull onDone: save model", "err", err)
 			return
 		}
 		if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
-			h.app.Logger().Error("gguf onDone: activate model", "err", err)
+			h.app.Logger().Error("pull onDone: activate model", "err", err)
 		}
 	}
-	if err := h.gguf.Start(llm.DefaultChatModelURL, dest, onDone); err != nil {
+	if err := h.ollama.Pull(tag, onDone); err != nil {
+		if e.Request.FormValue("target") == "models" {
+			return h.modelsPanel(e, err.Error())
+		}
+		modal, mErr := h.missingModelModalData(e.Request.FormValue("key"))
+		if mErr != nil {
+			return e.BadRequestError("model is not available", mErr)
+		}
 		modal.Error = err.Error()
 		return h.renderModelModal(e, modal)
 	}
-	store.Audit(h.app, "", "owner", "llm.gguf.download", llm.DefaultChatModelURL, true,
-		map[string]any{"dest": dest})
-	// Close the modal immediately; the chatbar's every-2s poll will flip to
-	// ready once the background download finishes and activates the model.
+	store.Audit(h.app, "", "owner", "llm.model.pull", tag, true, nil)
+	if e.Request.FormValue("target") == "models" {
+		return h.modelsPanel(e, "")
+	}
 	data, err := h.homeData()
 	if err != nil {
 		return e.InternalServerError("loading chatbar", err)
@@ -246,27 +241,35 @@ func (h *handlers) downloadModel(e *core.RequestEvent) error {
 	return nil
 }
 
-func (h *handlers) downloadModelFromPage(e *core.RequestEvent) error {
-	key := e.Request.FormValue("key")
-	if _, err := h.missingModelModalData(key); err != nil {
+// modelPullProgress renders the progress fragment.
+func (h *handlers) modelPullProgress(e *core.RequestEvent) error {
+	snap := h.ollama.Snapshot()
+	var b strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&b, "gguf_progress", snap); err != nil {
+		return e.InternalServerError("rendering pull progress", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("gguf-progress"), datastar.WithModeOuter())
+	return nil
+}
+
+// modelPullCancel cancels the active pull, if any.
+func (h *handlers) modelPullCancel(e *core.RequestEvent) error {
+	h.ollama.Cancel()
+	store.Audit(h.app, "", "owner", "llm.model.pull_cancel", "", true, nil)
+	return h.modelsPanel(e, "")
+}
+
+// modelDelete removes a model tag from Ollama's store.
+func (h *handlers) modelDelete(e *core.RequestEvent) error {
+	name := e.Request.FormValue("name")
+	if cfg, ok, _ := store.ActiveLLMConfig(h.app); ok && cfg.Kind == "local" && cfg.ChatModel == name {
+		return h.modelsPanel(e, "that model is the active model — choose another model first")
+	}
+	if err := h.ollama.Delete(name); err != nil {
 		return h.modelsPanel(e, err.Error())
 	}
-	dest := llm.DefaultChatModelPath(h.app.DataDir())
-	onDone := func(path string) {
-		id, err := store.SaveLocalGGUFModel(h.app, "", path)
-		if err != nil {
-			h.app.Logger().Error("gguf onDone: save model", "err", err)
-			return
-		}
-		if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
-			h.app.Logger().Error("gguf onDone: activate model", "err", err)
-		}
-	}
-	if err := h.gguf.Start(llm.DefaultChatModelURL, dest, onDone); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	store.Audit(h.app, "", "owner", "llm.gguf.download", llm.DefaultChatModelURL, true,
-		map[string]any{"dest": dest})
+	store.Audit(h.app, "", "owner", "llm.model.delete", name, true, nil)
 	return h.modelsPanel(e, "")
 }
 
@@ -331,11 +334,11 @@ func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 	}
 	if os.Getenv("BALAUR_CHAT_MODEL") != "" {
 		modal.Title = "Local model missing"
-		modal.Body = "BALAUR_CHAT_MODEL points at a model file Balaur cannot find. Put that file at the configured path, or unset BALAUR_CHAT_MODEL to use Balaur's default local model."
+		modal.Body = "BALAUR_CHAT_MODEL pins an Ollama tag Balaur cannot find locally. Run `ollama pull <tag>` for that tag, or unset BALAUR_CHAT_MODEL to use Balaur's default local model."
 		return modal, nil
 	}
 	modal.CanDownload = true
-	modal.Body = "Download Balaur's default " + llm.DefaultChatModelName + " llamafile (~4 GB) and make it the active model?"
+	modal.Body = "Pull Balaur's default " + ollama.DefaultChatModelName + " model via Ollama and make it the active model?"
 	return modal, nil
 }
 
@@ -350,86 +353,6 @@ func (h *handlers) renderModelModal(e *core.RequestEvent, data modelModalData) e
 	// htmx:afterSwap showModal hook).
 	_ = sse.ExecuteScript("(function(d){if(d&&!d.open)d.showModal()})(document.getElementById('model-modal'))")
 	return nil
-}
-
-// ggufDownload starts a background download of a GGUF model.
-func (h *handlers) ggufDownload(e *core.RequestEvent) error {
-	rawURL := strings.TrimSpace(e.Request.FormValue("url"))
-	if rawURL == "" {
-		rawURL = llm.DefaultChatModelURL
-	}
-	activate := e.Request.FormValue("activate") == "1"
-
-	parsed, err := url.Parse(rawURL)
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return h.modelsPanel(e, fmt.Sprintf("invalid URL: only http or https are supported"))
-	}
-
-	base := filepath.Base(parsed.Path)
-	if filepath.Ext(base) != ".gguf" {
-		return h.modelsPanel(e, "URL must point to a .gguf file")
-	}
-
-	modelsDir := filepath.Join(h.app.DataDir(), "models")
-	dest := filepath.Join(modelsDir, base)
-
-	onDone := func(path string) {
-		id, err := store.SaveLocalGGUFModel(h.app, "", path)
-		if err != nil {
-			h.app.Logger().Error("gguf onDone: save model", "err", err)
-			return
-		}
-		if activate {
-			if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
-				h.app.Logger().Error("gguf onDone: activate model", "err", err)
-			}
-		}
-	}
-
-	if err := h.gguf.Start(rawURL, dest, onDone); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-
-	store.Audit(h.app, "", "owner", "llm.gguf.download", rawURL, true,
-		map[string]any{"dest": dest})
-	return h.modelsPanel(e, "")
-}
-
-// ggufProgress renders the progress fragment.
-func (h *handlers) ggufProgress(e *core.RequestEvent) error {
-	snap := h.gguf.Snapshot()
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "gguf_progress", snap); err != nil {
-		return e.InternalServerError("rendering gguf progress", err)
-	}
-	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("gguf-progress"), datastar.WithModeOuter())
-	return nil
-}
-
-// ggufCancel cancels the active download, if any.
-func (h *handlers) ggufCancel(e *core.RequestEvent) error {
-	h.gguf.Cancel()
-	store.Audit(h.app, "", "owner", "llm.gguf.cancel", "", true, nil)
-	return h.modelsPanel(e, "")
-}
-
-// ggufDelete deletes a GGUF file from the models directory.
-func (h *handlers) ggufDelete(e *core.RequestEvent) error {
-	name := e.Request.FormValue("name")
-	modelsDir := filepath.Join(h.app.DataDir(), "models")
-
-	// Guard: don't delete the active model.
-	if cfg, ok, _ := store.ActiveLLMConfig(h.app); ok && cfg.Kind == "local" &&
-		filepath.Base(cfg.ChatModel) == name {
-		return h.modelsPanel(e, "that file is the active model — choose another model first")
-	}
-
-	if err := gguf.Delete(modelsDir, name); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	store.Audit(h.app, "", "owner", "llm.gguf.delete", name, true, nil)
-	return h.modelsPanel(e, "")
 }
 
 // updateProvider handles POST /ui/model/provider/{id}/save.

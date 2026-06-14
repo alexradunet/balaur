@@ -20,7 +20,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
-	"github.com/alexradunet/balaur/internal/gguf"
+	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
@@ -181,7 +181,7 @@ func Register(se *core.ServeEvent) error {
 
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
-	h := &handlers{app: se.App, tmpl: tmpl, gguf: gguf.Shared}
+	h := &handlers{app: se.App, tmpl: tmpl, ollama: ollama.Default}
 	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/dock/conversation", h.dockConversation)
@@ -189,11 +189,11 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/model/select", h.selectModel)
 	se.Router.POST("/ui/model/openai", h.saveOpenAIModel)
 	se.Router.GET("/ui/model/missing", h.missingModelModal)
-	se.Router.POST("/ui/model/download", h.downloadModel)
-	se.Router.GET("/ui/model/gguf/progress", h.ggufProgress)
-	se.Router.POST("/ui/model/gguf/download", h.ggufDownload)
-	se.Router.POST("/ui/model/gguf/cancel", h.ggufCancel)
-	se.Router.POST("/ui/model/gguf/delete", h.ggufDelete)
+	se.Router.POST("/ui/model/download", h.modelPull)
+	se.Router.GET("/ui/model/gguf/progress", h.modelPullProgress)
+	se.Router.POST("/ui/model/gguf/download", h.modelPull)
+	se.Router.POST("/ui/model/gguf/cancel", h.modelPullCancel)
+	se.Router.POST("/ui/model/gguf/delete", h.modelDelete)
 	se.Router.POST("/ui/model/provider/{id}/save", h.updateProvider)
 	se.Router.POST("/ui/model/provider/{id}/delete", h.deleteProvider)
 	se.Router.POST("/ui/model/{id}/delete", h.deleteModelRecord)
@@ -246,7 +246,7 @@ type handlers struct {
 	app     core.App
 	tmpl    *template.Template
 	clients turn.ClientSource
-	gguf    *gguf.Manager
+	ollama  *ollama.Manager
 }
 
 func (h *handlers) render(e *core.RequestEvent, name string, data any) error {

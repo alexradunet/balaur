@@ -1,6 +1,6 @@
 //go:build unix
 
-package llama
+package ollama
 
 import (
 	"os/exec"
@@ -8,7 +8,7 @@ import (
 )
 
 // setProcessGroup makes the child its own process-group leader so
-// killProcessGroup can reap any helper children llamafile spawns.
+// killProcessGroup can reap any helper children `ollama serve` spawns.
 func setProcessGroup(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 }

@@ -3,6 +3,7 @@ package turn
 import (
 	"testing"
 
+	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -40,5 +41,22 @@ func TestModelChoicesBareBox(t *testing.T) {
 	// The active ModelChoice should have an empty Key (nothing selected).
 	if active.Key != "" {
 		t.Errorf("active.Key = %q on bare box, want empty (no usable model)", active.Key)
+	}
+}
+
+func TestClientSourceLocalUsesOllama(t *testing.T) {
+	t.Setenv("BALAUR_OLLAMA_HOST", "")
+	t.Setenv("BALAUR_EMBED_MODEL", "")
+	var src ClientSource
+	client, err := src.ClientFor(nil, ModelChoice{Provider: "local", Model: "gemma4:e4b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	oc, ok := client.(*llm.OpenAIClient)
+	if !ok {
+		t.Fatalf("client type = %T", client)
+	}
+	if oc.BaseURL != "http://127.0.0.1:11434/v1" || oc.Model != "gemma4:e4b" {
+		t.Fatalf("client = %+v", oc)
 	}
 }

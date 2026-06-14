@@ -131,7 +131,7 @@
 
   <section class="k-section">
     <div class="k-heading">
-      <h2>Local model files</h2>
+      <h2>Local models</h2>
     </div>
     {{template "gguf_progress" .Gguf}}
     {{if .GgufFiles}}
@@ -149,17 +149,12 @@
       {{end}}
     </div>
     {{else}}
-    <p class="k-sub">No GGUF files in the models directory.</p>
+    <p class="k-sub">No models pulled yet.</p>
     {{end}}
     <form class="card model-provider-form" data-on:submit__prevent="@post('/ui/model/gguf/download', {contentType:'form'})">
-      <label>Model URL
-        <input name="url" placeholder="https://huggingface.co/…/resolve/main/model.gguf">
-        <span class="k-sub">Leave blank to download the default Qwen3.6 35B A3B GGUF.</span>
-      </label>
-      <div class="model-form-checks">
-        <label><input type="checkbox" name="activate" value="1" checked> activate after download</label>
-      </div>
-      <button class="btn btn-primary" type="submit">Download</button>
+      <input type="hidden" name="target" value="models">
+      <p class="k-sub">Pull Balaur's default local model (Gemma 4 E4B) via Ollama and make it the active model. To use a different model, run <code>ollama pull &lt;tag&gt;</code> and select it above, or set <code>BALAUR_CHAT_MODEL</code>.</p>
+      <button class="btn btn-primary" type="submit">Pull default model</button>
     </form>
   </section>
 

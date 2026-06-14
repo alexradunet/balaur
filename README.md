@@ -7,10 +7,9 @@
 
 Balaur is a personal AI companion that lives on a box you own: a single Go
 executable embedding [PocketBase](https://pocketbase.io) for data, auth and
-migrations, a Datastar web interface, and local LLM inference served by a
-[llamafile](https://github.com/Mozilla-Ocho/llamafile) engine that Balaur runs
-as a subprocess and reaches over the OpenAI-compatible API — the same seam it
-uses for any remote provider.
+migrations, a Datastar web interface, and local LLM inference served by
+[Ollama](https://ollama.com) over the OpenAI-compatible `/v1` API — the same
+seam it uses for any remote provider.
 
 The name comes from the Romanian fairy-tale balaur: a dragon with multiple
 heads. Balaur keeps one main head — the master life conversation. Focused
@@ -31,11 +30,11 @@ database you own and can open with any SQLite tool.
 - **UI:** server-rendered Go templates + Datastar, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
-- **Models:** out of the box, a self-contained **Qwen3.5-4B llamafile**
-  (engine + weights in one executable) that Balaur downloads on first serve and
-  runs as a subprocess. Add any OpenAI-compatible endpoint — your own
-  llama-server, Ollama, or a remote API — and select it explicitly. Advanced:
-  point `BALAUR_CHAT_MODEL` at your own `.llamafile` or `.gguf`.
+- **Models:** out of the box, **Gemma 4 E4B** (`gemma4:e4b`) served by Ollama —
+  auto-installed and auto-pulled on first serve. GPU users can opt into
+  `gemma4:26b` (MoE). Add any OpenAI-compatible endpoint — a remote API or
+  another self-hosted server — and select it explicitly. Override the default
+  local tag with `BALAUR_CHAT_MODEL`.
 - **Heads:** sub-agents are auth records with short-lived tokens; their
   permissions are rows in `grants`, enforced in one code path
   (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
@@ -171,34 +170,35 @@ Just run it:
 go run . serve
 ```
 
-On first serve, Balaur downloads its default model — the **Qwen3.5-4B
-llamafile** (~4 GB, a single self-contained executable) — into
-`pb_data/models/` and activates it once the download finishes. Progress shows
-in the settings card's models section (`/focus/settings?section=models`).
-Disable the auto-download with `BALAUR_AUTO_MODEL=0`.
+On first serve, Balaur auto-installs a pinned Ollama binary (unless
+`BALAUR_AUTO_MODEL=0`), ensures `ollama serve` is running (adopting an
+existing instance if one is present), and pulls **Gemma 4 E4B** in the
+background with visible progress in the settings card's models section
+(`/focus/settings?section=models`).
 
 Overrides:
 
 ```bash
-# Use your own model file (a fat .llamafile, or a bare .gguf):
-BALAUR_CHAT_MODEL=/path/to/model.llamafile go run . serve
+# Use a different Ollama tag:
+BALAUR_CHAT_MODEL=gemma4:26b go run . serve
 
-# A bare .gguf needs a separate llamafile engine binary; default location is
-# pb_data/bin/llamafile, override with BALAUR_LLAMAFILE:
-BALAUR_CHAT_MODEL=/path/to/model.gguf BALAUR_LLAMAFILE=/opt/llamafile go run . serve
+# Point at a non-default Ollama instance:
+BALAUR_OLLAMA_HOST=192.168.1.10:11434 go run . serve
 
-# Add OpenAI-compatible endpoints (your own llama-server, Ollama, a remote
-# API) from the settings card's models section
-# (/focus/settings?section=models). Base URL, model id, and optional API key are
-# stored in PocketBase; the active model is selected explicitly.
+# Skip auto-install/pull entirely:
+BALAUR_AUTO_MODEL=0 go run . serve
+
+# Add OpenAI-compatible endpoints (a remote API or another self-hosted server)
+# from the settings card's models section (/focus/settings?section=models).
+# Base URL, model id, and optional API key are stored in PocketBase; the
+# active model is selected explicitly.
 ```
 
-**llamafile**: Balaur runs the model as a subprocess with `--server` on a
-local port and talks to it over the OpenAI-compatible API, so local and remote
-models share one code path (`internal/llm`). A fat `.llamafile` is its own
-engine; a bare `.gguf` is served by a separate llamafile engine binary. Either
-way the llama.cpp runtime is bundled — no C toolchain, no llama.cpp-head
-tracking. The process starts on the first chat and is torn down on shutdown.
+**Ollama**: Balaur manages Ollama as a subprocess and talks to it over the
+OpenAI-compatible `/v1` API, so local and remote models share one code path
+(`internal/llm`). If `ollama serve` is already running when Balaur starts,
+Balaur adopts it. The process is torn down on shutdown only if Balaur started
+it.
 
 **Extension engine**: Balaur uses goja (no tags; pins a master commit) for the JavaScript sandbox. Bumping it is a deliberate act—run `go test ./internal/ext/` after changing.
 
@@ -210,10 +210,11 @@ Optional environment variables:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `BALAUR_ALLOWED_HOSTS` | (unset) | Comma-separated `host[:port]` values allowed as the Host header beyond loopback (LAN names, NetBird — see [docs/netbird.md](docs/netbird.md)) |
-| `BALAUR_CHAT_MODEL` | (unset) | Path to a local model file (`.llamafile` or `.gguf`); overrides the default and the settings models-section choice |
-| `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-download of the default Qwen3.5-4B llamafile |
-| `BALAUR_LLAMAFILE` | (unset) | Path to the llamafile engine binary used to serve a bare `.gguf`; defaults to `pb_data/bin/llamafile`. Not needed for a fat `.llamafile`. |
-| `BALAUR_EMBED_MODEL` | (unset) | Path to a local embedding model GGUF (reserved for future embedding recall; lexical recall uses FTS5 today) |
+| `BALAUR_OLLAMA_HOST` | `127.0.0.1:11434` | Ollama bind address (host:port, no scheme) Balaur connects to |
+| `BALAUR_OLLAMA` | (unset) | Path to the Ollama binary; overrides the auto-installed default |
+| `BALAUR_CHAT_MODEL` | `gemma4:e4b` | Ollama tag for the local chat model; overrides the default and the settings models-section choice |
+| `BALAUR_EMBED_MODEL` | `embeddinggemma` | Ollama tag for the local embedding model |
+| `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-install/pull of Ollama and the default model |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
@@ -294,8 +295,8 @@ loginctl enable-linger "$USER"
 ```
 
 Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —
-no C toolchain. The binary is static; the GGUF weights and the llamafile
-engine are downloaded data, stored outside the repo and outside the binary.
+no C toolchain. The binary is static; the Ollama binary and model weights are
+downloaded data, stored outside the repo and outside the binary.
 
 ## CLI for agents & test harnesses
 
@@ -422,7 +423,7 @@ main.go            wire-up: PocketBase app, migrations, CLI, routes, crons
 migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: OpenAI-compatible HTTP (local + remote)
-internal/llama/    llamafile subprocess supervisor serving a local GGUF
+internal/ollama/   Ollama subprocess manager, binary install, model pull
 internal/turn/     the channel-agnostic turn pipeline + model resolution
 internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries

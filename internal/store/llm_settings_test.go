@@ -1,97 +1,71 @@
 package store
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
-func TestEnsureDefaultLLMConfigDoesNotAutoSelectMissingLocal(t *testing.T) {
+func TestEnsureDefaultLLMConfigRegistersDefaultWithoutActivating(t *testing.T) {
 	app := storetest.NewApp(t)
+	t.Setenv("BALAUR_CHAT_MODEL", "")
 	if err := EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
 		t.Fatalf("ensure default: %v", err)
-	}
-	if _, ok, err := ActiveLLMConfig(app); err != nil || ok {
-		t.Fatalf("active = %v, %v; want unset without model file", ok, err)
 	}
 	models, err := ListLLMModels(app)
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
-	if len(models) != 1 || models[0].Kind != "local" || !models[0].Local {
-		t.Fatalf("default models = %#v, want one local model", models)
+	if len(models) != 1 || models[0].Kind != "local" ||
+		models[0].ChatModel != ollama.DefaultChatModel || models[0].EmbedModel != ollama.DefaultEmbedModel {
+		t.Fatalf("default models = %#v, want one local tag model", models)
+	}
+	// Registered but NOT auto-activated — activation happens only after a pull.
+	if _, ok, err := ActiveLLMConfig(app); err != nil || ok {
+		t.Fatalf("active = %v, %v; want no active model before pull", ok, err)
 	}
 }
 
-func TestEnsureDefaultLLMConfigSelectsExistingLocal(t *testing.T) {
+func TestSaveLocalModelIdempotent(t *testing.T) {
 	app := storetest.NewApp(t)
-	target := llm.DefaultChatModelPath(app.DataDir())
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(target, []byte("GGUF"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
-		t.Fatalf("ensure default: %v", err)
-	}
-	cfg, ok, err := ActiveLLMConfig(app)
-	if err != nil || !ok {
-		t.Fatalf("active = %v, %v; want set", ok, err)
-	}
-	if cfg.Kind != "local" || cfg.ChatModel != target {
-		t.Fatalf("active config = %#v", cfg)
-	}
-}
-
-func TestSaveLocalGGUFModelIdempotent(t *testing.T) {
-	app := storetest.NewApp(t)
-	path := filepath.Join(app.DataDir(), "models", "test.gguf")
-
-	id1, err := SaveLocalGGUFModel(app, "", path)
+	id1, err := SaveLocalModel(app, "gemma4:e4b", "embeddinggemma")
 	if err != nil {
-		t.Fatalf("first call: %v", err)
+		t.Fatalf("first: %v", err)
 	}
 	if id1 == "" {
-		t.Fatal("expected non-empty id")
+		t.Fatal("empty id")
 	}
-
-	// Second call with same path must return same id (idempotent upsert).
-	id2, err := SaveLocalGGUFModel(app, "", path)
+	id2, err := SaveLocalModel(app, "gemma4:e4b", "embeddinggemma")
 	if err != nil {
-		t.Fatalf("second call: %v", err)
+		t.Fatalf("second: %v", err)
 	}
 	if id1 != id2 {
-		t.Fatalf("idempotent upsert: first=%q second=%q; want same id", id1, id2)
+		t.Fatalf("not idempotent: %q vs %q", id1, id2)
 	}
-
-	// Label defaults to file name.
 	models, err := ListLLMModels(app)
 	if err != nil {
-		t.Fatalf("list models: %v", err)
+		t.Fatalf("list: %v", err)
 	}
 	var found bool
 	for _, m := range models {
 		if m.ModelID == id1 {
-			if m.Label != "test.gguf" {
-				t.Fatalf("label = %q, want %q", m.Label, "test.gguf")
+			if m.ChatModel != "gemma4:e4b" || m.EmbedModel != "embeddinggemma" {
+				t.Fatalf("model = %#v", m)
 			}
 			found = true
 		}
 	}
 	if !found {
-		t.Fatal("model not found in list")
+		t.Fatal("model not in list")
 	}
 }
 
-func TestSaveLocalGGUFModelRequiresPath(t *testing.T) {
+func TestSaveLocalModelRequiresTag(t *testing.T) {
 	app := storetest.NewApp(t)
-	if _, err := SaveLocalGGUFModel(app, "label", ""); err == nil {
-		t.Fatal("expected error when path is empty")
+	if _, err := SaveLocalModel(app, "", "embeddinggemma"); err == nil {
+		t.Fatal("expected error when tag is empty")
 	}
 }
 
