@@ -37,22 +37,22 @@ func TestMeasureCard_HasData(t *testing.T) {
 		`class="kcard ucard ucard-measure"`,
 		`/static/icons/orb.png`,
 		`Measure`,
-		`weight`,                              // kcard-meta kind
-		`class="life-stat"`,                  // stat paragraph
-		`82.5`,                               // LastVal
+		`weight`,            // kcard-meta kind
+		`class="life-stat"`, // stat paragraph
+		`82.5`,              // LastVal
 		`class="life-unit"`,
-		`kg`,                                 // Unit
+		`kg`, // Unit
 		`class="life-lastat"`,
-		`· Jun 14`,                           // LastAt
-		`class="spark"`,                      // SVG element
+		`· Jun 14`,      // LastAt
+		`class="spark"`, // SVG element
 		`viewBox="0 0 240 48"`,
 		`width="240"`,
 		`height="48"`,
 		`aria-label="weight trend"`,
-		`4.0,44.0 122.0,24.0 240.0,4.0`,     // polyline points
+		`4.0,44.0 122.0,24.0 240.0,4.0`, // polyline points
 		`fill="none"`,
-		`cx="240.0"`,                         // circle last x
-		`cy="4.0"`,                           // circle last y
+		`cx="240.0"`, // circle last x
+		`cy="4.0"`,   // circle last y
 		`r="3"`,
 		`class="life-change"`,
 		`+1.5 over 90d`,

@@ -13,6 +13,7 @@ import (
 func Register(app core.App) {
 	registerMeasure(app)
 	registerLines(app)
+	registerLifelog(app)
 }
 
 // Unregister removes all cards this feature registered. Called from
@@ -20,6 +21,7 @@ func Register(app core.App) {
 func Unregister() {
 	ui.UnregisterCard("measure")
 	ui.UnregisterCard("lines")
+	ui.UnregisterCard("lifelog")
 }
 
 // init self-registers this feature so the declarative registry (and

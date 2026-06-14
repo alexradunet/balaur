@@ -22,8 +22,6 @@ import (
 // View-models (mirror lifeKindView + lifeHabitView in internal/web/life.go)
 // ---------------------------------------------------------------------------
 
-const lifeWindowDays = 90
-
 // LifeKindView is one tracked kind's summary for the lifelog card tile.
 // The tile shows only Kind + Count (no sparklines); those are reserved for the
 // focus view.

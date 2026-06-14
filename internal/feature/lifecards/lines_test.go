@@ -29,8 +29,8 @@ func TestLinesCard_WithLines(t *testing.T) {
 		`class="kcard ucard ucard-lines"`,
 		`/static/icons/orb.png`,
 		`Recent lines`,
-		`reading`,                                  // kcard-meta kind
-		`class="life-lines"`,                       // ul element
+		`reading`,            // kcard-meta kind
+		`class="life-lines"`, // ul element
 		`Jun 14 — Finished The Pragmatic Programmer`,
 		`Jun 12 — Chapter 5`,
 		`href="/focus/lifelog"`,
