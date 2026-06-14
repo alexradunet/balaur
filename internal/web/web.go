@@ -222,6 +222,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
 	// Heads — switchable personas. The active head flavors the master turn.
 	se.Router.POST("/ui/heads/active", h.setActiveHead)
+	se.Router.POST("/ui/heads/new", h.createHead)
+	se.Router.POST("/ui/heads/{id}/delete", h.deleteHead)
 	// Typed card registry (plan 028) — parameterized server resources.
 	se.Router.GET("/ui/cards", h.uiCardPalette)
 	se.Router.GET("/ui/cards/{type}", h.uiCard)

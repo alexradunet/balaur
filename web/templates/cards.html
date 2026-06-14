@@ -323,23 +323,61 @@
 {{- /* heads card — active heads with status tags */ -}}
 {{- /* context: cardHeadsView */ -}}
 {{define "ucard_heads"}}
-<article class="kcard ucard ucard-heads" id="ucard-heads">
+<article class="kcard ucard ucard-heads ucard-manage" id="ucard-heads">
   <header class="kcard-head">
     <span class="kcard-kind"><img class="tool-icon" src="/static/icons/tome.png" alt="">Heads</span>
   </header>
-  {{if .Heads}}
-  <ul class="ucard-list">
+  <ul class="head-list">
     {{range .Heads}}
-    <li class="ucard-row">
-      <span class="ucard-title"><a href="/focus/heads">{{.Name}}</a></span>
-      {{with .Purpose}}<span class="kcard-meta">{{.}}</span>{{end}}
+    <li class="head-row{{if .Active}} head-row-active{{end}}" id="head-{{.ID}}">
+      <img class="px head-row-avatar" src="{{.AvatarURL}}" alt="" decoding="async">
+      <div class="head-row-main">
+        <span class="head-row-name">{{.Name}}{{if .BuiltIn}} <span class="tag">built-in</span>{{end}}{{if .Active}} <span class="tag">active</span>{{end}}</span>
+        {{with .Purpose}}<span class="kcard-meta">{{.}}</span>{{end}}
+        <span class="head-row-groups">
+          {{range .Groups}}{{if .On}}<span class="head-group-pip">{{.Key}}</span>{{end}}{{end}}
+        </span>
+      </div>
+      <div class="head-row-actions">
+        {{if not .Active}}
+        <form data-on:submit__prevent="@post('/ui/heads/active', {contentType:'form'})">
+          <input type="hidden" name="head" value="{{.ID}}">
+          <button class="btn btn-ghost btn-sm" type="submit">Make active</button>
+        </form>
+        {{end}}
+        {{if not .BuiltIn}}
+        <form data-on:submit__prevent="@post('/ui/heads/{{.ID}}/delete', {contentType:'form'})">
+          <button class="btn btn-ghost btn-sm" type="submit">Delete</button>
+        </form>
+        {{end}}
+      </div>
     </li>
     {{end}}
   </ul>
-  {{else}}
-  <p class="k-empty">No active heads yet.</p>
-  {{end}}
-  <footer class="kcard-actions"><a href="/focus/heads">all heads →</a></footer>
+
+  <details class="head-new">
+    <summary>+ New head</summary>
+    <form class="head-new-form" data-on:submit__prevent="@post('/ui/heads/new', {contentType:'form'})">
+      <input type="text" name="name" placeholder="Name" required maxlength="120">
+      <input type="text" name="purpose" placeholder="Purpose (how this head should answer)" maxlength="2000">
+      <fieldset class="head-new-groups">
+        <legend>Tools (none = all)</legend>
+        {{range .Groups}}
+        <label><input type="checkbox" name="tools" value="{{.}}"> {{.}}</label>
+        {{end}}
+      </fieldset>
+      <fieldset class="head-new-avatars avatar-choice-list">
+        <legend>Avatar</legend>
+        {{range .Avatars}}
+        <label class="avatar-choice">
+          <input type="radio" name="balaur_avatar" value="{{.Key}}">
+          <img class="px" src="{{.URL}}" alt="{{.Label}}" decoding="async"><span>{{.Label}}</span>
+        </label>
+        {{end}}
+      </fieldset>
+      <button class="btn btn-primary btn-sm" type="submit">Create head</button>
+    </form>
+  </details>
 </article>
 {{end}}
 

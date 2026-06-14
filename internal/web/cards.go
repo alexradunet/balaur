@@ -22,8 +22,10 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/cards"
+	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/life"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
@@ -278,12 +280,21 @@ type cardSkillsView struct {
 	ParamLine string
 }
 
-type headRow struct {
-	ID, Name, Purpose string
+type headGroupChoice struct {
+	Key string
+	On  bool
+}
+
+type headManageRow struct {
+	ID, Name, Purpose, AvatarURL string
+	BuiltIn, Active              bool
+	Groups                       []headGroupChoice
 }
 
 type cardHeadsView struct {
-	Heads []headRow
+	Heads   []headManageRow
+	Avatars []store.AvatarEntry // new-head avatar picker
+	Groups  []string            // group checkboxes for the new-head form
 }
 
 // ---- per-type renderers ----
@@ -562,16 +573,32 @@ func (h *handlers) renderCardSkills(w io.Writer, params map[string]string) error
 }
 
 func (h *handlers) renderCardHeads(w io.Writer, _ map[string]string) error {
-	recs, _ := h.app.FindRecordsByFilter("heads", "", "created", 0, 0)
-	var heads []headRow
-	for _, r := range recs {
-		heads = append(heads, headRow{
-			ID:      r.Id,
-			Name:    r.GetString("name"),
-			Purpose: r.GetString("purpose"),
+	activeID := heads.Active(h.app).ID
+	var rows []headManageRow
+	for _, hd := range heads.List(h.app) {
+		sel := make(map[string]bool, len(hd.Groups))
+		for _, g := range hd.Groups {
+			sel[g] = true
+		}
+		groups := make([]headGroupChoice, 0, len(heads.Groups))
+		for _, g := range heads.Groups {
+			groups = append(groups, headGroupChoice{Key: g, On: sel[g]})
+		}
+		rows = append(rows, headManageRow{
+			ID:        hd.ID,
+			Name:      hd.Name,
+			Purpose:   hd.Purpose,
+			AvatarURL: store.BalaurAvatarURLForKey(h.app, hd.Avatar),
+			BuiltIn:   hd.BuiltIn,
+			Active:    hd.ID == activeID,
+			Groups:    groups,
 		})
 	}
-	return h.tmpl.ExecuteTemplate(w, "ucard_heads", cardHeadsView{Heads: heads})
+	return h.tmpl.ExecuteTemplate(w, "ucard_heads", cardHeadsView{
+		Heads:   rows,
+		Avatars: store.BalaurHeads(),
+		Groups:  heads.Groups,
+	})
 }
 
 // buildTimelineN builds the forward timeline over an explicit number of days

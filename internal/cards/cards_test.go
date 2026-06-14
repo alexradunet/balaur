@@ -209,12 +209,12 @@ func TestValidateFreeStringParamCap(t *testing.T) {
 }
 
 func TestHasManage(t *testing.T) {
-	for _, typ := range []string{"quests", "memory", "skills", "heads"} {
+	for _, typ := range []string{"quests", "memory", "skills"} {
 		if !cards.HasManage(typ) {
 			t.Errorf("HasManage(%q) = false, want true", typ)
 		}
 	}
-	for _, typ := range []string{"today", "calendar", "journal", "day", "habits", "lifelog", "timeline", "settings", "nope"} {
+	for _, typ := range []string{"today", "calendar", "journal", "day", "habits", "lifelog", "timeline", "settings", "heads", "nope"} {
 		if cards.HasManage(typ) {
 			t.Errorf("HasManage(%q) = true, want false", typ)
 		}
