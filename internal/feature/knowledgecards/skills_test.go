@@ -30,7 +30,7 @@ func TestSkillsCard_WithRows(t *testing.T) {
 		`limit: 6`,
 		`/focus/skills`,
 		`Weekly review`,
-		`enabled`,           // enabled badge for first row
+		`enabled`, // enabled badge for first row
 		`End-of-week reflection`,
 		`Deep work`,
 		`Distraction-free focus block`,

@@ -226,12 +226,12 @@ func TestMemoryRecordCardNoCategoryShowsMemory(t *testing.T) {
 
 func TestMemoryRecordCardBody(t *testing.T) {
 	r := knowledgecards.MemoryRecord{
-		ID:        "r3",
-		Status:    "active",
-		Category:  "fact",
-		Title:     "Some fact",
-		Content:   "The content here",
-		WhenToUse: "When discussing history",
+		ID:         "r3",
+		Status:     "active",
+		Category:   "fact",
+		Title:      "Some fact",
+		Content:    "The content here",
+		WhenToUse:  "When discussing history",
 		Importance: 2,
 	}
 	out := renderMemoryRecord(t, r)
