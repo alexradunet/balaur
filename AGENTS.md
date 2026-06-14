@@ -77,7 +77,8 @@ lean and high-signal — add a rule only when it changes a real decision.
   shared turn pipeline + model resolution), `internal/tools` (agent
   tools), `internal/self` (self-knowledge + capability inventory),
   `internal/web` (Datastar gateway), `internal/cli` (JSON gateway),
-  `internal/heads` (sub-agent identity + grants), `migrations` (schema).
+  `internal/heads` (switchable personas — name, purpose, avatar, tool-group
+  filter), `migrations` (schema).
   Treat a package past ~500 lines as a smell to decompose, not extend.
 - **Self-knowledge is part of the change.** `internal/self/knowledge.md`
   is the running binary's own description of its architecture and
@@ -93,13 +94,12 @@ lean and high-signal — add a rule only when it changes a real decision.
   breaking-change precedent (v0.23 rewrote the whole API surface), and
   >20 files touch it directly — an upgrade is a REPO-WIDE change; budget
   and test it as such, never as "one package wide".
-- **The rule boundary is sacred.** Go-side `app.Save`/`Find*` calls BYPASS
-  collection API rules — this is documented PocketBase behavior, not a bug.
-  Any code path acting *on behalf of a head* must enforce scope explicitly:
-  either `app.CanAccessRecord(record, requestInfo, rule)` or filters derived
-  from the head's grants. Never hand a head's request straight to the DAO.
-  Every such access writes an `audit_log` record. Tests must prove
-  out-of-scope access fails.
+- **Go-side record access bypasses API rules.** `app.Save`/`app.Find*` skip
+  PocketBase collection rules by design — that is documented behavior, not a
+  bug. Code that writes on the owner's behalf is trusted; there is no per-head
+  data scoping (heads are switchable personas, not sandboxed agents — see
+  `docs/superpowers/specs/2026-06-14-heads-as-personas-design.md`). Keep
+  mutations owner-initiated and auditable.
 - **OS access is opt-in and audited.** The four OS tools (read, write, edit,
   bash) ship disabled. Enabling them is an explicit setting; every
   invocation lands in `audit_log` with arguments and outcome.
@@ -164,9 +164,9 @@ lean and high-signal — add a rule only when it changes a real decision.
 
 ## Known limitations & deferred work
 
-- Multi-human multi-user is FUTURE work, not v1. V1 has one human owner;
-  the auth machinery exists to scope agent heads. Schema decisions should
-  not preclude multiple humans later, but no code path serves them yet.
+- Multi-human multi-user is FUTURE work, not v1. V1 has one human owner.
+  Schema decisions should not preclude multiple humans later, but no code
+  path serves them yet.
 - The Johnny Decimal Markdown vault mirror (one-way export + git) is
   roadmap, not shipped. Do not claim it in user-facing copy until real.
 - Local inference is a supervised Ollama subprocess (`internal/ollama`):

@@ -29,18 +29,22 @@ over time, and keeps your data your own.
 
 **The promise:** *Your personal wise companion that grows with you.*
 
-**Core metaphor — one companion, one main head.** Balaur has one master life
-conversation: the main head. Focused work opens a temporary sub-head, handled
-as a branch, then closes and merges back into the main head.
+**Core metaphor — one companion, one main head plus switchable specialist
+heads.** Balaur has one master life conversation. Its heads are switchable
+personas: the main `balaur` head plus specialists (`scholar`, `planner`,
+`coach`, and any you create). Switching the active head gives the same shared
+conversation a different voice, purpose, avatar, and tool set — it does not
+fork the conversation.
 
-**Growth metaphor — new branch, new head.** Balaur does not install plugins;
-it *grows*. Each focused branch or reviewable skill is a sub-head serving the
-same companion, not a separate AI. Never frame it as a plugin marketplace,
+**Growth metaphor — new head, new specialist.** Balaur does not install
+plugins; it *grows*. Each head and each reviewable skill serves the same
+companion, not a separate AI. Never frame it as a plugin marketplace,
 extension store, or multi-agent swarm.
 
-In the Go shape this metaphor is structural: each head is an auth record whose
-data access is scoped by grants and enforced at the rule boundary. The story
-and the security model are the same drawing.
+In the Go shape this metaphor is structural: a head is a persona record —
+name, purpose, avatar, and an optional capability-group tool filter — applied
+to the one master turn. Heads are not sandboxed agents; there is no per-head
+data scoping. The story and the trust model are the same drawing.
 
 **Keywords:** wise · companion · grows-with-you · helpful · remembers ·
 trustworthy · pixel-art · 16-bit · woven · tactile · storybook · local-first ·
@@ -71,7 +75,7 @@ never flatter you, say it this way?
 
 - *Your personal wise companion that grows with you.*
 - *Remembers what matters.*
-- *New branch, new head.*
+- *A head for every task.*
 - *Your life is not a product.*
 - *The repo is the system.*
 - *Woven, not rendered.*
@@ -90,18 +94,21 @@ renders at two sizes — a **tile** on a board, and a full-canvas **focus**
 used to be. *Boards* (`/boards`) are owner-composed dashboards of card tiles
 (drag/resize, persisted); the `/ui/cards` palette is the launcher that opens any
 feature in focus, and chat can compose cards/boards too (`card_show` /
-`board_compose`). The *dock chat* is the single persistent chat; it **swaps
-conversations** (the master head ↔ a sub-head's branch) without leaving the dock.
-There are no feature pages: the retired routes (`/tasks`, `/journal`, `/day`,
-`/memory`, `/skills`, `/life`, `/heads`, `/heads/{id}/chat`, `/models`,
+`board_compose`). The *dock chat* is the single persistent chat; a **head
+switcher** in the dock changes the active persona (voice, avatar, tool set)
+without leaving or forking the conversation. There are no feature pages: the
+retired routes (`/tasks`, `/journal`, `/day`,
+`/memory`, `/skills`, `/life`, `/heads`, `/models`,
 `/settings`, `/profile`) **302 → `/boards`**, while their write endpoints
 (`/ui/*`) live on, now driving card focuses.
 
 **True today:** single Go binary embedding PocketBase · Datastar web UI ·
 PocketBase collections for conversations, messages, memories, skills, heads,
-grants, audit log · local inference via a llamafile engine Balaur runs as a
-subprocess and reaches over the OpenAI-compatible API · OpenAI-compatible
-remote providers by explicit choice · heads as auth records with grant-scoped, audited access ·
+audit log · local inference via Ollama, run as a subprocess and reached over
+the OpenAI-compatible API · OpenAI-compatible
+remote providers by explicit choice · heads are switchable personas — name +
+purpose + avatar + optional capability-group tool filter, applied to the one
+master turn; no branch conversations, no grants ·
 OS access mode (read, write, edit, bash), off by default, fully audited ·
 memory & skill proposals with owner approval cards (chat, the memory & skills card focuses) ·
 two-tier context injection (importance-gated upfront + per-message recall) ·
@@ -141,10 +148,12 @@ avatar picker in the settings card's profile focus (stored in `owner_settings`) 
 profile section (the settings card focus, `/focus/settings?section=profile`)
 with display name, soul avatar picker (16 options),
 and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
-`localStorage` · sub-head branch conversations with a focused,
-tool-free chat channel per active head, opened in the dock via
-`GET /ui/dock/conversation?head={id}` (the heads roster is the heads card
-focus at `/focus/heads`), per-head Balaur avatars.
+`localStorage` · switchable head personas: a dock head switcher
+(`/ui/heads/active`) chooses the active head, which flavors the master turn
+and filters its tools by capability group; built-in `balaur`/`scholar`/
+`planner`/`coach` plus owner-created customs managed from the heads card
+(`/ui/heads/new`, `/ui/heads/{id}/delete`, focus at `/focus/heads`), each with
+its own Balaur avatar.
 
 the CLI speaks API v1 — every JSON output is enveloped `{v, kind, data}`
 where `kind` is `<command>.<subcommand>` (e.g. `"task.add"`, `"doctor"`) and
@@ -197,7 +206,7 @@ candlelit gold accents, constant-parchment content panels, and strict
    bevel shadow system, buttons that physically sink 3px on press.
 6. **Folk accenting** — madder red, candlelit gold, deep teal, indigo as
    accents, not decoration overload.
-7. **New branch, new head** — growth is depicted as another Balaur head on
+7. **A head for every task** — growth is depicted as another Balaur head on
    the same body, never a plugin tile.
 8. **Art ships borderless** — marks, avatars, and pixel icons carry no
    baked-in or CSS frame of their own. Frames are a context decision made
@@ -460,8 +469,9 @@ Selection takes effect immediately and persists.
 
 Stored as `balaur-01.png` … `balaur-16.png` under `web/static/avatars/`.
 `balaur.png` is the **active Balaur slot** — templates always reference it;
-it defaults to `balaur-01` (Wise). Focused sub-heads are assigned a head
-variant via the `balaur_avatar` field on the head record (via `POST /ui/heads/{id}/avatar`).
+it defaults to `balaur-01` (Wise). Each head persona carries its own variant
+via the `balaur_avatar` field on the head record (set when the head is created
+from the heads card via `POST /ui/heads/new`).
 
 | Key | Personality | Visual character |
 |---|---|---|
@@ -490,7 +500,7 @@ For any Balaur-branded surface:
 - One core voice: a wise companion — warm, steady, never flattering.
 - Lead with the companion: help, memory, growth. Privacy is the quiet
   second beat. Never lead with "sovereign / bastion / dragon swarm."
-- Heads = focused branches inside one companion; never separate AIs.
+- Heads = switchable personas inside one companion; never separate AIs.
 - Mythic seasoning, plain technical truth as the base. No hype, no emoji.
 - Match the honesty ledger. Never state roadmap as shipped.
 - Dark-first, woven, pixel-hard, not glossy.

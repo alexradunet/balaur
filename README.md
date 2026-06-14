@@ -12,11 +12,10 @@ migrations, a Datastar web interface, and local LLM inference served by
 seam it uses for any remote provider.
 
 The name comes from the Romanian fairy-tale balaur: a dragon with multiple
-heads. Balaur keeps one main head — the master life conversation. Focused
-work happens as temporary sub-heads: each is a real auth identity whose data
-access is scoped by explicit grants, checked on every access, and written to
-an audit log. When the work is done, the head merges back and its access
-dies with it.
+heads. A head is a switchable persona — a name, purpose, avatar, and an
+optional tool-group filter. The active head flavors the one shared life
+conversation; switch heads in the dock to give the same master turn a
+different voice and a narrower (or wider) set of tools.
 
 Your life is not a product. The record of your life should live in a
 database you own and can open with any SQLite tool.
@@ -25,7 +24,7 @@ database you own and can open with any SQLite tool.
 
 - **One binary:** `balaur` — web UI, database, migrations, agent loop.
 - **Data:** PocketBase collections — `conversations`, `messages`,
-  `memories`, `skills`, `heads`, `grants`, `audit_log` — in plain SQLite
+  `memories`, `skills`, `heads`, `audit_log` — in plain SQLite
   under `pb_data/`.
 - **UI:** server-rendered Go templates + Datastar, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
@@ -35,12 +34,12 @@ database you own and can open with any SQLite tool.
   `gemma4:26b` (MoE). Add any OpenAI-compatible endpoint — a remote API or
   another self-hosted server — and select it explicitly. Override the default
   local tag with `BALAUR_CHAT_MODEL`.
-- **Heads:** sub-agents are auth records with short-lived tokens; their
-  permissions are rows in `grants`, enforced in one code path
-  (`internal/heads`), audited in `audit_log`. Tests prove out-of-scope
-  access fails. Each active head also has a persistent, focused,
-  tool-free chat channel — a branch conversation separate from the
-  master, opened in the dock from the heads card focus.
+- **Heads:** switchable personas. A head is a name + purpose + avatar +
+  optional capability-group tool filter. Built-in `balaur`, `scholar`,
+  `planner`, and `coach` ship out of the box; create your own from the heads
+  card. The active head is chosen in the dock switcher and applied to the one
+  shared conversation — full trust, no data scoping. `internal/heads` owns
+  the roster.
 - **Memory & skills with consent:** the model proposes (`remember`,
   `propose_skill`); proposals render as cards — in chat and in the memory
   & skills card focuses — that the owner approves, edits, or dismisses. Nothing
@@ -429,7 +428,7 @@ internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries
 internal/tasks/    commitments: recurrence DSL + task verbs on the entries life log
 internal/verify/   runtime honesty check: words audited against tool deeds
-internal/heads/    sub-agent identities, grants, audit — the rule boundary
+internal/heads/    switchable personas: built-ins + custom CRUD, active head, tool-group filter
 internal/knowledge/ memory & skill lifecycle, context injection — the consent boundary
 internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
@@ -448,8 +447,6 @@ boundary) and `DESIGN.md` for the Basm design system.
 - Johnny Decimal Markdown vault mirror: one-way export + git history
 - Embedding recall (FTS5 lexical recall shipped; `Embed()` seam reserved
   for a second ranking stage behind the same SearchActive call)
-- Sub-head merge-back and scoped head tools (branch chat shipped;
-  merge and grant-scoped tools are the next slices)
 - Encrypted export
 - Multi-human accounts (the schema allows it; v1 serves one owner)
 

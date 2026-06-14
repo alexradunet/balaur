@@ -15,15 +15,15 @@ binary runs as a subprocess and reaches over the OpenAI-compatible API — the
 same seam used for optional OpenAI-compatible remote providers.
 
 The name is the Romanian fairy-tale dragon with many heads. There is one
-master conversation — the main head, persisted forever, summarized by
-the recap telescope. Focused work can run as temporary sub-heads with
-explicitly granted, audited data access (internal/heads). Each active
-head also has its own persistent branch conversation the owner can chat
-in: the dock swaps to it via GET /ui/dock/conversation?head={id} (opened
-from the heads card focus), and the turn endpoint is POST
-/ui/heads/{id}/chat. Turns are focused (the head's name and purpose as
-the system prompt), tool-free today (scoped tools are a future slice),
-and leave the master conversation untouched.
+master conversation, persisted forever and summarized by the recap
+telescope. Heads are switchable personas (internal/heads): the active
+head's name and purpose flavor the master turn's system prompt, its
+avatar marks its replies, and its capability groups filter which tools
+the turn may use. Built-in balaur/scholar/planner/coach plus
+owner-created customs; the owner picks the active head in the dock
+switcher (POST /ui/heads/active). There is no per-head data scoping, no
+grants, and no branch conversations — one shared conversation, full
+trust.
 
 Three governing principles:
 
@@ -53,8 +53,8 @@ One binary, layered as: gateway → turn pipeline → business logic.
   windows), tasks (commitments, recurrence DSL, nudges, briefing), life
   (owner-defined log + journal), knowledge (memory & skill lifecycle —
   the consent boundary), recap (hierarchical summaries), verify (words
-  vs deeds), heads (sub-agent identity, grants, audit — the rule
-  boundary), store (the one PocketBase seam), search (FTS5 sidecar index
+  vs deeds), heads (switchable personas — built-ins, active head,
+  custom CRUD, tool-group filter), store (the one PocketBase seam), search (FTS5 sidecar index
   — bm25-ranked recall rebuilt on boot, synced on write; pb_data/search.db
   is disposable and safe to delete), tools (your tool implementations),
   ext (balaur-extensions: consent-gated runtime tools in JavaScript, run
@@ -62,7 +62,7 @@ One binary, layered as: gateway → turn pipeline → business logic.
   client for local and remote alike), llama (the llamafile subprocess
   supervisor that serves a local GGUF).
 - Data lives in PocketBase collections: conversations, messages,
-  memories, skills, tasks, entries, summaries, heads, grants,
+  memories, skills, tasks, entries, summaries, heads,
   llm_providers, llm_models, llm_settings, extensions, audit_log.
   Inspectable with any SQLite tool.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
@@ -98,8 +98,9 @@ self tool, which reports the actual registry):
 
 Surfaces: the web UI at / (chat, /focus/memory, /focus/skills, /focus/quests,
 /focus/heads, /focus/journal, /focus/day?date={date}, /focus/lifelog,
-/focus/settings?section=profile|models; a head's branch
-chat opens in the dock via /ui/dock/conversation?head={id}); the machine-facing
+/focus/settings?section=profile|models; the active head is switched from the
+dock via POST /ui/heads/active, and the heads card manages personas via
+POST /ui/heads/new and POST /ui/heads/{id}/delete); the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
@@ -130,7 +131,7 @@ days param), journal (recent entries, limit param), day (a day-of-life summary
 tile + full focus, date param), measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
 kind, kind required + limit param), memory (active memories, query + limit
-params), skills (active skills, limit param), heads (active heads, no params),
+params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
 habits (recurring tasks with their streak, no params).
 GET /ui/cards lists the full palette. The registry lives in internal/cards
 (no web imports); renderers live in internal/web/cards.go.
