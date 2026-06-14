@@ -263,6 +263,13 @@ func (m *Manager) Snapshot() PullSnapshot {
 	return m.progress
 }
 
+// Reachable reports whether the configured Ollama server answers. Balaur never
+// spawns a server; this is the one readiness seam callers use to surface
+// "start Ollama" guidance.
+func (m *Manager) Reachable(ctx context.Context) bool {
+	return m.apiClient().up(ctx)
+}
+
 const tagsTTL = 3 * time.Second
 
 // cachedTags returns the model list from a short-TTL cache so the board-render

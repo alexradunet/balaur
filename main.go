@@ -51,15 +51,12 @@ func main() {
 		registerRecap(se.App)
 		registerNudge(se.App)
 		registerBriefing(se.App)
-		ensureLocalDefault(se.App)
+		logOllamaReachability(se.App)
 		registerSearchIndex(se.App)
 		return se.Next()
 	})
 
-	// Tear down the Ollama server (if Balaur spawned one) on shutdown so it
-	// does not outlive the Balaur process.
 	app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
-		ollama.Default.Stop()
 		// Close the FTS5 sidecar index if it was opened.
 		if raw, ok := app.Store().GetOk(search.StoreKey); ok {
 			if ix, ok := raw.(*search.Index); ok && ix != nil {
@@ -77,72 +74,21 @@ func main() {
 	os.Exit(cli.ExitCode())
 }
 
-// ensureLocalDefault makes a fresh box usable out of the box: install the
-// Ollama binary if absent, ensure the daemon is running, pull Balaur's default
-// Gemma 4 chat + embedding models in the background, and activate the chat
-// model. No-op when BALAUR_AUTO_MODEL=0. Progress is the same snapshot the
-// /models card polls.
-func ensureLocalDefault(app core.App) {
-	if os.Getenv("BALAUR_AUTO_MODEL") == "0" {
-		return
-	}
+// logOllamaReachability records, once at startup, whether the configured Ollama
+// server is reachable. Balaur is a client only — it never installs, spawns, or
+// stops Ollama. A fresh box has no active model until the owner pulls one via
+// /models (the default is pre-listed by store.EnsureDefaultLLMConfig).
+func logOllamaReachability(app core.App) {
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if _, err := ollama.Default.EnsureInstalled(ctx, app.DataDir()); err != nil {
-			app.Logger().Warn("ollama: install skipped", "err", err)
-			return
+		host := ollama.Host()
+		if ollama.Default.Reachable(ctx) {
+			app.Logger().Info("ollama: ready", "host", host)
+		} else {
+			app.Logger().Warn("ollama: not reachable — start Ollama or set BALAUR_OLLAMA_HOST", "host", host)
 		}
-		if err := ollama.Default.EnsureRunning(ctx); err != nil {
-			app.Logger().Warn("ollama: not running", "err", err)
-			return
-		}
-		// Embedding model first (small), then the chat model.
-		if pulled, _ := ollama.Default.IsPulled(ollama.EmbedModel()); !pulled {
-			if err := ollama.Default.Pull(ollama.EmbedModel(), nil); err != nil {
-				app.Logger().Warn("ollama: embed pull not started", "err", err)
-			}
-			waitPull(ctx)
-		}
-		tag := ollama.ChatModel()
-		if pulled, _ := ollama.Default.IsPulled(tag); pulled {
-			activateLocal(app, tag)
-			return
-		}
-		onDone := func(tag string) { activateLocal(app, tag) }
-		if err := ollama.Default.Pull(tag, onDone); err != nil {
-			app.Logger().Warn("ollama: chat pull not started", "err", err)
-			return
-		}
-		app.Logger().Info("ollama: pulling default model on first serve", "tag", tag)
-		store.Audit(app, "system", "llm.model.pull", tag, true, map[string]any{"auto": true})
 	}()
-}
-
-// waitPull blocks until the active pull finishes or ctx ends (sequences the
-// embed pull before the chat pull, since the Manager runs one slot at a time).
-func waitPull(ctx context.Context) {
-	for {
-		if !ollama.Default.Snapshot().Active {
-			return
-		}
-		select {
-		case <-time.After(time.Second):
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func activateLocal(app core.App, tag string) {
-	id, err := store.SaveLocalModel(app, tag, ollama.EmbedModel())
-	if err != nil {
-		app.Logger().Error("default model: save", "err", err)
-		return
-	}
-	if err := store.SetActiveLLMModel(app, id, "system"); err != nil {
-		app.Logger().Error("default model: activate", "err", err)
-	}
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve
