@@ -27,6 +27,7 @@ import (
 	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // queryToMap converts url.Values to a flat map[string]string (first value
@@ -88,6 +89,16 @@ func (h *handlers) uiCard(e *core.RequestEvent) error {
 // board grid (w = an in-process buffer, via cardHTML) — so a card is rendered
 // the same way whether it's lazily fetched or server-rendered inline.
 func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) error {
+	// Feature-owned gomponents renderers take precedence; unmigrated types
+	// fall through to the legacy html/template switch below. Empty registry =
+	// no behavior change.
+	if fn, ok := ui.LookupCard(typ); ok {
+		node, err := fn(ui.Tile, params)
+		if err != nil {
+			return err
+		}
+		return node.Render(w)
+	}
 	switch typ {
 	case "today":
 		return h.renderCardToday(w, params)
