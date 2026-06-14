@@ -36,9 +36,10 @@ func (c LLMConfig) DisplayName() string {
 
 // EnsureDefaultLLMConfig makes sure the "Local model" provider and Balaur's
 // default local model (an Ollama tag) exist. It does NOT activate the default:
-// a local model becomes active only after it is actually pulled (see
-// main.ensureLocalDefault and the web pull handler), so a fresh box never
-// reports an unpulled model as ready. The dataDir param is retained for
+// a local model becomes active only after it is actually pulled (via the
+// /models web pull handler, now the only path that activates a local
+// model), so a fresh box never reports an unpulled model as ready. The
+// dataDir param is retained for
 // call-site compatibility.
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
 	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)

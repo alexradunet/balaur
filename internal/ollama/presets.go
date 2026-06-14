@@ -1,8 +1,9 @@
-// Package ollama runs Balaur's local LLM through Ollama. Inference goes over
-// Ollama's OpenAI-compatible /v1 API via internal/llm.OpenAIClient — the same
-// client used for frontier providers — so "local" is just an OpenAI endpoint
-// Balaur detects or spawns and tends itself. This package owns operations only
-// (process lifecycle, binary install, model pull/list/delete), never inference.
+// Package ollama is Balaur's client to a separately-run Ollama server.
+// Inference goes over Ollama's OpenAI-compatible /v1 API via
+// internal/llm.OpenAIClient — the same client used for frontier providers.
+// Model control (list/pull/delete + readiness) goes over the official
+// github.com/ollama/ollama/api client. Balaur never installs, spawns, or
+// stops Ollama; it talks to whatever server BALAUR_OLLAMA_HOST points at.
 package ollama
 
 import "os"
