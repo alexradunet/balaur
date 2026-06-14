@@ -29,8 +29,12 @@ So: a head becomes a **persona you switch to**, not a sandboxed worker.
 
 ## Goals
 
-- One conversation, full tools, full trust. Switching a head changes only the
-  voice/expertise (a system-prompt flavor) and the avatar shown.
+- One conversation, full trust. Switching a head changes the voice/expertise
+  (a system-prompt flavor), the avatar shown, and — optionally — which tools
+  the head is offered.
+- Give each head an optional **tool selection** (capability groups). Empty =
+  all tools, so the main head and any unconfigured head behave exactly as
+  today. This shapes a head's focus without rebuilding the security layer.
 - Ship a small built-in roster — one **main** head plus three specialists —
   and let the owner create custom heads when they need them.
 - Switch the active head from a picker in the chat dock, beside the model
@@ -42,54 +46,99 @@ So: a head becomes a **persona you switch to**, not a sandboxed worker.
 
 - **No autonomous sub-agents.** Heads never run on their own; there is no
   spawn-by-AI, no delegated background task.
-- **No per-head scoping/grants/audit.** Every head shares the owner's full
-  tool set and trust. The `grants` collection and `heads.Scoped` are deleted.
+- **No per-head data scoping/grants/audit (the security boundary).** A head
+  can be offered a *subset of tools* (see "Per-head tool groups"), but that is
+  capability shaping, not enforcement: the tools that *are* offered still run
+  with the owner's full trust and full data access. An un-offered tool is
+  simply absent from the model's tool list — there is no fail-closed check, no
+  audit. The `grants` collection, `heads.Scoped`, and the audited rule boundary
+  are deleted and **not replaced**.
 - **No branch/separate conversations per head.** There is one `master`
   thread. Switching heads does not fork history. (`turn.RunFor`,
   `conversation.ForHead`, and the dock conversation-swap are deleted.)
-- **No merge-back, no scoped head tools.** The unshipped `docs/head-tools-design.md`
-  / plan 019 design becomes irrelevant and is removed.
+- **No merge-back.** The unshipped `docs/head-tools-design.md` / plan 019
+  described *grant-derived scoped tools* — a security model. That approach
+  stays rejected; per-head tool groups here are a non-security filter, not
+  grants, so the doc is removed.
 
 ## The model
 
-A **head** is three fields:
+A **head** is four fields:
 
 - `name` — e.g. "Scholar"
 - `purpose` — a short system-prompt flavor, e.g. "explains, researches, weighs
   trade-offs; precise and cites its reasoning"
 - `balaur_avatar` — one of `balaur-01`…`balaur-16`
+- `tools` — an optional list of capability-group keys (see below). Empty = all.
 
 There is exactly one conversation (the existing `master`). The **active head**
 is an owner setting. On each turn, `turn.Run` reads the active head and:
 
-1. appends its `purpose` to the system prompt (the main head adds nothing), and
-2. renders the assistant's messages with the active head's `balaur_avatar`.
+1. appends its `purpose` to the system prompt (the main head adds nothing),
+2. filters the offered tool set to the head's groups (empty = all tools), and
+3. renders the assistant's messages with the active head's `balaur_avatar`.
 
-Tools, memories, skills, history, and the honesty check are unchanged and
-shared. The Balaur metaphor is exact: **one body (memory, history, tools),
-many heads (voices).** Switching mid-conversation is fine and intentional —
-it is the dragon turning a different head toward you over the same shared
-memory.
+Memories, skills, history, and the honesty check are unchanged and shared. The
+Balaur metaphor is exact: **one body (memory, history, data), many heads
+(voices, each with the reach you give it).** Switching mid-conversation is fine
+and intentional — it is the dragon turning a different head toward you over the
+same shared memory.
 
 ### Built-in roster (in Go, always present, not editable)
 
-| key       | role | purpose flavor |
-|-----------|------|----------------|
-| `balaur`  | **main** | general companion; uses the owner's default `balaur_avatar`; adds no extra flavor (the baseline system prompt) |
-| `scholar` | specialist | explains, researches, weighs trade-offs; precise and cites its reasoning |
-| `planner` | specialist | turns goals into concrete tasks and steps; outcome-oriented |
-| `coach`   | specialist | accountability, reflection, journaling; warm and direct |
+The `tools` column lists each built-in's default capability groups (see
+"Per-head tool groups"); empty means the full toolset.
+
+| key       | role | purpose flavor | tools |
+|-----------|------|----------------|-------|
+| `balaur`  | **main** | general companion; uses the owner's default `balaur_avatar`; adds no extra flavor (the baseline system prompt) | *(all)* |
+| `scholar` | specialist | explains, researches, weighs trade-offs; precise and cites its reasoning | `memory` |
+| `planner` | specialist | turns goals into concrete tasks and steps; outcome-oriented | `tasks`, `memory` |
+| `coach`   | specialist | accountability, reflection, journaling; warm and direct | `journal`, `life`, `memory` |
 
 Built-ins are defined in code so they are always available and cannot be
-deleted or corrupted. Their avatars are fixed defaults (assigned in the plan).
-Re-skinning or editing a built-in is **out of scope for v1** — only custom
-heads are editable; built-ins are read-only.
+deleted or corrupted. Their avatars and tool groups are fixed defaults
+(assigned in the plan). Re-skinning or editing a built-in is **out of scope for
+v1** — only custom heads are editable; built-ins are read-only.
 
 ### Custom heads (owner-created)
 
 Stored as rows in the `heads` base collection. Created/deleted from the Heads
-manage card (`name` + `purpose` + pick an avatar). No scoping, no auth, no
-expiry — just the three fields plus `created`.
+manage card (`name` + `purpose` + pick an avatar + tick capability groups). No
+scoping, no auth, no expiry — just the four fields plus `created`.
+
+### Per-head tool groups
+
+The owner shapes a head's reach by selecting **capability groups**, not
+individual tools. The groups map one-to-one onto the tool constructors that
+`turn.Tools` already assembles (`internal/turn/tools.go`), so the mapping is
+nearly free and self-maintaining — adding a tool to, say, `KnowledgeTools`
+automatically reaches every head with the `memory` group.
+
+| group        | constructor               | tools (today) |
+|--------------|---------------------------|---------------|
+| `memory`     | `tools.KnowledgeTools`    | remember, recall, skill, propose_skill |
+| `tasks`      | `tools.TaskTools`         | task_add, task_list, task_done, task_snooze, task_drop |
+| `life`       | `tools.LifeTools`         | log_entry, entry_series, entry_drop |
+| `journal`    | `tools.JournalTools`      | journal_write |
+| `os`         | `tools.OSAccess`          | read, write, edit, bash — only present when `BALAUR_OS_ACCESS=1` |
+| `extensions` | `ext.ProposeTool` + `ext.Tools` | propose_extension + approved balaur-extensions |
+
+**Always-on core** (every head, not selectable): `tools.ChoiceTools`
+(offer_choices), `tools.UITools` (card/board composition), and `self.Tool`.
+These are interaction and self-description tools, not domain mutations, so
+every head keeps them. `self.Tool` is built from the head's *own* filtered tool
+names, so a narrowed head reports only the capabilities it actually has and
+never claims a tool it wasn't given.
+
+**Empty selection = all groups** — identical to today's behavior. This is the
+default for the main head and any custom head the owner leaves unconfigured.
+
+**This is a filter, not a sandbox.** A group the owner omits is simply not
+offered to the model that turn; the tools that *are* offered still execute with
+full owner trust. Only the two interactive chat gateways run a turn
+(`internal/web/chat.go`, `internal/cli/chat.go`), so adopting the active head's
+filter never narrows an agent-initiated message.
 
 ## Data model & migration
 
@@ -100,8 +149,9 @@ One **new** migration (historical migrations are not rewritten):
 
 - **Drop** the `grants` collection.
 - **Drop and recreate** `heads` as a *base* collection with fields:
-  `name` (text, required), `purpose` (text), `balaur_avatar` (text), and the
-  default `created`/`updated`. The old `heads` was an `AuthCollection`
+  `name` (text, required), `purpose` (text), `balaur_avatar` (text),
+  `tools` (JSON — an array of capability-group keys; empty/absent = all), and
+  the default `created`/`updated`. The old `heads` was an `AuthCollection`
   (email/password/tokens/status/expires) — all of that is gone.
 - **Drop** the branch-only `conversations` machinery added by
   `1750720000_conversation_indexes.go`: indexes
@@ -126,10 +176,16 @@ head was deleted), **fall back to `balaur`**. Default is `balaur`.
 ## Runtime wiring
 
 - **`turn.Run`** gains active-head awareness: resolve the active head, append
-  its `purpose` to the system prompt, and expose its avatar for rendering.
-  This is the single integration point. (`turn.RunFor` is deleted; head turns
-  now flow through `Run` and therefore get the honesty check they previously
-  skipped — a net improvement.)
+  its `purpose` to the system prompt, filter the tool set to the head's groups,
+  and expose its avatar for rendering. This is the single integration point.
+  (`turn.RunFor` is deleted; head turns now flow through `Run` and therefore
+  get the honesty check they previously skipped — a net improvement.)
+- **Tool filtering** lives in `internal/turn/tools.go` as a new
+  `ToolsForHead(app, groups)` beside the existing `Tools(app)`: empty `groups`
+  returns `Tools(app)` verbatim (zero behavior change); otherwise it assembles
+  the always-on core plus the selected group constructors, and builds
+  `self.Tool` from the resulting names. `Run` calls `ToolsForHead` instead of
+  `Tools`.
 - **Avatar resolution** generalizes today's behavior: the main `balaur` head
   uses the owner's `balaur_avatar` setting (unchanged from today); specialists
   and custom heads use their own `balaur_avatar`.
@@ -148,7 +204,9 @@ head was deleted), **fall back to `balaur`**. Default is `balaur`.
   "roster of active head *records* with avatar picker + open-chat" to a
   persona manager: list built-ins (read-only) and customs (editable/deletable),
   show which is active, "make active", and "+ New head" (name + purpose +
-  avatar). The card stays in the typed card registry (`internal/cards/cards.go`).
+  avatar + ~6 capability-group checkboxes). The group checkboxes are the only
+  new control versus the avatar picker the card already had. The card stays in
+  the typed card registry (`internal/cards/cards.go`).
 - **Removed UI:** the "Open chat →" branch button, the per-head branch dock,
   and the dock back-button/branch label in `home.html`/`dock_convo`.
 
@@ -236,17 +294,21 @@ the old model.
 **Add:**
 
 - Migration test: after migrating, `grants` is gone, `heads` is a base
-  collection with the three fields, and the branch `conversations`
-  fields/indexes are gone.
+  collection with the four fields (`name`, `purpose`, `balaur_avatar`,
+  `tools`), and the branch `conversations` fields/indexes are gone.
 - Active-head resolution: built-in key resolves; custom id resolves; deleted
   custom id falls back to `balaur`; default is `balaur`.
 - `turn.Run` system-prompt injection: a specialist's `purpose` appears in the
   prompt; the main head adds nothing.
+- `ToolsForHead` filtering: empty groups returns the full `Tools(app)` set; a
+  head with `["memory"]` is offered `recall` but not `task_add`; the always-on
+  core (offer_choices, UI, self) is present regardless; `self.Tool` reports
+  only the head's filtered tool names.
 - Dock: switcher renders the active head and the roster; selecting a head sets
   `active_head` and re-renders the dock avatar/label without swapping the
   conversation.
-- Custom head CRUD: create and delete a custom head; built-ins cannot be
-  deleted.
+- Custom head CRUD: create and delete a custom head with chosen tool groups;
+  built-ins cannot be deleted.
 
 ## Open questions
 
