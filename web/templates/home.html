@@ -67,6 +67,7 @@
 {{define "chat_bar"}}
 <div class="chatbar chatbar-slim" id="chatbar"
      {{if not .ChatReady}}data-on:interval__duration.2s="@get('/ui/chatbar')"{{end}}>
+  {{template "head_switcher" .}}
   {{template "model_switcher" .}}
 </div>
 {{end}}
@@ -122,6 +123,31 @@
     </span>
     <a href="/focus/settings?section=profile" class="chatbar-profile-href">Your avatar &amp; profile →</a>
   </div>
+</section>
+{{end}}
+
+{{- /* head_switcher — the dock persona picker, beside the model switcher.
+     Selecting a head @posts /ui/heads/active, which re-renders this fragment.
+     Disabled while a turn streams (mirrors the model switcher). Context: homeData. */ -}}
+{{define "head_switcher"}}
+<section class="head-switcher" id="head-switcher" aria-label="Head">
+  <span class="model-switcher-kicker">Head</span>
+  <span class="head-switcher-current">{{.ActiveHeadName}}</span>
+  <ul class="head-switcher-list">
+    {{range .HeadChoices}}
+    <li>
+      <form data-on:submit__prevent="@post('/ui/heads/active', {contentType:'form'})">
+        <input type="hidden" name="head" value="{{.ID}}">
+        <button type="submit" class="head-switcher-choice{{if .Active}} head-switcher-choice-active{{end}}"
+                data-attr:disabled="$streaming"
+                {{if .Active}}aria-current="true"{{end}}>
+          <img class="px" src="{{.AvatarURL}}" alt="" decoding="async">
+          <span>{{.Name}}</span>
+        </button>
+      </form>
+    </li>
+    {{end}}
+  </ul>
 </section>
 {{end}}
 

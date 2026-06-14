@@ -9,6 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
+	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -30,7 +31,16 @@ type homeData struct {
 	AvatarOptions   []AvatarOption      // soul avatar picker roster
 	OwnerName       string              // display name for the "You" label in chat
 	BalaurAvatarURL string              // resolved Balaur head avatar URL
+	ActiveHeadID    string              // current head id/key
+	ActiveHeadName  string              // current head name (switcher label)
+	HeadChoices     []headChoice        // roster for the switcher
 	Gguf            ollama.PullSnapshot // active model download, for the chatbar loading bar
+}
+
+// headChoice is one entry in the dock head switcher.
+type headChoice struct {
+	ID, Name, AvatarURL string
+	Active              bool
 }
 
 // AvatarOption is one entry in an avatar picker (soul or Balaur head).
@@ -74,6 +84,17 @@ func (h *handlers) homeData() (homeData, error) {
 	data.AvatarOptions = buildAvatarOptions(h.app)
 	data.OwnerName = store.OwnerName(h.app)
 	data.BalaurAvatarURL = store.BalaurAvatarURL(h.app)
+	activeHead := heads.Active(h.app)
+	data.ActiveHeadID = activeHead.ID
+	data.ActiveHeadName = activeHead.Name
+	for _, hd := range heads.List(h.app) {
+		data.HeadChoices = append(data.HeadChoices, headChoice{
+			ID:        hd.ID,
+			Name:      hd.Name,
+			AvatarURL: store.BalaurAvatarURLForKey(h.app, hd.Avatar),
+			Active:    hd.ID == activeHead.ID,
+		})
+	}
 	if active.Key == "" {
 		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
 		data.ModelHint = ollama.PullCommand()

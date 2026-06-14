@@ -1692,6 +1692,13 @@ dialog::backdrop {
 
 /* ── Heads page ──────────────────────────────────────────────────── */
 
+.head-switcher{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;padding:.3rem .5rem}
+.head-switcher-current{font-weight:600}
+.head-switcher-list{display:flex;flex-wrap:wrap;gap:.3rem;list-style:none;margin:0;padding:0}
+.head-switcher-choice{display:inline-flex;align-items:center;gap:.25rem;border:1px solid var(--line,#0003);border-radius:999px;padding:.15rem .5rem;background:transparent;cursor:pointer;font-size:.85em}
+.head-switcher-choice-active{border-color:var(--accent,#7a5);font-weight:600}
+.head-switcher-choice img{width:18px;height:18px;border-radius:50%}
+
 .head-meta {
   display: flex;
   align-items: flex-start;
