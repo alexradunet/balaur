@@ -278,7 +278,8 @@ func (m *Manager) cachedTags() ([]Model, error) {
 	m.tagsCache = models
 	m.tagsCacheAt = time.Now()
 	m.mu.Unlock()
-	return models, nil
+	// Return a copy so a caller mutating the slice can't corrupt the cache.
+	return append([]Model(nil), models...), nil
 }
 
 // invalidateTags forces the next cachedTags call to refetch.
