@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/alexradunet/balaur/internal/llm"
@@ -153,7 +152,7 @@ func startServer(enginePath, modelPath string) (*server, error) {
 	cmd.Stdout = tail
 	cmd.Stderr = tail
 	// Own process group so stop() can reap any helper children llamafile spawns.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setProcessGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("starting llamafile: %w", err)
@@ -231,8 +230,8 @@ func (s *server) stop() {
 	if s.cmd.Process == nil {
 		return
 	}
-	// Kill the whole process group (Setpgid made the child its own leader).
-	_ = syscall.Kill(-s.cmd.Process.Pid, syscall.SIGKILL)
+	// Kill the whole process group (setProcessGroup made the child its own leader).
+	killProcessGroup(s.cmd)
 	_ = s.cmd.Process.Kill()
 }
 
