@@ -171,6 +171,13 @@ func modelStorePath() string {
 // checkDiskSpace returns an error when free is below minGB gigabytes. Pure, for
 // testability; the OS probe is freeBytes.
 func checkDiskSpace(minGB int, free uint64) error {
+	if minGB <= 0 {
+		return nil
+	}
+	// Clamp to avoid uint64 overflow on an absurd operator-set value.
+	if minGB > 1<<24 {
+		minGB = 1 << 24
+	}
 	need := uint64(minGB) * 1024 * 1024 * 1024
 	if free < need {
 		return fmt.Errorf("insufficient disk space: %d GB free, need ≥ %d GB (set BALAUR_OLLAMA_MIN_FREE_GB to override)", free/(1024*1024*1024), minGB)

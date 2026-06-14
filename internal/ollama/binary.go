@@ -112,6 +112,15 @@ func extractArchive(archivePath, destRoot string) error {
 				return err
 			}
 		case tar.TypeSymlink:
+			// Containment (defense-in-depth): reject absolute or escaping link
+			// targets. The genuine release uses only same-dir relative symlinks.
+			if filepath.IsAbs(hdr.Linkname) {
+				return fmt.Errorf("archive symlink %q has absolute target %q", hdr.Name, hdr.Linkname)
+			}
+			linkTarget := filepath.Join(filepath.Dir(target), hdr.Linkname)
+			if linkTarget != cleanRoot && !strings.HasPrefix(linkTarget, cleanRoot+string(os.PathSeparator)) {
+				return fmt.Errorf("archive symlink %q target escapes destination", hdr.Name)
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
 			}
@@ -120,11 +129,15 @@ func extractArchive(archivePath, destRoot string) error {
 				return err
 			}
 		case tar.TypeLink:
+			src := filepath.Join(cleanRoot, hdr.Linkname)
+			if src != cleanRoot && !strings.HasPrefix(src, cleanRoot+string(os.PathSeparator)) {
+				return fmt.Errorf("archive hardlink %q source escapes destination", hdr.Name)
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
 			}
 			_ = os.Remove(target)
-			if err := os.Link(filepath.Join(cleanRoot, hdr.Linkname), target); err != nil {
+			if err := os.Link(src, target); err != nil {
 				return err
 			}
 		}
@@ -155,6 +168,7 @@ func installBinary(ctx context.Context, dataDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer os.Remove(tmp) // clean up the partial download on every return path
 	if _, err := io.Copy(out, resp.Body); err != nil {
 		out.Close()
 		return "", err
@@ -162,7 +176,6 @@ func installBinary(ctx context.Context, dataDir string) (string, error) {
 	if err := out.Close(); err != nil {
 		return "", err
 	}
-	defer os.Remove(tmp)
 	if err := extractArchive(tmp, dataDir); err != nil {
 		return "", err
 	}

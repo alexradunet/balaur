@@ -145,3 +145,13 @@ func TestExtractArchiveRejectsZipSlip(t *testing.T) {
 		t.Fatal("zip-slip wrote a file outside destRoot")
 	}
 }
+
+func TestExtractArchiveRejectsSymlinkEscape(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "evil.tgz")
+	writeTestTgz(t, archive, []tarEntry{{name: "esc", linkname: "../../etc"}})
+	root := filepath.Join(dir, "out")
+	if err := extractArchive(archive, root); err == nil {
+		t.Fatal("expected symlink-escape rejection")
+	}
+}

@@ -79,6 +79,9 @@ func TestCheckDiskSpace(t *testing.T) {
 	if err := checkDiskSpace(12, 5*gb); err == nil {
 		t.Fatal("5GB free, 12 min: want error")
 	}
+	if err := checkDiskSpace(1<<35, 1<<40); err == nil {
+		t.Fatal("absurd minGB must not silently pass via overflow")
+	}
 }
 
 func TestMinFreeGBOverride(t *testing.T) {
