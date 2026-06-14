@@ -11,6 +11,11 @@ import (
 // no model files on disk, nothing saved as active. This pins the
 // out-of-the-box behavior so regressions are visible.
 func TestModelChoicesBareBox(t *testing.T) {
+	// Point the local engine at an unreachable address so availableChoices'
+	// ollama.IsPulled probe deterministically fails (connection refused) — the
+	// "bare box" premise must hold regardless of any live Ollama daemon on the
+	// host running the tests.
+	t.Setenv("BALAUR_OLLAMA_HOST", "127.0.0.1:1")
 	app := storetest.NewApp(t)
 
 	choices, active, err := ModelChoices(app)
@@ -24,9 +29,9 @@ func TestModelChoicesBareBox(t *testing.T) {
 		t.Fatal("expected at least one choice (ensured default), got 0")
 	}
 
-	// On a bare box with no model file on disk, every local choice is
-	// Disabled (the file does not exist). This characterizes fresh-install
-	// behavior: choices are listed but none are usable.
+	// On a bare box, every local choice is Disabled (Ollama reports the tag as
+	// not pulled / is unreachable). This characterizes fresh-install behavior:
+	// choices are listed but none are usable.
 	for i, c := range choices {
 		if !c.Disabled {
 			// STOP condition from the plan: if an enabled choice appears on a
