@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
+	github.com/klauspost/compress v1.18.0
 	github.com/ncruces/go-sqlite3 v0.34.4
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.39.3
@@ -31,7 +32,6 @@ require (
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/ncruces/go-sqlite3-wasm/v2 v2.6.35302 // indirect
