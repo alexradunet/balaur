@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -42,6 +45,10 @@ type Manager struct {
 	cancel   context.CancelFunc
 	progress PullSnapshot
 	onDone   func(tag string)
+
+	// tags cache (board-render hot path)
+	tagsCache   []Model
+	tagsCacheAt time.Time
 }
 
 // Default is the process-wide manager shared by every caller.
@@ -70,8 +77,8 @@ func (m *Manager) EnsureInstalled(ctx context.Context, dataDir string) (string, 
 	if _, err := exec.LookPath(path); err == nil {
 		return path, nil
 	}
-	// BinaryPath returned the install target (<dataDir>/bin/ollama); download it.
-	return installBinary(ctx, path)
+	// Binary absent — install the full release (bin/ + lib/) into <dataDir>.
+	return installBinary(ctx, dataDir)
 }
 
 func (m *Manager) spawn(ctx context.Context) error {
@@ -124,9 +131,70 @@ func (m *Manager) Stop() {
 	m.spawned = false
 }
 
+const defaultMinFreeGB = 12
+
+// minFreeGB is the free-space floor (GB) required before a pull, overridable
+// via BALAUR_OLLAMA_MIN_FREE_GB.
+func minFreeGB() int {
+	if v := os.Getenv("BALAUR_OLLAMA_MIN_FREE_GB"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return n
+		}
+	}
+	return defaultMinFreeGB
+}
+
+// modelStorePath is the directory Ollama stores models in (OLLAMA_MODELS or
+// ~/.ollama), resolved to its nearest existing ancestor for the free-space
+// check (the store may not exist before the first pull).
+func modelStorePath() string {
+	dir := os.Getenv("OLLAMA_MODELS")
+	if dir == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			dir = filepath.Join(home, ".ollama")
+		} else {
+			dir = "."
+		}
+	}
+	for {
+		if _, err := os.Stat(dir); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "."
+		}
+		dir = parent
+	}
+}
+
+// checkDiskSpace returns an error when free is below minGB gigabytes. Pure, for
+// testability; the OS probe is freeBytes.
+func checkDiskSpace(minGB int, free uint64) error {
+	if minGB <= 0 {
+		return nil
+	}
+	// Clamp to avoid uint64 overflow on an absurd operator-set value.
+	if minGB > 1<<24 {
+		minGB = 1 << 24
+	}
+	need := uint64(minGB) * 1024 * 1024 * 1024
+	if free < need {
+		return fmt.Errorf("insufficient disk space: %d GB free, need ≥ %d GB (set BALAUR_OLLAMA_MIN_FREE_GB to override)", free/(1024*1024*1024), minGB)
+	}
+	return nil
+}
+
 // Pull starts a single background `ollama pull tag`. Only one pull runs at a
 // time. onDone is called with the tag on success.
 func (m *Manager) Pull(tag string, onDone func(tag string)) error {
+	// Fail fast on a near-full disk rather than mid-download. A probe error
+	// (statfs failure) is non-fatal — fall through and let the pull proceed.
+	if free, err := freeBytes(modelStorePath()); err == nil {
+		if err := checkDiskSpace(minFreeGB(), free); err != nil {
+			return err
+		}
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.progress.Active {
@@ -165,6 +233,7 @@ func (m *Manager) runPull(ctx context.Context, tag string) {
 	} else {
 		m.progress.Done = true
 		m.progress.Err = ""
+		m.tagsCacheAt = time.Time{} // a new model exists; force a refetch
 		cb = m.onDone
 	}
 	m.mu.Unlock()
@@ -194,20 +263,58 @@ func (m *Manager) Snapshot() PullSnapshot {
 	return m.progress
 }
 
-// List returns the models present in Ollama's local store.
-func (m *Manager) List() ([]Model, error) {
-	return m.apiClient().tags(context.Background())
-}
+const tagsTTL = 3 * time.Second
 
-// Delete removes a model tag from Ollama's store.
-func (m *Manager) Delete(tag string) error {
-	return m.apiClient().delete(context.Background(), tag)
-}
+// cachedTags returns the model list from a short-TTL cache so the board-render
+// path (IsPulled) does not hit the daemon on every request. The network fetch
+// runs WITHOUT the mutex held; a concurrent double-fetch is acceptable.
+func (m *Manager) cachedTags() ([]Model, error) {
+	m.mu.Lock()
+	if !m.tagsCacheAt.IsZero() && time.Since(m.tagsCacheAt) < tagsTTL {
+		out := append([]Model(nil), m.tagsCache...)
+		m.mu.Unlock()
+		return out, nil
+	}
+	m.mu.Unlock()
 
-// IsPulled reports whether tag is present locally. A reachability failure is
-// treated as "not pulled" so callers degrade to a "pull needed" prompt.
-func (m *Manager) IsPulled(tag string) (bool, error) {
 	models, err := m.apiClient().tags(context.Background())
+	if err != nil {
+		return nil, err // do not cache errors
+	}
+	m.mu.Lock()
+	m.tagsCache = models
+	m.tagsCacheAt = time.Now()
+	m.mu.Unlock()
+	// Return a copy so a caller mutating the slice can't corrupt the cache.
+	return append([]Model(nil), models...), nil
+}
+
+// invalidateTags forces the next cachedTags call to refetch.
+func (m *Manager) invalidateTags() {
+	m.mu.Lock()
+	m.tagsCacheAt = time.Time{}
+	m.mu.Unlock()
+}
+
+// List returns the models present in Ollama's local store (short-TTL cached).
+func (m *Manager) List() ([]Model, error) {
+	return m.cachedTags()
+}
+
+// Delete removes a model tag from Ollama's store and invalidates the tags cache.
+func (m *Manager) Delete(tag string) error {
+	if err := m.apiClient().delete(context.Background(), tag); err != nil {
+		return err
+	}
+	m.invalidateTags()
+	return nil
+}
+
+// IsPulled reports whether tag is present locally (short-TTL cached). A
+// reachability failure is treated as "not pulled" so callers degrade to a
+// "pull needed" prompt.
+func (m *Manager) IsPulled(tag string) (bool, error) {
+	models, err := m.cachedTags()
 	if err != nil {
 		return false, err
 	}
