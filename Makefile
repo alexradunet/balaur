@@ -4,9 +4,10 @@ BALAUR_CONFIG_DIR ?= $(HOME)/.config/balaur
 SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
 SERVICE_NAME ?= balaur
 
-.PHONY: help dev run build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
+.PHONY: help tools dev run build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
 
 help:
+	@echo "make tools  # install dev tools: dlv (debugger) + air (hot reload)"
 	@echo "make dev    # start Balaur with hot reload via air"
 	@echo "make run    # start Balaur once (go run . serve)"
 	@echo "make build  # build a CGO-free binary"
@@ -28,6 +29,13 @@ help:
 # inherits it. Override on the CLI: make dev BALAUR_ALLOWED_HOSTS=1.2.3.4
 BALAUR_ALLOWED_HOSTS ?= 192.168.50.12,100.124.242.131,balaur,balaur.local
 export BALAUR_ALLOWED_HOSTS
+
+# Reproducible dev-tool setup. dlv powers the VS Code "Debug: balaur serve"
+# launch config; air drives `make dev`. Both land in $(go env GOPATH)/bin —
+# ensure that's on your PATH. Re-run any time to update to the latest.
+tools:
+	go install github.com/go-delve/delve/cmd/dlv@latest
+	go install github.com/air-verse/air@latest
 
 dev:
 	@if command -v air >/dev/null 2>&1; then \
