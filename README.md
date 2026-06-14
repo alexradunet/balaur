@@ -30,7 +30,8 @@ database you own and can open with any SQLite tool.
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
 - **Models:** out of the box, **Gemma 4 E4B** (`gemma4:e4b`) served by Ollama —
-  auto-installed and auto-pulled on first serve. GPU users can opt into
+  pre-listed as the default; pull it into your running Ollama server from the
+  settings models section. GPU users can opt into
   `gemma4:26b` (MoE). Add any OpenAI-compatible endpoint — a remote API or
   another self-hosted server — and select it explicitly. Override the default
   local tag with `BALAUR_CHAT_MODEL`.
@@ -169,11 +170,11 @@ Just run it:
 go run . serve
 ```
 
-On first serve, Balaur auto-installs a pinned Ollama binary (unless
-`BALAUR_AUTO_MODEL=0`), ensures `ollama serve` is running (adopting an
-existing instance if one is present), and pulls **Gemma 4 E4B** in the
-background with visible progress in the settings card's models section
-(`/focus/settings?section=models`).
+Start your own Ollama server first (`ollama serve`). On serve, Balaur logs
+whether that server is reachable, then connects to it. Pull **Gemma 4 E4B**
+into it from the settings card's models section
+(`/focus/settings?section=models`), which shows download progress and
+activates the model when it finishes.
 
 Overrides:
 
@@ -181,11 +182,8 @@ Overrides:
 # Use a different Ollama tag:
 BALAUR_CHAT_MODEL=gemma4:26b go run . serve
 
-# Point at a non-default Ollama instance:
+# Point at a non-default (or remote) Ollama server:
 BALAUR_OLLAMA_HOST=192.168.1.10:11434 go run . serve
-
-# Skip auto-install/pull entirely:
-BALAUR_AUTO_MODEL=0 go run . serve
 
 # Add OpenAI-compatible endpoints (a remote API or another self-hosted server)
 # from the settings card's models section (/focus/settings?section=models).
@@ -193,11 +191,11 @@ BALAUR_AUTO_MODEL=0 go run . serve
 # active model is selected explicitly.
 ```
 
-**Ollama**: Balaur manages Ollama as a subprocess and talks to it over the
+**Ollama**: Balaur is a client of an Ollama server you run separately — it
+never installs, starts, or stops Ollama. It talks to that server over the
 OpenAI-compatible `/v1` API, so local and remote models share one code path
-(`internal/llm`). If `ollama serve` is already running when Balaur starts,
-Balaur adopts it. The process is torn down on shutdown only if Balaur started
-it.
+(`internal/llm`), and manages models (list/pull/delete) over the official
+`ollama/api` client. Point Balaur at the server with `BALAUR_OLLAMA_HOST`.
 
 **Extension engine**: Balaur uses goja (no tags; pins a master commit) for the JavaScript sandbox. Bumping it is a deliberate act—run `go test ./internal/ext/` after changing.
 
@@ -209,11 +207,9 @@ Optional environment variables:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `BALAUR_ALLOWED_HOSTS` | (unset) | Comma-separated `host[:port]` values allowed as the Host header beyond loopback (LAN names, NetBird — see [docs/netbird.md](docs/netbird.md)) |
-| `BALAUR_OLLAMA_HOST` | `127.0.0.1:11434` | Ollama bind address (host:port, no scheme) Balaur connects to |
-| `BALAUR_OLLAMA` | (unset) | Path to the Ollama binary; overrides the auto-installed default |
+| `BALAUR_OLLAMA_HOST` | `127.0.0.1:11434` | Ollama server address (host:port, no scheme) Balaur connects to |
 | `BALAUR_CHAT_MODEL` | `gemma4:e4b` | Ollama tag for the local chat model; overrides the default and the settings models-section choice |
 | `BALAUR_EMBED_MODEL` | `embeddinggemma` | Ollama tag for the local embedding model |
-| `BALAUR_AUTO_MODEL` | `1` | Set to `0` to skip the serve-start auto-install/pull of Ollama and the default model |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
@@ -294,8 +290,8 @@ loginctl enable-linger "$USER"
 ```
 
 Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —
-no C toolchain. The binary is static; the Ollama binary and model weights are
-downloaded data, stored outside the repo and outside the binary.
+no C toolchain. The binary is static; the Ollama server and model weights are
+owned by Ollama, stored outside the repo and outside the binary.
 
 ## CLI for agents & test harnesses
 
@@ -422,7 +418,7 @@ main.go            wire-up: PocketBase app, migrations, CLI, routes, crons
 migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: OpenAI-compatible HTTP (local + remote)
-internal/ollama/   Ollama subprocess manager, binary install, model pull
+internal/ollama/   Ollama client: readiness + model list/pull/delete control plane
 internal/turn/     the channel-agnostic turn pipeline + model resolution
 internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries

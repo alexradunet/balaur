@@ -2,8 +2,8 @@
 
 This repository is the source for Balaur, a local-first personal AI companion
 shipped as a single Go binary: PocketBase as an embedded framework, a Datastar
-web interface, and local LLM inference via Ollama, which Balaur manages as a
-subprocess and reaches over the OpenAI-compatible `/v1` API.
+web interface, and local LLM inference via Ollama, a server the owner runs
+separately that Balaur reaches over the OpenAI-compatible `/v1` API.
 
 Balaur follows a small-core, local-first design: a transparent runtime with
 capability pushed into small Go packages, Markdown skills, and explicit,
@@ -60,8 +60,8 @@ lean and high-signal — add a rule only when it changes a real decision.
   devloop.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
-- Local inference is served by Ollama (subprocess, OpenAI-compatible `/v1` API —
-  see `internal/ollama`); remote providers go through the same OpenAI-compatible
+- Local inference is served by Ollama (a separately-run server, OpenAI-compatible
+  `/v1` API — see `internal/ollama`); remote providers go through the same OpenAI-compatible
   HTTP client. Both sit behind the same internal `llm` interface. Provider choice is
   explicit; no hidden auto-routing.
 - Keep context transparent: durable state lives in PocketBase collections
@@ -169,11 +169,12 @@ lean and high-signal — add a rule only when it changes a real decision.
   path serves them yet.
 - The Johnny Decimal Markdown vault mirror (one-way export + git) is
   roadmap, not shipped. Do not claim it in user-facing copy until real.
-- Local inference is a supervised Ollama subprocess (`internal/ollama`):
-  Balaur auto-installs a pinned Ollama binary if absent, spawns `ollama serve`,
-  health-probes it, and stops it on shutdown (adopting an existing instance if
-  one is already running). Keep failure modes (missing binary, slow load, pull
-  errors) surfaced as plain errors.
+- Local inference uses a separately-run Ollama server (`internal/ollama`):
+  Balaur is a client only — it never installs, spawns, or stops Ollama. It
+  reaches whatever server `BALAUR_OLLAMA_HOST` points at (default
+  `127.0.0.1:11434`), manages models over the official `ollama/api` client
+  (list/pull/delete), and surfaces unreachable-server and pull errors as plain
+  errors.
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
   content that may be sent to remote providers.
 
