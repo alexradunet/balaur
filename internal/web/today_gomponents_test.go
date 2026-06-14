@@ -16,11 +16,15 @@ func TestTodayRendersViaGomponentsAfterRegister(t *testing.T) {
 	app := newWebApp(t)
 	h := &handlers{app: app, tmpl: parseTemplates(t)}
 
-	// Seed an open task due LATER TODAY so it lands in today's bucket (a task
-	// with no due date would bucket as "someday" and never reach the today card).
+	// Seed an open task due at NOON TODAY (local) so it deterministically lands
+	// in today's bucket (a task with no due date would bucket as "someday" and
+	// never reach the today card). now.Add(2h) was flaky: near local midnight in
+	// a non-UTC zone it rolls into the next calendar day and buckets as upcoming.
+	now := time.Now()
+	noon := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
 	if _, err := tasks.Create(app, tasks.CreateOpts{
 		Title:  "Call the notary",
-		Due:    time.Now().Add(2 * time.Hour),
+		Due:    noon,
 		Source: "test",
 	}); err != nil {
 		t.Fatalf("seed task: %v", err)
