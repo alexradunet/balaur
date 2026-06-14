@@ -4,6 +4,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 
+	"github.com/alexradunet/balaur/internal/feature"
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -20,4 +21,10 @@ func Register(app core.App) {
 // OnTerminate hook so the global ui registry stays clean between test runs.
 func Unregister() {
 	ui.UnregisterCard("today")
+}
+
+// init self-registers this feature so the declarative registry (and web.Register)
+// pick it up via the internal/feature/all blank import.
+func init() {
+	feature.Add(feature.Funcs(Register, Unregister))
 }
