@@ -7,7 +7,7 @@ SERVICE_NAME ?= balaur
 .PHONY: help tools dev run build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
 
 help:
-	@echo "make tools  # install dev tools: dlv (debugger) + air (hot reload)"
+	@echo "make tools  # install dlv + air, activate the pre-commit lint hook"
 	@echo "make dev    # start Balaur with hot reload via air"
 	@echo "make run    # start Balaur once (go run . serve)"
 	@echo "make build  # build a CGO-free binary"
@@ -33,9 +33,13 @@ export BALAUR_ALLOWED_HOSTS
 # Reproducible dev-tool setup. dlv powers the VS Code "Debug: balaur serve"
 # launch config; air drives `make dev`. Both land in $(go env GOPATH)/bin —
 # ensure that's on your PATH. Re-run any time to update to the latest.
+# Also points git at the committed .githooks/ so the pre-commit lint hook is
+# active without copying anything.
 tools:
 	go install github.com/go-delve/delve/cmd/dlv@latest
 	go install github.com/air-verse/air@latest
+	git config core.hooksPath .githooks
+	@echo "dev tools installed; pre-commit hook active (.githooks/pre-commit)"
 
 dev:
 	@if command -v air >/dev/null 2>&1; then \

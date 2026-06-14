@@ -34,6 +34,23 @@
       "request": "launch",
       "mode": "test",
       "program": "${workspaceFolder}/..."
+    },
+    {
+      // Attach the debugger to the ALREADY-RUNNING systemd `balaur` service
+      // (make start-user-service) without restarting it. Pick the process when
+      // prompted. Requires dlv (make tools).
+      //
+      // Notes:
+      //  - The service binary is built optimized (make build), so some
+      //    breakpoints/vars may be imprecise. For faithful debugging rebuild
+      //    with: go build -gcflags="all=-N -l" -o balaur .
+      //  - Same-user attach needs ptrace allowed. If attach fails with
+      //    "operation not permitted": sudo sysctl -w kernel.yama.ptrace_scope=0
+      "name": "Attach: running balaur service",
+      "type": "go",
+      "request": "attach",
+      "mode": "local",
+      "processId": "${command:pickGoProcess}"
     }
   ]
 }

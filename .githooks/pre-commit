@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Balaur pre-commit hook — mirrors `make lint` (gofmt + vet + test) so CI
+# failures surface locally before you push. Activated by `core.hooksPath`,
+# which `make tools` sets; this file is committed so it travels across machines.
+#
+# Bypass for a single commit:  git commit --no-verify
+set -e
+
+if ! command -v go >/dev/null 2>&1; then
+	echo "pre-commit: 'go' not on PATH — skipping lint (CI will still check)" >&2
+	exit 0
+fi
+
+echo "pre-commit: running 'make lint' (gofmt + vet + test)…"
+exec make lint
