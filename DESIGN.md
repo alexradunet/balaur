@@ -154,10 +154,11 @@ with no model calls: data dir writable, core collections present, model
 readiness (non-fatal), OS-access gate state, extension count.
 
 dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in chat
-(keyboard 1–9); a choice posts as the owner's turn · typed card registry — 12
+(keyboard 1–9); a choice posts as the owner's turn · typed card registry — 14
 parameterized, server-rendered card resources under `/ui/cards/{type}` (the
 composition unit for boards and on-the-spot UI): today, quests, calendar,
-timeline, journal, day, measure, lines, memory, skills, heads, habits ·
+timeline, journal, day, measure, lines, memory, skills, heads, habits, lifelog,
+settings ·
 the candle (the journal card's focus, /focus/journal): immersive writing
 surface — free-hand or guided by one model-composed prompt line (deterministic
 fallback), entries shared with the day card · boards — owner-composed dashboards of typed cards at /boards
