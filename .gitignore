@@ -16,6 +16,9 @@ dist/
 .cache/
 tmp/
 
+# Delve debug binaries (random suffix per `dlv debug` / VS Code session)
+__debug_bin*
+
 # Local environment
 .env
 .env.*
