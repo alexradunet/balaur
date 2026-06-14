@@ -31,3 +31,17 @@ func TestEmbedModelOverride(t *testing.T) {
 		t.Fatalf("EmbedModel() = %q, want nomic-embed-text", got)
 	}
 }
+
+func TestEmbedModelDefault(t *testing.T) {
+	t.Setenv("BALAUR_EMBED_MODEL", "")
+	if got := EmbedModel(); got != DefaultEmbedModel {
+		t.Fatalf("EmbedModel() = %q, want %q", got, DefaultEmbedModel)
+	}
+}
+
+func TestPullCommand(t *testing.T) {
+	t.Setenv("BALAUR_CHAT_MODEL", "")
+	if got := PullCommand(); got != "ollama pull "+DefaultChatModel {
+		t.Fatalf("PullCommand() = %q", got)
+	}
+}
