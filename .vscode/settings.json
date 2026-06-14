@@ -1,5 +1,6 @@
 {
-  "// note": "Shared, committed. Aligns the editor with the repo's gofmt standard (make fmt) and the Claude Code gofmt hook.",
+  // Shared, committed. Aligns the editor with the repo's gofmt standard
+  // (make fmt) and the Claude Code gofmt hook.
 
   // Go: format on save with plain gofmt (not gofumpt/goimports) to match `make fmt`.
   "go.useLanguageServer": true,
