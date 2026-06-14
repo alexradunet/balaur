@@ -76,8 +76,8 @@ func (m *Manager) EnsureInstalled(ctx context.Context, dataDir string) (string, 
 
 func (m *Manager) spawn(ctx context.Context) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.cmd != nil {
+		m.mu.Unlock()
 		return nil
 	}
 	bin := BinaryPath(m.dataDir) // set by EnsureInstalled; falls back to PATH when empty
@@ -88,11 +88,13 @@ func (m *Manager) spawn(ctx context.Context) error {
 	cmd.Env = append(cmd.Environ(), "OLLAMA_HOST="+Host())
 	setProcessGroup(cmd)
 	if err := cmd.Start(); err != nil {
+		m.mu.Unlock()
 		return fmt.Errorf("starting ollama serve: %w", err)
 	}
 	m.cmd = cmd
 	m.spawned = true
 	m.tail = tail
+	m.mu.Unlock() // release before the readiness poll so Snapshot/Pull/Cancel aren't blocked
 
 	a := m.apiClient()
 	deadline := time.Now().Add(maxLoad)
@@ -171,9 +173,12 @@ func (m *Manager) Cancel() {
 	defer m.mu.Unlock()
 	if m.cancel != nil {
 		m.cancel()
+		m.cancel = nil
 	}
-	m.progress.Active = false
-	m.progress.Err = "pull cancelled"
+	if m.progress.Active {
+		m.progress.Active = false
+		m.progress.Err = "pull cancelled"
+	}
 }
 
 // Snapshot returns the current pull state.
