@@ -197,12 +197,14 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			WhoLabel:        "Balaur",
 		}
 		// Re-render marked tool results.
-		// Consumer order: uicard → choices → proposal → plain.
+		// Consumer order: uicard → choices → proposal → refresh → plain.
 		// uicard: safe and useful to re-render on reload — it lazy-fetches
 		//   current data from the registry, so the card is always live.
 		// choices: degrade to inert plain text — no live panel on reload
 		//   (avoids resubmitting stale decisions).
 		// proposal: renders an approval card on first view and on reload.
+		// refresh: drop the live-patch directive — show the plain text only
+		//   (there is no card to patch on reload).
 		if mv.Role == "tool" {
 			if typ, query, rest, ok := tools.ParseUICard(mv.Content); ok {
 				mv.CardBody = h.uicardBody(typ, query)
@@ -211,6 +213,9 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 				mv.Content = clipText(modelText, 2000)
 			} else if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
 				mv.CardBody, mv.Content = h.proposalBody(kind, id), rest
+			} else if _, rest, ok := tools.ParseRefresh(mv.Content); ok {
+				// Live refresh has no meaning on reload; show the plain text only.
+				mv.Content = clipText(rest, 2000)
 			}
 		}
 		if mv.Role == "assistant" && mv.Content == "" {

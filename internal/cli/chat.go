@@ -65,7 +65,11 @@ func chatCmd(app core.App) *cobra.Command {
 				events = append(events, toolEvent{Tool: ev.Tool, Args: ev.Text})
 			case "tool_result":
 				if i, ok := pending[ev.CallID]; ok {
-					kind, id, rest, marked := tools.ParseProposal(ev.Text)
+					text := ev.Text
+					if _, r, ok := tools.ParseRefresh(text); ok {
+						text = r // drop the live-refresh marker; CLI has no UI to patch
+					}
+					kind, id, rest, marked := tools.ParseProposal(text)
 					events[i].Result = rest
 					events[i].IsError = strings.HasPrefix(rest, "error:")
 					if marked {
