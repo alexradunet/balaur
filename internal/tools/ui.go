@@ -179,7 +179,10 @@ func boardComposeTool(app core.App) agent.Tool {
 			}
 
 			// Find next sort value.
-			existing, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+			existing, err := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+			if err != nil {
+				return fmt.Sprintf("board_compose: loading boards: %s", err), nil
+			}
 			maxSort := -1
 			for _, r := range existing {
 				s := int(r.GetFloat("sort"))
@@ -250,7 +253,10 @@ func boardAddCardTool(app core.App) agent.Tool {
 			}
 
 			// Resolve the board: load all boards and match by id, then name, then substring.
-			all, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+			all, err := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+			if err != nil {
+				return fmt.Sprintf("board_add_card: loading boards: %s", err), nil
+			}
 
 			// Helper: build listing for error messages.
 			boardNames := func() string {
