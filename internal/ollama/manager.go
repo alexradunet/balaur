@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -124,9 +127,63 @@ func (m *Manager) Stop() {
 	m.spawned = false
 }
 
+const defaultMinFreeGB = 12
+
+// minFreeGB is the free-space floor (GB) required before a pull, overridable
+// via BALAUR_OLLAMA_MIN_FREE_GB.
+func minFreeGB() int {
+	if v := os.Getenv("BALAUR_OLLAMA_MIN_FREE_GB"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return n
+		}
+	}
+	return defaultMinFreeGB
+}
+
+// modelStorePath is the directory Ollama stores models in (OLLAMA_MODELS or
+// ~/.ollama), resolved to its nearest existing ancestor for the free-space
+// check (the store may not exist before the first pull).
+func modelStorePath() string {
+	dir := os.Getenv("OLLAMA_MODELS")
+	if dir == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			dir = filepath.Join(home, ".ollama")
+		} else {
+			dir = "."
+		}
+	}
+	for {
+		if _, err := os.Stat(dir); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "."
+		}
+		dir = parent
+	}
+}
+
+// checkDiskSpace returns an error when free is below minGB gigabytes. Pure, for
+// testability; the OS probe is freeBytes.
+func checkDiskSpace(minGB int, free uint64) error {
+	need := uint64(minGB) * 1024 * 1024 * 1024
+	if free < need {
+		return fmt.Errorf("insufficient disk space: %d GB free, need ≥ %d GB (set BALAUR_OLLAMA_MIN_FREE_GB to override)", free/(1024*1024*1024), minGB)
+	}
+	return nil
+}
+
 // Pull starts a single background `ollama pull tag`. Only one pull runs at a
 // time. onDone is called with the tag on success.
 func (m *Manager) Pull(tag string, onDone func(tag string)) error {
+	// Fail fast on a near-full disk rather than mid-download. A probe error
+	// (statfs failure) is non-fatal — fall through and let the pull proceed.
+	if free, err := freeBytes(modelStorePath()); err == nil {
+		if err := checkDiskSpace(minFreeGB(), free); err != nil {
+			return err
+		}
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.progress.Active {

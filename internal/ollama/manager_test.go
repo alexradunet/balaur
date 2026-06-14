@@ -69,3 +69,28 @@ func TestPullRejectsSecondConcurrent(t *testing.T) {
 		t.Fatal("second concurrent Pull should error")
 	}
 }
+
+func TestCheckDiskSpace(t *testing.T) {
+	gb := uint64(1024 * 1024 * 1024)
+	if err := checkDiskSpace(12, 20*gb); err != nil {
+		t.Fatalf("20GB free, 12 min: want nil, got %v", err)
+	}
+	if err := checkDiskSpace(12, 5*gb); err == nil {
+		t.Fatal("5GB free, 12 min: want error")
+	}
+}
+
+func TestMinFreeGBOverride(t *testing.T) {
+	t.Setenv("BALAUR_OLLAMA_MIN_FREE_GB", "")
+	if minFreeGB() != defaultMinFreeGB {
+		t.Fatalf("default = %d, want %d", minFreeGB(), defaultMinFreeGB)
+	}
+	t.Setenv("BALAUR_OLLAMA_MIN_FREE_GB", "50")
+	if minFreeGB() != 50 {
+		t.Fatalf("override = %d, want 50", minFreeGB())
+	}
+	t.Setenv("BALAUR_OLLAMA_MIN_FREE_GB", "garbage")
+	if minFreeGB() != defaultMinFreeGB {
+		t.Fatalf("garbage override = %d, want default", minFreeGB())
+	}
+}
