@@ -8,9 +8,13 @@ package knowledgecards
 import (
 	"fmt"
 
+	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
+
+	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // MemoryRow is one row in the MemoryCard summary view.
@@ -258,6 +262,83 @@ func memoryManageBody(v MemoryManageView) g.Node {
 	return g.Group(sections)
 }
 
+// ---------------------------------------------------------------------------
+// Data builders
+// ---------------------------------------------------------------------------
+
+// buildMemorySummary fetches active memories and returns the MemoryView.
+// Mirrors renderCardMemory (internal/web/cards.go ~526).
+func buildMemorySummary(app core.App, params map[string]string) MemoryView {
+	limit := intParam(params, "limit", 6)
+	query := params["query"]
+
+	recs, _ := knowledge.FilterActive(app, knowledge.Memory, query, "")
+	if len(recs) > limit {
+		recs = recs[:limit]
+	}
+
+	rows := make([]MemoryRow, 0, len(recs))
+	for _, r := range recs {
+		rows = append(rows, MemoryRow{
+			Title:      r.GetString("title"),
+			Category:   r.GetString("category"),
+			Importance: r.GetInt("importance"),
+		})
+	}
+
+	paramLine := fmt.Sprintf("limit: %d", limit)
+	if query != "" {
+		paramLine += " · q: " + query
+	}
+
+	return MemoryView{
+		ParamLine: paramLine,
+		Rows:      rows,
+	}
+}
+
+// buildMemoryManage returns proposed and capped-active memory records.
+// Mirrors renderKnowledgeManage (internal/web/cards.go ~517) for memory kind.
+func buildMemoryManage(app core.App) MemoryManageView {
+	precs, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusProposed)
+	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, "", "")
+	if len(arecs) > 8 {
+		arecs = arecs[:8]
+	}
+	return MemoryManageView{
+		Proposed: mapMemoryRecords(precs),
+		Active:   mapMemoryRecords(arecs),
+	}
+}
+
+func mapMemoryRecords(recs []*core.Record) []MemoryRecord {
+	out := make([]MemoryRecord, 0, len(recs))
+	for _, r := range recs {
+		out = append(out, MemoryRecord{
+			ID:         r.Id,
+			Status:     r.GetString("status"),
+			Category:   r.GetString("category"),
+			Title:      r.GetString("title"),
+			Content:    r.GetString("content"),
+			WhenToUse:  r.GetString("when_to_use"),
+			Importance: r.GetInt("importance"),
+			UseCount:   r.GetInt("use_count"),
+		})
+	}
+	return out
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
 // registerMemory wires the memory card (both modes) into the ui registry.
-// Called from Register in register.go (not yet created — wired JIT).
-func registerMemory() {}
+// Called from Register in register.go.
+func registerMemory(app core.App) {
+	ui.RegisterCard("memory", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
+		if params["mode"] == "manage" {
+			return MemoryManageCard(buildMemoryManage(app)), nil
+		}
+		return MemoryCard(buildMemorySummary(app, params)), nil
+	})
+}
