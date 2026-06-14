@@ -55,14 +55,6 @@ func taskViewOf(rec *core.Record, now time.Time) taskView {
 	return v
 }
 
-func taskViewsOf(recs []*core.Record, now time.Time) []taskView {
-	out := make([]taskView, 0, len(recs))
-	for _, r := range recs {
-		out = append(out, taskViewOf(r, now))
-	}
-	return out
-}
-
 // questGroup buckets an open task by rhythm: Dailies (daily / every:1d),
 // Rituals (any other recurrence), Quests (one-off with due),
 // Side quests (one-off without due).

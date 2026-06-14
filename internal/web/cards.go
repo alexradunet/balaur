@@ -17,7 +17,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -40,17 +39,6 @@ func queryToMap(q url.Values) map[string]string {
 		}
 	}
 	return m
-}
-
-// intParam reads a cleaned param by name, falling back to def if absent or empty.
-// The cleaned map already has clamped values from cards.Validate.
-func intParam(p map[string]string, key string, def int) int {
-	if v := p[key]; v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
-	}
-	return def
 }
 
 // uiCardPalette handles GET /ui/cards — the palette listing all card specs.
