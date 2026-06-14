@@ -20,8 +20,10 @@ tmp/
 .env
 .env.*
 
-# Claude Code local state (settings.local.json, locks, worktrees)
-.claude/
+# Claude Code: ignore personal/local state (settings.local.json, locks,
+# worktrees) but track shared project config so the setup syncs across machines.
+.claude/*
+!.claude/settings.json
 
 # Browser-in-the-loop debug artifacts (Playwright snapshots, scratch screenshots)
 .playwright-mcp/

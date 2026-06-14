@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(go run:*)",
+      "Bash(gofmt:*)",
+      "Bash(make dev:*)",
+      "Bash(make run:*)",
+      "Bash(make build:*)",
+      "Bash(make test:*)",
+      "Bash(make vet:*)",
+      "Bash(make fmt:*)",
+      "Bash(make lint:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; case \"$f\" in *.go) command -v gofmt >/dev/null 2>&1 && gofmt -w \"$f\";; esac; } 2>/dev/null || true",
+            "statusMessage": "gofmt"
+          }
+        ]
+      }
+    ]
+  }
+}
