@@ -26,6 +26,12 @@ func TaskTools(app core.App) []agent.Tool {
 	}
 }
 
+// taskRefreshCards names the cards a task mutation should re-render live in the
+// chat stream. v1: the non-parameterized "today" tile (always correct with no
+// params). Extend cautiously — parameterized cards (quests/calendar/...) need
+// the on-screen params the stateless turn does not know.
+var taskRefreshCards = []string{"today"}
+
 // DueFormats names the accepted time formats — the spec promised to the
 // model and to CLI flags alike (one source of truth).
 const DueFormats = "RFC3339, YYYY-MM-DDTHH:MM (box-local), or YYYY-MM-DD"
@@ -234,10 +240,10 @@ func taskDoneTool(app core.App) agent.Tool {
 				return "", fmt.Errorf("task_done: %w", err)
 			}
 			if !res.Recurring {
-				return fmt.Sprintf("Done: %q.", rec.GetString("title")), nil
+				return MarkRefresh(taskRefreshCards, fmt.Sprintf("Done: %q.", rec.GetString("title"))), nil
 			}
-			return fmt.Sprintf("Done: %q (%d completions logged). Next due %s.",
-				rec.GetString("title"), res.Completions, fmtDue(res.NextDue)), nil
+			return MarkRefresh(taskRefreshCards, fmt.Sprintf("Done: %q (%d completions logged). Next due %s.",
+				rec.GetString("title"), res.Completions, fmtDue(res.NextDue))), nil
 		},
 	}
 }
@@ -272,7 +278,7 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			if err := tasks.Snooze(app, rec, until); err != nil {
 				return "", fmt.Errorf("task_snooze: %w", err)
 			}
-			return fmt.Sprintf("Snoozed %q until %s.", rec.GetString("title"), fmtDue(until)), nil
+			return MarkRefresh(taskRefreshCards, fmt.Sprintf("Snoozed %q until %s.", rec.GetString("title"), fmtDue(until))), nil
 		},
 	}
 }
@@ -292,7 +298,7 @@ func taskDropTool(app core.App) agent.Tool {
 			if err := tasks.Drop(app, rec); err != nil {
 				return "", fmt.Errorf("task_drop: %w", err)
 			}
-			return fmt.Sprintf("Dropped: %q.", rec.GetString("title")), nil
+			return MarkRefresh(taskRefreshCards, fmt.Sprintf("Dropped: %q.", rec.GetString("title"))), nil
 		},
 	}
 }
