@@ -1,0 +1,54 @@
+{
+  // Shared, committed. Mirrors the Makefile so targets run from
+  // Terminal > Run Task (or Ctrl+Shift+B for the default build).
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev (hot reload via air)",
+      "type": "shell",
+      "command": "make dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "run (go run . serve)",
+      "type": "shell",
+      "command": "make run",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "build (CGO-free binary)",
+      "type": "shell",
+      "command": "make build",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "test (go test ./...)",
+      "type": "shell",
+      "command": "make test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "vet",
+      "type": "shell",
+      "command": "make vet",
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "fmt (gofmt -l)",
+      "type": "shell",
+      "command": "make fmt",
+      "problemMatcher": []
+    },
+    {
+      "label": "lint (fmt + vet + test)",
+      "type": "shell",
+      "command": "make lint",
+      "problemMatcher": ["$go"]
+    }
+  ]
+}

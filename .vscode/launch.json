@@ -1,0 +1,39 @@
+{
+  // Shared, committed. Debug configs for Balaur. First debug run will prompt to
+  // install Delve (dlv) — accept it, or run "Go: Install/Update Tools".
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Run `balaur serve` under the debugger with breakpoints. UI on http://127.0.0.1:8090
+      "name": "Debug: balaur serve",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}",
+      "args": ["serve", "--http=127.0.0.1:8090"],
+      "env": {
+        "CGO_ENABLED": "0"
+        // To reach the dev UI from another host (Tailscale/LAN), add e.g.:
+        // "BALAUR_ALLOWED_HOSTS": "balaur.local"
+      }
+    },
+    {
+      // Debug the test(s) in the currently open package.
+      "name": "Debug: test (current package)",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${fileDirname}"
+    },
+    {
+      // Debug a single test by name: set "test.run" to the test, or use the
+      // CodeLens "debug test" above any Test func instead.
+      "name": "Debug: test (whole module)",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/..."
+    }
+  ]
+}
