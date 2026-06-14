@@ -2,14 +2,12 @@ package store
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/ollama"
 )
 
 const llmSettingsKey = "default"
@@ -36,32 +34,31 @@ func (c LLMConfig) DisplayName() string {
 	return c.ChatModel
 }
 
+// EnsureDefaultLLMConfig makes sure the "Local model" provider and Balaur's
+// default local model (an Ollama tag) exist, and activates the default when no
+// model is active yet. The model is served by a local Ollama over /v1. Whether
+// the tag is actually pulled is surfaced by the turn layer (ollama.IsPulled),
+// not here — this stays free of network I/O. The dataDir param is retained for
+// call-site compatibility.
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
 	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
 	if err != nil {
 		return err
 	}
-	path := os.Getenv("BALAUR_CHAT_MODEL")
-	if path == "" {
-		path = llm.DefaultChatModelPath(dataDir)
+	tag := ollama.ChatModel()
+	label := "Local " + ollama.DefaultChatModelName
+	if tag != ollama.DefaultChatModel {
+		label = "Local " + tag
 	}
-	label := "Local model"
-	if os.Getenv("BALAUR_CHAT_MODEL") == "" {
-		label = "Local " + llm.DefaultChatModelName
-	}
-	model, err := findOrCreateLLMModel(app, provider.Id, label, path, os.Getenv("BALAUR_EMBED_MODEL"), true)
+	model, err := findOrCreateLLMModel(app, provider.Id, label, tag, ollama.EmbedModel(), true)
 	if err != nil {
 		return err
 	}
-
 	settings, err := app.FindFirstRecordByData("llm_settings", "key", llmSettingsKey)
 	if err == nil && settings.GetString("active_model") != "" {
 		return nil
 	}
-	if _, statErr := os.Stat(path); statErr == nil {
-		return SetActiveLLMModel(app, model.Id, "system")
-	}
-	return nil
+	return SetActiveLLMModel(app, model.Id, "system")
 }
 
 func ListLLMModels(app core.App) ([]LLMConfig, error) {
@@ -132,26 +129,23 @@ func SaveOpenAIModel(app core.App, name, baseURL, apiKey, label, model, embedMod
 	return llmModel.Id, nil
 }
 
-// SaveLocalGGUFModel registers path as a local GGUF model under the "Local
-// model" provider and returns the model record id. The model is served by a
-// llamafile subprocess at chat time. Label defaults to the file name.
-func SaveLocalGGUFModel(app core.App, label, path string) (string, error) {
-	if path == "" {
-		return "", fmt.Errorf("model path is required")
-	}
-	if label == "" {
-		label = filepath.Base(path)
+// SaveLocalModel registers an Ollama chat tag under the "Local model" provider
+// and returns the model record id. embedTag is the dedicated embedding tag.
+// The model is served by the local Ollama over /v1 at chat time.
+func SaveLocalModel(app core.App, tag, embedTag string) (string, error) {
+	if tag == "" {
+		return "", fmt.Errorf("model tag is required")
 	}
 	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
 	if err != nil {
 		return "", err
 	}
-	model, err := findOrCreateLLMModel(app, provider.Id, label, path, "", true)
+	model, err := findOrCreateLLMModel(app, provider.Id, "Local "+tag, tag, embedTag, true)
 	if err != nil {
 		return "", err
 	}
 	Audit(app, "", "owner", "llm.model.upsert", model.Id, true,
-		map[string]any{"provider": "Local model", "kind": "local", "local": true})
+		map[string]any{"provider": "Local model", "kind": "local", "local": true, "tag": tag})
 	return model.Id, nil
 }
 
