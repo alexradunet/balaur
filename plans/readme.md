@@ -76,6 +76,11 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 056 | Settings card (profile+models) + retire `/settings`,`/profile`,`/models` (Phase 6) | P2 | L | MED | 050, 053 | — | DONE (reviewed; settings card focus = the shell (profile+models); `/settings`,`/settings/{section}`,`/profile`,`/models` retired → 302 /boards; all write endpoints + section fragments kept; skills is its own card; spec✅+quality✅; merged to main `f31bb5a`) |
 | 057 | Cleanup: dead handlers, stale HTMX comments, holistic card-first IA docs (Phase 7) | P2 | S–M | LOW | 051–056 | — | DONE (dropped dead `renderError`/`execFragment` (head-chat gateway retired) — no live caller, removed unused `io` import; retired stale HTMX comments in `web.go`/`home.html`/`cards.html` + source comments (chatstream/knowledge.go); topbar confirmed final (no change); holistic card-first IA pass over DESIGN.md/README.md/knowledge.md + the web-gateway tour (boards + cards + dock, no feature pages); completeness greps clean — no feature page render/template survives, no live `hx-*` attribute; spec✅+quality✅; merged to main `982a8b6`) |
 | 058 | Dock follow-up fixes: silent-403 on inactive head + back-to-main mid-stream race | P3 | S | MED | 054 | — | DONE (two dock fixes: (1) inactive-head POST no longer bare-403s silently — `headChat` opens the SSE stream before validating, then clears the draft + appends a note (200 SSE) on inactive/ForHead-error; happy-path branch turn unchanged; (2) `$streaming` signal set true in `chatStream.start`/false in `finish` (covers master + branch), `dockConversation` resets it false on swap, `#nudge-poll` inits it, branch "← back to main" carries `data-attr:disabled="$streaming"`; master dock render byte-identical (`@post('/ui/chat')`, no `$streaming` leak); adversarial review caught + fixed a residual: the heads-card "Open chat" button also swaps the dock, so it's gated by `$streaming` too; spec✅+quality✅+adversarial✅; merged to main `1eb360a`. Known low-pri follow-ups (noted, not fixed): SSE-drop leaves `$streaming` stuck-true until next swap/reload (self-heals); a hard-DELETED head still bare-404s silently (rare; heads are merged/revoked, not deleted)) |
+| 059 | DESIGN.md card ledger: list all 14 card types (was 12) | P2 | S | LOW | — | — | TODO |
+| 060 | `make fmt` + CI gofmt print which files need formatting | P3 | S | LOW | — | — | TODO |
+| 061 | board_compose/board_add_card surface board-load query errors | P2 | S | MED | — | — | TODO |
+| 062 | web board handlers surface loadBoards() errors (nil-deref guard) | P2 | S | MED | — | — | TODO |
+| 063 | CLI v1 envelope: recover panics into error envelope + contract test | P2 | S | MED | — | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -109,6 +114,42 @@ the dock swaps conversations (master ↔ a head's branch), and every retired pag
 route (`/tasks`, `/journal`, `/day`, `/memory`, `/skills`, `/life`, `/heads`,
 `/heads/{id}/chat`, `/models`, `/settings`, `/profile`) 302s → `/boards`. No
 feature page route, template, or render survives; the UI is Datastar end to end.
+
+## Ninth cycle (2026-06-14, full audit at `7b16063`): plans 059–063
+
+First full audit since the card-first program (050–058) merged. Run autonomously
+via the improve skill at ultracode effort: a parallel workflow of 7 read-only
+finder agents (one per category cluster) → adversarial verify (each surviving
+finding re-checked by a skeptic that defaults to REJECT). **48 raw findings → 30
+survived adversarial verification → 18 rejected by the verifier.** The advisor
+then hand-vetted the survivors against the live code and against this index's
+rejection ledger, and against AGENTS.md's measurement-first rule. Baseline at
+`7b16063`: gofmt clean, vet ok, `go test ./...` ok, CGO-free build ok.
+
+Five plans selected — **value-aligned, low/med-risk, disjoint file sets** (so
+sequential auto-merge to main has near-zero conflict risk): 059 (docs ledger),
+060 (lint feedback DX), 061 (tools/ui.go board-query errors), 062
+(web/boards.go loadBoards errors / nil-deref), 063 (CLI envelope panic
+recovery). Execution model for this cycle: each plan dispatched to a sonnet
+executor in an isolated worktree, reviewed (done criteria re-run, scope + diff +
+test assertions audited) before APPROVE, then merged to main and pushed — fully
+autonomous, no per-step owner input (owner pre-authorized auto-merge to main for
+this run). None of the five consumes the next free migration timestamp, which
+remains `1750750000`.
+
+**Notably NOT selected** despite high raw leverage — the audit's two top-scored
+findings re-report decisions this project already made (see rejection ledger
+below): the heads-card owner_settings N+1 (a tiny-table point-query the second
+cycle already declined under AGENTS.md measurement-first) and base_url input
+validation (undercut by the single-owner threat model). Three more confirmed-
+but-lower-value findings were left in the backlog for a future cycle: PERF-04
+(timeline O(days·tasks) in-memory loop — MED-risk recurrence-logic change,
+speculative on small data), TECHDEBT-01/04 (board-handler duplication — deferred,
+the project has repeatedly declined `internal/web` decomposition), and TECHDEBT-02
+(duplicated "no active model" string — trivial). Security posture this cycle read
+as solid: nearly all security findings were rejected by the verifier as by-design
+(PocketBase API rules + the router-wide `guardLocalUI` already enforce access;
+prior hardening bundles 010/042 cover headers/CSRF/key-hiding).
 
 ## Dependency notes
 
@@ -247,6 +288,40 @@ Ordering notes:
   embedding recall second stage. Revisit next cycle.
 
 ## Findings considered and rejected (do not re-audit)
+
+Ninth cycle (`7b16063`) — survived adversarial verification but rejected on host
+vetting (re-reports of prior decisions, or against AGENTS.md measurement-first):
+
+- **Heads-card owner_settings N+1** (audit PERF-01, lev 8;
+  `web/cards.go:570` loop → `headViewFrom` → `store.GetOwnerSetting` +
+  `HeadBalaurAvatarURL`): re-report of the second-cycle rejection ("3×
+  owner_settings point-queries per head … tiny local SQLite table … measurement
+  before hot-path optimization … caching adds invalidation risk. Not worth
+  doing."). Heads is a tiny table; same verdict. *One sub-issue is genuinely a
+  defect, not perf:* `HeadBalaurAvatarURL(app, r.Id)` re-fetches the head record
+  by id even though the caller already holds `r` (`store/owner_settings.go:181`)
+  — a held-record re-fetch with no invalidation risk. Left as an opportunistic
+  cleanup (pass the record), not worth a standalone plan.
+- **Missing `idx_heads_status` index** (audit PERF-03, lev 7): premature
+  optimization on the same tiny `heads` table — a full scan of a handful of rows
+  is trivial; AGENTS.md wants a measurement first. Hot-table indexes were already
+  added for the tables that need them (plan 002). Rejected.
+- **base_url / api_key input validation on model config** (audit SECURITY-07,
+  lev 7.5; `web/models.go` saveOpenAIModel/updateProvider → `llm/openai.go:38`):
+  no URL-scheme validation is real, but on a single-owner box the owner sets
+  their own provider, so a "malicious base_url" crosses no privilege boundary —
+  the same single-owner reasoning that rejected prompt-injection-via-head-name
+  and OS-tool scoping. Marginal as defensive hygiene; deferred (revisit only if a
+  multi-human mode ships, where it would become a real boundary).
+
+Deferred to a future cycle (confirmed, real, but lower value than the selected
+five — NOT rejected, just not now): PERF-04 (timeline `buildTimelineN`
+O(days·tasks) in-memory loop, `web/cards.go:606`; MED-risk recurrence change,
+small-data); TECHDEBT-01/04 (duplicated "load boards → find current → render"
+across board handlers — deferred with the standing `internal/web` decomposition
+deferral); TECHDEBT-02 (duplicated "No active model is available" string,
+`web/models.go:84`/`:139` → extract a const); CORRECTNESS-01 (`llm/openai.go:53`
+`buf.ReadFrom` error ignored when building an HTTP error message — one-liner).
 
 Seventh cycle (`dd9e60b`):
 
