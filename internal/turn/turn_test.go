@@ -2,19 +2,14 @@ package turn
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/pocketbase/pocketbase/core"
-
 	"github.com/alexradunet/balaur/internal/agent"
-	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/ext"
-	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 	"github.com/alexradunet/balaur/internal/verify"
@@ -224,168 +219,6 @@ func TestMaxStepsEnvRaisesTheCap(t *testing.T) {
 	_, err := Run(context.Background(), app, client, "list everything twice", nil)
 	if err == nil || !strings.Contains(err.Error(), "exceeded 1 tool rounds") {
 		t.Errorf("cap of 1 must trip the loop, got %v", err)
-	}
-}
-
-// seedHeadForTurn creates an active head record for turn tests.
-func seedHeadForTurn(t *testing.T, app core.App, name string) *core.Record {
-	t.Helper()
-	col, err := app.FindCollectionByNameOrId("heads")
-	if err != nil {
-		t.Fatalf("heads collection: %v", err)
-	}
-	rec := core.NewRecord(col)
-	rec.Set("name", name)
-	rec.Set("status", "active")
-	rec.SetEmail(fmt.Sprintf("head-%d@balaur.local", time.Now().UnixNano()))
-	rec.SetRandomPassword()
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("saving head: %v", err)
-	}
-	return rec
-}
-
-func TestRunForPersistsFocusedTurn(t *testing.T) {
-	app := storetest.NewApp(t)
-	head := seedHeadForTurn(t, app, "Scout")
-
-	conv, err := conversation.ForHead(app, head)
-	if err != nil {
-		t.Fatalf("ForHead: %v", err)
-	}
-	master, err := conversation.Master(app)
-	if err != nil {
-		t.Fatalf("Master: %v", err)
-	}
-
-	client := llmtest.New(llmtest.Text("On it."))
-
-	var eventKinds []string
-	emit := func(ev agent.Event) { eventKinds = append(eventKinds, ev.Kind) }
-
-	res, err := RunFor(context.Background(), app, client, conv, "Scout", "find flights", "hello", emit)
-	if err != nil {
-		t.Fatalf("RunFor: %v", err)
-	}
-	if res.Reply != "On it." {
-		t.Errorf("reply = %q, want %q", res.Reply, "On it.")
-	}
-
-	// Persisted messages for the branch conversation: user + assistant.
-	msgs, err := app.FindRecordsByFilter("messages",
-		"conversation = {:conv}", "@rowid", 0, 0,
-		map[string]any{"conv": conv.Id})
-	if err != nil {
-		t.Fatalf("branch messages: %v", err)
-	}
-	var roles []string
-	for _, m := range msgs {
-		roles = append(roles, m.GetString("role"))
-	}
-	wantRoles := []string{"user", "assistant"}
-	if strings.Join(roles, ",") != strings.Join(wantRoles, ",") {
-		t.Errorf("branch roles = %v, want %v", roles, wantRoles)
-	}
-
-	// Master conversation must have gained NO messages.
-	masterMsgs, err := app.FindRecordsByFilter("messages",
-		"conversation = {:conv}", "@rowid", 0, 0,
-		map[string]any{"conv": master.Id})
-	if err != nil {
-		t.Fatalf("master messages: %v", err)
-	}
-	if len(masterMsgs) != 0 {
-		t.Errorf("master gained %d message(s), want 0", len(masterMsgs))
-	}
-
-	// emit saw a text event.
-	joined := strings.Join(eventKinds, ",")
-	if !strings.Contains(joined, "text") {
-		t.Errorf("emit missing 'text' event; got: %s", joined)
-	}
-}
-
-func TestRunForSystemPromptAndNoTools(t *testing.T) {
-	app := storetest.NewApp(t)
-	head := seedHeadForTurn(t, app, "Scout")
-
-	conv, err := conversation.ForHead(app, head)
-	if err != nil {
-		t.Fatalf("ForHead: %v", err)
-	}
-
-	// Capture messages sent to the model.
-	var capturedMsgs []llm.Message
-	client := llmtest.New()
-	client.Respond = func(msgs []llm.Message) string {
-		capturedMsgs = msgs
-		return "system prompt captured"
-	}
-
-	if _, err := RunFor(context.Background(), app, client, conv, "Scout", "find flights", "go", nil); err != nil {
-		t.Fatalf("RunFor: %v", err)
-	}
-
-	if len(capturedMsgs) == 0 {
-		t.Fatal("no messages sent to model")
-	}
-	sys := capturedMsgs[0]
-	if sys.Role != "system" {
-		t.Errorf("first message role = %q, want system", sys.Role)
-	}
-	if !strings.Contains(sys.Content, "You are Scout") {
-		t.Errorf("system prompt missing 'You are Scout': %s", sys.Content)
-	}
-	if !strings.Contains(sys.Content, "find flights") {
-		t.Errorf("system prompt missing purpose 'find flights': %s", sys.Content)
-	}
-}
-
-func TestRunForNoToolExecution(t *testing.T) {
-	// FINDING: Tools: nil means no tool can be found by name. When the model
-	// requests a tool call, agent.Loop returns "error: unknown tool <name>" as
-	// the tool result and persists a role='tool' message with that error
-	// content. The tool itself is never executed (no task record is created),
-	// but the loop does produce a persisted tool-error message.
-	app := storetest.NewApp(t)
-	head := seedHeadForTurn(t, app, "Scout")
-
-	conv, err := conversation.ForHead(app, head)
-	if err != nil {
-		t.Fatalf("ForHead: %v", err)
-	}
-
-	// Script a tool call — the loop has nil tools, so it cannot execute it.
-	client := llmtest.New(
-		llmtest.ToolCall("c1", "task_add", `{"title":"buy milk","due":"2026-06-13T09:00"}`),
-		llmtest.Text("I tried to add a task."),
-	)
-
-	_, _ = RunFor(context.Background(), app, client, conv, "Scout", "", "add a task", nil)
-
-	// No task record created — tool body never ran.
-	taskRecs, err := app.FindRecordsByFilter("tasks", "title = 'buy milk'", "", 0, 0)
-	if err == nil && len(taskRecs) != 0 {
-		t.Errorf("task was created despite Tools: nil — found %d task(s)", len(taskRecs))
-	}
-
-	// The loop does persist a role='tool' error message (unknown tool result).
-	// This characterizes actual behavior: the agent loop replies with an error
-	// string rather than silently dropping the call.
-	toolMsgs, err := app.FindRecordsByFilter("messages",
-		"conversation = {:conv} && role = 'tool'", "", 0, 0,
-		map[string]any{"conv": conv.Id})
-	if err != nil {
-		t.Fatalf("querying tool messages: %v", err)
-	}
-	if len(toolMsgs) == 0 {
-		t.Error("expected a tool-error message persisted by the loop, got 0")
-	}
-	if len(toolMsgs) > 0 {
-		content := toolMsgs[0].GetString("content")
-		if !strings.Contains(content, "unknown tool") {
-			t.Errorf("tool message content = %q, want to contain 'unknown tool'", content)
-		}
 	}
 }
 

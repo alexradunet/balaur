@@ -184,7 +184,6 @@ func Register(se *core.ServeEvent) error {
 	h := &handlers{app: se.App, tmpl: tmpl, ollama: ollama.Default}
 	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
 	se.Router.POST("/ui/chat", h.chat)
-	se.Router.GET("/ui/dock/conversation", h.dockConversation)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)
 	se.Router.POST("/ui/model/openai", h.saveOpenAIModel)
@@ -221,11 +220,6 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
-	// Heads management — the roster is a card focus; a head's branch chat opens
-	// in the dock (GET /ui/dock/conversation?head={id}). The /heads and
-	// /heads/{id}/chat pages were retired (plan 054).
-	se.Router.POST("/ui/heads/{id}/chat", h.headChat)
-	se.Router.POST("/ui/heads/{id}/avatar", h.setHeadAvatar)
 	// Typed card registry (plan 028) — parameterized server resources.
 	se.Router.GET("/ui/cards", h.uiCardPalette)
 	se.Router.GET("/ui/cards/{type}", h.uiCard)

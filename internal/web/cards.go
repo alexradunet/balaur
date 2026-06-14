@@ -561,23 +561,8 @@ func (h *handlers) renderCardSkills(w io.Writer, params map[string]string) error
 	})
 }
 
-// cardHeadsManageView feeds the interactive heads card (mode=manage): active
-// heads rendered via the self-targeting head_card partial (#head-{id}).
-type cardHeadsManageView struct {
-	Heads []headView
-}
-
-func (h *handlers) renderCardHeads(w io.Writer, params map[string]string) error {
+func (h *handlers) renderCardHeads(w io.Writer, _ map[string]string) error {
 	recs, _ := h.app.FindRecordsByFilter("heads", "status = 'active'", "-@rowid", 0, 0)
-
-	if params["mode"] == "manage" {
-		views := make([]headView, 0, len(recs))
-		for _, r := range recs {
-			views = append(views, headViewFrom(h.app, r))
-		}
-		return h.tmpl.ExecuteTemplate(w, "ucard_heads_manage", cardHeadsManageView{Heads: views})
-	}
-
 	var heads []headRow
 	for _, r := range recs {
 		heads = append(heads, headRow{

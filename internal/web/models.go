@@ -31,9 +31,6 @@ type homeData struct {
 	OwnerName       string              // display name for the "You" label in chat
 	BalaurAvatarURL string              // resolved Balaur head avatar URL
 	Gguf            ollama.PullSnapshot // active model download, for the chatbar loading bar
-	ConvPostURL     string              // dock draft @post target: /ui/chat (master) or /ui/heads/{id}/chat
-	ConvHeadName    string              // active head's name; "" = master (no back affordance)
-	ConvBack        bool                // show "← back to main" (true in a branch)
 }
 
 // AvatarOption is one entry in an avatar picker (soul or Balaur head).
@@ -65,7 +62,7 @@ type modelModalData struct {
 }
 
 func (h *handlers) homeData() (homeData, error) {
-	data := homeData{Title: "Balaur", ChatPlaceholder: "Choose a model before chatting", NowMillis: time.Now().UnixMilli(), ConvPostURL: "/ui/chat"}
+	data := homeData{Title: "Balaur", ChatPlaceholder: "Choose a model before chatting", NowMillis: time.Now().UnixMilli()}
 	choices, active, err := turn.ModelChoices(h.app)
 	if err != nil {
 		return data, err

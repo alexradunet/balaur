@@ -51,44 +51,6 @@ func Master(app core.App) (*core.Record, error) {
 	return rec, nil
 }
 
-// ForHead returns the open branch conversation for the given head, creating one
-// if none exists. Branch conversations are the persistent channel for sub-agent
-// exchanges; they carry their own history independent of the master.
-func ForHead(app core.App, head *core.Record) (*core.Record, error) {
-	rec, err := app.FindFirstRecordByFilter("conversations",
-		"kind = 'branch' && status = 'open' && head = {:head}",
-		dbx.Params{"head": head.Id})
-	if err == nil {
-		return rec, nil
-	}
-
-	master, err := Master(app)
-	if err != nil {
-		return nil, err
-	}
-
-	col, err := app.FindCollectionByNameOrId("conversations")
-	if err != nil {
-		return nil, fmt.Errorf("finding conversations collection: %w", err)
-	}
-	rec = core.NewRecord(col)
-	rec.Set("title", head.GetString("name")+" conversation")
-	rec.Set("kind", "branch")
-	rec.Set("status", "open")
-	rec.Set("head", head.Id)
-	rec.Set("parent", master.Id)
-	if err := app.Save(rec); err != nil {
-		// Lost-race retry: another request may have won the create race.
-		if existing, findErr := app.FindFirstRecordByFilter("conversations",
-			"kind = 'branch' && status = 'open' && head = {:head}",
-			dbx.Params{"head": head.Id}); findErr == nil {
-			return existing, nil
-		}
-		return nil, fmt.Errorf("creating branch conversation: %w", err)
-	}
-	return rec, nil
-}
-
 // Append persists one turn. toolName is the human-readable tool name for
 // role=tool turns (the llm.Message itself only carries the opaque call id);
 // pass "" for other roles. Tool payloads land in a dedicated JSON field so

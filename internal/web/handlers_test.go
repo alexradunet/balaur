@@ -342,7 +342,7 @@ func TestHeadsFocus(t *testing.T) {
 				return app
 			},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Scout", "head-"},
+			ExpectedContent: []string{"Scout"},
 		},
 	}
 	for _, scenario := range scenarios {
@@ -351,11 +351,10 @@ func TestHeadsFocus(t *testing.T) {
 }
 
 // TestRetiredHeadsPages: plan 054 deleted the GET /heads and
-// GET /heads/{id}/chat page routes. The roster now lives at /focus/heads and a
-// head's branch chat opens in the dock (GET /ui/dock/conversation?head={id},
-// covered by TestDockConversationBranch). The old page routes no longer exist;
-// unmatched UI paths fall through to the board-home redirect (302 → /boards), so
-// old bookmarks self-heal onto the boards dashboard.
+// GET /heads/{id}/chat page routes. The roster now lives at /focus/heads. The
+// old page routes no longer exist; unmatched UI paths fall through to the
+// board-home redirect (302 → /boards), so old bookmarks self-heal onto the
+// boards dashboard.
 func TestRetiredHeadsPages(t *testing.T) {
 	t.Run("GET /heads is retired", func(t *testing.T) {
 		scenario := tests.ApiScenario{
@@ -376,88 +375,6 @@ func TestRetiredHeadsPages(t *testing.T) {
 			URL:            "/heads/" + head.Id + "/chat",
 			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus: 302,
-		}
-		scenario.Test(t)
-	})
-}
-
-func TestHeadChat(t *testing.T) {
-	sseSrv := newFakeSSEServer("Hello from Scout")
-	t.Cleanup(func() { sseSrv.Close() })
-
-	newHeadChatApp := func(tb testing.TB) (*tests.TestApp, *core.Record) {
-		app := newWebApp(tb)
-		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
-		store.SetActiveLLMModel(app, id, "test")
-		head := seedHeadRec(tb, app, "Scout", "active")
-		return app, head
-	}
-
-	t.Run("streams Datastar element patches with user bubble", func(t *testing.T) {
-		app, head := newHeadChatApp(t)
-		// Like the master chat, the head chat now streams Datastar element
-		// patches: the server echoes the owner's bubble, then morphs the
-		// assistant body with the model's text. Both ride inside
-		// datastar-patch-elements SSE events.
-		scenario := tests.ApiScenario{
-			Name:            "head chat basic",
-			Method:          "POST",
-			URL:             "/ui/heads/" + head.Id + "/chat",
-			Body:            strings.NewReader("message=hello"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"datastar-patch-elements", "Hello from Scout", "msg msg-user"},
-		}
-		scenario.Test(t)
-	})
-	t.Run("empty message returns 400", func(t *testing.T) {
-		app, head := newHeadChatApp(t)
-		scenario := tests.ApiScenario{
-			Name:            "head chat empty message",
-			Method:          "POST",
-			URL:             "/ui/heads/" + head.Id + "/chat",
-			Body:            strings.NewReader("message="),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  400,
-			ExpectedContent: []string{"Empty message"},
-		}
-		scenario.Test(t)
-	})
-}
-
-func TestSetHeadAvatar(t *testing.T) {
-	// Confirm balaur-01 is a valid key before using it in the test.
-	if !store.ValidBalaurAvatarKey("balaur-01") {
-		t.Fatal("expected balaur-01 to be a valid avatar key")
-	}
-
-	t.Run("valid avatar key returns 200", func(t *testing.T) {
-		app := newWebApp(t)
-		head := seedHeadRec(t, app, "Scout", "active")
-		scenario := tests.ApiScenario{
-			Name:            "set head avatar valid key",
-			Method:          "POST",
-			URL:             "/ui/heads/" + head.Id + "/avatar",
-			Body:            strings.NewReader("balaur_avatar=balaur-01"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"Scout"},
-		}
-		scenario.Test(t)
-	})
-	t.Run("bogus avatar key returns 400", func(t *testing.T) {
-		scenario := tests.ApiScenario{
-			Name:            "set head avatar bogus key",
-			Method:          "POST",
-			URL:             "/ui/heads/someid/avatar",
-			Body:            strings.NewReader("balaur_avatar=bogus"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  400,
-			ExpectedContent: []string{"Invalid balaur avatar"},
 		}
 		scenario.Test(t)
 	})
