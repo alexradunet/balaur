@@ -4,5 +4,6 @@
 package all
 
 import (
+	_ "github.com/alexradunet/balaur/internal/feature/journalcards"
 	_ "github.com/alexradunet/balaur/internal/feature/taskcards"
 )
