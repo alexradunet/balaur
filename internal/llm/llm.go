@@ -1,7 +1,7 @@
 // Package llm defines Balaur's single seam to language models. One client
 // implements it: an OpenAI-compatible HTTP client. It speaks to remote
-// providers and to local endpoints alike — a local GGUF is served by a
-// llamafile subprocess (see internal/llama) and reached over the same API.
+// providers and to local endpoints alike — a local model is served by Ollama
+// (see internal/ollama) over the same OpenAI-compatible API.
 // Everything above this package is provider-agnostic.
 package llm
 
