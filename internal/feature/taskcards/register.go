@@ -15,12 +15,14 @@ func Register(app core.App) {
 	ui.RegisterCard("today", func(_ ui.CardSize, _ map[string]string) (g.Node, error) {
 		return TodayCard(buildToday(app)), nil
 	})
+	registerQuests(app)
 }
 
 // Unregister removes all cards this feature registered. Called from web.Register's
 // OnTerminate hook so the global ui registry stays clean between test runs.
 func Unregister() {
 	ui.UnregisterCard("today")
+	ui.UnregisterCard("quests")
 }
 
 // init self-registers this feature so the declarative registry (and web.Register)

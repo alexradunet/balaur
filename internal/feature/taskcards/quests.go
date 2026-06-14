@@ -1,8 +1,16 @@
 package taskcards
 
 import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	. "maragu.dev/gomponents/html"
+
+	"github.com/alexradunet/balaur/internal/tasks"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // QuestsView feeds both quest-card modes: the task rows + the summary param line.
@@ -82,4 +90,88 @@ func questsManageBody(v QuestsView) g.Node {
 		items = append(items, TaskCard(row))
 	}
 	return Div(Class("ucard-manage-list"), g.Group(items))
+}
+
+// taskViewOf builds the full task view-model (mirrors web/tasks.go taskViewOf).
+func taskViewOf(rec *core.Record, now time.Time) TaskView {
+	v := TaskView{
+		ID:     rec.Id,
+		Title:  rec.GetString("title"),
+		Notes:  rec.GetString("notes"),
+		Status: rec.GetString("status"),
+	}
+	if d := rec.GetDateTime("due").Time(); !d.IsZero() {
+		local := d.In(now.Location())
+		if local.Before(now) && v.Status == "open" {
+			v.Overdue = true
+			v.DueLine = tasks.Lateness(d, now) + " — was " + local.Format("Mon, Jan 2 at 15:04")
+		} else {
+			v.DueLine = "due " + local.Format("Mon, Jan 2 at 15:04")
+		}
+	}
+	if rule, err := tasks.Parse(rec.GetString("recur")); err == nil && !rule.IsZero() {
+		v.RecurLine = tasks.Describe(rule)
+	}
+	return v
+}
+
+func viewsOf(recs []*core.Record, now time.Time) []TaskView {
+	out := make([]TaskView, 0, len(recs))
+	for _, r := range recs {
+		out = append(out, taskViewOf(r, now))
+	}
+	return out
+}
+
+// renderQuests dispatches the quests card on its params (mirrors renderCardQuests):
+// mode=manage → the interactive fold; else a status/limit-filtered summary.
+func renderQuests(app core.App, params map[string]string) g.Node {
+	now := time.Now()
+	if params["mode"] == "manage" {
+		recs, _ := tasks.OpenTasks(app, nil)
+		if limit := intParam(params, "limit", 12); len(recs) > limit {
+			recs = recs[:limit]
+		}
+		return QuestsManageCard(QuestsView{Rows: viewsOf(recs, now)})
+	}
+
+	status := params["status"]
+	if status == "" {
+		status = "open"
+	}
+	limit := intParam(params, "limit", 10)
+
+	var recs []*core.Record
+	switch status {
+	case "done":
+		recs, _ = app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", limit, 0)
+	case "all":
+		recs, _ = app.FindRecordsByFilter("tasks", "status != 'dropped'", "-updated", limit, 0)
+	default: // open
+		open, _ := tasks.OpenTasks(app, nil)
+		if len(open) > limit {
+			open = open[:limit]
+		}
+		recs = open
+	}
+	return QuestsCard(QuestsView{
+		Rows:      viewsOf(recs, now),
+		ParamLine: fmt.Sprintf("status: %s · limit: %d", status, limit),
+	})
+}
+
+// intParam reads an int param, falling back to def. cards.Validate already
+// clamped limit/days upstream, so a plain Atoi is enough (empty/invalid → def).
+func intParam(p map[string]string, key string, def int) int {
+	if n, err := strconv.Atoi(p[key]); err == nil {
+		return n
+	}
+	return def
+}
+
+// registerQuests wires the quests card (both modes) into the ui registry.
+func registerQuests(app core.App) {
+	ui.RegisterCard("quests", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
+		return renderQuests(app, params), nil
+	})
 }
