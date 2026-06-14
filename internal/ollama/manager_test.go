@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -92,5 +93,32 @@ func TestMinFreeGBOverride(t *testing.T) {
 	t.Setenv("BALAUR_OLLAMA_MIN_FREE_GB", "garbage")
 	if minFreeGB() != defaultMinFreeGB {
 		t.Fatalf("garbage override = %d, want default", minFreeGB())
+	}
+}
+
+func TestCachedTagsHitsServerOnceWithinTTL(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		w.Write([]byte(`{"models":[{"name":"gemma4:e4b","size":1}]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("BALAUR_OLLAMA_HOST", hostFromURL(srv.URL))
+	m := &Manager{}
+	for i := 0; i < 3; i++ {
+		ok, err := m.IsPulled("gemma4:e4b")
+		if err != nil || !ok {
+			t.Fatalf("IsPulled = %v %v", ok, err)
+		}
+	}
+	if c := atomic.LoadInt32(&calls); c != 1 {
+		t.Fatalf("server hit %d times within TTL, want 1 (cache)", c)
+	}
+	m.invalidateTags()
+	if _, err := m.IsPulled("gemma4:e4b"); err != nil {
+		t.Fatal(err)
+	}
+	if c := atomic.LoadInt32(&calls); c != 2 {
+		t.Fatalf("server hit %d times after invalidate, want 2", c)
 	}
 }

@@ -45,6 +45,10 @@ type Manager struct {
 	cancel   context.CancelFunc
 	progress PullSnapshot
 	onDone   func(tag string)
+
+	// tags cache (board-render hot path)
+	tagsCache   []Model
+	tagsCacheAt time.Time
 }
 
 // Default is the process-wide manager shared by every caller.
@@ -222,6 +226,7 @@ func (m *Manager) runPull(ctx context.Context, tag string) {
 	} else {
 		m.progress.Done = true
 		m.progress.Err = ""
+		m.tagsCacheAt = time.Time{} // a new model exists; force a refetch
 		cb = m.onDone
 	}
 	m.mu.Unlock()
@@ -251,20 +256,57 @@ func (m *Manager) Snapshot() PullSnapshot {
 	return m.progress
 }
 
-// List returns the models present in Ollama's local store.
-func (m *Manager) List() ([]Model, error) {
-	return m.apiClient().tags(context.Background())
-}
+const tagsTTL = 3 * time.Second
 
-// Delete removes a model tag from Ollama's store.
-func (m *Manager) Delete(tag string) error {
-	return m.apiClient().delete(context.Background(), tag)
-}
+// cachedTags returns the model list from a short-TTL cache so the board-render
+// path (IsPulled) does not hit the daemon on every request. The network fetch
+// runs WITHOUT the mutex held; a concurrent double-fetch is acceptable.
+func (m *Manager) cachedTags() ([]Model, error) {
+	m.mu.Lock()
+	if !m.tagsCacheAt.IsZero() && time.Since(m.tagsCacheAt) < tagsTTL {
+		out := append([]Model(nil), m.tagsCache...)
+		m.mu.Unlock()
+		return out, nil
+	}
+	m.mu.Unlock()
 
-// IsPulled reports whether tag is present locally. A reachability failure is
-// treated as "not pulled" so callers degrade to a "pull needed" prompt.
-func (m *Manager) IsPulled(tag string) (bool, error) {
 	models, err := m.apiClient().tags(context.Background())
+	if err != nil {
+		return nil, err // do not cache errors
+	}
+	m.mu.Lock()
+	m.tagsCache = models
+	m.tagsCacheAt = time.Now()
+	m.mu.Unlock()
+	return models, nil
+}
+
+// invalidateTags forces the next cachedTags call to refetch.
+func (m *Manager) invalidateTags() {
+	m.mu.Lock()
+	m.tagsCacheAt = time.Time{}
+	m.mu.Unlock()
+}
+
+// List returns the models present in Ollama's local store (short-TTL cached).
+func (m *Manager) List() ([]Model, error) {
+	return m.cachedTags()
+}
+
+// Delete removes a model tag from Ollama's store and invalidates the tags cache.
+func (m *Manager) Delete(tag string) error {
+	if err := m.apiClient().delete(context.Background(), tag); err != nil {
+		return err
+	}
+	m.invalidateTags()
+	return nil
+}
+
+// IsPulled reports whether tag is present locally (short-TTL cached). A
+// reachability failure is treated as "not pulled" so callers degrade to a
+// "pull needed" prompt.
+func (m *Manager) IsPulled(tag string) (bool, error) {
+	models, err := m.cachedTags()
 	if err != nil {
 		return false, err
 	}
