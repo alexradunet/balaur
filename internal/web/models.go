@@ -204,6 +204,17 @@ func (h *handlers) missingModelModal(e *core.RequestEvent) error {
 // it when done. Used by the missing-model modal and the models card.
 func (h *handlers) modelPull(e *core.RequestEvent) error {
 	tag := ollama.ChatModel()
+	if req := strings.TrimSpace(e.Request.FormValue("tag")); req != "" {
+		// Only the curated presets may be pulled via the button; the picker
+		// handles already-pulled models. Reject anything else.
+		if req != ollama.ChatModel() && req != ollama.DefaultChatModel && req != ollama.GPUChatModel {
+			if e.Request.FormValue("target") == "models" {
+				return h.modelsPanel(e, "unknown model preset")
+			}
+			return e.BadRequestError("unknown model preset", nil)
+		}
+		tag = req
+	}
 	onDone := func(tag string) {
 		id, err := store.SaveLocalModel(h.app, tag, ollama.EmbedModel())
 		if err != nil {
