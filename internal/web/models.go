@@ -243,7 +243,7 @@ func (h *handlers) modelPull(e *core.RequestEvent) error {
 		modal.Error = err.Error()
 		return h.renderModelModal(e, modal)
 	}
-	store.Audit(h.app, "", "owner", "llm.model.pull", tag, true, nil)
+	store.Audit(h.app, "owner", "llm.model.pull", tag, true, nil)
 	if e.Request.FormValue("target") == "models" {
 		return h.modelsPanel(e, "")
 	}
@@ -274,7 +274,7 @@ func (h *handlers) modelPullProgress(e *core.RequestEvent) error {
 // modelPullCancel cancels the active pull, if any.
 func (h *handlers) modelPullCancel(e *core.RequestEvent) error {
 	h.ollama.Cancel()
-	store.Audit(h.app, "", "owner", "llm.model.pull_cancel", "", true, nil)
+	store.Audit(h.app, "owner", "llm.model.pull_cancel", "", true, nil)
 	return h.modelsPanel(e, "")
 }
 
@@ -287,7 +287,7 @@ func (h *handlers) modelDelete(e *core.RequestEvent) error {
 	if err := h.ollama.Delete(name); err != nil {
 		return h.modelsPanel(e, err.Error())
 	}
-	store.Audit(h.app, "", "owner", "llm.model.delete", name, true, nil)
+	store.Audit(h.app, "owner", "llm.model.delete", name, true, nil)
 	return h.modelsPanel(e, "")
 }
 

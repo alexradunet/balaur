@@ -1,14 +1,14 @@
 // Package conversation implements Balaur's master-conversation model: one
-// continuous life conversation (the main head), with focused branch
-// sub-conversations later compacted and merged back.
+// continuous life conversation (the main head). Switchable personas (heads)
+// share this single thread — they change voice and tools, not history.
 //
-// V1 ships the master only. The deliberate split that keeps a years-long
-// conversation from becoming a footgun: PERSISTENCE IS NOT CONTEXT. Every
-// turn is stored forever in the messages collection; the model sees only
-// the last few text turns (RecentTurns). Durable facts belong in approved
-// memories — that is what makes the master compactable and even archivable
-// without losing the companion. Compaction into the conversations.summary
-// field and branch/merge are the named next slices.
+// The deliberate split that keeps a years-long conversation from becoming a
+// footgun: PERSISTENCE IS NOT CONTEXT. Every turn is stored forever in the
+// messages collection; the model sees only the last few text turns
+// (RecentTurns). Durable facts belong in approved memories — that is what
+// makes the master compactable and even archivable without losing the
+// companion. Compaction into the conversations.summary field is the named
+// next slice.
 package conversation
 
 import (

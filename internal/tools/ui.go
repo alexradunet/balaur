@@ -211,7 +211,7 @@ func boardComposeTool(app core.App) agent.Tool {
 			}
 
 			// Audit the creation.
-			store.Audit(app, "", "agent", "board_compose", rec.Id, true,
+			store.Audit(app, "agent", "board_compose", rec.Id, true,
 				map[string]any{"name": name, "cards": len(cleaned)})
 
 			return fmt.Sprintf("board raised: %s (%d cards) — /boards/%s", name, len(cleaned), rec.Id), nil
@@ -334,7 +334,7 @@ func boardAddCardTool(app core.App) agent.Tool {
 
 			// Audit the mutation.
 			spec, _ := cards.Get(args.Type)
-			store.Audit(app, "", "agent", "board_add_card", board.Id, true,
+			store.Audit(app, "agent", "board_add_card", board.Id, true,
 				map[string]any{"card_type": args.Type, "board": board.GetString("name")})
 
 			return fmt.Sprintf("added %s to %s — /boards/%s", spec.Label, board.GetString("name"), board.Id), nil

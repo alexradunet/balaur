@@ -53,7 +53,7 @@ func clip(s string) string {
 
 // auditOS records one OS tool invocation through the shared audit helper.
 func auditOS(app core.App, tool, target string, allowed bool, detail map[string]any) {
-	store.Audit(app, "", "os", "os."+tool, target, allowed, detail)
+	store.Audit(app, "os", "os."+tool, target, allowed, detail)
 }
 
 func readTool(app core.App) agent.Tool {

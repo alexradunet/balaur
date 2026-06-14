@@ -68,7 +68,7 @@ func Nudge(app core.App, client llm.Client, now time.Time) error {
 		if err := app.Save(rec); err != nil {
 			return fmt.Errorf("marking nudge on %q: %w", rec.GetString("title"), err)
 		}
-		store.Audit(app, "", "nudge", "task.nudge", rec.Id, true,
+		store.Audit(app, "nudge", "task.nudge", rec.Id, true,
 			map[string]any{"title": rec.GetString("title")})
 	}
 	return nil

@@ -69,7 +69,7 @@ func Create(app core.App, o CreateOpts) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("saving task: %w", err)
 	}
-	store.Audit(app, "", "tasks", "task.create", rec.Id, true, map[string]any{"title": title, "recur": recur})
+	store.Audit(app, "tasks", "task.create", rec.Id, true, map[string]any{"title": title, "recur": recur})
 	return rec, nil
 }
 
@@ -99,7 +99,7 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		if err := app.Save(rec); err != nil {
 			return DoneResult{}, fmt.Errorf("saving task: %w", err)
 		}
-		store.Audit(app, "", "tasks", "task.done", rec.Id, true, nil)
+		store.Audit(app, "tasks", "task.done", rec.Id, true, nil)
 		return DoneResult{}, nil
 	}
 
@@ -121,7 +121,7 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		return DoneResult{}, fmt.Errorf("saving task: %w", err)
 	}
 	n, _ := app.CountRecords("entries", dbx.HashExp{"kind": "completion", "task": rec.Id})
-	store.Audit(app, "", "tasks", "task.done", rec.Id, true, map[string]any{"next_due": next.UTC().Format(time.RFC3339)})
+	store.Audit(app, "tasks", "task.done", rec.Id, true, map[string]any{"next_due": next.UTC().Format(time.RFC3339)})
 	return DoneResult{Recurring: true, NextDue: next, Completions: int(n)}, nil
 }
 
@@ -136,7 +136,7 @@ func Snooze(app core.App, rec *core.Record, until time.Time) error {
 	if err := app.Save(rec); err != nil {
 		return fmt.Errorf("saving task: %w", err)
 	}
-	store.Audit(app, "", "tasks", "task.snooze", rec.Id, true, map[string]any{"until": until.UTC().Format(time.RFC3339)})
+	store.Audit(app, "tasks", "task.snooze", rec.Id, true, map[string]any{"until": until.UTC().Format(time.RFC3339)})
 	return nil
 }
 
@@ -149,7 +149,7 @@ func Drop(app core.App, rec *core.Record) error {
 	if err := app.Save(rec); err != nil {
 		return fmt.Errorf("saving task: %w", err)
 	}
-	store.Audit(app, "", "tasks", "task.drop", rec.Id, true, nil)
+	store.Audit(app, "tasks", "task.drop", rec.Id, true, nil)
 	return nil
 }
 

@@ -10,9 +10,9 @@ func TestListAudit(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	// Seed three audit rows with different actors and actions
-	Audit(app, "", "tasks", "task.transition", "task-1", true, nil)
-	Audit(app, "", "os", "os.exec", "whoami", false, nil)
-	Audit(app, "", "tasks", "task.create", "task-2", true, nil)
+	Audit(app, "tasks", "task.transition", "task-1", true, nil)
+	Audit(app, "os", "os.exec", "whoami", false, nil)
+	Audit(app, "tasks", "task.create", "task-2", true, nil)
 
 	// List all (no filters)
 	all, err := ListAudit(app, "", "", 100)
@@ -69,7 +69,7 @@ func TestListAuditLimit(t *testing.T) {
 
 	// Seed 5 rows
 	for i := 0; i < 5; i++ {
-		Audit(app, "", "test", "action", "target", true, nil)
+		Audit(app, "test", "action", "target", true, nil)
 	}
 
 	// Query with limit

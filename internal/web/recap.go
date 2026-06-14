@@ -170,7 +170,7 @@ type messageView struct {
 	SoulAvatarURL   string        // resolved soul avatar URL (same for all views in one call)
 	BalaurAvatarURL string        // resolved Balaur head avatar URL
 	OwnerName       string        // display name for the "You" label
-	WhoLabel        string        // assistant display name ("Balaur", or head name for branch chats)
+	WhoLabel        string        // assistant display name ("Balaur", or the active head's name)
 
 	// Datastar streaming fields (master chat dock). BubbleID/BodyID give a
 	// streamed element a stable id so the SSE handler can morph it in place;

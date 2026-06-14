@@ -114,13 +114,13 @@ func SaveOpenAIModel(app core.App, name, baseURL, apiKey, label, model, embedMod
 		return "", err
 	}
 	if apiKey != "" {
-		Audit(app, "", "owner", "llm.provider_key.set", provider.Id, true, map[string]any{"provider": name})
+		Audit(app, "owner", "llm.provider_key.set", provider.Id, true, map[string]any{"provider": name})
 	}
 	llmModel, err := findOrCreateLLMModel(app, provider.Id, label, model, embedModel, true)
 	if err != nil {
 		return "", err
 	}
-	Audit(app, "", "owner", "llm.model.upsert", llmModel.Id, true, map[string]any{"provider": name, "kind": "openai", "local": local})
+	Audit(app, "owner", "llm.model.upsert", llmModel.Id, true, map[string]any{"provider": name, "kind": "openai", "local": local})
 	return llmModel.Id, nil
 }
 
@@ -139,7 +139,7 @@ func SaveLocalModel(app core.App, tag, embedTag string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	Audit(app, "", "owner", "llm.model.upsert", model.Id, true,
+	Audit(app, "owner", "llm.model.upsert", model.Id, true,
 		map[string]any{"provider": "Local model", "kind": "local", "local": true, "tag": tag})
 	return model.Id, nil
 }
@@ -210,9 +210,9 @@ func UpdateOpenAIProvider(app core.App, providerID, name, baseURL, apiKey string
 	if err := app.Save(rec); err != nil {
 		return err
 	}
-	Audit(app, "", "owner", "llm.provider.update", providerID, true, map[string]any{"provider": name})
+	Audit(app, "owner", "llm.provider.update", providerID, true, map[string]any{"provider": name})
 	if apiKey != "" {
-		Audit(app, "", "owner", "llm.provider_key.set", providerID, true, map[string]any{"provider": name})
+		Audit(app, "owner", "llm.provider_key.set", providerID, true, map[string]any{"provider": name})
 	}
 	return nil
 }
@@ -244,7 +244,7 @@ func DeleteOpenAIProvider(app core.App, providerID string) error {
 	if err := app.Delete(rec); err != nil {
 		return err
 	}
-	Audit(app, "", "owner", "llm.provider.delete", providerID, true, map[string]any{"provider": rec.GetString("name")})
+	Audit(app, "owner", "llm.provider.delete", providerID, true, map[string]any{"provider": rec.GetString("name")})
 	return nil
 }
 
@@ -268,7 +268,7 @@ func DeleteLLMModel(app core.App, modelID string) error {
 	if err := app.Delete(model); err != nil {
 		return err
 	}
-	Audit(app, "", "owner", "llm.model.delete", modelID, true, map[string]any{"provider": cfg.ProviderName})
+	Audit(app, "owner", "llm.model.delete", modelID, true, map[string]any{"provider": cfg.ProviderName})
 	return nil
 }
 
@@ -300,7 +300,7 @@ func SetActiveLLMModel(app core.App, modelID, actor string) error {
 	if actor == "" {
 		actor = "owner"
 	}
-	Audit(app, "", actor, "llm.active_model", modelID, true, map[string]any{
+	Audit(app, actor, "llm.active_model", modelID, true, map[string]any{
 		"provider": cfg.ProviderName,
 		"kind":     cfg.Kind,
 		"local":    cfg.Local,

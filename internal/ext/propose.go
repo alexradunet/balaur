@@ -94,7 +94,7 @@ func ProposeTool(app core.App) agent.Tool {
 					app.Logger().Warn("ext proposal source update failed", "name", args.Name, "err", err)
 				}
 			}
-			store.Audit(app, "", "model", "ext.propose", args.Name, true, map[string]any{"sha256": sum})
+			store.Audit(app, "model", "ext.propose", args.Name, true, map[string]any{"sha256": sum})
 
 			return fmt.Sprintf("Extension %q proposed for the owner's approval (file: pb_extensions/%s.js). "+
 				"It is NOT active: its tools do not exist until the owner runs `balaur ext approve %s` "+

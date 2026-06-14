@@ -77,7 +77,7 @@ func Briefing(app core.App, client llm.Client, now time.Time, hour int) error {
 		llm.Message{Role: "assistant", Content: text}, "", "briefing"); err != nil {
 		return err
 	}
-	store.Audit(app, "", "briefing", "task.briefing", "", true,
+	store.Audit(app, "briefing", "task.briefing", "", true,
 		map[string]any{"overdue": len(bk.Overdue), "today": len(bk.Today)})
 	return nil
 }

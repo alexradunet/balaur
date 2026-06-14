@@ -77,7 +77,7 @@ func ProposeMemory(app core.App, p MemoryProposal) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("saving memory proposal: %w", err)
 	}
-	store.Audit(app, "", "model", "knowledge.propose", "memories/"+rec.Id, true,
+	store.Audit(app, "model", "knowledge.propose", "memories/"+rec.Id, true,
 		map[string]any{"title": p.Title})
 	return rec, nil
 }
@@ -109,7 +109,7 @@ func ProposeSkill(app core.App, p SkillProposal) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("saving skill proposal: %w", err)
 	}
-	store.Audit(app, "", "model", "knowledge.propose", "skills/"+rec.Id, true,
+	store.Audit(app, "model", "knowledge.propose", "skills/"+rec.Id, true,
 		map[string]any{"name": p.Name})
 	return rec, nil
 }
@@ -138,7 +138,7 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 			break
 		}
 	}
-	store.Audit(app, "", "owner", "knowledge."+to, string(kind)+"/"+rec.Id, allowed,
+	store.Audit(app, "owner", "knowledge."+to, string(kind)+"/"+rec.Id, allowed,
 		map[string]any{"from": from})
 	if !allowed {
 		return nil, fmt.Errorf("knowledge: cannot move %s from %q to %q", kind, from, to)
@@ -181,7 +181,7 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("updating %s: %w", kind, err)
 	}
-	store.Audit(app, "", "owner", "knowledge.edit", string(kind)+"/"+rec.Id, true, nil)
+	store.Audit(app, "owner", "knowledge.edit", string(kind)+"/"+rec.Id, true, nil)
 	return rec, nil
 }
 

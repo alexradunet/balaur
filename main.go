@@ -115,7 +115,7 @@ func ensureLocalDefault(app core.App) {
 			return
 		}
 		app.Logger().Info("ollama: pulling default model on first serve", "tag", tag)
-		store.Audit(app, "", "system", "llm.model.pull", tag, true, map[string]any{"auto": true})
+		store.Audit(app, "system", "llm.model.pull", tag, true, map[string]any{"auto": true})
 	}()
 }
 

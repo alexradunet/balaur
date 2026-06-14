@@ -174,7 +174,7 @@ func ensureOne(ctx context.Context, app core.App, client llm.Client, conversatio
 	if err := save(app, conversationID, p, strings.TrimSpace(text), count); err != nil {
 		return false, err
 	}
-	store.Audit(app, "", "recap", "recap.generate", p.Type+"/"+p.Start.Format("2006-01-02"), true,
+	store.Audit(app, "recap", "recap.generate", p.Type+"/"+p.Start.Format("2006-01-02"), true,
 		map[string]any{"sources": count})
 	return true, nil
 }

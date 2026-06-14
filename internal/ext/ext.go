@@ -71,7 +71,7 @@ func Sync(app core.App) []Active {
 
 		src, sum, err := readHashed(path)
 		if err != nil {
-			store.Audit(app, "", "extensions", "ext.error", name, false, map[string]any{"error": err.Error()})
+			store.Audit(app, "extensions", "ext.error", name, false, map[string]any{"error": err.Error()})
 			continue
 		}
 
@@ -79,18 +79,18 @@ func Sync(app core.App) []Active {
 		switch {
 		case err != nil: // first sight: propose, never load
 			if _, err := upsertProposal(app, nil, name, path, src, sum, "discovered"); err == nil {
-				store.Audit(app, "", "extensions", "ext.discover", name, true, map[string]any{"sha256": sum})
+				store.Audit(app, "extensions", "ext.discover", name, true, map[string]any{"sha256": sum})
 			}
 		case rec.GetString("status") == StatusActive && rec.GetString("sha256") == sum:
 			defs, err := extract(src, name)
 			if err != nil {
-				store.Audit(app, "", "extensions", "ext.error", name, false, map[string]any{"error": err.Error()})
+				store.Audit(app, "extensions", "ext.error", name, false, map[string]any{"error": err.Error()})
 				continue
 			}
 			out = append(out, Active{Name: name, Path: path, Tools: defs, src: src})
 		case rec.GetString("status") == StatusActive: // approved content changed
 			if _, err := upsertProposal(app, rec, name, path, src, sum, rec.GetString("description")); err == nil {
-				store.Audit(app, "", "extensions", "ext.changed", name, false, map[string]any{"sha256": sum})
+				store.Audit(app, "extensions", "ext.changed", name, false, map[string]any{"sha256": sum})
 			}
 		}
 	}
@@ -102,7 +102,7 @@ func Sync(app core.App) []Active {
 		if !seen[rec.GetString("name")] {
 			rec.Set("status", StatusDisabled)
 			if err := app.Save(rec); err == nil {
-				store.Audit(app, "", "extensions", "ext.missing", rec.GetString("name"), false, nil)
+				store.Audit(app, "extensions", "ext.missing", rec.GetString("name"), false, nil)
 			}
 		}
 	}
@@ -117,7 +117,7 @@ func Tools(app core.App, taken map[string]bool) []agent.Tool {
 	for _, ext := range Sync(app) {
 		for _, def := range ext.Tools {
 			if taken[def.Name] {
-				store.Audit(app, "", "extensions", "ext.collision", ext.Name+"/"+def.Name, false, nil)
+				store.Audit(app, "extensions", "ext.collision", ext.Name+"/"+def.Name, false, nil)
 				continue
 			}
 			taken[def.Name] = true
@@ -137,7 +137,7 @@ func extTool(app core.App, ext Active, def ToolDef) agent.Tool {
 		Spec: agent.ToolSpecOf(toolName, def.Description+" (balaur-extension: "+extName+")", params),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			res, err := invoke(ctx, src, extName, toolName, argsJSON)
-			store.Audit(app, "", "extensions", "ext.invoke", extName+"/"+toolName, err == nil, nil)
+			store.Audit(app, "extensions", "ext.invoke", extName+"/"+toolName, err == nil, nil)
 			return res, err
 		},
 	}
@@ -172,7 +172,7 @@ func Approve(app core.App, name string) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("approving %s: %w", name, err)
 	}
-	store.Audit(app, "", "owner", "ext.approve", name, true, map[string]any{"sha256": sum})
+	store.Audit(app, "owner", "ext.approve", name, true, map[string]any{"sha256": sum})
 	return rec, nil
 }
 
@@ -186,7 +186,7 @@ func Disable(app core.App, name string) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("disabling %s: %w", name, err)
 	}
-	store.Audit(app, "", "owner", "ext.disable", name, true, nil)
+	store.Audit(app, "owner", "ext.disable", name, true, nil)
 	return rec, nil
 }
 

@@ -68,7 +68,7 @@ func Log(app core.App, o LogOpts) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("saving %s entry: %w", kind, err)
 	}
-	store.Audit(app, "", "life", "entry.log", rec.Id, true, map[string]any{"kind": kind})
+	store.Audit(app, "life", "entry.log", rec.Id, true, map[string]any{"kind": kind})
 	return rec, nil
 }
 
@@ -85,7 +85,7 @@ func Drop(app core.App, id string) (string, error) {
 	if err := app.Delete(rec); err != nil {
 		return "", fmt.Errorf("dropping entry: %w", err)
 	}
-	store.Audit(app, "", "life", "entry.drop", id, true, map[string]any{"kind": kind})
+	store.Audit(app, "life", "entry.drop", id, true, map[string]any{"kind": kind})
 	return kind, nil
 }
 

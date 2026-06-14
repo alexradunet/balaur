@@ -36,7 +36,7 @@ func JournalWrite(app core.App, text string, notedAt time.Time) (*core.Record, e
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("saving journal entry: %w", err)
 	}
-	store.Audit(app, "", "journal", "journal.write", rec.Id, true, nil)
+	store.Audit(app, "journal", "journal.write", rec.Id, true, nil)
 	return rec, nil
 }
 
@@ -53,6 +53,6 @@ func JournalDrop(app core.App, id string) error {
 	if err := app.Delete(rec); err != nil {
 		return fmt.Errorf("dropping journal entry: %w", err)
 	}
-	store.Audit(app, "", "journal", "journal.drop", id, true, nil)
+	store.Audit(app, "journal", "journal.drop", id, true, nil)
 	return nil
 }

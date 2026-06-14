@@ -8,18 +8,15 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// Audit appends one row to audit_log. headID may be empty for actions not
-// tied to a sub-agent. Auditing must never take the runtime down, so all
+// Audit appends one row to audit_log under an actor label (e.g. "owner",
+// "model", "tasks"). Auditing must never take the runtime down, so all
 // failures are swallowed — this is the only intentionally silent path.
-func Audit(app core.App, headID, actor, action, target string, allowed bool, detail map[string]any) {
+func Audit(app core.App, actor, action, target string, allowed bool, detail map[string]any) {
 	col, err := app.FindCollectionByNameOrId("audit_log")
 	if err != nil {
 		return
 	}
 	rec := core.NewRecord(col)
-	if headID != "" {
-		rec.Set("head", headID)
-	}
 	rec.Set("actor", actor)
 	rec.Set("action", action)
 	rec.Set("target", target)
