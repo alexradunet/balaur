@@ -99,36 +99,9 @@ func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) e
 		}
 		return node.Render(w)
 	}
-	switch typ {
-	case "today":
-		return h.renderCardToday(w, params)
-	case "quests":
-		return h.renderCardQuests(w, params)
-	case "calendar":
-		return h.renderCardCalendar(w, params)
-	case "timeline":
-		return h.renderCardTimeline(w, params)
-	case "journal":
-		return h.renderCardJournal(w, params)
-	case "day":
-		return h.renderCardDay(w, params)
-	case "measure":
-		return h.renderCardMeasure(w, params)
-	case "lines":
-		return h.renderCardLines(w, params)
-	case "memory":
-		return h.renderCardMemory(w, params)
-	case "skills":
-		return h.renderCardSkills(w, params)
-	case "heads":
-		return h.renderCardHeads(w, params)
-	case "habits":
-		return h.renderCardHabits(w, params)
-	case "lifelog":
-		return h.renderCardLifelog(w, params)
-	case "settings":
-		return h.renderCardSettings(w, params)
-	}
+	// Every card type is now served by a feature-owned gomponents renderer
+	// (registered via feature.RegisterAll). An unregistered type is a bug or a
+	// hand-edited board; surface it rather than rendering a stale tile.
 	return fmt.Errorf("unhandled card type %q", typ)
 }
 

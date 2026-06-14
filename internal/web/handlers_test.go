@@ -11,6 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
+	"github.com/alexradunet/balaur/internal/feature"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -32,6 +33,13 @@ func newWebApp(t testing.TB) *tests.TestApp {
 		}
 		return se.Next()
 	})
+	// OnServe only fires inside an ApiScenario HTTP request, so tests that build
+	// &handlers{} directly and render a card never populate the gomponents card
+	// registry. Register the features explicitly here (web.go blank-imports
+	// feature/all, so the registry is populated for the test binary); t.Cleanup
+	// keeps the process-global registry clean between test apps.
+	feature.RegisterAll(app)
+	t.Cleanup(feature.UnregisterAll)
 	return app
 }
 
