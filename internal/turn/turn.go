@@ -18,6 +18,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/conversation"
+	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/tasks"
@@ -76,6 +77,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	if err != nil {
 		return res, err
 	}
+	head := heads.Active(app)
 	recent, err := conversation.RecentTurns(app, master.Id, RecentTurnWindow)
 	if err != nil {
 		return res, err
@@ -93,9 +95,9 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	knowledgeBlock, usedMemories := knowledge.BuildContext(app, userText)
 	res.UsedMemories = usedMemories
 	todayBlock := tasks.TodayBlock(app, now)
-	loop := &agent.Loop{Client: client, Tools: Tools(app), MaxSteps: maxSteps()}
+	loop := &agent.Loop{Client: client, Tools: ToolsForHead(app, head.Groups), MaxSteps: maxSteps()}
 	history := make([]llm.Message, 0, len(recent)+2)
-	history = append(history, llm.Message{Role: "system", Content: systemPrompt + nowLine(now) + todayBlock + knowledgeBlock})
+	history = append(history, llm.Message{Role: "system", Content: systemPrompt + headFlavor(head.Name, head.Purpose) + nowLine(now) + todayBlock + knowledgeBlock})
 	history = append(history, recent...)
 	history = append(history, llm.Message{Role: "user", Content: userText})
 	contextLen := len(history)
@@ -198,6 +200,15 @@ const systemPrompt = "You are Balaur, a wise personal companion. " +
 	"balaur-extension and submitting it with `propose_extension`; it runs " +
 	"only after the owner approves, so never claim an extension capability " +
 	"before its tool exists in your registry."
+
+// headFlavor frames the active head's purpose as an addendum to the base
+// Balaur system prompt. The main head (empty purpose) adds nothing.
+func headFlavor(name, purpose string) string {
+	if purpose == "" {
+		return ""
+	}
+	return "\n\nRight now you answer as your " + name + " head — " + purpose + "."
+}
 
 // nowLine grounds the model in the present moment. Relative dates in the
 // owner's words ("tomorrow at 10") must resolve against the box's clock

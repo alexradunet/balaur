@@ -7,6 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -39,10 +40,11 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	}
 
 	soulURL := store.SoulAvatarURL(h.app)
-	balaURL := store.BalaurAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
+	head := heads.Active(h.app)
+	balaURL := store.BalaurAvatarURLForKey(h.app, head.Avatar)
 
-	cs := h.newChatStream(e, balaURL, "Balaur", soulURL, ownerName)
+	cs := h.newChatStream(e, balaURL, head.Name, soulURL, ownerName)
 
 	client, err := h.clients.Active(h.app)
 	if err != nil {
