@@ -155,7 +155,13 @@ func (m *Manager) runPull(ctx context.Context, tag string) {
 	m.mu.Lock()
 	m.progress.Active = false
 	if err != nil {
-		m.progress.Err = err.Error()
+		// A cancelled pull surfaces a raw context/transport error; keep the
+		// friendly "pull cancelled" message Cancel() set instead of clobbering it.
+		if ctx.Err() != nil {
+			m.progress.Err = "pull cancelled"
+		} else {
+			m.progress.Err = err.Error()
+		}
 	} else {
 		m.progress.Done = true
 		m.progress.Err = ""
