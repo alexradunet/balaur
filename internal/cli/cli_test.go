@@ -602,3 +602,30 @@ func TestDoctorModelReadyNonFatal(t *testing.T) {
 		t.Errorf("model_ready must not be fatal: %v", modelReady)
 	}
 }
+
+// TestEnvelopePanicRecovered proves a panic in a command body is converted to
+// the v1 error envelope (kind=error, non-empty data.error) and a non-zero exit,
+// instead of crashing the process and breaking the CLI contract.
+func TestEnvelopePanicRecovered(t *testing.T) {
+	app := storetest.NewApp(t)
+	cmd := &cobra.Command{
+		Use: "boom",
+		RunE: run(app, "boom", func(*cobra.Command, []string) (any, error) {
+			panic("kaboom")
+		}),
+	}
+	env, err := executeEnvelope(t, cmd)
+	if err == nil {
+		t.Fatal("a panicking command must return a non-nil error")
+	}
+	if env["kind"] != "error" {
+		t.Errorf("kind: want error, got %v", env["kind"])
+	}
+	data, ok := env["data"].(map[string]any)
+	if !ok || data["error"] == "" {
+		t.Errorf("error data must have a non-empty error field, got %v", env["data"])
+	}
+	if ExitCode() == 0 {
+		t.Errorf("panic must set a non-zero exit code, got %d", ExitCode())
+	}
+}

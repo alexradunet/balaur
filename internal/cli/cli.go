@@ -78,15 +78,20 @@ func Register(app core.App, root *cobra.Command) {
 // for a non-zero exit (main may add its own diagnostic line after the JSON —
 // stdout stays clean either way).
 func run(app core.App, kind string, body func(cmd *cobra.Command, args []string) (any, error)) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) (err error) {
 		cmd.SilenceUsage = true
 		cmd.SilenceErrors = true
-		if err := app.RunAllMigrations(); err != nil {
-			return failJSON(cmd, fmt.Errorf("applying migrations: %w", err))
+		defer func() {
+			if r := recover(); r != nil {
+				err = failJSON(cmd, fmt.Errorf("panic: %v", r))
+			}
+		}()
+		if mErr := app.RunAllMigrations(); mErr != nil {
+			return failJSON(cmd, fmt.Errorf("applying migrations: %w", mErr))
 		}
-		out, err := body(cmd, args)
-		if err != nil {
-			return failJSON(cmd, err)
+		out, bErr := body(cmd, args)
+		if bErr != nil {
+			return failJSON(cmd, bErr)
 		}
 		return emit(cmd.OutOrStdout(), kind, out)
 	}
