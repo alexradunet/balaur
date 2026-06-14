@@ -29,25 +29,31 @@ func TestBinaryPathDataDirWhenPresent(t *testing.T) {
 	}
 }
 
-func TestExtractTgz(t *testing.T) {
-	dir := t.TempDir()
-	archive := filepath.Join(dir, "o.tgz")
-	writeTestTgz(t, archive, "bin/ollama", []byte("ELF-fake"))
-	dest := filepath.Join(dir, "out", "ollama")
-	if err := extractOllama(archive, dest); err != nil {
-		t.Fatal(err)
-	}
-	b, err := os.ReadFile(dest)
-	if err != nil || string(b) != "ELF-fake" {
-		t.Fatalf("extracted = %q, err=%v", b, err)
-	}
-	info, _ := os.Stat(dest)
-	if info.Mode()&0o100 == 0 {
-		t.Fatal("extracted binary is not executable")
+type tarEntry struct {
+	name     string
+	data     []byte
+	linkname string // if set, write a symlink instead of a regular file
+}
+
+func writeTarEntries(t *testing.T, tw *tar.Writer, entries []tarEntry) {
+	t.Helper()
+	for _, e := range entries {
+		if e.linkname != "" {
+			if err := tw.WriteHeader(&tar.Header{Name: e.name, Typeflag: tar.TypeSymlink, Linkname: e.linkname, Mode: 0o777}); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		if err := tw.WriteHeader(&tar.Header{Name: e.name, Mode: 0o755, Size: int64(len(e.data)), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write(e.data); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
-func writeTestTgz(t *testing.T, path, name string, data []byte) {
+func writeTestTgz(t *testing.T, path string, entries []tarEntry) {
 	t.Helper()
 	f, err := os.Create(path)
 	if err != nil {
@@ -56,13 +62,12 @@ func writeTestTgz(t *testing.T, path, name string, data []byte) {
 	defer f.Close()
 	gz := gzip.NewWriter(f)
 	tw := tar.NewWriter(gz)
-	tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(data)), Typeflag: tar.TypeReg})
-	tw.Write(data)
+	writeTarEntries(t, tw, entries)
 	tw.Close()
 	gz.Close()
 }
 
-func writeTestZst(t *testing.T, path, name string, data []byte) {
+func writeTestZst(t *testing.T, path string, entries []tarEntry) {
 	t.Helper()
 	f, err := os.Create(path)
 	if err != nil {
@@ -74,28 +79,79 @@ func writeTestZst(t *testing.T, path, name string, data []byte) {
 		t.Fatal(err)
 	}
 	tw := tar.NewWriter(zw)
-	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(data)), Typeflag: tar.TypeReg}); err != nil {
-		t.Fatal(err)
-	}
-	tw.Write(data)
+	writeTarEntries(t, tw, entries)
 	tw.Close()
 	zw.Close()
+}
+
+func assertExtracted(t *testing.T, root string) {
+	t.Helper()
+	bin := filepath.Join(root, "bin", "ollama")
+	b, err := os.ReadFile(bin)
+	if err != nil || string(b) != "ELF-fake" {
+		t.Fatalf("bin/ollama = %q err=%v", b, err)
+	}
+	if info, _ := os.Stat(bin); info.Mode()&0o100 == 0 {
+		t.Fatal("bin/ollama not executable")
+	}
+	if b, err := os.ReadFile(filepath.Join(root, "lib", "ollama", "libfoo.so")); err != nil || string(b) != "LIB" {
+		t.Fatalf("lib/ollama/libfoo.so = %q err=%v", b, err)
+	}
+	link := filepath.Join(root, "lib", "ollama", "libfoo.so.1")
+	if lt, err := os.Readlink(link); err != nil || lt != "libfoo.so" {
+		t.Fatalf("symlink = %q err=%v", lt, err)
+	}
+}
+
+func extractEntries() []tarEntry {
+	return []tarEntry{
+		{name: "bin/ollama", data: []byte("ELF-fake")},
+		{name: "lib/ollama/libfoo.so", data: []byte("LIB")},
+		{name: "lib/ollama/libfoo.so.1", linkname: "libfoo.so"},
+	}
+}
+
+func TestExtractTgz(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "o.tgz")
+	writeTestTgz(t, archive, extractEntries())
+	root := filepath.Join(dir, "out")
+	if err := extractArchive(archive, root); err != nil {
+		t.Fatal(err)
+	}
+	assertExtracted(t, root)
 }
 
 func TestExtractZst(t *testing.T) {
 	dir := t.TempDir()
 	archive := filepath.Join(dir, "o.tar.zst")
-	writeTestZst(t, archive, "bin/ollama", []byte("ELF-fake-zst"))
-	dest := filepath.Join(dir, "out", "ollama")
-	if err := extractOllama(archive, dest); err != nil {
+	writeTestZst(t, archive, extractEntries())
+	root := filepath.Join(dir, "out")
+	if err := extractArchive(archive, root); err != nil {
 		t.Fatal(err)
 	}
-	b, err := os.ReadFile(dest)
-	if err != nil || string(b) != "ELF-fake-zst" {
-		t.Fatalf("extracted = %q, err=%v", b, err)
+	assertExtracted(t, root)
+}
+
+func TestExtractArchiveRejectsZipSlip(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "evil.tgz")
+	writeTestTgz(t, archive, []tarEntry{{name: "../evil.txt", data: []byte("pwned")}})
+	root := filepath.Join(dir, "out")
+	if err := extractArchive(archive, root); err == nil {
+		t.Fatal("expected zip-slip rejection")
 	}
-	info, _ := os.Stat(dest)
-	if info.Mode()&0o100 == 0 {
-		t.Fatal("extracted binary is not executable")
+	if _, err := os.Stat(filepath.Join(dir, "evil.txt")); err == nil {
+		t.Fatal("zip-slip wrote a file outside destRoot")
+	}
+}
+
+func TestExtractArchiveRejectsSymlinkEscape(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "evil.tgz")
+	writeTestTgz(t, archive, []tarEntry{{name: "esc", linkname: "../../etc"}})
+	root := filepath.Join(dir, "out")
+	if err := extractArchive(archive, root); err == nil {
+		t.Fatal("expected symlink-escape rejection")
 	}
 }

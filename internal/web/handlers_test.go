@@ -734,6 +734,38 @@ func TestModelHandlers(t *testing.T) {
 		}
 		scenario.Test(t)
 	})
+
+	t.Run("GPU preset tag is accepted", func(t *testing.T) {
+		// Posting the GPU preset tag is allowlisted; the handler starts the pull
+		// (returns immediately) and re-renders the models panel. No live Ollama
+		// needed — Pull only launches a goroutine.
+		scenario := tests.ApiScenario{
+			Name:               "GPU preset tag accepted",
+			Method:             "POST",
+			URL:                "/ui/model/gguf/download",
+			Body:               strings.NewReader("target=models&tag=gemma4:26b"),
+			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:     newWebApp,
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"gguf-progress"},
+			NotExpectedContent: []string{"unknown model preset"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("unknown preset tag is rejected", func(t *testing.T) {
+		scenario := tests.ApiScenario{
+			Name:            "unknown preset tag rejected",
+			Method:          "POST",
+			URL:             "/ui/model/gguf/download",
+			Body:            strings.NewReader("target=models&tag=evil:1b"),
+			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"unknown model preset"},
+		}
+		scenario.Test(t)
+	})
 }
 
 // TestDayPageRendersOnEmptyDB verifies that the day focus

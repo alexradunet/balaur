@@ -49,10 +49,11 @@ func BinaryPath(dataDir string) string {
 	return dataBin
 }
 
-// extractOllama extracts the `ollama` binary out of a release tarball (.tgz or
-// .tar.zst) to dest, marking it executable. It scans for a tar entry whose base
-// name is "ollama".
-func extractOllama(archivePath, dest string) error {
+// extractArchive extracts every entry of a release tarball (.tgz or .tar.zst)
+// into destRoot, preserving the archive's bin/ + lib/ layout. The ollama binary
+// resolves ../lib/ollama relative to itself, so the runner libs must travel
+// with it — extracting only the binary yields a non-functional install.
+func extractArchive(archivePath, destRoot string) error {
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return err
@@ -76,37 +77,78 @@ func extractOllama(archivePath, dest string) error {
 		decompressed = gz
 	}
 
+	cleanRoot := filepath.Clean(destRoot)
 	tr := tar.NewReader(decompressed)
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
-			return fmt.Errorf("ollama binary not found in %s", archivePath)
+			return nil
 		}
 		if err != nil {
 			return err
 		}
-		if hdr.Typeflag != tar.TypeReg || filepath.Base(hdr.Name) != "ollama" {
-			continue
+		target := filepath.Join(cleanRoot, hdr.Name)
+		if target != cleanRoot && !strings.HasPrefix(target, cleanRoot+string(os.PathSeparator)) {
+			return fmt.Errorf("archive entry %q escapes destination", hdr.Name)
 		}
-		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-			return err
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			out, err := os.OpenFile(target, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(hdr.Mode)&0o777)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(out, tr); err != nil {
+				out.Close()
+				return err
+			}
+			if err := out.Close(); err != nil {
+				return err
+			}
+		case tar.TypeSymlink:
+			// Containment (defense-in-depth): reject absolute or escaping link
+			// targets. The genuine release uses only same-dir relative symlinks.
+			if filepath.IsAbs(hdr.Linkname) {
+				return fmt.Errorf("archive symlink %q has absolute target %q", hdr.Name, hdr.Linkname)
+			}
+			linkTarget := filepath.Join(filepath.Dir(target), hdr.Linkname)
+			if linkTarget != cleanRoot && !strings.HasPrefix(linkTarget, cleanRoot+string(os.PathSeparator)) {
+				return fmt.Errorf("archive symlink %q target escapes destination", hdr.Name)
+			}
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			_ = os.Remove(target)
+			if err := os.Symlink(hdr.Linkname, target); err != nil {
+				return err
+			}
+		case tar.TypeLink:
+			src := filepath.Join(cleanRoot, hdr.Linkname)
+			if src != cleanRoot && !strings.HasPrefix(src, cleanRoot+string(os.PathSeparator)) {
+				return fmt.Errorf("archive hardlink %q source escapes destination", hdr.Name)
+			}
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return err
+			}
+			_ = os.Remove(target)
+			if err := os.Link(src, target); err != nil {
+				return err
+			}
 		}
-		out, err := os.OpenFile(dest, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(out, tr); err != nil {
-			out.Close()
-			return err
-		}
-		return out.Close()
 	}
 }
 
-// installBinary downloads the pinned release tarball and extracts ollama to
-// dest. Returns dest on success.
-func installBinary(ctx context.Context, dest string) (string, error) {
-	tmp := dest + ".tar.download"
+// installBinary downloads the pinned release tarball and extracts the full
+// archive (bin/ + lib/) into <dataDir>, returning the binary path.
+func installBinary(ctx context.Context, dataDir string) (string, error) {
+	binPath := filepath.Join(dataDir, "bin", "ollama")
+	tmp := filepath.Join(dataDir, "ollama.tar.download")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL(), nil)
 	if err != nil {
 		return "", err
@@ -119,13 +161,14 @@ func installBinary(ctx context.Context, dest string) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("downloading ollama: status %d from %s", resp.StatusCode, downloadURL())
 	}
-	if err := os.MkdirAll(filepath.Dir(tmp), 0o755); err != nil {
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return "", err
 	}
 	out, err := os.Create(tmp)
 	if err != nil {
 		return "", err
 	}
+	defer os.Remove(tmp) // clean up the partial download on every return path
 	if _, err := io.Copy(out, resp.Body); err != nil {
 		out.Close()
 		return "", err
@@ -133,9 +176,11 @@ func installBinary(ctx context.Context, dest string) (string, error) {
 	if err := out.Close(); err != nil {
 		return "", err
 	}
-	defer os.Remove(tmp)
-	if err := extractOllama(tmp, dest); err != nil {
+	if err := extractArchive(tmp, dataDir); err != nil {
 		return "", err
 	}
-	return dest, nil
+	if err := os.Chmod(binPath, 0o755); err != nil {
+		return "", err
+	}
+	return binPath, nil
 }

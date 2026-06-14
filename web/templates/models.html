@@ -156,6 +156,12 @@
       <p class="k-sub">Pull Balaur's default local model (Gemma 4 E4B) via Ollama and make it the active model. To use a different model, run <code>ollama pull &lt;tag&gt;</code> and select it above, or set <code>BALAUR_CHAT_MODEL</code>.</p>
       <button class="btn btn-primary" type="submit">Pull default model</button>
     </form>
+    <form class="card model-provider-form" data-on:submit__prevent="@post('/ui/model/gguf/download', {contentType:'form'})">
+      <input type="hidden" name="target" value="models">
+      <input type="hidden" name="tag" value="gemma4:26b">
+      <p class="k-sub">Pull the GPU chat model (Gemma 4 26B, ~18&nbsp;GB Mixture-of-Experts) and make it the active model. Built for a GPU box — it runs on CPU but slowly.</p>
+      <button class="btn btn-primary" type="submit">Pull GPU model (Gemma 4 26B)</button>
+    </form>
   </section>
 
   <section class="k-section">
