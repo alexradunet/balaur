@@ -20,7 +20,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
-	"github.com/alexradunet/balaur/internal/feature/taskcards"
+	"github.com/alexradunet/balaur/internal/feature"
+	_ "github.com/alexradunet/balaur/internal/feature/all"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
@@ -183,12 +184,13 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
 	h := &handlers{app: se.App, tmpl: tmpl, ollama: ollama.Default}
-	// Feature cards (gomponents) register their renderers; cardInto's shim
-	// serves them in place of the legacy switch. Unregistered on terminate so
-	// the global registry doesn't leak stale closures in tests.
-	taskcards.Register(se.App)
+	// Feature modules self-register (internal/feature/all blank import); the
+	// cardInto shim serves their gomponents renderers in place of the legacy
+	// switch. UnregisterAll on terminate keeps the global registry clean between
+	// test apps.
+	feature.RegisterAll(se.App)
 	se.App.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
-		taskcards.Unregister()
+		feature.UnregisterAll()
 		return e.Next()
 	})
 	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
