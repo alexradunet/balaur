@@ -134,7 +134,11 @@ kind, kind required + limit param), memory (active memories, query + limit
 params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
 habits (recurring tasks with their streak, no params).
 GET /ui/cards lists the full palette. The registry lives in internal/cards
-(no web imports); renderers live in internal/web/cards.go.
+(no web imports); each card tile is rendered by a typed gomponents component in
+its own per-feature package (internal/feature/* — taskcards, journalcards,
+knowledgecards, lifecards, headscards, settingscards), self-registered into a
+shared ui registry via feature.RegisterAll. internal/web/cards.go keeps only the
+shared dispatch (cardInto/cardHTML) and the chat embeds.
 
 Boards: owner-composed dashboards of typed cards at /boards. A board is a
 named, ordered list of card references stored in the `boards` PocketBase
