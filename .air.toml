@@ -4,7 +4,10 @@ tmp_dir = "tmp"
 [build]
   cmd = "go build -o ./tmp/balaur ."
   bin = "./tmp/balaur"
-  full_bin = "./tmp/balaur serve --http 127.0.0.1:8090 --dir ./pb_data"
+  # Bind on all interfaces so the dev server is reachable from the LAN.
+  # The allowed-hosts list is exported by the Makefile dev target (air's
+  # [build].env does not propagate to the child binary).
+  full_bin = "./tmp/balaur serve --http 0.0.0.0:8090 --dir ./pb_data"
   include_ext = ["go", "html", "css", "js", "png", "jpg", "jpeg", "svg", "woff", "woff2", "json"]
   exclude_dir = [".git", ".github", ".cache", "tmp", "pb_data", "dist"]
   exclude_file = []

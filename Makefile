@@ -22,6 +22,13 @@ help:
 	@echo "make vet    # go vet ./..."
 	@echo "make lint   # fmt + vet + test"
 
+# Hosts the dev server accepts beyond loopback (guardLocalUI in
+# internal/web/web.go 403s everything else). air's [build].env doesn't
+# propagate to the child binary, so we export it here — the built process
+# inherits it. Override on the CLI: make dev BALAUR_ALLOWED_HOSTS=1.2.3.4
+BALAUR_ALLOWED_HOSTS ?= 192.168.50.12,100.124.242.131,balaur,balaur.local
+export BALAUR_ALLOWED_HOSTS
+
 dev:
 	@if command -v air >/dev/null 2>&1; then \
 		air; \
