@@ -371,3 +371,15 @@ func knowledgeCardCanvas() g.Node {
 		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m3", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Content: "Was open 6am–10pm; the gym shut down in May.", Importance: 1}),
 	)
 }
+
+func calendarCellCanvas() g.Node {
+	cell := func(p ui.CalendarCellProps) g.Node {
+		return h.Div(h.Style("width:76px"), ui.CalendarCell(p))
+	}
+	return section("CalendarCell",
+		cell(ui.CalendarCellProps{Day: 8, Pips: 1}),
+		cell(ui.CalendarCellProps{Day: 14, Pips: 2, Today: true}),
+		cell(ui.CalendarCellProps{Day: 15, Pips: 2, Selected: true}),
+		cell(ui.CalendarCellProps{Day: 31, Dim: true}),
+	)
+}

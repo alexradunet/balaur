@@ -2869,3 +2869,24 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 /* ── Storybook: show the fixed .chatbar inline in the canvas ─────────────── */
 .sb-canvas .chatbar { position: static; }
+
+/* ── CalendarCell — a square day button in a month grid ─────────────────── */
+.cal-day {
+  position: relative; width: 100%; aspect-ratio: 1 / 1; min-width: 38px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  cursor: pointer; border-radius: 0; padding: 4px; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge);
+}
+.cal-day-num { font-family: var(--font-mono); font-size: 13px; line-height: 1; }
+.cal-day.is-today { border-color: var(--gold-deep); box-shadow: inset 0 0 0 1px var(--gold-deep); }
+.cal-day.is-today .cal-day-num { font-weight: 700; }
+.cal-day.is-selected { background: var(--gold); background-image: none; box-shadow: var(--parch-bevel); }
+.cal-day.is-selected .cal-day-num { color: var(--ink); font-weight: 700; }
+.cal-day.is-dim { opacity: .4; }
+.cal-day-pips { display: flex; gap: 3px; height: 5px; }
+.cal-pip { width: 5px; height: 5px; display: block; }
+.cal-pip-0 { background: var(--ember); }
+.cal-pip-1 { background: var(--teal-ink); }
+.cal-pip-2 { background: var(--gold-ink); }
+.cal-day.is-selected .cal-pip { background: var(--ink); }
