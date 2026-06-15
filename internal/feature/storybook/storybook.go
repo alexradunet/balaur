@@ -10,6 +10,7 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 )
 
 // section wraps a labelled group of component variants.
@@ -181,5 +182,13 @@ func screenTitleCanvas() g.Node {
 	return section("ScreenTitle",
 		ui.ScreenTitle(ui.ScreenTitleProps{Eyebrow: "Tuesday · 14 May", Title: "On the book."}),
 		ui.ScreenTitle(ui.ScreenTitleProps{Title: "Memory"}),
+	)
+}
+
+func chatMessageCanvas() g.Node {
+	return section("Message",
+		chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Content: "Noted — I'll remind you at 6pm. Anything else for the book?"}),
+		chat.Message(chat.MessageProps{Role: "user", Who: "You", AvatarSrc: "/static/crest.png", Content: "Add: water the tomatoes every 2 days."}),
+		chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Pending: true}),
 	)
 }
