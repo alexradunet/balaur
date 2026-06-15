@@ -66,9 +66,15 @@ func sidebarFor(active string) shell.SidebarProps {
 			g.Text("Balaur"),
 		}),
 		Sections: sections,
-		Footer: hh.Button(hh.Class("theme-toggle"), hh.Type("button"),
-			g.Attr("onclick", "basmToggleTheme()"),
-			hh.Title("Toggle light/dark mode"), hh.Aria("label", "Toggle light/dark mode"),
-			g.Text("◑")),
+		Footer: g.Group([]g.Node{
+			hh.Button(hh.Class("theme-cycle"), hh.Type("button"),
+				g.Attr("onclick", "basmCycleTheme()"),
+				hh.Title("Cycle theme"), hh.Aria("label", "Cycle theme"),
+				g.Text("Hearth")),
+			hh.Button(hh.Class("theme-toggle"), hh.Type("button"),
+				g.Attr("onclick", "basmToggleTheme()"),
+				hh.Title("Toggle light/dark mode"), hh.Aria("label", "Toggle light/dark mode"),
+				g.Text("◑")),
+		}),
 	}
 }

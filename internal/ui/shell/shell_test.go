@@ -31,6 +31,8 @@ func TestPage(t *testing.T) {
 		`<main id="main">BODY</main>`,
 		`<aside id="dock">DOCK</aside>`,
 		`localStorage.getItem('basm-theme')`,
+		`localStorage.getItem('basm-palette')`,
+		`'theme-'`,
 		`<a href="/" aria-current="page">`,
 	} {
 		if !strings.Contains(got, want) {

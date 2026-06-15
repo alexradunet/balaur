@@ -11,7 +11,7 @@ import (
 
 // noFlashScript applies the saved theme + dock state before first paint, so the
 // page never flashes the wrong colour scheme. Ported verbatim from layout.html.
-const noFlashScript = `(function(){var d=document.documentElement,t=localStorage.getItem('basm-theme');if(t)d.classList.add(t);if(localStorage.getItem('basm-dock-full')==='1')d.classList.add('dock-full');var w=parseInt(localStorage.getItem('basm-dock-w'),10);if(w>=280&&w<=720)d.style.setProperty('--sidebar-w',w+'px');}());`
+const noFlashScript = `(function(){var d=document.documentElement;d.classList.add(localStorage.getItem('basm-theme')||'dark');d.classList.add('theme-'+(localStorage.getItem('basm-palette')||'hearthwood'));if(localStorage.getItem('basm-dock-full')==='1')d.classList.add('dock-full');var w=parseInt(localStorage.getItem('basm-dock-w'),10);if(w>=280&&w<=720)d.style.setProperty('--sidebar-w',w+'px');}());`
 
 // PageProps configures a full page. Active is the nav key for aria-current
 // ("storybook", "settings"); Body fills #main; Dock fills the companion #dock.
@@ -69,6 +69,11 @@ func topbar(active string) g.Node {
 			navLink("/", "Storybook", "storybook", active),
 			navLink("/focus/settings", "Settings", "settings", active),
 			h.A(h.Href("/_/"), h.Target("_blank"), g.Attr("rel", "noopener noreferrer"), g.Text("Engine room")),
+		),
+		h.Button(h.Class("theme-cycle"), h.Type("button"),
+			g.Attr("onclick", "basmCycleTheme()"),
+			h.Title("Cycle theme"), h.Aria("label", "Cycle theme"),
+			g.Text("Hearth"),
 		),
 		h.Button(h.Class("theme-toggle"), h.Type("button"),
 			g.Attr("onclick", "basmToggleTheme()"),

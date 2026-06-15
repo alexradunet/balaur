@@ -25,3 +25,25 @@ func TestNoUndefinedHearthwoodTokens(t *testing.T) {
 		}
 	}
 }
+
+// TestThemePaletteBlocks guards Slice-1: flat-dither wood default and the Forest
+// + Dungeon palette override blocks (Hearthwood is the base :root, no block).
+func TestThemePaletteBlocks(t *testing.T) {
+	b, err := FS.ReadFile("static/basm.css")
+	if err != nil {
+		t.Fatalf("read basm.css: %v", err)
+	}
+	css := string(b)
+	for _, want := range []string{
+		"--wood-planks: none;",
+		":root.theme-forest {",
+		":root.theme-forest.light {",
+		":root.theme-dungeon {",
+		":root.theme-dungeon.light {",
+		".theme-toggle, .theme-cycle {",
+	} {
+		if !strings.Contains(css, want) {
+			t.Errorf("basm.css missing theme block marker: %q", want)
+		}
+	}
+}
