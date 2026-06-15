@@ -38,6 +38,7 @@ var stories = []Story{
 	{"sectionlabel", "Typography", "SectionLabel", sectionLabelCanvas},
 	{"screentitle", "Typography", "ScreenTitle", screenTitleCanvas},
 	{"chatmessage", "Chat", "Message", chatMessageCanvas},
+	{"chattoolrow", "Chat", "ToolRow", chatToolRowCanvas},
 }
 
 // Stories returns the ordered registry.

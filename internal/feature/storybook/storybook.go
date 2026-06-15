@@ -192,3 +192,10 @@ func chatMessageCanvas() g.Node {
 		chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Pending: true}),
 	)
 }
+
+func chatToolRowCanvas() g.Node {
+	return section("ToolRow",
+		chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", Content: "added task: water the tomatoes · every 2 days 18:00"}),
+		chat.ToolRow(chat.ToolRowProps{Tool: "remember", Icon: "tome", Content: "saved: prefers tea over coffee"}),
+	)
+}
