@@ -210,7 +210,8 @@ Layout map (file → concern):
 - internal/conversation, internal/tasks, internal/life,
   internal/knowledge, internal/recap, internal/verify, internal/heads,
   internal/store, internal/tools — business logic, one concern each
-- internal/web — Datastar gateway; web/ — embedded templates and CSS
+- internal/web — Datastar gateway; internal/web/assets — embedded static
+  assets (CSS, fonts, icons, avatars); web/ — embedded html/template files
 - internal/cli — JSON gateway for harnesses
 - internal/self — this self-knowledge and the capability inventory
 - scripts/fake-model.py — scriptable model stub for deterministic tests
