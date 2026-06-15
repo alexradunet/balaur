@@ -2826,3 +2826,11 @@ progress.pull-progress-bar::-moz-progress-bar {
   --bevel-light:rgba(40,60,110,.20);
   --grain-warm: repeating-conic-gradient(rgba(40,50,90,.045) 0% 25%, transparent 0% 50%);
 }
+
+/* ── Foundations · Colors — token swatches (re-tint live per theme) ──────── */
+.fdn-stack { display: flex; flex-direction: column; gap: 24px; }
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 13px; }
+.swatch { display: flex; flex-direction: column; gap: 7px; }
+.swatch-chip { height: 62px; background: var(--sw); border: 2px solid var(--outline-2); box-shadow: var(--bevel-in); }
+.swatch-label { font-family: var(--font-mono); font-size: 11px; color: var(--fg-strong); }
+.swatch-name { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }

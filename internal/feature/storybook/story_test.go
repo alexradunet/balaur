@@ -40,6 +40,28 @@ func TestButtonCanvasRenders(t *testing.T) {
 	}
 }
 
+func TestColorsCanvas(t *testing.T) {
+	s, ok := storybook.Lookup("colors")
+	if !ok {
+		t.Fatal("colors story not registered")
+	}
+	var b strings.Builder
+	if err := s.Canvas().Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+	for _, want := range []string{
+		`<span class="section-label-text">Accents</span>`,
+		`<div class="swatch-chip" style="--sw:var(--gold)"></div>`,
+		`<div class="swatch-name">--bg</div>`,
+		`<div class="swatch-label">gold</div>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("colors canvas missing %q", want)
+		}
+	}
+}
+
 func TestOverviewRenders(t *testing.T) {
 	var b strings.Builder
 	if err := storybook.Overview().Render(&b); err != nil {

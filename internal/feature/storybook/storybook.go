@@ -205,3 +205,34 @@ func chatToolRowCanvas() g.Node {
 		),
 	)
 }
+
+// colorGroups drives the Colors foundation page — token groups whose swatches
+// read var(--token) live, so they re-tint with the active theme.
+var colorGroups = []struct {
+	Name  string
+	Items [][2]string // {label, css-var}
+}{
+	{"Page & wood", [][2]string{{"bg", "--bg"}, {"chrome", "--chrome"}, {"chrome-2", "--chrome-2"}, {"chrome-fg", "--chrome-fg"}, {"outline-2", "--outline-2"}}},
+	{"Parchment & ink", [][2]string{{"surface", "--surface"}, {"surface-2", "--surface-2"}, {"surface-3", "--surface-3"}, {"parch-edge", "--parch-edge"}, {"ink", "--ink"}, {"ink-muted", "--ink-muted"}}},
+	{"Accents", [][2]string{{"gold", "--gold"}, {"gold-deep", "--gold-deep"}, {"ember", "--ember"}, {"ember-deep", "--ember-deep"}, {"ember-red", "--ember-red"}, {"teal", "--teal"}, {"teal-deep", "--teal-deep"}, {"folkred", "--folkred"}, {"indigo", "--indigo"}, {"violet", "--violet"}, {"good", "--good"}}},
+	{"Text on page", [][2]string{{"fg", "--fg"}, {"fg-strong", "--fg-strong"}, {"muted", "--muted"}, {"hair", "--hair"}}},
+}
+
+func colorsCanvas() g.Node {
+	groups := make([]g.Node, 0, len(colorGroups))
+	for _, grp := range colorGroups {
+		swatches := make([]g.Node, 0, len(grp.Items))
+		for _, it := range grp.Items {
+			swatches = append(swatches, h.Div(h.Class("swatch"),
+				h.Div(h.Class("swatch-chip"), h.Style("--sw:var("+it[1]+")")),
+				h.Div(h.Class("swatch-label"), g.Text(it[0])),
+				h.Div(h.Class("swatch-name"), g.Text(it[1])),
+			))
+		}
+		groups = append(groups, h.Div(
+			ui.SectionLabel(ui.SectionLabelProps{Text: grp.Name}),
+			h.Div(append([]g.Node{h.Class("swatch-grid")}, swatches...)...),
+		))
+	}
+	return section("Colors", h.Div(append([]g.Node{h.Class("fdn-stack")}, groups...)...))
+}
