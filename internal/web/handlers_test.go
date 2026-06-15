@@ -776,6 +776,49 @@ func TestModelHandlers(t *testing.T) {
 	})
 }
 
+// TestModelsPanelOllamaStatus verifies the models panel reflects Ollama
+// reachability: a live control server shows the "reachable" pill; an
+// unreachable server shows the "not reachable" guidance instead of the
+// misleading "No models pulled yet." empty state.
+func TestModelsPanelOllamaStatus(t *testing.T) {
+	t.Run("reachable server shows reachable pill", func(t *testing.T) {
+		// A live Ollama control endpoint: Heartbeat hits "/" and List hits
+		// "/api/tags"; answer both so the panel renders the reachable branch.
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`{"models":[]}`))
+		}))
+		t.Cleanup(srv.Close)
+		t.Setenv("BALAUR_OLLAMA_HOST", strings.TrimPrefix(srv.URL, "http://"))
+		scenario := tests.ApiScenario{
+			Name:            "models panel reachable pill",
+			Method:          "GET",
+			URL:             "/focus/settings?section=models",
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"Ollama: reachable at"},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("unreachable server shows guidance, not the pull-empty state", func(t *testing.T) {
+		// Point at a closed server so Heartbeat fails fast.
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		host := strings.TrimPrefix(srv.URL, "http://")
+		srv.Close()
+		t.Setenv("BALAUR_OLLAMA_HOST", host)
+		scenario := tests.ApiScenario{
+			Name:               "models panel unreachable guidance",
+			Method:             "GET",
+			URL:                "/focus/settings?section=models",
+			TestAppFactory:     newWebApp,
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"Ollama: not reachable", "BALAUR_OLLAMA_HOST"},
+			NotExpectedContent: []string{"No models pulled yet."},
+		}
+		scenario.Test(t)
+	})
+}
+
 // TestDayPageRendersOnEmptyDB verifies that the day focus
 // (GET /focus/day?date=…) returns 200 even when the database contains no entries
 // or tasks — a blank day must not 500. (The standalone /day page is retired.)
