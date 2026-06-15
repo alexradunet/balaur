@@ -2893,3 +2893,17 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 /* ── Sparkline — tiny SVG trend chart (colour via attr) ─────────────────── */
 .sparkline { display: block; shape-rendering: geometricPrecision; }
+
+/* ── DayEntry — a day-timeline row: time | node rail | content ──────────── */
+.dayentry { display: grid; grid-template-columns: 54px 22px 1fr; column-gap: 12px; align-items: stretch; }
+.dayentry-time { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .03em; padding-top: 1px; text-align: right; }
+.dayentry-rail { position: relative; display: flex; justify-content: center; }
+.dayentry-rail::before { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--parch-edge); }
+.dayentry-node { position: relative; z-index: 1; width: 12px; height: 12px; margin-top: 1px; background: var(--gold-ink); border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--gold-ink); }
+.dayentry-teal .dayentry-node { background: var(--teal-ink); box-shadow: 0 0 0 2px var(--teal-ink); }
+.dayentry-ember .dayentry-node { background: var(--ember-deep); box-shadow: 0 0 0 2px var(--ember-deep); }
+.dayentry-last .dayentry-rail::before { bottom: auto; height: 14px; }
+.dayentry-content { padding-bottom: 18px; }
+.dayentry-last .dayentry-content { padding-bottom: 0; }
+.dayentry-title { font-size: 14.5px; color: var(--ink); line-height: 1.3; }
+.dayentry-detail { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); margin-top: 2px; }

@@ -394,3 +394,13 @@ func sparklineCanvas() g.Node {
 		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--ember-deep)", Width: 200, Height: 48})),
 	)
 }
+
+func dayEntryCanvas() g.Node {
+	return section("DayEntry",
+		h.Div(h.Class("list"), h.Div(h.Style("padding:14px"),
+			ui.DayEntry(ui.DayEntryProps{Time: "07:30", Title: "Fed the hens", Detail: "daily · streak 12", Tone: "gold"}),
+			ui.DayEntry(ui.DayEntryProps{Time: "13:00", Title: "Logged weight — 81.2 kg", Detail: "life log", Tone: "teal"}),
+			ui.DayEntry(ui.DayEntryProps{Time: "18:00", Title: "Watered the tomatoes", Detail: "every 2 days", Tone: "ember", Last: true}),
+		)),
+	)
+}
