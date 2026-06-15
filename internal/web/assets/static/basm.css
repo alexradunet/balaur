@@ -2515,8 +2515,10 @@ progress.pull-progress-bar::-moz-progress-bar {
   background: var(--badge-bg); border: 2px solid var(--badge-bd);
   border-radius: var(--radius);
 }
-.badge-gold  { --badge-bg: var(--gold);      --badge-bd: var(--gold-deep);  --badge-fg: var(--ink); }
-.badge-ember { --badge-bg: var(--ember);     --badge-bd: var(--ember-deep); --badge-fg: var(--ink); }
+/* fg flips by scheme: light parchment on the darker light-mode accent,
+   near-black ink on the bright dark-mode accent — legible in both (WCAG AA). */
+.badge-gold  { --badge-bg: var(--gold);      --badge-bd: var(--gold-deep);  --badge-fg: light-dark(var(--surface), var(--ink)); }
+.badge-ember { --badge-bg: var(--ember);     --badge-bd: var(--ember-deep); --badge-fg: light-dark(var(--surface), var(--ink)); }
 .badge-teal  { --badge-bg: var(--teal-deep); --badge-bd: var(--outline-2);  --badge-fg: var(--surface); }
 .badge-wood  { --badge-bg: var(--chrome-2);  --badge-bd: var(--outline-2);  --badge-fg: var(--chrome-fg); }
 
