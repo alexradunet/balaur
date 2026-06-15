@@ -69,7 +69,7 @@
   /* Pixel grain (dither) */
   --grain-warm: repeating-conic-gradient(rgba(255,214,150,.022) 0% 25%, transparent 0% 50%); /* @kind other */
   --grain-ink:  repeating-conic-gradient(rgba(64,44,18,.045) 0% 25%, transparent 0% 50%); /* @kind other */
-  --wood-planks: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 2px, transparent 2px 9px); /* @kind other */
+  --wood-planks: none; /* @kind other */
 }
 
 /* Manual color-scheme overrides (toggled via JS on <html>) */
@@ -916,7 +916,7 @@ dialog::backdrop {
 
 /* ── Theme toggle ────────────────────────────────────────────────── */
 
-.theme-toggle {
+.theme-toggle, .theme-cycle {
   font-family: var(--font-mono);
   font-size: 13px;
   background: none;
@@ -930,7 +930,7 @@ dialog::backdrop {
   transition: color .1s, border-color .1s;
   line-height: 1;
 }
-.theme-toggle:hover {
+.theme-toggle:hover, .theme-cycle:hover {
   color: var(--gold);
   border-color: var(--gold-deep);
 }
@@ -2788,4 +2788,41 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .screen-title-head {
   margin: 0; font-family: var(--font-display); font-size: clamp(28px, 5vw, 40px); color: var(--fg-strong); line-height: 1;
+}
+
+/* ── Themes — Forest & Dungeon palettes (Hearthwood is the base :root) ───────
+   Additive overrides of the theme-varying tokens only; parchment/ink constants
+   stay constant across themes. Mode is the orthogonal .light/.dark axis. This is
+   the token-definition layer — raw hex is the source of truth here. */
+:root.theme-forest {
+  --bg:#0b140e; --chrome:#16271a; --chrome-2:#0d1a11; --chrome-fg:#a4bd94;
+  --fg:#bcccab; --fg-strong:#dfead0; --muted:#80936f; --smoke:#586b4d; --hair:#21321c; --outline-2:#050c07;
+  --gold:#e6c652; --gold-deep:#8c7a26; --ember:#ff9a45; --ember-deep:#7a4a15; --ember-red:#e0584d;
+  --teal:#46d8b4; --teal-deep:#1a9a7e; --folkred:#d96b3c; --indigo:#a6c2ea; --violet:#bd8cf2; --good:#93d56e; --steel:#8a9c74;
+  --bevel-light:rgba(190,255,170,.16);
+  --grain-warm: repeating-conic-gradient(rgba(150,255,180,.025) 0% 25%, transparent 0% 50%);
+}
+:root.theme-forest.light {
+  --bg:#e4eccf; --chrome:#243d28; --chrome-2:#16271a; --chrome-fg:#cfe0bd;
+  --fg:#2e3d26; --fg-strong:#1a2614; --muted:#5e7050; --smoke:#7d9072; --hair:#bcd0a8; --outline-2:#0d1a11;
+  --gold:#6f7a18; --gold-deep:#5a6312; --ember:#b8541c; --ember-deep:#7a4a15; --ember-red:#a83820;
+  --teal:#0d7a5c; --teal-deep:#0a5a44; --folkred:#8a4320; --indigo:#3d54a0; --violet:#6d3bb8; --good:#3f7a2f; --steel:#5e7050;
+  --bevel-light:rgba(220,255,200,.34);
+  --grain-warm: repeating-conic-gradient(rgba(40,90,40,.04) 0% 25%, transparent 0% 50%);
+}
+:root.theme-dungeon {
+  --bg:#0c0d12; --chrome:#20232c; --chrome-2:#15161d; --chrome-fg:#a0a3b6;
+  --fg:#b7b9c8; --fg-strong:#e3e5f0; --muted:#7c7f93; --smoke:#565a6c; --hair:#2a2d39; --outline-2:#050609;
+  --gold:#d8b552; --gold-deep:#8a6f28; --ember:#ff6a38; --ember-deep:#8a3014; --ember-red:#e5484d;
+  --teal:#5bd2da; --teal-deep:#2a98a0; --folkred:#d84e3c; --indigo:#aab6f2; --violet:#cf90ff; --good:#7fcf8a; --steel:#8a8da2;
+  --bevel-light:rgba(180,200,255,.16);
+  --grain-warm: repeating-conic-gradient(rgba(160,180,255,.028) 0% 25%, transparent 0% 50%);
+}
+:root.theme-dungeon.light {
+  --bg:#dcdde4; --chrome:#2c2f38; --chrome-2:#20232c; --chrome-fg:#cdd0de;
+  --fg:#2a2d38; --fg-strong:#16181f; --muted:#5c5f70; --smoke:#7c7f93; --hair:#c2c4d0; --outline-2:#1a1c24;
+  --gold:#7a6520; --gold-deep:#5e4e18; --ember:#c2461c; --ember-deep:#8a3014; --ember-red:#a8201f;
+  --teal:#0d6e7a; --teal-deep:#0a545c; --folkred:#a8392c; --indigo:#3d54a0; --violet:#6d3bb8; --good:#3f6f4a; --steel:#5c5f70;
+  --bevel-light:rgba(40,60,110,.20);
+  --grain-warm: repeating-conic-gradient(rgba(40,50,90,.045) 0% 25%, transparent 0% 50%);
 }
