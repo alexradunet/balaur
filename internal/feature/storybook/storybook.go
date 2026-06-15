@@ -338,3 +338,18 @@ func headSwitcherCanvas() g.Node {
 		}),
 	)
 }
+
+func chatBarCanvas() g.Node {
+	return section("ChatBar",
+		chat.ChatBar(chat.ChatBarProps{
+			ActiveHead: "Balaur",
+			Heads: []chat.Head{
+				{Name: "Balaur", AvatarSrc: "/static/crest.png", Active: true},
+				{Name: "Scholar", AvatarSrc: "/static/crest.png"},
+				{Name: "Planner", AvatarSrc: "/static/crest.png"},
+			},
+			ActiveModel: "gemma3:4b",
+			AvatarSrc:   "/static/crest.png",
+		}),
+	)
+}
