@@ -12,18 +12,6 @@ import (
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
-// Body is the legacy all-in-one gallery (every canvas stacked). Retained so the
-// build stays green during the routed-shell migration; removed once the routed
-// handler lands.
-func Body() g.Node {
-	canvases := make([]g.Node, 0, len(Stories())+1)
-	canvases = append(canvases, h.H1(g.Text("Balaur — Hearthwood storybook")))
-	for _, s := range Stories() {
-		canvases = append(canvases, s.Canvas())
-	}
-	return h.Div(h.Class("sb"), g.Group(canvases))
-}
-
 // section wraps a labelled group of component variants.
 func section(label string, items ...g.Node) g.Node {
 	return h.Section(h.Class("sb-section"),
