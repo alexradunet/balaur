@@ -2495,3 +2495,27 @@ progress.pull-progress-bar::-moz-progress-bar {
   opacity: .7;
 }
 .sb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 22px; }
+
+/* ── Badge — small count / status chip ───────────────────────────────
+   Tones gold (default) / ember (urgent) / teal (info) / wood (neutral).
+   .badge is the pill; .badge-dot the bare marker; tone classes set the
+   shared --badge-bg/--badge-bd (+ pill --badge-fg). Export hex #1c0d04 ->
+   --ink, #06120f -> --surface, white sheen -> --bevel-light. */
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  line-height: 1; letter-spacing: .02em;
+  color: var(--badge-fg); background: var(--badge-bg);
+  border: 2px solid var(--badge-bd); border-radius: var(--radius);
+  box-shadow: inset 0 2px 0 var(--bevel-light);
+}
+.badge-dot {
+  display: inline-block; width: 9px; height: 9px;
+  background: var(--badge-bg); border: 2px solid var(--badge-bd);
+  border-radius: var(--radius);
+}
+.badge-gold  { --badge-bg: var(--gold);      --badge-bd: var(--gold-deep);  --badge-fg: var(--ink); }
+.badge-ember { --badge-bg: var(--ember);     --badge-bd: var(--ember-deep); --badge-fg: var(--ink); }
+.badge-teal  { --badge-bg: var(--teal-deep); --badge-bd: var(--outline-2);  --badge-fg: var(--surface); }
+.badge-wood  { --badge-bg: var(--chrome-2);  --badge-bd: var(--outline-2);  --badge-fg: var(--chrome-fg); }
