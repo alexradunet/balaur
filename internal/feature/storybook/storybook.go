@@ -308,3 +308,14 @@ func dialogueChoicesCanvas() g.Node {
 		),
 	)
 }
+
+func messageDraftCanvas() g.Node {
+	return section("MessageDraft",
+		h.Div(h.Class("chat"),
+			chat.MessageDraft(chat.DraftProps{
+				AvatarSrc:   "/static/crest.png",
+				Placeholder: "Speak; I am listening.",
+			}),
+		),
+	)
+}
