@@ -82,6 +82,15 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 062 | web board handlers surface loadBoards() errors (nil-deref guard) | P2 | S | MED | — | — | DONE (reviewed; all 4 swallow sites — boardsCreate/Rename/CardAdd/CardRemove — now `return e.InternalServerError("loading boards", err)`, no helper extraction per the standing web-decomposition deferral; merged to main `e4eddd7`) |
 | 063 | CLI v1 envelope: recover panics into error envelope + contract test | P2 | S | MED | — | — | DONE (reviewed; `run()` recovers panics → v1 error envelope + non-zero exit via named return; `TestEnvelopePanicRecovered` green, existing envelope tests still pass; merged to main `cb95583`) |
 | 064 | Restore Windows cross-compile: split llama supervisor syscalls by build tag | P1 | S | LOW–MED | — | — | DONE (reviewed; `setProcessGroup`/`killProcessGroup` split into `supervisor_unix.go` (`//go:build unix`, byte-identical) + `supervisor_windows.go` (no-op); `syscall` import dropped from supervisor.go; all 5 CI cross-compile targets build incl. windows/amd64; make lint green; merged to main `9f53c8d`) |
+| 065 | Ollama Manager hardening: kill the cancel-vs-restart race (gen token) + cover the failure surface + bound control-call timeouts | P1 | S–M | LOW | — | — | DONE (APPROVED; `improve/065-ollama-manager-hardening`@`3f89665`; gen-token fix + 5 tests, `-race` clean; unmerged) |
+| 066 | Drop the discarded per-kind `life.Series` scan from the lifelog tile | P1 | S | LOW | — | — | DONE (APPROVED; `improve/066-lifelog-dead-series-query`@`63cef75`; dead scan removed + builder test; unmerged) |
+| 067 | Skip redundant llm-config writes on unchanged find-or-create (EnsureDefaultLLMConfig) | P2 | S | LOW | — | — | DONE (APPROVED; `improve/067-llm-config-write-dedup`@`3a02d9a`; dirty-check guards + idempotence/change tests; unmerged) |
+| 068 | Characterization tests for the two Ollama data migrations (+ secondary heads-as-personas data path) | P2 | M | LOW | — | — | DONE (APPROVED; `improve/068-data-migration-characterization-tests`@`2761f25`; rewrite+dedup pinned; import-cycle worked around via `tests.NewTestApp`; unmerged) |
+| 069 | Delete the duplicate heads renderer + the calendar & `Model.Path` fossils | P2 | S | LOW | soft: 070 (shared `manager.go`) | — | DONE (APPROVED; `improve/069-gomponents-dead-code-cleanup`@`02b5336`; one residual is an out-of-scope comment in `tasks.go`; unmerged) |
+| 070 | Rename the gguf-era model-pull identifiers to honest pull/model names | P3 | M | LOW | — | — | DONE (APPROVED; `improve/070-gguf-to-pull-rename`@`ddf9fa3`; residual `gguf` only in out-of-scope `settingscards` comment + frozen migrations; unmerged) |
+| 071 | Extract `ui.CardHead` for the shared card-frame header (17 hand-copied sites) | P3 | M | LOW–MED | soft: 066 (shared `lifelog.go`) | — | DONE (APPROVED; `improve/071-ui-cardshell-helper`@`45f23a2`; byte-identical — feature tests green; unmerged) |
+| 072 | Surface Ollama reachability in the models panel (status pill + honest empty state; optional `ollama ps` badge) | P2 | S–M | LOW | **070** (shared `models.go`/`models.html`) | — | DONE (APPROVED; `improve/072-ollama-server-status`@`5fbca9e`; D1 shipped, D2 ps-badge deferred as planned; unmerged) |
+| 073 | Spike: flag-gated embedding rerank over the `SearchActive` seam (design + prototype + open questions) | P3 | L | MED | — | — | DONE (APPROVED; `improve/073-embedding-recall-spike`@`8552777`; prototype + spike findings (above); unmerged) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -165,6 +174,62 @@ the two syscalls into `setProcessGroup`/`killProcessGroup` helpers across
 a runtime target). The audit's deps-dx finder missed it by reading CI config
 statically instead of running the matrix; future audits should run
 `GOOS=windows … go build ./...` as a baseline check.
+
+## Tenth cycle (2026-06-15, full audit at `1f8f55e`): plans 065–073
+
+First audit since the **Ollama client-only refactor**, the **in-flight gomponents UI
+migration**, and the **heads-as-personas migration** landed — ~18.7k insertions
+since the ninth-cycle baseline `7b16063`, none previously audited. Run via the
+improve skill at ultracode effort: a parallel workflow of 7 read-only category
+finders over the post-`7b16063` surface → adversarial verify (each finding
+re-checked by a skeptic that defaults to REJECT, handed this index's rejection
+ledger + the single-owner threat model + AGENTS.md measurement-first rule). **21
+raw findings → 18 survived adversarial verify → 3 rejected by the verifier.** The
+advisor then re-opened every cited file, vetted the survivors against the live
+code and the intent/design docs, and consolidated them into nine plans (owner
+selected all four fix-clusters + two direction spikes; the "finish the gomponents
+migration" direction option was **not** selected this cycle).
+
+Verification baseline at `1f8f55e`: gofmt clean, `go vet ./...` ok, `go test ./...`
+all 30 packages ok, `CGO_ENABLED=0 go build ./...` ok, **and** the full
+`GOOS=windows` cross-compile is green (the refactor deleted `internal/llama`,
+retiring plan 064's breakage) with **no duplicate migration timestamps** — both
+recurring prior-cycle risks are paid down.
+
+Plans were drafted by a parallel workflow of 9 sub-agents (each reading the real
+cited files first-hand against the template + the 064 exemplar), then **reviewed
+by the advisor against the live code** (every "Current state" excerpt re-confirmed;
+one typo fixed in 071). Next free migration timestamp remains `1750830000` — none
+of these nine adds a migration (068 is a test-only file that registers none).
+
+**Cross-plan file overlaps (the branch-train ordering that matters):**
+
+- **`internal/ollama/manager.go` is touched by 065, 069, 070, and 072-D2** — but in
+  different declarations: 065 adds the `gen` token + control-call timeouts
+  (Pull/Cancel/runPull/Delete/cachedTags); 069 deletes the `Model.Path` field; 070
+  edits only the `PullSnapshot` doc comment; 072-D2 (optional) adds a `Running()`
+  method. Land them in number order on a train and the edits don't textually
+  collide; out of order, re-run each plan's drift check first.
+- **070 → 072 (the one near-strict ordering)**: both edit `internal/web/models.go`
+  (`modelsPageData` + `modelsData`), `web/templates/models.html` (the "Local
+  models" section), and `internal/web/handlers_test.go`. 072's template guidance
+  references identifiers 070 renames (`.GgufFiles`→`.InstalledModels`,
+  `gguf_progress`→`pull_progress`). **Land 070 before 072**, or reconcile 072's
+  template/field references at merge.
+- **066 ↔ 071 (soft, `internal/feature/lifecards/lifelog.go`)**: 066 rewrites
+  `buildLifelog` (~lines 55–77); 071 converts the lifelog tile *header* (~line 127)
+  to `ui.CardHead`. Different regions — trivial merge either order.
+- **069 ↔ 070 (soft, `internal/web/templates_test.go`)**: 069 deletes
+  `TestCalendarCellsLinkToDayPages` (~238–251); 070 renames `data.Gguf`→`data.Pull`
+  (~82, 97). Different regions.
+- **Fully independent (any order / parallel):** 066, 067, 068, 073 share no files
+  with each other or (modulo the soft overlaps above) the rest.
+
+Recommended execution order (leverage-weighted, conflict-aware): **066, 065, 067,
+068, 069, 070, 072, 071, 073.** Each plan is commit-anchored to `1f8f55e` with a
+drift check; execute exactly as the prior cycles did (dispatched executor in an
+isolated worktree, advisor re-runs done-criteria + audits scope/diff before
+APPROVE, then merge to main).
 
 ## Dependency notes
 
@@ -303,6 +368,44 @@ Ordering notes:
   embedding recall second stage. Revisit next cycle.
 
 ## Findings considered and rejected (do not re-audit)
+
+Tenth cycle (`1f8f55e`) — raised but rejected (by the adversarial verifier and/or
+advisor vetting against the live code and intent docs):
+
+- **heads-as-personas migration "loses custom-head data"** (`1750820000` drops &
+  recreates the `heads` collection): **by-design, not a finding.** The design doc
+  `docs/superpowers/specs/2026-06-14-heads-as-personas-design.md:145-146` states
+  "there is zero head/grant/branch data, this is risk-free" — built-in heads live
+  in Go (`internal/heads/heads.go`), and the prior sub-head feature never
+  accumulated custom-head rows. Caught during advisor vetting before it reached a
+  finder; recorded so it isn't re-raised.
+- **heads-as-personas widens `heads` write rules from superuser-only to any `users`
+  token** (audit SECURITY; `1750820000:59-64` sets all five CRUD rules to
+  `@request.auth.collectionName = 'users'`): REJECTED on the single-owner threat
+  model — the only `users` token is the owner's, persona CRUD is exactly what the
+  manage card does on the owner's behalf (`createHead`/`deleteHead`), and the web
+  path writes Go-side via `app.Save` (which bypasses API rules by design) anyway.
+  Same reasoning that rejected prompt-injection-via-head-name. Revisit only if
+  multi-human ships.
+- **dedup migration silently skips the `active_model` repoint on a non-not-found
+  `llm_settings` error** (`1750810000:25-27` swallows every error into
+  `settings=nil`): REJECTED as benign — mid-migration the `llm_settings`
+  collection exists, so the only realistic `FindFirstRecordByData` error is
+  genuinely "no default row," in which case `settings=nil` is correct (nothing to
+  repoint). Plan 068 still characterizes the repoint path that *does* run.
+- **Ollama migration hardcodes model tags/label that duplicate
+  `internal/ollama/presets`** (`1750800000:34-36` writes `"gemma4:e4b"` /
+  `"embeddinggemma"` / `"Local Gemma 4 E4B"` as literals): REJECTED — this is
+  *correct*, not debt. Migrations are frozen historical snapshots; importing live
+  presets would make an old migration's behavior change when presets change,
+  breaking reproducibility. Hardcoded literals are the right pattern (plan 068
+  pins them with a characterization test).
+
+**Not audited this cycle** (scoped out, not rejected): the pre-existing core
+unchanged since `7b16063` — `internal/agent` loop, `internal/turn` pipeline,
+`internal/recap`, `internal/tasks`, `internal/ext`, `internal/cli`,
+`internal/verify` — beyond the files the three new work-streams touched. Nine prior
+cycles covered it; this cycle deliberately focused on the new surface.
 
 Ninth cycle (`7b16063`) — survived adversarial verification but rejected on host
 vetting (re-reports of prior decisions, or against AGENTS.md measurement-first):
