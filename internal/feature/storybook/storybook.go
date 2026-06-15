@@ -440,3 +440,11 @@ func nudgeBannerCanvas() g.Node {
 			})),
 	)
 }
+
+func statCardCanvas() g.Node {
+	box := func(n g.Node) g.Node { return h.Div(h.Style("max-width:260px"), n) }
+	return section("StatCard",
+		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Weight", Value: "81.2", Unit: "kg", Delta: "0.6 this week", DeltaTone: "down", Data: []float64{83, 82.6, 82.1, 82.4, 81.9, 81.6, 81.2}})),
+		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Steps", Value: "8,210", Delta: "12% vs avg", DeltaTone: "up", Data: []float64{6800, 7100, 7400, 7900, 8100, 8000, 8210}})),
+	)
+}
