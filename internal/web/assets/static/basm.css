@@ -2741,3 +2741,31 @@ progress.pull-progress-bar::-moz-progress-bar {
 .empty-title { margin: 0; font-family: var(--font-display); font-size: 22px; color: var(--fg-strong); }
 .empty-line { margin: 0; max-width: 360px; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .empty-action { margin-top: 4px; }
+
+/* ── Toast — accent-bordered parchment status pill ──────────────────────── */
+.toast {
+  display: inline-flex; align-items: center; gap: 11px; max-width: 100%;
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  color: var(--ink); border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); padding: 11px 15px;
+}
+.toast-success { border-color: var(--good-ink); }
+.toast-warn { border-color: var(--ember-deep); }
+.toast-icon { width: 20px; height: 20px; image-rendering: pixelated; flex-shrink: 0; }
+.toast-msg { font-size: 14px; line-height: 1.45; }
+
+/* ── Dialog — native <dialog> parchment panel w/ corner brackets ────────── */
+.dlg {
+  position: relative; inset: auto; margin: 0; width: min(520px, calc(100% - 40px)); max-width: 520px;
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; color: var(--ink);
+  border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); padding: 22px 22px 20px;
+}
+.dlg::backdrop { background: rgba(10, 5, 1, .72); }
+.dlg-corner { position: absolute; width: 10px; height: 10px; border: 0 solid var(--gold-deep); pointer-events: none; }
+.dlg-corner-tl { top: 5px; left: 5px; border-top-width: 3px; border-left-width: 3px; }
+.dlg-corner-tr { top: 5px; right: 5px; border-top-width: 3px; border-right-width: 3px; }
+.dlg-corner-bl { bottom: 5px; left: 5px; border-bottom-width: 3px; border-left-width: 3px; }
+.dlg-corner-br { bottom: 5px; right: 5px; border-bottom-width: 3px; border-right-width: 3px; }
+.dlg-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); margin-bottom: 8px; }
+.dlg-title { margin: 0 0 10px; font-family: var(--font-display); font-size: 24px; color: var(--ink); line-height: 1.1; }
+.dlg-body { font-size: 15px; line-height: 1.55; }
+.dlg-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: flex-end; }

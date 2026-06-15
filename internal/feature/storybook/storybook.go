@@ -149,3 +149,23 @@ func emptyStateCanvas() g.Node {
 		ActionHref:  "#",
 	}))
 }
+
+func toastCanvas() g.Node {
+	return section("Toast",
+		ui.Toast(ui.ToastProps{}, g.Text("Saved to the book.")),
+		ui.Toast(ui.ToastProps{Tone: "success"}, g.Text("Task marked done.")),
+		ui.Toast(ui.ToastProps{Tone: "warn"}, g.Text("Heads up — that's overdue.")),
+	)
+}
+
+func dialogCanvas() g.Node {
+	return section("Dialog", ui.Dialog(ui.DialogProps{
+		Open:   true,
+		Kicker: "Confirm",
+		Title:  "Forget this thread?",
+		Actions: []ui.DialogAction{
+			{Label: "Cancel", Variant: "ghost", Href: "#"},
+			{Label: "Forget", Variant: "wood"},
+		},
+	}, g.Text("This removes the thread and everything Balaur learned in it. This cannot be undone.")))
+}
