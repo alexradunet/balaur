@@ -2826,3 +2826,43 @@ progress.pull-progress-bar::-moz-progress-bar {
   --bevel-light:rgba(40,60,110,.20);
   --grain-warm: repeating-conic-gradient(rgba(40,50,90,.045) 0% 25%, transparent 0% 50%);
 }
+
+/* ── Foundations · Colors — token swatches (re-tint live per theme) ──────── */
+.fdn-stack { display: flex; flex-direction: column; gap: 24px; }
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 13px; }
+.swatch { display: flex; flex-direction: column; gap: 7px; }
+.swatch-chip { height: 62px; background: var(--sw); border: 2px solid var(--outline-2); box-shadow: var(--bevel-in); }
+.swatch-label { font-family: var(--font-mono); font-size: 11px; color: var(--fg-strong); }
+.swatch-name { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+/* ── Foundations · Typography — the four font roles + a scale ────────────── */
+.fdn-col { display: flex; flex-direction: column; gap: 16px; }
+.fdn-card { border: 2px solid var(--parch-edge); background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; box-shadow: var(--parch-bevel); padding: 18px 20px; color: var(--ink); }
+.type-row { display: flex; gap: 20px; align-items: baseline; flex-wrap: wrap; }
+.type-role { width: 84px; flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--gold-ink); }
+.type-note { flex: 1; min-width: 160px; text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+.type-sample-display { font-family: var(--font-display); font-size: 30px; color: var(--ink); line-height: 1; }
+.type-sample-pixel { font-family: var(--font-pixel); font-size: 17px; letter-spacing: .08em; color: var(--gold-ink); }
+.type-sample-body { font-family: var(--font-body); font-size: 22px; color: var(--ink); }
+.type-sample-mono { font-family: var(--font-mono); font-size: 15px; color: var(--ink); }
+.type-scale-head { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); margin-bottom: 14px; }
+.type-scale-list { display: flex; flex-direction: column; gap: 6px; }
+.type-scale-row { display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid var(--parch-edge); padding-bottom: 6px; }
+.type-scale-tag { width: 46px; flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+.type-scale-36 { font-family: var(--font-display); font-size: 36px; color: var(--ink); line-height: 1; }
+.type-scale-28 { font-family: var(--font-display); font-size: 28px; color: var(--ink); line-height: 1; }
+.type-scale-22 { font-family: var(--font-body); font-size: 22px; color: var(--ink); }
+.type-scale-17 { font-family: var(--font-body); font-size: 17px; color: var(--ink); }
+.type-scale-13 { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+
+/* ── Foundations · Materials — the material specimens ───────────────────── */
+.mat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 16px; }
+.mat-tile { display: flex; flex-direction: column; gap: 10px; }
+.mat-swatch { height: 96px; }
+.mat-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--fg-strong); }
+.mat-desc { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); line-height: 1.5; }
+.mat-parchment { background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); }
+.mat-wood { background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px; border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); }
+.mat-well { background-color: var(--chrome-2); background-image: var(--grain-warm); background-size: 4px 4px; border: 2px solid var(--outline-2); box-shadow: var(--bevel-in); }
+.mat-ornate { background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); }
+.mat-frame { background: var(--bg); border: 2px solid var(--outline-2); display: flex; align-items: center; justify-content: center; padding: 0 18px; }
