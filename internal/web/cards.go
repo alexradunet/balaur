@@ -7,8 +7,7 @@ package web
 // Card tiles are rendered by feature-owned gomponents renderers (see
 // internal/feature/*, registered via feature.RegisterAll); this file keeps only
 // the shared dispatch (cardInto/cardHTML), the chat embeds (uicardBody/
-// proposalBody), the palette, and the still-legacy heads tile (re-patched
-// directly by heads.go after set-active/create).
+// proposalBody), and the palette.
 
 import (
 	"fmt"
@@ -22,9 +21,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/cards"
-	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/knowledge"
-	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -147,64 +144,4 @@ func (h *handlers) proposalBody(kind, id string) template.HTML {
 		return ""
 	}
 	return template.HTML(s)
-}
-
-// calendarCardView feeds the legacy ucard_calendar template. The calendar tile
-// itself is now gomponents (internal/feature/taskcards); this struct + template
-// are retained only for the templates_test smoke test.
-type calendarCardView struct {
-	Cal calView
-}
-
-// ---- heads tile (still legacy) ----
-//
-// The heads card is served as gomponents through the registry like every other
-// tile, but heads.go re-patches #ucard-heads directly via renderCardHeads after
-// setActiveHead/createHead (not through cardInto), so the legacy renderer +
-// ucard_heads template stay until that re-patch moves to the gomponents path.
-
-type headGroupChoice struct {
-	Key string
-	On  bool
-}
-
-type headManageRow struct {
-	ID, Name, Purpose, AvatarURL string
-	BuiltIn, Active              bool
-	Groups                       []headGroupChoice
-}
-
-type cardHeadsView struct {
-	Heads   []headManageRow
-	Avatars []store.AvatarEntry // new-head avatar picker
-	Groups  []string            // group checkboxes for the new-head form
-}
-
-func (h *handlers) renderCardHeads(w io.Writer, _ map[string]string) error {
-	activeID := heads.Active(h.app).ID
-	var rows []headManageRow
-	for _, hd := range heads.List(h.app) {
-		sel := make(map[string]bool, len(hd.Groups))
-		for _, g := range hd.Groups {
-			sel[g] = true
-		}
-		groups := make([]headGroupChoice, 0, len(heads.Groups))
-		for _, g := range heads.Groups {
-			groups = append(groups, headGroupChoice{Key: g, On: sel[g]})
-		}
-		rows = append(rows, headManageRow{
-			ID:        hd.ID,
-			Name:      hd.Name,
-			Purpose:   hd.Purpose,
-			AvatarURL: store.BalaurAvatarURLForKey(h.app, hd.Avatar),
-			BuiltIn:   hd.BuiltIn,
-			Active:    hd.ID == activeID,
-			Groups:    groups,
-		})
-	}
-	return h.tmpl.ExecuteTemplate(w, "ucard_heads", cardHeadsView{
-		Heads:   rows,
-		Avatars: store.BalaurHeads(),
-		Groups:  heads.Groups,
-	})
 }

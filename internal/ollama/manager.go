@@ -11,12 +11,11 @@ import (
 	api "github.com/ollama/ollama/api"
 )
 
-// Model is one model present in Ollama's local store. Path is always empty
-// (Ollama owns the blob store); kept so existing templates bind unchanged.
+// Model is one model present in Ollama's local store. Field names mirror the
+// `GgufFiles` template loop (web/templates/models.html), which reads Name and Size.
 type Model struct {
 	Name string
 	Size int64
-	Path string
 }
 
 // PullSnapshot is the observable state of the single background pull. Field

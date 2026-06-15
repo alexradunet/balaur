@@ -34,7 +34,7 @@ func (h *handlers) setActiveHead(e *core.RequestEvent) error {
 	// Also refresh the manage card's active badges if it is on the page; the
 	// patch is a no-op when #ucard-heads is absent.
 	var card strings.Builder
-	if err := h.renderCardHeads(&card, nil); err == nil {
+	if err := h.cardInto(&card, "heads", nil); err == nil {
 		_ = sse.PatchElements(card.String(), datastar.WithSelectorID("ucard-heads"), datastar.WithModeOuter())
 	}
 	return nil
@@ -43,7 +43,7 @@ func (h *handlers) setActiveHead(e *core.RequestEvent) error {
 // renderHeadsCard re-renders the heads manage card (#ucard-heads) via SSE.
 func (h *handlers) renderHeadsCard(e *core.RequestEvent) error {
 	var b strings.Builder
-	if err := h.renderCardHeads(&b, nil); err != nil {
+	if err := h.cardInto(&b, "heads", nil); err != nil {
 		return e.InternalServerError("rendering heads card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
