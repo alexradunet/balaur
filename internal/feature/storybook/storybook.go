@@ -319,3 +319,9 @@ func messageDraftCanvas() g.Node {
 		),
 	)
 }
+
+func modelSwitcherCanvas() g.Node {
+	return section("ModelSwitcher",
+		chat.ModelSwitcher(chat.ModelSwitcherProps{ActiveModel: "gemma3:4b", AvatarSrc: "/static/crest.png"}),
+	)
+}
