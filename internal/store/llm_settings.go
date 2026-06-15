@@ -325,6 +325,15 @@ func findOrCreateLLMProvider(app core.App, name, kind, baseURL, apiKey string, l
 		rec = core.NewRecord(col)
 		rec.Set("name", name)
 	}
+	// Only write when the record is new or a field actually differs, so the
+	// per-render EnsureDefaultLLMConfig call does not churn the WAL with
+	// no-op UPDATEs (see plan 067).
+	changed := rec.IsNew() ||
+		rec.GetString("kind") != kind ||
+		rec.GetString("base_url") != baseURL ||
+		rec.GetBool("local") != local ||
+		rec.GetBool("enabled") != enabled ||
+		(apiKey != "" && rec.GetString("api_key") != apiKey)
 	rec.Set("kind", kind)
 	rec.Set("base_url", baseURL)
 	if apiKey != "" {
@@ -332,8 +341,10 @@ func findOrCreateLLMProvider(app core.App, name, kind, baseURL, apiKey string, l
 	}
 	rec.Set("local", local)
 	rec.Set("enabled", enabled)
-	if err := app.Save(rec); err != nil {
-		return nil, err
+	if changed {
+		if err := app.Save(rec); err != nil {
+			return nil, err
+		}
 	}
 	return rec, nil
 }
@@ -354,12 +365,20 @@ func findOrCreateLLMModel(app core.App, providerID, label, chatModel, embedModel
 		rec = core.NewRecord(col)
 		rec.Set("provider", providerID)
 	}
+	// Skip the write on the found-and-unchanged path (see plan 067).
+	changed := rec.IsNew() ||
+		rec.GetString("label") != label ||
+		rec.GetString("chat_model") != chatModel ||
+		rec.GetString("embed_model") != embedModel ||
+		rec.GetBool("enabled") != enabled
 	rec.Set("label", label)
 	rec.Set("chat_model", chatModel)
 	rec.Set("embed_model", embedModel)
 	rec.Set("enabled", enabled)
-	if err := app.Save(rec); err != nil {
-		return nil, err
+	if changed {
+		if err := app.Save(rec); err != nil {
+			return nil, err
+		}
 	}
 	return rec, nil
 }
