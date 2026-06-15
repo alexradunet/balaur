@@ -132,6 +132,11 @@
   <section class="k-section">
     <div class="k-heading">
       <h2>Local models</h2>
+      {{if .OllamaReachable}}
+      <span class="tag">Ollama: reachable at {{.OllamaHost}}</span>
+      {{else}}
+      <span class="tag">Ollama: not reachable</span>
+      {{end}}
     </div>
     {{template "gguf_progress" .Gguf}}
     {{if .GgufFiles}}
@@ -148,6 +153,8 @@
       </div>
       {{end}}
     </div>
+    {{else if not .OllamaReachable}}
+    <p class="model-error">Ollama is not reachable at {{.OllamaHost}} — start Ollama or set <code>BALAUR_OLLAMA_HOST</code> to point at your server, then reload.</p>
     {{else}}
     <p class="k-sub">No models pulled yet.</p>
     {{end}}

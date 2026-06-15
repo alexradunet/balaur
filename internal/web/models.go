@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -52,14 +53,16 @@ type AvatarOption struct {
 }
 
 type modelsPageData struct {
-	ModelChoices  []turn.ModelChoice
-	ActiveModel   string
-	ActiveModelID string
-	ModelError    string
-	ModelHint     string
-	Gguf          ollama.PullSnapshot
-	GgufFiles     []ollama.Model
-	Providers     []store.ProviderView
+	ModelChoices    []turn.ModelChoice
+	ActiveModel     string
+	ActiveModelID   string
+	ModelError      string
+	ModelHint       string
+	Gguf            ollama.PullSnapshot
+	GgufFiles       []ollama.Model
+	Providers       []store.ProviderView
+	OllamaReachable bool   // whether the Ollama control server answered a heartbeat
+	OllamaHost      string // host:port the heartbeat was sent to (no scheme)
 }
 
 type modelModalData struct {
@@ -153,6 +156,10 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	} else {
 		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	data.OllamaHost = ollama.Host()
+	data.OllamaReachable = h.ollama.Reachable(ctx)
 	data.Gguf = h.ollama.Snapshot()
 	if files, err := h.ollama.List(); err == nil {
 		data.GgufFiles = files
