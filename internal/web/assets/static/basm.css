@@ -2610,3 +2610,25 @@ progress.pull-progress-bar::-moz-progress-bar {
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
   pointer-events: none; font-family: var(--font-mono); font-size: 12px; color: var(--gold-ink);
 }
+
+/* ── Toggle — Hearthwood switch (track + sliding knob) ──────────────────
+   Pure-render <button role="switch">; state lives in [aria-checked]/[disabled],
+   the knob slides via CSS, never inline style. */
+.toggle {
+  position: relative; display: inline-block; flex-shrink: 0; width: 46px; height: 26px; padding: 0;
+  background: var(--chrome-2); background-image: var(--grain-warm); background-size: 4px 4px;
+  border: 2px solid var(--outline-2); border-radius: var(--radius); box-shadow: var(--bevel-in); cursor: pointer;
+}
+.toggle[aria-checked="true"] { background: var(--teal-deep); background-image: none; }
+.toggle-knob {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  background: var(--surface-2); border: 2px solid var(--outline-2); border-radius: var(--radius);
+  box-shadow: var(--bevel-up); transition: left 80ms;
+}
+.toggle[aria-checked="true"] .toggle-knob { left: 22px; background: var(--gold); }
+.toggle[disabled] { opacity: .5; cursor: default; }
+.toggle-row { display: inline-flex; align-items: center; gap: 11px; cursor: pointer; }
+.toggle-row:has(.toggle[disabled]) { cursor: default; }
+.toggle-label {
+  font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg);
+}
