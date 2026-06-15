@@ -34,6 +34,9 @@ type ScriptedClient struct {
 	// Respond, when non-nil, is called instead of consuming the replies queue.
 	// The returned string is emitted as a text delta.
 	Respond func(msgs []llm.Message) string
+	// EmbedFunc, when non-nil, produces the embedding vectors for Embed.
+	// Lets a test script a deterministic reorder without a real model.
+	EmbedFunc func(texts []string) ([][]float32, error)
 }
 
 // New creates a ScriptedClient with the given reply sequence.
@@ -76,5 +79,8 @@ func (f *ScriptedClient) ChatStream(ctx context.Context, msgs []llm.Message, too
 }
 
 func (f *ScriptedClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
-	return nil, nil
+	if f.EmbedFunc != nil {
+		return f.EmbedFunc(texts)
+	}
+	return nil, nil // default: no embeddings scripted
 }
