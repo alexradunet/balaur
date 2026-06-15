@@ -2780,3 +2780,12 @@ progress.pull-progress-bar::-moz-progress-bar {
   flex: 1; height: 2px;
   background: linear-gradient(to right, var(--hair) 50%, transparent 50%) 0 0 / 8px 2px repeat-x;
 }
+
+/* ── ScreenTitle — mono eyebrow over a display headline ──────────────────── */
+.screen-title-eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 7px;
+}
+.screen-title-head {
+  margin: 0; font-family: var(--font-display); font-size: clamp(28px, 5vw, 40px); color: var(--fg-strong); line-height: 1;
+}

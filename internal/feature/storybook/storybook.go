@@ -176,3 +176,10 @@ func sectionLabelCanvas() g.Node {
 		ui.SectionLabel(ui.SectionLabelProps{Text: "This week", Accent: "var(--smoke)"}),
 	)
 }
+
+func screenTitleCanvas() g.Node {
+	return section("ScreenTitle",
+		ui.ScreenTitle(ui.ScreenTitleProps{Eyebrow: "Tuesday · 14 May", Title: "On the book."}),
+		ui.ScreenTitle(ui.ScreenTitleProps{Title: "Memory"}),
+	)
+}
