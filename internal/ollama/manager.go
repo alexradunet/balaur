@@ -40,6 +40,7 @@ type Manager struct {
 	mu sync.Mutex
 
 	// single-slot pull
+	gen      int // bumped on every Pull/Cancel; runPull writes only when it still owns m.gen
 	cancel   context.CancelFunc
 	progress PullSnapshot
 	onDone   func(tag string)
@@ -78,27 +79,39 @@ func (m *Manager) Pull(tag string, onDone func(tag string)) error {
 	if m.progress.Active {
 		return fmt.Errorf("a model pull is already in progress")
 	}
+	m.gen++
+	gen := m.gen
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 	m.progress = PullSnapshot{Active: true, URL: tag, Dest: tag}
 	m.onDone = onDone
-	go m.runPull(ctx, tag)
+	go m.runPull(ctx, gen, tag)
 	return nil
 }
 
-func (m *Manager) runPull(ctx context.Context, tag string) {
+func (m *Manager) runPull(ctx context.Context, gen int, tag string) {
 	err := m.apiClient().Pull(ctx, &api.PullRequest{Model: tag}, func(p api.ProgressResponse) error {
 		if p.Total <= 0 {
 			return nil // status-only line (e.g. "success"); keep the last byte counts
 		}
 		m.mu.Lock()
-		m.progress.BytesDone = p.Completed
-		m.progress.BytesTotal = p.Total
+		if m.gen == gen { // only the owning pull may write progress
+			m.progress.BytesDone = p.Completed
+			m.progress.BytesTotal = p.Total
+		}
 		m.mu.Unlock()
 		return nil
 	})
 	var cb func(string)
 	m.mu.Lock()
+	// If a Cancel or a newer Pull bumped m.gen, this goroutine has been
+	// superseded: its late completion must not clobber the live snapshot.
+	// (A cancelled pull takes the err!=nil branch, so cb stays nil — onDone is
+	// never spuriously fired; the only bug was the stale snapshot write.)
+	if m.gen != gen {
+		m.mu.Unlock()
+		return
+	}
 	m.progress.Active = false
 	if err != nil {
 		// A cancelled pull surfaces a raw context/transport error; keep the
@@ -132,6 +145,7 @@ func (m *Manager) Cancel() {
 		m.progress.Active = false
 		m.progress.Err = "pull cancelled"
 	}
+	m.gen++ // supersede the goroutine we just cancelled so its late completion is a no-op
 }
 
 // Snapshot returns the current pull state.
@@ -150,6 +164,12 @@ func (m *Manager) Reachable(ctx context.Context) bool {
 
 const tagsTTL = 3 * time.Second
 
+// controlTimeout bounds the non-streaming control calls (List/Heartbeat/Delete)
+// so a hung Ollama daemon can't wedge a board-render or readiness check. It is
+// deliberately NOT applied to Pull: a real pull streams for minutes, so it stays
+// on a cancellable background context with no deadline.
+const controlTimeout = 5 * time.Second
+
 // cachedTags returns the model list from a short-TTL cache so the board-render
 // path (IsPulled) does not hit the daemon on every request. The network fetch
 // runs WITHOUT the mutex held; a concurrent double-fetch is acceptable.
@@ -162,7 +182,9 @@ func (m *Manager) cachedTags() ([]Model, error) {
 	}
 	m.mu.Unlock()
 
-	models, err := m.fetchModels(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), controlTimeout)
+	defer cancel()
+	models, err := m.fetchModels(ctx)
 	if err != nil {
 		return nil, err // do not cache errors
 	}
@@ -188,7 +210,9 @@ func (m *Manager) List() ([]Model, error) {
 
 // Delete removes a model tag from Ollama's store and invalidates the tags cache.
 func (m *Manager) Delete(tag string) error {
-	if err := m.apiClient().Delete(context.Background(), &api.DeleteRequest{Model: tag}); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), controlTimeout)
+	defer cancel()
+	if err := m.apiClient().Delete(ctx, &api.DeleteRequest{Model: tag}); err != nil {
 		return err
 	}
 	m.invalidateTags()
