@@ -292,3 +292,19 @@ func materialsCanvas() g.Node {
 			"2px dashed folk separator. Radius is 0 — RPG panels never round. No blur, ever."),
 	))
 }
+
+func dialogueChoicesCanvas() g.Node {
+	return section("DialogueChoices",
+		h.Div(h.Class("chat"),
+			chat.DialogueChoices(chat.ChoicesProps{
+				Prompt:    "How should I log this?",
+				AvatarSrc: "/static/crest.png",
+				Choices: []chat.Choice{
+					{Label: "As a quick note", Hint: "1 line"},
+					{Label: "As a full journal entry"},
+					{Label: "Don't save it", Hint: "skip"},
+				},
+			}),
+		),
+	)
+}
