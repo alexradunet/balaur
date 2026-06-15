@@ -2,7 +2,7 @@ package ui
 
 import (
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 )
 
 // ErrorStrip is the inline card-error fragment, the gomponents equivalent of
@@ -10,7 +10,7 @@ import (
 // user-derived string can never inject markup — the no-raw-HTML firewall.
 // Never replace g.Text here with g.Raw.
 func ErrorStrip(msg string) g.Node {
-	return Div(Class("card-note card-note-error"), g.Text(msg))
+	return h.Div(h.Class("card-note card-note-error"), g.Text(msg))
 }
 
 // CardHead renders the shared kcard header: a kcard-kind span with the
@@ -21,11 +21,11 @@ func ErrorStrip(msg string) g.Node {
 // HTML must stay byte-identical to the hand-rolled headers it replaces.
 func CardHead(iconSrc, title string, trailing ...g.Node) g.Node {
 	children := []g.Node{
-		Span(Class("kcard-kind"),
-			Img(Class("tool-icon"), Src(iconSrc), Alt("")),
+		h.Span(h.Class("kcard-kind"),
+			h.Img(h.Class("tool-icon"), h.Src(iconSrc), h.Alt("")),
 			g.Text(title),
 		),
 	}
 	children = append(children, trailing...)
-	return Header(Class("kcard-head"), g.Group(children))
+	return h.Header(h.Class("kcard-head"), g.Group(children))
 }

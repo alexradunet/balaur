@@ -24,6 +24,7 @@ import (
 	_ "github.com/alexradunet/balaur/internal/feature/all"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/turn"
+	webstatic "github.com/alexradunet/balaur/internal/web/assets"
 	webassets "github.com/alexradunet/balaur/web"
 )
 
@@ -160,7 +161,7 @@ func sameHost(origin, request string) bool {
 func Register(se *core.ServeEvent) error {
 	tmpl := template.Must(template.New("").Funcs(funcs).ParseFS(webassets.FS, "templates/*.html"))
 
-	staticFS, err := fs.Sub(webassets.FS, "static")
+	staticFS, err := fs.Sub(webstatic.FS, "static")
 	if err != nil {
 		panic("web: static assets missing from embed: " + err.Error())
 	}
@@ -194,6 +195,7 @@ func Register(se *core.ServeEvent) error {
 		return e.Next()
 	})
 	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
+	se.Router.GET("/storybook", h.storybookHome)
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)

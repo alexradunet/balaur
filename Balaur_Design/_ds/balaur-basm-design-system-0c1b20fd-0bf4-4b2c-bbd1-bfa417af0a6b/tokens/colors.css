@@ -1,0 +1,66 @@
+/* Basm color tokens — "Hearthwood" (canon v2).
+   This project is now the canon; it intentionally diverges from the
+   repo's Forest at Dusk palette toward a grounded fantasy-RPG material
+   language: tavern oak chrome, candlelit gold, parchment content panels
+   with ink text. Dark is the brand identity; light is a daylight study
+   of the same room. Force a mode with <html class="dark|light">. */
+
+:root {
+  color-scheme: dark light;
+
+  /* Page & wood chrome */
+  --bg:        light-dark(#efe2bd, #140c06);
+  --chrome:    light-dark(#3a2210, #2a1709);  /* topbar, chatbar, tool rows, tags */
+  --chrome-2:  light-dark(#2c1a0c, #1d0f06);  /* deeper wood inset */
+  --chrome-fg: light-dark(#d6bb92, #b59872);  /* text on wood */
+
+  /* Parchment content panels (constant across modes) */
+  --surface:    light-dark(#f4e9c4, #e8d9ae);
+  --surface-2:  light-dark(#e4d49e, #d6c188);
+  --surface-3:  light-dark(#d2bf82, #c4ab74);
+  --parch-edge: light-dark(#9a7f4c, #8a6f3c);
+
+  /* Text */
+  --fg:        light-dark(#3a2c18, #c9b894);  /* body on page bg */
+  --fg-strong: light-dark(#241a0c, #ecdcb2);  /* headings on page bg */
+  --muted:     light-dark(#7a6644, #8a7355);
+  --smoke:     light-dark(#8f7a52, #6b5639);
+  --hair:      light-dark(#c8b488, #3b2a16);
+  --outline-2: light-dark(#241708, #120a04);  /* the near-black pixel outline */
+
+  /* Ink — text on parchment (constant) */
+  --ink:       #2c2012;
+  --ink-muted: #6f5e3c;
+  --on-surface: #2c2012;
+
+  /* Bevel edges */
+  --bevel-light: light-dark(rgba(255,222,166,.30), rgba(255,196,118,.18));
+  --bevel-dark:  rgba(0,0,0,.55);
+
+  /* Accents — candlelit on dark, ink-weight on light */
+  --gold:       light-dark(#8a6212, #f2c14e);
+  --gold-deep:  light-dark(#7a5a14, #a87b24);
+  --gold-ink:   #8a6212;                       /* gold on parchment */
+  --ember:      light-dark(#d04f12, #ff7a33);
+  --ember-deep: light-dark(#7e3210, #8f3a12);
+  --ember-red:  light-dark(#a8201f, #e5484d);
+  --teal:       light-dark(#0d6e5c, #3ecfb8);
+  --teal-deep:  light-dark(#0a574a, #169a82);
+  --teal-ink:   #0d6e5c;                       /* teal on parchment */
+  --folkred:    light-dark(#983f20, #e0563b);
+  --indigo:     light-dark(#3d54a0, #a8c0f0);
+  --indigo-ink: #3d54a0;                       /* user hue on parchment */
+  --violet:     light-dark(#6d3bb8, #c084fc);
+  --good:       light-dark(#3f6f2f, #7fcf6a);
+  --good-ink:   #4c7a2c;
+  --steel:      light-dark(#7a6644, #9b8a6c);
+
+  /* Pixel grain (dither) */
+  --grain-warm: repeating-conic-gradient(rgba(255,214,150,.022) 0% 25%, transparent 0% 50%); /* @kind other */
+  --grain-ink:  repeating-conic-gradient(rgba(64,44,18,.045) 0% 25%, transparent 0% 50%); /* @kind other */
+  --wood-planks: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 2px, transparent 2px 9px); /* @kind other */
+}
+
+/* Manual color-scheme overrides (toggled via JS on <html>) */
+:root.light { color-scheme: light; }
+:root.dark  { color-scheme: dark;  }
