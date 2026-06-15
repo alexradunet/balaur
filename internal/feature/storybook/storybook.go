@@ -453,3 +453,10 @@ func statCardCanvas() g.Node {
 func topbarCanvas() g.Node {
 	return section("Topbar", h.Div(h.Style("position:relative"), shell.Topbar("storybook")))
 }
+
+func composerCanvas() g.Node {
+	return section("Composer",
+		h.Div(h.Style("max-width:560px"),
+			ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})),
+	)
+}
