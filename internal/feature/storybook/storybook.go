@@ -414,3 +414,15 @@ func recapCardCanvas() g.Node {
 			})),
 	)
 }
+
+func guardianCardCanvas() g.Node {
+	return section("GuardianCard",
+		h.Div(h.Style("max-width:400px"),
+			ui.GuardianCard(ui.GuardianProps{
+				Kicker: "OS access", Title: "Read your Documents folder?",
+				Detail:        "To find the budget spreadsheet you mentioned. Read-only, and only this once.",
+				Scope:         "read · ~/Documents · this session",
+				AllowOnceHref: "#", AllowAlwaysHref: "#", DenyHref: "#",
+			})),
+	)
+}

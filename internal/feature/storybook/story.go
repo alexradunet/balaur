@@ -53,6 +53,7 @@ var stories = []Story{
 	{"sparkline", "Display", "Sparkline", sparklineCanvas},
 	{"dayentry", "Display", "DayEntry", dayEntryCanvas},
 	{"recapcard", "Cards", "RecapCard", recapCardCanvas},
+	{"guardiancard", "Cards", "GuardianCard", guardianCardCanvas},
 }
 
 // Stories returns the ordered registry.
