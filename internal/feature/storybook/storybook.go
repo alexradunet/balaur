@@ -140,3 +140,12 @@ func listCanvas() g.Node {
 		},
 	}))
 }
+
+func emptyStateCanvas() g.Node {
+	return section("EmptyState", ui.EmptyState(ui.EmptyProps{
+		CrestSrc:    "/static/crest.png",
+		Line:        "Tell Balaur in chat what to keep for you.",
+		ActionLabel: "Start a thread",
+		ActionHref:  "#",
+	}))
+}
