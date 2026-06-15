@@ -79,7 +79,7 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	// While a model is downloading, the chatbar shows a loading bar, not the form.
 	b.Reset()
 	data.ChatReady = false
-	data.Gguf = ollama.PullSnapshot{Active: true, BytesDone: 500, BytesTotal: 1000, Dest: "/models/x.llamafile"}
+	data.Pull = ollama.PullSnapshot{Active: true, BytesDone: 500, BytesTotal: 1000, Dest: "/models/x.llamafile"}
 	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
 		t.Fatalf("chat_bar downloading: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	// chat_draft renders the composer form in the flow.
 	b.Reset()
 	data.ChatReady = true
-	data.Gguf = ollama.PullSnapshot{}
+	data.Pull = ollama.PullSnapshot{}
 	if err := tmpl.ExecuteTemplate(&b, "chat_draft", data); err != nil {
 		t.Fatalf("chat_draft: %v", err)
 	}

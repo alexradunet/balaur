@@ -20,7 +20,7 @@ type Model struct {
 }
 
 // PullSnapshot is the observable state of the single background pull. Field
-// names mirror the retired gguf.Progress so existing templates bind unchanged;
+// names are deliberately generic so the web templates bind to it directly;
 // URL and Dest both carry the tag being pulled.
 type PullSnapshot struct {
 	Active     bool

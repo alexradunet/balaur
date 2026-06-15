@@ -104,14 +104,14 @@
     <a class="model-switcher-manage" href="/focus/settings?section=models">Manage models &amp; APIs →</a>
   </div>
   {{if not .ChatReady}}
-    {{if .Gguf.Active}}
+    {{if .Pull.Active}}
     <div class="chatbar-download">
-      <span class="chatbar-download-label">Downloading model… {{fmtBytes .Gguf.BytesDone}}{{if .Gguf.BytesTotal}} / {{fmtBytes .Gguf.BytesTotal}}{{end}}</span>
-      <progress class="gguf-progress-bar"{{if .Gguf.BytesTotal}} value="{{.Gguf.BytesDone}}" max="{{.Gguf.BytesTotal}}"{{end}}></progress>
+      <span class="chatbar-download-label">Downloading model… {{fmtBytes .Pull.BytesDone}}{{if .Pull.BytesTotal}} / {{fmtBytes .Pull.BytesTotal}}{{end}}</span>
+      <progress class="pull-progress-bar"{{if .Pull.BytesTotal}} value="{{.Pull.BytesDone}}" max="{{.Pull.BytesTotal}}"{{end}}></progress>
     </div>
     {{else}}
     <div class="model-switcher-empty">
-      <span>{{if .Gguf.Err}}{{.Gguf.Err}}{{else if .ModelError}}{{.ModelError}}{{else}}No model is ready yet.{{end}}</span>
+      <span>{{if .Pull.Err}}{{.Pull.Err}}{{else if .ModelError}}{{.ModelError}}{{else}}No model is ready yet.{{end}}</span>
       <a href="/focus/settings?section=models">Set up a model →</a>
     </div>
     {{end}}

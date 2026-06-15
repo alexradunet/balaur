@@ -34,7 +34,7 @@ type homeData struct {
 	ActiveHeadID    string              // current head id/key
 	ActiveHeadName  string              // current head name (switcher label)
 	HeadChoices     []headChoice        // roster for the switcher
-	Gguf            ollama.PullSnapshot // active model download, for the chatbar loading bar
+	Pull            ollama.PullSnapshot // active model download, for the chatbar loading bar
 }
 
 // headChoice is one entry in the dock head switcher.
@@ -52,14 +52,14 @@ type AvatarOption struct {
 }
 
 type modelsPageData struct {
-	ModelChoices  []turn.ModelChoice
-	ActiveModel   string
-	ActiveModelID string
-	ModelError    string
-	ModelHint     string
-	Gguf          ollama.PullSnapshot
-	GgufFiles     []ollama.Model
-	Providers     []store.ProviderView
+	ModelChoices    []turn.ModelChoice
+	ActiveModel     string
+	ActiveModelID   string
+	ModelError      string
+	ModelHint       string
+	Pull            ollama.PullSnapshot
+	InstalledModels []ollama.Model
+	Providers       []store.ProviderView
 }
 
 type modelModalData struct {
@@ -78,7 +78,7 @@ func (h *handlers) homeData() (homeData, error) {
 		return data, err
 	}
 	data.ModelChoices = choices
-	data.Gguf = h.ollama.Snapshot()
+	data.Pull = h.ollama.Snapshot()
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
 	data.AvatarOptions = buildAvatarOptions(h.app)
@@ -153,9 +153,9 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	} else {
 		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
 	}
-	data.Gguf = h.ollama.Snapshot()
+	data.Pull = h.ollama.Snapshot()
 	if files, err := h.ollama.List(); err == nil {
-		data.GgufFiles = files
+		data.InstalledModels = files
 	}
 	if providers, err := store.ListOpenAIProviders(h.app); err == nil {
 		data.Providers = providers
@@ -274,11 +274,11 @@ func (h *handlers) modelPull(e *core.RequestEvent) error {
 func (h *handlers) modelPullProgress(e *core.RequestEvent) error {
 	snap := h.ollama.Snapshot()
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "gguf_progress", snap); err != nil {
+	if err := h.tmpl.ExecuteTemplate(&b, "pull_progress", snap); err != nil {
 		return e.InternalServerError("rendering pull progress", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("gguf-progress"), datastar.WithModeOuter())
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("pull-progress"), datastar.WithModeOuter())
 	return nil
 }
 
