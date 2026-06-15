@@ -2476,3 +2476,22 @@ progress.pull-progress-bar::-moz-progress-bar {
   gap: 10px;
 }
 .ucard-manage-list .kcard { margin: 0; }
+
+/* ── Storybook gallery chrome (dev surface) ───────────────────────────
+   .sb sits inside <main id="main">, which already centers + pads (0 6vw);
+   restate only the vertical rhythm here or the 6vw compounds to 12vw. */
+.sb { padding: 40px 0 96px; }
+.sb > h1 { font-size: 30px; margin: 0 0 4px; }
+.sb-section { padding: 28px 0 4px; border-top: 2px dashed var(--hair); }
+.sb-section:first-of-type { border-top: 0; }
+.sb-section > h2 {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 18px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.sb-section > h2::after {
+  content: ""; flex: 1; height: 2px;
+  background: linear-gradient(to right, var(--hair) 50%, transparent 50%) 0 0 / 8px 2px repeat-x;
+  opacity: .7;
+}
+.sb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 22px; }
