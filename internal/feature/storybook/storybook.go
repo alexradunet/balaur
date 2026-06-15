@@ -129,3 +129,23 @@ func paginationCanvas() g.Node {
 		Total: 8, Page: 3, HrefFor: func(n int) string { return "#" },
 	}))
 }
+
+func listCanvas() g.Node {
+	return section("List", ui.List(ui.ListProps{
+		Title: "Today",
+		Items: []ui.ListItemProps{
+			{Icon: "scroll", Title: "Buy milk", Subtitle: "groceries", Meta: "2pm"},
+			{Icon: "flame", Title: "Workout", Meta: "due", MetaTone: "warn"},
+			{Title: "Read chapter 4", Subtitle: "before bed"},
+		},
+	}))
+}
+
+func emptyStateCanvas() g.Node {
+	return section("EmptyState", ui.EmptyState(ui.EmptyProps{
+		CrestSrc:    "/static/crest.png",
+		Line:        "Tell Balaur in chat what to keep for you.",
+		ActionLabel: "Start a thread",
+		ActionHref:  "#",
+	}))
+}
