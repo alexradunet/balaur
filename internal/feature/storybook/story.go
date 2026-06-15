@@ -56,6 +56,7 @@ var stories = []Story{
 	{"guardiancard", "Cards", "GuardianCard", guardianCardCanvas},
 	{"nudgebanner", "Cards", "NudgeBanner", nudgeBannerCanvas},
 	{"statcard", "Cards", "StatCard", statCardCanvas},
+	{"topbar", "Navigation", "Topbar", topbarCanvas},
 }
 
 // Stories returns the ordered registry.

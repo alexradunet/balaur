@@ -13,6 +13,7 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
+	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
 // section wraps a labelled group of component variants.
@@ -447,4 +448,8 @@ func statCardCanvas() g.Node {
 		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Weight", Value: "81.2", Unit: "kg", Delta: "0.6 this week", DeltaTone: "down", Data: []float64{83, 82.6, 82.1, 82.4, 81.9, 81.6, 81.2}})),
 		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Steps", Value: "8,210", Delta: "12% vs avg", DeltaTone: "up", Data: []float64{6800, 7100, 7400, 7900, 8100, 8000, 8210}})),
 	)
+}
+
+func topbarCanvas() g.Node {
+	return section("Topbar", h.Div(h.Style("position:relative"), shell.Topbar("storybook")))
 }
