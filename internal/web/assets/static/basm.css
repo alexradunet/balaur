@@ -2542,3 +2542,18 @@ progress.pull-progress-bar::-moz-progress-bar {
 .alert-info   { --alert-edge: var(--gold-deep);  --alert-kick: var(--gold-ink); }
 .alert-warn   { --alert-edge: var(--ember-deep); --alert-kick: var(--ember-deep); }
 .alert-danger { --alert-edge: var(--ember-red);  --alert-kick: var(--ember-red); }
+
+/* ── Tooltip — wood label revealed on hover/focus (pure CSS) ──────────── */
+.tooltip { position: relative; display: inline-flex; }
+.tooltip-bubble {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 100%; margin-bottom: 8px; z-index: 30; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .02em;
+  color: var(--chrome-fg); background-color: var(--chrome);
+  background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
+  border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); padding: 5px 9px;
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.tooltip-bottom .tooltip-bubble { bottom: auto; top: 100%; margin-bottom: 0; margin-top: 8px; }
+.tooltip:hover .tooltip-bubble,
+.tooltip:focus-within .tooltip-bubble { opacity: 1; visibility: visible; }
