@@ -49,6 +49,40 @@ func Sidebar(p SidebarProps) g.Node {
 	return h.Aside(kids...)
 }
 
+// SidebarPageProps configures a SidebarPage. Crumb is the breadcrumb tail
+// (empty -> just "Storybook"); Body fills the canvas; Sidebar is the rail node.
+type SidebarPageProps struct {
+	Title   string
+	Sidebar g.Node
+	Crumb   string
+	Body    g.Node
+}
+
+// SidebarPage renders a full <html> document for a sidebar surface: the shared
+// page head, then a .sb-root grid of the sidebar and a scrollable .sb-canvas
+// main with a breadcrumb header. No app #dock — this is its own surface.
+func SidebarPage(p SidebarPageProps) g.Node {
+	crumb := "Storybook"
+	if p.Crumb != "" {
+		crumb = "Storybook / " + p.Crumb
+	}
+	return g.Group([]g.Node{
+		g.Raw("<!doctype html>"),
+		h.HTML(h.Lang("en"),
+			h.Head(pageHead(), h.TitleEl(g.Text(p.Title+" · Balaur"))),
+			h.Body(
+				h.Div(h.Class("sb-root"),
+					p.Sidebar,
+					h.Main(h.Class("sb-canvas"),
+						h.Header(h.Class("sb-crumb"), g.Text(crumb)),
+						p.Body,
+					),
+				),
+			),
+		),
+	})
+}
+
 func sidebarItem(it SidebarItem) g.Node {
 	cls := "sb-nav-item"
 	if it.Active {

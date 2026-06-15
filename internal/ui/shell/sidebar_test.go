@@ -9,6 +9,34 @@ import (
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
+func TestSidebarPage(t *testing.T) {
+	var b strings.Builder
+	n := shell.SidebarPage(shell.SidebarPageProps{
+		Title:   "Button",
+		Sidebar: g.El("aside", g.Text("SIDE")),
+		Crumb:   "Button",
+		Body:    g.Text("CANVAS"),
+	})
+	if err := n.Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+	for _, want := range []string{
+		"<!doctype html>",
+		`<title>Button · Balaur</title>`,
+		`<link rel="stylesheet" href="/static/basm.css">`,
+		`<div class="sb-root">`,
+		`<aside>SIDE</aside>`,
+		`<main class="sb-canvas">`,
+		`<header class="sb-crumb">Storybook / Button</header>`,
+		`CANVAS`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("sidebar page missing %q in: %s", want, got)
+		}
+	}
+}
+
 func TestSidebar(t *testing.T) {
 	var b strings.Builder
 	n := shell.Sidebar(shell.SidebarProps{
