@@ -2557,3 +2557,19 @@ progress.pull-progress-bar::-moz-progress-bar {
 .tooltip-bottom .tooltip-bubble { bottom: auto; top: 100%; margin-bottom: 0; margin-top: 8px; }
 .tooltip:hover .tooltip-bubble,
 .tooltip:focus-within .tooltip-bubble { opacity: 1; visibility: visible; }
+
+/* ── Skeleton — carved parchment loading placeholder w/ sliding sheen ───
+   The warm sheen uses --bevel-light (not a cold white) to stay on-brand.
+   Variants: .skeleton-line (default), .skeleton-block, .skeleton-avatar. */
+.skeleton {
+  --sk-w: 100%; --sk-h: 13px; display: block; width: var(--sk-w); height: var(--sk-h);
+  border: 2px solid var(--parch-edge); border-radius: var(--radius);
+  background-color: var(--surface-2);
+  background-image: linear-gradient(100deg, transparent 30%, var(--bevel-light) 50%, transparent 70%);
+  background-size: 220% 100%; background-repeat: no-repeat;
+  box-shadow: var(--bevel-in); animation: sk-sheen 1.25s linear infinite;
+}
+.skeleton-block { --sk-h: 64px; }
+.skeleton-avatar { --sk-w: 48px; --sk-h: 48px; }
+@keyframes sk-sheen { from { background-position: 200% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
