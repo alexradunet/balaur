@@ -319,3 +319,37 @@ func messageDraftCanvas() g.Node {
 		),
 	)
 }
+
+func modelSwitcherCanvas() g.Node {
+	return section("ModelSwitcher",
+		chat.ModelSwitcher(chat.ModelSwitcherProps{ActiveModel: "gemma3:4b", AvatarSrc: "/static/crest.png"}),
+	)
+}
+
+func headSwitcherCanvas() g.Node {
+	return section("HeadSwitcher",
+		chat.HeadSwitcher(chat.HeadSwitcherProps{
+			ActiveHead: "Balaur",
+			Heads: []chat.Head{
+				{Name: "Balaur", AvatarSrc: "/static/crest.png", Active: true},
+				{Name: "Scholar", AvatarSrc: "/static/crest.png"},
+				{Name: "Planner", AvatarSrc: "/static/crest.png"},
+			},
+		}),
+	)
+}
+
+func chatBarCanvas() g.Node {
+	return section("ChatBar",
+		chat.ChatBar(chat.ChatBarProps{
+			ActiveHead: "Balaur",
+			Heads: []chat.Head{
+				{Name: "Balaur", AvatarSrc: "/static/crest.png", Active: true},
+				{Name: "Scholar", AvatarSrc: "/static/crest.png"},
+				{Name: "Planner", AvatarSrc: "/static/crest.png"},
+			},
+			ActiveModel: "gemma3:4b",
+			AvatarSrc:   "/static/crest.png",
+		}),
+	)
+}

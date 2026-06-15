@@ -2866,3 +2866,6 @@ progress.pull-progress-bar::-moz-progress-bar {
 .mat-well { background-color: var(--chrome-2); background-image: var(--grain-warm); background-size: 4px 4px; border: 2px solid var(--outline-2); box-shadow: var(--bevel-in); }
 .mat-ornate { background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); }
 .mat-frame { background: var(--bg); border: 2px solid var(--outline-2); display: flex; align-items: center; justify-content: center; padding: 0 18px; }
+
+/* ── Storybook: show the fixed .chatbar inline in the canvas ─────────────── */
+.sb-canvas .chatbar { position: static; }
