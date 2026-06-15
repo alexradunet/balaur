@@ -2519,3 +2519,26 @@ progress.pull-progress-bar::-moz-progress-bar {
 .badge-ember { --badge-bg: var(--ember);     --badge-bd: var(--ember-deep); --badge-fg: var(--ink); }
 .badge-teal  { --badge-bg: var(--teal-deep); --badge-bd: var(--outline-2);  --badge-fg: var(--surface); }
 .badge-wood  { --badge-bg: var(--chrome-2);  --badge-bd: var(--outline-2);  --badge-fg: var(--chrome-fg); }
+
+/* ── Alert — parchment callout band ──────────────────────────────────
+   2-col (icon + body) grid with an asymmetric thick left accent stripe.
+   Tone drives the stripe + kicker color and the default icon; role is set
+   in markup (note for info, alert for warn/danger). */
+.alert {
+  display: grid; grid-template-columns: 26px 1fr; column-gap: 12px;
+  align-items: start; padding: 13px 16px 14px;
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  color: var(--ink);
+  border: 2px solid var(--parch-edge); border-left: 6px solid var(--alert-edge);
+  box-shadow: var(--parch-bevel);
+}
+/* Icon atom sizing inside the band (wins on specificity over img.tool-icon). */
+.alert .tool-icon { width: 22px; height: 22px; margin: 1px 0 0 0; image-rendering: pixelated; }
+.alert-kicker {
+  margin-bottom: 4px; font-family: var(--font-mono); font-size: 11px;
+  font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--alert-kick);
+}
+.alert-body { font-size: 14px; line-height: 1.5; }
+.alert-info   { --alert-edge: var(--gold-deep);  --alert-kick: var(--gold-ink); }
+.alert-warn   { --alert-edge: var(--ember-deep); --alert-kick: var(--ember-deep); }
+.alert-danger { --alert-edge: var(--ember-red);  --alert-kick: var(--ember-red); }
