@@ -2677,3 +2677,17 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .sb-stat b { display: block; font-family: var(--font-display); font-size: 24px; color: var(--ink); }
 .sb-stat span { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); }
+
+/* ── Breadcrumb — wood trail of link crumbs + › separators ──────────────── */
+.breadcrumb {
+  display: inline-flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  background: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
+  border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); padding: 7px 12px;
+}
+.breadcrumb a, .breadcrumb span {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .03em; text-transform: uppercase;
+}
+.crumb-link { color: var(--chrome-fg); text-decoration: none; }
+.crumb-link:hover { color: var(--gold); }
+.crumb-cur { color: var(--gold); }
+.crumb-sep { color: var(--smoke); }

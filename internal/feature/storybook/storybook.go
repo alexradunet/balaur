@@ -115,3 +115,11 @@ func tabsCanvas() g.Node {
 		{Label: "Someday", Href: "#"},
 	}))
 }
+
+func breadcrumbCanvas() g.Node {
+	return section("Breadcrumb", ui.Breadcrumb([]ui.Crumb{
+		{Label: "Home", Href: "/"},
+		{Label: "Tasks", Href: "/tasks"},
+		{Label: "Today"},
+	}))
+}
