@@ -426,3 +426,17 @@ func guardianCardCanvas() g.Node {
 			})),
 	)
 }
+
+func nudgeBannerCanvas() g.Node {
+	return section("NudgeBanner",
+		h.Div(h.Style("max-width:440px"),
+			ui.NudgeBanner(ui.NudgeProps{
+				When: "18:00", Message: "The evening comes, and the tomatoes thirst. Will you tend them now?",
+				Replies: []ui.NudgeReply{
+					{Label: "It is done.", Hint: "mark done"},
+					{Label: "At nightfall.", Hint: "snooze · 21:00"},
+					{Label: "Tomorrow, I swear it.", Hint: "snooze · tomorrow"},
+				},
+			})),
+	)
+}
