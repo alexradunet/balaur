@@ -2854,3 +2854,15 @@ progress.pull-progress-bar::-moz-progress-bar {
 .type-scale-22 { font-family: var(--font-body); font-size: 22px; color: var(--ink); }
 .type-scale-17 { font-family: var(--font-body); font-size: 17px; color: var(--ink); }
 .type-scale-13 { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+
+/* ── Foundations · Materials — the material specimens ───────────────────── */
+.mat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 16px; }
+.mat-tile { display: flex; flex-direction: column; gap: 10px; }
+.mat-swatch { height: 96px; }
+.mat-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--fg-strong); }
+.mat-desc { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); line-height: 1.5; }
+.mat-parchment { background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); }
+.mat-wood { background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px; border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); }
+.mat-well { background-color: var(--chrome-2); background-image: var(--grain-warm); background-size: 4px 4px; border: 2px solid var(--outline-2); box-shadow: var(--bevel-in); }
+.mat-ornate { background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); }
+.mat-frame { background: var(--bg); border: 2px solid var(--outline-2); display: flex; align-items: center; justify-content: center; padding: 0 18px; }

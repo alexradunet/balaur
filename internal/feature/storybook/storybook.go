@@ -267,3 +267,28 @@ func typographyCanvas() g.Node {
 		),
 	))
 }
+
+func matTile(swatch g.Node, title, desc string) g.Node {
+	return h.Div(h.Class("mat-tile"),
+		swatch,
+		h.Div(h.Class("mat-title"), g.Text(title)),
+		h.Div(h.Class("mat-desc"), g.Text(desc)),
+	)
+}
+
+func materialsCanvas() g.Node {
+	return section("Materials", h.Div(h.Class("mat-grid"),
+		matTile(h.Div(h.Class("mat-swatch mat-parchment")), "Parchment",
+			"surface + ink grain, paper bevel, 3px hard drop. The content material."),
+		matTile(h.Div(h.Class("mat-swatch mat-wood")), "Wood chrome",
+			"plank lines + raised bevel + 2px near-black outline. Topbar, tags, frames."),
+		matTile(h.Div(h.Class("mat-swatch mat-well")), "Carved well",
+			"inset bevel — things carved into the wood: tool rows, the chat input."),
+		matTile(h.Div(h.Class("mat-swatch mat-ornate")), "Ornate parchment",
+			"gold-bordered — reserved for panels that matter: proposals, choices, dialogs."),
+		matTile(h.Div(h.Class("mat-swatch mat-frame"), ui.FolkBand()), "Folk band",
+			"the woven carpet stripe — the boldest motif, used sparingly."),
+		matTile(h.Div(h.Class("mat-swatch mat-frame"), ui.Stitch()), "Stitch · square corners",
+			"2px dashed folk separator. Radius is 0 — RPG panels never round. No blur, ever."),
+	))
+}

@@ -85,6 +85,29 @@ func TestTypographyCanvas(t *testing.T) {
 	}
 }
 
+func TestMaterialsCanvas(t *testing.T) {
+	s, ok := storybook.Lookup("materials")
+	if !ok {
+		t.Fatal("materials story not registered")
+	}
+	var b strings.Builder
+	if err := s.Canvas().Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+	for _, want := range []string{
+		`<div class="mat-title">Parchment</div>`,
+		`<div class="mat-swatch mat-wood"></div>`,
+		`<div class="mat-title">Wood chrome</div>`,
+		`class="folk-band"`,
+		`class="stitch"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("materials canvas missing %q", want)
+		}
+	}
+}
+
 func TestOverviewRenders(t *testing.T) {
 	var b strings.Builder
 	if err := storybook.Overview().Render(&b); err != nil {
