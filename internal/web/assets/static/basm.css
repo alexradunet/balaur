@@ -2907,3 +2907,76 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dayentry-last .dayentry-content { padding-bottom: 0; }
 .dayentry-title { font-size: 14.5px; color: var(--ink); line-height: 1.3; }
 .dayentry-detail { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+
+/* ── RecapCard — the daily-recap parchment card ─────────────────────────── */
+.recapcard {
+  position: relative; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: 15px 17px 16px;
+}
+.recapcard-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; background: var(--gold-ink); }
+.recapcard-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.recapcard-orb { width: 20px; height: 20px; image-rendering: pixelated; }
+.recapcard-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--teal-ink); }
+.recapcard-when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
+.recapcard-summary { margin: 0 0 11px; font-size: 15px; line-height: 1.55; }
+.recapcard-points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.recapcard-point { display: grid; grid-template-columns: 14px 1fr; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+.recapcard-sq { color: var(--teal-ink); }
+
+/* ── GuardianCard — OS-access consent (reuses .dlg-corner brackets) ──────── */
+.guardian {
+  position: relative; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); padding: 16px 18px;
+}
+.guardian-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.guardian-icon { width: 24px; height: 24px; image-rendering: pixelated; }
+.guardian-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); }
+.guardian-title { margin: 0 0 7px; font-family: var(--font-display); font-size: 21px; color: var(--ink); line-height: 1.12; }
+.guardian-detail { margin: 0 0 11px; font-size: 14.5px; line-height: 1.5; }
+.guardian-scope {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted);
+  background: var(--surface-2); border: 2px solid var(--parch-edge); box-shadow: var(--bevel-in);
+  padding: 7px 10px; margin-bottom: 13px; overflow-wrap: anywhere;
+}
+.guardian-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+
+/* ── NudgeBanner — the evening reminder ─────────────────────────────────── */
+.nudge {
+  color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); padding: 13px 16px 14px;
+}
+.nudge-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.nudge-icon { width: 20px; height: 20px; image-rendering: pixelated; }
+.nudge-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); }
+.nudge-when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
+.nudge-msg { margin: 0 0 12px; font-size: 15.5px; line-height: 1.5; }
+.nudge-replies { display: flex; flex-wrap: wrap; gap: 8px; }
+.nudge-reply {
+  display: inline-flex; align-items: baseline; gap: 9px; cursor: pointer; text-align: left;
+  border-radius: 0; background: var(--surface-2); border: 2px solid var(--parch-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4); padding: 7px 11px; font: 14px var(--font-body); color: var(--ink);
+}
+.nudge-reply-hint { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-muted); }
+
+/* ── StatCard — a Life metric: icon, value, delta, sparkline ────────────── */
+.statcard {
+  display: flex; flex-direction: column; gap: 11px; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: 15px 16px 14px;
+}
+.statcard-head { display: flex; align-items: center; gap: 8px; }
+.statcard-icon { width: 18px; height: 18px; image-rendering: pixelated; }
+.statcard-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
+.statcard-value-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.statcard-value { font-family: var(--font-display); font-size: 32px; color: var(--ink); line-height: .9; }
+.statcard-unit { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.statcard-delta { margin-left: auto; font-family: var(--font-mono); font-size: 11.5px; }
+.statcard-delta-up { color: var(--good-ink); }
+.statcard-delta-down { color: var(--ember-deep); }
+.statcard-delta-flat { color: var(--ink-muted); }
+
+/* ── Storybook: contain the sticky .topbar inside the canvas tile ───────── */
+.sb-canvas .topbar { position: static; }

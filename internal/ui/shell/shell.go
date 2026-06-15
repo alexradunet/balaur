@@ -32,7 +32,7 @@ func Page(p PageProps) g.Node {
 				h.TitleEl(g.Text(p.Title+" · Balaur")),
 			),
 			h.Body(
-				topbar(p.Active),
+				Topbar(p.Active),
 				h.Div(h.Class("with-sidebar"),
 					h.Main(h.ID("main"), p.Body),
 				),
@@ -57,9 +57,9 @@ func pageHead() g.Node {
 	})
 }
 
-// topbar is the wood-chrome header: crest brand, mono nav, theme toggle. The
+// Topbar is the wood-chrome header: crest brand, mono nav, theme toggle. The
 // active link carries aria-current="page".
-func topbar(active string) g.Node {
+func Topbar(active string) g.Node {
 	return h.Header(h.Class("topbar"),
 		h.A(h.Class("brand"), h.Href("/"),
 			h.Img(h.Class("crest"), h.Src("/static/crest.png"), h.Alt(""), g.Attr("decoding", "async")),

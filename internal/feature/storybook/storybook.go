@@ -13,6 +13,7 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
+	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
 // section wraps a labelled group of component variants.
@@ -403,4 +404,52 @@ func dayEntryCanvas() g.Node {
 			ui.DayEntry(ui.DayEntryProps{Time: "18:00", Title: "Watered the tomatoes", Detail: "every 2 days", Tone: "ember", Last: true}),
 		)),
 	)
+}
+
+func recapCardCanvas() g.Node {
+	return section("RecapCard",
+		h.Div(h.Style("max-width:400px"),
+			ui.RecapCard(ui.RecapProps{
+				When: "earlier today", Summary: "We planned the orchard work and set the tomato watering. You asked me to keep two things.",
+				Points: []string{"Garden — tomatoes & peppers, watered at dusk", "Notes exported as Markdown", "Mend the deer fence before the weekend"},
+			})),
+	)
+}
+
+func guardianCardCanvas() g.Node {
+	return section("GuardianCard",
+		h.Div(h.Style("max-width:400px"),
+			ui.GuardianCard(ui.GuardianProps{
+				Kicker: "OS access", Title: "Read your Documents folder?",
+				Detail:        "To find the budget spreadsheet you mentioned. Read-only, and only this once.",
+				Scope:         "read · ~/Documents · this session",
+				AllowOnceHref: "#", AllowAlwaysHref: "#", DenyHref: "#",
+			})),
+	)
+}
+
+func nudgeBannerCanvas() g.Node {
+	return section("NudgeBanner",
+		h.Div(h.Style("max-width:440px"),
+			ui.NudgeBanner(ui.NudgeProps{
+				When: "18:00", Message: "The evening comes, and the tomatoes thirst. Will you tend them now?",
+				Replies: []ui.NudgeReply{
+					{Label: "It is done.", Hint: "mark done"},
+					{Label: "At nightfall.", Hint: "snooze · 21:00"},
+					{Label: "Tomorrow, I swear it.", Hint: "snooze · tomorrow"},
+				},
+			})),
+	)
+}
+
+func statCardCanvas() g.Node {
+	box := func(n g.Node) g.Node { return h.Div(h.Style("max-width:260px"), n) }
+	return section("StatCard",
+		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Weight", Value: "81.2", Unit: "kg", Delta: "0.6 this week", DeltaTone: "down", Data: []float64{83, 82.6, 82.1, 82.4, 81.9, 81.6, 81.2}})),
+		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Steps", Value: "8,210", Delta: "12% vs avg", DeltaTone: "up", Data: []float64{6800, 7100, 7400, 7900, 8100, 8000, 8210}})),
+	)
+}
+
+func topbarCanvas() g.Node {
+	return section("Topbar", h.Div(h.Style("position:relative"), shell.Topbar("storybook")))
 }
