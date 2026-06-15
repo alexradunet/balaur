@@ -31,6 +31,32 @@ function basmUpdateThemeButtons() {
 
 document.addEventListener('DOMContentLoaded', basmUpdateThemeButtons);
 
+// ── Theme palette cycle (hearthwood → forest → dungeon) ────────────
+// Orthogonal to light/dark mode (basmToggleTheme). The <head> no-flash
+// script applies the saved palette before paint; this handles the cycle.
+window.basmCycleTheme = function () {
+  var order = ['hearthwood', 'forest', 'dungeon'];
+  var d = document.documentElement;
+  var cur = order.find(function (t) { return d.classList.contains('theme-' + t); }) || 'hearthwood';
+  var next = order[(order.indexOf(cur) + 1) % order.length];
+  d.classList.remove('theme-hearthwood', 'theme-forest', 'theme-dungeon');
+  d.classList.add('theme-' + next);
+  localStorage.setItem('basm-palette', next);
+  basmUpdatePaletteButtons();
+};
+
+function basmUpdatePaletteButtons() {
+  var order = ['hearthwood', 'forest', 'dungeon'];
+  var labels = { hearthwood: 'Hearth', forest: 'Forest', dungeon: 'Dungeon' };
+  var d = document.documentElement;
+  var cur = order.find(function (t) { return d.classList.contains('theme-' + t); }) || 'hearthwood';
+  document.querySelectorAll('.theme-cycle').forEach(function (btn) {
+    btn.textContent = labels[cur];
+    btn.title = 'Cycle theme (now ' + labels[cur] + ')';
+  });
+}
+document.addEventListener('DOMContentLoaded', basmUpdatePaletteButtons);
+
 // ── Chatbar height → CSS custom property ──────────────────────────
 // The chat section uses padding-bottom: var(--chatbar-space) so the
 // last message is never hidden behind the fixed bar.
