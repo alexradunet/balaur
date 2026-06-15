@@ -2980,3 +2980,30 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 /* ── Storybook: contain the sticky .topbar inside the canvas tile ───────── */
 .sb-canvas .topbar { position: static; }
+
+/* ── Composer — the unified owner-input ledge (draft mode) ──────────────── */
+.composer {
+  position: relative; width: 100%;
+  background: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
+  border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); padding: 12px 14px 14px;
+}
+.composer-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 8px; margin-bottom: 10px; min-height: 42px; }
+.composer-tools { display: flex; align-items: center; gap: 8px; }
+.composer-tool {
+  display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0; cursor: pointer;
+  background: var(--chrome-2); background-image: var(--grain-warm); background-size: 4px 4px;
+  border: 2px solid var(--outline-2); border-radius: 0; box-shadow: var(--bevel-in);
+}
+.composer-tool img { width: 20px; height: 20px; image-rendering: pixelated; }
+.composer-portrait { display: flex; align-items: center; justify-content: flex-end; }
+.composer-draft {
+  position: relative; min-width: 0; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px dashed var(--parch-edge); padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 6px;
+}
+.composer-draft textarea {
+  width: 100%; background: transparent; border: 0; resize: none; font: 16px/1.6 var(--font-body); color: var(--ink);
+  caret-color: var(--ember-deep); padding: 2px; min-height: 48px; max-height: 180px; outline: none;
+}
+.composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 2px dotted var(--parch-edge); padding-top: 8px; }
+.composer-hint { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }

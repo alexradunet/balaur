@@ -47,6 +47,7 @@ var stories = []Story{
 	{"modelswitcher", "Chat", "ModelSwitcher", modelSwitcherCanvas},
 	{"headswitcher", "Chat", "HeadSwitcher", headSwitcherCanvas},
 	{"chatbar", "Chat", "ChatBar", chatBarCanvas},
+	{"composer", "Chat", "Composer", composerCanvas},
 	{"taskcard", "Cards", "TaskCard", taskCardCanvas},
 	{"knowledgecard", "Cards", "KnowledgeCard", knowledgeCardCanvas},
 	{"calendarcell", "Display", "CalendarCell", calendarCellCanvas},
