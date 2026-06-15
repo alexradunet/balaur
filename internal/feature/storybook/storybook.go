@@ -383,3 +383,14 @@ func calendarCellCanvas() g.Node {
 		cell(ui.CalendarCellProps{Day: 31, Dim: true}),
 	)
 }
+
+func sparklineCanvas() g.Node {
+	data := []float64{62, 64, 61, 67, 70, 66, 72, 75, 73, 78}
+	frame := func(n g.Node) g.Node {
+		return h.Div(h.Class("fdn-card"), n)
+	}
+	return section("Sparkline",
+		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--teal-ink)", Width: 200, Height: 48})),
+		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--ember-deep)", Width: 200, Height: 48})),
+	)
+}

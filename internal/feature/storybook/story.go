@@ -50,6 +50,7 @@ var stories = []Story{
 	{"taskcard", "Cards", "TaskCard", taskCardCanvas},
 	{"knowledgecard", "Cards", "KnowledgeCard", knowledgeCardCanvas},
 	{"calendarcell", "Display", "CalendarCell", calendarCellCanvas},
+	{"sparkline", "Display", "Sparkline", sparklineCanvas},
 }
 
 // Stories returns the ordered registry.

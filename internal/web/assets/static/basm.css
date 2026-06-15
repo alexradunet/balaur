@@ -2890,3 +2890,6 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cal-pip-1 { background: var(--teal-ink); }
 .cal-pip-2 { background: var(--gold-ink); }
 .cal-day.is-selected .cal-pip { background: var(--ink); }
+
+/* ── Sparkline — tiny SVG trend chart (colour via attr) ─────────────────── */
+.sparkline { display: block; shape-rendering: geometricPrecision; }
