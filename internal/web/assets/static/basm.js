@@ -181,3 +181,18 @@ document.addEventListener('pointerdown', (e) => {
   document.addEventListener('pointerup', onUp);
   document.addEventListener('pointercancel', onUp);
 });
+
+// ── Storybook off-canvas nav drawer ────────────────────────────────
+// The sidebar (.sb-side) is fixed off-screen ≤920px; the .sb-topbar burger
+// and the .sb-backdrop both toggle it. Closes on backdrop click and on any
+// nav-item click (so navigating dismisses the drawer).
+window.basmToggleNav = function () {
+  var open = document.documentElement.classList.toggle('sb-nav-open');
+  document.querySelectorAll('.sb-side, .sb-backdrop').forEach(function (el) { el.classList.toggle('is-open', open); });
+  document.querySelectorAll('.sb-burger').forEach(function (b) { b.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+};
+document.addEventListener('click', function (e) {
+  if (e.target.closest('.sb-side .sb-nav-item') && document.documentElement.classList.contains('sb-nav-open')) {
+    window.basmToggleNav();
+  }
+});
