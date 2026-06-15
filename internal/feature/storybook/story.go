@@ -45,6 +45,7 @@ var stories = []Story{
 	{"dialoguechoices", "Chat", "DialogueChoices", dialogueChoicesCanvas},
 	{"messagedraft", "Chat", "MessageDraft", messageDraftCanvas},
 	{"modelswitcher", "Chat", "ModelSwitcher", modelSwitcherCanvas},
+	{"headswitcher", "Chat", "HeadSwitcher", headSwitcherCanvas},
 }
 
 // Stories returns the ordered registry.
