@@ -2907,3 +2907,19 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dayentry-last .dayentry-content { padding-bottom: 0; }
 .dayentry-title { font-size: 14.5px; color: var(--ink); line-height: 1.3; }
 .dayentry-detail { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+
+/* ── RecapCard — the daily-recap parchment card ─────────────────────────── */
+.recapcard {
+  position: relative; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: 15px 17px 16px;
+}
+.recapcard-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; background: var(--gold-ink); }
+.recapcard-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.recapcard-orb { width: 20px; height: 20px; image-rendering: pixelated; }
+.recapcard-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--teal-ink); }
+.recapcard-when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
+.recapcard-summary { margin: 0 0 11px; font-size: 15px; line-height: 1.55; }
+.recapcard-points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.recapcard-point { display: grid; grid-template-columns: 14px 1fr; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+.recapcard-sq { color: var(--teal-ink); }

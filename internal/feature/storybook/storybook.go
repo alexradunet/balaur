@@ -404,3 +404,13 @@ func dayEntryCanvas() g.Node {
 		)),
 	)
 }
+
+func recapCardCanvas() g.Node {
+	return section("RecapCard",
+		h.Div(h.Style("max-width:400px"),
+			ui.RecapCard(ui.RecapProps{
+				When: "earlier today", Summary: "We planned the orchard work and set the tomato watering. You asked me to keep two things.",
+				Points: []string{"Garden — tomatoes & peppers, watered at dusk", "Notes exported as Markdown", "Mend the deer fence before the weekend"},
+			})),
+	)
+}
