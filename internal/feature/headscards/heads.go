@@ -89,12 +89,7 @@ func buildHeads(app core.App) HeadsView {
 func HeadsCard(v HeadsView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-heads ucard-manage"), ID("ucard-heads"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/tome.png"), Alt("")),
-				g.Text("Heads"),
-			),
-		),
+		ui.CardHead("/static/icons/tome.png", "Heads"),
 		Ul(Class("head-list"), g.Group(headRows(v.Heads))),
 		Details(Class("head-new"),
 			Summary(g.Text("+ New head")),

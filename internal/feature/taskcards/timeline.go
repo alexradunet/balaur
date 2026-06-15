@@ -82,11 +82,7 @@ func buildTimeline(app core.App, days int) TLView {
 func TimelineCard(v TLView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-timeline"), ID("ucard-timeline"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/hourglass.png"), Alt("")),
-				g.Text("Timeline"),
-			),
+		ui.CardHead("/static/icons/hourglass.png", "Timeline",
 			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		timelineBody(v),

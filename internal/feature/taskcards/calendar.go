@@ -114,11 +114,7 @@ func calMondayOf(t time.Time) time.Time {
 func CalendarCard(v CalView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-calendar"), ID("ucard-calendar"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/hourglass.png"), Alt("")),
-				g.Text("Calendar"),
-			),
+		ui.CardHead("/static/icons/hourglass.png", "Calendar",
 			Span(Class("kcard-meta"), g.Text(v.Label)),
 		),
 		Div(Class("cal-compact"),

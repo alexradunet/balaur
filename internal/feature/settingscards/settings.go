@@ -18,12 +18,7 @@ import (
 func SettingsCard() g.Node {
 	return Article(
 		Class("kcard ucard ucard-settings"), ID("ucard-settings"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/key.png"), Alt("")),
-				g.Text("Settings"),
-			),
-		),
+		ui.CardHead("/static/icons/key.png", "Settings"),
 		Ul(Class("ucard-stats"),
 			Li(A(Href("/focus/settings?section=profile"), g.Text("Profile"))),
 			Li(A(Href("/focus/settings?section=models"), g.Text("Models & APIs"))),

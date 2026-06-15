@@ -55,12 +55,7 @@ func buildHabits(app core.App) []HabitView {
 func HabitsCard(habits []HabitView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-habits"), ID("ucard-habits"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/flame.png"), Alt("")),
-				g.Text("Habits"),
-			),
-		),
+		ui.CardHead("/static/icons/flame.png", "Habits"),
 		habitsBody(habits),
 		Footer(Class("kcard-actions"), A(Href("/focus/lifelog"), g.Text("life →"))),
 	)

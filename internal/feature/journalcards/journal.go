@@ -64,11 +64,7 @@ func buildJournal(app core.App, params map[string]string) JournalView {
 func JournalCard(v JournalView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-journal"), ID("ucard-journal"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/quill.png"), Alt("")),
-				g.Text("Journal"),
-			),
+		ui.CardHead("/static/icons/quill.png", "Journal",
 			journalParamLine(v.ParamLine),
 		),
 		journalBody(v),
