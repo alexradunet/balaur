@@ -2724,3 +2724,13 @@ progress.pull-progress-bar::-moz-progress-bar {
 .list-sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; text-align: right; }
 .list-meta-warn { color: var(--ember-deep); }
+
+/* ── List — parchment card of ListItem rows ─────────────────────────────── */
+.list {
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); overflow: hidden;
+}
+.list-head {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--gold-ink); padding: 11px 14px 9px; border-bottom: 2px solid var(--parch-edge);
+}

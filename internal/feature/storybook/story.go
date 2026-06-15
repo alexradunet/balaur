@@ -31,6 +31,7 @@ var stories = []Story{
 	{"tabs", "Navigation", "Tabs", tabsCanvas},
 	{"breadcrumb", "Navigation", "Breadcrumb", breadcrumbCanvas},
 	{"pagination", "Navigation", "Pagination", paginationCanvas},
+	{"list", "Display", "List", listCanvas},
 }
 
 // Stories returns the ordered registry.
