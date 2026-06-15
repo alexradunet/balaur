@@ -31,6 +31,10 @@ func TestBodyRendersAtoms(t *testing.T) {
 		`class="alert alert-warn"`,
 		`class="tooltip"`,
 		`class="skeleton skeleton-line"`,
+		`class="prim-field prim-field-text"`,
+		`class="prim-field prim-field-select"`,
+		`class="toggle"`,
+		`role="switch"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("storybook body missing %q", want)
