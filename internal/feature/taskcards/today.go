@@ -14,6 +14,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // TodayRow is one task line in the today card.
@@ -66,12 +67,7 @@ func rowOf(rec *core.Record, now time.Time) TodayRow {
 func TodayCard(v TodayView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-today"), ID("ucard-today"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/scroll.png"), Alt("")),
-				g.Text("Today"),
-			),
-		),
+		ui.CardHead("/static/icons/scroll.png", "Today"),
 		todayBody(v),
 		Footer(Class("kcard-actions"), A(Href("/focus/quests"), g.Text("all quests →"))),
 	)

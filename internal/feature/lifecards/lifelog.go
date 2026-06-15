@@ -124,12 +124,7 @@ func buildLifelogHabits(app core.App, now time.Time) []LifeHabitView {
 func LifelogCard(v LifelogView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-lifelog"), ID("ucard-lifelog"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/orb.png"), Alt("")),
-				g.Text("Life"),
-			),
-		),
+		ui.CardHead("/static/icons/orb.png", "Life"),
 		lifelogHabitStrip(v.Habits),
 		lifelogKindsList(v.Kinds),
 		Footer(Class("kcard-actions"), A(Href("/focus/lifelog"), g.Text("open life →"))),

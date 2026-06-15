@@ -82,11 +82,7 @@ func buildMeasure(app core.App, params map[string]string) MeasureView {
 func MeasureCard(v MeasureView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-measure"), ID("ucard-measure"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/orb.png"), Alt("")),
-				g.Text("Measure"),
-			),
+		ui.CardHead("/static/icons/orb.png", "Measure",
 			Span(Class("kcard-meta"), g.Text(v.Kind)),
 		),
 		measureBody(v),

@@ -114,11 +114,7 @@ func intParam(p map[string]string, key string, def int) int {
 func SkillsCard(rows []SkillRow, paramLine string) g.Node {
 	return Article(
 		Class("kcard ucard ucard-skills"), ID("ucard-skills"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/key.png"), Alt("")),
-				g.Text("Skills"),
-			),
+		ui.CardHead("/static/icons/key.png", "Skills",
 			g.If(paramLine != "", Span(Class("kcard-meta"), g.Text(paramLine))),
 		),
 		skillsSummaryBody(rows),
@@ -226,11 +222,7 @@ func skillFooterActions(r SkillRecord) g.Node {
 func SkillsManageCard(proposed, active []SkillRecord) g.Node {
 	return Article(
 		Class("kcard ucard ucard-manage ucard-skills-manage"), ID("ucard-skills-manage"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/key.png"), Alt("")),
-				g.Text("Skills"),
-			),
+		ui.CardHead("/static/icons/key.png", "Skills",
 			A(Class("kcard-meta"), Href("/focus/skills"), g.Text("manage all →")),
 		),
 		skillsManageBody(proposed, active),

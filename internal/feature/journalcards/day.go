@@ -83,11 +83,7 @@ func buildDay(app core.App, params map[string]string) DayView {
 func DayCard(v DayView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-day"), ID("ucard-day"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/scroll.png"), Alt("")),
-				g.Text("day"),
-			),
+		ui.CardHead("/static/icons/scroll.png", "day",
 			Span(Class("tag"), g.Text(v.Label)),
 		),
 		Ul(Class("ucard-stats"),

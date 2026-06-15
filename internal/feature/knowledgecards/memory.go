@@ -52,11 +52,7 @@ type MemoryManageView struct {
 func MemoryCard(v MemoryView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-memory"), ID("ucard-memory"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/tome.png"), Alt("")),
-				g.Text("Memory"),
-			),
+		ui.CardHead("/static/icons/tome.png", "Memory",
 			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		memoryBody(v),
@@ -219,11 +215,7 @@ func memoryActions(r MemoryRecord) g.Node {
 func MemoryManageCard(v MemoryManageView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-manage ucard-memories-manage"), ID("ucard-memories-manage"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/tome.png"), Alt("")),
-				g.Text("Memory"),
-			),
+		ui.CardHead("/static/icons/tome.png", "Memory",
 			A(Class("kcard-meta"), Href("/focus/memory"), g.Text("manage all →")),
 		),
 		memoryManageBody(v),

@@ -24,11 +24,7 @@ type QuestsView struct {
 func QuestsCard(v QuestsView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-quests"), ID("ucard-quests"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/scroll.png"), Alt("")),
-				g.Text("Quest log"),
-			),
+		ui.CardHead("/static/icons/scroll.png", "Quest log",
 			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		questsSummaryBody(v),
@@ -70,11 +66,7 @@ func questsSummaryRow(row TaskView) g.Node {
 func QuestsManageCard(v QuestsView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-manage ucard-quests-manage"), ID("ucard-quests-manage"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"),
-				Img(Class("tool-icon"), Src("/static/icons/scroll.png"), Alt("")),
-				g.Text("Quest log"),
-			),
+		ui.CardHead("/static/icons/scroll.png", "Quest log",
 			A(Class("kcard-meta"), Href("/focus/quests"), g.Text("all quests →")),
 		),
 		questsManageBody(v),
