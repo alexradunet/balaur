@@ -196,6 +196,7 @@ func Register(se *core.ServeEvent) error {
 	})
 	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
 	se.Router.GET("/storybook", h.storybookHome)
+	se.Router.GET("/storybook/{id}", h.storybookStory)
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)

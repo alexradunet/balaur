@@ -2477,11 +2477,10 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .ucard-manage-list .kcard { margin: 0; }
 
-/* ── Storybook gallery chrome (dev surface) ───────────────────────────
-   .sb sits inside <main id="main">, which already centers + pads (0 6vw);
-   restate only the vertical rhythm here or the 6vw compounds to 12vw. */
-.sb { padding: 40px 0 96px; }
-.sb > h1 { font-size: 30px; margin: 0 0 4px; }
+/* ── Storybook canvas content (Overview + per-component) ───────────────
+   .sb wraps the canvas content inside .sb-canvas, which owns the side +
+   bottom padding; only the top rhythm lives here. */
+.sb { padding: 40px 0 0; }
 .sb-section { padding: 28px 0 4px; border-top: 2px dashed var(--hair); }
 .sb-section:first-of-type { border-top: 0; }
 .sb-section > h2 {
@@ -2632,3 +2631,49 @@ progress.pull-progress-bar::-moz-progress-bar {
 .toggle-label {
   font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg);
 }
+
+/* ── Storybook shell — sidebar rail + canvas ─────────────────────────── */
+.sb-root { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+.sb-side {
+  display: flex; flex-direction: column; height: 100vh;
+  position: sticky; top: 0; overflow-y: auto;
+  background: var(--chrome); background-image: var(--wood-planks);
+  border-right: 2px solid var(--outline-2); box-shadow: var(--bevel-up);
+}
+.sb-brand {
+  display: flex; align-items: center; gap: 8px; padding: 14px 16px;
+  font-family: var(--font-pixel); font-size: 13px; letter-spacing: .06em;
+  color: var(--gold); border-bottom: 2px solid var(--outline-2);
+}
+.sb-brand img { width: 22px; height: 22px; image-rendering: pixelated; }
+.sb-nav { flex: 1; padding: 8px 0; }
+.sb-nav-group { padding: 6px 0; }
+.sb-nav-label {
+  padding: 6px 16px 4px; font-family: var(--font-mono); font-size: 9.5px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.sb-nav-item {
+  display: block; padding: 6px 16px; text-decoration: none;
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .02em;
+  color: var(--chrome-fg); border-left: 3px solid transparent;
+}
+.sb-nav-item:hover { filter: brightness(1.18); }
+.sb-nav-item-active { color: var(--gold); background: var(--chrome-2); border-left-color: var(--ember); }
+.sb-foot { padding: 12px 16px; border-top: 2px solid var(--outline-2); }
+.sb-canvas { height: 100vh; overflow-y: auto; max-width: none; margin: 0; padding: 0 5vw 96px; background: var(--bg); }
+.sb-crumb {
+  position: sticky; top: 0; z-index: 5; margin: 0 0 8px; padding: 14px 0;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted);
+  background: var(--bg); border-bottom: 2px dashed var(--hair);
+}
+/* Overview stat tiles + tiers */
+.sb-lede { margin: 18px 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--fg-strong); }
+.sb-stats { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 28px; }
+.sb-stat {
+  padding: 12px 18px; min-width: 92px; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel);
+}
+.sb-stat b { display: block; font-family: var(--font-display); font-size: 24px; color: var(--ink); }
+.sb-stat span { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); }
