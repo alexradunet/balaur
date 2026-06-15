@@ -58,11 +58,6 @@ func buildLifelog(app core.App) LifelogView {
 	ks, err := life.Kinds(app)
 	if err == nil {
 		for _, k := range ks {
-			recs, err := life.Series(app, k.Kind, now.AddDate(0, 0, -lifeWindowDays))
-			if err != nil {
-				continue
-			}
-			_ = recs // series fetched for consistency with legacy; tile shows count only
 			kinds = append(kinds, LifeKindView{
 				Kind:  k.Kind,
 				Unit:  k.Unit,
