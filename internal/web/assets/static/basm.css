@@ -2598,3 +2598,15 @@ progress.pull-progress-bar::-moz-progress-bar {
   font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .02em; color: var(--muted);
 }
 .prim-msg-error { color: var(--ember-red); }
+
+/* ── Primitives: Select (extends the shared .prim-field base) ──────────── */
+.prim-select { position: relative; width: 100%; }
+.prim-field-select {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer;
+  font: 13px var(--font-mono); text-transform: uppercase; letter-spacing: .03em;
+  padding: 11px 34px 11px 12px;
+}
+.prim-select-chevron {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; font-family: var(--font-mono); font-size: 12px; color: var(--gold-ink);
+}
