@@ -2769,3 +2769,14 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dlg-title { margin: 0 0 10px; font-family: var(--font-display); font-size: 24px; color: var(--ink); line-height: 1.1; }
 .dlg-body { font-size: 15px; line-height: 1.55; }
 .dlg-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+
+/* ── SectionLabel — mono caption + trailing dashed hairline rule ─────────── */
+.section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.section-label-text {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--sl-accent, var(--gold)); white-space: nowrap;
+}
+.section-label-rule {
+  flex: 1; height: 2px;
+  background: linear-gradient(to right, var(--hair) 50%, transparent 50%) 0 0 / 8px 2px repeat-x;
+}

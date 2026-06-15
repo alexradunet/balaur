@@ -169,3 +169,10 @@ func dialogCanvas() g.Node {
 		},
 	}, g.Text("This removes the thread and everything Balaur learned in it. This cannot be undone.")))
 }
+
+func sectionLabelCanvas() g.Node {
+	return section("SectionLabel",
+		ui.SectionLabel(ui.SectionLabelProps{Text: "Today"}),
+		ui.SectionLabel(ui.SectionLabelProps{Text: "This week", Accent: "var(--smoke)"}),
+	)
+}

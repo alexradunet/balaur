@@ -35,6 +35,7 @@ var stories = []Story{
 	{"emptystate", "Feedback", "EmptyState", emptyStateCanvas},
 	{"toast", "Feedback", "Toast", toastCanvas},
 	{"dialog", "Feedback", "Dialog", dialogCanvas},
+	{"sectionlabel", "Typography", "SectionLabel", sectionLabelCanvas},
 }
 
 // Stories returns the ordered registry.
