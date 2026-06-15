@@ -1,7 +1,8 @@
 // Package storybook builds the Hearthwood component gallery — the product
-// surface at /. Body() returns the gallery node; the web gateway composes it
-// into shell.Page. It is NOT a registered card and renders from in-package
-// fixtures only (never PocketBase), so it works on an empty database.
+// surface (mounted at /storybook now; it takes / when boards is cut). Body()
+// returns the gallery node; the web gateway composes it into shell.Page. It is
+// NOT a registered card and renders from in-package fixtures only (never
+// PocketBase), so it works on an empty database.
 package storybook
 
 import (
