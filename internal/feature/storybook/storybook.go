@@ -69,6 +69,17 @@ func Body() g.Node {
 			ui.Skeleton(ui.SkeletonProps{Variant: "block"}),
 			ui.Skeleton(ui.SkeletonProps{Variant: "avatar"}),
 		),
+		section("Form fields",
+			ui.TextField(ui.FieldProps{Label: "Name", Placeholder: "Your name", Name: "name"}),
+			ui.TextField(ui.FieldProps{Label: "Email", Type: "email", Value: "you@yourbox", Name: "email", Hint: "Used only on your box."}),
+			ui.TextField(ui.FieldProps{Label: "Token", ID: "tok", Name: "token", Error: "Required."}),
+			ui.Select(ui.SelectProps{Label: "Model", Options: []string{"local", "openai", "anthropic"}, Value: "local", Name: "model"}),
+		),
+		section("Toggles",
+			ui.Toggle(ui.ToggleProps{Label: "Notifications", ID: "notif", Checked: true}),
+			ui.Toggle(ui.ToggleProps{Label: "OS access", ID: "os"}),
+			ui.Toggle(ui.ToggleProps{Label: "Disabled", ID: "dis", Disabled: true}),
+		),
 	)
 }
 
