@@ -236,3 +236,34 @@ func colorsCanvas() g.Node {
 	}
 	return section("Colors", h.Div(append([]g.Node{h.Class("fdn-stack")}, groups...)...))
 }
+
+func typeRole(role, sampleClass, sample, note string) g.Node {
+	return h.Div(h.Class("fdn-card type-row"),
+		h.Div(h.Class("type-role"), g.Text(role)),
+		h.Div(h.Class(sampleClass), g.Text(sample)),
+		h.Div(h.Class("type-note"), g.Text(note)),
+	)
+}
+
+func typographyCanvas() g.Node {
+	scale := []struct{ Tag, Class string }{
+		{"36", "type-scale-36"}, {"28", "type-scale-28"}, {"22", "type-scale-22"}, {"17", "type-scale-17"}, {"13", "type-scale-13"},
+	}
+	rows := make([]g.Node, 0, len(scale))
+	for _, s := range scale {
+		rows = append(rows, h.Div(h.Class("type-scale-row"),
+			h.Span(h.Class("type-scale-tag"), g.Text(s.Tag)),
+			h.Span(h.Class(s.Class), g.Text("The hearth is lit")),
+		))
+	}
+	return section("Typography", h.Div(h.Class("fdn-col"),
+		typeRole("Display", "type-sample-display", "A new head wakes", "Jersey 15 · headings 20px+"),
+		typeRole("Pixel", "type-sample-pixel", "BALAUR", "Silkscreen · nameplate & runes only"),
+		typeRole("Body", "type-sample-body", "I shall weigh the matter.", "Piazzolla · 17px / 1.6"),
+		typeRole("Mono", "type-sample-mono", "tool · search · used ×3", "JetBrains Mono · meta, nav, code"),
+		h.Div(h.Class("fdn-card"),
+			h.Div(h.Class("type-scale-head"), g.Text("Scale")),
+			h.Div(append([]g.Node{h.Class("type-scale-list")}, rows...)...),
+		),
+	))
+}

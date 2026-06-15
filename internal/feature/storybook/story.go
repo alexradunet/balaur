@@ -14,6 +14,7 @@ type Story struct {
 
 var stories = []Story{
 	{"colors", "Foundations", "Colors", colorsCanvas},
+	{"typography", "Foundations", "Typography", typographyCanvas},
 	{"button", "Atoms", "Button", buttonCanvas},
 	{"tag", "Atoms", "Tag", tagCanvas},
 	{"pips", "Atoms", "Pips", pipsCanvas},

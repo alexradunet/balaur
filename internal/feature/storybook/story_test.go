@@ -62,6 +62,29 @@ func TestColorsCanvas(t *testing.T) {
 	}
 }
 
+func TestTypographyCanvas(t *testing.T) {
+	s, ok := storybook.Lookup("typography")
+	if !ok {
+		t.Fatal("typography story not registered")
+	}
+	var b strings.Builder
+	if err := s.Canvas().Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+	for _, want := range []string{
+		`<div class="type-role">Display</div>`,
+		`<div class="type-sample-display">A new head wakes</div>`,
+		`<div class="type-sample-pixel">BALAUR</div>`,
+		`The hearth is lit`,
+		`<span class="type-scale-tag">36</span>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("typography canvas missing %q", want)
+		}
+	}
+}
+
 func TestOverviewRenders(t *testing.T) {
 	var b strings.Builder
 	if err := storybook.Overview().Render(&b); err != nil {
