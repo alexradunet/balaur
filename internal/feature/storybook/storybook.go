@@ -106,3 +106,12 @@ func toggleCanvas() g.Node {
 		ui.Toggle(ui.ToggleProps{Label: "Disabled", ID: "dis", Disabled: true}),
 	)
 }
+
+func tabsCanvas() g.Node {
+	return section("Tabs", ui.Tabs([]ui.TabItem{
+		{Label: "Overdue", Href: "#"},
+		{Label: "Today", Href: "#", Active: true},
+		{Label: "Upcoming", Href: "#"},
+		{Label: "Someday", Href: "#"},
+	}))
+}
