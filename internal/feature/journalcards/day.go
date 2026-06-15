@@ -84,7 +84,7 @@ func DayCard(v DayView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-day"), ID("ucard-day"),
 		ui.CardHead("/static/icons/scroll.png", "day",
-			Span(Class("tag"), g.Text(v.Label)),
+			ui.Tag(g.Text(v.Label)),
 		),
 		Ul(Class("ucard-stats"),
 			Li(g.Text(fmt.Sprintf("%d journal", v.JournalN))),

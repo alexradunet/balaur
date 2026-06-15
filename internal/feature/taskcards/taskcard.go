@@ -4,6 +4,8 @@ import (
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
+
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // TaskView is the full task view-model behind the task-card partial (card-task.html):
@@ -25,7 +27,7 @@ func TaskCard(v TaskView) g.Node {
 		Class("kcard tcard tcard-"+v.Status), ID("tcard-"+v.ID),
 		Header(Class("kcard-head"),
 			Span(Class("kcard-kind"), g.Text("▪ task")),
-			g.If(v.RecurLine != "", Span(Class("tag"), g.Text(v.RecurLine))),
+			g.If(v.RecurLine != "", ui.Tag(g.Text(v.RecurLine))),
 		),
 		H3(Class("kcard-title"), g.Text(v.Title)),
 		taskDue(v),

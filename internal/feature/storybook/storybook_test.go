@@ -19,6 +19,14 @@ func TestBodyRendersAtoms(t *testing.T) {
 		`class="btn btn-ghost"`,
 		`class="btn btn-wood"`,
 		`class="btn btn-primary btn-sm"`,
+		`class="tag"`,
+		`class="kcard-pips"`,
+		`class="pip pip-on"`,
+		`class="card"`,
+		`class="balaur-avatar`,
+		`class="tool-icon"`,
+		`class="stitch"`,
+		`class="folk-band"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("storybook body missing %q", want)

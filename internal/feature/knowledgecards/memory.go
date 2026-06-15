@@ -75,24 +75,7 @@ func memoryRow(row MemoryRow) g.Node {
 	return Li(Class("ucard-row"),
 		Span(Class("ucard-title"), A(Href("/focus/memory"), g.Text(row.Title))),
 		Span(Class("kcard-meta"), g.Text(row.Category)),
-		memoryPips(row.Importance),
-	)
-}
-
-// memoryPips renders the 5-pip importance indicator for a summary row.
-func memoryPips(importance int) g.Node {
-	pips := make([]g.Node, 5)
-	for i := 0; i < 5; i++ {
-		if i < importance {
-			pips[i] = I(Class("pip pip-on"))
-		} else {
-			pips[i] = I(Class("pip"))
-		}
-	}
-	return Span(
-		Class("kcard-pips"),
-		g.Attr("title", fmt.Sprintf("importance %d/5", importance)),
-		g.Group(pips),
+		ui.Pips(row.Importance, 5, ""),
 	)
 }
 
@@ -103,7 +86,7 @@ func MemoryRecordCard(r MemoryRecord) g.Node {
 		Class("kcard kcard-"+r.Status), ID("kcard-"+r.ID),
 		Header(Class("kcard-head"),
 			Span(Class("kcard-kind"), g.Text("▪ "+memoryCategory(r.Category))),
-			recordPips(r.Importance),
+			ui.Pips(r.Importance, 5, ""),
 		),
 		H3(Class("kcard-title"), g.Text(r.Title)),
 		g.If(r.Content != "", P(Class("kcard-body"), g.Text(r.Content))),
@@ -119,23 +102,6 @@ func memoryCategory(cat string) string {
 		return "memory"
 	}
 	return cat
-}
-
-// recordPips renders the 5-pip importance indicator for a record card.
-func recordPips(importance int) g.Node {
-	pips := make([]g.Node, 5)
-	for i := 0; i < 5; i++ {
-		if i < importance {
-			pips[i] = I(Class("pip pip-on"))
-		} else {
-			pips[i] = I(Class("pip"))
-		}
-	}
-	return Span(
-		Class("kcard-pips"),
-		g.Attr("title", fmt.Sprintf("importance %d/5", importance)),
-		g.Group(pips),
-	)
 }
 
 // memoryEditForm renders the collapsible edit form inside a record card.

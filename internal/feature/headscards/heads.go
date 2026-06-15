@@ -129,10 +129,10 @@ func headRow(row HeadRow) g.Node {
 func headRowName(row HeadRow) g.Node {
 	children := []g.Node{g.Text(row.Name)}
 	if row.BuiltIn {
-		children = append(children, g.Text(" "), Span(Class("tag"), g.Text("built-in")))
+		children = append(children, g.Text(" "), ui.Tag(g.Text("built-in")))
 	}
 	if row.Active {
-		children = append(children, g.Text(" "), Span(Class("tag"), g.Text("active")))
+		children = append(children, g.Text(" "), ui.Tag(g.Text("active")))
 	}
 	return Span(Class("head-row-name"), g.Group(children))
 }

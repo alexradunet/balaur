@@ -1,22 +1,12 @@
 package ui_test
 
 import (
-	"strings"
 	"testing"
 
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/ui"
 )
-
-func render(t *testing.T, n g.Node) string {
-	t.Helper()
-	var b strings.Builder
-	if err := n.Render(&b); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	return b.String()
-}
 
 func TestButtonVariants(t *testing.T) {
 	cases := []struct {
