@@ -2575,3 +2575,26 @@ progress.pull-progress-bar::-moz-progress-bar {
 .skeleton-avatar { --sk-w: 48px; --sk-h: 48px; }
 @keyframes sk-sheen { from { background-position: 200% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* ── Primitives: shared form shell (TextField + Select) ────────────────
+   Mono uppercase caption stacked over a parchment control, full width.
+   The .prim-field base is defined ONCE here; Select adds only specializers. */
+.prim-control { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.prim-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+}
+.prim-field {
+  width: 100%; box-sizing: border-box;
+  color: var(--ink); background-color: var(--surface);
+  background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); border-radius: var(--radius);
+  box-shadow: var(--bevel-in); outline: none; caret-color: var(--ember-deep);
+}
+.prim-field:disabled { opacity: .55; cursor: default; }
+.prim-field-text { padding: 10px 12px; font: 15px var(--font-body); }
+.prim-field-error { border-color: var(--ember-red); }
+.prim-msg {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .02em; color: var(--muted);
+}
+.prim-msg-error { color: var(--ember-red); }
