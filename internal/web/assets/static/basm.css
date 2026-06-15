@@ -2691,3 +2691,22 @@ progress.pull-progress-bar::-moz-progress-bar {
 .crumb-link:hover { color: var(--gold); }
 .crumb-cur { color: var(--gold); }
 .crumb-sep { color: var(--smoke); }
+
+/* ── Pagination — prev / numbered slabs / next ──────────────────────────
+   Active page = raised gold chip; the rest are inset wells. */
+.pager { display: inline-flex; align-items: center; gap: 6px; }
+.pager-slab {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 34px; padding: 0 9px;
+  font-family: var(--font-mono); font-size: 12px; text-decoration: none;
+  color: var(--chrome-fg); background: var(--chrome-2);
+  background-image: var(--grain-warm); background-size: 4px 4px;
+  border: 2px solid var(--outline-2); border-radius: var(--radius); box-shadow: var(--bevel-in);
+}
+.pager-slab:hover { filter: brightness(1.15); }
+.pager-active {
+  color: var(--gold); background: var(--chrome); border-color: var(--gold-deep);
+  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark), var(--drop-hard);
+}
+.pager-disabled { opacity: .4; }
+.pager-gap { align-self: end; padding: 0 2px; color: var(--smoke); font-family: var(--font-mono); }

@@ -123,3 +123,9 @@ func breadcrumbCanvas() g.Node {
 		{Label: "Today"},
 	}))
 }
+
+func paginationCanvas() g.Node {
+	return section("Pagination", ui.Pagination(ui.PagerProps{
+		Total: 8, Page: 3, HrefFor: func(n int) string { return "#" },
+	}))
+}
