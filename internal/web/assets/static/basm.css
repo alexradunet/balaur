@@ -2741,3 +2741,14 @@ progress.pull-progress-bar::-moz-progress-bar {
 .empty-title { margin: 0; font-family: var(--font-display); font-size: 22px; color: var(--fg-strong); }
 .empty-line { margin: 0; max-width: 360px; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .empty-action { margin-top: 4px; }
+
+/* ── Toast — accent-bordered parchment status pill ──────────────────────── */
+.toast {
+  display: inline-flex; align-items: center; gap: 11px; max-width: 100%;
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  color: var(--ink); border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); padding: 11px 15px;
+}
+.toast-success { border-color: var(--good-ink); }
+.toast-warn { border-color: var(--ember-deep); }
+.toast-icon { width: 20px; height: 20px; image-rendering: pixelated; flex-shrink: 0; }
+.toast-msg { font-size: 14px; line-height: 1.45; }

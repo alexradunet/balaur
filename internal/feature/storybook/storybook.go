@@ -149,3 +149,11 @@ func emptyStateCanvas() g.Node {
 		ActionHref:  "#",
 	}))
 }
+
+func toastCanvas() g.Node {
+	return section("Toast",
+		ui.Toast(ui.ToastProps{}, g.Text("Saved to the book.")),
+		ui.Toast(ui.ToastProps{Tone: "success"}, g.Text("Task marked done.")),
+		ui.Toast(ui.ToastProps{Tone: "warn"}, g.Text("Heads up — that's overdue.")),
+	)
+}
