@@ -3007,3 +3007,37 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 2px dotted var(--parch-edge); padding-top: 8px; }
 .composer-hint { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
+
+/* ── Storybook responsive shell — off-canvas drawer ≤920px ──────────────── */
+.sb-topbar { display: none; }
+.sb-backdrop { display: none; }
+@media (max-width: 920px) {
+  .sb-root { grid-template-columns: 1fr; }
+  .sb-topbar {
+    display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50;
+    padding: 10px 16px; border-bottom: 2px solid var(--outline-2);
+    background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
+  }
+  .sb-burger {
+    font-family: var(--font-mono); font-size: 18px; line-height: 1; cursor: pointer;
+    background: none; border: 1px solid var(--chrome-fg); color: var(--gold); padding: 5px 10px; border-radius: var(--radius);
+  }
+  .sb-topbar-brand { font-family: var(--font-pixel); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+  .sb-topbar .crest { width: 28px; height: 28px; image-rendering: pixelated; }
+  .sb-side {
+    position: fixed; inset: 0 auto 0 0; width: min(86vw, 322px); z-index: 60;
+    transform: translateX(-104%); transition: transform .2s var(--ease-crisp); box-shadow: 6px 0 0 rgba(0, 0, 0, .4);
+  }
+  .sb-side.is-open { transform: none; }
+  .sb-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(8, 5, 2, .62); }
+  .sb-canvas { height: auto; padding: 26px 16px 80px; }
+}
+@media (max-width: 520px) { .sb-canvas { padding: 20px 10px 72px; } }
+@media (prefers-reduced-motion: reduce) { .sb-side { transition: none; } }
+
+/* ── Responsive component wrap/reflow fixes ─────────────────────────────── */
+.dayentry-content { min-width: 0; }
+.dayentry-title { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .dayentry { grid-template-columns: 44px 18px 1fr; column-gap: 9px; } }
+@media (max-width: 520px) { .composer-top { grid-template-columns: 1fr auto; } }
+.list-title, .list-sub { overflow-wrap: anywhere; }

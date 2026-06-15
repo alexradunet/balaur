@@ -26,8 +26,11 @@ func TestSidebarPage(t *testing.T) {
 		`<title>Button · Balaur</title>`,
 		`<link rel="stylesheet" href="/static/basm.css">`,
 		`<div class="sb-root">`,
+		`<header class="sb-topbar">`,
+		`<button class="sb-burger" type="button" onclick="basmToggleNav()"`,
 		`<aside>SIDE</aside>`,
 		`<main class="sb-canvas">`,
+		`<div class="sb-backdrop" onclick="basmToggleNav()"></div>`,
 		`<header class="sb-crumb">Storybook / Button</header>`,
 		`CANVAS`,
 	} {
