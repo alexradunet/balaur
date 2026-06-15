@@ -10,6 +10,7 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 )
 
 // section wraps a labelled group of component variants.
@@ -181,5 +182,26 @@ func screenTitleCanvas() g.Node {
 	return section("ScreenTitle",
 		ui.ScreenTitle(ui.ScreenTitleProps{Eyebrow: "Tuesday · 14 May", Title: "On the book."}),
 		ui.ScreenTitle(ui.ScreenTitleProps{Title: "Memory"}),
+	)
+}
+
+func chatMessageCanvas() g.Node {
+	// Wrap in .chat so --portrait-size (set on .chat) resolves; the portrait is
+	// sized by --portrait-size, not ui.Avatar's --avatar-size.
+	return section("Message",
+		h.Div(h.Class("chat"),
+			chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Content: "Noted — I'll remind you at 6pm. Anything else for the book?"}),
+			chat.Message(chat.MessageProps{Role: "user", Who: "You", AvatarSrc: "/static/crest.png", Content: "Add: water the tomatoes every 2 days."}),
+			chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Pending: true}),
+		),
+	)
+}
+
+func chatToolRowCanvas() g.Node {
+	return section("ToolRow",
+		h.Div(h.Class("chat"),
+			chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", Content: "added task: water the tomatoes · every 2 days 18:00"}),
+			chat.ToolRow(chat.ToolRowProps{Tool: "remember", Icon: "tome", Content: "saved: prefers tea over coffee"}),
+		),
 	)
 }
