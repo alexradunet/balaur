@@ -9,6 +9,8 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
+	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
 )
@@ -351,5 +353,54 @@ func chatBarCanvas() g.Node {
 			ActiveModel: "gemma3:4b",
 			AvatarSrc:   "/static/crest.png",
 		}),
+	)
+}
+
+func taskCardCanvas() g.Node {
+	return section("TaskCard",
+		taskcards.TaskCard(taskcards.TaskView{ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due today 18:00", RecurLine: "every 2 days"}),
+		taskcards.TaskCard(taskcards.TaskView{ID: "t2", Title: "Call the vet about Luna", Status: "open", DueLine: "due yesterday", Overdue: true}),
+		taskcards.TaskCard(taskcards.TaskView{ID: "t3", Title: "Submit the quarterly report", Status: "done"}),
+	)
+}
+
+func knowledgeCardCanvas() g.Node {
+	return section("KnowledgeCard",
+		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m1", Status: "proposed", Category: "preference", Title: "Prefers tea over coffee", Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3}),
+		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m2", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", WhenToUse: "pet care", Importance: 4, UseCount: 7}),
+		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m3", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Content: "Was open 6am–10pm; the gym shut down in May.", Importance: 1}),
+	)
+}
+
+func calendarCellCanvas() g.Node {
+	cell := func(p ui.CalendarCellProps) g.Node {
+		return h.Div(h.Style("width:76px"), ui.CalendarCell(p))
+	}
+	return section("CalendarCell",
+		cell(ui.CalendarCellProps{Day: 8, Pips: 1}),
+		cell(ui.CalendarCellProps{Day: 14, Pips: 2, Today: true}),
+		cell(ui.CalendarCellProps{Day: 15, Pips: 2, Selected: true}),
+		cell(ui.CalendarCellProps{Day: 31, Dim: true}),
+	)
+}
+
+func sparklineCanvas() g.Node {
+	data := []float64{62, 64, 61, 67, 70, 66, 72, 75, 73, 78}
+	frame := func(n g.Node) g.Node {
+		return h.Div(h.Class("fdn-card"), n)
+	}
+	return section("Sparkline",
+		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--teal-ink)", Width: 200, Height: 48})),
+		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--ember-deep)", Width: 200, Height: 48})),
+	)
+}
+
+func dayEntryCanvas() g.Node {
+	return section("DayEntry",
+		h.Div(h.Class("list"), h.Div(h.Style("padding:14px"),
+			ui.DayEntry(ui.DayEntryProps{Time: "07:30", Title: "Fed the hens", Detail: "daily · streak 12", Tone: "gold"}),
+			ui.DayEntry(ui.DayEntryProps{Time: "13:00", Title: "Logged weight — 81.2 kg", Detail: "life log", Tone: "teal"}),
+			ui.DayEntry(ui.DayEntryProps{Time: "18:00", Title: "Watered the tomatoes", Detail: "every 2 days", Tone: "ember", Last: true}),
+		)),
 	)
 }

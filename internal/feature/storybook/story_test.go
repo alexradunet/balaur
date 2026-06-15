@@ -40,6 +40,25 @@ func TestButtonCanvasRenders(t *testing.T) {
 	}
 }
 
+func TestCardsCanvas(t *testing.T) {
+	for _, tc := range []struct{ id, want string }{
+		{"taskcard", `<h3 class="kcard-title">Water the tomatoes</h3>`},
+		{"knowledgecard", `<h3 class="kcard-title">Prefers tea over coffee</h3>`},
+	} {
+		s, ok := storybook.Lookup(tc.id)
+		if !ok {
+			t.Fatalf("%s story not registered", tc.id)
+		}
+		var b strings.Builder
+		if err := s.Canvas().Render(&b); err != nil {
+			t.Fatalf("%s render: %v", tc.id, err)
+		}
+		if got := b.String(); !strings.Contains(got, tc.want) {
+			t.Errorf("%s canvas missing %q in: %s", tc.id, tc.want, got)
+		}
+	}
+}
+
 func TestColorsCanvas(t *testing.T) {
 	s, ok := storybook.Lookup("colors")
 	if !ok {
