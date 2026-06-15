@@ -6,7 +6,7 @@ import (
 )
 
 // TestMain makes the web test package hermetic against any live Ollama daemon
-// on the host. Model-pull handlers (e.g. POST /ui/model/gguf/download) launch a
+// on the host. Model-pull handlers (e.g. POST /ui/model/pull/download) launch a
 // real background pull goroutine whose onDone callback writes to the DB; on a
 // box actually running Ollama that callback can complete and fire after a
 // test's app has been torn down, panicking in a PocketBase query. Pointing the

@@ -1797,7 +1797,7 @@ dialog::backdrop {
   font-size: 12px;
   color: var(--chrome-fg);
 }
-.chatbar-download .gguf-progress-bar { width: 100%; }
+.chatbar-download .pull-progress-bar { width: 100%; }
 
 /* ── Model error ─────────────────────────────────────────────────── */
 
@@ -1877,9 +1877,9 @@ dialog::backdrop {
   box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
 }
 
-/* ── GGUF downloads ──────────────────────────────────────────────── */
+/* ── Model pulls ─────────────────────────────────────────────────── */
 
-progress.gguf-progress-bar {
+progress.pull-progress-bar {
   appearance: none;
   -webkit-appearance: none;
   width: 100%;
@@ -1890,22 +1890,22 @@ progress.gguf-progress-bar {
   accent-color: var(--gold);
 }
 
-progress.gguf-progress-bar::-webkit-progress-bar {
+progress.pull-progress-bar::-webkit-progress-bar {
   background: var(--surface-2);
   border-radius: var(--radius);
 }
 
-progress.gguf-progress-bar::-webkit-progress-value {
+progress.pull-progress-bar::-webkit-progress-value {
   background: var(--gold);
   border-radius: var(--radius);
 }
 
-progress.gguf-progress-bar::-moz-progress-bar {
+progress.pull-progress-bar::-moz-progress-bar {
   background: var(--gold);
   border-radius: var(--radius);
 }
 
-.gguf-download-row {
+.pull-download-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1913,7 +1913,7 @@ progress.gguf-progress-bar::-moz-progress-bar {
   padding: 8px 0;
 }
 
-.gguf-download-name {
+.pull-download-name {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--fg-strong);
@@ -1923,21 +1923,21 @@ progress.gguf-progress-bar::-moz-progress-bar {
   white-space: nowrap;
 }
 
-.gguf-download-bytes {
+.pull-download-bytes {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--chrome-fg);
   white-space: nowrap;
 }
 
-.gguf-file-list {
+.pull-file-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 16px;
 }
 
-.gguf-file-row {
+.pull-file-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1949,7 +1949,7 @@ progress.gguf-progress-bar::-moz-progress-bar {
   border-radius: var(--radius);
 }
 
-.gguf-file-name {
+.pull-file-name {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--ink);
@@ -1959,11 +1959,11 @@ progress.gguf-progress-bar::-moz-progress-bar {
   white-space: nowrap;
 }
 
-.gguf-file-size {
+.pull-file-size {
   white-space: nowrap;
 }
 
-.gguf-done {
+.pull-done {
   color: var(--chrome-fg);
   font-size: 13px;
   padding: 6px 0;

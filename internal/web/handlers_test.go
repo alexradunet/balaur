@@ -708,10 +708,10 @@ func TestModelHandlers(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:            "pull progress endpoint renders when idle",
 			Method:          "GET",
-			URL:             "/ui/model/gguf/progress",
+			URL:             "/ui/model/pull/progress",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"gguf-progress"},
+			ExpectedContent: []string{"pull-progress"},
 		}
 		scenario.Test(t)
 	})
@@ -733,7 +733,7 @@ func TestModelHandlers(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:            "delete refuses the active model",
 			Method:          "POST",
-			URL:             "/ui/model/gguf/delete",
+			URL:             "/ui/model/pull/delete",
 			Body:            strings.NewReader("name=gemma4:e4b"),
 			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory:  newGuardApp,
@@ -750,12 +750,12 @@ func TestModelHandlers(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:               "GPU preset tag accepted",
 			Method:             "POST",
-			URL:                "/ui/model/gguf/download",
+			URL:                "/ui/model/pull/download",
 			Body:               strings.NewReader("target=models&tag=gemma4:26b"),
 			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory:     newWebApp,
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{"gguf-progress"},
+			ExpectedContent:    []string{"pull-progress"},
 			NotExpectedContent: []string{"unknown model preset"},
 		}
 		scenario.Test(t)
@@ -765,7 +765,7 @@ func TestModelHandlers(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:            "unknown preset tag rejected",
 			Method:          "POST",
-			URL:             "/ui/model/gguf/download",
+			URL:             "/ui/model/pull/download",
 			Body:            strings.NewReader("target=models&tag=evil:1b"),
 			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory:  newWebApp,
