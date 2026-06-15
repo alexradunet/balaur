@@ -28,6 +28,9 @@ var stories = []Story{
 	{"textfield", "Forms", "TextField", textfieldCanvas},
 	{"select", "Forms", "Select", selectCanvas},
 	{"toggle", "Forms", "Toggle", toggleCanvas},
+	{"tabs", "Navigation", "Tabs", tabsCanvas},
+	{"breadcrumb", "Navigation", "Breadcrumb", breadcrumbCanvas},
+	{"pagination", "Navigation", "Pagination", paginationCanvas},
 }
 
 // Stories returns the ordered registry.
