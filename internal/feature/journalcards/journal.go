@@ -104,9 +104,13 @@ func journalEntryNode(e JournalEntry) g.Node {
 	)
 }
 
-// registerJournal wires the journal card into the ui card registry.
+// registerJournal wires the journal card into the ui card registry: the compact
+// tile for boards/chat, the full candle for the focus page.
 func registerJournal(app core.App) {
-	ui.RegisterCard("journal", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
+	ui.RegisterCard("journal", func(size ui.CardSize, params map[string]string) (g.Node, error) {
+		if size == ui.Focus {
+			return JournalFocus(BuildJournalFocus(app)), nil
+		}
 		return JournalCard(buildJournal(app, params)), nil
 	})
 }

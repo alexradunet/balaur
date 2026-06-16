@@ -141,8 +141,8 @@ func TestFocusJournalShowsCandle(t *testing.T) {
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
-			`@post('/ui/journal'`, // write form
-			`/ui/journal/prompt`,  // guided tab
+			`@post(&#39;/ui/journal&#39;`, // write form (gomponents HTML-escapes ' → &#39;)
+			`/ui/journal/prompt`,          // guided tab
 			`id="journal-candle-body"`,
 		},
 	}

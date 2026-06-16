@@ -91,6 +91,7 @@ var stories = []Story{
 	nudgebannerStory(),
 	statcardStory(),
 	lifelogfocusStory(),
+	journalfocusStory(),
 	topbarStory(),
 	modelcardStory(),
 	modelspanelStory(),
