@@ -67,6 +67,7 @@ func Register(app core.App, root *cobra.Command) {
 		selfCmd(app),
 		extCmd(app),
 		doctorCmd(app),
+		seedCmd(app),
 	)
 }
 

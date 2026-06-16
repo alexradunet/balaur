@@ -4,7 +4,7 @@ BALAUR_CONFIG_DIR ?= $(HOME)/.config/balaur
 SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
 SERVICE_NAME ?= balaur
 
-.PHONY: help tools dev run build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
+.PHONY: help tools dev run seed build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
 
 help:
 	@echo "make tools  # install dlv + air, activate the pre-commit lint hook"
@@ -50,6 +50,9 @@ dev:
 
 run:
 	go run . serve
+
+seed:
+	go run . seed $(ARGS)
 
 build:
 	CGO_ENABLED=0 go build -o balaur .
