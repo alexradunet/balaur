@@ -1,7 +1,7 @@
 {{- /* settings-focus.html — the settings shell (Profile + Models) as the
-     settings card's focus body. Skills is its own card now. The section
-     fragment defines (profile_*, models_panel) live in profile.html/models.html
-     and are shared with the /ui/* write endpoints. */ -}}
+     settings card's focus body. Skills is its own card now. Profile fragment
+     defines (profile_*) live in profile.html; the Models section is the
+     gomponents modelcards.Panel injected as {{.Models.ModelsHTML}}. */ -}}
 {{define "settings_body"}}
 <div class="settings-layout">
   <nav class="settings-nav" aria-label="Settings sections">

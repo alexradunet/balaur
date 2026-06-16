@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -14,7 +13,6 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/kronk"
-	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
@@ -30,17 +28,16 @@ type homeData struct {
 	History         []messageView
 	HasRecap        bool
 	DevSeed         bool
-	NowMillis       int64               // nudge-poll cursor: only messages after page load
-	SoulAvatarURL   string              // resolved soul avatar URL
-	AvatarOptions   []AvatarOption      // soul avatar picker roster
-	OwnerName       string              // display name for the "You" label in chat
-	BalaurAvatarURL string              // resolved Balaur head avatar URL
-	ActiveHeadID    string              // current head id/key
-	ActiveHeadName  string              // current head name (switcher label)
-	HeadChoices     []headChoice        // roster for the switcher
-	Pull            ollama.PullSnapshot // active model download, for the chatbar loading bar
-	ComposerHTML    template.HTML       // the live chat input (ui.Composer), rendered in Go
-	ChatBodyHTML    template.HTML       // history (chat.Message panels) or the hearth greeting
+	NowMillis       int64          // nudge-poll cursor: only messages after page load
+	SoulAvatarURL   string         // resolved soul avatar URL
+	AvatarOptions   []AvatarOption // soul avatar picker roster
+	OwnerName       string         // display name for the "You" label in chat
+	BalaurAvatarURL string         // resolved Balaur head avatar URL
+	ActiveHeadID    string         // current head id/key
+	ActiveHeadName  string         // current head name (switcher label)
+	HeadChoices     []headChoice   // roster for the switcher
+	ComposerHTML    template.HTML  // the live chat input (ui.Composer), rendered in Go
+	ChatBodyHTML    template.HTML  // history (chat.Message panels) or the hearth greeting
 }
 
 // headChoice is one entry in the dock head switcher.
@@ -57,26 +54,9 @@ type AvatarOption struct {
 	Active bool
 }
 
+// modelsPageData carries the rendered Models panel for the settings focus body.
 type modelsPageData struct {
-	ModelChoices    []turn.ModelChoice
-	ActiveModel     string
-	ActiveModelID   string
-	ModelError      string
-	ModelHint       string
-	Pull            ollama.PullSnapshot
-	InstalledModels []ollama.Model
-	OllamaReachable bool          // whether the Ollama control server answered a heartbeat
-	OllamaHost      string        // host:port the heartbeat was sent to (no scheme)
-	ModelsHTML      template.HTML // the gomponents modelcards.Panel, injected into settings_body
-}
-
-type modelModalData struct {
-	Title       string
-	Body        string
-	Detail      string
-	Key         string
-	CanDownload bool
-	Error       string
+	ModelsHTML template.HTML // the gomponents modelcards.Panel, injected into settings_body
 }
 
 func (h *handlers) homeData() (homeData, error) {
@@ -86,7 +66,6 @@ func (h *handlers) homeData() (homeData, error) {
 		return data, err
 	}
 	data.ModelChoices = choices
-	data.Pull = h.ollama.Snapshot()
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
 	data.AvatarOptions = buildAvatarOptions(h.app)
@@ -104,8 +83,7 @@ func (h *handlers) homeData() (homeData, error) {
 		})
 	}
 	if active.Key == "" {
-		data.ModelError = "No active model is available. Pull the local model."
-		data.ModelHint = ollama.PullCommand()
+		data.ModelError = "No active model. Install one on the Models page."
 		return data, nil
 	}
 	data.ActiveModel = active.Name
@@ -259,145 +237,6 @@ func (h *handlers) selectModel(e *core.RequestEvent) error {
 		return h.chatbar(e)
 	}
 	return e.BadRequestError("model is not available", nil)
-}
-
-func (h *handlers) missingModelModal(e *core.RequestEvent) error {
-	modal, err := h.missingModelModalData(e.Request.URL.Query().Get("key"))
-	if err != nil {
-		return e.BadRequestError("model is not available", err)
-	}
-	return h.renderModelModal(e, modal)
-}
-
-// modelPull starts a background pull of the default local model and activates
-// it when done. Used by the missing-model modal and the models card.
-func (h *handlers) modelPull(e *core.RequestEvent) error {
-	tag := ollama.ChatModel()
-	if req := strings.TrimSpace(e.Request.FormValue("tag")); req != "" {
-		// Only the curated presets may be pulled via the button; the picker
-		// handles already-pulled models. Reject anything else.
-		if req != ollama.ChatModel() && req != ollama.DefaultChatModel && req != ollama.GPUChatModel {
-			if e.Request.FormValue("target") == "models" {
-				return h.modelsPanel(e, "unknown model preset")
-			}
-			return e.BadRequestError("unknown model preset", nil)
-		}
-		tag = req
-	}
-	onDone := func(tag string) {
-		id, err := store.SaveLocalModel(h.app, tag, ollama.EmbedModel())
-		if err != nil {
-			h.app.Logger().Error("pull onDone: save model", "err", err)
-			return
-		}
-		if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
-			h.app.Logger().Error("pull onDone: activate model", "err", err)
-		}
-	}
-	if err := h.ollama.Pull(tag, onDone); err != nil {
-		if e.Request.FormValue("target") == "models" {
-			return h.modelsPanel(e, err.Error())
-		}
-		modal, mErr := h.missingModelModalData(e.Request.FormValue("key"))
-		if mErr != nil {
-			return e.BadRequestError("model is not available", mErr)
-		}
-		modal.Error = err.Error()
-		return h.renderModelModal(e, modal)
-	}
-	store.Audit(h.app, "owner", "llm.model.pull", tag, true, nil)
-	if e.Request.FormValue("target") == "models" {
-		return h.modelsPanel(e, "")
-	}
-	data, err := h.homeData()
-	if err != nil {
-		return e.InternalServerError("loading chatbar", err)
-	}
-	sse := datastar.NewSSE(e.Response, e.Request)
-	if err := h.patchChatbar(sse, data); err != nil {
-		return e.InternalServerError("rendering chatbar", err)
-	}
-	_ = sse.ExecuteScript("window.balaurCloseModal&&balaurCloseModal()")
-	return nil
-}
-
-// modelPullProgress renders the progress fragment.
-func (h *handlers) modelPullProgress(e *core.RequestEvent) error {
-	snap := h.ollama.Snapshot()
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "pull_progress", snap); err != nil {
-		return e.InternalServerError("rendering pull progress", err)
-	}
-	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("pull-progress"), datastar.WithModeOuter())
-	return nil
-}
-
-// modelPullCancel cancels the active pull, if any.
-func (h *handlers) modelPullCancel(e *core.RequestEvent) error {
-	h.ollama.Cancel()
-	store.Audit(h.app, "owner", "llm.model.pull_cancel", "", true, nil)
-	return h.modelsPanel(e, "")
-}
-
-// modelDelete removes a model tag from Ollama's store.
-func (h *handlers) modelDelete(e *core.RequestEvent) error {
-	name := e.Request.FormValue("name")
-	if cfg, ok, _ := store.ActiveLLMConfig(h.app); ok && cfg.Kind == "local" && cfg.ChatModel == name {
-		return h.modelsPanel(e, "that model is the active model — choose another model first")
-	}
-	if err := h.ollama.Delete(name); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	store.Audit(h.app, "owner", "llm.model.delete", name, true, nil)
-	return h.modelsPanel(e, "")
-}
-
-func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
-	choices, _, err := turn.ModelChoices(h.app)
-	if err != nil {
-		return modelModalData{}, err
-	}
-	var choice turn.ModelChoice
-	for _, candidate := range choices {
-		if candidate.Key == key {
-			choice = candidate
-			break
-		}
-	}
-	if choice.Key == "" || choice.Provider != "local" {
-		return modelModalData{}, fmt.Errorf("unknown model")
-	}
-	if !choice.Disabled {
-		return modelModalData{}, fmt.Errorf("model is already available")
-	}
-	modal := modelModalData{
-		Title:  "Download local model?",
-		Body:   "The local model is not on this box yet.",
-		Detail: choice.Model,
-		Key:    key,
-	}
-	if os.Getenv("BALAUR_CHAT_MODEL") != "" {
-		modal.Title = "Local model missing"
-		modal.Body = "BALAUR_CHAT_MODEL pins an Ollama tag Balaur cannot find locally. Run `ollama pull <tag>` for that tag, or unset BALAUR_CHAT_MODEL to use Balaur's default local model."
-		return modal, nil
-	}
-	modal.CanDownload = true
-	modal.Body = "Pull Balaur's default " + ollama.DefaultChatModelName + " model via Ollama and make it the active model?"
-	return modal, nil
-}
-
-func (h *handlers) renderModelModal(e *core.RequestEvent, data modelModalData) error {
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "model_modal", data); err != nil {
-		return e.InternalServerError("rendering model prompt", err)
-	}
-	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("model-modal"), datastar.WithModeInner())
-	// The <dialog> opens itself once its content lands (replaces basm.js's old
-	// htmx:afterSwap showModal hook).
-	_ = sse.ExecuteScript("(function(d){if(d&&!d.open)d.showModal()})(document.getElementById('model-modal'))")
-	return nil
 }
 
 // buildAvatarOptions returns the full roster of chooseable soul avatars with

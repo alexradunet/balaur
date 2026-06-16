@@ -7,8 +7,8 @@
 
 Balaur is a personal AI companion that lives on a box you own: a single Go
 executable embedding [PocketBase](https://pocketbase.io) for data, auth and
-migrations, a Datastar web interface, and local LLM inference served by
-[Ollama](https://ollama.com) over the OpenAI-compatible `/v1` API.
+migrations, a Datastar web interface, and local LLM inference run in-process via
+the embedded [Kronk](https://github.com/ardanlabs/kronk) engine (llama.cpp, CGO-free).
 
 The name comes from the Romanian fairy-tale balaur: a dragon with multiple
 heads. A head is a switchable persona — a name, purpose, avatar, and an
@@ -28,11 +28,10 @@ database you own and can open with any SQLite tool.
 - **UI:** server-rendered Go templates + Datastar, styled by the Basm design
   system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
   superuser engine room.
-- **Models:** out of the box, **Gemma 4 E4B** (`gemma4:e4b`) served by Ollama —
-  pre-listed as the default; pull it into your running Ollama server from the
-  settings models section. GPU users can opt into
-  `gemma4:26b` (MoE). Override the default local tag with `BALAUR_CHAT_MODEL`.
-  (V1 runs local models only.)
+- **Models:** Balaur runs local GGUF models in-process. Install one from the
+  settings models section (an absolute `.gguf` path) or via `BALAUR_CHAT_MODEL`;
+  it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
+  Vulkan GPU. (V1 runs local models only — no remote/API providers.)
 - **Heads:** switchable personas. A head is a name + purpose + avatar +
   optional capability-group tool filter. Built-in `balaur`, `scholar`,
   `planner`, and `coach` ship out of the box; create your own from the heads
@@ -168,27 +167,25 @@ Just run it:
 go run . serve
 ```
 
-Start your own Ollama server first (`ollama serve`). On serve, Balaur logs
-whether that server is reachable, then connects to it. Pull **Gemma 4 E4B**
-into it from the settings card's models section
-(`/focus/settings?section=models`), which shows download progress and
-activates the model when it finishes.
+**Local inference**: Balaur runs GGUF models in-process via the embedded Kronk
+engine (`internal/kronk`) — yzma `dlopen`s the prebuilt llama.cpp library at
+runtime, so the Go build stays CGO-free. Two runtime assets are owner-supplied
+(the engine never downloads them on boot):
 
-Overrides:
+- the native llama.cpp library — point `BALAUR_LIB_PATH` at its directory
+  (CPU by default; `BALAUR_PROCESSOR=vulkan` selects the Vulkan variant)
+- a GGUF model file — install it from the settings models section
+  (`/focus/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`
 
 ```bash
-# Use a different Ollama tag:
-BALAUR_CHAT_MODEL=gemma4:26b go run . serve
-
-# Point at a non-default Ollama server:
-BALAUR_OLLAMA_HOST=192.168.1.10:11434 go run . serve
+# Run a local GGUF on a Vulkan GPU:
+BALAUR_LIB_PATH=~/.local/share/balaur/kronk/lib \
+BALAUR_PROCESSOR=vulkan \
+BALAUR_CHAT_MODEL=/models/qwen3.gguf go run . serve
 ```
 
-**Ollama**: Balaur is a client of an Ollama server you run separately — it
-never installs, starts, or stops Ollama. It talks to that server over the
-OpenAI-compatible `/v1` API (`internal/llm`), and manages models
-(list/pull/delete) over the official `ollama/api` client. Point Balaur at the
-server with `BALAUR_OLLAMA_HOST`.
+Vulkan needs the host Vulkan loader + GPU driver/ICD (e.g. `mesa-vulkan-drivers`)
+— host setup, outside the repo.
 
 **Extension engine**: Balaur uses goja (no tags; pins a master commit) for the JavaScript sandbox. Bumping it is a deliberate act—run `go test ./internal/ext/` after changing.
 
@@ -200,9 +197,10 @@ Optional environment variables:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `BALAUR_ALLOWED_HOSTS` | (unset) | Comma-separated `host[:port]` values allowed as the Host header beyond loopback (LAN names, NetBird — see [docs/netbird.md](docs/netbird.md)) |
-| `BALAUR_OLLAMA_HOST` | `127.0.0.1:11434` | Ollama server address (host:port, no scheme) Balaur connects to |
-| `BALAUR_CHAT_MODEL` | `gemma4:e4b` | Ollama tag for the local chat model; overrides the default and the settings models-section choice |
-| `BALAUR_EMBED_MODEL` | `embeddinggemma` | Ollama tag for the local embedding model |
+| `BALAUR_LIB_PATH` | XDG `~/.local/share/balaur/kronk/lib` | Directory holding the prebuilt llama.cpp library (yzma dlopens it) |
+| `BALAUR_PROCESSOR` | `cpu` | llama.cpp variant to load — `cpu` or `vulkan` |
+| `BALAUR_CHAT_MODEL` | (unset) | Absolute path to a local `.gguf` chat model |
+| `BALAUR_EMBED_MODEL` | (unset) | Absolute path to a local `.gguf` embedding model |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
@@ -283,8 +281,8 @@ loginctl enable-linger "$USER"
 ```
 
 Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —
-no C toolchain. The binary is static; the Ollama server and model weights are
-owned by Ollama, stored outside the repo and outside the binary.
+no C toolchain. The Go binary is CGO-free; the native llama.cpp library and GGUF
+model weights are runtime assets, dlopen'd/read at runtime from outside the binary.
 
 ## CLI for agents & test harnesses
 
@@ -411,7 +409,7 @@ main.go            wire-up: PocketBase app, migrations, CLI, routes, crons
 migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
 internal/llm/      one model seam: OpenAI-compatible HTTP client (local)
-internal/ollama/   Ollama client: readiness + model list/pull/delete control plane
+internal/kronk/    embedded inference engine: in-process GGUF via the Kronk SDK (CPU/Vulkan)
 internal/turn/     the channel-agnostic turn pipeline + model resolution
 internal/conversation/ master conversation: persistence + context window
 internal/recap/    the telescope: period math + hierarchical summaries

@@ -23,7 +23,6 @@ import (
 	"github.com/alexradunet/balaur/internal/feature"
 	_ "github.com/alexradunet/balaur/internal/feature/all"
 	"github.com/alexradunet/balaur/internal/kronk"
-	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/turn"
 	webstatic "github.com/alexradunet/balaur/internal/web/assets"
 	webassets "github.com/alexradunet/balaur/web"
@@ -185,7 +184,7 @@ func Register(se *core.ServeEvent) error {
 
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
-	h := &handlers{app: se.App, tmpl: tmpl, clients: turn.ClientSource{Engine: kronk.FromStore(se.App)}, ollama: ollama.Default}
+	h := &handlers{app: se.App, tmpl: tmpl, clients: turn.ClientSource{Engine: kronk.FromStore(se.App)}}
 	// Feature modules self-register (internal/feature/all blank import); the
 	// cardInto shim serves their gomponents renderers in place of the legacy
 	// switch. UnregisterAll on terminate keeps the global registry clean between
@@ -202,12 +201,6 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)
 	se.Router.POST("/ui/model/install", h.installModel)
-	se.Router.GET("/ui/model/missing", h.missingModelModal)
-	se.Router.POST("/ui/model/download", h.modelPull)
-	se.Router.GET("/ui/model/pull/progress", h.modelPullProgress)
-	se.Router.POST("/ui/model/pull/download", h.modelPull)
-	se.Router.POST("/ui/model/pull/cancel", h.modelPullCancel)
-	se.Router.POST("/ui/model/pull/delete", h.modelDelete)
 	se.Router.POST("/ui/journal", h.journalWrite)
 	se.Router.GET("/ui/journal/prompt", h.journalPrompt)
 	se.Router.POST("/ui/day/{date}/journal", h.dayJournalWrite)
@@ -256,7 +249,6 @@ type handlers struct {
 	app     core.App
 	tmpl    *template.Template
 	clients turn.ClientSource
-	ollama  *ollama.Manager
 }
 
 func (h *handlers) render(e *core.RequestEvent, name string, data any) error {

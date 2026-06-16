@@ -10,14 +10,13 @@ import (
 
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llm"
-	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/store"
 )
 
 // isLocalFile reports whether a local model's chat_model is an on-disk GGUF file
-// path — run in-process by the embedded Kronk engine — rather than a legacy
-// Ollama tag served over /v1. This is the dual-path seam during the Ollama→Kronk
-// migration (plan 074): GGUF paths route to Kronk, tags still route to Ollama.
+// path, which the embedded Kronk engine runs in-process. A non-GGUF value is a
+// legacy Ollama tag from before plan 074 — no longer runnable, so it surfaces as
+// a disabled "install a GGUF" choice.
 func isLocalFile(model string) bool {
 	return filepath.IsAbs(model) && strings.HasSuffix(strings.ToLower(model), ".gguf")
 }
@@ -128,10 +127,12 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 						choice.Badge = "missing"
 						choice.Detail = filepath.Base(cfg.ChatModel) + " · file not found"
 					}
-				} else if pulled, err := ollama.Default.IsPulled(cfg.ChatModel); err != nil || !pulled {
+				} else {
+					// A non-GGUF local model is a legacy Ollama tag — there is no
+					// engine to run it; surface it as unavailable.
 					choice.Disabled = true
 					choice.Badge = "missing"
-					choice.Detail = cfg.ChatModel + " · pull needed"
+					choice.Detail = cfg.ChatModel + " · install a GGUF file"
 				}
 			}
 		}
@@ -148,12 +149,11 @@ func modelBadge(_ store.LLMConfig) string {
 	return "local"
 }
 
-// ClientSource builds llm clients for model choices. A local model whose
-// chat_model is a GGUF file path resolves to the in-process Kronk engine; a
-// legacy Ollama tag resolves to an OpenAIClient pointed at the local Ollama.
+// ClientSource builds llm clients for model choices. V1 has a single provider
+// path: a local model (a GGUF file) runs in-process via the embedded Kronk engine.
 type ClientSource struct {
 	// Engine is the in-process Kronk runtime, threaded from app.Store(). Nil is
-	// tolerated for the Ollama-tag path and the injected-client (test) path.
+	// tolerated only on the injected-client (test) path.
 	Engine *kronk.Engine
 }
 
@@ -179,26 +179,26 @@ func (s *ClientSource) Active(app core.App) (llm.Client, error) {
 // explicit; no hidden auto-routing (AGENTS.md).
 func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, error) {
 	if choice.Provider == "local" {
-		if isLocalFile(choice.Model) {
-			if s.Engine == nil {
-				return nil, fmt.Errorf("local inference engine not initialized")
-			}
-			return s.Engine.Client(choice.Model, ""), nil
+		if !isLocalFile(choice.Model) {
+			return nil, fmt.Errorf("local model %q is not a GGUF file", choice.Model)
 		}
-		return ollama.NewClient(choice.Model), nil
+		if s.Engine == nil {
+			return nil, fmt.Errorf("local inference engine not initialized")
+		}
+		return s.Engine.Client(choice.Model, ""), nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
 }
 
 func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.Client, error) {
 	if cfg.Kind == "local" {
-		if isLocalFile(cfg.ChatModel) {
-			if s.Engine == nil {
-				return nil, fmt.Errorf("local inference engine not initialized")
-			}
-			return s.Engine.Client(cfg.ChatModel, cfg.EmbedModel), nil
+		if !isLocalFile(cfg.ChatModel) {
+			return nil, fmt.Errorf("local model %q is not a GGUF file", cfg.ChatModel)
 		}
-		return ollama.NewClient(cfg.ChatModel), nil
+		if s.Engine == nil {
+			return nil, fmt.Errorf("local inference engine not initialized")
+		}
+		return s.Engine.Client(cfg.ChatModel, cfg.EmbedModel), nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", cfg.Kind)
 }

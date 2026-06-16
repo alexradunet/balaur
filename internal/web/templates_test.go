@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/turn"
 	webassets "github.com/alexradunet/balaur/web"
 )
@@ -75,25 +74,9 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Error("chatbar should not render the old disabled text input when chat is not ready")
 	}
 
-	// While a model is downloading, the chatbar shows a loading bar, not the form.
-	b.Reset()
-	data.ChatReady = false
-	data.Pull = ollama.PullSnapshot{Active: true, BytesDone: 500, BytesTotal: 1000, Dest: "/models/x.llamafile"}
-	if err := tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
-		t.Fatalf("chat_bar downloading: %v", err)
-	}
-	dl := b.String()
-	if !strings.Contains(dl, "chatbar-download") || !strings.Contains(dl, "<progress") {
-		t.Error("chatbar should render a download progress bar while a model is downloading")
-	}
-	if strings.Contains(dl, `<textarea name="message"`) {
-		t.Error("chatbar must not render the chat input — it belongs in chat_draft")
-	}
-
 	// The chat input is now the storybook ui.Composer, rendered in Go
 	// (composerNode) and injected into the dock — not a chat_draft template.
 	data.ChatReady = true
-	data.Pull = ollama.PullSnapshot{}
 	var cb strings.Builder
 	if err := composerNode(data).Render(&cb); err != nil {
 		t.Fatalf("composer render: %v", err)

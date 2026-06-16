@@ -1,8 +1,7 @@
-// Package llm defines Balaur's single seam to language models. One client
-// implements it: an OpenAI-compatible HTTP client. It speaks to remote
-// providers and to local endpoints alike — a local model is served by Ollama
-// (see internal/ollama) over the same OpenAI-compatible API.
-// Everything above this package is provider-agnostic.
+// Package llm defines Balaur's single seam to language models: the Client
+// interface (ChatStream + Embed) the agent loop talks to. For v1 a local GGUF
+// model runs in-process via the embedded Kronk engine (internal/kronk), which
+// implements this interface. Everything above this package is provider-agnostic.
 package llm
 
 import "context"

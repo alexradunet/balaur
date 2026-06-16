@@ -2,8 +2,8 @@
 
 This repository is the source for Balaur, a local-first personal AI companion
 shipped as a single Go binary: PocketBase as an embedded framework, a Datastar
-web interface, and local LLM inference via Ollama, a server the owner runs
-separately that Balaur reaches over the OpenAI-compatible `/v1` API.
+web interface, and local LLM inference run in-process via the embedded Kronk
+engine (llama.cpp through yzma, CGO-free; see `internal/kronk`).
 
 Balaur follows a small-core, local-first design: a transparent runtime with
 capability pushed into small Go packages, Markdown skills, and explicit,
@@ -71,10 +71,11 @@ lean and high-signal — add a rule only when it changes a real decision.
   devloop.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
-- Local inference is served by Ollama (a separately-run server, OpenAI-compatible
-  `/v1` API — see `internal/ollama`), behind the internal `llm` interface. V1 has
-  a single provider path: local. (The remote OpenAI-compatible provider path was
-  removed in plan 074; Phase 1 moves local inference in-process to Kronk.)
+- Local inference runs in-process via the embedded Kronk SDK (`internal/kronk`):
+  a local GGUF model is loaded by yzma (purego — CGO stays off; the native
+  llama.cpp lib is `dlopen`'d at runtime), behind the internal `llm` interface.
+  V1 has a single provider path: local. There is no remote/HTTP provider and no
+  Ollama (both removed in plan 074).
 - Keep context transparent: durable state lives in PocketBase collections
   (inspectable SQLite) and exported Markdown, never hidden in-session state.
 
@@ -184,12 +185,13 @@ lean and high-signal — add a rule only when it changes a real decision.
   path serves them yet.
 - The Johnny Decimal Markdown vault mirror (one-way export + git) is
   roadmap, not shipped. Do not claim it in user-facing copy until real.
-- Local inference uses a separately-run Ollama server (`internal/ollama`):
-  Balaur is a client only — it never installs, spawns, or stops Ollama. It
-  reaches whatever server `BALAUR_OLLAMA_HOST` points at (default
-  `127.0.0.1:11434`), manages models over the official `ollama/api` client
-  (list/pull/delete), and surfaces unreachable-server and pull errors as plain
-  errors.
+- Local inference is embedded (`internal/kronk`, the Kronk SDK). The native
+  llama.cpp library and GGUF model files are runtime assets, owner-supplied via
+  `BALAUR_LIB_PATH`/`BALAUR_CHAT_MODEL`; the engine never downloads them on boot.
+  CPU is the default; `BALAUR_PROCESSOR=vulkan` offloads to a Vulkan GPU (the host
+  loader + driver are host setup, outside the repo). Owner-initiated downloads and
+  a richer model UI are deferred work. The full-engine dependency weight (~+33MB
+  binary, incl. AWS/gRPC/OTel via go-getter, MPL-2.0) is an accepted cost (plan 074).
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
   content that may leave the box (logs, exports, audit entries).
 

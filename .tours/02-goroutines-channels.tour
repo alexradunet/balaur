@@ -1,55 +1,37 @@
 {
   "$schema": "https://aka.ms/codetour-schema",
   "title": "02 — Goroutines, Channels & Select",
-  "description": "Go's signature feature: lightweight concurrency through goroutines and channels. This tour traces three real patterns in Balaur: the Ollama manager's process lifecycle, the streaming HTTP client, and the chat handler's chunked flush loop.",
+  "description": "Go's signature feature: lightweight concurrency through goroutines and channels. This tour traces the real patterns in Balaur's embedded inference engine (internal/kronk): a mutex guarding resident native models, and a goroutine + buffered channel + select that bridges the model's stream into the agent loop.",
   "steps": [
     {
-      "file": "internal/ollama/manager.go",
-      "line": 32,
-      "title": "2.1 — Manager: struct with a mutex",
-      "description": "```go\ntype Manager struct {\n    mu sync.Mutex\n\n    // lifecycle\n    dataDir string\n    cmd     *exec.Cmd\n    spawned bool\n    tail    *ringBuffer\n\n    // single-slot pull\n    cancel   context.CancelFunc\n    progress PullSnapshot\n    onDone   func(tag string)\n}\n```\n\n`sync.Mutex` is Go's mutual exclusion lock. The lowercase fields are unexported — callers outside the `ollama` package can't access them. They're internal implementation detail.\n\nThe mutex is needed because `EnsureRunning`, `Stop`, and `Pull` may be called concurrently: the HTTP handler for a chat request calls `EnsureRunning` on the first model call, while the shutdown hook calls `Stop`. Without a mutex, both could see and modify `cmd` at the same time — a data race that the Go race detector would catch.\n\nThe canonical Go mutex pattern: **lock immediately, defer unlock immediately** so you can never forget to unlock even if you add early returns later."
+      "file": "internal/kronk/engine.go",
+      "line": 33,
+      "title": "2.1 — Engine: struct with a mutex",
+      "description": "```go\ntype Engine struct {\n    mu        sync.Mutex\n    libPath   string\n    processor string\n    inited    bool\n\n    chatPath string\n    chat     *kronk.Kronk\n    embPath  string\n    emb      *kronk.Kronk\n}\n```\n\n`sync.Mutex` is Go's mutual-exclusion lock. The lowercase fields are unexported — nothing outside the `kronk` package can touch them.\n\nThe mutex is needed because the resident `*kronk.Kronk` models are mutable shared state: a web turn and a cron turn (recap/nudge/briefing) can both reach the engine concurrently. Loading or swapping a model mutates `chat`/`chatPath`; without the lock two goroutines could load at once — a data race the Go race detector would catch.\n\nThe canonical Go mutex pattern: **lock immediately, defer unlock immediately**, so you can never forget to unlock even if you add early returns later."
     },
     {
-      "file": "internal/ollama/manager.go",
-      "line": 55,
-      "title": "2.2 — EnsureRunning: the guarded hot path",
-      "description": "```go\nfunc (m *Manager) EnsureRunning(ctx context.Context) error {\n    a := m.apiClient()\n    if a.up(ctx) {\n        return nil\n    }\n    return m.spawn(ctx)\n}\n```\n\nThis is the idiomatic Go \"check-then-act\" pattern. `EnsureRunning` first probes the Ollama API (`GET /api/tags`) — if another process already has Ollama running, we adopt it for free. Only if Ollama is unreachable do we spawn our own.\n\nNote: `ctx` propagates cancellation — if the caller times out while Ollama is loading, `spawn` returns `ctx.Err()`."
+      "file": "internal/kronk/engine.go",
+      "line": 64,
+      "title": "2.2 — ensureInit: run-once, the check-then-act guard",
+      "description": "```go\nfunc (e *Engine) ensureInit() error {\n    if e.inited || kronk.Initialized() {\n        e.inited = true\n        return nil\n    }\n    libDir, err := resolveLibDir(e.libPath, e.processor)\n    if err != nil {\n        return err\n    }\n    if err := kronk.Init(kronk.WithLibPath(libDir)); err != nil {\n        return fmt.Errorf(\"initializing local inference runtime (%s): %w\", e.processor, err)\n    }\n    e.inited = true\n    return nil\n}\n```\n\nThe Kronk SDK's `Init` may run only **once per process**. This is the idiomatic Go \"check-then-act\" guard: if the runtime is already initialized, return immediately; otherwise resolve the native library directory and initialize.\n\nThe caller holds `e.mu` (see 2.3), so the guard is safe against concurrent first-inference calls racing to initialize. Initialization is lazy — a box with no model and no native library still boots; the cost is paid on first real inference."
     },
     {
-      "file": "internal/ollama/manager.go",
-      "line": 77,
-      "title": "2.3 — spawn: launching the subprocess",
-      "description": "```go\nfunc (m *Manager) spawn(ctx context.Context) error {\n    m.mu.Lock()\n    if m.cmd != nil {\n        m.mu.Unlock()\n        return nil\n    }\n    ...\n    if err := cmd.Start(); err != nil {\n        m.mu.Unlock()\n        return fmt.Errorf(\"starting ollama serve: %w\", err)\n    }\n    m.cmd = cmd\n    m.spawned = true\n    m.mu.Unlock() // release before the readiness poll\n    ...\n}\n```\n\n`cmd.Start()` launches `ollama serve` as a child process and returns immediately — the process runs in the background. Unlike `cmd.Run()`, it does not wait for the command to finish.\n\nThe mutex is released **before** the readiness poll loop. Why? Holding the lock during a blocking network poll would freeze every other goroutine trying to call `Snapshot`, `Pull`, or `Cancel`. Release early, then poll without a lock.\n\n`m.spawned = true` remembers that **Balaur started this process** — `Stop` only kills a process Balaur owns, not an externally managed Ollama instance."
+      "file": "internal/kronk/engine.go",
+      "line": 106,
+      "title": "2.3 — chatModel: load/swap a resident model under the lock",
+      "description": "```go\nfunc (e *Engine) chatModel(ctx context.Context, ggufPath string) (*kronk.Kronk, error) {\n    e.mu.Lock()\n    defer e.mu.Unlock()\n    if e.chat != nil && e.chatPath == ggufPath {\n        return e.chat, nil\n    }\n    if err := e.ensureInit(); err != nil {\n        return nil, err\n    }\n    if e.chat != nil {\n        _ = e.chat.Unload(ctx)\n        e.chat, e.chatPath = nil, \"\"\n    }\n    krn, err := kronk.New(model.WithModelFiles([]string{ggufPath}), ...)\n    ...\n}\n```\n\n`Lock()` then `defer Unlock()` on the first two lines — the whole load/swap is serialized. If the resident model already matches the requested path, return it warm. Otherwise unload the old native model (freeing its memory) and load the new one.\n\nThis is reload-on-switch: one model stays resident, and changing the active model pays a full unload+load on the next turn. Holding `mu` for the duration means a concurrent turn waits rather than racing on `e.chat`."
     },
     {
-      "file": "internal/ollama/manager.go",
-      "line": 100,
-      "title": "2.4 — spawn: select for two-way cancellation",
-      "description": "```go\ndeadline := time.Now().Add(maxLoad)\nfor time.Now().Before(deadline) {\n    if a.up(ctx) {\n        return nil\n    }\n    select {\n    case <-time.After(300 * time.Millisecond):\n    case <-ctx.Done():\n        return ctx.Err()\n    }\n}\nreturn fmt.Errorf(\"ollama serve did not become ready in %s\\n%s\", maxLoad, tail.String())\n```\n\n`select` is Go's **switch-for-channels**: it waits until one of the listed cases is ready, then executes exactly that case. If multiple are ready simultaneously, it picks one at random.\n\nThis `select` (no `default`) is a **blocking sleep** with cancellation: wait 300ms, but wake immediately if the context is cancelled. Without the `ctx.Done()` case, a cancelled HTTP request would leave the goroutine stuck sleeping until the deadline expires.\n\nThis is the canonical Go pattern for a poll loop that must be interruptible — you will see it in every production Go networking codebase."
+      "file": "internal/kronk/client.go",
+      "line": 74,
+      "title": "2.4 — bridge: goroutine + buffered channel",
+      "description": "```go\nout := make(chan llm.Chunk, 8)\ngo func() {\n    defer close(out)\n    ...\n}()\nreturn out\n```\n\n`make(chan llm.Chunk, 8)` creates a **buffered channel** with capacity 8: up to 8 `Chunk` values can sit in the pipe before a send blocks. Without a buffer every send would block until the caller reads; a small buffer lets the goroutine run slightly ahead of the reader — useful when the model emits tokens faster than the gateway can render them.\n\n`bridge` returns `out` immediately — the goroutine keeps running in the background, translating Kronk's `model.ChatResponse` stream into Balaur's provider-neutral `llm.Chunk`s.\n\n`defer close(out)` is the critical safety guarantee: **when the goroutine exits for any reason, the channel closes**, so the consumer's `for chunk := range out` cleanly ends. Without it the range loop would wait forever."
     },
     {
-      "file": "internal/llm/openai.go",
-      "line": 130,
-      "title": "2.5 — ChatStream: goroutine + buffered channel",
-      "description": "```go\nch := make(chan Chunk, 8)\ngo func() {\n    defer close(ch)\n    defer resp.Body.Close()\n    ...\n}()\nreturn ch, nil\n```\n\n`make(chan Chunk, 8)` creates a **buffered channel** with capacity 8: up to 8 `Chunk` values can sit in the pipe before a send blocks. Why buffered? Without a buffer, every `ch <- chunk` would block until the caller reads. A small buffer lets the goroutine run slightly ahead of the reader — useful when the model produces tokens faster than the HTTP handler can flush them.\n\n`ChatStream` returns `ch` immediately — the goroutine is still running in the background. The caller gets a channel they can read from as tokens arrive.\n\n`defer close(ch)` is the critical safety guarantee: **when the goroutine exits (for any reason), the channel closes**. Anything doing `for chunk := range ch` will exit the loop when the channel closes. Without this, the range loop would wait forever.\n\nThe extra `defer resp.Body.Close()` cleans up the HTTP response body. In Go, HTTP response bodies must be explicitly closed or they leak a connection."
-    },
-    {
-      "file": "internal/llm/openai.go",
-      "line": 138,
-      "title": "2.6 — SSE line-by-line parsing inside the goroutine",
-      "description": "```go\nsc := bufio.NewScanner(resp.Body)\nsc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)\nfor sc.Scan() {\n    line := strings.TrimSpace(sc.Text())\n    if !strings.HasPrefix(line, \"data:\") {\n        continue\n    }\n    data := strings.TrimSpace(strings.TrimPrefix(line, \"data:\"))\n    if data == \"[DONE]\" {\n        break\n    }\n    ...\n```\n\nServer-Sent Events (SSE) is a text protocol: the server sends lines like `data: {\"choices\":[...]}` and a `data: [DONE]` at the end. `bufio.NewScanner` reads the response body line by line.\n\n`sc.Buffer(...)` sets a larger internal buffer — the default 64KB is too small for responses with long tool-call argument strings.\n\nThis is the only place in Balaur that does raw HTTP/SSE parsing. Everything else talks to clean Go types. Once tokens are extracted and sent into `ch`, the agent loop consumes them the same way regardless of whether the underlying client is local or remote — the channel is the abstraction boundary."
-    },
-    {
-      "file": "internal/llm/openai.go",
-      "line": 170,
-      "title": "2.7 — Select for cancellation (the most important pattern)",
-      "description": "```go\nselect {\ncase ch <- Chunk{Content: d.Content, Reasoning: d.Reasoning}:\ncase <-ctx.Done():\n    ch <- Chunk{Err: ctx.Err()}\n    return\n}\n```\n\n`select` with two cases:\n- Try to send a chunk into `ch`. If the reader is keeping up, this case fires.\n- If the context was cancelled (HTTP request closed, user navigated away, timeout hit), `ctx.Done()` closes, this case fires instead — we send an error chunk and exit the goroutine.\n\nWithout `select`, a cancelled context would leave the goroutine blocked on `ch <-` forever (if nobody is reading), leaking memory until the process dies.\n\nThis pattern appears in both `openai.go` (HTTP streaming) and `internal/ollama/manager.go` (`spawn` poll loop). It is the canonical Go cancellation idiom — you will see it in every production Go networking codebase."
-    },
-    {
-      "file": "internal/web/chat.go",
-      "line": 67,
-      "title": "2.8 — The HTTP flush pattern (streaming HTML)",
-      "description": "```go\nw := e.Response\nw.Header().Set(\"Content-Type\", \"text/html; charset=utf-8\")\nflusher, _ := w.(http.Flusher)\nflush := func() {\n    if flusher != nil {\n        flusher.Flush()\n    }\n}\n```\n\nHTMX chat streaming uses **chunked HTTP responses**: the handler keeps the connection open and flushes HTML fragments as the model produces tokens. The browser (via HTMX's `hx-swap beforeend`) appends each fragment to the DOM without a full page load.\n\n`w.(http.Flusher)` is a **type assertion**: it checks whether the underlying `ResponseWriter` implements `http.Flusher` — the optional interface that exposes `Flush()`. Not all response writers support it (e.g., test recorders don't), so the two-value form `_, ok` is used and a nil check is kept.\n\nEach time the agent loop emits a `text` event, `chat.go` writes escaped HTML and calls `flush()` — the browser receives the token immediately rather than waiting for the response to end.\n\n**The data flow:**\n```\nmodel (Ollama)     → SSE chunks over HTTP\n                       ↓\nopenai.go goroutine → ch (chan Chunk)\n                       ↓\nagent.Loop         → emit(Event{Kind:\"text\", Text:...})\n                       ↓\nchat.go emitEv     → fmt.Fprint(w, ...) + flush()\n                       ↓\nbrowser            → HTMX appends to #chat\n```\nThree goroutine boundaries, one channel, one HTTP flush loop — the whole streaming pipeline."
+      "file": "internal/kronk/client.go",
+      "line": 81,
+      "title": "2.5 — Select for cancellation (the most important pattern)",
+      "description": "```go\nselect {\ncase out <- ch:\n    return true\ncase <-ctx.Done():\n    return false\n}\n```\n\n`select` is Go's **switch for channels**: it waits until one case is ready, then runs exactly that one.\n\nHere it guards every send:\n- Try to send a chunk into `out`. If the reader is keeping up, this case fires.\n- If the context was cancelled (the owner navigated away, the request closed, a timeout hit), `ctx.Done()` fires instead and the bridge stops.\n\nWithout `select`, a cancelled context would leave the goroutine blocked on `out <-` forever when nobody is reading — leaking the goroutine until the process dies. This is the canonical Go cancellation idiom; you will see it in every production Go networking codebase."
     }
   ]
 }

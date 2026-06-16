@@ -56,20 +56,13 @@
   <div class="model-switcher-head">
     <span class="model-switcher-kicker">Model</span>
     {{if .ActiveModel}}<span class="model-current">{{.ActiveModel}}</span>{{end}}
-    <a class="model-switcher-manage" href="/focus/settings?section=models">Manage models &amp; APIs →</a>
+    <a class="model-switcher-manage" href="/focus/settings?section=models">Manage models →</a>
   </div>
   {{if not .ChatReady}}
-    {{if .Pull.Active}}
-    <div class="chatbar-download">
-      <span class="chatbar-download-label">Downloading model… {{fmtBytes .Pull.BytesDone}}{{if .Pull.BytesTotal}} / {{fmtBytes .Pull.BytesTotal}}{{end}}</span>
-      <progress class="pull-progress-bar"{{if .Pull.BytesTotal}} value="{{.Pull.BytesDone}}" max="{{.Pull.BytesTotal}}"{{end}}></progress>
-    </div>
-    {{else}}
     <div class="model-switcher-empty">
-      <span>{{if .Pull.Err}}{{.Pull.Err}}{{else if .ModelError}}{{.ModelError}}{{else}}No model is ready yet.{{end}}</span>
+      <span>{{if .ModelError}}{{.ModelError}}{{else}}No model is ready yet.{{end}}</span>
       <a href="/focus/settings?section=models">Set up a model →</a>
     </div>
-    {{end}}
   {{end}}
 
   <div class="chatbar-profile-link">
@@ -104,28 +97,4 @@
     {{end}}
   </ul>
 </section>
-{{end}}
-
-{{- /* model_modal — inner content injected into <dialog id="model-modal">.
-     basm.js calls showModal() after the Datastar patch. The outer <dialog>
-     element provides backdrop, focus-trap, and Escape-key handling for free. */ -}}
-{{define "model_modal"}}
-<div class="modal-head">
-  <span class="tag">local</span>
-  <h2 id="model-modal-title">{{.Title}}</h2>
-</div>
-<p>{{.Body}}</p>
-{{if .Detail}}<p class="modal-detail"><code>{{.Detail}}</code></p>{{end}}
-{{if .Error}}<p class="model-error">{{.Error}}</p>{{end}}
-<div class="modal-actions">
-  {{if .CanDownload}}
-  <form data-on:submit__prevent="@post('/ui/model/download', {contentType:'form'})">
-    <input type="hidden" name="key" value="{{.Key}}">
-    <button class="btn btn-primary" type="submit" autofocus>Download and use</button>
-  </form>
-  {{end}}
-  <button class="btn btn-ghost" type="button"
-          {{if not .CanDownload}}autofocus{{end}}
-          onclick="balaurCloseModal()">Not now</button>
-</div>
 {{end}}

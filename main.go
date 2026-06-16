@@ -19,7 +19,6 @@ import (
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/kronk"
-	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/store"
@@ -53,7 +52,6 @@ func main() {
 		registerRecap(se.App)
 		registerNudge(se.App)
 		registerBriefing(se.App)
-		logOllamaReachability(se.App)
 		registerSearchIndex(se.App)
 		return se.Next()
 	})
@@ -77,23 +75,6 @@ func main() {
 	// CLI commands report failures via their JSON contract; PocketBase's
 	// Execute discards RunE errors, so the exit status is read back here.
 	os.Exit(cli.ExitCode())
-}
-
-// logOllamaReachability records, once at startup, whether the configured Ollama
-// server is reachable. Balaur is a client only — it never installs, spawns, or
-// stops Ollama. A fresh box has no active model until the owner pulls one via
-// /models (the default is pre-listed by store.EnsureDefaultLLMConfig).
-func logOllamaReachability(app core.App) {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		host := ollama.Host()
-		if ollama.Default.Reachable(ctx) {
-			app.Logger().Info("ollama: ready", "host", host)
-		} else {
-			app.Logger().Warn("ollama: not reachable — start Ollama or set BALAUR_OLLAMA_HOST", "host", host)
-		}
-	}()
 }
 
 // registerKronkEngine creates the in-process Kronk inference engine and stores it

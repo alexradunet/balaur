@@ -2,12 +2,11 @@ package store
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-
-	"github.com/alexradunet/balaur/internal/ollama"
 )
 
 const llmSettingsKey = "default"
@@ -34,27 +33,13 @@ func (c LLMConfig) DisplayName() string {
 	return c.ChatModel
 }
 
-// EnsureDefaultLLMConfig makes sure the "Local model" provider and Balaur's
-// default local model (an Ollama tag) exist. It does NOT activate the default:
-// a local model becomes active only after it is actually pulled (via the
-// /models web pull handler, now the only path that activates a local
-// model), so a fresh box never reports an unpulled model as ready. The
-// dataDir param is retained for
-// call-site compatibility.
+// EnsureDefaultLLMConfig makes sure the "Local model" provider exists. It seeds
+// NO default model: for v1 a fresh box has no model until the owner installs a
+// GGUF file via the Models page, so a fresh box never reports a model as ready.
+// The dataDir param is retained for call-site compatibility.
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
-	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
-	if err != nil {
-		return err
-	}
-	tag := ollama.ChatModel()
-	label := "Local " + ollama.DefaultChatModelName
-	if tag != ollama.DefaultChatModel {
-		label = "Local " + tag
-	}
-	if _, err := findOrCreateLLMModel(app, provider.Id, label, tag, ollama.EmbedModel(), true); err != nil {
-		return err
-	}
-	return nil
+	_, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
+	return err
 }
 
 func ListLLMModels(app core.App) ([]LLMConfig, error) {
@@ -106,23 +91,24 @@ func ActiveLLMConfig(app core.App) (LLMConfig, bool, error) {
 	return cfg, true, nil
 }
 
-// SaveLocalModel registers an Ollama chat tag under the "Local model" provider
-// and returns the model record id. embedTag is the dedicated embedding tag.
-// The model is served by the local Ollama over /v1 at chat time.
-func SaveLocalModel(app core.App, tag, embedTag string) (string, error) {
-	if tag == "" {
-		return "", fmt.Errorf("model tag is required")
+// SaveLocalModel registers a local GGUF model under the "Local model" provider
+// and returns the model record id. path is the absolute .gguf chat-model path;
+// embedPath is the optional embedding-model path. The model runs in-process via
+// the embedded Kronk engine at chat time.
+func SaveLocalModel(app core.App, path, embedPath string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("model path is required")
 	}
 	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
 	if err != nil {
 		return "", err
 	}
-	model, err := findOrCreateLLMModel(app, provider.Id, "Local "+tag, tag, embedTag, true)
+	model, err := findOrCreateLLMModel(app, provider.Id, "Local "+filepath.Base(path), path, embedPath, true)
 	if err != nil {
 		return "", err
 	}
 	Audit(app, "owner", "llm.model.upsert", model.Id, true,
-		map[string]any{"provider": "Local model", "kind": "local", "local": true, "tag": tag})
+		map[string]any{"provider": "Local model", "kind": "local", "local": true, "path": path})
 	return model.Id, nil
 }
 

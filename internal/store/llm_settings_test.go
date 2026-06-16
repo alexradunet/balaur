@@ -4,29 +4,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pocketbase/dbx"
-
-	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
-func TestEnsureDefaultLLMConfigRegistersDefaultWithoutActivating(t *testing.T) {
+func TestEnsureDefaultLLMConfigSeedsNoModel(t *testing.T) {
 	app := storetest.NewApp(t)
-	t.Setenv("BALAUR_CHAT_MODEL", "")
 	if err := EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
 		t.Fatalf("ensure default: %v", err)
 	}
+	// V1 seeds the "Local model" provider but NO model — a fresh box has nothing
+	// until the owner installs a GGUF via the Models page.
 	models, err := ListLLMModels(app)
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
-	if len(models) != 1 || models[0].Kind != "local" ||
-		models[0].ChatModel != ollama.DefaultChatModel || models[0].EmbedModel != ollama.DefaultEmbedModel {
-		t.Fatalf("default models = %#v, want one local tag model", models)
+	if len(models) != 0 {
+		t.Fatalf("default models = %#v, want none seeded", models)
 	}
-	// Registered but NOT auto-activated — activation happens only after a pull.
 	if _, ok, err := ActiveLLMConfig(app); err != nil || ok {
-		t.Fatalf("active = %v, %v; want no active model before pull", ok, err)
+		t.Fatalf("active = %v, %v; want no active model", ok, err)
 	}
 }
 
@@ -73,26 +69,18 @@ func TestSaveLocalModelRequiresTag(t *testing.T) {
 
 func TestEnsureDefaultLLMConfigIsWriteIdempotent(t *testing.T) {
 	app := storetest.NewApp(t)
-	t.Setenv("BALAUR_CHAT_MODEL", "")
-	t.Setenv("BALAUR_EMBED_MODEL", "")
 
 	if err := EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
 		t.Fatalf("first ensure: %v", err)
 	}
-
 	provs, err := app.FindRecordsByFilter("llm_providers", "name = 'Local model'", "", 0, 0)
 	if err != nil || len(provs) != 1 {
 		t.Fatalf("provider lookup: %v (n=%d)", err, len(provs))
 	}
-	models, err := app.FindRecordsByFilter("llm_models", "chat_model = {:m}", "", 0, 0, dbx.Params{"m": ollama.DefaultChatModel})
-	if err != nil || len(models) != 1 {
-		t.Fatalf("model lookup: %v (n=%d)", err, len(models))
-	}
 	provUpdated := provs[0].GetString("updated")
-	modelUpdated := models[0].GetString("updated")
 
-	// Second call must be a pure no-op: no record may be re-saved, so the
-	// autodate `updated` fields stay byte-for-byte identical.
+	// Second call must be a pure no-op: the provider may not be re-saved, so the
+	// autodate `updated` field stays byte-for-byte identical (plan 067).
 	if err := EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
 		t.Fatalf("second ensure: %v", err)
 	}
@@ -100,15 +88,8 @@ func TestEnsureDefaultLLMConfigIsWriteIdempotent(t *testing.T) {
 	if err != nil || len(provs2) != 1 {
 		t.Fatalf("provider re-lookup: %v (n=%d)", err, len(provs2))
 	}
-	models2, err := app.FindRecordsByFilter("llm_models", "chat_model = {:m}", "", 0, 0, dbx.Params{"m": ollama.DefaultChatModel})
-	if err != nil || len(models2) != 1 {
-		t.Fatalf("model re-lookup: %v (n=%d)", err, len(models2))
-	}
 	if got := provs2[0].GetString("updated"); got != provUpdated {
 		t.Fatalf("provider re-saved on idempotent call: updated %q -> %q", provUpdated, got)
-	}
-	if got := models2[0].GetString("updated"); got != modelUpdated {
-		t.Fatalf("model re-saved on idempotent call: updated %q -> %q", modelUpdated, got)
 	}
 }
 
