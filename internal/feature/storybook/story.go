@@ -90,6 +90,7 @@ var stories = []Story{
 	guardiancardStory(),
 	nudgebannerStory(),
 	statcardStory(),
+	lifelogfocusStory(),
 	topbarStory(),
 }
 

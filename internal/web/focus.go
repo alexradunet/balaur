@@ -90,12 +90,12 @@ func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.
 		return h.knowledgeFocusHTML(knowledge.Memory)
 	case "skills":
 		return h.knowledgeFocusHTML(knowledge.Skill)
-	case "lifelog":
-		return h.lifelogFocusHTML()
 	case "settings":
 		return h.settingsFocusHTML(params)
 	}
-	return h.cardHTML(typ, params)
+	// Feature cards that implement the CardSize.Focus branch (e.g. lifelog) render
+	// their full-canvas body here; the rest fall back to their Tile render.
+	return h.cardFocusHTML(typ, params)
 }
 
 // focusParams validates the card params and, for cards that have a richer
