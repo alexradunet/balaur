@@ -41,6 +41,17 @@ lean and high-signal — add a rule only when it changes a real decision.
   PocketBase as a Go library and serves the web UI from `embed.FS`.
 - **The PocketBase admin dashboard is the superuser engine room** — never the
   product surface. Balaur's face is its own Datastar UI under `/`.
+- **The UI is assembled from the atomic component system; the storybook is its
+  source of truth.** Screens are composed from typed `gomponents` components —
+  atoms (`internal/ui`), chat organisms (`internal/ui/chat`), the page shell
+  (`internal/ui/shell`), domain cards (`internal/feature/*cards`) — in the
+  "Hearthwood" design language (`DESIGN.md` + tokens in
+  `internal/web/assets/static/basm.css`). The live storybook at `/storybook`
+  (`internal/feature/storybook`) renders every component from fixtures and
+  documents its variants, props, and do/don'ts. **For any UI work, check the
+  storybook first, reuse or extend a component instead of hand-rolling markup,
+  and add or update its story in the same change.** Follow the
+  `ui-development` skill for the full workflow.
 - **No MCP.** Capability is exposed as Go tools in the agent loop,
   balaur-extensions, vault entries, or Markdown skills — not as MCP
   servers.
@@ -78,7 +89,11 @@ lean and high-signal — add a rule only when it changes a real decision.
   tools), `internal/self` (self-knowledge + capability inventory),
   `internal/web` (Datastar gateway), `internal/cli` (JSON gateway),
   `internal/heads` (switchable personas — name, purpose, avatar, tool-group
-  filter), `migrations` (schema).
+  filter), `internal/ui` (atomic components — the `gomponents` design system),
+  `internal/ui/chat` (chat organisms), `internal/ui/shell` (page shell +
+  sidebar), `internal/feature/*cards` (domain cards composing `ui` atoms),
+  `internal/feature/storybook` (the component catalog at `/storybook`),
+  `migrations` (schema).
   Treat a package past ~500 lines as a smell to decompose, not extend.
 - **Self-knowledge is part of the change.** `internal/self/knowledge.md`
   is the running binary's own description of its architecture and
