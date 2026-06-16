@@ -177,7 +177,7 @@ so they can also be done in parallel by different conversations.
 | 02 | journal-focus | ✅ DONE — ported to `journalcards.JournalFocus`/`JournalCandleBody` |
 | 03 | day-focus | ✅ DONE — ported to `journalcards.DayFocus`/`DayJournal` |
 | 04 | knowledge-focus | ✅ DONE — ported to `knowledgecards.KnowledgeFocus`/`KnowledgeGrid` |
-| 05 | settings-profile-focus | ⬜ deferred (Profile not yet ported); the Models part is **no longer blocked** now that the Ollama→Kronk Phase 1 has merged to `main` |
+| 05 | settings-focus | ✅ DONE — Profile + Models ported to `settingscards.SettingsFocus`; routed through the `CardSize.Focus` seam, `BuildModelsPanelView` moved into `settingscards` as the single source for the panel view (the `/ui/model/*` handlers call it). Unblocked once Ollama→Kronk Phase 1 merged to `main`. |
 
 01–04 landed together (each: feature-package component filling the `CardSize.Focus`
 seam, one shared builder between the focus body and its SSE re-render handler, a
