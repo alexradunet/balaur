@@ -380,3 +380,71 @@ func knowledgefocusStory() Story {
 		},
 	}
 }
+
+// dayfocusStory documents the day card's full-canvas focus body — journal
+// write surface, recap with transcript expander, done tasks, and the day's log.
+func dayfocusStory() Story {
+	return Story{
+		ID: "dayfocus", Group: "Cards", Title: "DayFocus", Wide: true, OnDark: true,
+		Blurb: "The day-of-life focus body: the journal write form + entry list, the day recap with transcript expander, what got done, and what was logged. Prev/next navigate the focus in place. The journal section (#day-journal) is outer-patched after write/drop POSTs.",
+		Variants: []Variant{
+			{"today · writable", journalcards.DayFocus(journalcards.DayFocusView{
+				Date:       "2026-06-16",
+				Label:      "Tuesday, June 16 2026",
+				IsToday:    true,
+				Prev:       "2026-06-15",
+				Next:       "",
+				RecapStart: "1750032000",
+				Journal: []journalcards.DayJournalEntry{
+					{ID: "e1", Time: "08:30", Text: "The morning was quiet and still."},
+				},
+			})},
+			{"past · recap + expander", journalcards.DayFocus(journalcards.DayFocusView{
+				Date:       "2026-06-10",
+				Label:      "Wednesday, June 10 2026",
+				IsToday:    false,
+				Prev:       "2026-06-09",
+				Next:       "2026-06-11",
+				RecapStart: "1749513600",
+				Recap:      "You sorted the notary papers and trained in the evening.",
+				Journal: []journalcards.DayJournalEntry{
+					{ID: "e2", Time: "21:40", Text: "A good, quiet day."},
+				},
+				Done: []journalcards.DayLine{
+					{Time: "10:12", Text: "Call notary"},
+				},
+				Logs: []journalcards.DayLine{
+					{Time: "08:00", Text: "weight: 82.5 kg"},
+				},
+			})},
+			{"empty day", journalcards.DayFocus(journalcards.DayFocusView{
+				Date:       "2026-01-15",
+				Label:      "Thursday, January 15 2026",
+				Prev:       "2026-01-14",
+				Next:       "2026-01-16",
+				RecapStart: "1736899200",
+			})},
+		},
+		Props: []Prop{
+			{"Date", "string", "—", "YYYY-MM-DD; drives the write/drop form endpoints."},
+			{"Label", "string", "—", "Human day label shown in the nav heading."},
+			{"IsToday", "bool", "false", "Omits 'next ▸' and the recap expander; shows 'today' tag."},
+			{"Prev", "string", "—", "YYYY-MM-DD for the ◂ prev link."},
+			{"Next", "string", "—", "YYYY-MM-DD for the next ▸ link; empty when IsToday."},
+			{"Journal", "[]DayJournalEntry", "nil", "Today's journal entries; each has a remove form."},
+			{"Recap", "string", "—", "Day summary text; empty → one of two empty states."},
+			{"RecapStart", "string", "—", "Unix seconds; drives the #recap-children-day-{unix} container id."},
+			{"Done", "[]DayLine", "nil", "Tasks/completions done this day."},
+			{"Logs", "[]DayLine", "nil", "Tracked entries logged this day."},
+		},
+		Dos: []string{
+			"Write date in the PATH for the journal write form (/ui/day/{date}/journal).",
+			"Write ID in the PATH and date in the QUERY for the drop form (/ui/day/journal/{id}/drop?date=).",
+			"Reproduce the recap-expand click JS verbatim: classList.add('recap-open') + @get('/ui/recap/expand?type=day&start={unix}').",
+		},
+		Donts: []string{
+			"Render the recap expander when IsToday — the day is still being written.",
+			"Swap PATH vs QUERY for write/drop — the handlers parse them differently.",
+		},
+	}
+}

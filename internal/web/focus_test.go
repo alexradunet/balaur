@@ -160,8 +160,9 @@ func TestFocusDayShowsSections(t *testing.T) {
 		ExpectedContent: []string{
 			`id="day-journal"`,
 			"What got done",
-			"The day's log",
-			`@post('/ui/day/`, // the day journal write form
+			// gomponents escapes ' → &#39; in both text content and attribute values
+			"The day&#39;s log",
+			`@post(&#39;/ui/day/`, // the day journal write form
 		},
 	}
 	s.Test(t)

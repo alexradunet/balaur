@@ -11,6 +11,7 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/conversation"
+	"github.com/alexradunet/balaur/internal/feature/journalcards"
 	"github.com/alexradunet/balaur/internal/life"
 )
 
@@ -170,29 +171,9 @@ func (h *handlers) dayJournalDrop(e *core.RequestEvent) error {
 }
 
 func (h *handlers) renderDayJournal(e *core.RequestEvent, d, now time.Time) error {
-	var convID string
-	if master, err := conversation.Master(h.app); err == nil {
-		convID = master.Id
-	}
-	dd, err := life.Day(h.app, convID, d)
-	if err != nil {
-		return e.InternalServerError("loading day journal", err)
-	}
-	loc := now.Location()
-	journal := make([]dayJournalView, 0, len(dd.Journal))
-	for _, r := range dd.Journal {
-		journal = append(journal, dayJournalView{
-			ID:   r.Id,
-			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-			Text: r.GetString("text"),
-		})
-	}
-	data := struct {
-		Date    string
-		Journal []dayJournalView
-	}{d.Format(dayLayout), journal}
+	v := journalcards.BuildDayFocus(h.app, map[string]string{"date": d.Format(dayLayout)})
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "day_journal", data); err != nil {
+	if err := journalcards.DayJournal(v).Render(&b); err != nil {
 		return e.InternalServerError("rendering journal", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
