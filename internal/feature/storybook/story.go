@@ -91,6 +91,8 @@ var stories = []Story{
 	nudgebannerStory(),
 	statcardStory(),
 	topbarStory(),
+	modelcardStory(),
+	modelspanelStory(),
 }
 
 // Stories returns the ordered registry.
