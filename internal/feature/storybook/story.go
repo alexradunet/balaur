@@ -52,12 +52,12 @@ var stories = []Story{
 	alertStory(),
 	tooltipStory(),
 	skeletonStory(),
-	{ID: "textfield", Group: "Forms", Title: "TextField", Custom: textfieldCanvas()},
-	{ID: "select", Group: "Forms", Title: "Select", Custom: selectCanvas()},
-	{ID: "toggle", Group: "Forms", Title: "Toggle", Custom: toggleCanvas()},
-	{ID: "tabs", Group: "Navigation", Title: "Tabs", Custom: tabsCanvas()},
-	{ID: "breadcrumb", Group: "Navigation", Title: "Breadcrumb", Custom: breadcrumbCanvas()},
-	{ID: "pagination", Group: "Navigation", Title: "Pagination", Custom: paginationCanvas()},
+	textfieldStory(),
+	selectStory(),
+	toggleStory(),
+	tabsStory(),
+	breadcrumbStory(),
+	paginationStory(),
 	{ID: "list", Group: "Display", Title: "List", Custom: listCanvas()},
 	emptyStateStory(),
 	toastStory(),
@@ -81,7 +81,7 @@ var stories = []Story{
 	{ID: "guardiancard", Group: "Cards", Title: "GuardianCard", Custom: guardianCardCanvas()},
 	{ID: "nudgebanner", Group: "Cards", Title: "NudgeBanner", Custom: nudgeBannerCanvas()},
 	{ID: "statcard", Group: "Cards", Title: "StatCard", Custom: statCardCanvas()},
-	{ID: "topbar", Group: "Navigation", Title: "Topbar", Custom: topbarCanvas()},
+	topbarStory(),
 }
 
 // Stories returns the ordered registry.

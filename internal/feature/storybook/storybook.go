@@ -13,7 +13,6 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
-	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
 // section wraps a labelled group of component variants.
@@ -22,49 +21,6 @@ func section(label string, items ...g.Node) g.Node {
 		h.H2(g.Text(label)),
 		h.Div(h.Class("sb-row"), g.Group(items)),
 	)
-}
-
-func textfieldCanvas() g.Node {
-	return section("TextField",
-		ui.TextField(ui.FieldProps{Label: "Name", Placeholder: "Your name", Name: "name"}),
-		ui.TextField(ui.FieldProps{Label: "Email", Type: "email", Value: "you@yourbox", Name: "email", Hint: "Used only on your box."}),
-		ui.TextField(ui.FieldProps{Label: "Token", ID: "tok", Name: "token", Error: "Required."}),
-	)
-}
-
-func selectCanvas() g.Node {
-	return section("Select", ui.Select(ui.SelectProps{Label: "Model", Options: []string{"local", "openai", "anthropic"}, Value: "local", Name: "model"}))
-}
-
-func toggleCanvas() g.Node {
-	return section("Toggle",
-		ui.Toggle(ui.ToggleProps{Label: "Notifications", ID: "notif", Checked: true}),
-		ui.Toggle(ui.ToggleProps{Label: "OS access", ID: "os"}),
-		ui.Toggle(ui.ToggleProps{Label: "Disabled", ID: "dis", Disabled: true}),
-	)
-}
-
-func tabsCanvas() g.Node {
-	return section("Tabs", ui.Tabs([]ui.TabItem{
-		{Label: "Overdue", Href: "#"},
-		{Label: "Today", Href: "#", Active: true},
-		{Label: "Upcoming", Href: "#"},
-		{Label: "Someday", Href: "#"},
-	}))
-}
-
-func breadcrumbCanvas() g.Node {
-	return section("Breadcrumb", ui.Breadcrumb([]ui.Crumb{
-		{Label: "Home", Href: "/"},
-		{Label: "Tasks", Href: "/tasks"},
-		{Label: "Today"},
-	}))
-}
-
-func paginationCanvas() g.Node {
-	return section("Pagination", ui.Pagination(ui.PagerProps{
-		Total: 8, Page: 3, HrefFor: func(n int) string { return "#" },
-	}))
 }
 
 func listCanvas() g.Node {
@@ -352,10 +308,6 @@ func statCardCanvas() g.Node {
 		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Weight", Value: "81.2", Unit: "kg", Delta: "0.6 this week", DeltaTone: "down", Data: []float64{83, 82.6, 82.1, 82.4, 81.9, 81.6, 81.2}})),
 		box(ui.StatCard(ui.StatProps{Icon: "gem", Label: "Steps", Value: "8,210", Delta: "12% vs avg", DeltaTone: "up", Data: []float64{6800, 7100, 7400, 7900, 8100, 8000, 8210}})),
 	)
-}
-
-func topbarCanvas() g.Node {
-	return section("Topbar", h.Div(h.Style("position:relative"), shell.Topbar("storybook")))
 }
 
 func composerCanvas() g.Node {
