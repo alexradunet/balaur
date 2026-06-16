@@ -109,9 +109,9 @@ func topbarStory() Story {
 		Blurb: "The sticky wood-plank chrome bar: a borderless crest brand, mono uppercase nav, and the theme toggles. Top-level page navigation only — the active link rides gold.",
 		Variants: []Variant{
 			// position:relative gives the sticky bar a containing block so it
-			// renders in place inside the storybook tile.
-			{"storybook", h.Div(h.Style("position:relative"), shell.Topbar("storybook"))},
-			{"settings", h.Div(h.Style("position:relative"), shell.Topbar("settings"))},
+			// renders in place inside the storybook tile. One example — the
+			// active link (here "storybook") rides gold; other pages just move it.
+			{"storybook active", h.Div(h.Style("position:relative"), shell.Topbar("storybook"))},
 		},
 		Props: []Prop{
 			{"active", "string", "—", `Nav key for the current page ("storybook", "settings") — that link renders gold with aria-current="page".`},
