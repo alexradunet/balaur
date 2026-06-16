@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"os"
 	"strings"
 	"time"
@@ -36,6 +37,8 @@ type homeData struct {
 	ActiveHeadName  string              // current head name (switcher label)
 	HeadChoices     []headChoice        // roster for the switcher
 	Pull            ollama.PullSnapshot // active model download, for the chatbar loading bar
+	ComposerHTML    template.HTML       // the live chat input (ui.Composer), rendered in Go
+	ChatBodyHTML    template.HTML       // history (chat.Message panels) or the hearth greeting
 }
 
 // headChoice is one entry in the dock head switcher.
@@ -60,7 +63,6 @@ type modelsPageData struct {
 	ModelHint       string
 	Pull            ollama.PullSnapshot
 	InstalledModels []ollama.Model
-	Providers       []store.ProviderView
 	OllamaReachable bool   // whether the Ollama control server answered a heartbeat
 	OllamaHost      string // host:port the heartbeat was sent to (no scheme)
 }
@@ -99,7 +101,7 @@ func (h *handlers) homeData() (homeData, error) {
 		})
 	}
 	if active.Key == "" {
-		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
+		data.ModelError = "No active model is available. Pull the local model."
 		data.ModelHint = ollama.PullCommand()
 		return data, nil
 	}
@@ -136,7 +138,7 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 	}
 	if data.ChatReady {
 		var d strings.Builder
-		if err := h.tmpl.ExecuteTemplate(&d, "chat_draft", data); err != nil {
+		if err := composerNode(data).Render(&d); err != nil {
 			return err
 		}
 		_ = sse.PatchElements(d.String(), datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
@@ -154,7 +156,7 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	if active.Key != "" {
 		data.ActiveModel = active.Name
 	} else {
-		data.ModelError = "No active model is available. Pull the local model or add an OpenAI-compatible provider."
+		data.ModelError = "No active model is available. Pull the local model."
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -163,9 +165,6 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	data.Pull = h.ollama.Snapshot()
 	if files, err := h.ollama.List(); err == nil {
 		data.InstalledModels = files
-	}
-	if providers, err := store.ListOpenAIProviders(h.app); err == nil {
-		data.Providers = providers
 	}
 	// Capture the active model ID for per-model active badge rendering.
 	// active.Key is the model record id (same as ModelChoice.Key).
@@ -309,41 +308,6 @@ func (h *handlers) modelDelete(e *core.RequestEvent) error {
 	return h.modelsPanel(e, "")
 }
 
-func (h *handlers) saveOpenAIModel(e *core.RequestEvent) error {
-	name := strings.TrimSpace(e.Request.FormValue("name"))
-	baseURL := strings.TrimSpace(e.Request.FormValue("base_url"))
-	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
-	label := strings.TrimSpace(e.Request.FormValue("label"))
-	model := strings.TrimSpace(e.Request.FormValue("model"))
-	embedModel := strings.TrimSpace(e.Request.FormValue("embed_model"))
-	local := e.Request.FormValue("local") == "1"
-	modelID, err := store.SaveOpenAIModel(h.app, name, baseURL, apiKey, label, model, embedModel, local)
-	if err != nil {
-		if e.Request.FormValue("target") == "models" {
-			return h.modelsPanel(e, err.Error())
-		}
-		data, loadErr := h.homeData()
-		if loadErr != nil {
-			return e.InternalServerError("loading chatbar", loadErr)
-		}
-		data.ModelError = err.Error()
-		sse := datastar.NewSSE(e.Response, e.Request)
-		if renderErr := h.patchChatbar(sse, data); renderErr != nil {
-			return e.InternalServerError("rendering chatbar", renderErr)
-		}
-		return nil
-	}
-	if e.Request.FormValue("use") == "1" {
-		if err := store.SetActiveLLMModel(h.app, modelID, "owner"); err != nil {
-			return e.InternalServerError("saving model choice", err)
-		}
-	}
-	if e.Request.FormValue("target") == "models" {
-		return h.modelsPanel(e, "")
-	}
-	return h.chatbar(e)
-}
-
 func (h *handlers) missingModelModalData(key string) (modelModalData, error) {
 	choices, _, err := turn.ModelChoices(h.app)
 	if err != nil {
@@ -389,37 +353,6 @@ func (h *handlers) renderModelModal(e *core.RequestEvent, data modelModalData) e
 	// htmx:afterSwap showModal hook).
 	_ = sse.ExecuteScript("(function(d){if(d&&!d.open)d.showModal()})(document.getElementById('model-modal'))")
 	return nil
-}
-
-// updateProvider handles POST /ui/model/provider/{id}/save.
-func (h *handlers) updateProvider(e *core.RequestEvent) error {
-	id := e.Request.PathValue("id")
-	name := strings.TrimSpace(e.Request.FormValue("name"))
-	baseURL := strings.TrimSpace(e.Request.FormValue("base_url"))
-	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
-	local := e.Request.FormValue("local") == "1"
-	if err := store.UpdateOpenAIProvider(h.app, id, name, baseURL, apiKey, local); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	return h.modelsPanel(e, "")
-}
-
-// deleteProvider handles POST /ui/model/provider/{id}/delete.
-func (h *handlers) deleteProvider(e *core.RequestEvent) error {
-	id := e.Request.PathValue("id")
-	if err := store.DeleteOpenAIProvider(h.app, id); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	return h.modelsPanel(e, "")
-}
-
-// deleteModelRecord handles POST /ui/model/{id}/delete.
-func (h *handlers) deleteModelRecord(e *core.RequestEvent) error {
-	id := e.Request.PathValue("id")
-	if err := store.DeleteLLMModel(h.app, id); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	return h.modelsPanel(e, "")
 }
 
 // buildAvatarOptions returns the full roster of chooseable soul avatars with

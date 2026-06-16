@@ -19,6 +19,12 @@ type MessageProps struct {
 	AvatarSrc string
 	Content   string
 	Pending   bool
+
+	// Streaming ids (the chat gateway sets these so SSE patches can target a
+	// turn). ID is the root element id (morph/remove target); BodyID is the
+	// parchment body id the stream morphs as tokens accumulate. Both optional.
+	ID     string
+	BodyID string
 }
 
 // Message renders a chat turn as the framed RPG speech panel from the design
@@ -52,15 +58,9 @@ func Message(p MessageProps) g.Node {
 		h.Img(h.Src(p.AvatarSrc), h.Alt(""), g.Attr("decoding", "async")),
 	)
 
-	var body g.Node
-	if p.Pending && p.Content == "" {
-		body = h.Span(h.Class("thinking thinking-dots"), g.Text("thinking"))
-	} else {
-		body = h.Div(h.Class("cmsg-body"), g.Text(p.Content))
-	}
 	panel := h.Div(h.Class("cmsg-panel"),
 		h.Div(h.Class("cmsg-name"), g.Text(who)),
-		body,
+		messageBody(p.BodyID, p.Content, p.Pending),
 	)
 
 	// Balaur: portrait then panel; owner: panel then portrait (mirrored).
@@ -68,5 +68,36 @@ func Message(p MessageProps) g.Node {
 	if user {
 		row = h.Div(h.Class("cmsg-row"), panel, portrait)
 	}
-	return h.Div(h.Class(cls), row)
+	rootAttrs := []g.Node{h.Class(cls)}
+	if p.ID != "" {
+		rootAttrs = append(rootAttrs, h.ID(p.ID))
+	}
+	rootAttrs = append(rootAttrs, row)
+	return h.Div(rootAttrs...)
+}
+
+// messageBody renders the parchment body. When bodyID is set it is the chat
+// stream's per-token morph target; a pending+empty turn shows thinking dots —
+// a bare span in the static (storybook) case, wrapped in the id'd body div when
+// streaming so the first token-morph lands by id.
+func messageBody(bodyID, content string, pending bool) g.Node {
+	if pending && content == "" {
+		thinking := h.Span(h.Class("thinking thinking-dots"), g.Text("thinking"))
+		if bodyID == "" {
+			return thinking
+		}
+		return h.Div(h.Class("cmsg-body"), h.ID(bodyID), thinking)
+	}
+	kids := []g.Node{h.Class("cmsg-body")}
+	if bodyID != "" {
+		kids = append(kids, h.ID(bodyID))
+	}
+	kids = append(kids, g.Text(content))
+	return h.Div(kids...)
+}
+
+// MessageBody renders just the parchment body element — the token-morph target
+// the chat stream replaces by id as Balaur's text accumulates.
+func MessageBody(bodyID, content string) g.Node {
+	return messageBody(bodyID, content, false)
 }

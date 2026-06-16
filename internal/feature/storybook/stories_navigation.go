@@ -106,15 +106,15 @@ func paginationStory() Story {
 func topbarStory() Story {
 	return Story{
 		ID: "topbar", Group: "Navigation", Title: "Topbar", Wide: true,
-		Blurb: "The sticky wood-plank chrome bar: a borderless crest brand, mono uppercase nav, and the theme toggles. Top-level page navigation only — the active link rides gold.",
+		Blurb: "The sticky wood-plank chrome bar: the crest brand links Home (the full-screen companion chat), then the top-level domain nav (Quests / Knowledge / Life / Journal / Heads + Settings) and the theme toggles. This is the product's only top-level navigation — the active domain rides gold.",
 		Variants: []Variant{
 			// position:relative gives the sticky bar a containing block so it
 			// renders in place inside the storybook tile. One example — the
-			// active link (here "storybook") rides gold; other pages just move it.
-			{"storybook active", h.Div(h.Style("position:relative"), shell.Topbar("storybook"))},
+			// active domain (here "quests") rides gold; other pages just move it.
+			{"quests active", h.Div(h.Style("position:relative"), shell.Topbar("quests"))},
 		},
 		Props: []Prop{
-			{"active", "string", "—", `Nav key for the current page ("storybook", "settings") — that link renders gold with aria-current="page".`},
+			{"active", "string", "—", `Nav key for the current page — a domain key ("quests", "knowledge", "life", "journal", "heads") or "settings"; that link renders gold with aria-current="page". Home ("/") highlights nothing.`},
 		},
 		Dos: []string{
 			"Use for top-level page navigation only.",

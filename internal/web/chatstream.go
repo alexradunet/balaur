@@ -7,9 +7,11 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
+	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/tools"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 )
 
 // chatSignals is the Datastar signal payload the composer sends with @post.
@@ -68,26 +70,35 @@ func (h *handlers) newChatStream(e *core.RequestEvent, balaURL, who, soulURL, ow
 	}
 }
 
-// render executes a named fragment to a buffer; empty string on error (the
-// caller owns a live stream and cannot un-send bytes).
-func (s *chatStream) render(name string, mv messageView) string {
+// renderNode renders a gomponents node to a string; empty on error (the caller
+// owns a live stream and cannot un-send bytes).
+func (s *chatStream) renderNode(n g.Node) string {
 	var b strings.Builder
-	if err := s.h.tmpl.ExecuteTemplate(&b, name, mv); err != nil {
-		s.h.app.Logger().Warn("chat fragment render failed", "fragment", name, "err", err)
+	if err := n.Render(&b); err != nil {
+		s.h.app.Logger().Warn("chat node render failed", "err", err)
 		return ""
 	}
 	return b.String()
 }
 
-// appendChat appends a fragment as the last child of #chat.
-func (s *chatStream) appendChat(name string, mv messageView) {
-	_ = s.sse.PatchElements(s.render(name, mv),
+// appendNode appends a rendered component as the last child of #chat.
+func (s *chatStream) appendNode(n g.Node) {
+	_ = s.sse.PatchElements(s.renderNode(n),
 		datastar.WithSelectorID("chat"), datastar.WithModeAppend())
 }
 
-// morph replaces an element in place by the id on the fragment's root.
-func (s *chatStream) morph(name string, mv messageView) {
-	_ = s.sse.PatchElements(s.render(name, mv))
+// morphNode replaces an element in place by the id on the node's root.
+func (s *chatStream) morphNode(n g.Node) {
+	_ = s.sse.PatchElements(s.renderNode(n))
+}
+
+// balaurBubble builds a Balaur chat.Message bubble for the stream — pending
+// while empty, finalized once buf has text. ID/BodyID make it a morph target.
+func (s *chatStream) balaurBubble(content string, pending bool) g.Node {
+	return chat.Message(chat.MessageProps{
+		Role: "balaur", AvatarSrc: s.balaURL, Who: s.who,
+		ID: s.bubbleID, BodyID: s.bodyID, Content: content, Pending: pending,
+	})
 }
 
 // start clears any stale choice panels and the composer signal, echoes the
@@ -95,9 +106,9 @@ func (s *chatStream) morph(name string, mv messageView) {
 func (s *chatStream) start(userMsg string) {
 	_ = s.sse.RemoveElement(".choices")
 	_ = s.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
-	s.appendChat("chat-msg-user", messageView{
-		SoulAvatarURL: s.soulURL, OwnerName: s.ownerName, Content: userMsg,
-	})
+	s.appendNode(chat.Message(chat.MessageProps{
+		Role: "user", AvatarSrc: s.soulURL, Who: s.ownerName, Content: userMsg,
+	}))
 	s.openBubble()
 	// Mark the turn in-flight so the branch "← back to main" control disables
 	// while tokens stream (otherwise a swap leaves the open head stream
@@ -115,10 +126,7 @@ func (s *chatStream) openBubble() {
 	s.bubbleID = fmt.Sprintf("balaur-%s-%d", s.base, s.bubbleN)
 	s.bodyID = s.bubbleID + "-body"
 	s.buf.Reset()
-	s.appendChat("chat-balaur-bubble", messageView{
-		BalaurAvatarURL: s.balaURL, WhoLabel: s.who,
-		BubbleID: s.bubbleID, BodyID: s.bodyID, Pending: true,
-	})
+	s.appendNode(s.balaurBubble("", true))
 }
 
 // finalizeBubble drops an empty bubble or morphs the open one to its final,
@@ -130,10 +138,7 @@ func (s *chatStream) finalizeBubble() {
 	if strings.TrimSpace(s.buf.String()) == "" {
 		_ = s.sse.RemoveElementByID(s.bubbleID)
 	} else {
-		s.morph("chat-balaur-bubble", messageView{
-			BalaurAvatarURL: s.balaURL, WhoLabel: s.who,
-			BubbleID: s.bubbleID, BodyID: s.bodyID, Content: s.buf.String(),
-		})
+		s.morphNode(s.balaurBubble(s.buf.String(), false))
 	}
 	s.bubbleID, s.bodyID = "", ""
 }
@@ -143,16 +148,16 @@ func (s *chatStream) emit(ev agent.Event) {
 	switch ev.Kind {
 	case "text":
 		s.buf.WriteString(ev.Text)
-		s.morph("chat-balaur-body", messageView{BodyID: s.bodyID, Content: s.buf.String()})
+		s.morphNode(chat.MessageBody(s.bodyID, s.buf.String()))
 	case "tool_start":
 		s.finalizeBubble()
 		s.toolN++
 		s.toolName = ev.Tool
 		s.toolID = fmt.Sprintf("tool-%s-%d", s.base, s.toolN)
 		s.toolBody = s.toolID + "-body"
-		s.appendChat("chat-tool-row", messageView{
-			Tool: s.toolName, BubbleID: s.toolID, BodyID: s.toolBody,
-		})
+		s.appendNode(chat.ToolRow(chat.ToolRowProps{
+			Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody,
+		}))
 	case "tool_result":
 		s.handleToolResult(ev)
 		s.openBubble()
@@ -161,7 +166,7 @@ func (s *chatStream) emit(ev agent.Event) {
 			s.buf.WriteString(" — ")
 		}
 		s.buf.WriteString("the thread snapped: " + s.h.chatErrText(ev.Err))
-		s.morph("chat-balaur-body", messageView{BodyID: s.bodyID, Content: s.buf.String()})
+		s.morphNode(chat.MessageBody(s.bodyID, s.buf.String()))
 	}
 }
 
@@ -195,11 +200,11 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 // endTool morphs the open tool row with its result and, when a card is attached,
 // appends it server-rendered (no lazy mount, no htmx) so it survives in history.
 func (s *chatStream) endTool(content string, card template.HTML) {
-	s.morph("chat-tool-row", messageView{
-		Tool: s.toolName, BubbleID: s.toolID, BodyID: s.toolBody, Content: content,
-	})
+	s.morphNode(chat.ToolRow(chat.ToolRowProps{
+		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
+	}))
 	if card != "" {
-		s.appendChat("chat-inline-card", messageView{BubbleID: s.toolID + "-card", CardBody: card})
+		s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
 	}
 }
 
@@ -228,9 +233,9 @@ func (s *chatStream) appendChoices(prompt string, choices []tools.Choice) {
 
 // note appends a standalone assistant message (e.g. the honesty check note).
 func (s *chatStream) note(origin, content string) {
-	s.appendChat("chat-msg-balaur", messageView{
-		BalaurAvatarURL: s.balaURL, WhoLabel: s.who, Origin: origin, Content: content,
-	})
+	s.appendNode(chat.Message(chat.MessageProps{
+		Role: "balaur", AvatarSrc: s.balaURL, Who: s.who, Origin: origin, Content: content,
+	}))
 }
 
 // finish closes the last open bubble and clears the streaming signal.

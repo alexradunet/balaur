@@ -405,14 +405,10 @@ func (h *handlers) chatNudges(e *core.RequestEvent) error {
 		return nil // nothing new — the poller keeps its cursor
 	}
 	last := recs[len(recs)-1].GetDateTime("created").Time().UnixMilli()
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "chat-messages.html", h.messageViews(recs)); err != nil {
-		return e.InternalServerError("rendering nudges", err)
-	}
 	// Append the new agent messages to the chat and advance the poller's cursor
 	// signal so the next poll only asks for what's newer.
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
+	_ = sse.PatchElements(string(h.renderMessages(h.messageViews(recs))), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
 	_ = sse.MarshalAndPatchSignals(struct {
 		NudgeSince int64 `json:"nudgeSince"`
 	}{last})

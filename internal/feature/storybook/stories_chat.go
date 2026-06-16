@@ -29,6 +29,8 @@ func chatmessageStory() Story {
 			{"AvatarSrc", "string", "—", "Path to the portrait PNG (balaur head or owner soul)."},
 			{"Content", "string", "—", "The spoken line."},
 			{"Pending", "bool", "false", "Marks an assistant turn mid-generation — thinking dots + a breathing teal glow."},
+			{"ID", "string", "—", "Optional root element id — the chat stream's morph/remove target for a turn."},
+			{"BodyID", "string", "—", "Optional body element id — the stream morphs it as tokens accumulate."},
 		},
 		Dos: []string{
 			"Keep the owner on the right, Balaur on the left.",
@@ -55,6 +57,8 @@ func chattoolrowStory() Story {
 			{"Tool", "string", "—", `Machine name of the tool call; rendered "tool · {Tool}", mono.`},
 			{"Icon", "string", "—", "A /static/icons name, composed via ui.Icon."},
 			{"Content", "string", "—", "The event detail / result line."},
+			{"ID", "string", "—", "Optional root element id — lets the chat stream morph the row once the tool returns."},
+			{"BodyID", "string", "—", "Optional body element id — the morph target for the tool's result."},
 		},
 		Dos: []string{
 			"Show every tool and OS-access event — the trail is the trust.",

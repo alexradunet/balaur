@@ -1,9 +1,6 @@
 package web
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -11,30 +8,9 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 
 	"github.com/alexradunet/balaur/internal/life"
-	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/llmtest"
 	_ "github.com/alexradunet/balaur/migrations"
 )
-
-// newFakePromptServer returns a fake SSE model server that always responds
-// with the given prompt text.
-func newFakePromptServer(line string) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/chat/completions" {
-			http.NotFound(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n\n", line)
-		fmt.Fprint(w, "data: [DONE]\n\n")
-	}))
-}
-
-// newFakeErrorServer returns a server that always responds with 500.
-func newFakeErrorServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "model unavailable", http.StatusInternalServerError)
-	}))
-}
 
 // TestJournalPage: the candle now lives in the journal card's focus
 // (/focus/journal). The standalone /journal page is retired; this asserts the
@@ -85,13 +61,9 @@ func TestJournalWrite(t *testing.T) {
 func TestJournalPrompt(t *testing.T) {
 	t.Run("with active model returns model line", func(t *testing.T) {
 		const promptLine = "Let the day speak through you."
-		sseSrv := newFakePromptServer(promptLine)
-		t.Cleanup(func() { sseSrv.Close() })
-
 		newPromptApp := func(tb testing.TB) *tests.TestApp {
 			app := newWebApp(tb)
-			id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
-			store.SetActiveLLMModel(app, id, "test")
+			seedScriptedModel(tb, app, llmtest.Text(promptLine))
 			return app
 		}
 
@@ -107,13 +79,9 @@ func TestJournalPrompt(t *testing.T) {
 	})
 
 	t.Run("with failing client falls back to deterministic line", func(t *testing.T) {
-		errSrv := newFakeErrorServer()
-		t.Cleanup(func() { errSrv.Close() })
-
 		newErrApp := func(tb testing.TB) *tests.TestApp {
 			app := newWebApp(tb)
-			id, _ := store.SaveOpenAIModel(app, "fake-err", errSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
-			store.SetActiveLLMModel(app, id, "test")
+			seedFailingModel(tb, app)
 			return app
 		}
 

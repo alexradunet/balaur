@@ -100,11 +100,27 @@ self tool, which reports the actual registry):
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI at / (chat, /focus/memory, /focus/skills, /focus/quests,
-/focus/heads, /focus/journal, /focus/day?date={date}, /focus/lifelog,
-/focus/settings?section=profile|models; the active head is switched from the
+Surfaces: the web UI — / is Home, the full-screen companion chat (the
+conversation with Balaur is the home). Home renders as gomponents on shell.Page
+with class "home" on <html>, which makes the persistent companion dock fill the
+canvas. The chat renders through the storybook components: messages are
+chat.Message speech panels + chat.ToolRow rows (page-load history via
+h.renderMessages and the live SSE stream in chatstream.go share one markup
+source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
+the bottom) that replaced the old chat_draft. The surrounding dock chrome
+(chat_dock shell: grip, recap zone, nudge poller, head/model switcher) is still
+the legacy template injected via g.Raw, pending a full chat.Dock port. The
+domain pages (Quests, Knowledge, Life, Journal, Heads) + Settings are the
+top-level nav in the wood topbar (no side rail); navigating to one drops the
+"home" class so the dock returns to its right rail (the chat moves to the
+sidebar) with the domain content in #main. Those domains are still served by the
+legacy /focus/memory, /focus/skills, /focus/quests, /focus/heads, /focus/journal,
+/focus/day?date={date}, /focus/lifelog, /focus/settings?section=profile|models,
+and owner-composed boards remain at /boards until those surfaces are migrated to
+gomponents and retired (so nav to them is a full page load for now). The active
+head is switched from the
 dock via POST /ui/heads/active, and the heads card manages personas via
-POST /ui/heads/new and POST /ui/heads/{id}/delete); the machine-facing
+POST /ui/heads/new and POST /ui/heads/{id}/delete; the machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`

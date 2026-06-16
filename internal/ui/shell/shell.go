@@ -14,31 +14,39 @@ import (
 const noFlashScript = `(function(){var d=document.documentElement;d.classList.add(localStorage.getItem('basm-theme')||'dark');d.classList.add('theme-'+(localStorage.getItem('basm-palette')||'hearthwood'));if(localStorage.getItem('basm-dock-full')==='1')d.classList.add('dock-full');var w=parseInt(localStorage.getItem('basm-dock-w'),10);if(w>=280&&w<=720)d.style.setProperty('--sidebar-w',w+'px');}());`
 
 // PageProps configures a full page. Active is the nav key for aria-current
-// ("storybook", "settings"); Body fills #main; Dock fills the companion #dock.
+// (a domain key like "quests", or "settings"); Body fills #main; Dock fills the
+// companion #dock. HTMLClass (optional) is added to <html> — "home" makes the
+// persistent dock fill the canvas for the full-screen companion chat.
 type PageProps struct {
-	Title  string
-	Active string
-	Body   g.Node
-	Dock   g.Node
+	Title     string
+	Active    string
+	HTMLClass string
+	Body      g.Node
+	Dock      g.Node
 }
 
 // Page renders the full <html> document for one Balaur page.
 func Page(p PageProps) g.Node {
+	html := []g.Node{h.Lang("en")}
+	if p.HTMLClass != "" {
+		html = append(html, h.Class(p.HTMLClass))
+	}
+	html = append(html,
+		h.Head(
+			pageHead(),
+			h.TitleEl(g.Text(p.Title+" · Balaur")),
+		),
+		h.Body(
+			Topbar(p.Active),
+			h.Div(h.Class("with-sidebar"),
+				h.Main(h.ID("main"), p.Body),
+			),
+			h.Aside(h.ID("dock"), p.Dock),
+		),
+	)
 	return g.Group([]g.Node{
 		g.Raw("<!doctype html>"),
-		h.HTML(h.Lang("en"),
-			h.Head(
-				pageHead(),
-				h.TitleEl(g.Text(p.Title+" · Balaur")),
-			),
-			h.Body(
-				Topbar(p.Active),
-				h.Div(h.Class("with-sidebar"),
-					h.Main(h.ID("main"), p.Body),
-				),
-				h.Aside(h.ID("dock"), p.Dock),
-			),
-		),
+		h.HTML(html...),
 	})
 }
 
@@ -57,8 +65,12 @@ func pageHead() g.Node {
 	})
 }
 
-// Topbar is the wood-chrome header: crest brand, mono nav, theme toggle. The
-// active link carries aria-current="page".
+// Topbar is the wood-chrome header: the crest brand links Home (the full-screen
+// companion chat), then the product's top-level domain nav (the active domain
+// rides gold) and the theme toggles. The domain links are the single top-level
+// navigation — there is no side rail. Each domain whose own page is not yet
+// migrated to gomponents points at its existing /focus surface. The active link
+// carries aria-current="page".
 func Topbar(active string) g.Node {
 	return h.Header(h.Class("topbar"),
 		h.A(h.Class("brand"), h.Href("/"),
@@ -66,9 +78,12 @@ func Topbar(active string) g.Node {
 			g.Text("Balaur"),
 		),
 		h.Nav(
-			navLink("/", "Storybook", "storybook", active),
+			navLink("/focus/quests", "Quests", "quests", active),
+			navLink("/focus/memory", "Knowledge", "knowledge", active),
+			navLink("/focus/lifelog", "Life", "life", active),
+			navLink("/focus/journal", "Journal", "journal", active),
+			navLink("/focus/heads", "Heads", "heads", active),
 			navLink("/focus/settings", "Settings", "settings", active),
-			h.A(h.Href("/_/"), h.Target("_blank"), g.Attr("rel", "noopener noreferrer"), g.Text("Engine room")),
 		),
 		h.Button(h.Class("theme-cycle"), h.Type("button"),
 			g.Attr("onclick", "basmCycleTheme()"),

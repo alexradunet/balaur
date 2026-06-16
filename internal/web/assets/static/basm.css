@@ -3166,3 +3166,53 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cmsg-balaur .cmsg-name { left: 12px; color: var(--gold-ink); }
 .cmsg-user .cmsg-name { right: 12px; color: var(--indigo-ink); }
 .cmsg-body { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; }
+
+/* ── Home: the full-screen companion chat ───────────────────────────────────
+   Home is the chat. The chat lives in the persistent #dock as on every page;
+   the "home" class on <html> makes that dock fill the canvas (mirroring the
+   .dock-full overlay) so the companion IS the home. Navigating to a domain page
+   drops .home and the dock returns to its right rail — the chat moves to the
+   sidebar. The dock-head (full-screen toggle) is hidden here; on Home it's
+   already full. */
+html.home .with-sidebar { padding-right: 0; }
+html.home #dock {
+  left: 0;
+  width: auto;
+  z-index: 50;
+  border-left: 0;
+  box-shadow: none;
+}
+html.home #dock .dock-grip,
+html.home #dock .dock-head { display: none; }
+html.home #dock .chat,
+html.home #dock .msg-draft,
+html.home #dock .chatbar,
+html.home #dock .recap-zone,
+html.home #dock .recap-band {
+  width: auto;
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 24px 8px; }
+html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
+
+@media (max-width: 900px) {
+  html.home #dock { position: fixed; inset: 62px 0 0 0; width: auto; height: auto; }
+}
+
+/* ── Live composer in the dock ──────────────────────────────────────────────
+   The conversation (#dock-convo) flexes to fill, so the ui.Composer ledge stays
+   pinned at the bottom of the dock with the history scrolling above it. On Home
+   (full-screen chat) the composer centers with the conversation column. */
+#dock-convo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#dock .composer { flex: 0 0 auto; margin: 8px 10px 10px; }
+html.home #dock .composer { width: auto; max-width: 940px; margin-left: auto; margin-right: auto; }
+
+/* Chat speech panels (chat.Message) inside the dock: take the full column width
+   (the dock is narrower than the storybook stage) and compact the portrait in
+   the rail; Home (full-screen chat) keeps it larger. */
+#dock .chat .cmsg-row { max-width: 100%; }
+#dock .chat .cmsg-portrait { width: 46px; height: 46px; }
+html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
+#dock .chat .hearth-crest { display: block; margin: 4px auto 14px; }

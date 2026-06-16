@@ -68,27 +68,14 @@ func newModel(t *testing.T, app core.App, providerID, label, chat, created strin
 func TestOllamaLocalModelsUpRewrites(t *testing.T) {
 	app := newTestApp(t)
 
-	// Seed a local provider and an openai-kind provider.
+	// Seed a local provider. (The openai-provider fixture is gone: plan 074
+	// removed the remote path and migration 1750830000 forbids kind="openai".)
 	localPID := newLocalProvider(t, app, "local-provider")
-
-	openaiCol, err := app.FindCollectionByNameOrId("llm_providers")
-	if err != nil {
-		t.Fatalf("llm_providers collection: %v", err)
-	}
-	openaiRec := core.NewRecord(openaiCol)
-	openaiRec.Set("name", "openai-provider")
-	openaiRec.Set("kind", "openai")
-	if err := app.Save(openaiRec); err != nil {
-		t.Fatalf("save openai provider: %v", err)
-	}
-	openaiPID := openaiRec.Id
 
 	// m1: legacy .gguf path on local provider — should be rewritten.
 	m1 := newModel(t, app, localPID, "Old Local Gemma", "/models/gemma.gguf", "")
 	// m2: already a tag on local provider — should be untouched.
 	m2 := newModel(t, app, localPID, "Already Tag Model", "gemma4:e4b", "")
-	// m3: .gguf on openai provider — should be untouched (non-local).
-	m3 := newModel(t, app, openaiPID, "OpenAI Gguf Model", "/models/other.gguf", "")
 
 	if err := ollamaLocalModelsUp(app); err != nil {
 		t.Fatalf("ollamaLocalModelsUp: %v", err)
@@ -119,15 +106,6 @@ func TestOllamaLocalModelsUpRewrites(t *testing.T) {
 	}
 	if got2.GetString("label") != "Already Tag Model" {
 		t.Errorf("m2 label = %q, want Already Tag Model (should be untouched)", got2.GetString("label"))
-	}
-
-	// m3 (openai provider) should be untouched.
-	got3, err := app.FindRecordById("llm_models", m3)
-	if err != nil {
-		t.Fatalf("refetch m3: %v", err)
-	}
-	if got3.GetString("chat_model") != "/models/other.gguf" {
-		t.Errorf("m3 chat_model = %q, want /models/other.gguf (openai provider, should be untouched)", got3.GetString("chat_model"))
 	}
 }
 

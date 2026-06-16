@@ -194,22 +194,18 @@ func Register(se *core.ServeEvent) error {
 		feature.UnregisterAll()
 		return e.Next()
 	})
-	se.Router.GET("/", h.boardHome) // board-as-home; the chat lives in the dock
+	se.Router.GET("/", h.root) // exact / → Home; any unregistered path → redirect Home
 	se.Router.GET("/storybook", h.storybookHome)
 	se.Router.GET("/storybook/{id}", h.storybookStory)
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)
-	se.Router.POST("/ui/model/openai", h.saveOpenAIModel)
 	se.Router.GET("/ui/model/missing", h.missingModelModal)
 	se.Router.POST("/ui/model/download", h.modelPull)
 	se.Router.GET("/ui/model/pull/progress", h.modelPullProgress)
 	se.Router.POST("/ui/model/pull/download", h.modelPull)
 	se.Router.POST("/ui/model/pull/cancel", h.modelPullCancel)
 	se.Router.POST("/ui/model/pull/delete", h.modelDelete)
-	se.Router.POST("/ui/model/provider/{id}/save", h.updateProvider)
-	se.Router.POST("/ui/model/provider/{id}/delete", h.deleteProvider)
-	se.Router.POST("/ui/model/{id}/delete", h.deleteModelRecord)
 	se.Router.POST("/ui/journal", h.journalWrite)
 	se.Router.GET("/ui/journal/prompt", h.journalPrompt)
 	se.Router.POST("/ui/day/{date}/journal", h.dayJournalWrite)
@@ -273,12 +269,6 @@ func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
 // recap telescope.
 const historyWindow = 60
 
-// boardHome lands the owner on the board dashboard (board-as-home). The
-// companion chat lives in the board's dock — there is no standalone chat page.
-func (h *handlers) boardHome(e *core.RequestEvent) error {
-	return e.Redirect(http.StatusFound, "/boards")
-}
-
 // dockData assembles the companion-chat view-model (model state + history +
 // recap flag) shared by the home page and the board dock (chat_dock fragment).
 func (h *handlers) dockData() (homeData, error) {
@@ -297,6 +287,8 @@ func (h *handlers) dockData() (homeData, error) {
 			data.HasRecap = oldest.Before(startOfToday)
 		}
 	}
+	data.ComposerHTML = composerHTML(data)   // the live chat input, rendered in Go
+	data.ChatBodyHTML = h.chatBodyHTML(data) // history (or greeting), via chat.Message
 	return data, nil
 }
 

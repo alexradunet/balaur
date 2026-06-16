@@ -25,43 +25,22 @@
 
   {{template "chat_bar" .}}
 
+  {{- /* The live chat input — the storybook ui.Composer, rendered in Go and
+       injected here so it sits at the bottom of the dock (history scrolls
+       above it). Replaces the old chat_draft template. */ -}}
+  {{.ComposerHTML}}
+
   <!-- Native dialog — showModal() called by basm.js after swap -->
   <dialog id="model-modal" aria-labelledby="model-modal-title"></dialog>
 {{end}}
 
 {{- /* dock_convo — the conversation region inside #dock-convo: the #chat
-     history/greeting and the draft. The dock shell (grip, full-screen,
-     recap, nudge-poll, chat_bar, dialog) is rendered separately and stays
-     put. Context: homeData. */ -}}
+     history (or hearth greeting), rendered via the chat.Message / chat.ToolRow
+     components in Go (ChatBodyHTML) so it matches the live stream. The dock
+     shell (grip, full-screen, recap, nudge-poll, chat_bar, composer, dialog) is
+     rendered separately and stays put. Context: homeData. */ -}}
 {{define "dock_convo"}}
-  <section class="chat" id="chat" aria-live="polite">
-    {{if .History}}
-      {{template "chat-messages.html" .History}}
-    {{else}}
-    <img class="hearth-crest" src="/static/crest.png"
-         alt="The Balaur crest — a three-headed dragon holding a glowing orb and a tome">
-    <div class="msg msg-balaur msg-with-avatar">
-      <figure class="portrait">
-        <span class="balaur-avatar balaur-avatar-balaur" data-kind="balaur" aria-hidden="true">
-          <img src="{{.BalaurAvatarURL}}" alt="" decoding="async">
-        </span>
-        <figcaption class="who">Balaur</figcaption>
-      </figure>
-      <div class="msg-main">
-        {{if .ChatReady}}
-        <div class="body">I am here. The hearth is lit and your words stay on this box. What shall we weigh today?</div>
-        {{else}}
-        <div class="body">
-          <p>{{.ModelError}}</p>
-          {{if .ModelHint}}<p><code>{{.ModelHint}}</code></p>{{end}}
-        </div>
-        {{end}}
-      </div>
-    </div>
-    {{end}}
-  </section>
-
-  {{template "chat_draft" .}}
+  <section class="chat" id="chat" aria-live="polite">{{.ChatBodyHTML}}</section>
 {{end}}
 
 {{define "chat_bar"}}
@@ -69,30 +48,6 @@
      {{if not .ChatReady}}data-on:interval__duration.2s="@get('/ui/chatbar')"{{end}}>
   {{template "head_switcher" .}}
   {{template "model_switcher" .}}
-</div>
-{{end}}
-
-{{define "chat_draft"}}
-<div class="msg msg-user msg-draft" id="chat-draft" data-signals:message="''">
-  <figure class="portrait">
-    <span class="balaur-avatar balaur-avatar-soul" data-kind="soul" aria-hidden="true">
-      <img src="{{.SoulAvatarURL}}" alt="" decoding="async">
-    </span>
-    <figcaption class="who">{{.OwnerName}}</figcaption>
-  </figure>
-  <div class="msg-main">
-    <form class="chat-form" data-on:submit="@post('/ui/chat')">
-      <textarea name="message" data-bind:message placeholder="{{.ChatPlaceholder}}" rows="2"
-                autocomplete="off" autofocus required
-                {{if not .ChatReady}}disabled{{end}}
-                onkeydown="balaurSubmitOnEnter(event)"></textarea>
-      <div class="msg-draft-foot">
-        <span class="msg-draft-hint">enter to speak · shift+enter for a new line</span>
-        <button class="btn btn-primary btn-sm" type="submit"
-                {{if not .ChatReady}}disabled{{end}}>Speak</button>
-      </div>
-    </form>
-  </div>
 </div>
 {{end}}
 

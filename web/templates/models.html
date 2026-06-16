@@ -70,65 +70,6 @@
     {{end}}
   </section>
 
-  {{if .Providers}}
-  <section class="k-section">
-    <div class="k-heading">
-      <h2>Saved providers</h2>
-    </div>
-    <div class="k-grid">
-      {{range .Providers}}
-      <article class="kcard">
-        <div class="kcard-head">
-          <div>
-            <div class="kcard-kind">{{.BaseURL}}{{if .KeySet}} · key set{{else}} · key not set{{end}}{{if .Local}} · self-hosted{{end}}</div>
-            <h3>{{.Name}}</h3>
-          </div>
-        </div>
-        {{if .Models}}
-        <ul class="k-sub" style="list-style:none;padding:0;margin:0.5rem 0">
-          {{$activeID := $.ActiveModelID}}
-          {{range .Models}}
-          <li style="display:flex;align-items:center;gap:0.5rem;margin:0.25rem 0">
-            <span>{{.Label}} <span class="k-sub">{{.ChatModel}}</span></span>
-            {{if eq .ModelID $activeID}}
-            <span class="tag">active</span>
-            {{else}}
-            <form data-on:submit__prevent="confirm('Remove this model?') &amp;&amp; @post('/ui/model/{{.ModelID}}/delete')"
-                  style="display:inline;margin:0">
-              <button class="btn btn-ghost btn-sm" type="submit">Remove</button>
-            </form>
-            {{end}}
-          </li>
-          {{end}}
-        </ul>
-        {{end}}
-        <div class="kcard-actions">
-          <details class="kcard-edit">
-            <summary>edit</summary>
-            <form data-on:submit__prevent="@post('/ui/model/provider/{{.ID}}/save', {contentType:'form'})">
-              <label>Provider name<input name="name" value="{{.Name}}" required></label>
-              <label>Base URL<input name="base_url" value="{{.BaseURL}}" required></label>
-              <label>API key
-                <input name="api_key" type="password" autocomplete="off" value="">
-                <span class="k-sub">Leave blank to keep the current key.</span>
-              </label>
-              <div class="model-form-checks">
-                <label><input type="checkbox" name="local" value="1"{{if .Local}} checked{{end}}> self-hosted/local endpoint</label>
-              </div>
-              <button class="btn btn-primary btn-sm" type="submit">Save changes</button>
-            </form>
-          </details>
-          <form data-on:submit__prevent="confirm('Remove this provider and its models?') &amp;&amp; @post('/ui/model/provider/{{.ID}}/delete')"
-                style="display:inline">
-            <button class="btn btn-ghost btn-sm" type="submit">Delete provider</button>
-          </form>
-        </div>
-      </article>
-      {{end}}
-    </div>
-  </section>
-  {{end}}
-
   <section class="k-section">
     <div class="k-heading">
       <h2>Local models</h2>
@@ -168,28 +109,6 @@
       <input type="hidden" name="tag" value="gemma4:26b">
       <p class="k-sub">Pull the GPU chat model (Gemma 4 26B, ~18&nbsp;GB Mixture-of-Experts) and make it the active model. Built for a GPU box — it runs on CPU but slowly.</p>
       <button class="btn btn-primary" type="submit">Pull GPU model (Gemma 4 26B)</button>
-    </form>
-  </section>
-
-  <section class="k-section">
-    <div class="k-heading">
-      <h2>Add OpenAI-compatible API</h2>
-    </div>
-    <p class="k-sub">Works with Ollama, llama-server, LM Studio, OpenAI, Synthetic, and other OpenAI-compatible endpoints.</p>
-    <form class="card model-provider-form" data-on:submit__prevent="@post('/ui/model/openai', {contentType:'form'})">
-      <input type="hidden" name="target" value="models">
-      <label>Provider name<input name="name" placeholder="Ollama" required></label>
-      <label>Base URL<input name="base_url" placeholder="http://localhost:11434/v1" required></label>
-      <label>Display label<input name="label" placeholder="Llama 3.1 8B" required></label>
-      <label>Chat model id<input name="model" placeholder="llama3.1:8b" required></label>
-      <label>Embedding model id <span class="muted">optional</span><input name="embed_model" placeholder="nomic-embed-text"></label>
-      <label>API key <span class="muted">optional, stored in PocketBase</span><input name="api_key" type="password" autocomplete="off" placeholder="sk-..."></label>
-      <div class="model-form-checks">
-        <label><input type="checkbox" name="local" value="1"> self-hosted/local endpoint</label>
-        <label><input type="checkbox" name="use" value="1" checked> use after saving</label>
-      </div>
-      <p class="k-sub">Keys are redacted in Balaur's UI and audit log, but pb_data and backups should be treated as secret.</p>
-      <button class="btn btn-primary" type="submit">Save model</button>
     </form>
   </section>
 </div>

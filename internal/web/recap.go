@@ -9,11 +9,13 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
+	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 )
 
 // The recap telescope UI: the chat page tops out with a "further back"
@@ -139,9 +141,7 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 		if err != nil {
 			return e.InternalServerError("loading day", err)
 		}
-		if err := h.tmpl.ExecuteTemplate(&b, "chat-messages.html", h.messageViews(msgs)); err != nil {
-			return e.InternalServerError("rendering day transcript", err)
-		}
+		b.WriteString(string(h.renderMessages(h.messageViews(msgs))))
 	} else {
 		var cards []recapView
 		for _, child := range recap.Children(p) {
@@ -178,6 +178,60 @@ type messageView struct {
 	BubbleID string
 	BodyID   string
 	Pending  bool
+}
+
+// renderMessages renders a chat transcript via the storybook components
+// (chat.Message speech panels + chat.ToolRow trail) — the single source of chat
+// markup for page-load history, the Home greeting, and day-recap expansion. The
+// live stream (chatstream.go) renders the same components, so history and
+// streamed turns match.
+func (h *handlers) renderMessages(views []messageView) template.HTML {
+	nodes := make([]g.Node, 0, len(views))
+	for _, mv := range views {
+		switch mv.Role {
+		case "user":
+			nodes = append(nodes, chat.Message(chat.MessageProps{
+				Role: "user", AvatarSrc: mv.SoulAvatarURL, Who: mv.OwnerName, Content: mv.Content,
+			}))
+		case "tool":
+			nodes = append(nodes, chat.ToolRow(chat.ToolRowProps{
+				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Content: mv.Content,
+			}))
+			if mv.CardBody != "" {
+				nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), g.Raw(string(mv.CardBody))))
+			}
+		default: // assistant
+			nodes = append(nodes, chat.Message(chat.MessageProps{
+				Role: "balaur", AvatarSrc: mv.BalaurAvatarURL, Who: mv.WhoLabel, Origin: mv.Origin, Content: mv.Content,
+			}))
+		}
+	}
+	var b strings.Builder
+	_ = g.Group(nodes).Render(&b)
+	return template.HTML(b.String())
+}
+
+// chatBodyHTML renders the #chat body: the conversation history when present,
+// otherwise the hearth greeting (the crest + a balaur welcome, or the model
+// setup notice). Everything goes through the chat components so the empty state,
+// history, and the live stream share one look.
+func (h *handlers) chatBodyHTML(d homeData) template.HTML {
+	if len(d.History) > 0 {
+		return h.renderMessages(d.History)
+	}
+	content := "I am here. The hearth is lit and your words stay on this box. What shall we weigh today?"
+	if !d.ChatReady {
+		content = d.ModelError
+		if d.ModelHint != "" {
+			content += "\n" + d.ModelHint
+		}
+	}
+	crest := g.El("img", g.Attr("class", "hearth-crest"), g.Attr("src", "/static/crest.png"),
+		g.Attr("alt", "The Balaur crest — a three-headed dragon holding a glowing orb and a tome"))
+	greeting := chat.Message(chat.MessageProps{Role: "balaur", AvatarSrc: d.BalaurAvatarURL, Who: "Balaur", Content: content})
+	var b strings.Builder
+	_ = g.Group([]g.Node{crest, greeting}).Render(&b)
+	return template.HTML(b.String())
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {

@@ -11,6 +11,27 @@ import (
 	"github.com/alexradunet/balaur/internal/store"
 )
 
+// testClientKey holds an llm.Client injected by tests via SetTestClient so the
+// turn pipeline can run without a real backend. Production never sets it; it
+// lives on app.Store() (per-app, concurrency-safe) rather than as a package
+// global, mirroring how the FTS5 search index is held.
+const testClientKey = "turn.testClient"
+
+// SetTestClient injects a fake llm.Client for tests. When present, ClientSource
+// resolves to it and availableChoices treats local models as ready (no daemon
+// reachability required). This is the seam AGENTS.md mandates: tests fake the
+// llm.Client interface and never hit a real model.
+func SetTestClient(app core.App, c llm.Client) { app.Store().Set(testClientKey, c) }
+
+func injectedClient(app core.App) (llm.Client, bool) {
+	v, ok := app.Store().GetOk(testClientKey)
+	if !ok {
+		return nil, false
+	}
+	c, ok := v.(llm.Client)
+	return c, ok && c != nil
+}
+
 // ModelChoice describes one selectable provider/model pair. Name, Detail
 // and Badge are human-facing labels; gateways render them as they see fit.
 type ModelChoice struct {
@@ -89,11 +110,13 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 			Badge:    modelBadge(cfg),
 		}
 		if cfg.Kind == "local" {
-			pulled, err := ollama.Default.IsPulled(cfg.ChatModel)
-			if err != nil || !pulled {
-				choice.Disabled = true
-				choice.Badge = "missing"
-				choice.Detail = cfg.ChatModel + " · pull needed"
+			if _, faked := injectedClient(app); !faked {
+				pulled, err := ollama.Default.IsPulled(cfg.ChatModel)
+				if err != nil || !pulled {
+					choice.Disabled = true
+					choice.Badge = "missing"
+					choice.Detail = cfg.ChatModel + " · pull needed"
+				}
 			}
 		}
 		choices = append(choices, choice)
@@ -102,25 +125,11 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 }
 
 func modelDetail(cfg store.LLMConfig) string {
-	if cfg.Kind == "local" {
-		return filepath.Base(cfg.ChatModel) + " · on this box"
-	}
-	place := "remote API"
-	if cfg.Local {
-		place = "self-hosted API"
-	}
-	key := "key not set"
-	if cfg.KeySet {
-		key = "key set"
-	}
-	return cfg.ChatModel + " · " + cfg.BaseURL + " · " + place + " · " + key
+	return filepath.Base(cfg.ChatModel) + " · on this box"
 }
 
-func modelBadge(cfg store.LLMConfig) string {
-	if cfg.Kind == "local" || cfg.Local {
-		return "local"
-	}
-	return "api"
+func modelBadge(_ store.LLMConfig) string {
+	return "local"
 }
 
 // ClientSource builds llm clients for model choices. Local choices resolve to
@@ -130,6 +139,9 @@ type ClientSource struct{}
 
 // Active resolves the active model choice and returns a client for it.
 func (s *ClientSource) Active(app core.App) (llm.Client, error) {
+	if c, ok := injectedClient(app); ok {
+		return c, nil
+	}
 	if err := store.EnsureDefaultLLMConfig(app, app.DataDir()); err != nil {
 		return nil, err
 	}
@@ -146,21 +158,15 @@ func (s *ClientSource) Active(app core.App) (llm.Client, error) {
 // ClientFor returns a client for an explicit choice. Provider choice is
 // explicit; no hidden auto-routing (AGENTS.md).
 func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, error) {
-	switch choice.Provider {
-	case "local":
+	if choice.Provider == "local" {
 		return ollama.NewClient(choice.Model), nil
-	case "openai":
-		return nil, fmt.Errorf("openai choices must be resolved from PocketBase config")
 	}
 	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
 }
 
 func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.Client, error) {
-	switch cfg.Kind {
-	case "local":
+	if cfg.Kind == "local" {
 		return ollama.NewClient(cfg.ChatModel), nil
-	case "openai":
-		return &llm.OpenAIClient{BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, Model: cfg.ChatModel, EmbedModel: cfg.EmbedModel}, nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", cfg.Kind)
 }

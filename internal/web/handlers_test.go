@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 
 	"github.com/alexradunet/balaur/internal/feature"
+	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -43,53 +43,13 @@ func newWebApp(t testing.TB) *tests.TestApp {
 	return app
 }
 
-func newFakeSSEServer(text string) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/chat/completions" {
-			http.NotFound(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n\n", text)
-		fmt.Fprint(w, "data: [DONE]\n\n")
-	}))
-}
-
-// newChoicesSSEServer creates a two-turn fake model server. The first request
-// returns an offer_choices tool call; the second request (after tool execution)
-// returns plain text so the agent completes.
-func newChoicesSSEServer() *httptest.Server {
-	calls := 0
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/chat/completions" {
-			http.NotFound(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		calls++
-		if calls == 1 {
-			// First turn: return an offer_choices tool call.
-			args := `{\"choices\":[{\"label\":\"Yes, do it\",\"hint\":\"recommended\"},{\"label\":\"Not now\"}]}`
-			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"tc1\",\"function\":{\"name\":\"offer_choices\",\"arguments\":\"\"}}]}}]}\n\n")
-			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"offer_choices\",\"arguments\":\"%s\"}}]}}]}\n\n", args)
-			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{}}],\"finish_reason\":\"tool_calls\"}\n\n")
-			fmt.Fprint(w, "data: [DONE]\n\n")
-		} else {
-			// Second turn: plain text reply after tool executes.
-			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"I have offered you two choices.\"}}]}\n\n")
-			fmt.Fprint(w, "data: [DONE]\n\n")
-		}
-	}))
-}
-
 func TestChatChoices(t *testing.T) {
-	sseSrv := newChoicesSSEServer()
-	t.Cleanup(func() { sseSrv.Close() })
-
 	newChoicesApp := func(tb testing.TB) *tests.TestApp {
 		app := newWebApp(tb)
-		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
-		store.SetActiveLLMModel(app, id, "test")
+		seedScriptedModel(tb, app,
+			llmtest.ToolCall("tc1", "offer_choices", `{"choices":[{"label":"Yes, do it","hint":"recommended"},{"label":"Not now"}]}`),
+			llmtest.Text("I have offered you two choices."),
+		)
 		return app
 	}
 
@@ -239,10 +199,13 @@ func TestSettingsPages(t *testing.T) {
 func TestHandlerHomePage(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			Name:           "/ redirects to the board dashboard (board-as-home)",
-			Method:         "GET",
-			URL:            "/",
-			ExpectedStatus: 302,
+			// Home is the full-screen companion chat: the exact root renders the
+			// shell with the "home" class and the persistent dock.
+			Name:            "/ renders the full-screen companion chat",
+			Method:          "GET",
+			URL:             "/",
+			ExpectedStatus:  200,
+			ExpectedContent: []string{`<html lang="en" class="home">`, `<aside id="dock">`, `id="chat"`},
 		},
 	}
 
@@ -253,16 +216,12 @@ func TestHandlerHomePage(t *testing.T) {
 }
 
 func TestChatHandler(t *testing.T) {
-	sseSrv := newFakeSSEServer("Hello from the fake model")
-	t.Cleanup(func() { sseSrv.Close() })
-
 	// Each ApiScenario.Test re-fires OnServe, causing route registration
 	// conflicts when sharing one app. Give each scenario its own app with
 	// the model already seeded so the factory is a plain getter.
 	newChatApp := func(tb testing.TB) *tests.TestApp {
 		app := newWebApp(tb)
-		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
-		store.SetActiveLLMModel(app, id, "test")
+		seedScriptedModel(tb, app, llmtest.Text("Hello from the fake model"))
 		return app
 	}
 
@@ -277,7 +236,7 @@ func TestChatHandler(t *testing.T) {
 			Body:            strings.NewReader("message=hello"),
 			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"datastar-patch-elements", "Hello from the fake model", "msg msg-user", "msg msg-balaur"},
+			ExpectedContent: []string{"datastar-patch-elements", "Hello from the fake model", "cmsg cmsg-user", "cmsg cmsg-balaur"},
 		},
 		{
 			Name:            "chat empty message",
@@ -469,178 +428,13 @@ func TestOriginGuard(t *testing.T) {
 	scenario.Test(t)
 }
 
-func TestProviderManager(t *testing.T) {
-	const secretKey = "sk-test-secret-zzz"
-
-	// newProviderApp seeds two providers and makes prov1's model active.
-	// Returns (app, prov1ID, model1ID, prov2ID, model2ID).
-	newProviderApp := func(tb testing.TB) (*tests.TestApp, string, string, string, string) {
-		tb.Helper()
-		app := newWebApp(tb)
-		mid1, err := store.SaveOpenAIModel(app, "Prov1", "https://p1.example.com/v1", secretKey, "Model A", "model-a", "", false)
-		if err != nil {
-			tb.Fatalf("save prov1: %v", err)
-		}
-		mid2, err := store.SaveOpenAIModel(app, "Prov2", "https://p2.example.com/v1", "sk-other", "Model B", "model-b", "", false)
-		if err != nil {
-			tb.Fatalf("save prov2: %v", err)
-		}
-		if err := store.SetActiveLLMModel(app, mid1, "test"); err != nil {
-			tb.Fatalf("set active: %v", err)
-		}
-		providers, err := store.ListOpenAIProviders(app)
-		if err != nil {
-			tb.Fatalf("list providers: %v", err)
-		}
-		var prov1ID, prov2ID string
-		for _, p := range providers {
-			if p.Name == "Prov1" {
-				prov1ID = p.ID
-			} else if p.Name == "Prov2" {
-				prov2ID = p.ID
-			}
-		}
-		if prov1ID == "" || prov2ID == "" {
-			tb.Fatalf("provider IDs not found; prov1=%q prov2=%q", prov1ID, prov2ID)
-		}
-		return app, prov1ID, mid1, prov2ID, mid2
-	}
-
-	t.Run("GET /focus/settings?section=models shows provider name and key set, not secret", func(t *testing.T) {
-		app, _, _, _, _ := newProviderApp(t)
-		scenario := tests.ApiScenario{
-			Name:               "models focus shows provider",
-			Method:             "GET",
-			URL:                "/focus/settings?section=models",
-			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:     200,
-			ExpectedContent:    []string{"Prov1", "key set"},
-			NotExpectedContent: []string{secretKey},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("delete active provider returns refusal message", func(t *testing.T) {
-		app, prov1ID, _, _, _ := newProviderApp(t)
-		// Verify state before scenario (scenario's AfterTestFunc runs while app is alive).
-		scenario := tests.ApiScenario{
-			Name:            "delete active provider refused",
-			Method:          "POST",
-			URL:             "/ui/model/provider/" + prov1ID + "/delete",
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"active model", "models-panel"},
-			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
-				// Prov1 should still be listed after the refused delete.
-				providers, err := store.ListOpenAIProviders(app)
-				if err != nil {
-					t.Fatalf("list after refused delete: %v", err)
-				}
-				var found bool
-				for _, p := range providers {
-					if p.ID == prov1ID {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Fatal("provider was deleted despite having the active model")
-				}
-			},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("delete after re-pointing active succeeds", func(t *testing.T) {
-		app, prov1ID, _, _, mid2 := newProviderApp(t)
-		// Re-point active to prov2's model.
-		if err := store.SetActiveLLMModel(app, mid2, "test"); err != nil {
-			t.Fatalf("re-point active: %v", err)
-		}
-		scenario := tests.ApiScenario{
-			Name:            "delete prov1 after re-point",
-			Method:          "POST",
-			URL:             "/ui/model/provider/" + prov1ID + "/delete",
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"models-panel"},
-			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
-				// Prov1 should be gone.
-				providers, err := store.ListOpenAIProviders(app)
-				if err != nil {
-					t.Fatalf("list after delete: %v", err)
-				}
-				for _, p := range providers {
-					if p.ID == prov1ID {
-						t.Fatal("provider still present after delete")
-					}
-				}
-			},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("update with blank key keeps existing secret", func(t *testing.T) {
-		app, prov1ID, _, _, _ := newProviderApp(t)
-		scenario := tests.ApiScenario{
-			Name:            "update provider blank key",
-			Method:          "POST",
-			URL:             "/ui/model/provider/" + prov1ID + "/save",
-			Body:            strings.NewReader("name=Prov1+Renamed&base_url=https%3A%2F%2Fp1.example.com%2Fv1&api_key="),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"models-panel"},
-			AfterTestFunc: func(t testing.TB, app *tests.TestApp, res *http.Response) {
-				// Raw record should still have the original key.
-				raw, err := app.FindRecordById("llm_providers", prov1ID)
-				if err != nil {
-					t.Fatalf("find raw: %v", err)
-				}
-				if raw.GetString("api_key") != secretKey {
-					t.Fatalf("key overwritten: got %q, want %q", raw.GetString("api_key"), secretKey)
-				}
-			},
-		}
-		scenario.Test(t)
-	})
-}
-
-// newCardShowSSEServer creates a two-turn fake model server. The first request
-// returns a card_show tool call (for the "today" card); the second returns plain
-// text so the agent completes.
-func newCardShowSSEServer() *httptest.Server {
-	calls := 0
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/chat/completions" {
-			http.NotFound(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		calls++
-		if calls == 1 {
-			// First turn: return a card_show tool call.
-			args := `{\"type\":\"today\"}`
-			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"tc1\",\"function\":{\"name\":\"card_show\",\"arguments\":\"\"}}]}}]}\n\n")
-			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"card_show\",\"arguments\":\"%s\"}}]}}]}\n\n", args)
-			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{}}],\"finish_reason\":\"tool_calls\"}\n\n")
-			fmt.Fprint(w, "data: [DONE]\n\n")
-		} else {
-			// Second turn: plain text reply after tool executes.
-			fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"Here is your today card.\"}}]}\n\n")
-			fmt.Fprint(w, "data: [DONE]\n\n")
-		}
-	}))
-}
-
 func TestChatCardShow(t *testing.T) {
-	sseSrv := newCardShowSSEServer()
-	t.Cleanup(func() { sseSrv.Close() })
-
 	newCardShowApp := func(tb testing.TB) *tests.TestApp {
 		app := newWebApp(tb)
-		id, _ := store.SaveOpenAIModel(app, "fake", sseSrv.URL+"/v1", "", "Fake", "fake-model", "", false)
-		store.SetActiveLLMModel(app, id, "test")
+		seedScriptedModel(tb, app,
+			llmtest.ToolCall("tc1", "card_show", `{"type":"today"}`),
+			llmtest.Text("Here is your today card."),
+		)
 		return app
 	}
 
@@ -837,15 +631,12 @@ func TestDayPageRendersOnEmptyDB(t *testing.T) {
 // TestSelectModel covers the POST /ui/model/select handler for the three
 // key paths: missing key, unknown key, and valid key.
 func TestSelectModel(t *testing.T) {
-	// Seed a provider+model so there is at least one choice available.
+	// Seed a local model with an injected fake client so there is at least one
+	// selectable (non-disabled) choice available.
 	newModelApp := func(tb testing.TB) (*tests.TestApp, string) {
 		tb.Helper()
 		app := newWebApp(tb)
-		mid, err := store.SaveOpenAIModel(app, "Prov1", "https://p1.example.com/v1", "sk-test", "Model A", "model-a", "", false)
-		if err != nil {
-			tb.Fatalf("SaveOpenAIModel: %v", err)
-		}
-		return app, mid
+		return app, seedScriptedModel(tb, app)
 	}
 
 	t.Run("missing key returns 400", func(t *testing.T) {
@@ -886,7 +677,7 @@ func TestSelectModel(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ModelChoices: %v", err)
 		}
-		// The openai model is not local so it is not Disabled (no file check).
+		// The injected fake client marks the local model ready, so it is not Disabled.
 		var validKey string
 		for _, c := range choices {
 			if !c.Disabled {

@@ -54,10 +54,9 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Fatalf("chat_bar: %v", err)
 	}
 	out := b.String()
-	// The inline model chooser and the add-API form were moved to the settings
-	// card's models focus.
-	if strings.Contains(out, "model-choice-list") || strings.Contains(out, "Add OpenAI-compatible API") {
-		t.Error("chatbar should no longer render the inline model chooser or add-API form")
+	// The inline model chooser was moved to the settings card's models focus.
+	if strings.Contains(out, "model-choice-list") {
+		t.Error("chatbar should no longer render the inline model chooser")
 	}
 	if !strings.Contains(out, `href="/focus/settings?section=models"`) {
 		t.Error("chatbar should link to the settings models focus to manage models")
@@ -91,29 +90,32 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Error("chatbar must not render the chat input — it belongs in chat_draft")
 	}
 
-	// chat_draft renders the composer form in the flow.
-	b.Reset()
+	// The chat input is now the storybook ui.Composer, rendered in Go
+	// (composerNode) and injected into the dock — not a chat_draft template.
 	data.ChatReady = true
 	data.Pull = ollama.PullSnapshot{}
-	if err := tmpl.ExecuteTemplate(&b, "chat_draft", data); err != nil {
-		t.Fatalf("chat_draft: %v", err)
+	var cb strings.Builder
+	if err := composerNode(data).Render(&cb); err != nil {
+		t.Fatalf("composer render: %v", err)
 	}
-	draft := b.String()
+	draft := cb.String()
 	if !strings.Contains(draft, `id="chat-draft"`) {
-		t.Error("chat_draft must render #chat-draft")
+		t.Error("composer must render #chat-draft")
 	}
 	if !strings.Contains(draft, `<textarea name="message"`) {
-		t.Error("chat_draft must contain the message textarea when ready")
+		t.Error("composer must contain the message textarea when ready")
+	}
+	if !strings.Contains(draft, `data-on:submit`) || !strings.Contains(draft, `/ui/chat`) {
+		t.Error("composer form must @post to /ui/chat")
 	}
 	// Not-ready: textarea and button are disabled.
-	b.Reset()
 	data.ChatReady = false
-	if err := tmpl.ExecuteTemplate(&b, "chat_draft", data); err != nil {
-		t.Fatalf("chat_draft not ready: %v", err)
+	var ncb strings.Builder
+	if err := composerNode(data).Render(&ncb); err != nil {
+		t.Fatalf("composer not-ready render: %v", err)
 	}
-	notReady := b.String()
-	if !strings.Contains(notReady, "disabled") {
-		t.Error("chat_draft: textarea/button must be disabled when chat is not ready")
+	if !strings.Contains(ncb.String(), "disabled") {
+		t.Error("composer: textarea/button must be disabled when chat is not ready")
 	}
 
 	// The settings shell is the settings card focus now (plan 056): the models
@@ -125,7 +127,7 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Fatalf("settings_body models: %v", err)
 	}
 	out = b.String()
-	for _, want := range []string{"Available models", "Add OpenAI-compatible API", "Local Qwen3.6 35B A3B"} {
+	for _, want := range []string{"Available models", "Local Qwen3.6 35B A3B"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("models section missing %q", want)
 		}
@@ -364,8 +366,8 @@ func TestChatbarPollAndDraft(t *testing.T) {
 	if err := tmpl.ExecuteTemplate(&rb, "chat_bar", ready); err != nil {
 		t.Fatalf("chat_bar ready: %v", err)
 	}
-	if err := tmpl.ExecuteTemplate(&rb, "chat_draft", ready); err != nil {
-		t.Fatalf("chat_draft ready: %v", err)
+	if err := composerNode(ready).Render(&rb); err != nil {
+		t.Fatalf("composer ready: %v", err)
 	}
 	readyOut := rb.String()
 	if !strings.Contains(readyOut, `id="chatbar"`) {

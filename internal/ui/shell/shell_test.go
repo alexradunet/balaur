@@ -12,8 +12,8 @@ import (
 func TestPage(t *testing.T) {
 	var b strings.Builder
 	page := shell.Page(shell.PageProps{
-		Title:  "Storybook",
-		Active: "storybook",
+		Title:  "Quests",
+		Active: "quests",
 		Body:   g.Text("BODY"),
 		Dock:   g.Text("DOCK"),
 	})
@@ -25,7 +25,7 @@ func TestPage(t *testing.T) {
 	for _, want := range []string{
 		"<!doctype html>",
 		`<html lang="en">`,
-		`<title>Storybook · Balaur</title>`,
+		`<title>Quests · Balaur</title>`,
 		`<link rel="stylesheet" href="/static/basm.css">`,
 		`<script type="module" src="/static/datastar.js"></script>`,
 		`<main id="main">BODY</main>`,
@@ -33,13 +33,40 @@ func TestPage(t *testing.T) {
 		`localStorage.getItem('basm-theme')`,
 		`localStorage.getItem('basm-palette')`,
 		`'theme-'`,
-		`<a href="/" aria-current="page">`,
+		// Top-level domain nav: the active domain rides gold, others are plain links.
+		`<a href="/focus/quests" aria-current="page">Quests</a>`,
+		`<a href="/focus/journal">Journal</a>`,
+		`<a href="/focus/settings">Settings</a>`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("shell missing %q\nfull:\n%s", want, got)
 		}
 	}
+	// Today was dropped (Home replaced it); Boards was cut earlier.
+	if strings.Contains(got, ">Today</a>") {
+		t.Error("Today nav link should be gone (Home replaced /today)")
+	}
 	if strings.Contains(got, ">Boards<") {
 		t.Error("Boards nav link should be gone (boards is cut)")
+	}
+}
+
+// TestPageHTMLClass: PageProps.HTMLClass lands on <html> (used by Home's
+// "home" full-screen-chat layout); an empty HTMLClass leaves <html> plain.
+func TestPageHTMLClass(t *testing.T) {
+	var home strings.Builder
+	if err := shell.Page(shell.PageProps{Title: "Home", HTMLClass: "home", Dock: g.Text("D")}).Render(&home); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if got := home.String(); !strings.Contains(got, `<html lang="en" class="home">`) {
+		t.Errorf(`HTMLClass not applied to <html>; got: %s`, got)
+	}
+
+	var plain strings.Builder
+	if err := shell.Page(shell.PageProps{Title: "X", Dock: g.Text("D")}).Render(&plain); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if got := plain.String(); !strings.Contains(got, `<html lang="en">`) {
+		t.Errorf(`empty HTMLClass should leave <html> plain; got: %s`, got)
 	}
 }

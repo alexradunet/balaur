@@ -11,6 +11,7 @@ import (
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 )
 
 // choicesView is the template payload for the chat-choices fragment.
@@ -48,9 +49,9 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 
 	client, err := h.clients.Active(h.app)
 	if err != nil {
-		cs.appendChat("chat-msg-user", messageView{
-			SoulAvatarURL: soulURL, OwnerName: ownerName, Content: msg,
-		})
+		cs.appendNode(chat.Message(chat.MessageProps{
+			Role: "user", AvatarSrc: soulURL, Who: ownerName, Content: msg,
+		}))
 		_ = cs.sse.MarshalAndPatchSignals(chatSignals{Message: ""})
 		cs.note("", h.chatErrText(err))
 		return nil

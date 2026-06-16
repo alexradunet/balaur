@@ -38,14 +38,26 @@ type ComposerProps struct {
 	Prompt      string
 	Choices     []ComposerChoice
 	Decision    g.Node
+
+	// Live-chat wiring (the gateway uses these to make the draft a functional
+	// chat input). When PostURL is set the draft form @posts there over Datastar,
+	// the textarea binds the `message` signal (enter submits), and the root seeds
+	// that signal. ID sets the root element id (e.g. "chat-draft" so a poll can
+	// re-render it). Disabled greys the textarea + send until a model is ready.
+	PostURL  string
+	ID       string
+	Disabled bool
 }
 
 // Composer renders the wood input ledge: corner brackets, a top row of tool
 // wells + a sound toggle + the soul portrait, and either the parchment draft
 // (textarea + send) or — when Choices are given — the embedded dialogue choices.
-// Static (catalog); Datastar wiring is the gateway's job.
-func Composer(p ComposerProps) g.Node {
+// Trailing attrs are applied to the root. When ComposerProps.PostURL is set the
+// draft is the functional live-chat input; otherwise it is the static catalog
+// form and Datastar wiring is the gateway's job.
+func Composer(p ComposerProps, attrs ...g.Node) g.Node {
 	deciding := len(p.Choices) > 0 || p.Decision != nil
+	live := p.PostURL != ""
 
 	hint := p.Hint
 	if hint == "" {
@@ -86,15 +98,27 @@ func Composer(p ComposerProps) g.Node {
 		// A surfaced TaskCard / KnowledgeCard, carried in by the caller.
 		main = h.Div(h.Class("composer-decision"), p.Decision)
 	default:
-		main = h.Form(h.Class("composer-form"),
+		ta := []g.Node{h.Name("message"), h.Placeholder(p.Placeholder), h.Rows("2"), g.Attr("autocomplete", "off")}
+		if live {
+			ta = append(ta, g.Attr("data-bind:message"), g.Attr("onkeydown", "balaurSubmitOnEnter(event)"), h.Required(), h.AutoFocus())
+		}
+		if p.Disabled {
+			ta = append(ta, h.Disabled())
+		}
+		formAttrs := []g.Node{h.Class("composer-form")}
+		if live {
+			formAttrs = append(formAttrs, g.Attr("data-on:submit", "@post('"+p.PostURL+"')"))
+		}
+		formAttrs = append(formAttrs,
 			h.Div(h.Class("composer-draft"),
-				h.Textarea(h.Name("message"), h.Placeholder(p.Placeholder), h.Rows("2"), g.Attr("autocomplete", "off")),
+				h.Textarea(ta...),
 				h.Div(h.Class("composer-foot"),
 					h.Span(h.Class("composer-hint"), g.Text(hint)),
-					Button(ButtonProps{Size: "sm"}, h.Type("submit"), g.Text(send)),
+					Button(ButtonProps{Size: "sm"}, h.Type("submit"), g.If(p.Disabled, h.Disabled()), g.Text(send)),
 				),
 			),
 		)
+		main = h.Form(formAttrs...)
 	}
 
 	rootCls := "composer"
@@ -102,7 +126,15 @@ func Composer(p ComposerProps) g.Node {
 		rootCls += " composer-deciding"
 	}
 
-	return h.Div(h.Class(rootCls),
+	root := []g.Node{h.Class(rootCls)}
+	if p.ID != "" {
+		root = append(root, h.ID(p.ID))
+	}
+	if live {
+		root = append(root, g.Attr("data-signals:message", "''"))
+	}
+	root = append(root, attrs...)
+	root = append(root,
 		h.Span(h.Class("dlg-corner dlg-corner-tl")),
 		h.Span(h.Class("dlg-corner dlg-corner-tr")),
 		h.Span(h.Class("dlg-corner dlg-corner-bl")),
@@ -114,6 +146,7 @@ func Composer(p ComposerProps) g.Node {
 		),
 		main,
 	)
+	return h.Div(root...)
 }
 
 // composerChoices renders the embedded dialogue choices — numbered choice
