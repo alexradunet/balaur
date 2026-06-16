@@ -11,8 +11,8 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
+	"github.com/alexradunet/balaur/internal/feature/settingscards"
 	"github.com/alexradunet/balaur/internal/heads"
-	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
@@ -127,6 +127,10 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 	return nil
 }
 
+// modelsData returns a modelsPageData for the legacy settings_body template.
+// Dead since plan 05 — called only by settingsFocusHTML (also dead).
+// TODO(ui-redesign): retire together with settingsFocusHTML once templates_test.go
+// is reconciled.
 func (h *handlers) modelsData() (modelsPageData, error) {
 	html, err := h.renderModelsPanel("")
 	if err != nil {
@@ -135,33 +139,11 @@ func (h *handlers) modelsData() (modelsPageData, error) {
 	return modelsPageData{ModelsHTML: html}, nil
 }
 
-// buildModelsPanelView assembles the Models settings view from the model choices,
-// the active processor, and a pure-Go VRAM estimate per installed GGUF model.
-func (h *handlers) buildModelsPanelView(errMsg string) (modelcards.PanelView, error) {
-	choices, _, err := turn.ModelChoices(h.app)
-	if err != nil {
-		return modelcards.PanelView{}, err
-	}
-	view := modelcards.PanelView{Processor: kronk.Processor(), Error: errMsg}
-	for _, c := range choices {
-		mv := modelcards.ModelView{ID: c.Key, Name: c.Name, Detail: c.Detail, Kind: c.Badge, VRAM: kronk.EstimateVRAM(c.Model)}
-		switch {
-		case c.Active:
-			mv.Status = modelcards.StatusActive
-		case c.Disabled:
-			mv.Status = modelcards.StatusMissing
-		default:
-			mv.Status = modelcards.StatusAvailable
-		}
-		view.Models = append(view.Models, mv)
-	}
-	return view, nil
-}
-
 // renderModelsPanel renders the gomponents Models panel to HTML for injection
-// into settings_body on page load.
+// into settings_body on page load. Delegates view assembly to
+// settingscards.BuildModelsPanelView — the single source of truth.
 func (h *handlers) renderModelsPanel(errMsg string) (template.HTML, error) {
-	view, err := h.buildModelsPanelView(errMsg)
+	view, err := settingscards.BuildModelsPanelView(h.app, errMsg)
 	if err != nil {
 		return "", err
 	}
@@ -173,7 +155,7 @@ func (h *handlers) renderModelsPanel(errMsg string) (template.HTML, error) {
 }
 
 func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
-	view, err := h.buildModelsPanelView(msg)
+	view, err := settingscards.BuildModelsPanelView(h.app, msg)
 	if err != nil {
 		return e.InternalServerError("loading models", err)
 	}

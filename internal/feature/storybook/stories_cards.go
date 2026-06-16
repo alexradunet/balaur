@@ -7,6 +7,7 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/journalcards"
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/feature/lifecards"
+	"github.com/alexradunet/balaur/internal/feature/settingscards"
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -445,6 +446,57 @@ func dayfocusStory() Story {
 		Donts: []string{
 			"Render the recap expander when IsToday — the day is still being written.",
 			"Swap PATH vs QUERY for write/drop — the handlers parse them differently.",
+		},
+	}
+}
+
+// settingsfocusStory documents the settings card's full-canvas focus body —
+// the Profile section (identity + soul avatar + Balaur head) and the Models
+// section (modelcards.Panel). The two tabs in settings-nav drive @get nav
+// between sections.
+func settingsfocusStory() Story {
+	// Profile variant: one active soul avatar, one active Balaur head.
+	profileView := settingscards.SettingsFocusView{
+		Section: "profile",
+		Profile: settingscards.ProfileView{
+			OwnerName: "Mira",
+			AvatarOptions: []settingscards.ProfileAvatarOption{
+				{Key: "soul-01", Label: "soul-01", URL: "/static/avatars/soul-01.png", Active: true},
+				{Key: "soul-02", Label: "soul-02", URL: "/static/avatars/soul-02.png"},
+			},
+			BalaurOptions: []settingscards.ProfileAvatarOption{
+				{Key: "balaur-01", Label: "balaur-01", URL: "/static/avatars/balaur-01.png", Active: true},
+				{Key: "balaur-02", Label: "balaur-02", URL: "/static/avatars/balaur-02.png"},
+			},
+		},
+	}
+
+	// Models variant: one active model.
+	modelsView := settingscards.SettingsFocusView{
+		Section: "models",
+		Models:  settingscards.ExamplePanelView(),
+	}
+
+	return Story{
+		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
+		Blurb: "The settings card's focus body: a nav strip (Profile / Models) and the section content. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
+		Variants: []Variant{
+			{"profile section", settingscards.SettingsFocus(profileView)},
+			{"models section", settingscards.SettingsFocus(modelsView)},
+		},
+		Props: []Prop{
+			{"Section", "string", `"profile"`, `Active section: "profile" or "models". Controls the active nav tab and which content renders.`},
+			{"Profile", "ProfileView", "—", "Profile section view: OwnerName, AvatarOptions (soul), BalaurOptions (head), SavedName flash."},
+			{"Models", "modelcards.PanelView", "—", "Models panel view; passed directly to modelcards.Panel."},
+		},
+		Dos: []string{
+			"Use #identity-card, #soul-section, #balaur-section as the SSE outer-patch targets after profile POSTs.",
+			"Keep the avatar grid as FORM-PER-BUTTON — one hidden input per form, no single wrapper form.",
+			"Use settings-nav-active on the current section's nav link.",
+		},
+		Donts: []string{
+			"Swap the form-per-button avatar grid for a single form — the SSE re-render targets individual sections.",
+			"Add a Skills tab — Skills is its own card now.",
 		},
 	}
 }

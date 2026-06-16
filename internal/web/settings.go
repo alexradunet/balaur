@@ -8,15 +8,22 @@ import (
 // settingsData feeds the settings card focus (settings_body): the Profile +
 // Models sections of the settings shell. Skills left settings (plan 053/056) —
 // it is its own card now.
+//
+// TODO(ui-redesign): retire once TestModelsPageAndCleanChatbarRender in
+// templates_test.go is reconciled — it still constructs settingsData directly
+// to test the settings_body template define.
 type settingsData struct {
 	Section string
 	Profile profileData
 	Models  modelsPageData
 }
 
-// settingsFocusHTML renders the settings card's focus body (Profile + Models).
-// Was /settings/{section}. The section param defaults to profile; Skills is the
-// skills card now.
+// settingsFocusHTML rendered the settings card's focus body (Profile + Models).
+// Dead since plan 05 — the settings case was dropped from focusBodyHTML and the
+// focus body now routes through the CardSize.Focus seam (settingscards.SettingsFocus).
+//
+// TODO(ui-redesign): retire once templates_test.go::TestModelsPageAndCleanChatbarRender
+// is reconciled (it executes settings_body directly via the tmpl).
 func (h *handlers) settingsFocusHTML(params map[string]string) template.HTML {
 	section := params["section"]
 	if section != "models" {

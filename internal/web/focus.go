@@ -74,16 +74,10 @@ func focusBackHref(from string) string {
 	return "/boards/" + from
 }
 
-// focusBodyHTML renders a card's focus body. A few card types have a bespoke,
-// richer focus view (the surface of the page they replace); every other type
-// falls back to the generic registry render (manage mode where available).
+// focusBodyHTML renders a card's focus body. Feature cards that implement the
+// CardSize.Focus branch (e.g. lifelog, settings) render their full-canvas body
+// here; the rest fall back to their Tile render.
 func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.HTML {
-	switch typ {
-	case "settings":
-		return h.settingsFocusHTML(params)
-	}
-	// Feature cards that implement the CardSize.Focus branch (e.g. lifelog) render
-	// their full-canvas body here; the rest fall back to their Tile render.
 	return h.cardFocusHTML(typ, params)
 }
 

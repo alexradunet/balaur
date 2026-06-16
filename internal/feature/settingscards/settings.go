@@ -27,10 +27,16 @@ func SettingsCard() g.Node {
 	)
 }
 
-// registerSettings wires the settings tile into the ui registry. The tile is
-// static, so the app is unused.
-func registerSettings(_ core.App) {
-	ui.RegisterCard("settings", func(_ ui.CardSize, _ map[string]string) (g.Node, error) {
+// registerSettings wires the settings tile and focus body into the ui registry.
+func registerSettings(app core.App) {
+	ui.RegisterCard("settings", func(size ui.CardSize, params map[string]string) (g.Node, error) {
+		if size == ui.Focus {
+			view, err := BuildSettingsFocus(app, params)
+			if err != nil {
+				return nil, err
+			}
+			return SettingsFocus(view), nil
+		}
 		return SettingsCard(), nil
 	})
 }

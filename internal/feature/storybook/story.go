@@ -95,6 +95,7 @@ var stories = []Story{
 	journalfocusStory(),
 	knowledgefocusStory(),
 	dayfocusStory(),
+	settingsfocusStory(),
 	topbarStory(),
 	modelcardStory(),
 	modelspanelStory(),

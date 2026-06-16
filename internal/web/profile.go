@@ -3,6 +3,7 @@ package web
 import (
 	"strings"
 
+	"github.com/alexradunet/balaur/internal/feature/settingscards"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
@@ -25,7 +26,7 @@ func (h *handlers) buildProfileData(savedName bool) profileData {
 }
 
 // saveName handles POST /ui/profile/name — persists the owner display name
-// and re-renders the identity card fragment.
+// and re-renders the identity card fragment via the gomponents component.
 func (h *handlers) saveName(e *core.RequestEvent) error {
 	name := strings.TrimSpace(e.Request.FormValue("display_name"))
 	if len(name) > 60 {
@@ -34,8 +35,9 @@ func (h *handlers) saveName(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "display_name", name); err != nil {
 		return e.InternalServerError("saving display name", err)
 	}
+	view := settingscards.BuildProfile(h.app, true)
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "profile_identity_card", h.buildProfileData(true)); err != nil {
+	if err := settingscards.ProfileIdentityCard(view).Render(&b); err != nil {
 		return e.InternalServerError("rendering identity card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
@@ -55,8 +57,9 @@ func (h *handlers) setSoulAvatarFromProfile(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "soul_avatar", pref); err != nil {
 		return e.InternalServerError("saving avatar preference", err)
 	}
+	view := settingscards.BuildProfile(h.app, false)
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "profile_soul_section", h.buildProfileData(false)); err != nil {
+	if err := settingscards.ProfileSoulSection(view).Render(&b); err != nil {
 		return e.InternalServerError("rendering soul section", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
@@ -75,8 +78,9 @@ func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "balaur_avatar", pref); err != nil {
 		return e.InternalServerError("saving balaur avatar", err)
 	}
+	view := settingscards.BuildProfile(h.app, false)
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "profile_balaur_section", h.buildProfileData(false)); err != nil {
+	if err := settingscards.ProfileBalaurSection(view).Render(&b); err != nil {
 		return e.InternalServerError("rendering balaur section", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
