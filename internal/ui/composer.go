@@ -19,10 +19,15 @@ type ComposerChoice struct {
 // Hint defaults "unsent · enter speaks"; SendLabel defaults "Send"; Tools are
 // the /static/icons names for the tool wells (default scroll/tome/lens).
 //
-// Prompt + Choices switch the composer into "deciding" mode: the draft is
-// replaced by the embedded dialogue choices (Balaur asks; the owner picks a
-// numbered line), always closing with a manual-input row. Every owner decision
-// is taken here, so the owner only ever looks in one place.
+// Prompt, Choices and Decision switch the composer into "deciding" mode: the
+// draft is replaced in place by the decision Balaur surfaced — embedded dialogue
+// choices, or a Decision card (a TaskCard's Done/Snooze/Drop, a proposed
+// KnowledgeCard's Approve/Dismiss). Every owner decision is taken here, so the
+// owner only ever looks in one place.
+//
+// Decision is a pre-rendered card node, not a card package import: internal/ui
+// must not depend on internal/feature/* (they compose ui), so the caller renders
+// the card and hands it in — the same dependency-injection the export uses.
 type ComposerProps struct {
 	Who         string
 	AvatarSrc   string
@@ -32,6 +37,7 @@ type ComposerProps struct {
 	Tools       []string
 	Prompt      string
 	Choices     []ComposerChoice
+	Decision    g.Node
 }
 
 // Composer renders the wood input ledge: corner brackets, a top row of tool
@@ -39,7 +45,7 @@ type ComposerProps struct {
 // (textarea + send) or — when Choices are given — the embedded dialogue choices.
 // Static (catalog); Datastar wiring is the gateway's job.
 func Composer(p ComposerProps) g.Node {
-	deciding := len(p.Choices) > 0
+	deciding := len(p.Choices) > 0 || p.Decision != nil
 
 	hint := p.Hint
 	if hint == "" {
@@ -73,9 +79,13 @@ func Composer(p ComposerProps) g.Node {
 	}
 
 	var main g.Node
-	if deciding {
+	switch {
+	case len(p.Choices) > 0:
 		main = composerChoices(p.Choices)
-	} else {
+	case p.Decision != nil:
+		// A surfaced TaskCard / KnowledgeCard, carried in by the caller.
+		main = h.Div(h.Class("composer-decision"), p.Decision)
+	default:
 		main = h.Form(h.Class("composer-form"),
 			h.Div(h.Class("composer-draft"),
 				h.Textarea(h.Name("message"), h.Placeholder(p.Placeholder), h.Rows("2"), g.Attr("autocomplete", "off")),

@@ -3,6 +3,8 @@ package storybook
 import (
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
+	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
 )
@@ -152,7 +154,7 @@ func chatbarStory() Story {
 func composerStory() Story {
 	return Story{
 		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
-		Blurb: "The owner's single seat of action — every input is given here, so the owner never looks anywhere else. Draft mode is the textarea; when Balaur asks a question the dialogue choices embed in place of the draft, always closing with a type-your-own row.",
+		Blurb: "The owner's single seat of action — every input is given here, so the owner never looks anywhere else. Draft mode is the textarea; when Balaur surfaces a decision it embeds in place of the draft: dialogue choices (closing with a type-your-own row), a TaskCard to settle, or a proposed KnowledgeCard to keep.",
 		Variants: []Variant{
 			{"draft", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})},
 			{"deciding · choices", ui.Composer(ui.ComposerProps{
@@ -164,6 +166,21 @@ func composerStory() Story {
 					{Label: "Don't save it", Hint: "skip"},
 				},
 			})},
+			{"deciding · task", ui.Composer(ui.ComposerProps{
+				AvatarSrc: "/static/crest.png",
+				Prompt:    "The hour has come",
+				Decision: taskcards.TaskCard(taskcards.TaskView{
+					ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due now · 18:00", RecurLine: "every 2 days",
+				}),
+			})},
+			{"deciding · memory", ui.Composer(ui.ComposerProps{
+				AvatarSrc: "/static/crest.png",
+				Prompt:    "Shall I keep this?",
+				Decision: knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
+					ID: "m1", Status: "proposed", Category: "preference", Title: "Prefers tea over coffee",
+					Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3,
+				}),
+			})},
 		},
 		Props: []Prop{
 			{"Who", "string", `"You"`, "Nameplate under the owner portrait."},
@@ -174,6 +191,7 @@ func composerStory() Story {
 			{"Tools", "[]string", "scroll·tome·lens", "/static/icons names for the tool wells, left of the sound toggle."},
 			{"Prompt", "string", `"Your word"`, "Kicker question shown in the top row when deciding."},
 			{"Choices", "[]ComposerChoice", "nil", "When set, the draft is replaced by these numbered choices + a manual-input row."},
+			{"Decision", "g.Node", "nil", "A surfaced TaskCard / KnowledgeCard (rendered by the caller) shown in place of the draft — its own actions are the decision."},
 		},
 		Dos: []string{
 			"Route every owner input through this one surface — text, choices, task and memory decisions.",
