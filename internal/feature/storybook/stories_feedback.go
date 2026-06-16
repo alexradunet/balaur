@@ -117,7 +117,7 @@ func skeletonStory() Story {
 
 func emptyStateStory() Story {
 	return Story{
-		ID: "emptystate", Group: "Feedback", Title: "EmptyState",
+		ID: "emptystate", Group: "Feedback", Title: "EmptyState", Wide: true, OnDark: true,
 		Blurb: "The hearth when there is nothing yet — the crest, a plain heading, and a dry-warm line that invites without nagging. Used on empty Tasks, Memory, Life and the new conversation.",
 		Variants: []Variant{
 			{"with action", ui.EmptyState(ui.EmptyProps{
@@ -172,7 +172,7 @@ func toastStory() Story {
 
 func dialogStory() Story {
 	return Story{
-		ID: "dialog", Group: "Feedback", Title: "Dialog",
+		ID: "dialog", Group: "Feedback", Title: "Dialog", Wide: true, OnDark: true,
 		Blurb: "An ornate gold-bracketed parchment modal for moments that need the owner to stop and decide. Kicker, title, body, and Button actions. Reserved — most decisions belong in the conversation.",
 		Variants: []Variant{
 			{"open", ui.Dialog(ui.DialogProps{

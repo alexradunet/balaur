@@ -38,6 +38,16 @@ type Story struct {
 	// full-width variant column instead of the narrow auto-fill tiles they
 	// would otherwise overflow.
 	Wide bool
+	// OnDark renders the variant tiles on the page background (--bg, which flips
+	// with light/dark mode) — for page components whose text also flips (the
+	// empty hearth, page titles, chat messages) and would otherwise show
+	// light-on-parchment in dark mode.
+	OnDark bool
+	// OnDock renders the variant tiles on the always-dark wood dock (--chrome)
+	// — for the chat ledge sub-components (model/head switcher) whose text is
+	// dock-light (--chrome-fg) in both modes and needs a dark surface even in
+	// light mode.
+	OnDock bool
 }
 
 var stories = []Story{
@@ -112,6 +122,12 @@ func Page(s Story) g.Node {
 	cls := "sb-views"
 	if s.Wide {
 		cls += " sb-views-wide"
+	}
+	if s.OnDark {
+		cls += " sb-views-dark"
+	}
+	if s.OnDock {
+		cls += " sb-views-dock"
 	}
 	views := make([]g.Node, 0, len(s.Variants)+1)
 	views = append(views, h.Class(cls))

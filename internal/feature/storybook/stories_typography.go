@@ -10,7 +10,7 @@ import (
 
 func sectionlabelStory() Story {
 	return Story{
-		ID: "sectionlabel", Group: "Typography", Title: "SectionLabel",
+		ID: "sectionlabel", Group: "Typography", Title: "SectionLabel", OnDark: true,
 		Blurb: "A mono uppercase caption with a trailing dashed hairline that fills the row — for dividing a screen into named bands. Gold by default; an accent recolors the caption.",
 		Variants: []Variant{
 			{"today", ui.SectionLabel(ui.SectionLabelProps{Text: "Today"})},
@@ -33,7 +33,7 @@ func sectionlabelStory() Story {
 
 func screentitleStory() Story {
 	return Story{
-		ID: "screentitle", Group: "Typography", Title: "ScreenTitle",
+		ID: "screentitle", Group: "Typography", Title: "ScreenTitle", OnDark: true,
 		Blurb: "A page header — an optional mono eyebrow over a fluid display headline. It opens a screen and tells the owner where they are.",
 		Variants: []Variant{
 			{"eyebrow", ui.ScreenTitle(ui.ScreenTitleProps{Eyebrow: "Tuesday · 14 May", Title: "On the book."})},

@@ -13,7 +13,7 @@ import (
 
 func chatmessageStory() Story {
 	return Story{
-		ID: "chatmessage", Group: "Chat", Title: "Message",
+		ID: "chatmessage", Group: "Chat", Title: "Message", Wide: true, OnDark: true,
 		Blurb: "A single RPG speech panel: a wood-framed portrait beside a parchment bubble, the nameplate riding the top border. Balaur speaks gold from the left; the owner answers from the right. Compose these into a Chat.",
 		Variants: []Variant{
 			{"balaur", h.Div(h.Class("chat"),
@@ -44,7 +44,7 @@ func chatmessageStory() Story {
 
 func chattoolrowStory() Story {
 	return Story{
-		ID: "chattoolrow", Group: "Chat", Title: "ToolRow",
+		ID: "chattoolrow", Group: "Chat", Title: "ToolRow", Wide: true, OnDark: true,
 		Blurb: "A dark wood inset slab recording one tool / OS-access event. The visible audit trail, indented to the text column.",
 		Variants: []Variant{
 			{"task_add", h.Div(h.Class("chat"),
@@ -70,7 +70,7 @@ func chattoolrowStory() Story {
 
 func dialoguechoicesStory() Story {
 	return Story{
-		ID: "dialoguechoices", Group: "Chat", Title: "DialogueChoices",
+		ID: "dialoguechoices", Group: "Chat", Title: "DialogueChoices", Wide: true, OnDark: true,
 		Blurb: "A numbered choice panel beside the owner's soul portrait — Balaur asks, the owner picks a line. The decision lives in the conversation, not a modal.",
 		Variants: []Variant{
 			{"three choices", h.Div(h.Class("chat"),
@@ -103,7 +103,7 @@ func dialoguechoicesStory() Story {
 
 func messagedraftStory() Story {
 	return Story{
-		ID: "messagedraft", Group: "Chat", Title: "MessageDraft",
+		ID: "messagedraft", Group: "Chat", Title: "MessageDraft", Wide: true, OnDark: true,
 		Blurb: "The owner's editable draft bubble: a soul portrait beside a parchment textarea with a hint and a Speak button. The split half of the input that pairs with the ChatBar.",
 		Variants: []Variant{
 			{"empty", h.Div(h.Class("chat"),
@@ -133,7 +133,7 @@ func messagedraftStory() Story {
 
 func modelswitcherStory() Story {
 	return Story{
-		ID: "modelswitcher", Group: "Chat", Title: "ModelSwitcher", Wide: true,
+		ID: "modelswitcher", Group: "Chat", Title: "ModelSwitcher", Wide: true, OnDock: true,
 		Blurb: "The model line of the chat ledge: a quiet kicker, the active model pill, and the links to manage models and the owner's profile. Provider choice stays explicit and in sight.",
 		Variants: []Variant{
 			{"ready", chat.ModelSwitcher(chat.ModelSwitcherProps{ActiveModel: "gemma3:4b", AvatarSrc: "/static/crest.png"})},
@@ -155,7 +155,7 @@ func modelswitcherStory() Story {
 
 func headswitcherStory() Story {
 	return Story{
-		ID: "headswitcher", Group: "Chat", Title: "HeadSwitcher",
+		ID: "headswitcher", Group: "Chat", Title: "HeadSwitcher", Wide: true, OnDock: true,
 		Blurb: "The persona picker of the chat ledge: a labelled list of head choices, the active one marked. Heads are switchable faces — a name, a portrait, a tool-group filter — not sandboxed agents.",
 		Variants: []Variant{
 			{"three heads", chat.HeadSwitcher(chat.HeadSwitcherProps{
@@ -184,7 +184,7 @@ func headswitcherStory() Story {
 
 func chatbarStory() Story {
 	return Story{
-		ID: "chatbar", Group: "Chat", Title: "ChatBar", Wide: true,
+		ID: "chatbar", Group: "Chat", Title: "ChatBar", Wide: true, OnDock: true,
 		Blurb: "The wood input ledge: the HeadSwitcher beside the ModelSwitcher. Fixed to the dock bottom in the live app; shown inline here. Who is speaking, on which model, in one bar.",
 		Variants: []Variant{
 			{"head · model", chat.ChatBar(chat.ChatBarProps{
@@ -217,7 +217,7 @@ func chatbarStory() Story {
 
 func composerStory() Story {
 	return Story{
-		ID: "composer", Group: "Chat", Title: "Composer",
+		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
 		Blurb: "The owner's single seat of action. ChatBar and MessageDraft merged into one artisanal wood ledge: corner brackets, a tool row, a sound toggle, the soul portrait, and the parchment draft. Whatever Balaur asks, the owner answers here.",
 		Variants: []Variant{
 			{"draft", h.Div(h.Style("max-width:560px"),
