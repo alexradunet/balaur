@@ -10,7 +10,7 @@ import (
 func TestStoriesUniqueAndLookup(t *testing.T) {
 	seen := map[string]bool{}
 	for _, s := range storybook.Stories() {
-		if s.ID == "" || s.Group == "" || s.Title == "" || s.Canvas == nil {
+		if s.ID == "" || s.Group == "" || s.Title == "" || (s.Custom == nil && len(s.Variants) == 0) {
 			t.Fatalf("incomplete story: %+v", s)
 		}
 		if seen[s.ID] {
@@ -32,7 +32,7 @@ func TestStoriesUniqueAndLookup(t *testing.T) {
 func TestButtonCanvasRenders(t *testing.T) {
 	s, _ := storybook.Lookup("button")
 	var b strings.Builder
-	if err := s.Canvas().Render(&b); err != nil {
+	if err := storybook.Page(s).Render(&b); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if got := b.String(); !strings.Contains(got, `class="btn btn-primary"`) {
@@ -50,7 +50,7 @@ func TestCardsCanvas(t *testing.T) {
 			t.Fatalf("%s story not registered", tc.id)
 		}
 		var b strings.Builder
-		if err := s.Canvas().Render(&b); err != nil {
+		if err := storybook.Page(s).Render(&b); err != nil {
 			t.Fatalf("%s render: %v", tc.id, err)
 		}
 		if got := b.String(); !strings.Contains(got, tc.want) {
@@ -65,7 +65,7 @@ func TestColorsCanvas(t *testing.T) {
 		t.Fatal("colors story not registered")
 	}
 	var b strings.Builder
-	if err := s.Canvas().Render(&b); err != nil {
+	if err := storybook.Page(s).Render(&b); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	got := b.String()
@@ -87,7 +87,7 @@ func TestTypographyCanvas(t *testing.T) {
 		t.Fatal("typography story not registered")
 	}
 	var b strings.Builder
-	if err := s.Canvas().Render(&b); err != nil {
+	if err := storybook.Page(s).Render(&b); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	got := b.String()
@@ -110,7 +110,7 @@ func TestMaterialsCanvas(t *testing.T) {
 		t.Fatal("materials story not registered")
 	}
 	var b strings.Builder
-	if err := s.Canvas().Render(&b); err != nil {
+	if err := storybook.Page(s).Render(&b); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	got := b.String()

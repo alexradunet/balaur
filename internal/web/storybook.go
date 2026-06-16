@@ -20,7 +20,7 @@ func (h *handlers) storybookHome(e *core.RequestEvent) error {
 func (h *handlers) storybookStory(e *core.RequestEvent) error {
 	id := e.Request.PathValue("id")
 	if s, ok := storybook.Lookup(id); ok {
-		return renderStorybook(e, s.ID, s.Title, s.Canvas())
+		return renderStorybook(e, s.ID, s.Title, storybook.Page(s))
 	}
 	return renderStorybook(e, "", "", storybook.Overview())
 }
