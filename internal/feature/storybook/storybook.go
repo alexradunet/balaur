@@ -23,31 +23,6 @@ func section(label string, items ...g.Node) g.Node {
 	)
 }
 
-func listCanvas() g.Node {
-	return section("List", ui.List(ui.ListProps{
-		Title: "Today",
-		Items: []ui.ListItemProps{
-			{Icon: "scroll", Title: "Buy milk", Subtitle: "groceries", Meta: "2pm"},
-			{Icon: "flame", Title: "Workout", Meta: "due", MetaTone: "warn"},
-			{Title: "Read chapter 4", Subtitle: "before bed"},
-		},
-	}))
-}
-
-func sectionLabelCanvas() g.Node {
-	return section("SectionLabel",
-		ui.SectionLabel(ui.SectionLabelProps{Text: "Today"}),
-		ui.SectionLabel(ui.SectionLabelProps{Text: "This week", Accent: "var(--smoke)"}),
-	)
-}
-
-func screenTitleCanvas() g.Node {
-	return section("ScreenTitle",
-		ui.ScreenTitle(ui.ScreenTitleProps{Eyebrow: "Tuesday · 14 May", Title: "On the book."}),
-		ui.ScreenTitle(ui.ScreenTitleProps{Title: "Memory"}),
-	)
-}
-
 func chatMessageCanvas() g.Node {
 	// Wrap in .chat so --portrait-size (set on .chat) resolves; the portrait is
 	// sized by --portrait-size, not ui.Avatar's --avatar-size.
@@ -230,39 +205,6 @@ func knowledgeCardCanvas() g.Node {
 		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m1", Status: "proposed", Category: "preference", Title: "Prefers tea over coffee", Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3}),
 		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m2", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", WhenToUse: "pet care", Importance: 4, UseCount: 7}),
 		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m3", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Content: "Was open 6am–10pm; the gym shut down in May.", Importance: 1}),
-	)
-}
-
-func calendarCellCanvas() g.Node {
-	cell := func(p ui.CalendarCellProps) g.Node {
-		return h.Div(h.Style("width:76px"), ui.CalendarCell(p))
-	}
-	return section("CalendarCell",
-		cell(ui.CalendarCellProps{Day: 8, Pips: 1}),
-		cell(ui.CalendarCellProps{Day: 14, Pips: 2, Today: true}),
-		cell(ui.CalendarCellProps{Day: 15, Pips: 2, Selected: true}),
-		cell(ui.CalendarCellProps{Day: 31, Dim: true}),
-	)
-}
-
-func sparklineCanvas() g.Node {
-	data := []float64{62, 64, 61, 67, 70, 66, 72, 75, 73, 78}
-	frame := func(n g.Node) g.Node {
-		return h.Div(h.Class("fdn-card"), n)
-	}
-	return section("Sparkline",
-		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--teal-ink)", Width: 200, Height: 48})),
-		frame(ui.Sparkline(ui.SparkProps{Data: data, Color: "var(--ember-deep)", Width: 200, Height: 48})),
-	)
-}
-
-func dayEntryCanvas() g.Node {
-	return section("DayEntry",
-		h.Div(h.Class("list"), h.Div(h.Style("padding:14px"),
-			ui.DayEntry(ui.DayEntryProps{Time: "07:30", Title: "Fed the hens", Detail: "daily · streak 12", Tone: "gold"}),
-			ui.DayEntry(ui.DayEntryProps{Time: "13:00", Title: "Logged weight — 81.2 kg", Detail: "life log", Tone: "teal"}),
-			ui.DayEntry(ui.DayEntryProps{Time: "18:00", Title: "Watered the tomatoes", Detail: "every 2 days", Tone: "ember", Last: true}),
-		)),
 	)
 }
 
