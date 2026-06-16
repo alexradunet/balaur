@@ -207,3 +207,20 @@ document.addEventListener('click', function (e) {
     window.basmToggleNav();
   }
 });
+
+// ── Sidebar scroll persistence ─────────────────────────────────────
+// Each storybook nav is a full page load, which would reset the sidebar rail to
+// the top. Persist its scroll position per tab so clicking an item near the
+// bottom of the list keeps the rail where it was.
+(function () {
+  var KEY = 'basm-side-scroll';
+  function rail() { return document.querySelector('.sb-side'); }
+  function save() { var r = rail(); if (r) { try { sessionStorage.setItem(KEY, String(r.scrollTop)); } catch (e) {} } }
+  window.addEventListener('pagehide', save);
+  document.addEventListener('DOMContentLoaded', function () {
+    var r = rail(); if (!r) return;
+    try { var v = sessionStorage.getItem(KEY); if (v) r.scrollTop = parseInt(v, 10) || 0; } catch (e) {}
+    // belt-and-suspenders: also save synchronously on a nav-item click.
+    r.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.sb-nav-item')) save(); });
+  });
+})();

@@ -154,7 +154,7 @@ func chatbarStory() Story {
 func composerStory() Story {
 	return Story{
 		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
-		Blurb: "The owner's single seat of action — every input is given here, so the owner never looks anywhere else. Draft mode is the textarea; when Balaur surfaces a decision it embeds in place of the draft: dialogue choices (closing with a type-your-own row), a TaskCard to settle, or a proposed KnowledgeCard to keep.",
+		Blurb: "The owner's single seat of action — every input is given here, so the owner never looks anywhere else. Draft mode is the textarea; when Balaur surfaces a decision it embeds in place of the draft: dialogue choices (closing with a type-your-own row), a TaskCard to settle, a proposed KnowledgeCard to keep, or a GuardianCard granting OS access.",
 		Variants: []Variant{
 			{"draft", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})},
 			{"deciding · choices", ui.Composer(ui.ComposerProps{
@@ -181,6 +181,16 @@ func composerStory() Story {
 					Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3,
 				}),
 			})},
+			{"deciding · guardian", ui.Composer(ui.ComposerProps{
+				AvatarSrc: "/static/crest.png",
+				Prompt:    "May I look?",
+				Decision: ui.GuardianCard(ui.GuardianProps{
+					Kicker: "OS access", Title: "Read your Documents folder?",
+					Detail:        "To find the budget spreadsheet you mentioned. Read-only, and only this once.",
+					Scope:         "read · ~/Documents · this session",
+					AllowOnceHref: "#", AllowAlwaysHref: "#", DenyHref: "#",
+				}),
+			})},
 		},
 		Props: []Prop{
 			{"Who", "string", `"You"`, "Nameplate under the owner portrait."},
@@ -191,7 +201,7 @@ func composerStory() Story {
 			{"Tools", "[]string", "scroll·tome·lens", "/static/icons names for the tool wells, left of the sound toggle."},
 			{"Prompt", "string", `"Your word"`, "Kicker question shown in the top row when deciding."},
 			{"Choices", "[]ComposerChoice", "nil", "When set, the draft is replaced by these numbered choices + a manual-input row."},
-			{"Decision", "g.Node", "nil", "A surfaced TaskCard / KnowledgeCard (rendered by the caller) shown in place of the draft — its own actions are the decision."},
+			{"Decision", "g.Node", "nil", "A surfaced card (TaskCard / KnowledgeCard / GuardianCard, rendered by the caller) shown in place of the draft — its own actions are the decision."},
 		},
 		Dos: []string{
 			"Route every owner input through this one surface — text, choices, task and memory decisions.",
