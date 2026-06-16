@@ -3060,6 +3060,23 @@ progress.pull-progress-bar::-moz-progress-bar {
 @media (max-width: 520px) { .composer-top { grid-template-columns: 1fr auto; } }
 .list-title, .list-sub { overflow-wrap: anywhere; }
 
+/* Composer "deciding" mode — a decision (dialogue choices) is embedded in place
+   of the draft: gold ledge, dimmed tools, the prompt as the top-row kicker. */
+.composer-deciding { border-color: var(--gold-deep); }
+.composer-deciding .composer-tool { opacity: .38; pointer-events: none; }
+.composer-kicker {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--gold);
+}
+.composer-choices { min-height: 0; }
+.choice-type { align-items: center; cursor: text; }
+.choice-type input {
+  flex: 1 1 auto; min-width: 0; background: transparent; border: 0; padding: 0; outline: none;
+  font: 16px/1.45 var(--font-body); color: var(--ink); caret-color: var(--ember-deep);
+}
+.choice-type input::placeholder { color: var(--ink-muted); }
+
 /* ── Storybook per-component page — head, views, props, usage ───────────── */
 .sb-head { margin: 0 0 22px; }
 .sb-head-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
