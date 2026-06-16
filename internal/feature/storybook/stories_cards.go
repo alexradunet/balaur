@@ -4,9 +4,46 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
+	"github.com/alexradunet/balaur/internal/feature/lifecards"
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 )
+
+// lifelogfocusStory documents the lifelog card's full-canvas focus body — the
+// life overview ported to gomponents (chat.Message-style components are for the
+// chat; this is the page body). Read-only; entries are logged via chat.
+func lifelogfocusStory() Story {
+	return Story{
+		ID: "lifelogfocus", Group: "Cards", Title: "LifelogFocus", Wide: true, OnDark: true,
+		Blurb: "The life overview as the lifelog card's focus body: a habit strip plus every tracked kind. Numeric kinds chart a sparkline + trend; text kinds list recent lines. The kinds are the owner's to invent — entries are logged via chat, so this surface is read-only.",
+		Variants: []Variant{
+			{"tracked + habits", lifecards.LifelogFocus(lifecards.LifelogFocusView{
+				Habits: []lifecards.LifeHabitView{
+					{Title: "Stretch", Streak: 5, RecurLine: "repeats daily"},
+					{Title: "Read", RecurLine: "weekdays"},
+				},
+				Kinds: []lifecards.LifeKindFocusView{
+					{Kind: "weight", Unit: "kg", Count: 12, Numeric: true, LastVal: "82.5", LastAt: "Jun 11",
+						Change: "-0.8 over 90d", Points: "4.0,40.0 120.0,22.0 236.0,8.0", SparkLastX: "236.0", SparkLastY: "8.0"},
+					{Kind: "gratitude", Count: 3, Recent: []string{"Jun 10 — the morning was quiet", "Jun 9 — a long walk by the river"}},
+				},
+			})},
+			{"empty", lifecards.LifelogFocus(lifecards.LifelogFocusView{})},
+		},
+		Props: []Prop{
+			{"Kinds", "[]LifeKindFocusView", "—", "Tracked kinds; numeric ones carry Points/LastVal/Change, text ones carry Recent lines."},
+			{"Habits", "[]LifeHabitView", "—", "Recurring tasks with their current streak, shown as the habit strip."},
+		},
+		Dos: []string{
+			"Let the owner's logged kinds define the grid — impose no taxonomy.",
+			"Chart numeric kinds; list recent lines for text kinds.",
+		},
+		Donts: []string{
+			"Add a form here — entries are logged via chat; this is read-only.",
+			"Invent kinds the owner has not logged.",
+		},
+	}
+}
 
 // Rich story builders for the Cards group — the operational and growth surfaces
 // where Balaur proposes and the owner decides: tasks, memory, the day's recap,

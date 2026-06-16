@@ -173,9 +173,13 @@ func lifelogKindsList(kinds []LifeKindView) g.Node {
 // Registration
 // ---------------------------------------------------------------------------
 
-// registerLifelog wires the lifelog card into the ui registry.
+// registerLifelog wires the lifelog card into the ui registry: the compact tile
+// for boards/chat, the full life overview for the focus page.
 func registerLifelog(app core.App) {
-	ui.RegisterCard("lifelog", func(_ ui.CardSize, _ map[string]string) (g.Node, error) {
+	ui.RegisterCard("lifelog", func(size ui.CardSize, _ map[string]string) (g.Node, error) {
+		if size == ui.Focus {
+			return LifelogFocus(buildLifelogFocus(app)), nil
+		}
 		return LifelogCard(buildLifelog(app)), nil
 	})
 }
