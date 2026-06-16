@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	g "maragu.dev/gomponents"
+
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -60,5 +62,25 @@ func TestComposerDeciding(t *testing.T) {
 	// deciding mode replaces the draft — no textarea.
 	if strings.Contains(got, "<textarea") {
 		t.Errorf("deciding composer should not render the draft textarea: %s", got)
+	}
+}
+
+func TestComposerDecision(t *testing.T) {
+	card := g.El("article", g.Attr("class", "kcard"), g.Text("CARD"))
+	got := render(t, ui.Composer(ui.ComposerProps{
+		AvatarSrc: "/static/crest.png", Prompt: "Shall I keep this?", Decision: card,
+	}))
+	for _, want := range []string{
+		`<div class="composer composer-deciding">`,
+		`<div class="composer-kicker">Shall I keep this?</div>`,
+		`<div class="composer-decision"><article class="kcard">CARD</article></div>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("decision composer missing %q in: %s", want, got)
+		}
+	}
+	// the surfaced card replaces both draft and choices.
+	if strings.Contains(got, "<textarea") || strings.Contains(got, "choices-panel") {
+		t.Errorf("decision mode should render neither draft nor choices: %s", got)
 	}
 }
