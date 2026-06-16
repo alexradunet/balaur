@@ -169,7 +169,22 @@ recap-expander, dual-mode nav, three empty states); `05` Profile any time, Model
 after Kronk merges. They're mutually independent otherwise — different files —
 so they can also be done in parallel by different conversations.
 
-**Status:** all `TODO`.
+**Status:**
+
+| # | Plan | Status |
+|---|------|--------|
+| 01 | quests-focus | ✅ DONE — ported to `taskcards.QuestsFocus`/`QuestRail` |
+| 02 | journal-focus | ✅ DONE — ported to `journalcards.JournalFocus`/`JournalCandleBody` |
+| 03 | day-focus | ✅ DONE — ported to `journalcards.DayFocus`/`DayJournal` |
+| 04 | knowledge-focus | ✅ DONE — ported to `knowledgecards.KnowledgeFocus`/`KnowledgeGrid` |
+| 05 | settings-profile-focus | ⬜ deferred (Profile not yet ported); the Models part is **no longer blocked** now that the Ollama→Kronk Phase 1 has merged to `main` |
+
+01–04 landed together (each: feature-package component filling the `CardSize.Focus`
+seam, one shared builder between the focus body and its SSE re-render handler, a
+storybook story, and a class/id contract test). Each retired its legacy
+`*FocusHTML` handler + template define **only** where no test still executes them;
+the rest are left as dead code with retire-TODOs for the README's "canon-cleanup"
+backlog item.
 
 ---
 
