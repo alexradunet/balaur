@@ -8,8 +8,7 @@
 Balaur is a personal AI companion that lives on a box you own: a single Go
 executable embedding [PocketBase](https://pocketbase.io) for data, auth and
 migrations, a Datastar web interface, and local LLM inference served by
-[Ollama](https://ollama.com) over the OpenAI-compatible `/v1` API — the same
-seam it uses for any remote provider.
+[Ollama](https://ollama.com) over the OpenAI-compatible `/v1` API.
 
 The name comes from the Romanian fairy-tale balaur: a dragon with multiple
 heads. A head is a switchable persona — a name, purpose, avatar, and an
@@ -32,9 +31,8 @@ database you own and can open with any SQLite tool.
 - **Models:** out of the box, **Gemma 4 E4B** (`gemma4:e4b`) served by Ollama —
   pre-listed as the default; pull it into your running Ollama server from the
   settings models section. GPU users can opt into
-  `gemma4:26b` (MoE). Add any OpenAI-compatible endpoint — a remote API or
-  another self-hosted server — and select it explicitly. Override the default
-  local tag with `BALAUR_CHAT_MODEL`.
+  `gemma4:26b` (MoE). Override the default local tag with `BALAUR_CHAT_MODEL`.
+  (V1 runs local models only.)
 - **Heads:** switchable personas. A head is a name + purpose + avatar +
   optional capability-group tool filter. Built-in `balaur`, `scholar`,
   `planner`, and `coach` ship out of the box; create your own from the heads
@@ -182,25 +180,20 @@ Overrides:
 # Use a different Ollama tag:
 BALAUR_CHAT_MODEL=gemma4:26b go run . serve
 
-# Point at a non-default (or remote) Ollama server:
+# Point at a non-default Ollama server:
 BALAUR_OLLAMA_HOST=192.168.1.10:11434 go run . serve
-
-# Add OpenAI-compatible endpoints (a remote API or another self-hosted server)
-# from the settings card's models section (/focus/settings?section=models).
-# Base URL, model id, and optional API key are stored in PocketBase; the
-# active model is selected explicitly.
 ```
 
 **Ollama**: Balaur is a client of an Ollama server you run separately — it
 never installs, starts, or stops Ollama. It talks to that server over the
-OpenAI-compatible `/v1` API, so local and remote models share one code path
-(`internal/llm`), and manages models (list/pull/delete) over the official
-`ollama/api` client. Point Balaur at the server with `BALAUR_OLLAMA_HOST`.
+OpenAI-compatible `/v1` API (`internal/llm`), and manages models
+(list/pull/delete) over the official `ollama/api` client. Point Balaur at the
+server with `BALAUR_OLLAMA_HOST`.
 
 **Extension engine**: Balaur uses goja (no tags; pins a master commit) for the JavaScript sandbox. Bumping it is a deliberate act—run `go test ./internal/ext/` after changing.
 
-API keys are never rendered back into the UI or audit log, but they live in
-the local PocketBase data directory and backups. Treat `pb_data/` as secret.
+Secrets (OAuth tokens, vault entries) live in the local PocketBase data
+directory and its backups. Treat `pb_data/` as secret.
 
 Optional environment variables:
 
@@ -280,8 +273,8 @@ make restart-user-service
 make stop-user-service
 ```
 
-Edit `~/.config/balaur/env` for model paths, remote provider settings, or
-optional features. The file is not overwritten by later installs.
+Edit `~/.config/balaur/env` for model paths or optional features. The file is
+not overwritten by later installs.
 
 To let the user service start at boot before you log in, enable linger once:
 
@@ -417,7 +410,7 @@ Project layout:
 main.go            wire-up: PocketBase app, migrations, CLI, routes, crons
 migrations/        schema as Go code (collections + API rules)
 internal/agent/    the conversation loop: model → tools → model
-internal/llm/      one model seam: OpenAI-compatible HTTP (local + remote)
+internal/llm/      one model seam: OpenAI-compatible HTTP client (local)
 internal/ollama/   Ollama client: readiness + model list/pull/delete control plane
 internal/turn/     the channel-agnostic turn pipeline + model resolution
 internal/conversation/ master conversation: persistence + context window

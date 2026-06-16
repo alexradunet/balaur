@@ -72,9 +72,9 @@ lean and high-signal — add a rule only when it changes a real decision.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
 - Local inference is served by Ollama (a separately-run server, OpenAI-compatible
-  `/v1` API — see `internal/ollama`); remote providers go through the same OpenAI-compatible
-  HTTP client. Both sit behind the same internal `llm` interface. Provider choice is
-  explicit; no hidden auto-routing.
+  `/v1` API — see `internal/ollama`), behind the internal `llm` interface. V1 has
+  a single provider path: local. (The remote OpenAI-compatible provider path was
+  removed in plan 074; Phase 1 moves local inference in-process to Kronk.)
 - Keep context transparent: durable state lives in PocketBase collections
   (inspectable SQLite) and exported Markdown, never hidden in-session state.
 
@@ -130,7 +130,7 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Standard Go style: `gofmt` is law; run `go vet ./...` before declaring done.
 - Prefer plain functions and small structs over interfaces with one
   implementation. Introduce an interface only at a real seam (e.g. `llm.Client`,
-  the one OpenAI-compatible HTTP client behind which local and remote both sit).
+  behind which the OpenAI-compatible HTTP client serves local inference).
 - Errors are values: wrap with `fmt.Errorf("doing x: %w", err)`, return early,
   no panics in library code. `log.Fatal` only in `main`.
 - No global mutable state. Pass `core.App`, config structs, and loggers
@@ -191,7 +191,7 @@ lean and high-signal — add a rule only when it changes a real decision.
   (list/pull/delete), and surfaces unreachable-server and pull errors as plain
   errors.
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
-  content that may be sent to remote providers.
+  content that may leave the box (logs, exports, audit entries).
 
 ## Safety
 
@@ -199,8 +199,8 @@ lean and high-signal — add a rule only when it changes a real decision.
   access tokens, or local model credentials.
 - Do not expose the Balaur port to the internet without an explicit threat
   model; it is a personal, loopback-first service.
-- Redact secrets before persisting records that may leave the box through
-  a remote provider.
+- Redact secrets before persisting records that may leave the box (logs,
+  exports, audit entries).
 
 ## Behavioral guidelines to reduce common LLM coding mistakes
 
