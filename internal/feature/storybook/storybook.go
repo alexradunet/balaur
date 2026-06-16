@@ -24,42 +24,6 @@ func section(label string, items ...g.Node) g.Node {
 	)
 }
 
-func buttonCanvas() g.Node {
-	return section("Button",
-		ui.Button(ui.ButtonProps{}, g.Text("Primary")),
-		ui.Button(ui.ButtonProps{Variant: "ghost"}, g.Text("Ghost")),
-		ui.Button(ui.ButtonProps{Variant: "wood"}, g.Text("Wood")),
-		ui.Button(ui.ButtonProps{Size: "sm"}, g.Text("Small")),
-	)
-}
-
-func tagCanvas() g.Node {
-	return section("Tag", ui.Tag(g.Text("daily")), ui.Tag(g.Text("⟳ weekly")))
-}
-
-func pipsCanvas() g.Node {
-	return section("Pips", ui.Pips(1, 5, ""), ui.Pips(3, 5, ""), ui.Pips(5, 5, ""))
-}
-
-func cardCanvas() g.Node {
-	return section("Card", ui.Card(h.H3(g.Text("A parchment card")), h.P(g.Text("Body text on parchment."))))
-}
-
-func stitchCanvas() g.Node   { return section("Stitch", ui.Stitch()) }
-func folkbandCanvas() g.Node { return section("FolkBand", ui.FolkBand()) }
-
-func avatarCanvas() g.Node {
-	return section("Avatar",
-		ui.Avatar(ui.AvatarProps{Src: "/static/avatars/balaur-01.png", Kind: "balaur", Alt: "Wise"}),
-		ui.Avatar(ui.AvatarProps{Src: "/static/avatars/balaur-01.png", State: "thinking"}),
-		ui.Avatar(ui.AvatarProps{Src: "/static/avatars/soul-01.png", Kind: "soul", Alt: "Owner"}),
-	)
-}
-
-func iconCanvas() g.Node {
-	return section("Icon", ui.Icon("scroll"), ui.Icon("tome"), ui.Icon("quill"), ui.Icon("lens"), ui.Icon("flame"))
-}
-
 func badgeCanvas() g.Node {
 	return section("Badge",
 		ui.Badge(ui.BadgeProps{}, g.Text("3")),

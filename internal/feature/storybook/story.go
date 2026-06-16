@@ -1,63 +1,87 @@
 package storybook
 
-import g "maragu.dev/gomponents"
+import (
+	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
+)
 
-// Story is one component's storybook entry: its url/anchor ID, sidebar Group and
-// Title, and the Canvas that renders its variants. The ordered registry below is
-// the single source for both the sidebar nav and the /storybook/{id} routes.
+// Prop documents one component prop for the props table.
+type Prop struct {
+	Name    string
+	Type    string
+	Default string
+	Desc    string
+}
+
+// Variant is one named, captioned state of a component (a "view").
+type Variant struct {
+	Label string
+	Node  g.Node
+}
+
+// Story is one storybook entry. A component story carries a Blurb, captioned
+// Variants, a Props table, and Do/Don't guidance, and renders the rich
+// per-component page. A foundation/overview entry sets Custom (a bespoke node)
+// and renders it verbatim. The ordered registry below is the single source for
+// both the sidebar nav and the /storybook/{id} routes.
 type Story struct {
-	ID     string
-	Group  string
-	Title  string
-	Canvas func() g.Node
+	ID       string
+	Group    string
+	Title    string
+	Blurb    string
+	Variants []Variant
+	Props    []Prop
+	Dos      []string
+	Donts    []string
+	Custom   g.Node
 }
 
 var stories = []Story{
-	{"colors", "Foundations", "Colors", colorsCanvas},
-	{"typography", "Foundations", "Typography", typographyCanvas},
-	{"materials", "Foundations", "Materials", materialsCanvas},
-	{"button", "Atoms", "Button", buttonCanvas},
-	{"tag", "Atoms", "Tag", tagCanvas},
-	{"pips", "Atoms", "Pips", pipsCanvas},
-	{"card", "Atoms", "Card", cardCanvas},
-	{"stitch", "Atoms", "Stitch", stitchCanvas},
-	{"folkband", "Atoms", "FolkBand", folkbandCanvas},
-	{"avatar", "Atoms", "Avatar", avatarCanvas},
-	{"icon", "Atoms", "Icon", iconCanvas},
-	{"badge", "Feedback", "Badge", badgeCanvas},
-	{"alert", "Feedback", "Alert", alertCanvas},
-	{"tooltip", "Feedback", "Tooltip", tooltipCanvas},
-	{"skeleton", "Feedback", "Skeleton", skeletonCanvas},
-	{"textfield", "Forms", "TextField", textfieldCanvas},
-	{"select", "Forms", "Select", selectCanvas},
-	{"toggle", "Forms", "Toggle", toggleCanvas},
-	{"tabs", "Navigation", "Tabs", tabsCanvas},
-	{"breadcrumb", "Navigation", "Breadcrumb", breadcrumbCanvas},
-	{"pagination", "Navigation", "Pagination", paginationCanvas},
-	{"list", "Display", "List", listCanvas},
-	{"emptystate", "Feedback", "EmptyState", emptyStateCanvas},
-	{"toast", "Feedback", "Toast", toastCanvas},
-	{"dialog", "Feedback", "Dialog", dialogCanvas},
-	{"sectionlabel", "Typography", "SectionLabel", sectionLabelCanvas},
-	{"screentitle", "Typography", "ScreenTitle", screenTitleCanvas},
-	{"chatmessage", "Chat", "Message", chatMessageCanvas},
-	{"chattoolrow", "Chat", "ToolRow", chatToolRowCanvas},
-	{"dialoguechoices", "Chat", "DialogueChoices", dialogueChoicesCanvas},
-	{"messagedraft", "Chat", "MessageDraft", messageDraftCanvas},
-	{"modelswitcher", "Chat", "ModelSwitcher", modelSwitcherCanvas},
-	{"headswitcher", "Chat", "HeadSwitcher", headSwitcherCanvas},
-	{"chatbar", "Chat", "ChatBar", chatBarCanvas},
-	{"composer", "Chat", "Composer", composerCanvas},
-	{"taskcard", "Cards", "TaskCard", taskCardCanvas},
-	{"knowledgecard", "Cards", "KnowledgeCard", knowledgeCardCanvas},
-	{"calendarcell", "Display", "CalendarCell", calendarCellCanvas},
-	{"sparkline", "Display", "Sparkline", sparklineCanvas},
-	{"dayentry", "Display", "DayEntry", dayEntryCanvas},
-	{"recapcard", "Cards", "RecapCard", recapCardCanvas},
-	{"guardiancard", "Cards", "GuardianCard", guardianCardCanvas},
-	{"nudgebanner", "Cards", "NudgeBanner", nudgeBannerCanvas},
-	{"statcard", "Cards", "StatCard", statCardCanvas},
-	{"topbar", "Navigation", "Topbar", topbarCanvas},
+	{ID: "colors", Group: "Foundations", Title: "Colors", Custom: colorsCanvas()},
+	{ID: "typography", Group: "Foundations", Title: "Typography", Custom: typographyCanvas()},
+	{ID: "materials", Group: "Foundations", Title: "Materials", Custom: materialsCanvas()},
+	buttonStory(),
+	tagStory(),
+	pipsStory(),
+	cardStory(),
+	stitchStory(),
+	folkbandStory(),
+	avatarStory(),
+	iconStory(),
+	{ID: "badge", Group: "Feedback", Title: "Badge", Custom: badgeCanvas()},
+	{ID: "alert", Group: "Feedback", Title: "Alert", Custom: alertCanvas()},
+	{ID: "tooltip", Group: "Feedback", Title: "Tooltip", Custom: tooltipCanvas()},
+	{ID: "skeleton", Group: "Feedback", Title: "Skeleton", Custom: skeletonCanvas()},
+	{ID: "textfield", Group: "Forms", Title: "TextField", Custom: textfieldCanvas()},
+	{ID: "select", Group: "Forms", Title: "Select", Custom: selectCanvas()},
+	{ID: "toggle", Group: "Forms", Title: "Toggle", Custom: toggleCanvas()},
+	{ID: "tabs", Group: "Navigation", Title: "Tabs", Custom: tabsCanvas()},
+	{ID: "breadcrumb", Group: "Navigation", Title: "Breadcrumb", Custom: breadcrumbCanvas()},
+	{ID: "pagination", Group: "Navigation", Title: "Pagination", Custom: paginationCanvas()},
+	{ID: "list", Group: "Display", Title: "List", Custom: listCanvas()},
+	{ID: "emptystate", Group: "Feedback", Title: "EmptyState", Custom: emptyStateCanvas()},
+	{ID: "toast", Group: "Feedback", Title: "Toast", Custom: toastCanvas()},
+	{ID: "dialog", Group: "Feedback", Title: "Dialog", Custom: dialogCanvas()},
+	{ID: "sectionlabel", Group: "Typography", Title: "SectionLabel", Custom: sectionLabelCanvas()},
+	{ID: "screentitle", Group: "Typography", Title: "ScreenTitle", Custom: screenTitleCanvas()},
+	{ID: "chatmessage", Group: "Chat", Title: "Message", Custom: chatMessageCanvas()},
+	{ID: "chattoolrow", Group: "Chat", Title: "ToolRow", Custom: chatToolRowCanvas()},
+	{ID: "dialoguechoices", Group: "Chat", Title: "DialogueChoices", Custom: dialogueChoicesCanvas()},
+	{ID: "messagedraft", Group: "Chat", Title: "MessageDraft", Custom: messageDraftCanvas()},
+	{ID: "modelswitcher", Group: "Chat", Title: "ModelSwitcher", Custom: modelSwitcherCanvas()},
+	{ID: "headswitcher", Group: "Chat", Title: "HeadSwitcher", Custom: headSwitcherCanvas()},
+	{ID: "chatbar", Group: "Chat", Title: "ChatBar", Custom: chatBarCanvas()},
+	{ID: "composer", Group: "Chat", Title: "Composer", Custom: composerCanvas()},
+	{ID: "taskcard", Group: "Cards", Title: "TaskCard", Custom: taskCardCanvas()},
+	{ID: "knowledgecard", Group: "Cards", Title: "KnowledgeCard", Custom: knowledgeCardCanvas()},
+	{ID: "calendarcell", Group: "Display", Title: "CalendarCell", Custom: calendarCellCanvas()},
+	{ID: "sparkline", Group: "Display", Title: "Sparkline", Custom: sparklineCanvas()},
+	{ID: "dayentry", Group: "Display", Title: "DayEntry", Custom: dayEntryCanvas()},
+	{ID: "recapcard", Group: "Cards", Title: "RecapCard", Custom: recapCardCanvas()},
+	{ID: "guardiancard", Group: "Cards", Title: "GuardianCard", Custom: guardianCardCanvas()},
+	{ID: "nudgebanner", Group: "Cards", Title: "NudgeBanner", Custom: nudgeBannerCanvas()},
+	{ID: "statcard", Group: "Cards", Title: "StatCard", Custom: statCardCanvas()},
+	{ID: "topbar", Group: "Navigation", Title: "Topbar", Custom: topbarCanvas()},
 }
 
 // Stories returns the ordered registry.
@@ -71,4 +95,72 @@ func Lookup(id string) (Story, bool) {
 		}
 	}
 	return Story{}, false
+}
+
+// Page renders a story's body. A foundation/overview story (Custom set, no
+// Variants) renders verbatim; a component story renders the rich page: a blurb
+// header, the captioned variant tiles, the props table, and the Do/Don't columns.
+func Page(s Story) g.Node {
+	if len(s.Variants) == 0 {
+		return s.Custom
+	}
+
+	views := make([]g.Node, 0, len(s.Variants)+1)
+	views = append(views, h.Class("sb-views"))
+	for _, v := range s.Variants {
+		views = append(views,
+			h.Figure(h.Class("sb-view"),
+				h.Div(h.Class("sb-view-stage"), v.Node),
+				h.FigCaption(h.Class("sb-view-cap"), g.Text(v.Label)),
+			),
+		)
+	}
+
+	kids := []g.Node{
+		h.Header(h.Class("sb-head"),
+			h.Div(h.Class("sb-head-eyebrow"), g.Text(s.Group)),
+			h.H1(h.Class("sb-head-title"), g.Text(s.Title)),
+			h.P(h.Class("sb-head-blurb"), g.Text(s.Blurb)),
+		),
+		h.Section(views...),
+	}
+	if len(s.Props) > 0 {
+		kids = append(kids, propsTable(s.Props))
+	}
+	if len(s.Dos) > 0 || len(s.Donts) > 0 {
+		kids = append(kids, h.Section(h.Class("sb-usage"),
+			usageCol("Do", "sb-do", "✓", s.Dos),
+			usageCol("Don't", "sb-dont", "✗", s.Donts),
+		))
+	}
+	return g.Group(kids)
+}
+
+func propsTable(props []Prop) g.Node {
+	rows := make([]g.Node, 0, len(props))
+	for _, p := range props {
+		rows = append(rows, h.Tr(
+			h.Td(h.Code(g.Text(p.Name))),
+			h.Td(h.Code(g.Text(p.Type))),
+			h.Td(g.Text(p.Default)),
+			h.Td(g.Text(p.Desc)),
+		))
+	}
+	return h.Section(h.Class("sb-props"),
+		h.H2(h.Class("sb-h2"), g.Text("Props")),
+		h.Div(h.Class("sb-props-scroll"),
+			h.Table(
+				h.THead(h.Tr(h.Th(g.Text("Prop")), h.Th(g.Text("Type")), h.Th(g.Text("Default")), h.Th(g.Text("Description")))),
+				h.TBody(rows...),
+			),
+		),
+	)
+}
+
+func usageCol(title, cls, mark string, items []string) g.Node {
+	lis := make([]g.Node, 0, len(items))
+	for _, it := range items {
+		lis = append(lis, h.Li(h.Span(h.Class("sb-mark"), g.Text(mark)), g.Text(it)))
+	}
+	return h.Div(h.Class(cls), h.H3(g.Text(title)), h.Ul(lis...))
 }
