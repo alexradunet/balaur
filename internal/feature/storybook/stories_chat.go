@@ -133,7 +133,7 @@ func messagedraftStory() Story {
 
 func modelswitcherStory() Story {
 	return Story{
-		ID: "modelswitcher", Group: "Chat", Title: "ModelSwitcher",
+		ID: "modelswitcher", Group: "Chat", Title: "ModelSwitcher", Wide: true,
 		Blurb: "The model line of the chat ledge: a quiet kicker, the active model pill, and the links to manage models and the owner's profile. Provider choice stays explicit and in sight.",
 		Variants: []Variant{
 			{"ready", chat.ModelSwitcher(chat.ModelSwitcherProps{ActiveModel: "gemma3:4b", AvatarSrc: "/static/crest.png"})},
@@ -184,7 +184,7 @@ func headswitcherStory() Story {
 
 func chatbarStory() Story {
 	return Story{
-		ID: "chatbar", Group: "Chat", Title: "ChatBar",
+		ID: "chatbar", Group: "Chat", Title: "ChatBar", Wide: true,
 		Blurb: "The wood input ledge: the HeadSwitcher beside the ModelSwitcher. Fixed to the dock bottom in the live app; shown inline here. Who is speaking, on which model, in one bar.",
 		Variants: []Variant{
 			{"head · model", chat.ChatBar(chat.ChatBarProps{

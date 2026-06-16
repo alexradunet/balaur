@@ -16,7 +16,7 @@ import (
 
 func taskcardStory() Story {
 	return Story{
-		ID: "taskcard", Group: "Cards", Title: "TaskCard",
+		ID: "taskcard", Group: "Cards", Title: "TaskCard", Wide: true,
 		Blurb: "Operational action card for chat embeds and the Tasks page. Open tasks get Done, Snooze, Drop; closed tasks show their status.",
 		Variants: []Variant{
 			{"open · recurring", taskcards.TaskCard(taskcards.TaskView{ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due today 18:00", RecurLine: "every 2 days"})},

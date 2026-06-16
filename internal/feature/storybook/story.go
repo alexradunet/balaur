@@ -34,6 +34,10 @@ type Story struct {
 	Dos      []string
 	Donts    []string
 	Custom   g.Node
+	// Wide gives full-bleed components (topbar, chat ledges) a single
+	// full-width variant column instead of the narrow auto-fill tiles they
+	// would otherwise overflow.
+	Wide bool
 }
 
 var stories = []Story{
@@ -105,8 +109,12 @@ func Page(s Story) g.Node {
 		return s.Custom
 	}
 
+	cls := "sb-views"
+	if s.Wide {
+		cls += " sb-views-wide"
+	}
 	views := make([]g.Node, 0, len(s.Variants)+1)
-	views = append(views, h.Class("sb-views"))
+	views = append(views, h.Class(cls))
 	for _, v := range s.Variants {
 		views = append(views,
 			h.Figure(h.Class("sb-view"),
