@@ -47,7 +47,7 @@ func TestSidebar(t *testing.T) {
 		Sections: []shell.SidebarSection{{
 			Label: "Atoms",
 			Items: []shell.SidebarItem{
-				{Label: "Button", Href: "/storybook/button", Active: true},
+				{Label: "Button", Href: "/storybook/button", Active: true, Dot: "var(--teal)"},
 				{Label: "Tag", Href: "/storybook/tag"},
 			},
 		}},
@@ -60,9 +60,9 @@ func TestSidebar(t *testing.T) {
 	for _, want := range []string{
 		`<aside class="sb-side">`,
 		`<header class="sb-brand">BALAUR</header>`,
-		`<div class="sb-nav-label">Atoms</div>`,
-		`<a class="sb-nav-item sb-nav-item-active" href="/storybook/button" aria-current="page">Button</a>`,
-		`<a class="sb-nav-item" href="/storybook/tag">Tag</a>`,
+		`<div class="sb-nav-label"><span>Atoms</span><span class="sb-nav-count">2</span><span class="sb-nav-rule"></span></div>`,
+		`<a class="sb-nav-item sb-nav-item-active" href="/storybook/button" aria-current="page"><span class="sb-nav-dot" style="background:var(--teal)"></span><span>Button</span></a>`,
+		`<a class="sb-nav-item" href="/storybook/tag"><span>Tag</span></a>`,
 		`<footer class="sb-foot">FOOT</footer>`,
 	} {
 		if !strings.Contains(got, want) {

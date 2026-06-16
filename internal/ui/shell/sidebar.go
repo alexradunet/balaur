@@ -1,14 +1,18 @@
 package shell
 
 import (
+	"strconv"
+
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 )
 
-// SidebarItem is one nav link. Active marks the current page.
+// SidebarItem is one nav link. Active marks the current page. Dot is an optional
+// CSS color for the leading group-dot (e.g. "var(--teal)").
 type SidebarItem struct {
 	Label, Href string
 	Active      bool
+	Dot         string
 }
 
 // SidebarSection is a labelled group of nav items.
@@ -32,7 +36,11 @@ type SidebarProps struct {
 func Sidebar(p SidebarProps) g.Node {
 	groups := make([]g.Node, 0, len(p.Sections))
 	for _, sec := range p.Sections {
-		items := []g.Node{h.Div(h.Class("sb-nav-label"), g.Text(sec.Label))}
+		items := []g.Node{h.Div(h.Class("sb-nav-label"),
+			h.Span(g.Text(sec.Label)),
+			h.Span(h.Class("sb-nav-count"), g.Text(strconv.Itoa(len(sec.Items)))),
+			h.Span(h.Class("sb-nav-rule")),
+		)}
 		for _, it := range sec.Items {
 			items = append(items, sidebarItem(it))
 		}
@@ -99,6 +107,9 @@ func sidebarItem(it SidebarItem) g.Node {
 	if it.Active {
 		attrs = append(attrs, h.Aria("current", "page"))
 	}
-	attrs = append(attrs, g.Text(it.Label))
+	if it.Dot != "" {
+		attrs = append(attrs, h.Span(h.Class("sb-nav-dot"), h.Style("background:"+it.Dot)))
+	}
+	attrs = append(attrs, h.Span(g.Text(it.Label)))
 	return h.A(attrs...)
 }
