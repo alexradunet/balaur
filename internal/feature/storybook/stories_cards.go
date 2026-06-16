@@ -10,6 +10,47 @@ import (
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
+// questsfocusStory documents the quests card's full-canvas focus body — the
+// rhythm-grouped quest rail plus the detail panel.
+func questsfocusStory() Story {
+	first := taskcards.TaskView{ID: "t1", Title: "Morning stretch", Status: "open", RecurLine: "every day"}
+	return Story{
+		ID: "questsfocus", Group: "Cards", Title: "QuestsFocus", Wide: true, OnDark: true,
+		Blurb: "The quest-log focus body: a rhythm rail (Dailies / Rituals / Quests / Side quests) on the left, a task detail card on the right. Rail buttons inner-patch #quest-detail; task transitions outer-patch #quest-rail.",
+		Variants: []Variant{
+			{"populated rail + detail", taskcards.QuestsFocus(taskcards.QuestsFocusView{
+				Groups: []taskcards.QuestGroupView{
+					{Name: "Dailies", Tasks: []taskcards.TaskView{
+						{ID: "t1", Title: "Morning stretch", Status: "open", RecurLine: "every day"},
+						{ID: "t2", Title: "Read 20 pages", Status: "open", RecurLine: "every day"},
+					}},
+					{Name: "Quests", Tasks: []taskcards.TaskView{
+						{ID: "t3", Title: "File the deed", Status: "open", DueLine: "due Mon, Jun 16 at 09:00", Overdue: true},
+					}},
+				},
+				First: &first,
+				DoneRecently: []taskcards.TaskView{
+					{ID: "t4", Title: "Submit the report", Status: "done"},
+				},
+			})},
+			{"empty", taskcards.QuestsFocus(taskcards.QuestsFocusView{})},
+		},
+		Props: []Prop{
+			{"Groups", "[]QuestGroupView", "nil", "Rhythm groups (Dailies/Rituals/Quests/Side quests); omitted when empty."},
+			{"First", "*TaskView", "nil", "Pre-rendered task for the detail panel; shows k-empty when nil."},
+			{"DoneRecently", "[]TaskView", "nil", "Recent done tasks; renders as a collapsible 'Done recently' section."},
+		},
+		Dos: []string{
+			"Keep the fixed group order: Dailies → Rituals → Quests → Side quests.",
+			"Use #quest-rail (outer patch) and #quest-detail (inner patch) as the SSE targets.",
+		},
+		Donts: []string{
+			"Add a form to the rail — actions live on the TaskCard in the detail panel.",
+			"Re-implement the Done/Snooze/Drop forms — TaskCard is the single source.",
+		},
+	}
+}
+
 // lifelogfocusStory documents the lifelog card's full-canvas focus body — the
 // life overview ported to gomponents (chat.Message-style components are for the
 // chat; this is the page body). Read-only; entries are logged via chat.

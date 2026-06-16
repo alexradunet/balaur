@@ -80,8 +80,6 @@ func focusBackHref(from string) string {
 // falls back to the generic registry render (manage mode where available).
 func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.HTML {
 	switch typ {
-	case "quests":
-		return h.questsFocusHTML()
 	case "day":
 		return h.dayFocusHTML(params)
 	case "memory":

@@ -161,9 +161,12 @@ func intParam(p map[string]string, key string, def int) int {
 	return def
 }
 
-// registerQuests wires the quests card (both modes) into the ui registry.
+// registerQuests wires the quests card (tile + focus) into the ui registry.
 func registerQuests(app core.App) {
-	ui.RegisterCard("quests", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
+	ui.RegisterCard("quests", func(size ui.CardSize, params map[string]string) (g.Node, error) {
+		if size == ui.Focus {
+			return QuestsFocus(BuildQuestsFocus(app)), nil
+		}
 		return renderQuests(app, params), nil
 	})
 }

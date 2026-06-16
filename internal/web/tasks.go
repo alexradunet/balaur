@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
+	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
@@ -146,9 +147,11 @@ func buildQuestLog(openRecs []*core.Record, doneRecs []*core.Record, now time.Ti
 	}
 }
 
-// questsFocusHTML renders the quests card's focus body: the rhythm-grouped quest
-// rail + sticky detail — the surface formerly at /tasks?view=list. Tasks are
-// created in chat, so this view is read + transition only (strict parity).
+// questsFocusHTML is dead code — the quests focus body is now rendered by
+// taskcards.QuestsFocus (registered via the ui.Focus seam). Left here because
+// templates_test.go::TestQuestsFocusListRenders still executes the tasks_list
+// template directly; retire both once that test is reconciled.
+// TODO(ui-redesign): retire once TestQuestsFocusListRenders is reconciled.
 func (h *handlers) questsFocusHTML() template.HTML {
 	now := time.Now()
 	openRecs, doneRecs := h.loadQuestLogRecs()
@@ -354,9 +357,8 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	// cards carry no "src", so they reach here (board tiles returned above).
 	if ref := e.Request.Header.Get("Referer"); ref != "" {
 		if u, err := url.Parse(ref); err == nil && u.Path == "/focus/quests" {
-			openRecs, doneRecs := h.loadQuestLogRecs()
 			var rb strings.Builder
-			if err := h.tmpl.ExecuteTemplate(&rb, "quest_rail", buildQuestLog(openRecs, doneRecs, now)); err != nil {
+			if err := taskcards.QuestRail(taskcards.BuildQuestsFocus(h.app)).Render(&rb); err != nil {
 				return e.InternalServerError("rendering quest rail", err)
 			}
 			_ = sse.PatchElements(rb.String(),
