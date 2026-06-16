@@ -3114,3 +3114,37 @@ progress.pull-progress-bar::-moz-progress-bar {
 .sb-mark { font-weight: 700; }
 .sb-do .sb-mark { color: var(--good-ink); }
 .sb-dont .sb-mark { color: var(--ember-deep); }
+
+/* ── Chat Message — the framed RPG speech panel (matches the design export) ──
+   A keyline-framed portrait sized to the message minimum height beside a
+   parchment panel; the speaker's nameplate is a tab straddling the panel's top
+   border. Balaur speaks from the left; the owner answers, mirrored, from the right. */
+.cmsg { display: flex; }
+.cmsg-balaur { justify-content: flex-start; }
+.cmsg-user { justify-content: flex-end; }
+.cmsg-row { display: flex; gap: 10px; align-items: stretch; max-width: 88%; }
+.cmsg-portrait {
+  width: 64px; height: 64px; flex-shrink: 0; align-self: flex-start; box-sizing: border-box;
+  overflow: hidden; padding: 3px; border: 2px solid var(--outline-2); background: #101314;
+  box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
+}
+.cmsg-user .cmsg-portrait { box-shadow: inset 0 0 0 2px var(--indigo), var(--drop-hard); }
+.cmsg-portrait img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.cmsg-user .cmsg-portrait img { transform: scaleX(-1); }
+.cmsg-pending .cmsg-portrait { animation: basm-glow 1.6s ease-in-out infinite; }
+.cmsg-panel {
+  position: relative; min-width: 0; min-height: 64px; box-sizing: border-box;
+  display: flex; align-items: center; color: var(--ink);
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: 16px 16px 13px;
+}
+.cmsg-pending .cmsg-panel { border-color: var(--gold-deep); }
+.cmsg-name {
+  position: absolute; top: 0; transform: translateY(-52%);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; background: var(--surface-2); border: 2px solid var(--parch-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4); padding: 1px 9px; line-height: 1.6;
+}
+.cmsg-balaur .cmsg-name { left: 12px; color: var(--gold-ink); }
+.cmsg-user .cmsg-name { right: 12px; color: var(--indigo-ink); }
+.cmsg-body { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; }
