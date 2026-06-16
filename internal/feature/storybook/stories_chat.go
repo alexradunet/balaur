@@ -220,8 +220,7 @@ func composerStory() Story {
 		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
 		Blurb: "The owner's single seat of action. ChatBar and MessageDraft merged into one artisanal wood ledge: corner brackets, a tool row, a sound toggle, the soul portrait, and the parchment draft. Whatever Balaur asks, the owner answers here.",
 		Variants: []Variant{
-			{"draft", h.Div(h.Style("max-width:560px"),
-				ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."}))},
+			{"draft", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})},
 		},
 		Props: []Prop{
 			{"Who", "string", `"You"`, "Nameplate under the owner portrait."},

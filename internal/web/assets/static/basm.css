@@ -3066,9 +3066,14 @@ progress.pull-progress-bar::-moz-progress-bar {
 .sb-head-title { margin: 0; font-family: var(--font-display); font-size: clamp(26px, 4vw, 34px); color: var(--fg-strong); line-height: 1; }
 .sb-head-blurb { margin: 9px 0 0; max-width: 60ch; font-size: 15px; line-height: 1.55; color: var(--fg); }
 .sb-views { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 16px; margin: 0 0 28px; }
-/* Full-bleed components (topbar, chat ledges) get one full-width column so they
-   render at their natural size instead of overflowing a narrow auto-fill tile. */
-.sb-views-wide { grid-template-columns: 1fr; }
+/* Full-bleed components (topbar, chat ledges, composer) get one wide column,
+   capped at a comfortable max and left-aligned with the page content. They fill
+   it up to the cap and shrink below — horizontally responsive, not fixed islands. */
+.sb-views-wide { grid-template-columns: minmax(0, 960px); }
+/* Wide components fill their stage (content-width ones like List/DayEntry would
+   otherwise center small); those with their own max-width (Dialog, switchers)
+   stay capped. */
+.sb-views-wide .sb-view-stage > * { width: 100%; }
 .sb-view { margin: 0; display: flex; flex-direction: column; }
 .sb-view-stage {
   flex: 1; display: flex; align-items: center; justify-content: center; min-height: 96px; padding: 20px;

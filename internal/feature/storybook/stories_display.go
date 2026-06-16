@@ -14,7 +14,7 @@ import (
 
 func listStory() Story {
 	return Story{
-		ID: "list", Group: "Display", Title: "List",
+		ID: "list", Group: "Display", Title: "List", Wide: true,
 		Blurb: "A parchment list of rows — each with an optional pixel icon, a title and subtitle, and a trailing meta value. The backbone of the Tasks and Memory screens; rows divide with a hairline.",
 		Variants: []Variant{
 			{"with header", ui.List(ui.ListProps{
@@ -103,7 +103,7 @@ func sparklineStory() Story {
 
 func dayentryStory() Story {
 	return Story{
-		ID: "dayentry", Group: "Display", Title: "DayEntry",
+		ID: "dayentry", Group: "Display", Title: "DayEntry", Wide: true,
 		Blurb: "A row on the day timeline: a time, a node on the rail, and the entry. Tone colors the node (gold / teal / ember). Stack them; mark the last to close the rail.",
 		Variants: []Variant{
 			{"timeline", h.Div(h.Class("list"), h.Div(h.Style("padding:14px"),
