@@ -80,8 +80,6 @@ var stories = []Story{
 	screentitleStory(),
 	chatmessageStory(),
 	chattoolrowStory(),
-	dialoguechoicesStory(),
-	messagedraftStory(),
 	modelswitcherStory(),
 	headswitcherStory(),
 	chatbarStory(),

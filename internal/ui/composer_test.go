@@ -39,3 +39,26 @@ func TestComposerDefaults(t *testing.T) {
 		}
 	}
 }
+
+func TestComposerDeciding(t *testing.T) {
+	got := render(t, ui.Composer(ui.ComposerProps{
+		AvatarSrc: "/static/crest.png", Prompt: "How should I log this?",
+		Choices: []ui.ComposerChoice{{Label: "A quick note", Hint: "1 line"}, {Label: "A journal entry"}},
+	}))
+	for _, want := range []string{
+		`<div class="composer composer-deciding">`,
+		`<div class="composer-kicker">How should I log this?</div>`,
+		`<div class="choices-panel composer-choices">`,
+		`<span class="choice-label">A quick note</span>`,
+		// the embedded manual-input row, keyed after the choices (3rd here)
+		`<div class="choice choice-type"><span class="choice-key">3</span><input type="text" placeholder="type your answer…" autocomplete="off">`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("deciding composer missing %q in: %s", want, got)
+		}
+	}
+	// deciding mode replaces the draft — no textarea.
+	if strings.Contains(got, "<textarea") {
+		t.Errorf("deciding composer should not render the draft textarea: %s", got)
+	}
+}

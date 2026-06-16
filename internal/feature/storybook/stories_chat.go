@@ -65,69 +65,6 @@ func chattoolrowStory() Story {
 	}
 }
 
-func dialoguechoicesStory() Story {
-	return Story{
-		ID: "dialoguechoices", Group: "Chat", Title: "DialogueChoices", Wide: true, OnDark: true,
-		Blurb: "A numbered choice panel beside the owner's soul portrait — Balaur asks, the owner picks a line. The decision lives in the conversation, not a modal.",
-		Variants: []Variant{
-			{"three choices", h.Div(h.Class("chat"),
-				chat.DialogueChoices(chat.ChoicesProps{
-					Prompt:    "How should I log this?",
-					AvatarSrc: "/static/crest.png",
-					Choices: []chat.Choice{
-						{Label: "As a quick note", Hint: "1 line"},
-						{Label: "As a full journal entry"},
-						{Label: "Don't save it", Hint: "skip"},
-					},
-				}))},
-		},
-		Props: []Prop{
-			{"Prompt", "string", "—", "The kicker question above the choices; omitted when empty."},
-			{"Choices", "[]Choice", "nil", "The numbered options — each a Label (spoken reply) + optional Hint."},
-			{"AvatarSrc", "string", "—", "The owner's mirrored soul portrait."},
-			{"Who", "string", `"You"`, "Nameplate under the portrait."},
-		},
-		Dos: []string{
-			"Keep the choices short — they are spoken lines, not paragraphs.",
-			"Use a Hint to clarify what a choice does, not to repeat the label.",
-		},
-		Donts: []string{
-			"Stack more than a handful — long lists belong in a Select.",
-			"Use it for an irreversible choice — that is a Dialog.",
-		},
-	}
-}
-
-func messagedraftStory() Story {
-	return Story{
-		ID: "messagedraft", Group: "Chat", Title: "MessageDraft", Wide: true, OnDark: true,
-		Blurb: "The owner's editable draft bubble: a soul portrait beside a parchment textarea with a hint and a Speak button. The split half of the input that pairs with the ChatBar.",
-		Variants: []Variant{
-			{"empty", h.Div(h.Class("chat"),
-				chat.MessageDraft(chat.DraftProps{
-					AvatarSrc:   "/static/crest.png",
-					Placeholder: "Speak; I am listening.",
-				}))},
-		},
-		Props: []Prop{
-			{"AvatarSrc", "string", "—", "The owner's soul portrait."},
-			{"Who", "string", `"You"`, "Nameplate under the portrait."},
-			{"Placeholder", "string", "—", "Ghost prompt inside the textarea."},
-			{"Hint", "string", "enter to speak…", "Foot hint; defaults to the live keyboard copy."},
-			{"SendLabel", "string", `"Speak"`, "The submit button label."},
-			{"Value", "string", "—", "Pre-filled textarea content."},
-		},
-		Dos: []string{
-			"Keep the hint quiet — it names the keys, nothing more.",
-			"Let the portrait glow while the owner types.",
-		},
-		Donts: []string{
-			"Show two drafts at once — there is one seat of action.",
-			"Crowd the foot with extra buttons; Speak is the one action.",
-		},
-	}
-}
-
 func modelswitcherStory() Story {
 	return Story{
 		ID: "modelswitcher", Group: "Chat", Title: "ModelSwitcher", Wide: true, OnDock: true,
@@ -215,9 +152,18 @@ func chatbarStory() Story {
 func composerStory() Story {
 	return Story{
 		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
-		Blurb: "The owner's single seat of action. ChatBar and MessageDraft merged into one artisanal wood ledge: corner brackets, a tool row, a sound toggle, the soul portrait, and the parchment draft. Whatever Balaur asks, the owner answers here.",
+		Blurb: "The owner's single seat of action — every input is given here, so the owner never looks anywhere else. Draft mode is the textarea; when Balaur asks a question the dialogue choices embed in place of the draft, always closing with a type-your-own row.",
 		Variants: []Variant{
 			{"draft", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})},
+			{"deciding · choices", ui.Composer(ui.ComposerProps{
+				AvatarSrc: "/static/crest.png",
+				Prompt:    "How should I log this?",
+				Choices: []ui.ComposerChoice{
+					{Label: "As a quick note", Hint: "1 line"},
+					{Label: "As a full journal entry"},
+					{Label: "Don't save it", Hint: "skip"},
+				},
+			})},
 		},
 		Props: []Prop{
 			{"Who", "string", `"You"`, "Nameplate under the owner portrait."},
@@ -226,10 +172,12 @@ func composerStory() Story {
 			{"Hint", "string", "unsent · enter speaks", "Foot hint; defaults to the live copy."},
 			{"SendLabel", "string", `"Send"`, "The submit button label."},
 			{"Tools", "[]string", "scroll·tome·lens", "/static/icons names for the tool wells, left of the sound toggle."},
+			{"Prompt", "string", `"Your word"`, "Kicker question shown in the top row when deciding."},
+			{"Choices", "[]ComposerChoice", "nil", "When set, the draft is replaced by these numbered choices + a manual-input row."},
 		},
 		Dos: []string{
-			"Route every owner input through this one surface.",
-			"Let the composer return to draft once a decision is answered.",
+			"Route every owner input through this one surface — text, choices, task and memory decisions.",
+			"Always offer the type-your-own row so the owner is never boxed into the listed choices.",
 		},
 		Donts: []string{
 			"Make the owner scroll back into the chat to act on a card.",
