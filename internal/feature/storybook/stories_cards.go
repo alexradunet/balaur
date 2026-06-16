@@ -1,0 +1,197 @@
+package storybook
+
+import (
+	h "maragu.dev/gomponents/html"
+
+	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
+	"github.com/alexradunet/balaur/internal/feature/taskcards"
+	"github.com/alexradunet/balaur/internal/ui"
+)
+
+// Rich story builders for the Cards group — the operational and growth surfaces
+// where Balaur proposes and the owner decides: tasks, memory, the day's recap,
+// the guardian's consent ask, the evening nudge, and the Life metrics. Render
+// calls mirror the live components; blurb/props/guidance follow the Hearthwood
+// design reference.
+
+func taskcardStory() Story {
+	return Story{
+		ID: "taskcard", Group: "Cards", Title: "TaskCard",
+		Blurb: "Operational action card for chat embeds and the Tasks page. Open tasks get Done, Snooze, Drop; closed tasks show their status.",
+		Variants: []Variant{
+			{"open · recurring", taskcards.TaskCard(taskcards.TaskView{ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due today 18:00", RecurLine: "every 2 days"})},
+			{"overdue", taskcards.TaskCard(taskcards.TaskView{ID: "t2", Title: "Call the vet about Luna", Status: "open", DueLine: "due yesterday", Overdue: true})},
+			{"done", taskcards.TaskCard(taskcards.TaskView{ID: "t3", Title: "Submit the quarterly report", Status: "done"})},
+		},
+		Props: []Prop{
+			{"ID", "string", "—", "Record id; drives the root element id and the transition form posts."},
+			{"Title", "string", "—", "The action."},
+			{"Status", "string", `"open"`, "Open shows Done/Snooze/Drop; any closed status shows the status word."},
+			{"DueLine", "string", "—", "Human due text."},
+			{"RecurLine", "string", "—", `Recurrence tag, e.g. "every 2 days".`},
+			{"Notes", "string", "—", "Collapsible detail under a Notes fold."},
+			{"Overdue", "bool", "false", "Reddens the due line."},
+		},
+		Dos: []string{
+			"Make Done the single primary on open tasks.",
+			"Embed the same card in chat and on the Tasks page.",
+		},
+		Donts: []string{
+			"Show Done/Snooze/Drop on a closed task.",
+			"Bury the due line — it is the point.",
+		},
+	}
+}
+
+func knowledgecardStory() Story {
+	return Story{
+		ID: "knowledgecard", Group: "Cards", Title: "KnowledgeCard",
+		Blurb: "The growth surface: Balaur proposes, the owner decides. Proposed pops with gold brackets; active is calm; archived is dashed and dimmed.",
+		Variants: []Variant{
+			{"proposed", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m1", Status: "proposed", Category: "preference", Title: "Prefers tea over coffee", Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3})},
+			{"active", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m2", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", WhenToUse: "pet care", Importance: 4, UseCount: 7})},
+			{"archived", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m3", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Content: "Was open 6am–10pm; the gym shut down in May.", Importance: 1})},
+		},
+		Props: []Prop{
+			{"ID", "string", "—", "Record id; drives the root element id and the edit/transition posts."},
+			{"Status", "string", `"active"`, "Drives the whole lifecycle look + actions: proposed, active, archived."},
+			{"Category", "string", `"memory"`, "fact · preference · person · project · context."},
+			{"Title", "string", "—", "What is remembered."},
+			{"Content", "string", "—", "The body detail."},
+			{"WhenToUse", "string", "—", "Recall hint — when Balaur should surface it."},
+			{"Importance", "int", "0", "Renders the Pips dial (out of 5)."},
+			{"UseCount", "int", "0", `Shows "used ×N" on active cards.`},
+		},
+		Dos: []string{
+			"Make Approve the only primary on a proposed card.",
+			"Nothing becomes memory without the owner's approval.",
+		},
+		Donts: []string{
+			"Auto-keep proposed memories.",
+			"Hide the archive — let restores be possible.",
+		},
+	}
+}
+
+func recapcardStory() Story {
+	return Story{
+		ID: "recapcard", Group: "Cards", Title: "RecapCard",
+		Blurb: "The \"further back…\" summary, marked with the orb. What Balaur is carrying forward from earlier — so the owner can see the context, not just trust it.",
+		Variants: []Variant{
+			{"earlier today", h.Div(h.Style("max-width:400px"),
+				ui.RecapCard(ui.RecapProps{
+					When: "earlier today", Summary: "We planned the orchard work and set the tomato watering. You asked me to keep two things.",
+					Points: []string{"Garden — tomatoes & peppers, watered at dusk", "Notes exported as Markdown", "Mend the deer fence before the weekend"},
+				}))},
+		},
+		Props: []Prop{
+			{"Kicker", "string", `"Recap"`, "Eyebrow above the timeframe."},
+			{"When", "string", `"earlier today"`, "Mono timeframe."},
+			{"Summary", "string", "—", "The carried-forward gist."},
+			{"Points", "[]string", "nil", "Specific items remembered, each a teal-square bullet."},
+		},
+		Dos: []string{
+			"Surface it at the top of a long conversation (\"further back…\").",
+			"Keep points concrete — the actual things kept.",
+		},
+		Donts: []string{
+			"Summarize what was never said.",
+			"Bury it mid-thread where it reads as a new message.",
+		},
+	}
+}
+
+func guardiancardStory() Story {
+	return Story{
+		ID: "guardiancard", Group: "Cards", Title: "GuardianCard",
+		Blurb: "The quiet guardian asking before it touches the owner's box. A shield, the request in plain words, the exact scope, and Allow once / Always / Deny. This is where local-first becomes visible.",
+		Variants: []Variant{
+			{"read files", h.Div(h.Style("max-width:400px"),
+				ui.GuardianCard(ui.GuardianProps{
+					Kicker: "OS access", Title: "Read your Documents folder?",
+					Detail:        "To find the budget spreadsheet you mentioned. Read-only, and only this once.",
+					Scope:         "read · ~/Documents · this session",
+					AllowOnceHref: "#", AllowAlwaysHref: "#", DenyHref: "#",
+				}))},
+		},
+		Props: []Prop{
+			{"Kicker", "string", `"OS access"`, "Eyebrow beside the shield."},
+			{"Title", "string", "—", "The request, in plain words."},
+			{"Detail", "string", "—", "Why, and how narrow."},
+			{"Scope", "string", "—", "Exact permission chip, mono."},
+			{"AllowOnceHref", "string", "—", "Allow-once action (primary); empty → plain button."},
+			{"AllowAlwaysHref", "string", "—", "Always action (ghost)."},
+			{"DenyHref", "string", "—", "Deny action (ghost)."},
+		},
+		Dos: []string{
+			"Name the exact scope — path, permission, duration.",
+			"Default the owner toward the narrowest grant (Allow once).",
+		},
+		Donts: []string{
+			"Bundle several permissions into one ask.",
+			"Pre-select Always, or hide what will be accessed.",
+		},
+	}
+}
+
+func nudgebannerStory() Story {
+	return Story{
+		ID: "nudgebanner", Group: "Cards", Title: "NudgeBanner",
+		Blurb: "The evening reminder. The bell, the spoken ask, and the owner's established replies — \"It is done.\" / \"At nightfall.\" / \"Tomorrow, I swear it.\" A gentle prompt, never a red badge.",
+		Variants: []Variant{
+			{"evening", h.Div(h.Style("max-width:440px"),
+				ui.NudgeBanner(ui.NudgeProps{
+					When: "18:00", Message: "The evening comes, and the tomatoes thirst. Will you tend them now?",
+					Replies: []ui.NudgeReply{
+						{Label: "It is done.", Hint: "mark done"},
+						{Label: "At nightfall.", Hint: "snooze · 21:00"},
+						{Label: "Tomorrow, I swear it.", Hint: "snooze · tomorrow"},
+					},
+				}))},
+		},
+		Props: []Prop{
+			{"Kicker", "string", `"Nudge"`, "Eyebrow beside the bell."},
+			{"When", "string", `"18:00"`, "Mono time."},
+			{"Message", "string", "—", "The spoken nudge."},
+			{"Replies", "[]NudgeReply", "nil", "Owner's established answers — each a Label + mono Hint."},
+		},
+		Dos: []string{
+			"Phrase the ask as Balaur speaking, not a system alert.",
+			"Use the owner's spoken vocabulary for the replies.",
+		},
+		Donts: []string{
+			"Use a red dot, a count badge, or an exclamation.",
+			"Nudge more than once for the same thing without snoozing.",
+		},
+	}
+}
+
+func statcardStory() Story {
+	return Story{
+		ID: "statcard", Group: "Cards", Title: "StatCard",
+		Blurb: "A Life metric: an icon and label, the big value with its unit, a delta, and the sparkline trend beneath. The cards that make up the Life dashboard.",
+		Variants: []Variant{
+			{"weight ▼", h.Div(h.Style("max-width:260px"),
+				ui.StatCard(ui.StatProps{Icon: "gem", Label: "Weight", Value: "81.2", Unit: "kg", Delta: "0.6 this week", DeltaTone: "down", Data: []float64{83, 82.6, 82.1, 82.4, 81.9, 81.6, 81.2}}))},
+			{"steps ▲", h.Div(h.Style("max-width:260px"),
+				ui.StatCard(ui.StatProps{Icon: "gem", Label: "Steps", Value: "8,210", Delta: "12% vs avg", DeltaTone: "up", Data: []float64{6800, 7100, 7400, 7900, 8100, 8000, 8210}}))},
+		},
+		Props: []Prop{
+			{"Icon", "string", "—", "A /static/icons name — the pixel icon."},
+			{"Label", "string", "—", "Metric name."},
+			{"Value", "string", "—", "The figure."},
+			{"Unit", "string", "—", "Follows the value."},
+			{"Delta", "string", "—", "The change."},
+			{"DeltaTone", "string", `"flat"`, `"up"/"down"/"flat" — drives the arrow, the delta colour, and the sparkline stroke.`},
+			{"Data", "[]float64", "nil", "Series for the sparkline trend."},
+		},
+		Dos: []string{
+			"Grid several into the Life view.",
+			"Let DeltaTone (not just the arrow) carry good/bad.",
+		},
+		Donts: []string{
+			"Imply a value judgement where there is none — use flat.",
+			"Cram more than one number into the value.",
+		},
+	}
+}
