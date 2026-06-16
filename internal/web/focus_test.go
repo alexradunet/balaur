@@ -22,14 +22,16 @@ func TestFocusFullLoad(t *testing.T) {
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
 			`class="focus"`,
-			`focus-back`,
-			// Go's html/template escapes the slashes inside the data-on JS-string
-			// context (@get('\/boards\/abc') — functionally identical in JS), so
-			// assert the Back link via its plain href, which keeps literal slashes.
-			`href="/boards/abc"`,
 			`Quest log`,
 			`id="dock"`,
+			// New gomponents shell: the top-nav topbar with the active domain
+			// (Quests) riding gold — replaces the legacy Boards/Settings topbar
+			// and the "← Back to board" control.
+			`class="topbar"`,
+			`href="/focus/quests" aria-current="page"`,
 		},
+		// The obsolete board-relative chrome is gone.
+		NotExpectedContent: []string{`focus-back`, `← Back`, `>Boards<`, `Engine room`},
 	}
 	s.Test(t)
 }

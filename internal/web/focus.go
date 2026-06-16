@@ -14,10 +14,34 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
+	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/ui/shell"
 )
+
+// focusActiveKey maps a card type to its top-level topbar nav key (see
+// shell.Topbar) so the active domain rides gold on the focus page. Types that
+// are not a top-level domain (today, calendar, timeline, habits, measure, lines)
+// return "" — no nav item is marked current.
+func focusActiveKey(typ string) string {
+	switch typ {
+	case "quests":
+		return "quests"
+	case "memory", "skills":
+		return "knowledge"
+	case "lifelog":
+		return "life"
+	case "journal", "day":
+		return "journal"
+	case "heads":
+		return "heads"
+	case "settings":
+		return "settings"
+	}
+	return ""
+}
 
 // focusView is the template data for focus_main / focus_page.
 //
@@ -142,11 +166,31 @@ func (h *handlers) focusPage(e *core.RequestEvent) error {
 		return nil
 	}
 
+	// Full document load: render the new gomponents shell (top-nav topbar +
+	// persistent dock) with the focus body in #main — the same shell Home uses.
+	// The Datastar @get branch above still patches only #main (focus_main), so
+	// the dock and its live chat survive in-app navigation.
 	dock, err := h.dockData()
 	if err != nil {
 		return e.InternalServerError("loading companion dock", err)
 	}
-	view.Title = spec.Label
-	view.Dock = dock
-	return h.render(e, "focus_page", view)
+	var dockHTML strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&dockHTML, "chat_dock", dock); err != nil {
+		return e.InternalServerError("rendering companion dock", err)
+	}
+	var bodyHTML strings.Builder
+	if err := h.tmpl.ExecuteTemplate(&bodyHTML, "focus_main", view); err != nil {
+		return e.InternalServerError("rendering focus", err)
+	}
+	page := shell.Page(shell.PageProps{
+		Title:  spec.Label,
+		Active: focusActiveKey(typ),
+		Body:   g.Raw(bodyHTML.String()),
+		Dock:   g.Raw(dockHTML.String()),
+	})
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := page.Render(e.Response); err != nil {
+		return e.InternalServerError("rendering focus page", err)
+	}
+	return nil
 }
