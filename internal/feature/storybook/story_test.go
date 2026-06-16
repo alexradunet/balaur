@@ -29,6 +29,22 @@ func TestStoriesUniqueAndLookup(t *testing.T) {
 	}
 }
 
+// TestAllStoriesRender renders every registered story's Page() — the source-of-
+// truth invariant: no entry may panic or render empty, whether it is a rich
+// component story (Variants) or a Foundations page (Custom).
+func TestAllStoriesRender(t *testing.T) {
+	for _, s := range storybook.Stories() {
+		var b strings.Builder
+		if err := storybook.Page(s).Render(&b); err != nil {
+			t.Errorf("story %q render: %v", s.ID, err)
+			continue
+		}
+		if b.Len() == 0 {
+			t.Errorf("story %q rendered empty", s.ID)
+		}
+	}
+}
+
 func TestButtonCanvasRenders(t *testing.T) {
 	s, _ := storybook.Lookup("button")
 	var b strings.Builder
