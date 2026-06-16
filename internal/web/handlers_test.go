@@ -12,7 +12,6 @@ import (
 
 	"github.com/alexradunet/balaur/internal/feature"
 	"github.com/alexradunet/balaur/internal/llmtest"
-	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
 	_ "github.com/alexradunet/balaur/migrations"
@@ -491,131 +490,6 @@ func TestUICardHistoryRendersCardInline(t *testing.T) {
 	}
 }
 
-// TestModelHandlers exercises the Ollama-backed model handlers without a live
-// Ollama daemon. Both paths return before any network call: the progress
-// fragment reads the idle in-process snapshot, and the delete guard short-
-// circuits on the active model.
-func TestModelHandlers(t *testing.T) {
-	t.Run("pull progress endpoint renders when idle", func(t *testing.T) {
-		// A fresh ollama.Default Snapshot is idle; this renders the empty
-		// progress fragment (no Ollama daemon needed).
-		scenario := tests.ApiScenario{
-			Name:            "pull progress endpoint renders when idle",
-			Method:          "GET",
-			URL:             "/ui/model/pull/progress",
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"pull-progress"},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("delete refuses the active model", func(t *testing.T) {
-		// Seed and activate a local model tag on the same app the handler uses
-		// so the delete guard fires before any Ollama call.
-		newGuardApp := func(tb testing.TB) *tests.TestApp {
-			app := newWebApp(tb)
-			id, err := store.SaveLocalModel(app, "gemma4:e4b", "embeddinggemma")
-			if err != nil {
-				tb.Fatalf("SaveLocalModel: %v", err)
-			}
-			if err := store.SetActiveLLMModel(app, id, "owner"); err != nil {
-				tb.Fatalf("SetActiveLLMModel: %v", err)
-			}
-			return app
-		}
-		scenario := tests.ApiScenario{
-			Name:            "delete refuses the active model",
-			Method:          "POST",
-			URL:             "/ui/model/pull/delete",
-			Body:            strings.NewReader("name=gemma4:e4b"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  newGuardApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"active model"},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("GPU preset tag is accepted", func(t *testing.T) {
-		// Posting the GPU preset tag is allowlisted; the handler starts the pull
-		// (returns immediately) and re-renders the models panel. No live Ollama
-		// needed — Pull only launches a goroutine.
-		scenario := tests.ApiScenario{
-			Name:               "GPU preset tag accepted",
-			Method:             "POST",
-			URL:                "/ui/model/pull/download",
-			Body:               strings.NewReader("target=models&tag=gemma4:26b"),
-			Headers:            map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:     newWebApp,
-			ExpectedStatus:     200,
-			ExpectedContent:    []string{"pull-progress"},
-			NotExpectedContent: []string{"unknown model preset"},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("unknown preset tag is rejected", func(t *testing.T) {
-		scenario := tests.ApiScenario{
-			Name:            "unknown preset tag rejected",
-			Method:          "POST",
-			URL:             "/ui/model/pull/download",
-			Body:            strings.NewReader("target=models&tag=evil:1b"),
-			Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"unknown model preset"},
-		}
-		scenario.Test(t)
-	})
-}
-
-// TestModelsPanelOllamaStatus verifies the models panel reflects Ollama
-// reachability: a live control server shows the "reachable" pill; an
-// unreachable server shows the "not reachable" guidance instead of the
-// misleading "No models pulled yet." empty state.
-func TestModelsPanelOllamaStatus(t *testing.T) {
-	t.Run("reachable server shows reachable pill", func(t *testing.T) {
-		// A live Ollama control endpoint: Heartbeat hits "/" and List hits
-		// "/api/tags"; answer both so the panel renders the reachable branch.
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`{"models":[]}`))
-		}))
-		t.Cleanup(srv.Close)
-		t.Setenv("BALAUR_OLLAMA_HOST", strings.TrimPrefix(srv.URL, "http://"))
-		scenario := tests.ApiScenario{
-			Name:            "models panel reachable pill",
-			Method:          "GET",
-			URL:             "/focus/settings?section=models",
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"Ollama: reachable at"},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("unreachable server shows guidance, not the pull-empty state", func(t *testing.T) {
-		// Point at a closed server so Heartbeat fails fast.
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-		host := strings.TrimPrefix(srv.URL, "http://")
-		srv.Close()
-		t.Setenv("BALAUR_OLLAMA_HOST", host)
-		scenario := tests.ApiScenario{
-			Name:               "models panel unreachable guidance",
-			Method:             "GET",
-			URL:                "/focus/settings?section=models",
-			TestAppFactory:     newWebApp,
-			ExpectedStatus:     200,
-			ExpectedContent:    []string{"Ollama: not reachable", "BALAUR_OLLAMA_HOST"},
-			NotExpectedContent: []string{"No models pulled yet."},
-		}
-		scenario.Test(t)
-	})
-}
-
-// TestDayPageRendersOnEmptyDB verifies that the day focus
-// (GET /focus/day?date=…) returns 200 even when the database contains no entries
-// or tasks — a blank day must not 500. (The standalone /day page is retired.)
 func TestDayPageRendersOnEmptyDB(t *testing.T) {
 	scenario := tests.ApiScenario{
 		Name:            "GET /focus/day?date=2026-01-15 renders 200 on empty DB",

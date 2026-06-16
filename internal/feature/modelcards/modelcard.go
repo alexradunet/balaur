@@ -61,7 +61,9 @@ func modelAction(v ModelView) g.Node {
 	case StatusActive:
 		return ui.Button(ui.ButtonProps{Variant: "ghost", Size: "sm"}, h.Disabled(), g.Text("In use"))
 	case StatusMissing:
-		return actionForm("/ui/model/download", v.ID, "Get this model")
+		// The GGUF file is gone; there is no per-card fix yet — the install form
+		// re-adds it. (Owner-initiated downloads are a later slice.)
+		return g.Text("")
 	default:
 		return actionForm("/ui/model/select", v.ID, "Use this model")
 	}

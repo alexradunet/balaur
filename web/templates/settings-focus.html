@@ -14,7 +14,7 @@
   </nav>
   <div class="settings-content">
     {{if eq .Section "models"}}
-      {{template "models_panel" .Models}}
+      {{.Models.ModelsHTML}}
     {{else}}
       {{template "profile_identity_card" .Profile}}
       {{template "profile_soul_section" .Profile}}

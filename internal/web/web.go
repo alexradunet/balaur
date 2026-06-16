@@ -201,6 +201,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/chat", h.chat)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)
+	se.Router.POST("/ui/model/install", h.installModel)
 	se.Router.GET("/ui/model/missing", h.missingModelModal)
 	se.Router.POST("/ui/model/download", h.modelPull)
 	se.Router.GET("/ui/model/pull/progress", h.modelPullProgress)

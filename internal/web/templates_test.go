@@ -121,16 +121,13 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	// The settings shell is the settings card focus now (plan 056): the models
 	// section renders via the shared settings_body define.
 	b.Reset()
-	models := modelsPageData{ActiveModel: "Local Qwen3.6 35B A3B", ModelChoices: []turn.ModelChoice{choice}}
+	models := modelsPageData{ModelsHTML: template.HTML(`<div id="models-panel">MODELS-PANEL-MARKER</div>`)}
 	settingsModels := settingsData{Section: "models", Models: models}
 	if err := tmpl.ExecuteTemplate(&b, "settings_body", settingsModels); err != nil {
 		t.Fatalf("settings_body models: %v", err)
 	}
-	out = b.String()
-	for _, want := range []string{"Available models", "Local Qwen3.6 35B A3B"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("models section missing %q", want)
-		}
+	if !strings.Contains(b.String(), "MODELS-PANEL-MARKER") {
+		t.Error("settings_body must inject the gomponents models panel (Models.ModelsHTML)")
 	}
 }
 

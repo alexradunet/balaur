@@ -1,17 +1,19 @@
 package web
 
 import (
-	"context"
 	"fmt"
 	"html/template"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
+	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/heads"
+	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -63,8 +65,9 @@ type modelsPageData struct {
 	ModelHint       string
 	Pull            ollama.PullSnapshot
 	InstalledModels []ollama.Model
-	OllamaReachable bool   // whether the Ollama control server answered a heartbeat
-	OllamaHost      string // host:port the heartbeat was sent to (no scheme)
+	OllamaReachable bool          // whether the Ollama control server answered a heartbeat
+	OllamaHost      string        // host:port the heartbeat was sent to (no scheme)
+	ModelsHTML      template.HTML // the gomponents modelcards.Panel, injected into settings_body
 }
 
 type modelModalData struct {
@@ -147,46 +150,88 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 }
 
 func (h *handlers) modelsData() (modelsPageData, error) {
-	data := modelsPageData{ModelHint: ollama.PullCommand()}
-	choices, active, err := turn.ModelChoices(h.app)
+	html, err := h.renderModelsPanel("")
 	if err != nil {
-		return data, err
+		return modelsPageData{}, err
 	}
-	data.ModelChoices = choices
-	if active.Key != "" {
-		data.ActiveModel = active.Name
-	} else {
-		data.ModelError = "No active model is available. Pull the local model."
+	return modelsPageData{ModelsHTML: html}, nil
+}
+
+// buildModelsPanelView assembles the Models settings view from the model choices,
+// the active processor, and a pure-Go VRAM estimate per installed GGUF model.
+func (h *handlers) buildModelsPanelView(errMsg string) (modelcards.PanelView, error) {
+	choices, _, err := turn.ModelChoices(h.app)
+	if err != nil {
+		return modelcards.PanelView{}, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	data.OllamaHost = ollama.Host()
-	data.OllamaReachable = h.ollama.Reachable(ctx)
-	data.Pull = h.ollama.Snapshot()
-	if files, err := h.ollama.List(); err == nil {
-		data.InstalledModels = files
+	view := modelcards.PanelView{Processor: kronk.Processor(), Error: errMsg}
+	for _, c := range choices {
+		mv := modelcards.ModelView{ID: c.Key, Name: c.Name, Detail: c.Detail, Kind: c.Badge, VRAM: kronk.EstimateVRAM(c.Model)}
+		switch {
+		case c.Active:
+			mv.Status = modelcards.StatusActive
+		case c.Disabled:
+			mv.Status = modelcards.StatusMissing
+		default:
+			mv.Status = modelcards.StatusAvailable
+		}
+		view.Models = append(view.Models, mv)
 	}
-	// Capture the active model ID for per-model active badge rendering.
-	// active.Key is the model record id (same as ModelChoice.Key).
-	data.ActiveModelID = active.Key
-	return data, nil
+	return view, nil
+}
+
+// renderModelsPanel renders the gomponents Models panel to HTML for injection
+// into settings_body on page load.
+func (h *handlers) renderModelsPanel(errMsg string) (template.HTML, error) {
+	view, err := h.buildModelsPanelView(errMsg)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	if err := modelcards.Panel(view).Render(&b); err != nil {
+		return "", err
+	}
+	return template.HTML(b.String()), nil
 }
 
 func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
-	data, err := h.modelsData()
+	view, err := h.buildModelsPanelView(msg)
 	if err != nil {
 		return e.InternalServerError("loading models", err)
 	}
-	if msg != "" {
-		data.ModelError = msg
-	}
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "models_panel", data); err != nil {
+	if err := modelcards.Panel(view).Render(&b); err != nil {
 		return e.InternalServerError("rendering models", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
 	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
 	return nil
+}
+
+// installModel registers a local GGUF model by absolute path and makes it active.
+// The file must already be on this box (owner-initiated downloads are a later
+// slice). It patches #models-panel.
+func (h *handlers) installModel(e *core.RequestEvent) error {
+	path := strings.TrimSpace(e.Request.FormValue("path"))
+	embed := strings.TrimSpace(e.Request.FormValue("embed_path"))
+	if path == "" {
+		return h.modelsPanel(e, "a GGUF file path is required")
+	}
+	if !filepath.IsAbs(path) || !strings.HasSuffix(strings.ToLower(path), ".gguf") {
+		return h.modelsPanel(e, "path must be an absolute .gguf file")
+	}
+	if _, err := os.Stat(path); err != nil {
+		return h.modelsPanel(e, "file not found: "+path)
+	}
+	id, err := store.SaveLocalModel(h.app, path, embed)
+	if err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	store.Audit(h.app, "owner", "llm.model.install", path, true, nil)
+	return h.modelsPanel(e, "")
 }
 
 func (h *handlers) selectModel(e *core.RequestEvent) error {

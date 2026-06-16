@@ -5,6 +5,7 @@ go 1.26.4
 require (
 	github.com/ardanlabs/kronk v1.28.0
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
+	github.com/hybridgroup/yzma v1.17.1
 	github.com/ncruces/go-sqlite3 v0.34.4
 	github.com/ollama/ollama v0.30.8
 	github.com/pocketbase/dbx v1.12.0
@@ -84,7 +85,6 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter v1.8.6 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
-	github.com/hybridgroup/yzma v1.17.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jupiterrider/ffi v0.7.0 // indirect
 	github.com/klauspost/compress v1.18.6 // indirect
