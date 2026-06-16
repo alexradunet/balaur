@@ -93,6 +93,7 @@ var stories = []Story{
 	questsfocusStory(),
 	lifelogfocusStory(),
 	journalfocusStory(),
+	knowledgefocusStory(),
 	topbarStory(),
 	modelcardStory(),
 	modelspanelStory(),

@@ -9,7 +9,9 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
+	g "maragu.dev/gomponents"
 
+	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/knowledge"
 )
 
@@ -76,6 +78,10 @@ func (h *handlers) knowledgeFocusHTML(kind knowledge.Kind) template.HTML {
 // live search and category tabs. Validation runs first (a normal HTTP error)
 // before any SSE is opened; on success the grid fragment morphs the inner HTML
 // of #k-active-grid in place.
+//
+// Active cards are built via the same helpers used by the initial focus render
+// (buildActiveMemoryNodes / buildActiveSkillNodes) so the live grid and the
+// initial grid always emit identical markup from one shared path.
 func (h *handlers) knowledgeGrid(e *core.RequestEvent) error {
 	kind, err := kindFromPath(e)
 	if err != nil {
@@ -83,14 +89,17 @@ func (h *handlers) knowledgeGrid(e *core.RequestEvent) error {
 	}
 	q := e.Request.URL.Query().Get("q")
 	cat := e.Request.URL.Query().Get("category")
-	active, _ := knowledge.FilterActive(h.app, kind, q, cat)
 
+	var active []g.Node
+	if kind == knowledge.Memory {
+		active = knowledgecards.BuildActiveMemoryNodes(h.app, q, cat)
+	} else {
+		active = knowledgecards.BuildActiveSkillNodes(h.app, q)
+	}
+
+	grid := knowledgecards.KnowledgeGrid(active, string(kind), q)
 	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "knowledge-grid.html", map[string]any{
-		"Kind":   string(kind),
-		"Active": active,
-		"Query":  q,
-	}); err != nil {
+	if err := grid.Render(&b); err != nil {
 		return e.InternalServerError("rendering grid", err)
 	}
 

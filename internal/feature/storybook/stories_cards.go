@@ -1,6 +1,7 @@
 package storybook
 
 import (
+	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/feature/journalcards"
@@ -300,6 +301,82 @@ func journalfocusStory() Story {
 		Donts: []string{
 			"Add date parameterisation — this surface is today-only.",
 			"Patch #candle-prompt from outside journalPrompt (the LLM handler owns it).",
+		},
+	}
+}
+
+// knowledgefocusStory documents the knowledge manager's full-canvas focus body
+// — memory + skills, with proposed/active/archived sections, live search, and
+// category tabs (memory only).
+func knowledgefocusStory() Story {
+	proposed := []knowledgecards.MemoryRecord{
+		{ID: "prop1", Status: "proposed", Category: "fact", Title: "Prefers dark mode", Importance: 3},
+	}
+	active := []knowledgecards.MemoryRecord{
+		{ID: "act1", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups.", WhenToUse: "pet care", Importance: 4, UseCount: 7},
+		{ID: "act2", Status: "active", Category: "preference", Title: "Prefers tea over coffee", Importance: 3},
+	}
+	archived := []knowledgecards.MemoryRecord{
+		{ID: "arc1", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Importance: 1},
+	}
+	proposedNodes := make([]g.Node, len(proposed))
+	for i, r := range proposed {
+		proposedNodes[i] = knowledgecards.MemoryRecordCard(r)
+	}
+	activeNodes := make([]g.Node, len(active))
+	for i, r := range active {
+		activeNodes[i] = knowledgecards.MemoryRecordCard(r)
+	}
+	archivedNodes := make([]g.Node, len(archived))
+	for i, r := range archived {
+		archivedNodes[i] = knowledgecards.MemoryRecordCard(r)
+	}
+
+	skillsActive := []knowledgecards.SkillRecord{
+		{ID: "s1", Status: "active", Name: "Summarise", Description: "Condenses long text.", WhenToUse: "before exporting", Enabled: true, UseCount: 12},
+	}
+	skillActiveNodes := make([]g.Node, len(skillsActive))
+	for i, r := range skillsActive {
+		skillActiveNodes[i] = knowledgecards.SkillRecordCard(r)
+	}
+
+	return Story{
+		ID: "knowledgefocus", Group: "Cards", Title: "KnowledgeFocus", Wide: true, OnDark: true,
+		Blurb: "The knowledge manager focus body: proposed queue, a searchable active grid with live Datastar filtering, category tabs (memory only), and an archived section. Reuses MemoryRecordCard / SkillRecordCard for individual records.",
+		Variants: []Variant{
+			{"memory · proposed + active + archived", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
+				Kind:       "memories",
+				Title:      "Memory",
+				Categories: []string{"fact", "preference", "person", "project", "context"},
+				Proposed:   proposedNodes,
+				Active:     activeNodes,
+				Archived:   archivedNodes,
+			})},
+			{"skills · active only", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
+				Kind:   "skills",
+				Title:  "Skills",
+				Active: skillActiveNodes,
+			})},
+			{"empty grid (no query)", knowledgecards.KnowledgeGrid(nil, "memories", "")},
+			{"empty grid (with query)", knowledgecards.KnowledgeGrid(nil, "memories", "dark mode")},
+		},
+		Props: []Prop{
+			{"Kind", "string", `"memories"`, `URL segment for Datastar @get calls: "memories" or "skills".`},
+			{"Title", "string", "—", `Used in the search placeholder: "Search Memory…".`},
+			{"Query", "string", "—", "Current search query; pre-populates the search input signal."},
+			{"Category", "string", "—", "Current category signal value (memory only)."},
+			{"Categories", "[]string", "nil", "Available category tabs; nil for skills (no tabs rendered)."},
+			{"Proposed", "[]g.Node", "nil", "Pre-rendered proposed record cards."},
+			{"Active", "[]g.Node", "nil", "Pre-rendered active record cards — also feeds KnowledgeGrid."},
+			{"Archived", "[]g.Node", "nil", "Pre-rendered archived record cards; section omitted when nil."},
+		},
+		Dos: []string{
+			"Pass pre-rendered MemoryRecordCard / SkillRecordCard nodes — KnowledgeFocus is kind-agnostic.",
+			"Use KnowledgeGrid for both the initial render and the live-search SSE patch into #k-active-grid.",
+		},
+		Donts: []string{
+			"Re-implement the record card forms here — MemoryRecordCard/SkillRecordCard own them.",
+			"Add category tabs for skills — only memory has categories.",
 		},
 	}
 }

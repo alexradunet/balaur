@@ -261,9 +261,13 @@ func skillsManageBody(proposed, active []SkillRecord) g.Node {
 // Registration
 // ---------------------------------------------------------------------------
 
-// registerSkills wires the skills card (both modes) into the ui registry.
+// registerSkills wires the skills card into the ui registry: the compact tile,
+// the manage tile, and the full focus body (used by /focus/skills).
 func registerSkills(app core.App) {
-	ui.RegisterCard("skills", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
+	ui.RegisterCard("skills", func(size ui.CardSize, params map[string]string) (g.Node, error) {
+		if size == ui.Focus {
+			return KnowledgeFocus(buildSkillsFocus(app, "")), nil
+		}
 		if params["mode"] == "manage" {
 			p, a := buildSkillsManage(app)
 			return SkillsManageCard(p, a), nil

@@ -17,7 +17,6 @@ import (
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/cards"
-	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
@@ -82,10 +81,6 @@ func (h *handlers) focusBodyHTML(typ string, params map[string]string) template.
 	switch typ {
 	case "day":
 		return h.dayFocusHTML(params)
-	case "memory":
-		return h.knowledgeFocusHTML(knowledge.Memory)
-	case "skills":
-		return h.knowledgeFocusHTML(knowledge.Skill)
 	case "settings":
 		return h.settingsFocusHTML(params)
 	}

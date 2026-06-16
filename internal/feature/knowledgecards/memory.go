@@ -290,10 +290,13 @@ func mapMemoryRecords(recs []*core.Record) []MemoryRecord {
 // Registration
 // ---------------------------------------------------------------------------
 
-// registerMemory wires the memory card (both modes) into the ui registry.
-// Called from Register in register.go.
+// registerMemory wires the memory card into the ui registry: the compact tile,
+// the manage tile, and the full focus body (used by /focus/memory).
 func registerMemory(app core.App) {
-	ui.RegisterCard("memory", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
+	ui.RegisterCard("memory", func(size ui.CardSize, params map[string]string) (g.Node, error) {
+		if size == ui.Focus {
+			return KnowledgeFocus(buildMemoryFocus(app, "", "")), nil
+		}
 		if params["mode"] == "manage" {
 			return MemoryManageCard(buildMemoryManage(app)), nil
 		}
