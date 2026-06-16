@@ -39,9 +39,17 @@ window.basmCycleTheme = function () {
   var d = document.documentElement;
   var cur = order.find(function (t) { return d.classList.contains('theme-' + t); }) || 'hearthwood';
   var next = order[(order.indexOf(cur) + 1) % order.length];
+  basmSetPalette(next);
+};
+
+// Set a specific palette directly — the sidebar footer's three theme buttons.
+window.basmSetPalette = function (name) {
+  var order = ['hearthwood', 'forest', 'dungeon'];
+  if (order.indexOf(name) < 0) name = 'hearthwood';
+  var d = document.documentElement;
   d.classList.remove('theme-hearthwood', 'theme-forest', 'theme-dungeon');
-  d.classList.add('theme-' + next);
-  localStorage.setItem('basm-palette', next);
+  d.classList.add('theme-' + name);
+  localStorage.setItem('basm-palette', name);
   basmUpdatePaletteButtons();
 };
 
@@ -53,6 +61,9 @@ function basmUpdatePaletteButtons() {
   document.querySelectorAll('.theme-cycle').forEach(function (btn) {
     btn.textContent = labels[cur];
     btn.title = 'Cycle theme (now ' + labels[cur] + ')';
+  });
+  document.querySelectorAll('.sb-theme-btn').forEach(function (btn) {
+    btn.classList.toggle('is-active', btn.getAttribute('data-theme') === cur);
   });
 }
 document.addEventListener('DOMContentLoaded', basmUpdatePaletteButtons);
