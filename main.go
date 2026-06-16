@@ -18,6 +18,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
+	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/search"
@@ -45,6 +46,7 @@ func main() {
 	cli.Register(app, app.RootCmd)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		registerKronkEngine(se.App)
 		if err := web.Register(se); err != nil {
 			return err
 		}
@@ -57,7 +59,10 @@ func main() {
 	})
 
 	app.OnTerminate().BindFunc(func(te *core.TerminateEvent) error {
-		// Close the FTS5 sidecar index if it was opened.
+		// Unload resident Kronk models, then close the FTS5 sidecar index.
+		if eng := kronk.FromStore(app); eng != nil {
+			_ = eng.Close(context.Background())
+		}
 		if raw, ok := app.Store().GetOk(search.StoreKey); ok {
 			if ix, ok := raw.(*search.Index); ok && ix != nil {
 				ix.Close()
@@ -91,6 +96,14 @@ func logOllamaReachability(app core.App) {
 	}()
 }
 
+// registerKronkEngine creates the in-process Kronk inference engine and stores it
+// on the app for the turn pipeline to resolve. It neither initializes the native
+// runtime nor loads a model — both happen lazily on first inference, so a box
+// with no model and no native library still boots.
+func registerKronkEngine(app core.App) {
+	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibPath()))
+}
+
 // registerRecap wires summary generation: an idempotent catch-up at serve
 // start plus hourly — self-hosted boxes sleep through midnights, so
 // catch-up beats fixed triggers. Disable with BALAUR_RECAP=0. Generation
@@ -101,7 +114,7 @@ func registerRecap(app core.App) {
 		return
 	}
 	var mu sync.Mutex
-	var clients turn.ClientSource
+	clients := turn.ClientSource{Engine: kronk.FromStore(app)}
 	run := func() {
 		if !mu.TryLock() {
 			return // a previous run is still in flight; this tick skips
@@ -136,7 +149,7 @@ func registerNudge(app core.App) {
 		return
 	}
 	var mu sync.Mutex
-	var clients turn.ClientSource
+	clients := turn.ClientSource{Engine: kronk.FromStore(app)}
 	run := func() {
 		if !mu.TryLock() {
 			return // a previous run is still in flight; this tick skips
@@ -168,7 +181,7 @@ func registerBriefing(app core.App) {
 		hour = h
 	}
 	var mu sync.Mutex
-	var clients turn.ClientSource
+	clients := turn.ClientSource{Engine: kronk.FromStore(app)}
 	run := func() {
 		if !mu.TryLock() {
 			return // a previous run is still in flight; this tick skips

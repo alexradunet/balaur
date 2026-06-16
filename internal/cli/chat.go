@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -19,7 +20,14 @@ import (
 // choice the web chatbar uses. A package var so tests inject a fake
 // client (tests never hit a real model — AGENTS.md).
 var chatClients = func(app core.App) (llm.Client, error) {
-	src := &turn.ClientSource{}
+	// The CLI runs outside OnServe, so the serve-time Kronk engine is absent;
+	// create one here (native runtime + model load stay lazy until inference).
+	eng := kronk.FromStore(app)
+	if eng == nil {
+		eng = kronk.NewEngine(kronk.LibPath())
+		app.Store().Set(kronk.StoreKey, eng)
+	}
+	src := &turn.ClientSource{Engine: eng}
 	return src.Active(app)
 }
 

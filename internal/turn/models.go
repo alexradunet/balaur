@@ -2,14 +2,25 @@ package turn
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/store"
 )
+
+// isLocalFile reports whether a local model's chat_model is an on-disk GGUF file
+// path — run in-process by the embedded Kronk engine — rather than a legacy
+// Ollama tag served over /v1. This is the dual-path seam during the Ollama→Kronk
+// migration (plan 074): GGUF paths route to Kronk, tags still route to Ollama.
+func isLocalFile(model string) bool {
+	return filepath.IsAbs(model) && strings.HasSuffix(strings.ToLower(model), ".gguf")
+}
 
 // testClientKey holds an llm.Client injected by tests via SetTestClient so the
 // turn pipeline can run without a real backend. Production never sets it; it
@@ -111,8 +122,13 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 		}
 		if cfg.Kind == "local" {
 			if _, faked := injectedClient(app); !faked {
-				pulled, err := ollama.Default.IsPulled(cfg.ChatModel)
-				if err != nil || !pulled {
+				if isLocalFile(cfg.ChatModel) {
+					if _, err := os.Stat(cfg.ChatModel); err != nil {
+						choice.Disabled = true
+						choice.Badge = "missing"
+						choice.Detail = filepath.Base(cfg.ChatModel) + " · file not found"
+					}
+				} else if pulled, err := ollama.Default.IsPulled(cfg.ChatModel); err != nil || !pulled {
 					choice.Disabled = true
 					choice.Badge = "missing"
 					choice.Detail = cfg.ChatModel + " · pull needed"
@@ -132,10 +148,14 @@ func modelBadge(_ store.LLMConfig) string {
 	return "local"
 }
 
-// ClientSource builds llm clients for model choices. Local choices resolve to
-// an OpenAIClient pointed at the local Ollama; the daemon keeps models warm, so
-// no per-process caching is needed here.
-type ClientSource struct{}
+// ClientSource builds llm clients for model choices. A local model whose
+// chat_model is a GGUF file path resolves to the in-process Kronk engine; a
+// legacy Ollama tag resolves to an OpenAIClient pointed at the local Ollama.
+type ClientSource struct {
+	// Engine is the in-process Kronk runtime, threaded from app.Store(). Nil is
+	// tolerated for the Ollama-tag path and the injected-client (test) path.
+	Engine *kronk.Engine
+}
 
 // Active resolves the active model choice and returns a client for it.
 func (s *ClientSource) Active(app core.App) (llm.Client, error) {
@@ -159,6 +179,12 @@ func (s *ClientSource) Active(app core.App) (llm.Client, error) {
 // explicit; no hidden auto-routing (AGENTS.md).
 func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, error) {
 	if choice.Provider == "local" {
+		if isLocalFile(choice.Model) {
+			if s.Engine == nil {
+				return nil, fmt.Errorf("local inference engine not initialized")
+			}
+			return s.Engine.Client(choice.Model, ""), nil
+		}
 		return ollama.NewClient(choice.Model), nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
@@ -166,6 +192,12 @@ func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, 
 
 func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.Client, error) {
 	if cfg.Kind == "local" {
+		if isLocalFile(cfg.ChatModel) {
+			if s.Engine == nil {
+				return nil, fmt.Errorf("local inference engine not initialized")
+			}
+			return s.Engine.Client(cfg.ChatModel, cfg.EmbedModel), nil
+		}
 		return ollama.NewClient(cfg.ChatModel), nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", cfg.Kind)

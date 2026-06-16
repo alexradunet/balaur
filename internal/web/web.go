@@ -22,6 +22,7 @@ import (
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/feature"
 	_ "github.com/alexradunet/balaur/internal/feature/all"
+	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/ollama"
 	"github.com/alexradunet/balaur/internal/turn"
 	webstatic "github.com/alexradunet/balaur/internal/web/assets"
@@ -184,7 +185,7 @@ func Register(se *core.ServeEvent) error {
 
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
-	h := &handlers{app: se.App, tmpl: tmpl, ollama: ollama.Default}
+	h := &handlers{app: se.App, tmpl: tmpl, clients: turn.ClientSource{Engine: kronk.FromStore(se.App)}, ollama: ollama.Default}
 	// Feature modules self-register (internal/feature/all blank import); the
 	// cardInto shim serves their gomponents renderers in place of the legacy
 	// switch. UnregisterAll on terminate keeps the global registry clean between
