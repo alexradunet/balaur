@@ -18,6 +18,8 @@ import (
 
 	"github.com/ardanlabs/kronk/sdk/kronk"
 	"github.com/ardanlabs/kronk/sdk/kronk/model"
+	"github.com/ardanlabs/kronk/sdk/tools/libs"
+	"github.com/hybridgroup/yzma/pkg/download"
 )
 
 // StoreKey holds the *Engine in app.Store(), mirroring how the FTS5 search index
@@ -29,9 +31,10 @@ const StoreKey = "kronk.engine"
 // reloading them when the active model changes. All native-resource mutation is
 // serialized by mu.
 type Engine struct {
-	mu      sync.Mutex
-	libPath string
-	inited  bool
+	mu        sync.Mutex
+	libPath   string
+	processor string
+	inited    bool
 
 	chatPath string
 	chat     *kronk.Kronk
@@ -39,11 +42,13 @@ type Engine struct {
 	emb      *kronk.Kronk
 }
 
-// NewEngine returns an Engine that resolves the native llama.cpp library from
-// libPath (a directory). It does NOT initialize the runtime — Init happens lazily
-// on the first real inference, so a box with no model and no native library still
-// boots.
-func NewEngine(libPath string) *Engine { return &Engine{libPath: libPath} }
+// NewEngine returns an Engine that loads the llama.cpp variant for processor
+// (cpu|vulkan) from under libPath. It does NOT initialize the runtime — Init
+// happens lazily on the first real inference, so a box with no model and no
+// native library still boots.
+func NewEngine(libPath, processor string) *Engine {
+	return &Engine{libPath: libPath, processor: processor}
+}
 
 // FromStore returns the Engine held on the app, or nil if none was registered.
 func FromStore(app core.App) *Engine {
@@ -61,11 +66,37 @@ func (e *Engine) ensureInit() error {
 		e.inited = true
 		return nil
 	}
-	if err := kronk.Init(kronk.WithLibPath(e.libPath)); err != nil {
-		return fmt.Errorf("initializing local inference runtime: %w", err)
+	libDir, err := resolveLibDir(e.libPath, e.processor)
+	if err != nil {
+		return err
+	}
+	if err := kronk.Init(kronk.WithLibPath(libDir)); err != nil {
+		return fmt.Errorf("initializing local inference runtime (%s): %w", e.processor, err)
 	}
 	e.inited = true
 	return nil
+}
+
+// resolveLibDir returns the directory yzma should dlopen the llama.cpp library
+// from for the given processor. A root containing version.json is honored as-is;
+// otherwise the per-triple variant dir <root>/<os>/<arch>/<processor>/ is used.
+func resolveLibDir(root, processor string) (string, error) {
+	if processor == "" {
+		processor = "cpu"
+	}
+	p, err := download.ParseProcessor(processor)
+	if err != nil {
+		return "", fmt.Errorf("invalid BALAUR_PROCESSOR %q (want cpu or vulkan): %w", processor, err)
+	}
+	opts := []libs.Option{libs.WithProcessor(p)}
+	if root != "" {
+		opts = append(opts, libs.WithLibPath(root))
+	}
+	lib, err := libs.New(opts...)
+	if err != nil {
+		return "", fmt.Errorf("resolving llama.cpp library path: %w", err)
+	}
+	return lib.LibsPath(), nil
 }
 
 // chatModel returns the resident chat model for ggufPath, loading it (and

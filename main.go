@@ -101,7 +101,7 @@ func logOllamaReachability(app core.App) {
 // runtime nor loads a model — both happen lazily on first inference, so a box
 // with no model and no native library still boots.
 func registerKronkEngine(app core.App) {
-	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibPath()))
+	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibPath(), kronk.Processor()))
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve

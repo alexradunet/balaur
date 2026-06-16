@@ -88,7 +88,7 @@ func TestClientSourceLocalGGUFUsesKronk(t *testing.T) {
 
 	// With an engine, a GGUF path resolves to the in-process Kronk client.
 	// Client construction does not touch the native runtime, so no lib is needed.
-	src := ClientSource{Engine: kronk.NewEngine("")}
+	src := ClientSource{Engine: kronk.NewEngine("", "cpu")}
 	client, err := src.ClientFor(nil, ModelChoice{Provider: "local", Model: path})
 	if err != nil {
 		t.Fatalf("ClientFor: %v", err)

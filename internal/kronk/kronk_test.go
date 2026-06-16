@@ -130,6 +130,24 @@ func TestBridgeContentAndToolCalls(t *testing.T) {
 	}
 }
 
+func TestProcessor(t *testing.T) {
+	t.Setenv("BALAUR_PROCESSOR", "")
+	if got := Processor(); got != "cpu" {
+		t.Errorf("default Processor() = %q, want cpu", got)
+	}
+	t.Setenv("BALAUR_PROCESSOR", "vulkan")
+	if got := Processor(); got != "vulkan" {
+		t.Errorf("Processor() = %q, want vulkan", got)
+	}
+}
+
+func TestResolveLibDirInvalidProcessor(t *testing.T) {
+	// An invalid processor errors before any filesystem resolution.
+	if _, err := resolveLibDir("", "bogus"); err == nil {
+		t.Fatal("expected error for an invalid processor")
+	}
+}
+
 func TestBridgeError(t *testing.T) {
 	reason := model.FinishReasonError
 	src := streamOf(
