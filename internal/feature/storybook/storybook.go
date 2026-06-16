@@ -24,37 +24,6 @@ func section(label string, items ...g.Node) g.Node {
 	)
 }
 
-func badgeCanvas() g.Node {
-	return section("Badge",
-		ui.Badge(ui.BadgeProps{}, g.Text("3")),
-		ui.Badge(ui.BadgeProps{Tone: ui.BadgeEmber}, g.Text("9")),
-		ui.Badge(ui.BadgeProps{Tone: ui.BadgeTeal}, g.Text("new")),
-		ui.Badge(ui.BadgeProps{Tone: ui.BadgeWood}, g.Text("draft")),
-		ui.Badge(ui.BadgeProps{Tone: ui.BadgeGold, Dot: true}),
-		ui.Badge(ui.BadgeProps{Tone: ui.BadgeEmber, Dot: true}),
-	)
-}
-
-func alertCanvas() g.Node {
-	return section("Alert",
-		ui.Alert(ui.AlertProps{Tone: "info", Title: "Heads up"}, g.Text("Your data stays on the box unless you switch models yourself.")),
-		ui.Alert(ui.AlertProps{Tone: "warn", Title: "Caution"}, g.Text("This action enables OS access for the session.")),
-		ui.Alert(ui.AlertProps{Tone: "danger", Title: "Stop"}, g.Text("This will permanently delete the record.")),
-	)
-}
-
-func tooltipCanvas() g.Node {
-	return section("Tooltip", ui.Tooltip(ui.TooltipProps{Label: "Keep it"}, ui.Button(ui.ButtonProps{Variant: "ghost"}, g.Text("hover me"))))
-}
-
-func skeletonCanvas() g.Node {
-	return section("Skeleton",
-		ui.SkeletonLine("100%"), ui.SkeletonLine("60%"),
-		ui.Skeleton(ui.SkeletonProps{Variant: "block"}),
-		ui.Skeleton(ui.SkeletonProps{Variant: "avatar"}),
-	)
-}
-
 func textfieldCanvas() g.Node {
 	return section("TextField",
 		ui.TextField(ui.FieldProps{Label: "Name", Placeholder: "Your name", Name: "name"}),
@@ -107,35 +76,6 @@ func listCanvas() g.Node {
 			{Title: "Read chapter 4", Subtitle: "before bed"},
 		},
 	}))
-}
-
-func emptyStateCanvas() g.Node {
-	return section("EmptyState", ui.EmptyState(ui.EmptyProps{
-		CrestSrc:    "/static/crest.png",
-		Line:        "Tell Balaur in chat what to keep for you.",
-		ActionLabel: "Start a thread",
-		ActionHref:  "#",
-	}))
-}
-
-func toastCanvas() g.Node {
-	return section("Toast",
-		ui.Toast(ui.ToastProps{}, g.Text("Saved to the book.")),
-		ui.Toast(ui.ToastProps{Tone: "success"}, g.Text("Task marked done.")),
-		ui.Toast(ui.ToastProps{Tone: "warn"}, g.Text("Heads up — that's overdue.")),
-	)
-}
-
-func dialogCanvas() g.Node {
-	return section("Dialog", ui.Dialog(ui.DialogProps{
-		Open:   true,
-		Kicker: "Confirm",
-		Title:  "Forget this thread?",
-		Actions: []ui.DialogAction{
-			{Label: "Cancel", Variant: "ghost", Href: "#"},
-			{Label: "Forget", Variant: "wood"},
-		},
-	}, g.Text("This removes the thread and everything Balaur learned in it. This cannot be undone.")))
 }
 
 func sectionLabelCanvas() g.Node {
