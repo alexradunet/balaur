@@ -105,7 +105,7 @@ func paginationStory() Story {
 
 func topbarStory() Story {
 	return Story{
-		ID: "topbar", Group: "Navigation", Title: "Topbar",
+		ID: "topbar", Group: "Navigation", Title: "Topbar", Wide: true,
 		Blurb: "The sticky wood-plank chrome bar: a borderless crest brand, mono uppercase nav, and the theme toggles. Top-level page navigation only — the active link rides gold.",
 		Variants: []Variant{
 			// position:relative gives the sticky bar a containing block so it
