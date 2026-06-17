@@ -12,15 +12,14 @@ import (
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
-// questsfocusStory documents the quests card's full-canvas focus body — the
-// rhythm-grouped quest rail plus the detail panel.
+// questsfocusStory documents the quests card's full-canvas focus body — a flat,
+// rhythm-grouped stack of TaskCards (plan 093: no rail, no detail pane).
 func questsfocusStory() Story {
-	first := taskcards.TaskView{ID: "t1", Title: "Morning stretch", Status: "open", RecurLine: "every day"}
 	return Story{
 		ID: "questsfocus", Group: "Cards", Title: "QuestsFocus", Wide: true, OnDark: true,
-		Blurb: "The quest-log focus body: a rhythm rail (Dailies / Rituals / Quests / Side quests) on the left, a task detail card on the right. Rail buttons inner-patch #quest-detail; task transitions outer-patch #quest-rail.",
+		Blurb: "The quests focus body: rhythm-grouped sections, each a flat stack of TaskCards. No rail, no detail pane — the chat is the navigation surface (plan 093). Task transitions outer-patch #tcard-{id} in place.",
 		Variants: []Variant{
-			{"populated rail + detail", taskcards.QuestsFocus(taskcards.QuestsFocusView{
+			{"populated", taskcards.QuestsFocus(taskcards.QuestsFocusView{
 				Groups: []taskcards.QuestGroupView{
 					{Name: "Dailies", Tasks: []taskcards.TaskView{
 						{ID: "t1", Title: "Morning stretch", Status: "open", RecurLine: "every day"},
@@ -30,7 +29,6 @@ func questsfocusStory() Story {
 						{ID: "t3", Title: "File the deed", Status: "open", DueLine: "due Mon, Jun 16 at 09:00", Overdue: true},
 					}},
 				},
-				First: &first,
 				DoneRecently: []taskcards.TaskView{
 					{ID: "t4", Title: "Submit the report", Status: "done"},
 				},
@@ -39,15 +37,14 @@ func questsfocusStory() Story {
 		},
 		Props: []Prop{
 			{"Groups", "[]QuestGroupView", "nil", "Rhythm groups (Dailies/Rituals/Quests/Side quests); omitted when empty."},
-			{"First", "*TaskView", "nil", "Pre-rendered task for the detail panel; shows k-empty when nil."},
-			{"DoneRecently", "[]TaskView", "nil", "Recent done tasks; renders as a collapsible 'Done recently' section."},
+			{"DoneRecently", "[]TaskView", "nil", "Recent done tasks; renders as a 'Done recently' section."},
 		},
 		Dos: []string{
 			"Keep the fixed group order: Dailies → Rituals → Quests → Side quests.",
-			"Use #quest-rail (outer patch) and #quest-detail (inner patch) as the SSE targets.",
+			"Let TaskCard own all task actions (Done/Snooze/Drop) — do not add forms to the stack.",
 		},
 		Donts: []string{
-			"Add a form to the rail — actions live on the TaskCard in the detail panel.",
+			"Add a rail or detail pane — the artifact is a flat stack (plan 093).",
 			"Re-implement the Done/Snooze/Drop forms — TaskCard is the single source.",
 		},
 	}
@@ -383,31 +380,25 @@ func knowledgefocusStory() Story {
 }
 
 // dayfocusStory documents the day card's full-canvas focus body — journal
-// write surface, recap with transcript expander, done tasks, and the day's log.
+// write surface, recap summary, done tasks, and the day's log (plan 093: nav-free).
 func dayfocusStory() Story {
 	return Story{
 		ID: "dayfocus", Group: "Cards", Title: "DayFocus", Wide: true, OnDark: true,
-		Blurb: "The day-of-life focus body: the journal write form + entry list, the day recap with transcript expander, what got done, and what was logged. Prev/next navigate the focus in place. The journal section (#day-journal) is outer-patched after write/drop POSTs.",
+		Blurb: "The day-of-life focus body: the journal write form + entry list, the day recap summary, what got done, and what was logged. Nav-free — the chat is the navigation surface. The journal section (#day-journal) is outer-patched after write/drop POSTs.",
 		Variants: []Variant{
 			{"today · writable", journalcards.DayFocus(journalcards.DayFocusView{
-				Date:       "2026-06-16",
-				Label:      "Tuesday, June 16 2026",
-				IsToday:    true,
-				Prev:       "2026-06-15",
-				Next:       "",
-				RecapStart: "1750032000",
+				Date:    "2026-06-16",
+				Label:   "Tuesday, June 16 2026",
+				IsToday: true,
 				Journal: []journalcards.DayJournalEntry{
 					{ID: "e1", Time: "08:30", Text: "The morning was quiet and still."},
 				},
 			})},
-			{"past · recap + expander", journalcards.DayFocus(journalcards.DayFocusView{
-				Date:       "2026-06-10",
-				Label:      "Wednesday, June 10 2026",
-				IsToday:    false,
-				Prev:       "2026-06-09",
-				Next:       "2026-06-11",
-				RecapStart: "1749513600",
-				Recap:      "You sorted the notary papers and trained in the evening.",
+			{"past · with recap", journalcards.DayFocus(journalcards.DayFocusView{
+				Date:    "2026-06-10",
+				Label:   "Wednesday, June 10 2026",
+				IsToday: false,
+				Recap:   "You sorted the notary papers and trained in the evening.",
 				Journal: []journalcards.DayJournalEntry{
 					{ID: "e2", Time: "21:40", Text: "A good, quiet day."},
 				},
@@ -419,32 +410,25 @@ func dayfocusStory() Story {
 				},
 			})},
 			{"empty day", journalcards.DayFocus(journalcards.DayFocusView{
-				Date:       "2026-01-15",
-				Label:      "Thursday, January 15 2026",
-				Prev:       "2026-01-14",
-				Next:       "2026-01-16",
-				RecapStart: "1736899200",
+				Date:  "2026-01-15",
+				Label: "Thursday, January 15 2026",
 			})},
 		},
 		Props: []Prop{
 			{"Date", "string", "—", "YYYY-MM-DD; drives the write/drop form endpoints."},
-			{"Label", "string", "—", "Human day label shown in the nav heading."},
-			{"IsToday", "bool", "false", "Omits 'next ▸' and the recap expander; shows 'today' tag."},
-			{"Prev", "string", "—", "YYYY-MM-DD for the ◂ prev link."},
-			{"Next", "string", "—", "YYYY-MM-DD for the next ▸ link; empty when IsToday."},
+			{"Label", "string", "—", "Human day label shown in the heading."},
+			{"IsToday", "bool", "false", "Shows 'today' tag; recap section shows 'still being written'."},
 			{"Journal", "[]DayJournalEntry", "nil", "Today's journal entries; each has a remove form."},
 			{"Recap", "string", "—", "Day summary text; empty → one of two empty states."},
-			{"RecapStart", "string", "—", "Unix seconds; drives the #recap-children-day-{unix} container id."},
 			{"Done", "[]DayLine", "nil", "Tasks/completions done this day."},
 			{"Logs", "[]DayLine", "nil", "Tracked entries logged this day."},
 		},
 		Dos: []string{
 			"Write date in the PATH for the journal write form (/ui/day/{date}/journal).",
 			"Write ID in the PATH and date in the QUERY for the drop form (/ui/day/journal/{id}/drop?date=).",
-			"Reproduce the recap-expand click JS verbatim: classList.add('recap-open') + @get('/ui/recap/expand?type=day&start={unix}').",
 		},
 		Donts: []string{
-			"Render the recap expander when IsToday — the day is still being written.",
+			"Add prev/next navigation — the day artifact is nav-free; the chat is the nav surface.",
 			"Swap PATH vs QUERY for write/drop — the handlers parse them differently.",
 		},
 	}
