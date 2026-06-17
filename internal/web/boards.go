@@ -274,14 +274,6 @@ func (h *handlers) boardsIndex(e *core.RequestEvent) error {
 	return e.Redirect(http.StatusFound, "/")
 }
 
-// boardPageData carries a board for the #main canvas plus the companion chat
-// for the persistent dock (chat_dock fragment).
-type boardPageData struct {
-	boardView
-	Title string
-	Dock  homeData
-}
-
 // boardsPage handles GET /boards/{id} — retired from nav; redirects home.
 func (h *handlers) boardsPage(e *core.RequestEvent) error {
 	return e.Redirect(http.StatusFound, "/")

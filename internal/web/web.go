@@ -253,14 +253,6 @@ type handlers struct {
 	clients turn.ClientSource
 }
 
-func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
-	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, name, data); err != nil {
-		return e.InternalServerError("rendering page", err)
-	}
-	return nil
-}
-
 // renderPageError renders a sanitized error inside the Hearthwood shell so a
 // full-page handler failure keeps the user in-app instead of falling out to
 // PocketBase's raw JSON error. The underlying err is logged server-side (never
