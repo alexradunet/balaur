@@ -1,8 +1,13 @@
 package web
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -11,6 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 
 	"github.com/alexradunet/balaur/internal/feature"
+	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
@@ -593,4 +599,69 @@ func TestSelectModel(t *testing.T) {
 		}
 		scenario.Test(t)
 	})
+}
+
+// TestDownloadOfficialModel verifies the download handler calls SaveLocalModel +
+// SetActiveLLMModel via a tiny fake GGUF served by an httptest server.
+// It uses a seam to override the URL/sha256 injected into modelget.Fetch
+// so the test is fully offline — no real network, no real model pin.
+func TestDownloadOfficialModel(t *testing.T) {
+	// Build a tiny fake GGUF and compute its sha256.
+	fakeContent := []byte("GGUF\x03\x00\x00\x00" + strings.Repeat("fake", 32))
+	h := sha256.New()
+	h.Write(fakeContent)
+	fakeHash := hex.EncodeToString(h.Sum(nil))
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", strconv.Itoa(len(fakeContent)))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(fakeContent)
+	}))
+	t.Cleanup(srv.Close)
+
+	// Override the official model pin to point at our httptest server.
+	origOfficial := kronkOfficial
+	kronkOfficial = func() kronk.OfficialModel {
+		return kronk.OfficialModel{
+			Name:      "Test Model",
+			URL:       srv.URL + "/model.gguf",
+			SHA256:    fakeHash,
+			SizeBytes: int64(len(fakeContent)),
+			FileName:  "test-model.gguf",
+		}
+	}
+	t.Cleanup(func() { kronkOfficial = origOfficial })
+
+	// Set models dir to a temp dir.
+	modelsDir := t.TempDir()
+	t.Setenv("BALAUR_MODELS_DIR", modelsDir)
+
+	app := newWebApp(t)
+
+	scenario := tests.ApiScenario{
+		Name:            "download official model success",
+		Method:          "POST",
+		URL:             "/ui/model/download",
+		Body:            strings.NewReader(""),
+		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"models-panel"},
+		AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+			// The downloaded file must exist.
+			finalPath := filepath.Join(modelsDir, "test-model.gguf")
+			if _, statErr := os.Stat(finalPath); statErr != nil {
+				tb.Errorf("downloaded file missing: %v", statErr)
+			}
+			// The model must now be active.
+			_, active, err := turn.ModelChoices(a)
+			if err != nil {
+				tb.Fatalf("ModelChoices: %v", err)
+			}
+			if active.Key == "" {
+				tb.Error("no active model after download; expected test-model.gguf to be active")
+			}
+		},
+	}
+	scenario.Test(t)
 }

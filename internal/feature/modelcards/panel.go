@@ -10,19 +10,28 @@ import (
 
 // PanelView drives the Models settings section.
 type PanelView struct {
-	Processor string      // "cpu" | "vulkan" — the active llama.cpp variant
-	Models    []ModelView // available/active/missing local models
-	Error     string      // optional error banner
+	Processor       string      // "cpu" | "vulkan" — the active llama.cpp variant
+	Models          []ModelView // available/active/missing local models
+	Error           string      // optional error banner
+	OfficialCTAName string      // display name of the official model — shown in the CTA
+	OfficialCTAMeta string      // one-line: quant + params + license
+	ShowOfficialCTA bool        // true when official model not yet installed
+	RuntimeMissing  bool        // true when BALAUR_LIB_PATH is unset / lib absent
 }
 
 // Panel renders #models-panel: an optional error, the processor tag, the model
-// grid (or an empty state), and the add-a-local-model form. It is the SSE patch
-// target for every /ui/model/* action.
+// grid (or an empty state), the official-model CTA when applicable, and the
+// add-a-local-model form. It is the SSE patch target for every /ui/model/* action.
 func Panel(v PanelView) g.Node {
 	kids := []g.Node{h.ID("models-panel")}
 
 	if v.Error != "" {
 		kids = append(kids, ui.Alert(ui.AlertProps{Tone: "ember", Title: "Model error"}, g.Text(v.Error)))
+	}
+
+	if v.RuntimeMissing {
+		kids = append(kids, ui.Alert(ui.AlertProps{Tone: "ember", Title: "Runtime not installed"},
+			g.Text("The local AI runtime isn't installed yet. Set BALAUR_LIB_PATH to a llama.cpp build (see the README env table), or install it from here once that lands (plan 087).")))
 	}
 
 	kids = append(kids, h.Div(h.Class("k-heading"),
@@ -43,8 +52,26 @@ func Panel(v PanelView) g.Node {
 		kids = append(kids, h.Div(grid...))
 	}
 
+	if v.ShowOfficialCTA {
+		kids = append(kids, officialCTA(v.OfficialCTAName, v.OfficialCTAMeta))
+	}
+
 	kids = append(kids, installForm())
 	return h.Div(kids...)
+}
+
+// officialCTA renders the "Get our official model" call-to-action section.
+// It is shown only when the official model has not yet been installed.
+func officialCTA(name, meta string) g.Node {
+	return h.Section(h.Class("k-section"),
+		ui.SectionLabel(ui.SectionLabelProps{Text: "Get our official model"}),
+		h.Form(h.Class("card model-official-cta"),
+			data.On("submit", "@post('/ui/model/download', {contentType:'form'})", data.ModifierPrevent),
+			h.P(g.Text(name)),
+			g.If(meta != "", h.P(h.Class("model-detail-line"), g.Text(meta))),
+			ui.Button(ui.ButtonProps{Variant: "primary"}, h.Type("submit"), g.Text("Download & install")),
+		),
+	)
 }
 
 // installForm registers a local GGUF model by absolute path. It posts to

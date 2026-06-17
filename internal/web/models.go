@@ -1,6 +1,9 @@
 package web
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -13,6 +16,8 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/feature/settingscards"
 	"github.com/alexradunet/balaur/internal/heads"
+	"github.com/alexradunet/balaur/internal/kronk"
+	"github.com/alexradunet/balaur/internal/kronk/modelget"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
@@ -180,6 +185,147 @@ func (h *handlers) installModel(e *core.RequestEvent) error {
 	}
 	store.Audit(h.app, "owner", "llm.model.install", path, true, nil)
 	return h.modelsPanel(e, "")
+}
+
+// downloadStoreKey is the app.Store() sidecar key for an in-flight download cancel func.
+const downloadStoreKey = "modeldownload.cancel"
+
+// kronkOfficial is an injectable seam so tests can replace the official model
+// pin without touching the real one (which has a placeholder sha256).
+var kronkOfficial = kronk.Official
+
+// downloadOfficialModel is a long-lived SSE handler that streams the official GGUF
+// download with a live progress meter, then activates it through the same atomic
+// path as installModel. Only one download may be in flight at a time; a concurrent
+// POST reflects the current panel state instead of starting a second writer.
+func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
+	m := kronkOfficial()
+
+	// Guard single in-flight download.
+	if _, ok := h.app.Store().GetOk(downloadStoreKey); ok {
+		return h.modelsPanel(e, "")
+	}
+
+	ctx, cancel := context.WithCancel(e.Request.Context())
+	h.app.Store().Set(downloadStoreKey, cancel)
+	defer func() {
+		// Remove (not Set-nil): GetOk is a presence check, so a nil value would
+		// leave the in-flight guard permanently tripped and block every later download.
+		h.app.Store().Remove(downloadStoreKey)
+		cancel()
+	}()
+
+	store.Audit(h.app, "owner", "llm.model.download",
+		m.URL, true, map[string]any{"sha256": m.SHA256, "size": m.SizeBytes})
+
+	sse := datastar.NewSSE(e.Response, e.Request)
+
+	// Render the panel with a downloading card upfront.
+	inFlight := modelcards.ModelView{
+		ID:            "official-dl",
+		Name:          m.Name,
+		Detail:        "Downloading…",
+		Kind:          "local",
+		Status:        modelcards.StatusDownloading,
+		Progress:      0,
+		ProgressLabel: "Starting…",
+	}
+	view, err := settingscards.BuildModelsPanelView(h.app, "")
+	if err == nil {
+		view.ShowOfficialCTA = false
+		view.Models = append(view.Models, inFlight)
+		var b strings.Builder
+		_ = modelcards.Panel(view).Render(&b)
+		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+	}
+
+	onProgress := func(p modelget.Progress) {
+		label := formatProgress(p)
+		var pct int
+		if p.Total > 0 {
+			pct = int(p.Current * 100 / p.Total)
+		}
+		card := modelcards.ModelView{
+			ID:            "official-dl",
+			Name:          m.Name,
+			Detail:        "Downloading…",
+			Kind:          "local",
+			Status:        modelcards.StatusDownloading,
+			Progress:      pct,
+			ProgressLabel: label,
+		}
+		var b strings.Builder
+		_ = modelcards.ModelCard(card).Render(&b)
+		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("model-card-official-dl"), datastar.WithModeOuter())
+	}
+
+	finalPath, dlErr := modelget.Fetch(
+		ctx,
+		m.URL,
+		kronk.ModelsDir(),
+		m.FileName,
+		m.SHA256,
+		m.SizeBytes,
+		os.Getenv("BALAUR_HF_TOKEN"),
+		onProgress,
+	)
+	if dlErr != nil {
+		if errors.Is(dlErr, context.Canceled) {
+			store.Audit(h.app, "owner", "llm.model.download", m.URL, false,
+				map[string]any{"reason": "cancelled"})
+		} else {
+			store.Audit(h.app, "owner", "llm.model.download", m.URL, false,
+				map[string]any{"error": dlErr.Error()})
+		}
+		return h.modelsPanel(e, dlErr.Error())
+	}
+
+	id, err := store.SaveLocalModel(h.app, finalPath, "")
+	if err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	store.Audit(h.app, "owner", "llm.model.install", finalPath, true, nil)
+	return h.modelsPanel(e, "")
+}
+
+// cancelDownload signals the in-flight download goroutine to stop.
+// The .part file is kept for a later resume. The panel is re-rendered.
+func (h *handlers) cancelDownload(e *core.RequestEvent) error {
+	if v, ok := h.app.Store().GetOk(downloadStoreKey); ok {
+		if cancel, ok := v.(context.CancelFunc); ok {
+			cancel()
+		}
+	}
+	return h.modelsPanel(e, "")
+}
+
+// formatProgress formats a Progress value as a human-readable download status string.
+func formatProgress(p modelget.Progress) string {
+	if p.Total <= 0 {
+		return humanBytes(p.Current) + " downloaded"
+	}
+	bps := ""
+	if p.BytesPerSec > 0 {
+		bps = " · " + humanBytes(int64(p.BytesPerSec)) + "/s"
+	}
+	return humanBytes(p.Current) + " / " + humanBytes(p.Total) + bps
+}
+
+// humanBytes formats a byte count as a human-readable string.
+func humanBytes(n int64) string {
+	switch {
+	case n >= 1<<30:
+		return fmt.Sprintf("%.1f GB", float64(n)/float64(1<<30))
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MB", float64(n)/float64(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1f KB", float64(n)/float64(1<<10))
+	default:
+		return fmt.Sprintf("%d B", n)
+	}
 }
 
 func (h *handlers) selectModel(e *core.RequestEvent) error {

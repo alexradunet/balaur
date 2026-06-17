@@ -175,7 +175,9 @@ runtime, so the Go build stays CGO-free. Two runtime assets are owner-supplied
 - the native llama.cpp library — point `BALAUR_LIB_PATH` at its directory
   (CPU by default; `BALAUR_PROCESSOR=vulkan` selects the Vulkan variant)
 - a GGUF model file — install it from the settings models section
-  (`/focus/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`
+  (`/focus/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`.
+  That page can also fetch Balaur's official curated model in one click
+  (owner-initiated download into `BALAUR_MODELS_DIR`; plan 086)
 
 ```bash
 # Run a local GGUF on a Vulkan GPU:
@@ -201,6 +203,8 @@ Optional environment variables:
 | `BALAUR_PROCESSOR` | `cpu` | llama.cpp variant to load — `cpu` or `vulkan` |
 | `BALAUR_CHAT_MODEL` | (unset) | Absolute path to a local `.gguf` chat model |
 | `BALAUR_EMBED_MODEL` | (unset) | Absolute path to a local `.gguf` embedding model |
+| `BALAUR_MODELS_DIR` | `~/.local/share/balaur/models` | Directory where in-app model downloads are saved |
+| `BALAUR_HF_TOKEN` | (unset) | Optional Hugging Face token for downloading gated models |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |
