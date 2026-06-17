@@ -1864,51 +1864,10 @@ dialog::backdrop {
 
 .settings-page > h1 { margin-bottom: 20px; }
 
-.settings-layout {
-  display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: var(--space-5);
-}
-
-@media (max-width: 720px) {
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.settings-nav {
+.settings-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  position: sticky;
-  top: 24px;
-  align-self: start;
-}
-
-.settings-nav-link {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--chrome-fg);
-  text-decoration: none;
-  background-color: var(--chrome);
-  background-image: var(--grain-warm);
-  background-size: 4px 4px;
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
-  padding: 6px 11px;
-  cursor: pointer;
-}
-
-.settings-nav-link:hover { color: var(--gold); border-color: var(--gold-deep); }
-
-.settings-nav-active {
-  color: var(--ink-deep);
-  background: var(--gold);
-  border-color: var(--outline-2);
-  box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
+  gap: var(--space-4);
 }
 
 /* ── Model pulls ─────────────────────────────────────────────────── */
