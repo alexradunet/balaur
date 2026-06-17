@@ -91,6 +91,18 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 071 | Extract `ui.CardHead` for the shared card-frame header (17 hand-copied sites) | P3 | M | LOW–MED | soft: 066 (shared `lifelog.go`) | — | DONE (APPROVED; `improve/071-ui-cardshell-helper`@`45f23a2`; byte-identical — feature tests green; merged to main `f861cc9`) |
 | 072 | Surface Ollama reachability in the models panel (status pill + honest empty state; optional `ollama ps` badge) | P2 | S–M | LOW | **070** (shared `models.go`/`models.html`) | — | DONE (APPROVED; `improve/072-ollama-server-status`@`5fbca9e`; D1 shipped, D2 ps-badge deferred as planned; merged to main `f861cc9`) |
 | 073 | Spike: flag-gated embedding rerank over the `SearchActive` seam (design + prototype + open questions) | P3 | L | MED | — | — | DONE (APPROVED; `improve/073-embedding-recall-spike`@`8552777`; prototype + spike findings (above); merged to main `f861cc9`) |
+| 074 | Replace the Ollama subprocess with in-process Kronk SDK (single local inference path) | P1 | L | MED | — | — | DONE (ollama→kronk migration; "no remote/HTTP provider and no Ollama, both removed in plan 074" per AGENTS.md) |
+| 075 | Hearthwood spacing-scale tokens + migrate dominant spacing literals | P1 | M | MED | — | — | DONE (reviewed; `improve/uxui-program`@`4388c24`; --space-1..7 + 135 value-preserving substitutions, +29 net lines, mappings verified correct; on integration branch) |
+| 076 | Tokenize the chat-column widths + cap the prose reading measure | P1 | S | LOW | 075 (soft) | — | DONE (reviewed; `improve/uxui-program`@`721cd77`; --w-chat-home/overlay + --measure, 1800 preserved, measure cap on cmsg-body/journal-text; on integration branch) |
+| 077 | Clamp the fluid side padding (sane gutters at viewport extremes) | P2 | S | LOW | 075 (soft) | — | DONE (reviewed; `improve/uxui-program`; --pad clamp on main/profile/sb-canvas + .with-sidebar rail term; chrome bars left on raw 6vw per scope; on integration branch) |
+| 078 | Responsive topbar + accessible off-canvas nav drawer + 44px touch targets | P1 | M | MED | — | — | DONE (reviewed; `improve/uxui-program`@`8202871`; off-canvas drawer w/ inert+focus-trap+Escape, 720px bp, 44px targets, shared topbarLinks; live responsive check pending final pass; on integration branch) |
+| 079 | A11y quick wins: reduced-motion regression, dark-mode contrast, control names/state, skip link | P1 | S | LOW | — | — | DONE (reviewed; `improve/uxui-program`@`ca14425`; 4 a11y gaps closed, recap-hint 2.68→~5.7:1, +test cleanup; on integration branch, not yet merged) |
+| 080 | Consolidate UI idioms: one ErrorStrip, variadic attrs on interactive atoms, typed Datastar + qualified imports | P2 | M | LOW–MED | — | — | DONE (reviewed; `improve/uxui-program`; 27 files, ErrorStrip×4→atom, variadic attrs on 6 atoms +pass-through tests, dot-imports/data.On cleaned; byte-stable; JS-tabs#9 + object-form data-signals deferred; on integration branch) |
+| 081 | Wire the missing UI states: shared empty states, post-action feedback, styled page errors | P2 | M | MED | 080 (soft) | — | DONE (reviewed; `improve/uxui-program`; EmptyState compact variant + 18 k-empty sites migrated byte-stable, styled+logged full-page error handler, Toast/Skeleton honestly deferred-in-storybook; +error-logging fix; on integration branch) |
+| 082 | CSS hygiene: hex→tokens, z-index tier, breakpoint snap, dead `--shadow-hard`, parch dedup, free-board collapse | P2 | M | MED | 075 (soft) | — | DONE (reviewed; `improve/uxui-program`; 3 hex tokens (theme-safe), --z-* tier×11, --shadow-hard deleted, bp snap 700/900/520→720/920/540; R3 deferred to 083, parch-dedup deferred as risky; on integration branch) |
+| 083 | Retire orphaned focus-body templates + reconcile the competing `/boards` page shell | P2 | M | MED | — | — | DONE (reviewed; `improve/uxui-program`; /boards→302 retire, 5 focus funcs + 5 templates + orphan helpers deleted (−883 lines), 8 tests repointed to live gomponents path (not gutted), tour anchor fixed; on integration branch) |
+| 084 | Port the companion chat dock to a `chat.Dock` gomponents organism (retire legacy `chat_dock`) | P1 | L | MED–HIGH | 076, 080 | — | DONE (reviewed; `improve/uxui-program`; chat.Dock shell organism (rail/overlay/home variants), all SSE selector ids preserved + tested, legacy chat_dock retired; +flex-chain fix (`a3d8f81`) so composer pins; widths via --w-chat-* tokens; switchers still templated (deferred). NOTE behavioral change: home now mounts the head/model-switcher ledge (old home did not) — confirm/revert post-merge. Streaming round-trip needs a configured model (verify in real deploy). On integration branch) |
+| 085 | Refresh DESIGN.md honesty ledger + self-knowledge to match running architecture | P3 | S | LOW | 075–084 (soft) | — | DONE (reviewed; `improve/uxui-program`@`702548f`; DESIGN.md IA→domain-rail, inference→Kronk in-process, layout-token layer documented, dead shadow-hard mirror removed; knowledge.md already accurate; on integration branch) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -231,6 +243,70 @@ drift check; execute exactly as the prior cycles did (dispatched executor in an
 isolated worktree, advisor re-runs done-criteria + audits scope/diff before
 APPROVE, then merge to main).
 
+## Eleventh cycle (2026-06-17, UX/UI audit at `12a2ff5`): plans 075–085
+
+Owner-requested via `improve` on 2026-06-17: "improve the UX/UI, follow best
+UX/UI patterns, get proportions right, make it highly responsive, and cleanly
+leverage the atomic-component architecture + gomponents." Audited the whole web
+UI across six dimensions (layout/proportions, responsiveness, atomic-architecture,
+gomponents idiom, UX/a11y, CSS/tokens) with a 49-agent fan-out + adversarial
+verification, **plus a live visual pass** (Chrome over Playwright at 390 / 768 /
+1000 / 1280 / 1440 / 2560 px in dark **and** light, with computed-style and
+WCAG-contrast measurement). 42 raw findings → 26 deduped; advisor re-verified the
+top findings against the live code/app, then drafted and cold-reviewed all 11
+plans (one fresh-context reviewer each; 1 blocking issue in 083 found and fixed —
+two GET-page board tests that the redirect would break).
+
+**Two root themes** drive the program:
+1. **No shared layout vocabulary** — color is fully tokenized but layout is not:
+   no spacing scale (~100 padding literals; 86×`8px`, 45×`12px`, 25×`16px`), no
+   breakpoint scale (9 ad-hoc values 480–920), no content/measure token (chat
+   column hardcoded `1800`/`940`, neither tied to `--maxw:1080`). This vacuum is
+   the upstream cause of most proportion/responsiveness findings, so the token
+   layer (075/076/077/082) is the foundation the rest reference.
+2. **Half-finished gomponents migration** — the most-used surface (the companion
+   chat dock) plus `/boards` and the orphaned focus bodies still render as legacy
+   `html/template` via `g.Raw`, so the storybook is not the source of truth for
+   them. 083 retires the dead focus templates; 084 ports the dock (the keystone).
+
+**Canonical decisions (shared across 075–085 so the plans cohere):** spacing
+`--space-1:4px … --space-7:48px` (4px base; `10`/`14` left off-scale); breakpoints
+`540 / 720 / 920` (existing values; only near-duplicate pairs snapped); width tokens
+`--maxw:1080px` (kept), `--measure:68ch`, `--w-chat-home:1800px` (**preserved** —
+deliberate commit `12a2ff5`), `--w-chat-overlay:940px`; `--pad:clamp(16px,6vw,64px)`;
+z-index tier `--z-base:1/--z-sticky:5/--z-tooltip:30/--z-overlay:50/--z-scrim:55/--z-drawer:60`.
+
+Each plan is commit-anchored to `12a2ff5` with a drift check, and (per this repo's
+discipline) every cited excerpt was re-read at HEAD during drafting and review.
+Verification baseline at `12a2ff5`: build/vet/test green; the live server served
+`/`, `/storybook`, `/focus/quests` (200) and `/boards` (302). Recommended order
+(leverage- and dependency-weighted): **079, 075, 078, 076, 080, 077, 082, 081,
+083, 084, 085** — the independent high-confidence a11y/responsive wins (079, 078)
+and the token foundation (075) first; the keystone dock port (084) after its
+width-token (076) and organism (080) prerequisites.
+
+**Execution record (2026-06-17):** all 11 plans (075–085) were executed by
+dispatched `sonnet` executors in a shared integration worktree on branch
+`improve/uxui-program` (off `12a2ff5`), each reviewed by the advisor (re-ran done
+criteria, scope + diff audit, read the code). Three review-caught fixes were
+applied on top: **081** dropped the underlying error in the new page-error path
+(restored server-side logging); **084** introduced a dock flex-chain regression
+(the `chat.Dock` wrapper broke the composer-pin) — fixed; **078**'s mobile nav
+drawer was occluded by the home dock's stacking context — moved to body level.
+Build/vet/`go test ./...` green throughout; live-verified (Chrome/Playwright) on
+the worktree server: home composer pins and the column is full-width up to the
+1800px cap (no overflow at 1280×600–1600×900), the phone topbar no longer
+overflows (`scrollWidth`=viewport, off-canvas drawer with focus-trap/Escape
+works and now paints above the home chat), focus pages keep `#main`+rail dock
+without overlap, light/dark legible. **The branch is NOT merged** — handed off
+for the owner to merge into `main`. Known follow-ups: confirm/revert the
+head/model-switcher ledge now mounted on the home dock (a behavioral change from
+the old home); the legacy `model_switcher` template has a pre-existing light-mode
+contrast miss (`.model-switcher-kicker`/`-manage` ~2.71:1) that the deferred
+switcher port (084 optional tail) should fix; parch-recipe dedup (082) and the
+free-board collapse R3 (moot after /boards retired) remain deferred; the
+storybook Topbar story no longer renders the drawer (now a Page-level overlay).
+
 ## Dependency notes
 
 - **004 → 005, 009**: the handler harness is the safety net for both the
@@ -368,6 +444,35 @@ Ordering notes:
   embedding recall second stage. Revisit next cycle.
 
 ## Findings considered and rejected (do not re-audit)
+
+Eleventh cycle (`12a2ff5`, UX/UI) — raised or hypothesized but rejected after
+advisor vetting against the live code + a live visual pass in both modes:
+
+- **The 1800px home chat column is "too wide / a proportion bug":** REJECTED as a
+  bug — it is a deliberate recent decision (commit `12a2ff5` "home chat + composer
+  fill centered 1800px column"). Live measurement confirmed the home `.chat`,
+  `.recap-zone`, and `.composer` all align at 1800px centered. Plan 076 only
+  *tokenizes* it (`--w-chat-home`) and caps the prose *measure* inside it; it does
+  not shrink the column.
+- **Broad light/dark "invisible text" legibility sweep:** REJECTED as unnecessary
+  beyond one spot — a live WCAG-contrast sweep of `/` and `/focus/quests` in both
+  modes found **zero** low-contrast text except `.recap-hint` (2.68:1 in dark),
+  which plan 079 fixes. The token-context flip trap is otherwise latent, not
+  shipped. `.model-detail`/`.model-choice` siblings flagged by the CSS audit are
+  **dead code** (no live render path) — left untouched, not re-audited.
+- **`internal/ui` → `internal/feature` dependency-direction violation:** REJECTED —
+  grep confirmed the direction is clean (one-way `feature → ui`); not a finding.
+- **Focus pages don't reflow on mobile:** REJECTED — live testing showed `#dock`
+  un-fixes to `position:static` and stacks full-width below `#main` at ≤768px; the
+  focus surfaces reflow correctly. The real responsive defect is phone-only and
+  scoped to the **topbar** (plan 078), not the focus layout.
+- **`prefers-reduced-motion` is broadly unhandled:** REJECTED as broad — the
+  reduced-motion block already covers buttons, legacy avatars, thinking dots,
+  type-cursor, choices, capture/task animations. Only the *migrated* chat glow
+  (`.cmsg-pending`) was missed (a port regression) — narrowly fixed in plan 079.
+- **Square corners / no-blur / pixel-hard interactions are "dated":** REJECTED —
+  these are the Hearthwood design canon (`DESIGN.md` §4), intentional, not a UX
+  defect.
 
 Tenth cycle (`1f8f55e`) — raised but rejected (by the adversarial verifier and/or
 advisor vetting against the live code and intent docs):
