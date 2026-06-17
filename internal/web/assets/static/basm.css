@@ -3466,10 +3466,81 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
 /* Icon inside a sidebar nav link. */
 .sb-nav-icon { width: 16px; height: 16px; flex-shrink: 0; image-rendering: pixelated; }
 
-/* Collapse to single column on narrow viewports (≤720px). */
+/* ─── plan 091: sidebar chrome — switchers, theme/palette, recap, drawer ─── */
+
+/* Rail switcher fit — head_switcher and model_switcher were styled for the dock;
+   in the wood Brand/Footer they need only small overrides.
+   Pin 3: wood-safe tokens only (--chrome-fg/--gold), never parchment tokens. */
+.sb-brand .head-switcher { padding: 0; border: none; }
+.sb-brand .head-switcher .model-switcher-kicker { display: block; padding: var(--space-1) 0 var(--space-1); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--chrome-fg); opacity: .7; }
+.sb-brand .head-switcher-current { display: none; } /* active head shown by the choice button below */
+.sb-brand .head-switcher-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.sb-brand .head-switcher-choice { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: 4px; background: none; color: var(--chrome-fg); cursor: pointer; font-size: 13px; }
+.sb-brand .head-switcher-choice:hover { border-color: var(--gold); color: var(--gold); }
+.sb-brand .head-switcher-choice-active { border-color: var(--gold); color: var(--gold); background: rgba(var(--gold-rgb, 212,163,74), .08); }
+.sb-brand .head-switcher-choice .px { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.sb-foot .chatbar { border: none; background: none; padding: 0; margin: 0; }
+.sb-foot .model-switcher { border: none; background: none; padding: 0; margin: 0 0 var(--space-2); }
+.sb-foot .model-switcher-head { display: flex; flex-direction: column; gap: var(--space-1); }
+.sb-foot .model-switcher-kicker { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--chrome-fg); opacity: .7; }
+.sb-foot .model-current { font-size: 12px; color: var(--gold); font-weight: 600; }
+.sb-foot .model-switcher-manage,
+.sb-foot .model-switcher-empty a,
+.sb-foot .chatbar-profile-href { font-size: 11px; color: var(--chrome-fg); text-decoration: none; opacity: .8; }
+.sb-foot .model-switcher-manage:hover,
+.sb-foot .model-switcher-empty a:hover,
+.sb-foot .chatbar-profile-href:hover { color: var(--gold); opacity: 1; }
+.sb-foot .model-switcher-empty { font-size: 12px; color: var(--chrome-fg); margin: var(--space-1) 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.sb-foot .chatbar-profile-link { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2); }
+.sb-foot .balaur-avatar-soul { --avatar-size: 24px; }
+/* Recap jump-link — affordance only; the #recap telescope sentinel stays in the dock. */
+.sb-foot-recap { display: inline-block; margin-top: var(--space-2); font-size: 12px; color: var(--chrome-fg); text-decoration: none; opacity: .75; }
+.sb-foot-recap:hover { color: var(--gold); opacity: 1; }
+
+/* --measure artifact cap: long-form prose in injected cards must not exceed the
+   reading-width cap (--measure: 68ch). The card wrapper itself is unconstrained. */
+#chat .k-inline .kcard-body { max-width: var(--measure); }
+
+/* Burger and backdrop — hidden by default; shown only at ≤720px via media query.
+   .sb-backdrop uses the same class basmToggleNav (basm.js:194) toggles.
+   .app-burger is positioned sticky at top-left outside .app-shell so it stays
+   accessible when the rail is off-canvas. */
+.app-burger { display: none; }
+.sb-backdrop { display: none; }
+
+/* Collapse to single column on narrow viewports (≤720px):
+   the product .app-shell rail goes off-canvas as a body-level fixed drawer,
+   reusing basmToggleNav (basm.js:194) which toggles .sb-side.is-open.
+   position:fixed escapes the grid's stacking context even with overflow:hidden on
+   .app-shell because .app-shell has no transform/filter/contain (plan-078 lesson). */
 @media (max-width: 720px) {
   html.app .app-shell {
     grid-template-columns: 1fr;
   }
-  html.app .app-shell .sb-side { display: none; }
+  html.app .app-shell .sb-side {
+    position: fixed; inset: 0 auto 0 0; width: min(86vw, 322px); z-index: var(--z-drawer);
+    transform: translateX(-104%); transition: transform .2s var(--ease-crisp);
+    box-shadow: 6px 0 0 rgba(0, 0, 0, .4);
+  }
+  html.app .app-shell .sb-side.is-open { transform: none; }
+  html.app .sb-backdrop.is-open {
+    display: block; position: fixed; inset: 0; z-index: var(--z-scrim);
+    background: rgba(8, 5, 2, .62);
+  }
+  /* Burger button — visible only at ≤720px; fixed at top-left above .app-shell. */
+  .app-burger {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: fixed; top: var(--space-2); left: var(--space-2); z-index: var(--z-overlay);
+    min-height: 44px; min-width: 44px;
+    background: var(--chrome); border: 1px solid var(--chrome-fg); border-radius: 4px;
+    color: var(--gold); cursor: pointer; font-size: 18px; padding: 0 10px;
+  }
+  /* 44px touch targets on persistent rail controls at phone width. */
+  .sb-brand .head-switcher-choice { min-height: 44px; }
+  .sb-foot .sb-foot-mode { min-height: 44px; min-width: 44px; }
+  .sb-foot .sb-theme-btn { min-height: 44px; }
+  .sb-foot .sb-foot-recap { min-height: 44px; display: inline-flex; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.app .app-shell .sb-side { transition: none; }
 }

@@ -28,9 +28,20 @@ func ChatShell(p ChatShellProps) g.Node {
 			),
 			h.Body(
 				h.A(h.Class("skip-link"), h.Href("#chat"), g.Text("Skip to content")),
+				// .app-burger: visible only at ≤720px (display:none at desktop via CSS).
+				// Opens the off-canvas rail drawer; lives outside .app-shell so it is
+				// accessible when the sidebar is hidden (plan-078 stacking-context lesson).
+				h.Button(h.Class("app-burger"), h.Type("button"),
+					g.Attr("onclick", "basmToggleNav()"),
+					h.Aria("label", "Open navigation"), h.Aria("expanded", "false"),
+					g.Text("☰"),
+				),
 				h.Div(h.Class("app-shell"),
 					p.Sidebar,
 					h.Aside(h.ID("dock"), h.Class("app-dock"), p.Dock),
+					// .sb-backdrop: scrim for the off-canvas rail drawer at ≤720px.
+					// Hidden at desktop (display:none); basmToggleNav toggles .is-open.
+					h.Div(h.Class("sb-backdrop"), g.Attr("onclick", "basmToggleNav()")),
 				),
 			),
 		),
