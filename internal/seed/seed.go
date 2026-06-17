@@ -36,12 +36,11 @@ import (
 // already marked) and Reset (delete only what is marked).
 const Marker = "seed"
 
-// seedSkillNames, seedBoardNames, and seedHeadNames are the natural keys for
-// collections without a spare marker field. Reset deletes records matching
-// these names; keep them in sync with the catalogs below.
+// seedSkillNames and seedHeadNames are the natural keys for collections without
+// a spare marker field. Reset deletes records matching these names; keep them
+// in sync with the catalogs below.
 var (
 	seedSkillNames = []string{"Weekly review", "Tomato care"}
-	seedBoardNames = []string{"This week"}
 	seedHeadNames  = []string{"Gardener"}
 )
 
@@ -54,7 +53,6 @@ type Result struct {
 	Skills      int `json:"skills"`
 	LifeEntries int `json:"life_entries"`
 	Summaries   int `json:"summaries"`
-	Boards      int `json:"boards"`
 	Heads       int `json:"heads"`
 }
 
@@ -94,11 +92,6 @@ func Run(app core.App) (*Result, error) {
 		return nil, err
 	}
 	res.Summaries = n
-
-	if n, err = seedBoards(app); err != nil {
-		return nil, err
-	}
-	res.Boards = n
 
 	if n, err = seedHeads(app); err != nil {
 		return nil, err
@@ -141,9 +134,6 @@ func Reset(app core.App) (*Result, error) {
 		return nil, err
 	}
 	if res.Skills, err = del("skills", nameFilter(seedSkillNames), nameParams(seedSkillNames)); err != nil {
-		return nil, err
-	}
-	if res.Boards, err = del("boards", nameFilter(seedBoardNames), nameParams(seedBoardNames)); err != nil {
 		return nil, err
 	}
 	if res.Heads, err = del("heads", nameFilter(seedHeadNames), nameParams(seedHeadNames)); err != nil {
@@ -364,31 +354,6 @@ func seedSummaries(app core.App, now time.Time) (int, error) {
 		rec.Set("message_count", 2)
 		if err := app.Save(rec); err != nil {
 			return count, fmt.Errorf("seeding %s summary: %w", p.Type, err)
-		}
-		count++
-	}
-	return count, nil
-}
-
-func seedBoards(app core.App) (int, error) {
-	col, err := app.FindCollectionByNameOrId("boards")
-	if err != nil {
-		return 0, fmt.Errorf("finding boards collection: %w", err)
-	}
-	count := 0
-	for i, name := range seedBoardNames {
-		if _, err := app.FindFirstRecordByFilter("boards", "name = {:n}", dbx.Params{"n": name}); err == nil {
-			continue
-		}
-		rec := core.NewRecord(col)
-		rec.Set("name", name)
-		rec.Set("sort", i)
-		rec.Set("cards", []map[string]any{
-			{"type": "tasks", "title": "Open tasks"},
-			{"type": "life", "title": "This week's logs"},
-		})
-		if err := app.Save(rec); err != nil {
-			return count, fmt.Errorf("seeding board %q: %w", name, err)
 		}
 		count++
 	}

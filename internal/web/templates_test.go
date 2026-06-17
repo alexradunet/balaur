@@ -159,11 +159,11 @@ func TestLifeBodyRenders(t *testing.T) {
 // Full DayFocus rendering is covered by internal/feature/journalcards/dayfocus_test.go.
 func TestDayArtifact(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:           "GET /ui/show/day injects day artifact",
-		Method:         "GET",
-		URL:            "/ui/show/day",
-		TestAppFactory: newWebApp,
-		ExpectedStatus: 200,
+		Name:            "GET /ui/show/day injects day artifact",
+		Method:          "GET",
+		URL:             "/ui/show/day",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  200,
 		ExpectedContent: []string{"ucard-day"},
 	}
 	scenario.Test(t)

@@ -79,7 +79,7 @@ func JournalCandleBody(v JournalFocusView) g.Node {
 					h.Div(h.Class("journal-meta"),
 						h.Span(h.Class("tl-time"), g.Text(e.Time)),
 						h.A(h.Class("btn btn-ghost btn-sm"), h.Href("/ui/show/day?date="+e.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+e.Date+"')"),
-					g.Text("→ this day")),
+							g.Text("→ this day")),
 					),
 					h.P(h.Class("journal-text"), g.Text(e.Text)),
 				),

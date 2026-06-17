@@ -71,11 +71,11 @@ func TestQuestsArtifactEndpoint(t *testing.T) {
 		seedTaskWithRecur(t, app, "Morning stretch", "open", "daily", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:           "GET /ui/show/quests injects quests artifact",
-			Method:         "GET",
-			URL:            "/ui/show/quests",
-			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus: 200,
+			Name:            "GET /ui/show/quests injects quests artifact",
+			Method:          "GET",
+			URL:             "/ui/show/quests",
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
 			ExpectedContent: []string{"ucard-quests", "Morning stretch"},
 		}
 		scenario.Test(t)

@@ -121,4 +121,3 @@ func cardShowTool(_ core.App) agent.Tool {
 		},
 	}
 }
-

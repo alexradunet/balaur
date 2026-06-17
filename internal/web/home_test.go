@@ -68,5 +68,3 @@ func TestHomeDockSelectorIDs(t *testing.T) {
 	}
 	s.Test(t)
 }
-
-
