@@ -96,7 +96,7 @@ func TestBridgeContentAndToolCalls(t *testing.T) {
 			Function: model.ResponseToolCallFunction{Name: "foo", Arguments: model.ToolCallArguments{"a": "b"}},
 		}}}),
 	)
-	got := drain(t, bridge(context.Background(), src))
+	got := drain(t, bridge(context.Background(), src, func() {}))
 
 	// Last chunk must be the single terminal Done with the assembled tool call.
 	last := got[len(got)-1]
@@ -154,7 +154,7 @@ func TestBridgeError(t *testing.T) {
 		delta(model.ResponseMessage{Content: "partial"}),
 		model.ChatResponse{Choices: []model.Choice{{FinishReasonPtr: &reason}}},
 	)
-	got := drain(t, bridge(context.Background(), src))
+	got := drain(t, bridge(context.Background(), src, func() {}))
 	last := got[len(got)-1]
 	if last.Err == nil {
 		t.Fatalf("expected terminal error chunk, got %+v", last)

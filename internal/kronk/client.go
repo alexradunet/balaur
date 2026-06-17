@@ -4,11 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/ardanlabs/kronk/sdk/kronk/model"
 
 	"github.com/alexradunet/balaur/internal/llm"
 )
+
+// chatStreamTimeout caps a single local streaming generation. Kronk's
+// ChatStreaming requires a context with a deadline; this is the default applied
+// when the caller supplies none (web/CLI request contexts usually have none).
+// Generous on purpose — a slow CPU generating up to max_tokens must not be cut
+// off mid-reply.
+const chatStreamTimeout = 10 * time.Minute
 
 // Client implements llm.Client against in-process Kronk models held by an Engine.
 // chatPath and embedPath are absolute GGUF file paths.
@@ -30,6 +38,14 @@ func (c *Client) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm
 	if err != nil {
 		return nil, err
 	}
+	// Kronk's streaming inference requires a context with a deadline. Web/CLI
+	// request contexts usually have none, so add a generous cap when one is
+	// absent (an existing caller deadline is honored). cancel fires when the
+	// stream is fully drained — see bridge.
+	var cancel context.CancelFunc = func() {}
+	if _, ok := ctx.Deadline(); !ok {
+		ctx, cancel = context.WithTimeout(ctx, chatStreamTimeout)
+	}
 	d := model.D{
 		"messages":   toKronkMessages(msgs),
 		"max_tokens": 2048,
@@ -41,9 +57,10 @@ func (c *Client) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm
 	}
 	src, err := krn.ChatStreaming(ctx, d)
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("local chat stream: %w", err)
 	}
-	return bridge(ctx, src), nil
+	return bridge(ctx, src, cancel), nil
 }
 
 // Embed returns one embedding vector per input text from the resident embedding
@@ -70,10 +87,11 @@ func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error)
 // streams content/reasoning deltas, accumulates tool calls by index, and emits
 // the assembled calls on a single terminal Chunk{Done:true}. Sends are guarded by
 // ctx so a cancelled or gone consumer cannot wedge the goroutine.
-func bridge(ctx context.Context, src <-chan model.ChatResponse) <-chan llm.Chunk {
+func bridge(ctx context.Context, src <-chan model.ChatResponse, cancel context.CancelFunc) <-chan llm.Chunk {
 	out := make(chan llm.Chunk, 8)
 	go func() {
 		defer close(out)
+		defer cancel() // release the stream's deadline context once drained
 
 		calls := map[int]*llm.ToolCall{}
 		var order []int
