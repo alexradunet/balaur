@@ -175,7 +175,9 @@ runtime, so the Go build stays CGO-free. Two runtime assets are owner-supplied
 - the native llama.cpp library — point `BALAUR_LIB_PATH` at its directory
   (CPU by default; `BALAUR_PROCESSOR=vulkan` selects the Vulkan variant)
 - a GGUF model file — install it from the settings models section
-  (`/focus/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`
+  (`/focus/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`.
+  That page can also fetch Balaur's official curated model in one click
+  (owner-initiated download into `BALAUR_MODELS_DIR`; plan 086)
 
 ```bash
 # Run a local GGUF on a Vulkan GPU:
