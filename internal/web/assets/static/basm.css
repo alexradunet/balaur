@@ -155,6 +155,18 @@
   /* Layout */
   --radius: 0px;            /* RPG panels are square; rounding is for blobs */
   --maxw: 1080px;
+
+  /* Spacing scale — 4px base. Dominant literals (8/12/16/24/32) map to these;
+     10px and 14px are intentionally OFF-SCALE and stay literal, as do bevel
+     offsets (3px), the 7px gold notch, and portrait/geometry one-offs. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
   --chatbar-space: 210px;
 
   /* Bevels & drops (the shadow system) */
