@@ -11,6 +11,7 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	g "maragu.dev/gomponents"
 
+	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/store"
@@ -161,16 +162,19 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 
 // messageView is one chat message's template payload (history + day expand).
 type messageView struct {
-	Role            string
-	Tool            string
-	Content         string
-	Origin          string        // agent-initiated marker: "nudge" | "briefing"; "" = chat
-	CardURL         string        // inline card embed endpoint (legacy; kept for the lazy-mount tests)
-	CardBody        template.HTML // server-rendered inline card, embedded directly (no lazy mount)
-	SoulAvatarURL   string        // resolved soul avatar URL (same for all views in one call)
-	BalaurAvatarURL string        // resolved Balaur head avatar URL
-	OwnerName       string        // display name for the "You" label
-	WhoLabel        string        // assistant display name ("Balaur", or the active head's name)
+	Role              string
+	Tool              string
+	Content           string
+	Origin            string        // agent-initiated marker: "nudge" | "briefing"; "" = chat
+	CardURL           string        // inline card embed endpoint (legacy; kept for the lazy-mount tests)
+	CardBody          template.HTML // server-rendered inline card, embedded directly (no lazy mount)
+	ArtifactTitle     string        // non-empty only for uicard/cluster artifacts (drives the chip + the cap)
+	ArtifactIcon      string        // /static/icons stem for the chip ("" = none)
+	ArtifactCollapsed bool          // true → render collapsed (older than the newest activeArtifactCap)
+	SoulAvatarURL     string        // resolved soul avatar URL (same for all views in one call)
+	BalaurAvatarURL   string        // resolved Balaur head avatar URL
+	OwnerName         string        // display name for the "You" label
+	WhoLabel          string        // assistant display name ("Balaur", or the active head's name)
 
 	// Datastar streaming fields (master chat dock). BubbleID/BodyID give a
 	// streamed element a stable id so the SSE handler can morph it in place;
@@ -198,7 +202,11 @@ func (h *handlers) renderMessages(views []messageView) template.HTML {
 				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Content: mv.Content,
 			}))
 			if mv.CardBody != "" {
-				nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), g.Raw(string(mv.CardBody))))
+				if mv.ArtifactTitle != "" {
+					nodes = append(nodes, artifactWrap(mv.ArtifactTitle, mv.ArtifactIcon, mv.ArtifactCollapsed, "", mv.CardBody))
+				} else {
+					nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), g.Raw(string(mv.CardBody))))
+				}
 			}
 		default: // assistant
 			nodes = append(nodes, chat.Message(chat.MessageProps{
@@ -263,6 +271,9 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			if typ, query, rest, ok := tools.ParseUICard(mv.Content); ok {
 				mv.CardBody = h.uicardBody(typ, query)
 				mv.Content = rest
+				if spec, ok := cards.Get(typ); ok {
+					mv.ArtifactTitle, mv.ArtifactIcon = spec.Label, spec.Icon
+				}
 			} else if _, _, modelText, ok := tools.ParseChoices(mv.Content); ok {
 				mv.Content = clipText(modelText, 2000)
 			} else if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
@@ -272,6 +283,7 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 				mv.Content = clipText(rest, 2000)
 			} else if title, cs, rest, ok := tools.ParseArtifact(mv.Content); ok {
 				mv.CardBody, mv.Content = h.artifactBody(title, cs), rest
+				mv.ArtifactTitle = title
 			}
 		}
 		if mv.Role == "assistant" && mv.Content == "" {
@@ -279,5 +291,26 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 		}
 		out = append(out, mv)
 	}
+	capArtifacts(out)
 	return out
+}
+
+// capArtifacts marks all but the newest activeArtifactCap artifacts collapsed,
+// in transcript order. Only uicard/cluster artifacts (ArtifactTitle != "")
+// count; proposals/notes are never collapsed. This is the server-side half of
+// the cap (the full reload); the live/cross-fragment half is balaurCapArtifacts
+// in basm.js, which re-applies it over the whole #chat DOM.
+func capArtifacts(views []messageView) {
+	var idx []int
+	for i := range views {
+		if views[i].ArtifactTitle != "" {
+			idx = append(idx, i)
+		}
+	}
+	if len(idx) <= activeArtifactCap {
+		return
+	}
+	for _, i := range idx[:len(idx)-activeArtifactCap] {
+		views[i].ArtifactCollapsed = true
+	}
 }

@@ -10,6 +10,7 @@ import (
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/ui/chat"
 )
@@ -175,41 +176,50 @@ func (s *chatStream) emit(ev agent.Event) {
 // inline card (when present) is appended server-rendered to the stream.
 func (s *chatStream) handleToolResult(ev agent.Event) {
 	if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
-		s.endTool(rest, s.h.uicardBody(typ, query))
+		if spec, ok := cards.Get(typ); ok {
+			s.endTool(rest, s.h.uicardBody(typ, query), spec.Label, spec.Icon)
+		} else {
+			s.endTool(rest, s.h.uicardBody(typ, query), typ, "")
+		}
 		return
 	}
 	if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
-		s.endTool("choices offered", "")
+		s.endTool("choices offered", "", "", "")
 		s.appendChoices(prompt, choices)
 		return
 	}
 	if kind, id, rest, ok := tools.ParseProposal(ev.Text); ok {
-		s.endTool(rest, s.h.proposalBody(kind, id))
+		s.endTool(rest, s.h.proposalBody(kind, id), "", "")
 		return
 	}
 	if types, rest, ok := tools.ParseRefresh(ev.Text); ok {
-		s.endTool(clipText(rest, 2000), "")
+		s.endTool(clipText(rest, 2000), "", "", "")
 		for _, typ := range types {
 			s.refreshCard(typ)
 		}
 		return
 	}
 	if title, cs, rest, ok := tools.ParseArtifact(ev.Text); ok {
-		s.endTool(rest, s.h.artifactBody(title, cs))
+		s.endTool(rest, s.h.artifactBody(title, cs), title, "")
 		return
 	}
-	s.endTool(clipText(ev.Text, 2000), "")
+	s.endTool(clipText(ev.Text, 2000), "", "", "")
 }
 
 // endTool morphs the open tool row with its result and, when a card is attached,
 // appends it server-rendered (no lazy mount, no htmx) so it survives in history.
-func (s *chatStream) endTool(content string, card template.HTML) {
+func (s *chatStream) endTool(content string, card template.HTML, artTitle, artIcon string) {
 	s.morphNode(chat.ToolRow(chat.ToolRowProps{
 		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
 	}))
-	if card != "" {
-		s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
+	if card == "" {
+		return
 	}
+	if artTitle == "" { // proposal etc. — not an artifact; keep the plain inline card
+		s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
+		return
+	}
+	s.appendNode(artifactWrap(artTitle, artIcon, false, s.toolID+"-card", card))
 }
 
 // refreshCard re-renders one registry card from live data and morphs it in
