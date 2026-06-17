@@ -18,6 +18,7 @@ import (
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/cards"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
@@ -158,10 +159,17 @@ func (h *handlers) focusPage(e *core.RequestEvent) error {
 	if err != nil {
 		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
-	var dockHTML strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&dockHTML, "chat_dock", dock); err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "rendering companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
-	}
+	// Render switchers (still a template fragment — deferred from plan 084).
+	var switchersHTML strings.Builder
+	_ = h.tmpl.ExecuteTemplate(&switchersHTML, "chat_bar", dock)
+	dockNode := chat.Dock(chat.DockProps{
+		Variant:   chat.DockRail,
+		HasRecap:  dock.HasRecap,
+		NowMillis: dock.NowMillis,
+		Convo:     g.Raw(string(dock.ChatBodyHTML)),
+		Composer:  composerNode(dock),
+		Switchers: g.Raw(switchersHTML.String()),
+	})
 	var bodyHTML strings.Builder
 	if err := h.tmpl.ExecuteTemplate(&bodyHTML, "focus_main", view); err != nil {
 		return h.renderPageError(e, http.StatusInternalServerError, "rendering focus", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
@@ -170,7 +178,7 @@ func (h *handlers) focusPage(e *core.RequestEvent) error {
 		Title:  spec.Label,
 		Active: focusActiveKey(typ),
 		Body:   g.Raw(bodyHTML.String()),
-		Dock:   g.Raw(dockHTML.String()),
+		Dock:   dockNode,
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := page.Render(e.Response); err != nil {

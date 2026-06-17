@@ -108,8 +108,11 @@ chat.Message speech panels + chat.ToolRow rows (page-load history via
 h.renderMessages and the live SSE stream in chatstream.go share one markup
 source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
 the bottom) that replaced the old chat_draft. The surrounding dock chrome
-(chat_dock shell: grip, recap zone, nudge poller, head/model switcher) is still
-the legacy template injected via g.Raw, pending a full chat.Dock port. The
+(grip, recap zone, nudge poller, composer, model-modal dialog) now renders via
+the chat.Dock gomponents organism (internal/ui/chat/dock.go), with variant prop
+DockHome on / and DockRail on focus pages. The head/model switcher fragments
+(chat_bar/model_switcher/head_switcher) remain as legacy template SSE patch
+targets for patchChatbar and setActiveHead — deferred from plan 084. The
 domain pages (Quests, Knowledge, Life, Journal, Heads) + Settings are the
 top-level nav in the wood topbar (no side rail); navigating to one drops the
 "home" class so the dock returns to its right rail (the chat moves to the

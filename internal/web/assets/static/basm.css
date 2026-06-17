@@ -3318,3 +3318,41 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
 
 /* No slide animation when reduced-motion is preferred. */
 @media (prefers-reduced-motion: reduce) { .topnav-drawer { transition: none; } }
+
+/* ── Section: chat dock variants ────────────────────────────────────────────
+   chat.Dock (dock.go) emits a wrapper div carrying a dock-v-{variant} class.
+   This is the single source of truth for the chat column width — the three
+   hand-synced html.home/#dock/.dock-full blocks above drive overlay/z-index
+   behaviour, but widths now key off the variant class so a future width
+   change touches ONE rule set.
+
+   Divergence between home (1800px) and overlay (940px) is intentional:
+     home    — the companion chat IS the canvas; owns the full viewport width
+     overlay — floats over page content; a narrower column avoids crowding
+   See --w-chat-home / --w-chat-overlay in :root. Do NOT merge the two. */
+
+.dock-v-home .chat,
+.dock-v-home .msg-draft,
+.dock-v-home .chatbar,
+.dock-v-home .recap-zone,
+.dock-v-home .recap-band,
+.dock-v-home .composer {
+  width: 100%;
+  max-width: var(--w-chat-home);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dock-v-overlay .chat,
+.dock-v-overlay .msg-draft,
+.dock-v-overlay .chatbar,
+.dock-v-overlay .recap-zone,
+.dock-v-overlay .recap-band,
+.dock-v-overlay .composer {
+  width: auto;
+  max-width: var(--w-chat-overlay);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* rail variant inherits #dock's fixed width (var(--sidebar-w)) — no extra rule. */
