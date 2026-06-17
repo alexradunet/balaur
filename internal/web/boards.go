@@ -269,16 +269,9 @@ func (h *handlers) ensureDefaultBoards() error {
 
 // -- Page handlers --
 
-// boardsIndex handles GET /boards — redirects to the first board by sort.
+// boardsIndex handles GET /boards — retired from nav; redirects home.
 func (h *handlers) boardsIndex(e *core.RequestEvent) error {
-	if err := h.ensureDefaultBoards(); err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "seeding default boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
-	}
-	boards, err := h.loadBoards()
-	if err != nil || len(boards) == 0 {
-		return h.renderPageError(e, http.StatusInternalServerError, "loading boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
-	}
-	return e.Redirect(http.StatusFound, "/boards/"+boards[0].ID)
+	return e.Redirect(http.StatusFound, "/")
 }
 
 // boardPageData carries a board for the #main canvas plus the companion chat
@@ -289,75 +282,9 @@ type boardPageData struct {
 	Dock  homeData
 }
 
-// boardsPage handles GET /boards/{id}. A normal load renders the full shell
-// (board canvas + persistent dock). A Datastar @get (board-tab switch) patches
-// only #main and reflects the URL — the dock, and its live chat, are never
-// touched, so switching boards keeps the conversation alive.
+// boardsPage handles GET /boards/{id} — retired from nav; redirects home.
 func (h *handlers) boardsPage(e *core.RequestEvent) error {
-	if err := h.ensureDefaultBoards(); err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "seeding default boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
-	}
-	id := e.Request.PathValue("id")
-	boards, err := h.loadBoards()
-	if err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "loading boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
-	}
-
-	var current *boardRecord
-	for _, b := range boards {
-		if b.ID == id {
-			current = b
-			break
-		}
-	}
-
-	ds := isDatastarRequest(e)
-
-	if current == nil {
-		// A board deleted in another tab: a Datastar @get can't apply a plain
-		// 404 body, which would freeze the stale tab. Self-heal by redirecting.
-		if ds {
-			sse := datastar.NewSSE(e.Response, e.Request)
-			_ = sse.Redirect("/boards")
-			return nil
-		}
-		return h.renderPageError(e, http.StatusNotFound, "board not found", nil, "Not found", "There is nothing at this address.")
-	}
-
-	// Server-render the current board's cards into their slots (no lazy-load).
-	h.renderBoardCards(current)
-	bv := boardView{Boards: boards, Current: current, Specs: cards.All()}
-
-	// Datastar board switch: patch #main only; the dock persists.
-	if ds {
-		sse := datastar.NewSSE(e.Response, e.Request)
-		var b strings.Builder
-		if err := h.tmpl.ExecuteTemplate(&b, "board_main", boardPageData{boardView: bv}); err != nil {
-			return e.InternalServerError("rendering board", err)
-		}
-		if err := sse.PatchElements(b.String(),
-			datastar.WithSelectorID("main"), datastar.WithModeInner()); err != nil {
-			return nil // client gone
-		}
-		if u, err := url.Parse("/boards/" + id); err == nil {
-			_ = sse.ReplaceURL(*u)
-		}
-		// Only #main was patched, so sync the tab title explicitly. The board
-		// and every card inside it are pure Datastar now — newly-patched nodes
-		// bind via Datastar's own observer, so no htmx re-processing is needed.
-		_ = sse.ExecuteScript(fmt.Sprintf("document.title=%q", current.Name+" · Balaur"))
-		return nil
-	}
-
-	dock, err := h.dockData()
-	if err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
-	}
-	return h.render(e, "boards.html", boardPageData{
-		boardView: bv,
-		Title:     current.Name + " · Balaur",
-		Dock:      dock,
-	})
+	return e.Redirect(http.StatusFound, "/")
 }
 
 // boardsCreate handles POST /ui/boards — creates a new board.
