@@ -2,11 +2,17 @@
 
 > **Executor instructions**: Follow step by step. Run every Verify and confirm before moving on. On a STOP condition, stop and report — do not improvise. When done, update the 087 row in plans/readme.md (add it if absent, matching the existing column format).
 >
-> **Drift check (run first)**:
-> `git diff --stat 3136bad..HEAD -- internal/kronk/engine.go internal/kronk/presets.go internal/web/models.go internal/web/web.go internal/feature/modelcards internal/feature/settingscards`
-> If any changed since this plan was written, compare the "Current state" excerpts below to the live code; on mismatch, STOP and report. Also confirm the vendored SDK is still `github.com/ardanlabs/kronk v1.28.0` and `github.com/hybridgroup/yzma v1.17.1` in `go.mod` — the `libs`/`download` API anchors below are pinned to those versions.
+> **Drift check (run first)**: `git rev-parse HEAD` should be at or after `e4c6394` (plan 086 merged). Confirm the vendored SDK is still `github.com/ardanlabs/kronk v1.28.0` and `github.com/hybridgroup/yzma v1.17.1` in `go.mod` — the `libs`/`download` API anchors below are pinned to those versions. Read the "Current state" files live before editing; the line numbers below predate 086 and have shifted.
 >
-> **Reconciliation note (re-anchored 1f463bb → 3136bad)**: commit `3136bad` touched `settingscards/settingsfocus.go` but not `engine.go`/`presets.go`/`models.go`/`web.go`, and left `BuildModelsPanelView` byte-identical — all excerpts below still hold.
+> ## ⚠️ Reconciliation — PLAN 086 HAS LANDED (re-anchored 1f463bb → e4c6394)
+> Plan 086 (one-click official-model download) is **merged to main** and several primitives this plan said it would "reuse from 086" now **exist** — use them, don't recreate:
+> - **`kronk.RuntimeInstalled()` already exists** (`internal/kronk/runtime.go`) and currently calls `resolveLibDir(LibPath(), Processor())` then stats `libllama.so`. **Step 1's `LibRoot()` change MUST also update `RuntimeInstalled` to use `LibRoot()`** (it's a third caller alongside the engine and the new installer — all three must agree).
+> - **`kronk.ModelsDir()` exists** in `presets.go` (the env-getter shape to mirror for `LibRoot()`).
+> - **The SSE-progress + single-in-flight + audit pattern exists** in `internal/web/models.go`: `downloadOfficialModel` uses `const downloadStoreKey = "modeldownload.cancel"`, guards via `h.app.Store().GetOk(...)`, removes via `h.app.Store().Remove(...)` in a `defer` (NOT `Set(...,nil)` — GetOk is presence-based; this was a bug fixed in 086), streams `datastar.NewSSE`, morphs a card by id, and audits `store.Audit(h.app,"owner","llm.model.download",...)`. **Mirror this exactly** for `installRuntime` (use a distinct store key e.g. `"runtimedownload.cancel"` and audit action `llm.runtime.install`).
+> - **`modelcards` already has** `StatusDownloading`, `Progress`/`ProgressLabel`, a progress meter, a Cancel form, and an official-model CTA (`ShowOfficialCTA`/`OfficialCTAName`/`OfficialCTAMeta`/`RuntimeMissing` on `PanelView`); the runtime section adds alongside these.
+> - **`settingscards.BuildModelsPanelView`** already renders the `RuntimeMissing` Alert (086 Step 8) when `kronk.RuntimeInstalled()` is false — this plan's Step 6 turns that Alert into the actual cpu/vulkan **Install** actions.
+> - Routes `/ui/model/download` + `/ui/model/download/cancel` are mounted near `/ui/model/install` in `web.go` — add `/ui/runtime/install` beside them.
+> - The official-model download proves the end-to-end UX; this plan makes the model actually *runnable* by installing the native runtime it needs.
 
 ## Status
 - **Priority**: P1
@@ -14,7 +20,7 @@
 - **Risk**: MED–HIGH
 - **Depends on**: plan **086** (reuses its SSE-progress loop, single-in-flight `app.Store()` flag, audit pattern, and the `RuntimeInstalled()` helper; and it *resolves* the runtime-missing Alert that 086 stubs). Land 086 first.
 - **Category**: feature (owner-requested)
-- **Planned at**: commit `1f463bb`, re-anchored to `3136bad`, 2026-06-17
+- **Planned at**: commit `1f463bb`, re-anchored to `e4c6394` (post-086-merge), 2026-06-17
 
 ## Why this matters
 The owner asked to *"embed both cpu and vulkan runtimes"* so the official model can be used **right away** on a fresh box. The honest engineering reading of "embed both" here is **"make both runtimes first-class and installable without leaving the app"**, *not* "compile the native libraries into the Go binary." Two hard facts drive that:
