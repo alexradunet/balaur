@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"html"
 	"html/template"
 	"net/http"
 	"strings"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // Knowledge: the proposed queue and the active collection render as Basm
@@ -230,6 +230,5 @@ func (h *handlers) renderCard(e *core.RequestEvent, kind knowledge.Kind, rec *co
 func (h *handlers) cardError(e *core.RequestEvent, err error) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	e.Response.WriteHeader(http.StatusUnprocessableEntity)
-	fmt.Fprintf(e.Response, `<div class="card-note card-note-error">%s</div>`, html.EscapeString(err.Error()))
-	return nil
+	return ui.ErrorStrip(err.Error()).Render(e.Response)
 }

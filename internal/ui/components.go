@@ -13,6 +13,12 @@ func ErrorStrip(msg string) g.Node {
 	return h.Div(h.Class("card-note card-note-error"), g.Text(msg))
 }
 
+// ErrorStripID renders the card-error strip with an element id (used where the
+// SSE target needs to address it). Same firewall as ErrorStrip: g.Text escapes.
+func ErrorStripID(id, msg string) g.Node {
+	return h.Div(h.Class("card-note card-note-error"), h.ID(id), g.Text(msg))
+}
+
 // CardHead renders the shared kcard header: a kcard-kind span with the
 // tool-icon image and the card title, plus an optional trailing node (a
 // kcard-meta param line, a "manage all →" link, a tag, …). It exists so the
