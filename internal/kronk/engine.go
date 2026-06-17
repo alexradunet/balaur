@@ -132,7 +132,11 @@ func (e *Engine) chatModel(ctx context.Context, ggufPath string) (*kronk.Kronk, 
 	krn, err := kronk.New(
 		model.WithModelFiles([]string{ggufPath}),
 		model.WithAutoTune(true),
-		model.WithContextWindow(4096),
+		// Balaur's assembled turn prompt (self-knowledge + persona + history) runs
+		// ~4k tokens before any reply, so 4096 overflowed on the first turn. 8192
+		// fits the system context plus a full max_tokens generation; Gemma-class
+		// models support far more if longer histories need it later.
+		model.WithContextWindow(8192),
 		model.WithNSeqMax(1),
 	)
 	if err != nil {
