@@ -19,6 +19,7 @@ func Register(app core.App) {
 	registerCalendar(app)
 	registerTimeline(app)
 	registerHabits(app)
+	registerTasks(app)
 }
 
 // Unregister removes all cards this feature registered. Called from web.Register's
@@ -29,6 +30,7 @@ func Unregister() {
 	ui.UnregisterCard("calendar")
 	ui.UnregisterCard("timeline")
 	ui.UnregisterCard("habits")
+	ui.UnregisterCard("tasks")
 }
 
 // init self-registers this feature so the declarative registry (and web.Register)

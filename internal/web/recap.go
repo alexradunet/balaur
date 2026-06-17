@@ -270,6 +270,8 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			} else if _, rest, ok := tools.ParseRefresh(mv.Content); ok {
 				// Live refresh has no meaning on reload; show the plain text only.
 				mv.Content = clipText(rest, 2000)
+			} else if title, cs, rest, ok := tools.ParseArtifact(mv.Content); ok {
+				mv.CardBody, mv.Content = h.artifactBody(title, cs), rest
 			}
 		}
 		if mv.Role == "assistant" && mv.Content == "" {

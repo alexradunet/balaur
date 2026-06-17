@@ -500,3 +500,39 @@ func settingsfocusStory() Story {
 		},
 	}
 }
+
+// tasksbareStory documents the tasks bare-stack card — individual TaskCards
+// with NO container chrome (contrast the quests card which wraps in a kcard).
+func tasksbareStory() Story {
+	return Story{
+		ID: "tasksbare", Group: "Cards", Title: "Tasks (bare stack)", Wide: true,
+		Blurb: "A bare vertical stack of individual TaskCards — no kcard/ucard container, no header, no footer. " +
+			"This is the 'draw the cards for THOSE quests' surface: the agent picks tasks by status/bucket/terms " +
+			"and the renderer draws each as its own card. Contrast with the quests card, which is a rolled-up summary.",
+		Variants: []Variant{
+			{"open · mixed", g.Group([]g.Node{
+				taskcards.TaskCard(taskcards.TaskView{ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due today 18:00", RecurLine: "every 2 days"}),
+				taskcards.TaskCard(taskcards.TaskView{ID: "t2", Title: "Call the vet about Luna", Status: "open", DueLine: "due yesterday", Overdue: true}),
+				taskcards.TaskCard(taskcards.TaskView{ID: "t3", Title: "Submit the quarterly report", Status: "done"}),
+			})},
+			{"overdue bucket", g.Group([]g.Node{
+				taskcards.TaskCard(taskcards.TaskView{ID: "t4", Title: "Reply to accountant", Status: "open", DueLine: "3 days ago — was Mon, Jun 14 at 10:00", Overdue: true}),
+				taskcards.TaskCard(taskcards.TaskView{ID: "t5", Title: "Renew car insurance", Status: "open", DueLine: "yesterday — was Tue, Jun 16 at 09:00", Overdue: true}),
+			})},
+		},
+		Props: []Prop{
+			{"status", "param", `"open"`, `open, done, or all. Controls which tasks are fetched.`},
+			{"bucket", "param", `""`, `overdue, today, upcoming, or someday — narrows OPEN tasks to one due bucket. Ignored unless status=open.`},
+			{"terms", "param", `""`, `Space-separated search terms matched against title and notes (ANDed). Truncated to 256 chars.`},
+			{"limit", "param", "12", `Maximum task cards to draw (clamped to [1,50] by cards.Validate).`},
+		},
+		Dos: []string{
+			"Use this card when the owner asks to 'draw the cards for those quests' or 'show my overdue tasks as cards'.",
+			"Let each TaskCard carry its own Done/Snooze/Drop actions — they post to /ui/tasks/{id}/transition.",
+		},
+		Donts: []string{
+			"Wrap the stack in a kcard header or footer — that's the quests card's job.",
+			"Use this for a summary/roll-up; use the quests card for that.",
+		},
+	}
+}

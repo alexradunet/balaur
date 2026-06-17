@@ -101,6 +101,7 @@ self tool, which reports the actual registry):
   any change re-proposes it, and every invocation is audited. Extensions
   add verbs, not privileges — no filesystem, no shell, no npm.
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
+- Card composition: card_show renders one live card inline (single-card seam); show_cards renders a hand-picked cluster of 1–8 cards as ONE inline artifact — use it when the owner asks to see multiple domains at once ("show my quests and my weight together"). Both are always-on UI tools available to all heads.
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI — / is Home, the single-page chat shell.
@@ -144,7 +145,7 @@ the owner's journal entries, the day's recap, what got done, and what was logged
 with prev/next day nav. The tile shows a read-only summary (journal/done/log
 counts); calendar cells and recap day cards deep-link into the artifact.
 
-Typed card registry: Balaur's UI supports 12 parameterized card types at
+Typed card registry: Balaur's UI supports parameterized card types at
 GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment
 (HATEOAS). The types are: today (open tasks due today), quests (task list,
 status param), calendar (month grid, month param), timeline (forward days,
@@ -153,7 +154,9 @@ tile + full focus, date param), measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
 kind, kind required + limit param), memory (active memories, query + limit
 params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
-habits (recurring tasks with their streak, no params).
+habits (recurring tasks with their streak, no params), tasks (bare stack of
+individual TaskCards filtered by status/bucket/terms/limit — the "draw the
+cards for THOSE quests" surface; contrast quests which is a rolled-up summary).
 GET /ui/cards lists the full palette. The registry lives in internal/cards
 (no web imports); each card tile is rendered by a typed gomponents component in
 its own per-feature package (internal/feature/* — taskcards, journalcards,
@@ -161,18 +164,25 @@ knowledgecards, lifecards, headscards, settingscards), self-registered into a
 shared ui registry via feature.RegisterAll. internal/web/cards.go keeps only the
 shared dispatch (cardInto/cardHTML) and the chat embeds.
 
-Agent UI tools: one tool lets you render on-the-spot UI from the typed card
+Agent UI tools: two tools let you render on-the-spot UI from the typed card
 registry — you never author markup, only {type, params} validated by the registry.
 
-- card_show: renders a live card inline in the conversation. Call it with a type
+- card_show: renders ONE live card inline in the conversation. Call it with a type
   from the registry and optional params; the server fetches real data and embeds
   the card in the chat server-rendered into the stream. Example: show the owner their
   weight trend by calling card_show with type="measure" and params.kind set to
   their weight kind. The composition rule: only the registry-validated type and
   params reach the card URL — no free-form text, no model-authored markup.
+- show_cards: renders a hand-picked cluster of 1–8 cards as ONE inline artifact.
+  Use when the owner asks to see multiple domains at once ("show my quests and my
+  weight together") or when individual tasks should each render as their own card
+  (use type="tasks" with bucket/terms/status params). The server renders each card
+  from live data and wraps them in a titled vertical stack (chat.Cluster). Persists
+  as a marker in the tool message — the cluster re-renders on page reload. Clusters
+  are agent-only in v1; /ui/show (sidebar) maps to single cards only.
 
-The registry vocabulary is embedded in the tool description at registration time —
-when new card types are added the model sees them for free.
+The registry vocabulary for both tools is embedded in the tool description at
+registration time — when new card types are added the model sees them for free.
 
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an

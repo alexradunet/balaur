@@ -174,6 +174,19 @@ func init() {
 			// no params — the full tracked overview + habits
 		},
 		{
+			Type:  "tasks",
+			Label: "Tasks",
+			Icon:  "scroll",
+			W:     4,
+			H:     20,
+			Params: []ParamSpec{
+				{Name: "status", Enum: []string{"open", "done", "all"}, Doc: "filter by task status (default: open)"},
+				{Name: "bucket", Enum: []string{"overdue", "today", "upcoming", "someday"}, Doc: "narrow OPEN tasks to one due bucket (ignored unless status is open)"},
+				{Name: "terms", Doc: "space-separated search terms matched against title and notes (ANDed)"},
+				{Name: "limit", Doc: "maximum cards to draw (default 12, max 50)"},
+			},
+		},
+		{
 			Type:  "settings",
 			Label: "Settings",
 			Icon:  "key",

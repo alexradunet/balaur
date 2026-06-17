@@ -56,9 +56,10 @@ func ParseUICard(s string) (typ, query, rest string, ok bool) {
 	return typ, query, rest, true
 }
 
-// UITools returns the card_show tool.
+// UITools returns the card_show and show_cards tools. (089 retired the board
+// tools; 090 added show_cards for in-chat card clusters.)
 func UITools(app core.App) []agent.Tool {
-	return []agent.Tool{cardShowTool(app)}
+	return []agent.Tool{cardShowTool(app), showCardsTool(app)}
 }
 
 func cardShowTool(_ core.App) agent.Tool {

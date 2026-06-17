@@ -18,10 +18,12 @@ import (
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
+	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/ui"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 )
 
 // queryToMap converts url.Values to a flat map[string]string (first value
@@ -127,6 +129,22 @@ func cardErrorStrip(msg string) template.HTML {
 func (h *handlers) uicardBody(typ, query string) template.HTML {
 	vals, _ := url.ParseQuery(query)
 	return h.cardHTML(typ, queryToMap(vals))
+}
+
+// artifactBody server-renders a hand-picked cluster of cards for an inline chat
+// artifact: each card is rendered via cardHTML (validated + error-stripped per
+// card) and wrapped in the chat.Cluster organism as one template.HTML.
+// Mirrors uicardBody for the single-card seam; a bad card error-strips without
+// blanking the whole cluster. Placed in the single mv.CardBody slot on both the
+// live stream (endTool) and the reload path (messageViews).
+func (h *handlers) artifactBody(title string, cs []cards.Card) template.HTML {
+	nodes := make([]g.Node, 0, len(cs))
+	for _, c := range cs {
+		nodes = append(nodes, g.Raw(string(h.cardHTML(c.Type, c.Params))))
+	}
+	var b strings.Builder
+	_ = chat.Cluster(chat.ClusterProps{Title: title, Cards: nodes}).Render(&b)
+	return template.HTML(b.String())
 }
 
 // proposalBody server-renders an approval/proposal card (a task, or a knowledge

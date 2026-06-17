@@ -194,6 +194,10 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		}
 		return
 	}
+	if title, cs, rest, ok := tools.ParseArtifact(ev.Text); ok {
+		s.endTool(rest, s.h.artifactBody(title, cs))
+		return
+	}
 	s.endTool(clipText(ev.Text, 2000), "")
 }
 
