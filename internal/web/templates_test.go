@@ -361,25 +361,14 @@ func TestChatbarPollAndDraft(t *testing.T) {
 	}
 	// Tool wells are permanently disabled (no handler yet); the textarea and
 	// submit button must NOT be disabled when the chat is ready.
-	if strings.Contains(readyOut, "<textarea") && strings.Contains(readyOut, "disabled") {
-		// Narrow check: textarea must not carry the disabled attr.
-		if strings.Contains(readyOut, "<textarea"+` name="message"`) &&
-			strings.Contains(readyOut, `<textarea name="message" placeholder`) &&
-			strings.Contains(readyOut, "disabled") {
-			// Only fail if the textarea itself is disabled (not just the tool wells).
-			if idx := strings.Index(readyOut, "<textarea"); idx >= 0 {
-				taSnippet := readyOut[idx:]
-				end := strings.Index(taSnippet, ">")
-				if end > 0 && strings.Contains(taSnippet[:end], "disabled") {
-					t.Error("ready draft textarea must not be disabled")
-				}
-			}
-		}
+	if strings.Contains(openingTag(readyOut, "<textarea"), "disabled") {
+		t.Error("ready draft textarea must not be disabled")
 	}
-	if strings.Contains(readyOut, `type="submit"`) {
-		idx := strings.Index(readyOut, `type="submit"`)
-		submitSnippet := readyOut[max(0, idx-100) : idx+20]
-		if strings.Contains(submitSnippet, "disabled") {
+	// Locate the submit button by finding type="submit" then walking back to its
+	// enclosing <button tag, and confirm that opening tag carries no disabled attr.
+	if idx := strings.Index(readyOut, `type="submit"`); idx >= 0 {
+		start := strings.LastIndex(readyOut[:idx], "<button")
+		if start >= 0 && strings.Contains(openingTag(readyOut[start:], "<button"), "disabled") {
 			t.Error("ready draft submit button must not be disabled")
 		}
 	}
@@ -396,4 +385,17 @@ func TestChatbarPollAndDraft(t *testing.T) {
 	if !strings.Contains(nb.String(), `data-on:interval__duration.2s="@get('/ui/chatbar')"`) {
 		t.Error("not-ready chatbar must poll every 2s via Datastar")
 	}
+}
+
+// openingTag returns the substring of html from the first occurrence of marker
+// up to and including the next '>'. Returns "" if marker is not found.
+func openingTag(html, marker string) string {
+	i := strings.Index(html, marker)
+	if i < 0 {
+		return ""
+	}
+	if j := strings.Index(html[i:], ">"); j >= 0 {
+		return html[i : i+j+1]
+	}
+	return html[i:]
 }
