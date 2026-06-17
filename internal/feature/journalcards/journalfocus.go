@@ -6,6 +6,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	data "maragu.dev/gomponents-datastar"
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/store"
@@ -65,7 +66,7 @@ func JournalCandleBody(v JournalFocusView) g.Node {
 		h.ID("journal-candle-body"),
 		h.Form(
 			h.Class("journal-form"),
-			g.Attr("data-on:submit__prevent", "@post('/ui/journal', {contentType:'form'})"),
+			data.On("submit", "@post('/ui/journal', {contentType:'form'})", data.ModifierPrevent),
 			h.Textarea(h.Name("text"), h.Rows("8"), h.Placeholder("What stays with you from this day?")),
 			h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Keep it")),
 		),

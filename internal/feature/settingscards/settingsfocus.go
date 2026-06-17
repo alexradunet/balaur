@@ -14,6 +14,7 @@ package settingscards
 import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
@@ -187,7 +188,7 @@ func ProfileIdentityCard(v ProfileView) g.Node {
 		P(Class("profile-hint"), g.Text("The name Balaur uses in the chat label when you speak.")),
 		Form(
 			Class("profile-name-form"),
-			g.Attr("data-on:submit__prevent", "@post('/ui/profile/name', {contentType:'form'})"),
+			data.On("submit", "@post('/ui/profile/name', {contentType:'form'})", data.ModifierPrevent),
 			Label(For("display_name"), g.Text("Your name")),
 			Div(Class("profile-name-row"),
 				Input(
@@ -233,7 +234,7 @@ func ProfileSoulSection(v ProfileView) g.Node {
 		}
 		grid = append(grid,
 			Form(
-				g.Attr("data-on:submit__prevent", "@post('/ui/profile/soul-avatar', {contentType:'form'})"),
+				data.On("submit", "@post('/ui/profile/soul-avatar', {contentType:'form'})", data.ModifierPrevent),
 				Input(Type("hidden"), Name("soul_avatar"), Value(opt.Key)),
 				Button(append(btnAttrs,
 					Img(Class("px"), Src(opt.URL), Alt(""), g.Attr("decoding", "async")),
@@ -270,7 +271,7 @@ func ProfileBalaurSection(v ProfileView) g.Node {
 		}
 		grid = append(grid,
 			Form(
-				g.Attr("data-on:submit__prevent", "@post('/ui/profile/balaur-avatar', {contentType:'form'})"),
+				data.On("submit", "@post('/ui/profile/balaur-avatar', {contentType:'form'})", data.ModifierPrevent),
 				Input(Type("hidden"), Name("balaur_avatar"), Value(opt.Key)),
 				Button(append(btnAttrs,
 					Img(Class("px"), Src(opt.URL), Alt(""), g.Attr("decoding", "async")),
@@ -316,13 +317,13 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 			A(
 				Class(profileLinkClass),
 				Href("/focus/settings?section=profile"),
-				g.Attr("data-on:click__prevent", "@get('/focus/settings?section=profile')"),
+				data.On("click", "@get('/focus/settings?section=profile')", data.ModifierPrevent),
 				g.Text("Profile"),
 			),
 			A(
 				Class(modelsLinkClass),
 				Href("/focus/settings?section=models"),
-				g.Attr("data-on:click__prevent", "@get('/focus/settings?section=models')"),
+				data.On("click", "@get('/focus/settings?section=models')", data.ModifierPrevent),
 				g.Text("Models"),
 			),
 		),

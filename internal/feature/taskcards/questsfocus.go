@@ -5,6 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
@@ -120,7 +121,7 @@ func QuestRail(v QuestsFocusView) g.Node {
 			}
 			btn := []g.Node{
 				Class(cls),
-				g.Attr("data-on:click", "@get('/ui/tasks/"+t.ID+"/card')"),
+				data.On("click", "@get('/ui/tasks/"+t.ID+"/card')"),
 				g.Text(t.Title),
 			}
 			if t.DueLine != "" {
@@ -148,7 +149,7 @@ func QuestRail(v QuestsFocusView) g.Node {
 		for _, t := range v.DoneRecently {
 			doneItems = append(doneItems, Li(g.El("button",
 				Class("quest-row"),
-				g.Attr("data-on:click", "@get('/ui/tasks/"+t.ID+"/card')"),
+				data.On("click", "@get('/ui/tasks/"+t.ID+"/card')"),
 				g.Text(t.Title),
 			)))
 		}
