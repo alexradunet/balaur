@@ -493,12 +493,13 @@ func TestUICardHistoryRendersCardInline(t *testing.T) {
 func TestDayCardArtifact(t *testing.T) {
 	// GET /ui/show/day?date=... injects the full day view (ui.Focus) into chat.
 	scenario := tests.ApiScenario{
-		Name:            "GET /ui/show/day?date=2026-01-15 injects day card artifact",
-		Method:          "GET",
-		URL:             "/ui/show/day?date=2026-01-15",
-		TestAppFactory:  newWebApp,
-		ExpectedStatus:  200,
-		ExpectedContent: []string{"day-focus", "day-nav", "January"},
+		Name:               "GET /ui/show/day?date=2026-01-15 injects day card artifact",
+		Method:             "GET",
+		URL:                "/ui/show/day?date=2026-01-15",
+		TestAppFactory:     newWebApp,
+		ExpectedStatus:     200,
+		ExpectedContent:    []string{"day-focus", "January"},
+		NotExpectedContent: []string{"day-nav"},
 	}
 	scenario.Test(t)
 }
