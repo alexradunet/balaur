@@ -16,6 +16,16 @@
 </div>
 {{end}}
 
+{{- /* model_bar — the model switcher alone in the rail footer.
+     Carries id="chatbar" so patchChatbar patches it (Pin 2 — do NOT rename).
+     The 2s not-ready poll stays on it until a model is ready. */ -}}
+{{define "model_bar"}}
+<div class="chatbar chatbar-slim" id="chatbar"
+     {{if not .ChatReady}}data-on:interval__duration.2s="@get('/ui/chatbar')"{{end}}>
+  {{template "model_switcher" .}}
+</div>
+{{end}}
+
 {{define "model_switcher"}}
 <section class="model-switcher" aria-label="Model">
   <div class="model-switcher-head">
