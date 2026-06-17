@@ -1,0 +1,18 @@
+{
+  "b9664": {
+    "linux/amd64/cpu": {
+      "libllama.so": ""
+    },
+    "linux/amd64/vulkan": {
+      "libllama.so": "",
+      "libggml-vulkan.so": ""
+    },
+    "linux/arm64/cpu": {
+      "libllama.so": ""
+    },
+    "linux/arm64/vulkan": {
+      "libllama.so": "",
+      "libggml-vulkan.so": ""
+    }
+  }
+}

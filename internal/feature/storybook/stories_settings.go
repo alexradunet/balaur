@@ -2,6 +2,7 @@ package storybook
 
 import (
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
+	h "maragu.dev/gomponents/html"
 )
 
 // Story builders for the Models group — the settings surface where the owner
@@ -106,6 +107,49 @@ func modelspanelStory() Story {
 		},
 		Donts: []string{
 			"Imply remote/API models — v1 runs local GGUF only.",
+		},
+	}
+}
+
+func runtimesectionStory() Story {
+	return Story{
+		ID: "runtimesection", Group: "Models", Title: "Runtime section", Wide: true,
+		Blurb: "The Local AI runtime section inside the Models panel: one row per variant (CPU, Vulkan) showing install status and an Install action. Vulkan shows a host-loader note. Unsupported triples show a disabled button.",
+		Variants: []Variant{
+			{"cpu available · vulkan available", h.Section(h.Class("k-section"),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "cpu", Status: modelcards.StatusAvailable}),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "vulkan", Status: modelcards.StatusAvailable, NeedsHostLoader: true}),
+			)},
+			{"cpu installed · vulkan available", h.Section(h.Class("k-section"),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "cpu", Status: modelcards.StatusInstalled, Version: "b9664"}),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "vulkan", Status: modelcards.StatusAvailable, NeedsHostLoader: true}),
+			)},
+			{"both installed", h.Section(h.Class("k-section"),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "cpu", Status: modelcards.StatusInstalled, Version: "b9664"}),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "vulkan", Status: modelcards.StatusInstalled, Version: "b9664", NeedsHostLoader: true}),
+			)},
+			{"cpu installing", h.Section(h.Class("k-section"),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "cpu", Status: modelcards.StatusInstalling}),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "vulkan", Status: modelcards.StatusAvailable, NeedsHostLoader: true}),
+			)},
+			{"vulkan unsupported", h.Section(h.Class("k-section"),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "cpu", Status: modelcards.StatusAvailable}),
+				modelcards.RuntimeCard(modelcards.RuntimeView{Processor: "vulkan", Status: modelcards.StatusUnsupported, NeedsHostLoader: true}),
+			)},
+		},
+		Props: []Prop{
+			{"Processor", "string", "—", `"cpu" or "vulkan".`},
+			{"Status", "string", `"available"`, "installed · available · installing · unsupported."},
+			{"Version", "string", "—", "Installed version tag, e.g. b9664."},
+			{"NeedsHostLoader", "bool", "false", "When true, renders the Vulkan host-loader note."},
+		},
+		Dos: []string{
+			"Show both cpu and vulkan rows so the owner knows what's available.",
+			"State the Vulkan host-loader requirement clearly so the owner knows what's needed.",
+		},
+		Donts: []string{
+			"Offer Install for an unsupported triple — show a disabled 'Not supported' button instead.",
+			"Start install on boot — owner-click only.",
 		},
 	}
 }

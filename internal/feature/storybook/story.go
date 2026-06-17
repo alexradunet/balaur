@@ -101,6 +101,7 @@ var stories = []Story{
 	topbarStory(),
 	modelcardStory(),
 	modelspanelStory(),
+	runtimesectionStory(),
 }
 
 // Stories returns the ordered registry.

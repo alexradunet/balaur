@@ -185,14 +185,17 @@ lean and high-signal — add a rule only when it changes a real decision.
   path serves them yet.
 - The Johnny Decimal Markdown vault mirror (one-way export + git) is
   roadmap, not shipped. Do not claim it in user-facing copy until real.
-- Local inference is embedded (`internal/kronk`, the Kronk SDK). The native
-  llama.cpp library and GGUF model files are runtime assets, owner-supplied via
-  `BALAUR_LIB_PATH`/`BALAUR_CHAT_MODEL`; the engine never downloads them on boot.
-  CPU is the default; `BALAUR_PROCESSOR=vulkan` offloads to a Vulkan GPU (the host
-  loader + driver are host setup, outside the repo). Owner-initiated MODEL download
-  ships (plan 086); owner-initiated runtime download is plan 087. A richer model UI
-  is deferred. The full-engine dependency weight (~+33MB
-  binary, incl. AWS/gRPC/OTel via go-getter, MPL-2.0) is an accepted cost (plan 074).
+- Local inference is embedded (`internal/kronk`, the Kronk SDK). GGUF model files
+  are runtime assets, owner-supplied via `BALAUR_CHAT_MODEL` or the Models page;
+  the engine never downloads anything on boot. CPU is the default;
+  `BALAUR_PROCESSOR=vulkan` offloads to a Vulkan GPU (the host loader + driver are
+  host setup, outside the repo). Owner-initiated model download ships (plan 086);
+  owner-initiated runtime install (cpu + vulkan, into `LibRoot()` =
+  `~/.local/share/balaur/kronk/lib`) ships (plan 087). A richer model UI is
+  deferred. The full-engine dependency weight (~+33MB binary, incl.
+  AWS/gRPC/OTel via go-getter, MPL-2.0) is an accepted cost (plan 074).
+  Checksum manifest (`runtime_sums.json`) has placeholder sha256s until the reviewer
+  installs cpu+vulkan and fills real hashes at merge (plan 087 merge gate).
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
   content that may leave the box (logs, exports, audit entries).
 

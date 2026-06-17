@@ -10,13 +10,14 @@ import (
 
 // PanelView drives the Models settings section.
 type PanelView struct {
-	Processor       string      // "cpu" | "vulkan" — the active llama.cpp variant
-	Models          []ModelView // available/active/missing local models
-	Error           string      // optional error banner
-	OfficialCTAName string      // display name of the official model — shown in the CTA
-	OfficialCTAMeta string      // one-line: quant + params + license
-	ShowOfficialCTA bool        // true when official model not yet installed
-	RuntimeMissing  bool        // true when BALAUR_LIB_PATH is unset / lib absent
+	Processor       string        // "cpu" | "vulkan" — the active llama.cpp variant
+	RuntimeSection  []RuntimeView // per-variant runtime status rows (cpu + vulkan)
+	Models          []ModelView   // available/active/missing local models
+	Error           string        // optional error banner
+	OfficialCTAName string        // display name of the official model — shown in the CTA
+	OfficialCTAMeta string        // one-line: quant + params + license
+	ShowOfficialCTA bool          // true when official model not yet installed
+	RuntimeMissing  bool          // true when BALAUR_LIB_PATH is unset / lib absent
 }
 
 // Panel renders #models-panel: an optional error, the processor tag, the model
@@ -29,9 +30,16 @@ func Panel(v PanelView) g.Node {
 		kids = append(kids, ui.Alert(ui.AlertProps{Tone: "ember", Title: "Model error"}, g.Text(v.Error)))
 	}
 
-	if v.RuntimeMissing {
+	if len(v.RuntimeSection) > 0 {
+		rKids := []g.Node{h.Class("k-section")}
+		rKids = append(rKids, ui.SectionLabel(ui.SectionLabelProps{Text: "Local AI runtime"}))
+		for _, rv := range v.RuntimeSection {
+			rKids = append(rKids, RuntimeCard(rv))
+		}
+		kids = append(kids, h.Section(rKids...))
+	} else if v.RuntimeMissing {
 		kids = append(kids, ui.Alert(ui.AlertProps{Tone: "ember", Title: "Runtime not installed"},
-			g.Text("The local AI runtime isn't installed yet. Set BALAUR_LIB_PATH to a llama.cpp build (see the README env table), or install it from here once that lands (plan 087).")))
+			g.Text("The local AI runtime isn't installed yet. Set BALAUR_LIB_PATH to a llama.cpp build (see the README env table), or install it from the runtime section above.")))
 	}
 
 	kids = append(kids, h.Div(h.Class("k-heading"),

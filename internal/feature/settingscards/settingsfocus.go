@@ -15,11 +15,14 @@ package settingscards
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
+
+	"github.com/ardanlabs/kronk/sdk/tools/libs"
 
 	"github.com/alexradunet/balaur/internal/feature/headscards"
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
@@ -153,6 +156,29 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 		view.OfficialCTAMeta = official.Quant + " · " + official.Params + " · " + official.License
 	}
 	view.RuntimeMissing = !kronk.RuntimeInstalled()
+
+	// Build the runtime section: cpu and vulkan rows.
+	goos := runtime.GOOS
+	goarch := runtime.GOARCH
+	for _, proc := range []string{"cpu", "vulkan"} {
+		rv := modelcards.RuntimeView{
+			Processor:       proc,
+			NeedsHostLoader: proc == "vulkan",
+		}
+		if !libs.IsSupported(goarch, goos, proc) {
+			rv.Status = modelcards.StatusUnsupported
+		} else {
+			dir := kronk.InstallDirFor(kronk.LibRoot(), goarch, goos, proc)
+			vt, err := libs.ReadVersionFile(dir)
+			if err == nil && vt.Version != "" {
+				rv.Status = modelcards.StatusInstalled
+				rv.Version = vt.Version
+			} else {
+				rv.Status = modelcards.StatusAvailable
+			}
+		}
+		view.RuntimeSection = append(view.RuntimeSection, rv)
+	}
 
 	return view, nil
 }

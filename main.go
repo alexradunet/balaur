@@ -82,7 +82,7 @@ func main() {
 // runtime nor loads a model — both happen lazily on first inference, so a box
 // with no model and no native library still boots.
 func registerKronkEngine(app core.App) {
-	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibPath(), kronk.Processor()))
+	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibRoot(), kronk.Processor()))
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve

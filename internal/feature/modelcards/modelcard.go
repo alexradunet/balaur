@@ -23,6 +23,82 @@ const (
 	StatusDownloading = "downloading" // download in progress
 )
 
+// Runtime status values.
+const (
+	StatusInstalled   = "installed"   // runtime present + verified
+	StatusInstalling  = "installing"  // install in progress
+	StatusUnsupported = "unsupported" // not in the supported build matrix
+)
+
+// RuntimeView is the presentation model for one llama.cpp runtime variant.
+type RuntimeView struct {
+	Processor       string // "cpu" | "vulkan"
+	Status          string // StatusInstalled | StatusAvailable | StatusInstalling | StatusUnsupported
+	Version         string // e.g. "b9664" when installed; "" otherwise
+	NeedsHostLoader bool   // true for vulkan: host must supply libvulkan.so.1 + ICD
+}
+
+// RuntimeCard renders one runtime variant row with a status-appropriate action.
+func RuntimeCard(v RuntimeView) g.Node {
+	label := v.Processor
+	if len(label) > 0 {
+		label = string(label[0]-32) + label[1:] // capitalise first byte (ascii only; "cpu"→"CPU" not needed, just "Cpu")
+	}
+	// Use cleaner labels.
+	switch v.Processor {
+	case "cpu":
+		label = "CPU"
+	case "vulkan":
+		label = "Vulkan"
+	}
+
+	var detail string
+	switch v.Status {
+	case StatusInstalled:
+		detail = "Installed"
+		if v.Version != "" {
+			detail += " · " + v.Version
+		}
+	case StatusInstalling:
+		detail = "Installing…"
+	case StatusUnsupported:
+		detail = "Not available on this platform"
+	default:
+		detail = "Not installed"
+	}
+
+	var hostNote g.Node
+	if v.NeedsHostLoader {
+		hostNote = h.P(h.Class("model-detail-line"),
+			g.Text("Uses your GPU via Vulkan. Needs the host Vulkan loader + driver (e.g. mesa-vulkan-drivers); falls back to CPU if absent."))
+	}
+
+	var action g.Node
+	switch v.Status {
+	case StatusInstalled:
+		action = ui.Tag(g.Text("installed"))
+	case StatusInstalling:
+		action = ui.Button(ui.ButtonProps{Variant: "ghost", Size: "sm"}, h.Disabled(), g.Text("Installing…"))
+	case StatusUnsupported:
+		action = ui.Button(ui.ButtonProps{Variant: "ghost", Size: "sm"}, h.Disabled(), g.Text("Not supported"))
+	default:
+		action = h.Form(
+			data.On("submit", "@post('/ui/runtime/install', {contentType:'form'})", data.ModifierPrevent),
+			h.Input(h.Type("hidden"), h.Name("processor"), h.Value(v.Processor)),
+			ui.Button(ui.ButtonProps{Variant: "primary", Size: "sm"}, h.Type("submit"), g.Text("Install")),
+		)
+	}
+
+	return h.Div(h.Class("runtime-row"), h.ID("runtime-row-"+v.Processor),
+		h.Div(h.Class("runtime-row-info"),
+			h.Strong(g.Text(label)),
+			h.Span(h.Class("model-detail-line"), g.Text(detail)),
+			hostNote,
+		),
+		h.Div(h.Class("runtime-row-action"), action),
+	)
+}
+
 // ModelView is the presentation model for one local model.
 type ModelView struct {
 	ID            string // model record id — drives the element id and the action posts

@@ -37,3 +37,18 @@ func ModelsDir() string {
 	}
 	return filepath.Join(home, ".local", "share", "balaur", "models")
 }
+
+// LibRoot returns the llama.cpp libraries ROOT holding per-triple dirs
+// (<root>/<os>/<arch>/<processor>/). BALAUR_LIB_PATH wins; empty defaults to
+// ~/.local/share/balaur/kronk/lib. The installer, resolveLibDir, and
+// RuntimeInstalled all use this so install target == load source.
+func LibRoot() string {
+	if p := LibPath(); p != "" {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "lib"
+	}
+	return filepath.Join(home, ".local", "share", "balaur", "kronk", "lib")
+}

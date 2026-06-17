@@ -12,6 +12,9 @@ package kronk
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -78,25 +81,35 @@ func (e *Engine) ensureInit() error {
 }
 
 // resolveLibDir returns the directory yzma should dlopen the llama.cpp library
-// from for the given processor. A root containing version.json is honored as-is;
-// otherwise the per-triple variant dir <root>/<os>/<arch>/<processor>/ is used.
+// from for the given processor. If root directly contains a version.json it is
+// honored as-is (user-managed flat layout). Otherwise the per-triple variant dir
+// <root>/<os>/<arch>/<processor>/ is used — the same path InstallDirFor produces,
+// so install target always equals load source.
 func resolveLibDir(root, processor string) (string, error) {
 	if processor == "" {
 		processor = "cpu"
 	}
-	p, err := download.ParseProcessor(processor)
-	if err != nil {
+	// Validate processor string before returning any path.
+	if _, err := download.ParseProcessor(processor); err != nil {
 		return "", fmt.Errorf("invalid BALAUR_PROCESSOR %q (want cpu or vulkan): %w", processor, err)
 	}
-	opts := []libs.Option{libs.WithProcessor(p)}
+	// Honor a flat layout (version.json at root) for user-supplied builds.
 	if root != "" {
-		opts = append(opts, libs.WithLibPath(root))
+		if _, err := os.Stat(filepath.Join(root, "version.json")); err == nil {
+			return root, nil
+		}
 	}
-	lib, err := libs.New(opts...)
-	if err != nil {
-		return "", fmt.Errorf("resolving llama.cpp library path: %w", err)
+	// Standard per-triple layout: <root>/<os>/<arch>/<processor>/.
+	if root == "" {
+		// Fall back to SDK default resolution when no root is set.
+		opts := []libs.Option{}
+		lib, err := libs.New(opts...)
+		if err != nil {
+			return "", fmt.Errorf("resolving llama.cpp library path: %w", err)
+		}
+		return lib.LibsPath(), nil
 	}
-	return lib.LibsPath(), nil
+	return InstallDirFor(root, runtime.GOARCH, runtime.GOOS, processor), nil
 }
 
 // chatModel returns the resident chat model for ggufPath, loading it (and
