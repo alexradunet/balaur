@@ -1,0 +1,18 @@
+{
+  "b9664": {
+    "linux/amd64/cpu": {
+      "libllama.so": "552f47357c0cebb6887e983b9b0ee079a75e0b18dd0ae570a1d79f6181f2c43a"
+    },
+    "linux/amd64/vulkan": {
+      "libllama.so": "552f47357c0cebb6887e983b9b0ee079a75e0b18dd0ae570a1d79f6181f2c43a",
+      "libggml-vulkan.so": "2277c57ed00b6d3d46c8aa9a4b86fb057c55703d8d64455870f6b055f7589a35"
+    },
+    "linux/arm64/cpu": {
+      "libllama.so": ""
+    },
+    "linux/arm64/vulkan": {
+      "libllama.so": "",
+      "libggml-vulkan.so": ""
+    }
+  }
+}

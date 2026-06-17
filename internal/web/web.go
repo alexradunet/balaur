@@ -205,6 +205,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/model/install", h.installModel)
 	se.Router.POST("/ui/model/download", h.downloadOfficialModel)
 	se.Router.POST("/ui/model/download/cancel", h.cancelDownload)
+	se.Router.POST("/ui/runtime/install", h.installRuntime)
 	se.Router.POST("/ui/journal", h.journalWrite)
 	se.Router.GET("/ui/journal/prompt", h.journalPrompt)
 	se.Router.POST("/ui/day/{date}/journal", h.dayJournalWrite)

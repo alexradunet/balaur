@@ -9,7 +9,7 @@ import (
 // the configured path. It never loads or dlopen's anything — just a stat check.
 // Returns false when BALAUR_LIB_PATH is unset and the default dir is empty.
 func RuntimeInstalled() bool {
-	dir, err := resolveLibDir(LibPath(), Processor())
+	dir, err := resolveLibDir(LibRoot(), Processor())
 	if err != nil {
 		return false
 	}

@@ -386,6 +386,78 @@ func buildBalaurHeadOptions(app core.App) []AvatarOption {
 	return buildBalaurHeadOptionsFor(store.GetOwnerSetting(app, "balaur_avatar", "balaur-01"))
 }
 
+// runtimeInstallStoreKey is the app.Store() sidecar key for an in-flight runtime install cancel func.
+const runtimeInstallStoreKey = "runtimedownload.cancel"
+
+// kronkInstallRuntime is an injectable seam so tests can replace the real install without a network.
+var kronkInstallRuntime = kronk.InstallRuntime
+
+// installRuntime is a long-lived SSE handler that streams runtime installation
+// progress, then re-renders the panel. Mirrors downloadOfficialModel from 086.
+func (h *handlers) installRuntime(e *core.RequestEvent) error {
+	processor := e.Request.FormValue("processor")
+	if processor != "cpu" && processor != "vulkan" {
+		return h.modelsPanel(e, "processor must be cpu or vulkan")
+	}
+
+	// Guard single in-flight install.
+	if _, ok := h.app.Store().GetOk(runtimeInstallStoreKey); ok {
+		return h.modelsPanel(e, "")
+	}
+
+	ctx, cancel := context.WithCancel(e.Request.Context())
+	h.app.Store().Set(runtimeInstallStoreKey, cancel)
+	defer func() {
+		h.app.Store().Remove(runtimeInstallStoreKey)
+		cancel()
+	}()
+
+	store.Audit(h.app, "owner", "llm.runtime.install",
+		processor, true, map[string]any{"version": kronk.RuntimeVersion()})
+
+	sse := datastar.NewSSE(e.Response, e.Request)
+
+	// Patch the panel with an "installing" state upfront.
+	view, err := settingscards.BuildModelsPanelView(h.app, "")
+	if err == nil {
+		for i, rv := range view.RuntimeSection {
+			if rv.Processor == processor {
+				view.RuntimeSection[i].Status = modelcards.StatusInstalling
+				break
+			}
+		}
+		var b strings.Builder
+		_ = modelcards.Panel(view).Render(&b)
+		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+	}
+
+	// sseLogger forwards SDK progress log lines as a status morph.
+	sseLogger := func(_ context.Context, msg string, _ ...any) {
+		var b strings.Builder
+		b.WriteString(`<div id="runtime-dl-progress">`)
+		b.WriteString(template.HTMLEscapeString(msg))
+		b.WriteString(`</div>`)
+		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("runtime-dl-progress"), datastar.WithModeOuter())
+	}
+
+	installErr := kronkInstallRuntime(ctx, processor, sseLogger)
+
+	if installErr != nil {
+		if errors.Is(installErr, context.Canceled) {
+			store.Audit(h.app, "owner", "llm.runtime.install", processor, false,
+				map[string]any{"reason": "cancelled"})
+		} else {
+			store.Audit(h.app, "owner", "llm.runtime.install", processor, false,
+				map[string]any{"error": installErr.Error()})
+		}
+		return h.modelsPanel(e, installErr.Error())
+	}
+
+	store.Audit(h.app, "owner", "llm.runtime.install", processor, true,
+		map[string]any{"version": kronk.RuntimeVersion(), "installed": true})
+	return h.modelsPanel(e, "")
+}
+
 // buildBalaurHeadOptionsFor returns the roster with an explicit active key —
 // used by the /heads page where each head carries its own preference.
 // The roster is the single source from store.BalaurHeads.
