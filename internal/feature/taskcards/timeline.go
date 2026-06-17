@@ -92,7 +92,7 @@ func TimelineCard(v TLView) g.Node {
 
 func timelineBody(v TLView) g.Node {
 	if len(v.Days) == 0 {
-		return P(Class("k-empty"), g.Text("Nothing upcoming in the window."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing upcoming in the window."})
 	}
 	items := make([]g.Node, 0, len(v.Days))
 	for _, day := range v.Days {
@@ -103,7 +103,7 @@ func timelineBody(v TLView) g.Node {
 	}
 	// If all days had no items, render empty state
 	if len(items) == 0 {
-		return P(Class("k-empty"), g.Text("Nothing upcoming in the window."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing upcoming in the window."})
 	}
 	return Ul(Class("ucard-list tl-items"), g.Group(items))
 }

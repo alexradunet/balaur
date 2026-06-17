@@ -63,7 +63,7 @@ func HabitsCard(habits []HabitView) g.Node {
 
 func habitsBody(habits []HabitView) g.Node {
 	if len(habits) == 0 {
-		return P(Class("k-empty"), g.Text("No habits yet — add a recurring task in chat."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No habits yet — add a recurring task in chat."})
 	}
 	items := make([]g.Node, 0, len(habits))
 	for _, h := range habits {

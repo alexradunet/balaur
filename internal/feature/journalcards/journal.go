@@ -86,7 +86,7 @@ func journalParamLine(line string) g.Node {
 // journalBody renders the entry list or the empty-state paragraph.
 func journalBody(v JournalView) g.Node {
 	if len(v.Entries) == 0 {
-		return P(Class("k-empty"), g.Text("No journal entries yet."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No journal entries yet."})
 	}
 	items := make([]g.Node, 0, len(v.Entries))
 	for _, e := range v.Entries {

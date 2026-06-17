@@ -62,7 +62,7 @@ func MemoryCard(v MemoryView) g.Node {
 
 func memoryBody(v MemoryView) g.Node {
 	if len(v.Rows) == 0 {
-		return h.P(h.Class("k-empty"), g.Text("No active memories yet."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No active memories yet."})
 	}
 	items := make([]g.Node, 0, len(v.Rows))
 	for _, row := range v.Rows {
@@ -190,7 +190,7 @@ func MemoryManageCard(v MemoryManageView) g.Node {
 
 func memoryManageBody(v MemoryManageView) g.Node {
 	if len(v.Proposed) == 0 && len(v.Active) == 0 {
-		return h.P(h.Class("k-empty"), g.Text("Nothing yet — Memory appears as Balaur proposes."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing yet — Memory appears as Balaur proposes."})
 	}
 
 	var sections []g.Node

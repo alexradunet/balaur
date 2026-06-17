@@ -75,7 +75,7 @@ func TodayCard(v TodayView) g.Node {
 
 func todayBody(v TodayView) g.Node {
 	if len(v.Rows) == 0 {
-		return P(Class("k-empty"), g.Text("Nothing due today."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing due today."})
 	}
 	items := make([]g.Node, 0, len(v.Rows))
 	for _, row := range v.Rows {

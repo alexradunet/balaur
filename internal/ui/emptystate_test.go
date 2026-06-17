@@ -37,3 +37,20 @@ func TestEmptyStateDefaultTitle(t *testing.T) {
 		t.Errorf("bare empty state should omit crest/line/action: %s", got)
 	}
 }
+
+func TestEmptyStateCompact(t *testing.T) {
+	// Must be byte-identical to the legacy hand-rolled P(Class("k-empty"), g.Text(...))
+	// so pinned feature-card tests stay green.
+	got := render(t, ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing due today."}))
+	if got != `<p class="k-empty">Nothing due today.</p>` {
+		t.Errorf("compact empty state not byte-stable; got: %s", got)
+	}
+}
+
+func TestEmptyStateCompactTitleFallback(t *testing.T) {
+	// When Line is empty, Title is used as the message.
+	got := render(t, ui.EmptyState(ui.EmptyProps{Compact: true, Title: "No items yet."}))
+	if got != `<p class="k-empty">No items yet.</p>` {
+		t.Errorf("compact title fallback not working; got: %s", got)
+	}
+}

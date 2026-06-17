@@ -9,6 +9,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // QuestGroupView is one rhythm group in the quest-log rail.
@@ -141,7 +142,7 @@ func QuestRail(v QuestsFocusView) g.Node {
 	}
 
 	if len(v.Groups) == 0 {
-		kids = append(kids, P(Class("k-empty"), g.Text("No quests yet. Speak one in the chat.")))
+		kids = append(kids, ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests yet. Speak one in the chat."}))
 	}
 
 	if len(v.DoneRecently) > 0 {
@@ -174,7 +175,7 @@ func QuestsFocus(v QuestsFocusView) g.Node {
 	if v.First != nil {
 		detail = TaskCard(*v.First)
 	} else {
-		detail = P(Class("k-empty"), g.Text("No quests yet. Speak one in the chat."))
+		detail = ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests yet. Speak one in the chat."})
 	}
 	return Div(Class("quest-log"),
 		QuestRail(v),

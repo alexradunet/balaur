@@ -14,6 +14,7 @@ import (
 	. "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // focusMemoryCategories mirrors the migration constant and the web-side list.
@@ -46,9 +47,9 @@ func KnowledgeGrid(active []g.Node, kind, query string) g.Node {
 		return Div(Class("k-grid"), g.Group(active))
 	}
 	if query != "" {
-		return P(Class("k-empty"), g.Text(fmt.Sprintf("Nothing matches %q.", query)))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: fmt.Sprintf("Nothing matches %q.", query)})
 	}
-	return P(Class("k-empty"), g.Text("Nothing here yet. Speak with Balaur — when something is worth keeping, it will ask."))
+	return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing here yet. Speak with Balaur — when something is worth keeping, it will ask."})
 }
 
 // KnowledgeFocus renders the full knowledge manager focus body. Ports

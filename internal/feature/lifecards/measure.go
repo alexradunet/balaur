@@ -97,7 +97,7 @@ func measureBody(v MeasureView) g.Node {
 	if v.HasData {
 		return measureDataBody(v)
 	}
-	return P(Class("k-empty"), g.Text("No "+v.Kind+" entries yet."))
+	return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No " + v.Kind + " entries yet."})
 }
 
 func measureDataBody(v MeasureView) g.Node {

@@ -124,7 +124,7 @@ func SkillsCard(rows []SkillRow, paramLine string) g.Node {
 
 func skillsSummaryBody(rows []SkillRow) g.Node {
 	if len(rows) == 0 {
-		return P(Class("k-empty"), g.Text("No active skills yet."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No active skills yet."})
 	}
 	items := make([]g.Node, 0, len(rows))
 	for _, row := range rows {
@@ -231,7 +231,7 @@ func SkillsManageCard(proposed, active []SkillRecord) g.Node {
 
 func skillsManageBody(proposed, active []SkillRecord) g.Node {
 	if len(proposed) == 0 && len(active) == 0 {
-		return P(Class("k-empty"), g.Text("Nothing yet — Skills appears as Balaur proposes."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing yet — Skills appears as Balaur proposes."})
 	}
 
 	var nodes []g.Node
