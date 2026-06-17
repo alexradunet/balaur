@@ -23,3 +23,23 @@ func TestErrorStripRendersAndEscapes(t *testing.T) {
 		t.Fatalf("expected escaped text: %q", got)
 	}
 }
+
+func TestErrorStripIDRendersAndEscapes(t *testing.T) {
+	var b strings.Builder
+	if err := ui.ErrorStripID("myid", `<script>evil()</script>`).Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+	if !strings.Contains(got, `id="myid"`) {
+		t.Fatalf("missing id attribute: %q", got)
+	}
+	if !strings.Contains(got, `class="card-note card-note-error"`) {
+		t.Fatalf("missing error classes: %q", got)
+	}
+	if strings.Contains(got, "<script>") {
+		t.Fatalf("model/user string not escaped (firewall breach): %q", got)
+	}
+	if !strings.Contains(got, "&lt;script&gt;") {
+		t.Fatalf("expected escaped text: %q", got)
+	}
+}

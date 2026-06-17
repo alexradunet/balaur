@@ -1,7 +1,10 @@
 package ui_test
 
 import (
+	"strings"
 	"testing"
+
+	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -20,5 +23,12 @@ func TestBreadcrumb(t *testing.T) {
 		`<span class="crumb-cur">Today</span></nav>`
 	if got != want {
 		t.Fatalf("\n got: %s\nwant: %s", got, want)
+	}
+}
+
+func TestBreadcrumbAttrsPassThrough(t *testing.T) {
+	got := render(t, ui.Breadcrumb([]ui.Crumb{{Label: "Home"}}, g.Attr("data-test", "1")))
+	if !strings.Contains(got, `data-test="1"`) {
+		t.Errorf("Breadcrumb: attrs not passed through to root nav: %s", got)
 	}
 }

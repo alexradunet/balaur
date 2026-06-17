@@ -34,6 +34,7 @@ func tabsStory() Story {
 			{"Label", "string", "—", "The tab text — short, lowercase in content."},
 			{"Href", "string", "—", "The filter route or Datastar target the tab links to."},
 			{"Active", "bool", "false", `Gold-fills the tab and sets aria-current="page".`},
+			{"Attrs", "[]g.Node", "nil", "Per-tab pass-through attributes — Datastar wiring for in-place switching."},
 		},
 		Dos: []string{
 			"Use to filter one collection in place (memory kinds, task states).",
@@ -60,6 +61,7 @@ func breadcrumbStory() Story {
 		Props: []Prop{
 			{"Label", "string", "—", "The crumb text."},
 			{"Href", "string", "—", "Where the crumb links; empty Href (or the last item) renders as the current page, not a link."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the nav element."},
 		},
 		Dos: []string{
 			"Use when the owner has drilled two or more levels in.",
@@ -91,6 +93,7 @@ func paginationStory() Story {
 			{"Total", "int", "1", "Total pages (1-based); clamped to at least 1."},
 			{"Page", "int", "1", "Current page (1-based); the raised gold chip."},
 			{"HrefFor", "func(int) string", "—", "Maps a page number to its URL — the slab links."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the nav element."},
 		},
 		Dos: []string{
 			"Use for long archives where infinite scroll would lose the owner.",

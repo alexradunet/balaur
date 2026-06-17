@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	g "maragu.dev/gomponents"
+
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -29,5 +31,12 @@ func TestListItemPlainFirst(t *testing.T) {
 	want := `<div class="list-item list-item-first"><div class="list-main"><div class="list-title">Read</div></div></div>`
 	if got != want {
 		t.Fatalf("\n got: %s\nwant: %s", got, want)
+	}
+}
+
+func TestListItemAttrsPassThrough(t *testing.T) {
+	got := render(t, ui.ListItem(ui.ListItemProps{Title: "x"}, g.Attr("data-test", "1")))
+	if !strings.Contains(got, `data-test="1"`) {
+		t.Errorf("ListItem: attrs not passed through to root: %s", got)
 	}
 }

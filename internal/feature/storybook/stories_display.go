@@ -29,6 +29,7 @@ func listStory() Story {
 		Props: []Prop{
 			{"Title", "string", "—", "Optional uppercase mono header; with none, the first row drops its top divider."},
 			{"Items", "[]ListItemProps", "nil", "The rows: {Icon, Title, Subtitle, Meta, MetaTone, First, Href}."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the list div."},
 		},
 		Dos: []string{
 			"Use for any homogeneous collection of rows.",
@@ -60,6 +61,7 @@ func calendarcellStory() Story {
 			{"Today", "bool", "false", "Gold ring."},
 			{"Selected", "bool", "false", "Gold fill."},
 			{"Dim", "bool", "false", "Fades an other-month day."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the button."},
 		},
 		Dos: []string{
 			"Compose into a 7-column grid for the month.",
@@ -118,6 +120,7 @@ func dayentryStory() Story {
 			{"Detail", "string", "—", "Optional sub-line under the title."},
 			{"Tone", "string", `"gold"`, `Node colour: "gold", "teal", "ember".`},
 			{"Last", "bool", "false", "Closes the rail below the node (the final entry)."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the entry div."},
 		},
 		Dos: []string{
 			"Use for the Day view and Life history.",

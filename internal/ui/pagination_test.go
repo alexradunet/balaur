@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	g "maragu.dev/gomponents"
+
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -33,5 +35,12 @@ func TestPaginationBounds(t *testing.T) {
 	}
 	if !strings.Contains(got, `>›</a>`) {
 		t.Errorf("next should be a link at page 1: %s", got)
+	}
+}
+
+func TestPaginationAttrsPassThrough(t *testing.T) {
+	got := render(t, ui.Pagination(ui.PagerProps{Total: 1, Page: 1, HrefFor: func(n int) string { return "#" }}, g.Attr("data-test", "1")))
+	if !strings.Contains(got, `data-test="1"`) {
+		t.Errorf("Pagination: attrs not passed through to root nav: %s", got)
 	}
 }
