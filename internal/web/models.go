@@ -209,7 +209,9 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 	ctx, cancel := context.WithCancel(e.Request.Context())
 	h.app.Store().Set(downloadStoreKey, cancel)
 	defer func() {
-		h.app.Store().Set(downloadStoreKey, nil)
+		// Remove (not Set-nil): GetOk is a presence check, so a nil value would
+		// leave the in-flight guard permanently tripped and block every later download.
+		h.app.Store().Remove(downloadStoreKey)
 		cancel()
 	}()
 
