@@ -60,8 +60,8 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	if strings.Contains(out, "model-choice-list") {
 		t.Error("chatbar should no longer render the inline model chooser")
 	}
-	if !strings.Contains(out, `href="/focus/settings?section=models"`) {
-		t.Error("chatbar should link to the settings models focus to manage models")
+	if !strings.Contains(out, `href="/ui/show/settings"`) {
+		t.Error("chatbar should link to the settings door to manage models")
 	}
 	// The form now lives in chat_draft, not in the chatbar.
 	if strings.Contains(out, `name="message"`) {

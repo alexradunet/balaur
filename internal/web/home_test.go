@@ -27,8 +27,8 @@ func TestHomeFullChat(t *testing.T) {
 			`class="sb-nav-icon"`, // pixel icon on sidebar items
 			// injecting sidebar items (no navigation — @get into #chat)
 			`data-on:click__prevent="@get(&#39;/ui/show/quests&#39;)"`,
-			// footer theme toggle
-			`class="theme-toggle"`,
+			// footer theme toggle (class includes sb-foot-mode since 091)
+			`class="theme-toggle sb-foot-mode"`,
 		},
 		NotExpectedContent: []string{
 			`<main id="main">`,                   // the old shell's #main content area is gone
