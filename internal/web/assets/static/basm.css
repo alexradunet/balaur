@@ -3331,6 +3331,17 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
      overlay — floats over page content; a narrower column avoids crowding
    See --w-chat-home / --w-chat-overlay in :root. Do NOT merge the two. */
 
+/* The wrapper is #dock's sole flex child — it must fill the column and re-
+   establish the flex context so #dock-convo fills and the composer pins. */
+.dock-v-rail,
+.dock-v-overlay,
+.dock-v-home {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .dock-v-home .chat,
 .dock-v-home .msg-draft,
 .dock-v-home .chatbar,
