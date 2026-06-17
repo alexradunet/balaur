@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,14 +11,13 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
-	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
 // tasks.go is the life-organization surface, now expressed as cards. The
 // operational list lives in the quests card's focus (taskcards.QuestsFocus —
-// the rhythm-grouped quest rail + detail, was /tasks?view=list). The month
+// a flat, rhythm-grouped task-card stack, was /tasks?view=list). The month
 // calendar and forward timeline are their own cards (ucard_calendar/ucard_timeline,
 // via buildCalendar/buildTimelineN in cards.go) — the future-facing mirror of the
 // recap telescope. Calendar and timeline are read-only projections of the
@@ -185,8 +183,8 @@ type tlView struct {
 
 // ---- card + transitions ----
 
-// taskCard loads one task card into the quests focus' quest-detail panel — the
-// rail row click is a Datastar @get that inner-patches #quest-detail.
+// taskCard loads one task card as a standalone SSE fragment (plan 093: the
+// quests artifact is a flat stack; no rail/detail pane).
 func (h *handlers) taskCard(e *core.RequestEvent) error {
 	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
 	if err != nil {
@@ -197,7 +195,7 @@ func (h *handlers) taskCard(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering task card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(html, datastar.WithSelectorID("quest-detail"), datastar.WithModeInner())
+	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
 	return nil
 }
 
@@ -260,21 +258,6 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering task card", err)
 	}
 	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
-
-	// The quests artifact (/ui/show/quests) shows a rail that must re-render after
-	// a transition so the row moves/strikes. A Datastar @post is a plain fetch,
-	// so we identify the surface by Referer. Detail-panel cards carry no "src",
-	// so they reach here (board tiles returned above).
-	if ref := e.Request.Header.Get("Referer"); ref != "" {
-		if u, err := url.Parse(ref); err == nil && u.Path == "/ui/show/quests" {
-			var rb strings.Builder
-			if err := taskcards.QuestRail(taskcards.BuildQuestsFocus(h.app)).Render(&rb); err != nil {
-				return e.InternalServerError("rendering quest rail", err)
-			}
-			_ = sse.PatchElements(rb.String(),
-				datastar.WithSelectorID("quest-rail"), datastar.WithModeOuter())
-		}
-	}
 	return nil
 }
 
