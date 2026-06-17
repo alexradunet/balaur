@@ -57,9 +57,9 @@ func ParseUICard(s string) (typ, query, rest string, ok bool) {
 	return typ, query, rest, true
 }
 
-// UITools returns the card_show, board_compose, and board_add_card tools.
+// UITools returns the card_show, show_cards, board_compose, and board_add_card tools.
 func UITools(app core.App) []agent.Tool {
-	return []agent.Tool{cardShowTool(app), boardComposeTool(app), boardAddCardTool(app)}
+	return []agent.Tool{cardShowTool(app), showCardsTool(app), boardComposeTool(app), boardAddCardTool(app)}
 }
 
 func cardShowTool(_ core.App) agent.Tool {
