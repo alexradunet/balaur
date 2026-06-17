@@ -62,8 +62,8 @@ func seedTaskWithRecur(t testing.TB, app *tests.TestApp, title, status, recur st
 	return rec
 }
 
-// TestQuestsArtifactEndpoint verifies GET /ui/show/quests injects a quests tile
-// artifact into the chat stream. The full quest-rail rendering (Dailies/Rituals/Quests
+// TestQuestsArtifactEndpoint verifies GET /ui/show/quests injects a quests
+// artifact into the chat stream. The flat stack rendering (Dailies/Rituals/Quests
 // groups) is tested at component level in internal/feature/taskcards.
 func TestQuestsArtifactEndpoint(t *testing.T) {
 	t.Run("quests tile artifact injected", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestQuestsArtifactEndpoint(t *testing.T) {
 			URL:             "/ui/show/quests",
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"quest-log", "Morning stretch"}, // full rail (ui.Focus), task present
+			ExpectedContent: []string{"quest-stack", "Morning stretch"}, // flat stack (ui.Focus), task present
 		}
 		scenario.Test(t)
 	})
@@ -94,14 +94,12 @@ func TestQuestsArtifactEndpoint(t *testing.T) {
 	})
 }
 
-// TestTaskTransitionRailRefresh verifies that a transition from the quests focus
-// (/ui/show/quests) emits a Datastar patch of the quest-rail in addition to the
-// card patch, while board and chat contexts get only the card patch. A Datastar
-// @post sends no HX-Current-URL, so the surface is identified by the Referer.
+// TestTaskTransitionRailRefresh verifies that a transition from any surface
+// emits only the in-place card patch (#tcard-{id} outer). The quests artifact
+// is now a flat stack — no separate rail OOB patch (plan 093).
 func TestTaskTransitionRailRefresh(t *testing.T) {
-	t.Run("from /ui/show/quests — response patches the quest-rail", func(t *testing.T) {
+	t.Run("from /ui/show/quests — response patches the card in place", func(t *testing.T) {
 		app := newWebApp(t)
-		// Seed two tasks so the rail has content after the transition.
 		rec := seedTaskWithRecur(t, app, "Complete me", "open", "daily", time.Time{})
 		seedTaskWithRecur(t, app, "Stay open", "open", "daily", time.Time{})
 
@@ -114,19 +112,20 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 				"Content-Type": "application/x-www-form-urlencoded",
 				"Referer":      "http://127.0.0.1:8090/ui/show/quests",
 			},
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"datastar-patch-elements", `id="quest-rail"`, "tcard-"},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"datastar-patch-elements", "tcard-"},
+			NotExpectedContent: []string{`id="quest-rail"`},
 		}
 		scenario.Test(t)
 	})
 
-	t.Run("from /ui/show/quests — completed task absent from rail open groups", func(t *testing.T) {
+	t.Run("from /ui/show/quests — only card patch emitted", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Finish this quest", "open", "", time.Now().Add(time.Hour))
 
 		scenario := tests.ApiScenario{
-			Name:   "completed task not in rail groups after transition",
+			Name:   "single card patch, no rail",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
@@ -134,22 +133,20 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 				"Content-Type": "application/x-www-form-urlencoded",
 				"Referer":      "http://127.0.0.1:8090/ui/show/quests",
 			},
-			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus: 200,
-			// The rail patch should be present; since the only task was completed,
-			// the open-groups section shows the empty state (no quest-group sections).
-			ExpectedContent:    []string{`id="quest-rail"`, "No quests yet"},
-			NotExpectedContent: []string{`class="quest-group"`},
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"datastar-patch-elements", "tcard-"},
+			NotExpectedContent: []string{`id="quest-rail"`},
 		}
 		scenario.Test(t)
 	})
 
-	t.Run("no Referer — no quest-rail patch", func(t *testing.T) {
+	t.Run("no Referer — card patch only", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Board task", "open", "", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition without Referer — no rail",
+			Name:   "transition without Referer",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
@@ -164,12 +161,12 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 		scenario.Test(t)
 	})
 
-	t.Run("Referer from chat — no quest-rail patch", func(t *testing.T) {
+	t.Run("Referer from chat — card patch only", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Chat task", "open", "", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition from chat URL — no rail",
+			Name:   "transition from chat URL",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=dropped"),

@@ -8,18 +8,14 @@ import (
 )
 
 // TestDayFocusContract guards the class/markup contract the served CSS
-// (day-focus, day-nav, day-title, day-journal, recap-card, tl-items, …) depends
-// on — a port of the legacy day_focus template must keep these byte-for-byte.
+// (day-focus, day-title, day-journal, tl-items, …) depends on — nav-free (plan 093).
 // Note: gomponents HTML-escapes attribute values, so ' → &#39; and & → &amp;.
 func TestDayFocusContract(t *testing.T) {
 	v := journalcards.DayFocusView{
-		Date:       "2026-06-10",
-		Label:      "Wednesday, June 10 2026",
-		IsToday:    false,
-		Prev:       "2026-06-09",
-		Next:       "2026-06-11",
-		RecapStart: "1780000000",
-		Recap:      "You sorted the notary papers.",
+		Date:    "2026-06-10",
+		Label:   "Wednesday, June 10 2026",
+		IsToday: false,
+		Recap:   "You sorted the notary papers.",
 		Journal: []journalcards.DayJournalEntry{
 			{ID: "j1", Time: "21:40", Text: "A good, quiet day."},
 		},
@@ -33,18 +29,10 @@ func TestDayFocusContract(t *testing.T) {
 	got := renderNode(t, journalcards.DayFocus(v))
 
 	for _, want := range []string{
-		// Nav structure
+		// Root container
 		`<div class="day-focus">`,
-		`<div class="day-nav">`,
+		// Title heading (no nav wrapper)
 		`<h2 class="day-title">Wednesday, June 10 2026</h2>`,
-		// Prev link (gomponents escapes ' → &#39;)
-		`href="/ui/show/day?date=2026-06-09"`,
-		`@get(&#39;/ui/show/day?date=2026-06-09&#39;)`,
-		`◂ prev`,
-		// Next link (IsToday=false so next is shown)
-		`href="/ui/show/day?date=2026-06-11"`,
-		`@get(&#39;/ui/show/day?date=2026-06-11&#39;)`,
-		`next ▸`,
 		// Journal section
 		`<section class="k-section" id="day-journal">`,
 		`<h2 class="k-heading">Your thoughts</h2>`,
@@ -59,18 +47,9 @@ func TestDayFocusContract(t *testing.T) {
 		`@post(&#39;/ui/day/2026-06-10/journal&#39;, {contentType:&#39;form&#39;})`,
 		`<textarea name="text" rows="3" placeholder="What stays with you from this day?" required>`,
 		`<button class="btn btn-primary btn-sm" type="submit">Keep it</button>`,
-		// Recap section with text
+		// Recap section with text (no expander)
 		`<h2 class="k-heading">The day in summary</h2>`,
 		`<p class="recap-body">You sorted the notary papers.</p>`,
-		// Recap expander (only for non-today)
-		`<article class="recap-card recap-day">`,
-		`<span class="recap-label">The conversation, preserved</span>`,
-		`<button class="recap-expand" type="button"`,
-		// Verbatim recap-expand JS (& → &amp;)
-		`el.closest(&#39;.recap-card&#39;).classList.add(&#39;recap-open&#39;); @get(&#39;/ui/recap/expand?type=day&amp;start=1780000000&#39;)`,
-		`transcript`,
-		// recap-children id
-		`id="recap-children-day-1780000000"`,
 		// Done section
 		`<h2 class="k-heading">What got done</h2>`,
 		`<ul class="tl-items">`,
@@ -85,36 +64,31 @@ func TestDayFocusContract(t *testing.T) {
 			t.Errorf("DayFocus missing %q in:\n%s", want, got)
 		}
 	}
+
+	// Nav and expander must be absent
+	for _, absent := range []string{
+		`class="day-nav"`,
+		`class="day-nav-spacer"`,
+		`class="recap-card`,
+		`recap-expand`,
+		`recap-children`,
+	} {
+		if strings.Contains(got, absent) {
+			t.Errorf("DayFocus must not render %q (nav-free, plan 093)", absent)
+		}
+	}
 }
 
-// TestDayFocusToday: IsToday=true → no "next ▸", no recap expander, "today" tag,
-// and the recap section shows "Today is still being written."
+// TestDayFocusToday: IsToday=true → "today" tag, correct recap empty state,
+// no nav elements.
 func TestDayFocusToday(t *testing.T) {
 	v := journalcards.DayFocusView{
-		Date:       "2026-06-16",
-		Label:      "Tuesday, June 16 2026",
-		IsToday:    true,
-		Prev:       "2026-06-15",
-		Next:       "", // omitted for today
-		RecapStart: "1750032000",
+		Date:    "2026-06-16",
+		Label:   "Tuesday, June 16 2026",
+		IsToday: true,
 	}
 	got := renderNode(t, journalcards.DayFocus(v))
 
-	// "next ▸" must be absent
-	if strings.Contains(got, "next ▸") {
-		t.Error("today DayFocus must not render 'next ▸'")
-	}
-	// spacer must be present instead
-	if !strings.Contains(got, `<span class="day-nav-spacer">`) {
-		t.Error("today DayFocus must render day-nav-spacer instead of next link")
-	}
-	// recap expander must be absent
-	if strings.Contains(got, "recap-card") {
-		t.Error("today DayFocus must not render the recap expander")
-	}
-	if strings.Contains(got, "recap-children-day-") {
-		t.Error("today DayFocus must not render recap-children container")
-	}
 	// "today" tag present
 	if !strings.Contains(got, `<span class="tag">today</span>`) {
 		t.Error("today DayFocus must show the 'today' tag")
@@ -123,16 +97,20 @@ func TestDayFocusToday(t *testing.T) {
 	if !strings.Contains(got, "Today is still being written.") {
 		t.Error("today DayFocus must show 'Today is still being written.'")
 	}
+	// nav and expander absent
+	if strings.Contains(got, "day-nav") {
+		t.Error("today DayFocus must not render day-nav")
+	}
+	if strings.Contains(got, "recap-card") {
+		t.Error("today DayFocus must not render recap-card")
+	}
 }
 
 // TestDayFocusEmpty: no journal/done/logs → empty-state paragraphs, no lists.
 func TestDayFocusEmpty(t *testing.T) {
 	v := journalcards.DayFocusView{
-		Date:       "2026-01-15",
-		Label:      "Thursday, January 15 2026",
-		Prev:       "2026-01-14",
-		Next:       "2026-01-16",
-		RecapStart: "1736899200",
+		Date:  "2026-01-15",
+		Label: "Thursday, January 15 2026",
 	}
 	got := renderNode(t, journalcards.DayFocus(v))
 

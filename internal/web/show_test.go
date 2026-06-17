@@ -44,7 +44,7 @@ func TestUIShow(t *testing.T) {
 				"datastar-patch-elements",
 				"selector #chat",
 				"mode append",
-				"quest-log", // full quest surface (ui.Focus), not the summary tile
+				"quest-stack", // flat stack (ui.Focus), not the summary tile
 			},
 			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, res *http.Response) {
 				// Verify the persisted messages row: role=tool, origin="",

@@ -106,9 +106,8 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 
 }
 
-// TestQuestsArtifact verifies /ui/show/quests injects the quests card tile
-// into the chat stream (the full quest-rail renders in the storybook / via card_show
-// at Focus size; /ui/show sends a Tile card artifact).
+// TestQuestsArtifact verifies /ui/show/quests injects the quests card artifact
+// into the chat stream as a flat task-card stack (plan 093: no rail, no detail pane).
 func TestQuestsArtifact(t *testing.T) {
 	s := tests.ApiScenario{
 		Name:           "GET /ui/show/quests injects quests artifact",
@@ -117,8 +116,11 @@ func TestQuestsArtifact(t *testing.T) {
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
-			`class="quest-log"`, // full quest rail + detail (ui.Focus), not a summary tile
+			`class="quest-stack"`, // flat stack (ui.Focus), not a summary tile
+		},
+		NotExpectedContent: []string{
 			`id="quest-rail"`,
+			`class="quest-log"`,
 		},
 	}
 	s.Test(t)
