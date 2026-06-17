@@ -1,6 +1,9 @@
 package kronk
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+)
 
 // LibPath returns the llama.cpp library root (BALAUR_LIB_PATH). Empty hands
 // resolution to Kronk's own default root. A directory that already contains a
@@ -19,4 +22,18 @@ func Processor() string {
 		return p
 	}
 	return "cpu"
+}
+
+// ModelsDir returns the directory downloaded GGUF model files live in
+// (BALAUR_MODELS_DIR). Empty falls back to the XDG data dir
+// ~/.local/share/balaur/models. Lazy getter — no module-level global (AGENTS.md).
+func ModelsDir() string {
+	if d := os.Getenv("BALAUR_MODELS_DIR"); d != "" {
+		return d
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "models"
+	}
+	return filepath.Join(home, ".local", "share", "balaur", "models")
 }
