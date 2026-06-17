@@ -69,23 +69,4 @@ func TestHomeDockSelectorIDs(t *testing.T) {
 	s.Test(t)
 }
 
-// TestFocusDockSelectorIDs: the rendered FOCUS page (full document load) must
-// carry the same SSE selector ids as Home — the dock is identical on both pages.
-func TestFocusDockSelectorIDs(t *testing.T) {
-	s := tests.ApiScenario{
-		Name:           "GET /focus/quests dock carries all SSE selector ids",
-		Method:         "GET",
-		URL:            "/focus/quests",
-		TestAppFactory: newWebApp,
-		ExpectedStatus: 200,
-		ExpectedContent: []string{
-			`id="chat"`,
-			`id="dock-convo"`,
-			`id="chat-draft"`,
-			`id="nudge-poll"`,
-			`id="model-modal"`,
-			`data-signals:streaming`,
-		},
-	}
-	s.Test(t)
-}
+

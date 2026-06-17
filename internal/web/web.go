@@ -219,11 +219,10 @@ func Register(se *core.ServeEvent) error {
 	if devSeedEnabled() {
 		se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
 	}
-	// Settings shell, profile, and models are the settings card focus now
-	// (plan 056: /focus/settings?section=profile|models). The /settings,
+	// The settings artifact is served by /ui/show/settings; the /settings,
 	// /settings/{section}, /profile, and /models page routes were retired.
-	// The profile + model write endpoints below stay — the focus reuses the
-	// same fragment templates and SSE patch targets.
+	// The profile + model write endpoints below stay — they are shared with
+	// the settings artifact handlers.
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
@@ -236,16 +235,6 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/cards/{type}", h.uiCard)
 	// Deterministic artifact injection (plan 088): sidebar click → card in chat.
 	se.Router.GET("/ui/show/{type}", h.uiShow)
-	se.Router.GET("/focus/{type}", h.focusPage)
-	// Boards — owner-composed dashboards of typed cards (plan 029).
-	se.Router.GET("/boards", h.boardsIndex)
-	se.Router.GET("/boards/{id}", h.boardsPage)
-	se.Router.POST("/ui/boards", h.boardsCreate)
-	se.Router.POST("/ui/boards/{id}/rename", h.boardsRename)
-	se.Router.POST("/ui/boards/{id}/delete", h.boardsDelete)
-	se.Router.POST("/ui/boards/{id}/cards/add", h.boardsCardAdd)
-	se.Router.POST("/ui/boards/{id}/cards/{idx}/remove", h.boardsCardRemove)
-	se.Router.POST("/ui/boards/{id}/layout", h.boardsLayout)
 	return nil
 }
 

@@ -60,7 +60,7 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 	if strings.Contains(out, "model-choice-list") {
 		t.Error("chatbar should no longer render the inline model chooser")
 	}
-	if !strings.Contains(out, `href="/focus/settings?section=models"`) {
+	if !strings.Contains(out, `href="/ui/show/settings?section=models"`) {
 		t.Error("chatbar should link to the settings models focus to manage models")
 	}
 	// The form now lives in chat_draft, not in the chatbar.
@@ -106,20 +106,18 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 
 }
 
-// TestQuestsFocusListRenders verifies the quests focus renders the quest rail
-// via the live gomponents path (/focus/quests). Mirrors TestFocusQuestsShowsRail
-// in focus_test.go — kept here so the template_test suite covers the rail markers
-// independently of focus_test.go.
-func TestQuestsFocusListRenders(t *testing.T) {
+// TestQuestsArtifact verifies /ui/show/quests injects the quests card tile
+// into the chat stream (the full quest-rail renders in the storybook / via card_show
+// at Focus size; /ui/show sends a Tile card artifact).
+func TestQuestsArtifact(t *testing.T) {
 	s := tests.ApiScenario{
-		Name:           "GET /focus/quests renders the quest rail",
+		Name:           "GET /ui/show/quests injects quests artifact",
 		Method:         "GET",
-		URL:            "/focus/quests",
+		URL:            "/ui/show/quests",
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
-			`id="quest-rail"`,
-			`id="quest-detail"`,
+			`id="ucard-quests"`,
 		},
 	}
 	s.Test(t)
@@ -157,43 +155,18 @@ func TestLifeBodyRenders(t *testing.T) {
 	}
 }
 
-// TestDayPageRenders: the day focus renders via the live gomponents path
-// (/focus/day). Sections (journal, recap, done, log) and the prev/next nav
-// deep-link to /focus/day?date=… are asserted. For today, the transcript
-// expander is absent and the "still being written" empty state is shown.
-func TestDayPageRenders(t *testing.T) {
-	// Past date: transcript expander present, prev/next nav links present.
-	past := tests.ApiScenario{
-		Name:           "GET /focus/day?date=2026-06-09 renders day sections",
+// TestDayArtifact verifies /ui/show/day injects a day card tile artifact into chat.
+// Full DayFocus rendering is covered by internal/feature/journalcards/dayfocus_test.go.
+func TestDayArtifact(t *testing.T) {
+	scenario := tests.ApiScenario{
+		Name:           "GET /ui/show/day injects day artifact",
 		Method:         "GET",
-		URL:            "/focus/day?date=2026-06-09",
+		URL:            "/ui/show/day",
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
-		ExpectedContent: []string{
-			`id="day-journal"`,
-			"What got done",
-			"/focus/day?date=", // prev/next nav
-			"transcript",       // recap expander on a past day
-		},
+		ExpectedContent: []string{"ucard-day"},
 	}
-	past.Test(t)
-
-	// Today: no transcript expander, honest empty states.
-	today := tests.ApiScenario{
-		Name:           "GET /focus/day (today) omits transcript expander",
-		Method:         "GET",
-		URL:            "/focus/day",
-		TestAppFactory: newWebApp,
-		ExpectedStatus: 200,
-		ExpectedContent: []string{
-			`id="day-journal"`,
-			"still being written",
-			"Nothing marked done",
-			"Nothing logged",
-		},
-		NotExpectedContent: []string{"transcript"},
-	}
-	today.Test(t)
+	scenario.Test(t)
 }
 
 func TestToolIconRendersAsImg(t *testing.T) {

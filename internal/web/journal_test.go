@@ -12,17 +12,17 @@ import (
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
-// TestJournalPage: the candle now lives in the journal card's focus
-// (/focus/journal). The standalone /journal page is retired; this asserts the
-// write surface renders there.
-func TestJournalPage(t *testing.T) {
+// TestJournalArtifact: /ui/show/journal injects the journal tile artifact into
+// the chat stream. The full candle surface (JournalFocus) is tested at component
+// level in internal/feature/journalcards.
+func TestJournalArtifact(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:            "GET /focus/journal returns candle surface",
+		Name:            "GET /ui/show/journal injects journal artifact",
 		Method:          "GET",
-		URL:             "/focus/journal",
+		URL:             "/ui/show/journal",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"candle-focus", "Keep it", "journal-form"},
+		ExpectedContent: []string{"ucard-journal"},
 	}
 	scenario.Test(t)
 }
@@ -110,8 +110,8 @@ func TestJournalPrompt(t *testing.T) {
 }
 
 // TestJournalCandleIntegration proves that an entry written via POST /ui/journal
-// appears in the day card's focus (GET /focus/day?date={today}) — the candle and
-// the day surface share the same underlying journal records.
+// increments the day tile's journal count — the candle and the day surface share
+// the same underlying journal records.
 func TestJournalCandleIntegration(t *testing.T) {
 	const entryText = "The river was quiet at dawn and the fog had not yet lifted."
 
@@ -130,27 +130,26 @@ func TestJournalCandleIntegration(t *testing.T) {
 
 	today := now.Format(dayLayout)
 
-	// The entry must appear in the day focus for today.
+	// The day tile must show 1 journal entry after the write.
 	scenario := tests.ApiScenario{
-		Name:            "entry written via candle path appears in the day focus",
+		Name:            "day tile reflects journal entry written via candle",
 		Method:          "GET",
-		URL:             "/focus/day?date=" + today,
+		URL:             "/ui/show/day?date=" + today,
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
-		ExpectedContent: []string{entryText},
+		ExpectedContent: []string{"ucard-day", "1 journal"},
 	}
 	scenario.Test(t)
 }
 
 // TestJournalAndDayRoutesRetired guards against accidental re-registration of
-// the standalone /journal and /day pages. Like TestTasksRouteRetired: the routes
-// are unregistered, so PocketBase's index fallback redirects them to the board
-// home (302 → /boards) rather than serving their own page. Their write paths
-// (/ui/journal, /ui/day/…) and the journal/day card focuses live on.
+// the standalone /journal and /day pages. The routes are unregistered, so the
+// catch-all handler redirects them home (302 → /). Their write paths
+// (/ui/journal, /ui/day/…) and the journal/day card artifacts live on.
 func TestJournalAndDayRoutesRetired(t *testing.T) {
 	for _, url := range []string{"/journal", "/day/2026-01-15"} {
 		s := tests.ApiScenario{
-			Name:           "GET " + url + " is retired (302 → /boards via index fallback)",
+			Name:           "GET " + url + " is retired (302)",
 			Method:         "GET",
 			URL:            url,
 			TestAppFactory: newWebApp,

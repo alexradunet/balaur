@@ -8,24 +8,16 @@ import (
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
-// TestFocusUnknownTypeRendersShellError: a direct GET to an unknown card type
-// renders the Hearthwood shell error page (HTML, status 404), not the raw
-// PocketBase JSON ApiError.
-func TestFocusUnknownTypeRendersShellError(t *testing.T) {
+// TestUIShowUnknownTypeReturns404: GET /ui/show/<unknown> returns 404 for unknown
+// card types — the endpoint is an SSE fragment, so the status is the signal.
+func TestUIShowUnknownTypeReturns404(t *testing.T) {
 	s := tests.ApiScenario{
-		Name:           "GET /focus/<unknown> renders the shell error page, not JSON",
-		Method:         "GET",
-		URL:            "/focus/__nope__",
-		TestAppFactory: newWebApp,
-		ExpectedStatus: 404,
-		ExpectedContent: []string{
-			"<!doctype html>",
-			`class="empty"`, // the EmptyState body rendered in the shell
-			`href="/"`,      // Back home link
-		},
-		NotExpectedContent: []string{
-			`"status":404`, // not the raw JSON ApiError
-		},
+		Name:            "GET /ui/show/<unknown> returns 404",
+		Method:          "GET",
+		URL:             "/ui/show/__nope__",
+		TestAppFactory:  newWebApp,
+		ExpectedStatus:  404,
+		ExpectedContent: []string{"404"},
 	}
 	s.Test(t)
 }
