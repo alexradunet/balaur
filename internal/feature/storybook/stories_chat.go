@@ -187,3 +187,50 @@ func chatdockStory() Story {
 		},
 	}
 }
+
+func chatclusterStory() Story {
+	// Pre-rendered task card nodes as fixture children — the cluster organism
+	// never imports internal/feature or internal/cards; the web layer does that.
+	card1 := taskcards.TaskCard(taskcards.TaskView{
+		ID: "t1", Title: "Water the tomatoes", Status: "open",
+		DueLine: "due today 18:00", RecurLine: "every 2 days",
+	})
+	card2 := taskcards.TaskCard(taskcards.TaskView{
+		ID: "t2", Title: "Call the vet about Luna", Status: "open",
+		DueLine: "due yesterday", Overdue: true,
+	})
+	card3 := taskcards.TaskCard(taskcards.TaskView{
+		ID: "t3", Title: "Submit the quarterly report", Status: "done",
+	})
+	return Story{
+		ID: "chatcluster", Group: "Chat", Title: "Cluster", Wide: true,
+		Blurb: "One inline chat artifact holding N pre-rendered cards as a vertical stack. " +
+			"Produced by the show_cards agent tool. The organism takes pre-rendered g.Node children " +
+			"so internal/ui/chat stays free of feature/cards imports.",
+		Variants: []Variant{
+			{"titled · 2 cards", chat.Cluster(chat.ClusterProps{
+				Title: "Your open tasks",
+				Cards: []g.Node{card1, card2},
+			})},
+			{"untitled · 3 cards", chat.Cluster(chat.ClusterProps{
+				Cards: []g.Node{card1, card2, card3},
+			})},
+			{"single card", chat.Cluster(chat.ClusterProps{
+				Title: "Overdue",
+				Cards: []g.Node{card2},
+			})},
+		},
+		Props: []Prop{
+			{"Title", "string", `""`, "Optional heading rendered in .k-cluster-head. Omit for an untitled stack."},
+			{"Cards", "[]g.Node", "nil", "Pre-rendered card nodes in order. Rendered by the web layer (h.cardHTML) — the organism never renders cards itself."},
+		},
+		Dos: []string{
+			"Pass pre-rendered g.Node children from the web layer via h.cardHTML.",
+			"Let the gateway (endTool / messageViews) wrap the cluster in .k-inline — do not add k-inline inside the organism.",
+		},
+		Donts: []string{
+			"Import internal/feature or internal/cards from internal/ui/chat.",
+			"Add container chrome (kcard header/footer) inside the cluster — each child card owns its own chrome.",
+		},
+	}
+}

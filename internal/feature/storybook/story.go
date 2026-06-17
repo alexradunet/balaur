@@ -82,6 +82,7 @@ var stories = []Story{
 	chattoolrowStory(),
 	composerStory(),
 	chatdockStory(),
+	chatclusterStory(),
 	taskcardStory(),
 	knowledgecardStory(),
 	calendarcellStory(),

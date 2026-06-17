@@ -3473,3 +3473,14 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
   }
   html.app .app-shell .sb-side { display: none; }
 }
+
+/* ── Card cluster (plan 090: show_cards inline artifact) ──────────────────── */
+/* A vertical stack of pre-rendered cards as one conversation artifact.        */
+/* Sits inside .k-inline (added by the gateway); uses parchment surface tokens.*/
+.k-cluster { display: flex; flex-direction: column; gap: 0; }
+.k-cluster-head { padding: var(--space-2) 0 var(--space-3); }
+.k-cluster-head h3 { margin: 0; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); }
+.k-cluster-body { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* Bare task stack (plan 090: tasks cluster card) */
+.tasks-stack { display: flex; flex-direction: column; gap: var(--space-3); }
