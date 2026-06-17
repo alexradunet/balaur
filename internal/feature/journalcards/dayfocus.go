@@ -25,15 +25,13 @@ type DayLine struct {
 
 // DayFocusView is the day focus body's view-model.
 type DayFocusView struct {
-	Date       string
-	Label      string
-	IsToday    bool
-	Prev, Next string
-	Journal    []DayJournalEntry
-	Recap      string
-	RecapStart string // unix seconds, for the transcript expander
-	Done       []DayLine
-	Logs       []DayLine
+	Date    string
+	Label   string
+	IsToday bool
+	Journal []DayJournalEntry
+	Recap   string
+	Done    []DayLine
+	Logs    []DayLine
 }
 
 // BuildDayFocus assembles the DayFocusView from live data for the given date
@@ -51,14 +49,9 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 
 	today := dayStartOf(now)
 	v := DayFocusView{
-		Date:       d.Format(dayLayout),
-		Label:      d.Format("Monday, January 2 2006"),
-		IsToday:    d.Equal(today),
-		Prev:       d.AddDate(0, 0, -1).Format(dayLayout),
-		RecapStart: fmt.Sprintf("%d", d.Unix()),
-	}
-	if !v.IsToday {
-		v.Next = d.AddDate(0, 0, 1).Format(dayLayout)
+		Date:    d.Format(dayLayout),
+		Label:   d.Format("Monday, January 2 2006"),
+		IsToday: d.Equal(today),
 	}
 
 	var convID string
@@ -170,23 +163,10 @@ func DayJournal(v DayFocusView) g.Node {
 	return Section(kids...)
 }
 
-// DayFocus renders the day card's full-canvas focus body: prev/next nav, the
-// journal section, the recap, done tasks, and the day's log.
+// DayFocus renders the day card's full-canvas focus body: the journal section,
+// the recap summary, done tasks, and the day's log. Nav-free — plan 093.
 // Ports {{define "day_focus"}} from web/templates/day-focus.html.
 func DayFocus(v DayFocusView) g.Node {
-	var nextNode g.Node
-	if v.Next != "" {
-		nextNode = A(
-			Class("btn btn-ghost btn-sm"),
-			Href("/ui/show/day?date="+v.Next),
-			g.Attr("data-on:click__prevent",
-				"@get('/ui/show/day?date="+v.Next+"')"),
-			g.Text("next ▸"),
-		)
-	} else {
-		nextNode = Span(Class("day-nav-spacer"))
-	}
-
 	titleKids := []g.Node{Class("day-title"), g.Text(v.Label)}
 	if v.IsToday {
 		titleKids = append(titleKids, g.Text(" "), Span(Class("tag"), g.Text("today")))
@@ -201,31 +181,6 @@ func DayFocus(v DayFocusView) g.Node {
 		recapText = P(Class("k-sub"), g.Text("Today is still being written."))
 	default:
 		recapText = P(Class("k-sub"), g.Text("No summary kept for this day."))
-	}
-
-	recapSectionKids := []g.Node{
-		Class("k-section"),
-		H2(Class("k-heading"), g.Text("The day in summary")),
-		recapText,
-	}
-	if !v.IsToday {
-		recapSectionKids = append(recapSectionKids,
-			Article(Class("recap-card recap-day"),
-				Header(Class("recap-head"),
-					Span(Class("recap-label"), g.Text("The conversation, preserved")),
-					Button(
-						Class("recap-expand"),
-						Type("button"),
-						g.Attr("data-on:click",
-							"el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start="+v.RecapStart+"')"),
-						g.Text("transcript"),
-					),
-				),
-				Div(Class("recap-children"),
-					ID("recap-children-day-"+v.RecapStart),
-				),
-			),
-		)
 	}
 
 	// Done section
@@ -263,20 +218,13 @@ func DayFocus(v DayFocusView) g.Node {
 	}
 
 	return Div(Class("day-focus"),
-		Div(Class("day-nav"),
-			A(
-				Class("btn btn-ghost btn-sm"),
-				Href("/ui/show/day?date="+v.Prev),
-				g.Attr("data-on:click__prevent",
-					"@get('/ui/show/day?date="+v.Prev+"')"),
-				g.Text("◂ prev"),
-			),
-			H2(titleKids...),
-			nextNode,
-		),
+		H2(titleKids...),
 		DayJournal(v),
 		Div(Class("stitch")),
-		Section(recapSectionKids...),
+		Section(Class("k-section"),
+			H2(Class("k-heading"), g.Text("The day in summary")),
+			recapText,
+		),
 		Div(Class("stitch")),
 		Section(Class("k-section"),
 			H2(Class("k-heading"), g.Text("What got done")),
