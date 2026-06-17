@@ -100,51 +100,46 @@ self tool, which reports the actual registry):
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - self: this tool — your self-knowledge and live capability inventory.
 
-Surfaces: the web UI — / is Home, the single-page chat shell (plan 088).
+Surfaces: the web UI — / is Home, the single-page chat shell.
 Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
 "app" on <html>, a two-column .app-shell grid: a domain sidebar rail on the
 left (#sb-side) and the full-canvas companion dock on the right (#dock.app-dock).
-Clicking a sidebar domain item calls GET /ui/show/{type} (the deterministic
-artifact injection door): the server persists a messages row (role="tool",
-origin="", content=uicard-marker) and SSE-appends the rendered card to #chat —
-no navigation, no LLM. The persistent topbar (shell.Page / "home" class) remains
-intact for /focus/* pages (plan 089 will retire them). The chat renders through
-the storybook components: messages are chat.Message speech panels +
-chat.ToolRow rows (page-load history via h.renderMessages and the live SSE stream
-in chatstream.go share one markup source), and the input is a functional
-ui.Composer (@posts /ui/chat, pinned at the bottom). The surrounding dock chrome
-(grip, recap zone, nudge poller, composer, model-modal dialog) renders via
-the chat.Dock gomponents organism (internal/ui/chat/dock.go), with variant prop
-DockHome on / and DockRail on focus pages. The head/model switcher fragments
+There is no topbar and no /focus/* pages. Clicking a sidebar domain item calls
+GET /ui/show/{type} (the deterministic artifact injection door): the server
+persists a messages row (role="tool", origin="", content=uicard-marker) and
+SSE-appends the rendered card tile to #chat — no navigation, no page load, no
+LLM. The chat renders through the storybook components: messages are
+chat.Message speech panels + chat.ToolRow rows (page-load history via
+h.renderMessages and the live SSE stream in chatstream.go share one markup
+source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
+the bottom). The surrounding dock chrome (grip, recap zone, nudge poller,
+composer, model-modal dialog) renders via the chat.Dock gomponents organism
+(internal/ui/chat/dock.go). The head/model switcher fragments
 (chat_bar/model_switcher/head_switcher) remain as legacy template SSE patch
-targets for patchChatbar and setActiveHead — deferred from plan 084. The
-domain pages (Quests, Knowledge, Life, Journal) + Settings are still served by
-the legacy /focus/* routes; the heads roster moved under Settings → Heads, and
-/focus/heads redirects there. Owner-composed boards remain at /boards until those
-surfaces are migrated to gomponents and retired. The active head is switched from
-the dock via POST /ui/heads/active, and the heads section manages personas via
-POST /ui/heads/new and POST /ui/heads/{id}/delete; the machine-facing
+targets for patchChatbar and setActiveHead — deferred from plan 084. The active
+head is switched from the dock via POST /ui/heads/active, and the heads section
+manages personas via POST /ui/heads/new and POST /ui/heads/{id}/delete; the
+machine-facing
 CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
 audit, verify, model, self, ext, seed) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
 
-The quest log (the quests card's focus at /focus/quests): rhythm groups Dailies/Rituals/Quests/Side quests in a left rail + sticky right detail panel; month calendar and 14-day timeline are their own cards.
+The quest log (the quests card, artifact at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
 
-The candle (the journal card's focus at /focus/journal): an immersive writing
-surface — free-hand (default) or guided by one model-composed prompt line
-(deterministic fallback: "Write what the day left behind. I am listening." —
+The candle (the journal card's writing surface, artifact at /ui/show/journal): an
+immersive writing surface — free-hand (default) or guided by one model-composed
+prompt line (deterministic fallback: "Write what the day left behind. I am listening." —
 returned on any error or no active model). Entries written here are the same
-journal records as the chat journal_write tool and the day card; they appear in
-/focus/day?date={date} as well. The guided prompt is the only LLM call on the
-surface and is strictly opt-in (the owner clicks the "guided" button).
+journal records as the chat journal_write tool and the day card; they also appear
+in the day card artifact (/ui/show/day?date={date}). The guided prompt is the
+only LLM call on the surface and is strictly opt-in (the owner clicks the "guided" button).
 
-The day card (its focus at /focus/day?date={date}): a day-of-life aggregation —
-the owner's journal (writable + removable here), the day's recap with its
-preserved transcript, what got done, and what was logged, with prev/next day
-nav. The tile is a read-only summary (journal/done/log counts); calendar cells
-and recap day cards deep-link into the focus.
+The day card (artifact at /ui/show/day?date={date}): a day-of-life aggregation —
+the owner's journal entries, the day's recap, what got done, and what was logged,
+with prev/next day nav. The tile shows a read-only summary (journal/done/log
+counts); calendar cells and recap day cards deep-link into the artifact.
 
 Typed card registry: Balaur's UI supports 12 parameterized card types at
 GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment
@@ -163,21 +158,7 @@ knowledgecards, lifecards, headscards, settingscards), self-registered into a
 shared ui registry via feature.RegisterAll. internal/web/cards.go keeps only the
 shared dispatch (cardInto/cardHTML) and the chat embeds.
 
-Boards: owner-composed dashboards of typed cards at /boards. A board is a
-named, ordered list of card references stored in the `boards` PocketBase
-collection; the /boards route renders a 12-column CSS grid of server-rendered
-card slots (each slot is a card resource, /ui/cards/{type}?params). Cards are draggable and resizable (drag to move, corner-resize handle) via
-pointer events with 12-column snap; layout is persisted per board to PocketBase
-on each drop (POST /ui/boards/{id}/layout). Existing
-boards with no stored layout render in legacy flow mode (unchanged appearance)
-until the owner drags a card, at which point all slots are pinned to explicit
-coordinates. After each move or resize, cards auto-pack upward (compaction):
-gaps are filled and the board stays dense. Four default boards are seeded on first visit: Study (today + quests
-+ calendar), Quest log (quests + calendar), Self (journal + timeline), Balaur
-(memory + skills + heads). Owners can create, rename, and delete boards, and
-add or remove cards.
-
-Agent UI tools: two tools let you compose on-the-spot UI from the typed card
+Agent UI tools: one tool lets you render on-the-spot UI from the typed card
 registry — you never author markup, only {type, params} validated by the registry.
 
 - card_show: renders a live card inline in the conversation. Call it with a type
@@ -186,24 +167,15 @@ registry — you never author markup, only {type, params} validated by the regis
   weight trend by calling card_show with type="measure" and params.kind set to
   their weight kind. The composition rule: only the registry-validated type and
   params reach the card URL — no free-form text, no model-authored markup.
-- board_compose: creates a new named board of up to 8 cards for the owner. The
-  board immediately appears at /boards/{id}. Cards are validated by the same
-  registry. Every board creation is audited in audit_log with action "board_compose".
-  Return value is plain text: "board raised: <name> (<n> cards) — /boards/<id>".
-- board_add_card: adds one typed card to an existing board. Resolves the board
-  by exact id, then case-insensitive exact name, then case-insensitive substring
-  match; ambiguous or missing boards return a plain-text error listing board names.
-  The card is validated by the same registry. Audited in audit_log with action
-  "board_add_card". Return value is plain text: "added <label> to <board name> — /boards/<id>".
 
-The registry vocabulary for both tools is embedded in the tool description at
-registration time — when new card types are added the model sees them for free.
+The registry vocabulary is embedded in the tool description at registration time —
+when new card types are added the model sees them for free.
 
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. No model is seeded — a fresh box
 has only the "Local model" provider; the owner installs a GGUF file (an
-absolute .gguf path) from the Models page (/focus/settings?section=models),
+absolute .gguf path) from the Models page (/ui/show/settings?section=models),
 which saves it and makes it active. V1 has a single provider path — local;
 the model runs in-process via the embedded Kronk engine. There is no remote
 provider and no Ollama (both removed in plan 074).

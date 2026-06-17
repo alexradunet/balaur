@@ -13,7 +13,7 @@ web UI, and branded copy in the Go/PocketBase/Datastar shape.
 |---|---|---|
 | Identity | brand essence, character, heads, voice, messaging | this file |
 | Visual system | color roles, type, layout, motifs, component recipes | this file + `web/static/basm.css` |
-| Product UI | Datastar + `html/template` boards, cards & focuses served by the `balaur` binary | `web/templates/` |
+| Product UI | Datastar + gomponents cards served by the `balaur` binary | `internal/ui/`, `internal/feature/` |
 | Marks & avatars | crest, avatar library (soul + Balaur heads) | `web/static/` |
 
 If prose and code disagree, **`web/static/basm.css` wins for runtime values.**
@@ -86,23 +86,19 @@ never flatter you, say it this way?
 
 All copy must match this. Update it the moment shape changes.
 
-**Information architecture — Home is the companion; a domain rail is the nav.**
+**Information architecture — Home is the companion; a domain sidebar rail is the nav.**
 `/` is Home: the full-screen companion chat, the conversation Balaur is built
-around. The wood topbar carries the single top-level navigation — six domains
-(Quests, Knowledge, Life, Journal, Heads, Settings), the active one riding gold;
-there is no side rail. Each domain links its `/focus/{type}` surface
-(`/focus/quests`, `/focus/memory`, `/focus/lifelog`, `/focus/journal`,
-`/focus/heads`, `/focus/settings`); leaving Home drops the `home` class so the
-persistent dock chat returns to its right rail with the domain content in
-`#main`. A *card* is a typed, parameterized, server-rendered resource
-(`/ui/cards/{type}`) that renders as a tile or a full-canvas focus; *boards*
-(`/boards`) are owner-composed dashboards of card tiles (drag/resize, persisted),
-and chat can compose cards/boards too (`card_show` / `board_compose` /
-`board_add_card`). A **head switcher** in the dock changes the active persona
-(voice, avatar, tool set) without leaving or forking the conversation. Legacy
-flat routes (`/tasks`, `/journal`, `/day`, `/memory`, `/skills`, `/life`,
-`/heads`, `/models`, `/settings`, `/profile`) **302 → `/`** (Home); their write
-endpoints (`/ui/*`) live on, driving card focuses.
+around. There is no topbar. A domain sidebar rail (`#sb-side`) on the left
+carries the six domains (Quests, Knowledge, Life, Journal, Heads, Settings);
+clicking one calls `GET /ui/show/{type}`, which SSE-appends a rendered card
+artifact to `#chat` — no navigation, no page load, no LLM. A *card* is a typed,
+parameterized, server-rendered resource (`/ui/cards/{type}`) that renders as a
+tile; `card_show` is the single agent UI tool that embeds a card inline in chat.
+A **head switcher** in the dock changes the active persona (voice, avatar, tool
+set) without leaving or forking the conversation. Legacy flat routes (`/tasks`,
+`/journal`, `/day`, `/memory`, `/skills`, `/life`, `/heads`, `/models`,
+`/settings`, `/profile`) **302 → `/`** (Home); their write endpoints
+(`/ui/*`) live on.
 
 **True today:** single Go binary embedding PocketBase · Datastar web UI ·
 PocketBase collections for conversations, messages, memories, skills, heads,
@@ -126,7 +122,7 @@ the `tasks` collection — tiny recurrence DSL, completions logged to the
 idempotent catch-up after downtime, one batched message per tick,
 model-composed in the companion voice with a deterministic fallback,
 origin-tagged in `messages` and polled live into the open chat · the
-the quests focus (`/focus/quests`): quest-log list (rhythm groups: Dailies/Rituals/Quests/Side quests, rail + sticky detail), with month calendar and 14-day
+the quests card (artifact at `/ui/show/quests`): quest-log list (rhythm groups: Dailies/Rituals/Quests/Side quests), with month calendar and 14-day
 timeline as their own cards (read-only recurrence projections) · task cards inline in chat ·
 the morning briefing (once per local day, hour-gated with wake catch-up,
 idempotency derived from the origin-tagged message, quiet days skipped,
@@ -135,9 +131,9 @@ commitments and a present-moment line (date, time, timezone) injected
 into every chat turn, so relative dates resolve against the box's clock ·
 the owner-defined life log (`log_entry` / `entry_series` / `entry_drop`,
 free-form kinds, numeric or textual, backdatable, audited) and the lifelog
-card (tile + /focus/lifelog) mirroring what is actually logged — sparklines
+card (tile + artifact at /ui/show/lifelog) mirroring what is actually logged — sparklines
 for numeric kinds, recent lines for text kinds, live habit streaks · a one-line yesterday
-reflection in the briefing · the day card and its focus (/focus/day?date={date}):
+reflection in the briefing · the day card and its artifact (/ui/show/day?date={date}):
 the owner's journal (verbatim via journal_write in chat or the focus form,
 focus-side removal only), the day's recap with transcript expand, completions,
 and logs, with prev/next day nav — a read-only tile summary plus the full focus;
@@ -148,14 +144,14 @@ avatar picker in the settings card's profile focus (stored in `owner_settings`) 
 16-personality Balaur head library under `web/static/avatars/balaur-01..16.png`
 · a Balaur head medallion favicon at `web/static/logo.png` wired via
 `<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
-profile section (the settings card focus, `/focus/settings?section=profile`)
+profile section (the settings card, artifact at `/ui/show/settings?section=profile`)
 with display name, soul avatar picker (16 options),
 and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
 `localStorage` · switchable head personas: a dock head switcher
 (`/ui/heads/active`) chooses the active head, which flavors the master turn
 and filters its tools by capability group; built-in `balaur`/`scholar`/
 `planner`/`coach` plus owner-created customs managed from the heads card
-(`/ui/heads/new`, `/ui/heads/{id}/delete`, focus at `/focus/heads`), each with
+(`/ui/heads/new`, `/ui/heads/{id}/delete`, artifact at `/ui/show/heads`), each with
 its own Balaur avatar.
 
 the CLI speaks API v1 — every JSON output is enveloped `{v, kind, data}`
@@ -167,20 +163,14 @@ readiness (non-fatal), OS-access gate state, extension count.
 
 dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in chat
 (keyboard 1–9); a choice posts as the owner's turn · typed card registry — 14
-parameterized, server-rendered card resources under `/ui/cards/{type}` (the
-composition unit for boards and on-the-spot UI): today, quests, calendar,
+parameterized, server-rendered card resources under `/ui/cards/{type}`: today, quests, calendar,
 timeline, journal, day, measure, lines, memory, skills, heads, habits, lifelog,
 settings ·
-the candle (the journal card's focus, /focus/journal): immersive writing
+the candle (the journal card's artifact at /ui/show/journal): immersive writing
 surface — free-hand or guided by one model-composed prompt line (deterministic
-fallback), entries shared with the day card · boards — owner-composed dashboards of typed cards at /boards
-(Study/Quest log/Self/Balaur defaults); each board is a named, ordered list of
-card references in the `boards` collection; the `/boards` route renders a
-12-column CSS grid of server-rendered card slots; cards drag and resize (pointer +
-12-col snap), layout persisted per board — cards auto-pack upward after each move/resize ·
-on-the-spot UI — `card_show` embeds any typed card inline in chat; `board_compose`
-raises a new board from chat; `board_add_card` amends an existing board (all three
-tools compose from the typed registry only — Balaur cannot author markup) ·
+fallback), entries shared with the day card ·
+on-the-spot UI — `card_show` is the single agent UI tool: it embeds any typed
+card inline in chat (Balaur composes from the registry only — no free-form markup) ·
 FTS5 memory recall (bm25-ranked sidecar index, rebuilt on boot, synced on
 write; LIKE fallback when the index is unavailable).
 
@@ -399,7 +389,7 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
 
 The growth surface: Balaur proposes, the owner decides. One card template
 per kind serves chat (inline, server-rendered) and the memory & skills card
-focuses (`/focus/memory`, `/focus/skills`).
+artifacts (`/ui/show/memory`, `/ui/show/skills`).
 
 - **Proposed cards** pop: `--gold-deep` border, ornate gold corner brackets
   (`.ornate`), ember notch, Approve as the only primary button. The section
@@ -452,8 +442,8 @@ reference this file. The owner picker writes the choice to `owner_settings`
 and the server resolves the URL dynamically; `soul.png` stays as a stable
 fallback equal to `soul-01`.
 
-The picker lives in the profile section of the settings card focus
-(`/focus/settings?section=profile`) as a set of option buttons,
+The picker lives in the profile section of the settings card
+(`/ui/show/settings?section=profile`) as a set of option buttons,
 one Datastar `@post` form per option, posting to `/ui/profile/soul-avatar`.
 Selection takes effect immediately and persists.
 
