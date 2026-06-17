@@ -43,6 +43,7 @@ func Page(p PageProps) g.Node {
 				h.Main(h.ID("main"), p.Body),
 			),
 			h.Aside(h.ID("dock"), p.Dock),
+			topnavDrawer(p.Active),
 		),
 	)
 	return g.Group([]g.Node{
@@ -103,12 +104,23 @@ func Topbar(active string) g.Node {
 			h.Aria("controls", "topnav-drawer"),
 			g.Text("☰"),
 		),
+	)
+}
+
+// topnavDrawer returns the off-canvas drawer and its scrim backdrop as a pair
+// of nodes intended for direct body-level placement. Rendering them outside the
+// sticky .topbar element puts them in the root stacking context, so their
+// z-index:60/55 beats the home dock's z-index:50 (which is also in the root
+// context). If they were children of .topbar (z-index:5, position:sticky) they
+// would be confined to that stacking context and painted below the dock.
+func topnavDrawer(active string) g.Node {
+	return g.Group([]g.Node{
 		h.Div(h.Class("topnav-backdrop"), g.Attr("onclick", "basmToggleTopnav()")),
 		h.Aside(h.ID("topnav-drawer"), h.Class("topnav-drawer"),
 			h.Aria("hidden", "true"),
 			h.Nav(append([]g.Node{h.Class("topnav-drawer-nav")}, topbarLinks(active)...)...),
 		),
-	)
+	})
 }
 
 // topbarLinks returns the six domain nav links shared by the desktop nav and
