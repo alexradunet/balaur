@@ -56,7 +56,7 @@ func TestCalendarCard(t *testing.T) {
 		// today cell gets cal-today class
 		`cal-today`,
 		// day link href pattern
-		`href="/focus/day?date=2026-06-07"`,
+		`href="/ui/show/day?date=2026-06-07"`,
 		// day number span
 		`class="cal-daynum"`,
 		// cal-item with time
@@ -64,7 +64,7 @@ func TestCalendarCard(t *testing.T) {
 		`09:00`,
 		// footer
 		`full calendar →`,
-		`href="/focus/calendar"`,
+		`href="/ui/show/calendar"`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
@@ -89,7 +89,7 @@ func TestCalendarCardDayLink(t *testing.T) {
 	out := renderCalendar(t, syntheticCalView())
 
 	// every date should produce a daylink
-	if !strings.Contains(out, `href="/focus/day?date=2026-06-01"`) {
+	if !strings.Contains(out, `href="/ui/show/day?date=2026-06-01"`) {
 		t.Errorf("missing daylink for 2026-06-01:\n%s", out)
 	}
 	if !strings.Contains(out, `class="cal-daylink"`) {

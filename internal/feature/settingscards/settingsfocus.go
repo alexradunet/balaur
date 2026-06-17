@@ -377,7 +377,7 @@ func settingsNavLink(active, section, label string) g.Node {
 	if active == section {
 		cls += " settings-nav-active"
 	}
-	href := "/focus/settings?section=" + section
+	href := "/ui/show/settings?section=" + section
 	return A(
 		Class(cls),
 		Href(href),

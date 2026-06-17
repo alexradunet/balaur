@@ -17,9 +17,9 @@ func TestSettingsCard(t *testing.T) {
 		`id="ucard-settings"`,
 		`class="kcard ucard ucard-settings"`,
 		"Settings",
-		`href="/focus/settings?section=profile"`, "Profile",
-		`href="/focus/settings?section=models"`, "Models &amp; APIs",
-		`href="/focus/settings"`, "open settings →",
+		`href="/ui/show/settings?section=profile"`, "Profile",
+		`href="/ui/show/settings?section=models"`, "Models &amp; APIs",
+		`href="/ui/show/settings"`, "open settings →",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)

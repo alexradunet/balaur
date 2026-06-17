@@ -98,7 +98,6 @@ var stories = []Story{
 	dayfocusStory(),
 	settingsfocusStory(),
 	sidebarStory(),
-	topbarStory(),
 	modelcardStory(),
 	modelspanelStory(),
 	runtimesectionStory(),

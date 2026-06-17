@@ -35,7 +35,7 @@ func TestJournalFocusContract(t *testing.T) {
 		`<div class="journal-list">`,
 		`<article class="journal-entry">`,
 		`<span class="tl-time">08:30</span>`,
-		`<a class="btn btn-ghost btn-sm" href="/focus/day?date=2026-06-16">→ this day</a>`,
+		`href="/ui/show/day?date=2026-06-16"`,
 		`<p class="journal-text">A quiet morning.</p>`,
 	} {
 		if !strings.Contains(got, want) {

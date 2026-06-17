@@ -217,7 +217,7 @@ func HasManage(typ string) bool {
 }
 
 // Card is a typed, parameterized card reference — the composition unit for
-// boards and on-the-spot UI. It matches the JSON shape stored in the boards
+// on-the-spot UI. It matches the JSON shape stored in card markers
 // collection's cards field and produced by the board_compose tool.
 //
 // Layout fields (X, Y, W, H) are optional — zero means "use the spec default".

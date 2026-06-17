@@ -93,7 +93,8 @@ func DayCard(v DayView) g.Node {
 			dayRecapLi(v),
 		),
 		Footer(Class("kcard-actions"),
-			A(Href("/focus/day?date="+v.Date), g.Text("open the day →")),
+			A(Href("/ui/show/day?date="+v.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+v.Date+"')"),
+				g.Text("open the day →")),
 		),
 	)
 }
@@ -111,7 +112,7 @@ func dayRecapLi(v DayView) g.Node {
 }
 
 // registerDay wires the day card into the ui registry: the compact tile for
-// boards/chat, the full day-of-life view for the focus page.
+// chat, the full day-of-life view for the focus page.
 func registerDay(app core.App) {
 	ui.RegisterCard("day", func(size ui.CardSize, params map[string]string) (g.Node, error) {
 		if size == ui.Focus {

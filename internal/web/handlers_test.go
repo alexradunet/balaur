@@ -115,31 +115,23 @@ func TestChoicesHistoryInert(t *testing.T) {
 func TestSettingsPages(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			// The settings shell is the settings card focus now (plan 056).
-			Name:            "GET /focus/settings?section=profile renders profile section",
+			// /ui/show/settings injects the settings tile artifact (not the full focus).
+			Name:            "GET /ui/show/settings injects settings artifact",
 			Method:          "GET",
-			URL:             "/focus/settings?section=profile",
+			URL:             "/ui/show/settings",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"identity-card", "settings-nav"},
-		},
-		{
-			Name:            "GET /focus/settings?section=models renders models section",
-			Method:          "GET",
-			URL:             "/focus/settings?section=models",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"models-panel"},
+			ExpectedContent: []string{"ucard-settings"},
 		},
 		{
 			// Retired route (plan 056): the settings shell is the settings card
-			// focus now (/focus/settings, covered by TestFocusSettings*). The old
-			// /settings page 302s to /boards.
+			// focus now (/ui/show/settings). The old /settings page 302s to /.
 			Name:           "GET /settings is retired (302)",
 			Method:         "GET",
 			URL:            "/settings",
 			ExpectedStatus: 302,
 		},
 		{
-			// Retired route (plan 056): the section pages folded into the focus.
+			// Retired route (plan 056): the section pages folded into the artifact.
 			Name:           "GET /settings/profile is retired (302)",
 			Method:         "GET",
 			URL:            "/settings/profile",
@@ -152,16 +144,14 @@ func TestSettingsPages(t *testing.T) {
 			ExpectedStatus: 302,
 		},
 		{
-			// Retired route (plan 056): /profile folded into the settings focus
-			// (/focus/settings?section=profile).
+			// Retired route (plan 056): /profile folded into /ui/show/settings?section=profile.
 			Name:           "GET /profile is retired (302)",
 			Method:         "GET",
 			URL:            "/profile",
 			ExpectedStatus: 302,
 		},
 		{
-			// Retired route (plan 056): /models folded into the settings focus
-			// (/focus/settings?section=models).
+			// Retired route (plan 056): /models folded into /ui/show/settings?section=models.
 			Name:           "GET /models is retired (302)",
 			Method:         "GET",
 			URL:            "/models",
@@ -169,26 +159,24 @@ func TestSettingsPages(t *testing.T) {
 		},
 		{
 			// Retired route (plan 053): the skills manager lives in the skills
-			// card focus + /settings/skills now. The old /skills 302s to /boards.
-			Name:           "GET /skills is retired (302 to /boards)",
+			// The old /skills 302s to /.
+			Name:           "GET /skills is retired (302)",
 			Method:         "GET",
 			URL:            "/skills",
 			ExpectedStatus: 302,
 		},
 		{
 			// Retired route (plan 053): the memory manager moved into the memory
-			// card focus (/focus/memory, covered by TestFocusMemoryShowsManager).
-			// The old /memory page 302s to /boards.
-			Name:           "GET /memory is retired (302 to /boards)",
+			// /ui/show/memory. The old /memory page 302s to /.
+			Name:           "GET /memory is retired (302)",
 			Method:         "GET",
 			URL:            "/memory",
 			ExpectedStatus: 302,
 		},
 		{
 			// Retired route (plan 055): the life overview moved into the lifelog
-			// card focus (/focus/lifelog, covered by TestFocusLifelogShowsOverview).
-			// The old /life page 302s to /boards.
-			Name:           "GET /life is retired (302 to /boards)",
+			// /ui/show/lifelog. The old /life page 302s to /.
+			Name:           "GET /life is retired (302)",
 			Method:         "GET",
 			URL:            "/life",
 			ExpectedStatus: 302,
@@ -296,29 +284,20 @@ func seedHeadRec(t testing.TB, app *tests.TestApp, name, _ string) *core.Record 
 	return rec
 }
 
-// TestHeadsFocus: the heads roster moved under Settings → Heads. The old
-// standalone /focus/heads page redirects (302) to /focus/settings?section=heads,
-// where the active head appears in the heads section body.
+// TestHeadsFocus: the heads card is served as an artifact via /ui/show/heads.
 func TestHeadsFocus(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			Name:           "/focus/heads redirects to the settings heads section",
-			Method:         "GET",
-			URL:            "/focus/heads",
-			TestAppFactory: newWebApp,
-			ExpectedStatus: 302,
-		},
-		{
-			Name:   "active head appears in the settings heads section",
+			Name:   "/ui/show/heads injects heads artifact with active head",
 			Method: "GET",
-			URL:    "/focus/settings?section=heads",
+			URL:    "/ui/show/heads",
 			TestAppFactory: func(tb testing.TB) *tests.TestApp {
 				app := newWebApp(tb)
 				seedHeadRec(tb, app, "Scout", "active")
 				return app
 			},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Scout", "ucard-heads", "settings-nav"},
+			ExpectedContent: []string{"Scout", "ucard-heads"},
 		},
 	}
 	for _, scenario := range scenarios {
@@ -328,13 +307,13 @@ func TestHeadsFocus(t *testing.T) {
 
 // TestRetiredHeadsPages: plan 054 deleted the GET /heads and
 // GET /heads/{id}/chat page routes. The roster now lives under Settings → Heads
-// (/focus/settings?section=heads). The old page routes no longer exist;
-// unmatched UI paths fall through to the board-home redirect (302 → /boards), so
-// old bookmarks self-heal onto the boards dashboard.
+// (/ui/show/settings?section=heads). The old page routes no longer exist;
+// unmatched UI paths fall through to the catch-all redirect (302 → /), so
+// old bookmarks self-heal onto the home.
 func TestRetiredHeadsPages(t *testing.T) {
 	t.Run("GET /heads is retired", func(t *testing.T) {
 		scenario := tests.ApiScenario{
-			Name:           "GET /heads retired (302 to /boards)",
+			Name:           "GET /heads retired (302)",
 			Method:         "GET",
 			URL:            "/heads",
 			TestAppFactory: newWebApp,
@@ -346,7 +325,7 @@ func TestRetiredHeadsPages(t *testing.T) {
 		app := newWebApp(t)
 		head := seedHeadRec(t, app, "Scout", "active")
 		scenario := tests.ApiScenario{
-			Name:           "GET /heads/{id}/chat retired (302 to /boards)",
+			Name:           "GET /heads/{id}/chat retired (302)",
 			Method:         "GET",
 			URL:            "/heads/" + head.Id + "/chat",
 			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
@@ -405,12 +384,12 @@ func TestGuardRejectsNonLoopbackHost(t *testing.T) {
 // present on Balaur's own surfaces (not PocketBase's /api or /_).
 func TestHardeningHeaders(t *testing.T) {
 	scenario := tests.ApiScenario{
-		Name:            "GET /focus/memory carries hardening headers",
+		Name:            "GET / carries hardening headers",
 		Method:          "GET",
-		URL:             "/focus/memory",
+		URL:             "/",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"k-active-grid"},
+		ExpectedContent: []string{"sb-side"},
 		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
 			for _, hdr := range []struct{ name, want string }{
 				{"X-Content-Type-Options", "nosniff"},
@@ -432,10 +411,10 @@ func TestOriginGuard(t *testing.T) {
 	scenario := tests.ApiScenario{
 		Name:            "origin guard allows localhost",
 		Method:          "GET",
-		URL:             "/focus/memory",
+		URL:             "/",
 		Headers:         map[string]string{"Host": "localhost"},
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"k-active-grid"},
+		ExpectedContent: []string{"sb-side"},
 	}
 	scenario.TestAppFactory = newWebApp
 	scenario.Test(t)
@@ -504,14 +483,15 @@ func TestUICardHistoryRendersCardInline(t *testing.T) {
 	}
 }
 
-func TestDayPageRendersOnEmptyDB(t *testing.T) {
+func TestDayCardArtifact(t *testing.T) {
+	// GET /ui/show/day?date=... injects a day card tile into the chat stream.
 	scenario := tests.ApiScenario{
-		Name:            "GET /focus/day?date=2026-01-15 renders 200 on empty DB",
+		Name:            "GET /ui/show/day?date=2026-01-15 injects day card artifact",
 		Method:          "GET",
-		URL:             "/focus/day?date=2026-01-15",
+		URL:             "/ui/show/day?date=2026-01-15",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"day-title", "January"},
+		ExpectedContent: []string{"ucard-day", "January"},
 	}
 	scenario.Test(t)
 }

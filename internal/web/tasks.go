@@ -261,12 +261,12 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	}
 	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
 
-	// The quest-log surface (now the quests focus at /focus/quests) shows a rail
-	// that must re-render after a transition so the row moves/strikes. A Datastar
-	// @post is a plain fetch, so we identify the surface by Referer. Detail-panel
-	// cards carry no "src", so they reach here (board tiles returned above).
+	// The quests artifact (/ui/show/quests) shows a rail that must re-render after
+	// a transition so the row moves/strikes. A Datastar @post is a plain fetch,
+	// so we identify the surface by Referer. Detail-panel cards carry no "src",
+	// so they reach here (board tiles returned above).
 	if ref := e.Request.Header.Get("Referer"); ref != "" {
-		if u, err := url.Parse(ref); err == nil && u.Path == "/focus/quests" {
+		if u, err := url.Parse(ref); err == nil && u.Path == "/ui/show/quests" {
 			var rb strings.Builder
 			if err := taskcards.QuestRail(taskcards.BuildQuestsFocus(h.app)).Render(&rb); err != nil {
 				return e.InternalServerError("rendering quest rail", err)

@@ -69,7 +69,8 @@ func JournalCard(v JournalView) g.Node {
 		),
 		journalBody(v),
 		Footer(Class("kcard-actions"),
-			A(Href("/focus/day?date="+v.TodayDate), g.Text("today's page →")),
+			A(Href("/ui/show/day?date="+v.TodayDate), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+v.TodayDate+"')"),
+				g.Text("today's page →")),
 		),
 	)
 }
@@ -105,7 +106,7 @@ func journalEntryNode(e JournalEntry) g.Node {
 }
 
 // registerJournal wires the journal card into the ui card registry: the compact
-// tile for boards/chat, the full candle for the focus page.
+// tile for chat, the full candle for the focus page.
 func registerJournal(app core.App) {
 	ui.RegisterCard("journal", func(size ui.CardSize, params map[string]string) (g.Node, error) {
 		if size == ui.Focus {

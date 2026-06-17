@@ -28,7 +28,7 @@ func TestSkillsCard_WithRows(t *testing.T) {
 		`/static/icons/key.png`,
 		`Skills`,
 		`limit: 6`,
-		`/focus/skills`,
+		`/ui/show/skills`,
 		`Weekly review`,
 		`enabled`, // enabled badge for first row
 		`End-of-week reflection`,
@@ -86,7 +86,7 @@ func TestSkillsCard_Footer(t *testing.T) {
 	_ = knowledgecards.SkillsCard(nil, "").Render(&b)
 	out := b.String()
 
-	if !strings.Contains(out, `href="/focus/skills"`) {
+	if !strings.Contains(out, `href="/ui/show/skills"`) {
 		t.Errorf("footer link missing:\n%s", out)
 	}
 	if !strings.Contains(out, "all skills →") {
@@ -298,7 +298,7 @@ func TestSkillsManageCard_WithProposedAndActive(t *testing.T) {
 		`class="kcard ucard ucard-manage ucard-skills-manage"`,
 		`/static/icons/key.png`,
 		`Skills`,
-		`href="/focus/skills"`,
+		`href="/ui/show/skills"`,
 		`manage all →`,
 		`Awaiting your word`,
 		`kcard-proposed`,

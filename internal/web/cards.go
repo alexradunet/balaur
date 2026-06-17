@@ -75,11 +75,10 @@ func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) e
 	return h.cardSizeInto(w, typ, params, ui.Tile)
 }
 
-// cardSizeInto renders one card at the given size. cardInto (board grid, chat
-// embeds, the /ui/cards endpoint) always passes ui.Tile; focus pages pass
-// ui.Focus via cardFocusHTML. A feature renderer that ignores the size argument
-// (most do) renders its tile in both cases — only cards with a real Focus branch
-// (e.g. lifelog) differ.
+// cardSizeInto renders one card at the given size. cardInto (chat embeds,
+// the /ui/cards endpoint) always passes ui.Tile; artifact pages pass ui.Focus.
+// A feature renderer that ignores the size argument (most do) renders its tile
+// in both cases — only cards with a real Focus branch (e.g. lifelog) differ.
 func (h *handlers) cardSizeInto(w io.Writer, typ string, params map[string]string, size ui.CardSize) error {
 	if fn, ok := ui.LookupCard(typ); ok {
 		node, err := fn(size, params)
@@ -92,25 +91,6 @@ func (h *handlers) cardSizeInto(w io.Writer, typ string, params map[string]strin
 	// (registered via feature.RegisterAll). An unregistered type is a bug or a
 	// hand-edited board; surface it rather than rendering a stale tile.
 	return fmt.Errorf("unhandled card type %q", typ)
-}
-
-// cardFocusHTML server-renders one card at Focus size — the full-canvas body a
-// focus page drops into #main. Mirrors cardHTML but passes ui.Focus, so a
-// feature that implements the CardSize.Focus branch returns its rich body.
-func (h *handlers) cardFocusHTML(typ string, params map[string]string) template.HTML {
-	if _, ok := cards.Get(typ); !ok {
-		return cardErrorStrip("no such card type: " + typ)
-	}
-	cleaned, err := cards.Validate(typ, params)
-	if err != nil {
-		return cardErrorStrip(err.Error())
-	}
-	var b strings.Builder
-	if err := h.cardSizeInto(&b, typ, cleaned, ui.Focus); err != nil {
-		h.app.Logger().Warn("focus card render failed", "type", typ, "err", err)
-		return cardErrorStrip("could not render this card")
-	}
-	return template.HTML(b.String())
 }
 
 // cardHTML server-renders one card to HTML for inline embedding in a board grid.

@@ -122,9 +122,9 @@ func TestSettingsFocusNavProfileActive(t *testing.T) {
 	for _, want := range []string{
 		`class="settings-nav"`,
 		`class="settings-nav-link settings-nav-active"`,
-		`href="/focus/settings?section=profile"`,
-		`data-on:click__prevent="@get(&#39;/focus/settings?section=profile&#39;)"`,
-		`href="/focus/settings?section=models"`,
+		`href="/ui/show/settings?section=profile"`,
+		`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)"`,
+		`href="/ui/show/settings?section=models"`,
 		`id="identity-card"`,
 	} {
 		if !strings.Contains(got, want) {
@@ -147,8 +147,8 @@ func TestSettingsFocusNavModelsActive(t *testing.T) {
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
 		`class="settings-nav"`,
-		`href="/focus/settings?section=models"`,
-		`data-on:click__prevent="@get(&#39;/focus/settings?section=models&#39;)"`,
+		`href="/ui/show/settings?section=models"`,
+		`data-on:click__prevent="@get(&#39;/ui/show/settings?section=models&#39;)"`,
 		`id="models-panel"`,
 	} {
 		if !strings.Contains(got, want) {
@@ -174,8 +174,8 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
 		`class="settings-nav"`,
-		`class="settings-nav-link settings-nav-active" href="/focus/settings?section=heads"`,
-		`data-on:click__prevent="@get(&#39;/focus/settings?section=heads&#39;)"`,
+		`class="settings-nav-link settings-nav-active" href="/ui/show/settings?section=heads"`,
+		`data-on:click__prevent="@get(&#39;/ui/show/settings?section=heads&#39;)"`,
 		`id="ucard-heads"`,
 		`Scout`,
 	} {
@@ -194,7 +194,7 @@ func TestSettingsFocusAppearanceSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{Section: "appearance"}
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
-		`class="settings-nav-link settings-nav-active" href="/focus/settings?section=appearance"`,
+		`class="settings-nav-link settings-nav-active" href="/ui/show/settings?section=appearance"`,
 		`id="appearance-section"`,
 		`class="appearance-themes"`,
 		`class="appearance-theme-btn"`,

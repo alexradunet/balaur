@@ -9,7 +9,7 @@
       open
     </button>
     {{else}}
-    {{if .Date}}<a class="recap-daylink" href="/focus/day?date={{.Date}}">visit</a>{{end}}
+    {{if .Date}}<a class="recap-daylink" href="/ui/show/day?date={{.Date}}">visit</a>{{end}}
     <button class="recap-expand" type="button"
             data-on:click="el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start={{.Start}}')">
       transcript

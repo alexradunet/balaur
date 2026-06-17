@@ -68,7 +68,7 @@ func LinesCard(v LinesView) g.Node {
 			Span(Class("kcard-meta"), g.Text(v.Kind)),
 		),
 		linesBody(v),
-		Footer(Class("kcard-actions"), A(Href("/focus/lifelog"), g.Text("life →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
 	)
 }
 

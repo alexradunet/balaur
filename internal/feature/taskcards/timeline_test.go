@@ -54,7 +54,7 @@ func TestTimelineCardStructure(t *testing.T) {
 		"09:00 Morning standup",
 		"Tomorrow · Tuesday, June 15",
 		"14:00 Team sync",
-		`href="/focus/timeline"`,
+		`href="/ui/show/timeline"`,
 		"full timeline →",
 	} {
 		if !strings.Contains(out, want) {

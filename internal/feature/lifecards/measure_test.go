@@ -56,7 +56,7 @@ func TestMeasureCard_HasData(t *testing.T) {
 		`r="3"`,
 		`class="life-change"`,
 		`+1.5 over 90d`,
-		`href="/focus/lifelog"`,
+		`href="/ui/show/lifelog"`,
 		`life →`,
 	} {
 		if !strings.Contains(out, want) {

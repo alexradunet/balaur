@@ -62,119 +62,57 @@ func seedTaskWithRecur(t testing.TB, app *tests.TestApp, title, status, recur st
 	return rec
 }
 
-// TestQuestsFocusQuestLog verifies the quests focus (GET /focus/quests, formerly
-// /tasks?view=list) renders the rhythm-grouped quest rail + detail.
-func TestQuestsFocusQuestLog(t *testing.T) {
-	t.Run("all four groups render in order with seeded tasks", func(t *testing.T) {
+// TestQuestsArtifactEndpoint verifies GET /ui/show/quests injects a quests tile
+// artifact into the chat stream. The full quest-rail rendering (Dailies/Rituals/Quests
+// groups) is tested at component level in internal/feature/taskcards.
+func TestQuestsArtifactEndpoint(t *testing.T) {
+	t.Run("quests tile artifact injected", func(t *testing.T) {
 		app := newWebApp(t)
-		// Seed one task per group.
-		dailyRec := seedTaskWithRecur(t, app, "Morning stretch", "open", "daily", time.Time{})
-		ritualRec := seedTaskWithRecur(t, app, "Weekly review", "open", "weekly:mon", time.Time{})
-		questRec := seedTaskWithRecur(t, app, "File the deed", "open", "", time.Now().Add(24*time.Hour))
-		sideRec := seedTaskWithRecur(t, app, "Someday write a poem", "open", "", time.Time{})
-
-		// Suppress unused variable warnings — IDs are referenced for assertions below.
-		_ = dailyRec
-		_ = ritualRec
-		_ = questRec
-		_ = sideRec
+		seedTaskWithRecur(t, app, "Morning stretch", "open", "daily", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:           "GET /focus/quests — four groups in order",
-			Method:         "GET",
-			URL:            "/focus/quests",
-			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus: 200,
-			ExpectedContent: []string{
-				"Dailies", "Rituals", "Quests", "Side quests",
-				"Morning stretch", "Weekly review", "File the deed", "Someday write a poem",
-				"quest-detail",
-			},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("daily task appears under Dailies group", func(t *testing.T) {
-		app := newWebApp(t)
-		seedTaskWithRecur(t, app, "Daily meditation", "open", "daily", time.Time{})
-
-		scenario := tests.ApiScenario{
-			Name:            "daily task under Dailies",
+			Name:            "GET /ui/show/quests injects quests artifact",
 			Method:          "GET",
-			URL:             "/focus/quests",
+			URL:             "/ui/show/quests",
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Dailies", "Daily meditation"},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("quest-detail contains first task tcard id", func(t *testing.T) {
-		app := newWebApp(t)
-		rec := seedTaskWithRecur(t, app, "First quest", "open", "daily", time.Time{})
-
-		scenario := tests.ApiScenario{
-			Name:            "quest-detail pre-rendered with first task",
-			Method:          "GET",
-			URL:             "/focus/quests",
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"quest-detail", "tcard-" + rec.Id},
+			ExpectedContent: []string{"ucard-quests", "Morning stretch"},
 		}
 		scenario.Test(t)
 	})
 
 	t.Run("zero tasks shows empty state", func(t *testing.T) {
 		scenario := tests.ApiScenario{
-			Name:            "GET /focus/quests empty — shows empty state",
+			Name:            "GET /ui/show/quests empty — shows empty state",
 			Method:          "GET",
-			URL:             "/focus/quests",
+			URL:             "/ui/show/quests",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"No quests yet"},
-		}
-		scenario.Test(t)
-	})
-
-	t.Run("groups appear in fixed order Dailies Rituals Quests Side quests", func(t *testing.T) {
-		app := newWebApp(t)
-		// Seed in reverse order to confirm fixed output order.
-		seedTaskWithRecur(t, app, "Side thing", "open", "", time.Time{})
-		seedTaskWithRecur(t, app, "One-off with due", "open", "", time.Now().Add(time.Hour))
-		seedTaskWithRecur(t, app, "Biweekly ritual", "open", "every:14d", time.Time{})
-		seedTaskWithRecur(t, app, "Daily standup", "open", "daily", time.Time{})
-
-		scenario := tests.ApiScenario{
-			Name:            "fixed group order",
-			Method:          "GET",
-			URL:             "/focus/quests",
-			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"Dailies", "Rituals", "Quests", "Side quests"},
+			ExpectedContent: []string{"No quests here yet."},
 		}
 		scenario.Test(t)
 	})
 }
 
 // TestTaskTransitionRailRefresh verifies that a transition from the quests focus
-// (/focus/quests) emits a Datastar patch of the quest-rail in addition to the
+// (/ui/show/quests) emits a Datastar patch of the quest-rail in addition to the
 // card patch, while board and chat contexts get only the card patch. A Datastar
 // @post sends no HX-Current-URL, so the surface is identified by the Referer.
 func TestTaskTransitionRailRefresh(t *testing.T) {
-	t.Run("from /focus/quests — response patches the quest-rail", func(t *testing.T) {
+	t.Run("from /ui/show/quests — response patches the quest-rail", func(t *testing.T) {
 		app := newWebApp(t)
 		// Seed two tasks so the rail has content after the transition.
 		rec := seedTaskWithRecur(t, app, "Complete me", "open", "daily", time.Time{})
 		seedTaskWithRecur(t, app, "Stay open", "open", "daily", time.Time{})
 
 		scenario := tests.ApiScenario{
-			Name:   "transition with Referer=/focus/quests",
+			Name:   "transition with Referer=/ui/show/quests",
 			Method: "POST",
 			URL:    "/ui/tasks/" + rec.Id + "/transition",
 			Body:   strings.NewReader("to=done"),
 			Headers: map[string]string{
 				"Content-Type": "application/x-www-form-urlencoded",
-				"Referer":      "http://127.0.0.1:8090/focus/quests",
+				"Referer":      "http://127.0.0.1:8090/ui/show/quests",
 			},
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
@@ -183,7 +121,7 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 		scenario.Test(t)
 	})
 
-	t.Run("from /focus/quests — completed task absent from rail open groups", func(t *testing.T) {
+	t.Run("from /ui/show/quests — completed task absent from rail open groups", func(t *testing.T) {
 		app := newWebApp(t)
 		rec := seedTaskWithRecur(t, app, "Finish this quest", "open", "", time.Now().Add(time.Hour))
 
@@ -194,7 +132,7 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 			Body:   strings.NewReader("to=done"),
 			Headers: map[string]string{
 				"Content-Type": "application/x-www-form-urlencoded",
-				"Referer":      "http://127.0.0.1:8090/focus/quests",
+				"Referer":      "http://127.0.0.1:8090/ui/show/quests",
 			},
 			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus: 200,
@@ -293,11 +231,11 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 
 // TestTasksRouteRetired guards against accidental re-registration of the
 // standalone /tasks page. The route is unregistered, so PocketBase's index
-// fallback redirects it to the board home (302 → /boards) rather than serving
+// the catch-all handler redirects it home (302 → /) rather than serving
 // its own page. The guard asserts that fallback, not a 200 task surface.
 func TestTasksRouteRetired(t *testing.T) {
 	s := tests.ApiScenario{
-		Name:           "GET /tasks is retired (302 → /boards via index fallback)",
+		Name:           "GET /tasks is retired (302)",
 		Method:         "GET",
 		URL:            "/tasks",
 		TestAppFactory: newWebApp,

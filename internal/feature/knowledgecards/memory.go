@@ -56,7 +56,7 @@ func MemoryCard(v MemoryView) g.Node {
 			g.If(v.ParamLine != "", h.Span(h.Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		memoryBody(v),
-		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/focus/memory"), g.Text("all memories →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/memory"), g.Attr("data-on:click__prevent", "@get('/ui/show/memory')"), g.Text("all memories →"))),
 	)
 }
 
@@ -73,7 +73,7 @@ func memoryBody(v MemoryView) g.Node {
 
 func memoryRow(row MemoryRow) g.Node {
 	return h.Li(h.Class("ucard-row"),
-		h.Span(h.Class("ucard-title"), h.A(h.Href("/focus/memory"), g.Text(row.Title))),
+		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/memory"), g.Text(row.Title))),
 		h.Span(h.Class("kcard-meta"), g.Text(row.Category)),
 		ui.Pips(row.Importance, 5, ""),
 	)
@@ -182,7 +182,7 @@ func MemoryManageCard(v MemoryManageView) g.Node {
 	return h.Article(
 		h.Class("kcard ucard ucard-manage ucard-memories-manage"), h.ID("ucard-memories-manage"),
 		ui.CardHead("/static/icons/tome.png", "Memory",
-			h.A(h.Class("kcard-meta"), h.Href("/focus/memory"), g.Text("manage all →")),
+			h.A(h.Class("kcard-meta"), h.Href("/ui/show/memory"), g.Attr("data-on:click__prevent", "@get('/ui/show/memory')"), g.Text("manage all →")),
 		),
 		memoryManageBody(v),
 	)
@@ -291,7 +291,7 @@ func mapMemoryRecords(recs []*core.Record) []MemoryRecord {
 // ---------------------------------------------------------------------------
 
 // registerMemory wires the memory card into the ui registry: the compact tile,
-// the manage tile, and the full focus body (used by /focus/memory).
+// the manage tile, and the full focus body (used by /ui/show/memory).
 func registerMemory(app core.App) {
 	ui.RegisterCard("memory", func(size ui.CardSize, params map[string]string) (g.Node, error) {
 		if size == ui.Focus {

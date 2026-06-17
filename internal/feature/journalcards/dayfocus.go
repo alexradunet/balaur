@@ -178,9 +178,9 @@ func DayFocus(v DayFocusView) g.Node {
 	if v.Next != "" {
 		nextNode = A(
 			Class("btn btn-ghost btn-sm"),
-			Href("/focus/day?date="+v.Next),
+			Href("/ui/show/day?date="+v.Next),
 			g.Attr("data-on:click__prevent",
-				"@get('/focus/day?date="+v.Next+"')"),
+				"@get('/ui/show/day?date="+v.Next+"')"),
 			g.Text("next ▸"),
 		)
 	} else {
@@ -266,9 +266,9 @@ func DayFocus(v DayFocusView) g.Node {
 		Div(Class("day-nav"),
 			A(
 				Class("btn btn-ghost btn-sm"),
-				Href("/focus/day?date="+v.Prev),
+				Href("/ui/show/day?date="+v.Prev),
 				g.Attr("data-on:click__prevent",
-					"@get('/focus/day?date="+v.Prev+"')"),
+					"@get('/ui/show/day?date="+v.Prev+"')"),
 				g.Text("◂ prev"),
 			),
 			H2(titleKids...),

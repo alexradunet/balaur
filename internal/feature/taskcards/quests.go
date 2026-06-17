@@ -28,7 +28,7 @@ func QuestsCard(v QuestsView) g.Node {
 			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		questsSummaryBody(v),
-		Footer(Class("kcard-actions"), A(Href("/focus/quests"), g.Text("all quests →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →"))),
 	)
 }
 
@@ -67,7 +67,7 @@ func QuestsManageCard(v QuestsView) g.Node {
 	return Article(
 		Class("kcard ucard ucard-manage ucard-quests-manage"), ID("ucard-quests-manage"),
 		ui.CardHead("/static/icons/scroll.png", "Quest log",
-			A(Class("kcard-meta"), Href("/focus/quests"), g.Text("all quests →")),
+			A(Class("kcard-meta"), Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →")),
 		),
 		questsManageBody(v),
 	)

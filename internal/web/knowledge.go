@@ -15,7 +15,7 @@ import (
 )
 
 // Knowledge: the proposed queue and the active collection render as Basm
-// cards inside the memory + skills card focuses (/focus/memory, /focus/skills)
+// cards inside the memory + skills card artifacts (/ui/show/memory, /ui/show/skills)
 // and the /settings/skills section. Card actions post back tiny SSE fragments
 // — the server is the single source of truth for state.
 

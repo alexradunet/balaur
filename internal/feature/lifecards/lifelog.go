@@ -114,7 +114,7 @@ func buildLifelogHabits(app core.App, now time.Time) []LifeHabitView {
 //	  <header class="kcard-head"><span class="kcard-kind"><img …>Life</span></header>
 //	  [habit-strip if .Habits]
 //	  [ucard-stats if .Kinds, else p.k-sub empty state]
-//	  <footer class="kcard-actions"><a href="/focus/lifelog">open life →</a></footer>
+//	  <footer class="kcard-actions"><a href="/ui/show/lifelog">open life →</a></footer>
 //	</article>
 func LifelogCard(v LifelogView) g.Node {
 	return Article(
@@ -122,7 +122,7 @@ func LifelogCard(v LifelogView) g.Node {
 		ui.CardHead("/static/icons/orb.png", "Life"),
 		lifelogHabitStrip(v.Habits),
 		lifelogKindsList(v.Kinds),
-		Footer(Class("kcard-actions"), A(Href("/focus/lifelog"), g.Text("open life →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("open life →"))),
 	)
 }
 
@@ -174,7 +174,7 @@ func lifelogKindsList(kinds []LifeKindView) g.Node {
 // ---------------------------------------------------------------------------
 
 // registerLifelog wires the lifelog card into the ui registry: the compact tile
-// for boards/chat, the full life overview for the focus page.
+// for chat, the full life overview for the focus page.
 func registerLifelog(app core.App) {
 	ui.RegisterCard("lifelog", func(size ui.CardSize, _ map[string]string) (g.Node, error) {
 		if size == ui.Focus {
