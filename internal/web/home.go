@@ -59,16 +59,12 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 	if err != nil {
 		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
-	// Render the switchers (still a template fragment — deferred from plan 084).
-	var switchersHTML strings.Builder
-	_ = h.tmpl.ExecuteTemplate(&switchersHTML, "chat_bar", dock)
 	dockNode := chat.Dock(chat.DockProps{
 		Variant:   chat.DockHome,
 		HasRecap:  dock.HasRecap,
 		NowMillis: dock.NowMillis,
 		Convo:     g.Raw(string(dock.ChatBodyHTML)),
 		Composer:  composerNode(dock),
-		Switchers: g.Raw(switchersHTML.String()),
 	})
 	page := shell.Page(shell.PageProps{
 		Title:     "Home",
