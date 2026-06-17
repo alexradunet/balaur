@@ -109,6 +109,9 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 089 | Retire the top-nav + `/focus` pages + boards (drop the boards collection) + rewrite DESIGN.md/knowledge.md to the single-page IA | P1 | L | MED–HIGH | **088** | — | DONE (APPROVED + merged to main `45a02c7`. Executed by a dispatched sonnet executor (commit-per-step on `improve/089-retire-topnav-focus-boards`), re-anchored post-088, then merged over the 086/087 work that had landed meanwhile — clean auto-merge, advisor re-ran the FULL gate on merged main: CGO-free build/vet/`gofmt`/`go test ./...` 34 pkgs green, `git diff --check` clean, completeness greps empty (no `/focus` product path, no boards routes/tools, `UITools`=`{card_show}`). −3240/+337 lines. Landed: deleted `focus.go`/`boards.go`/`layout.html`+templates+tests; trimmed `UITools`; `migrations/1750850000_drop_boards.go` (Up delete / Down recreate, idempotent, +test); re-pointed ~27 `/focus` links → `@get('/ui/show/{type}')`; rewrote DESIGN.md+knowledge.md to the final single-page IA; required ripple cleanup in `doctor.go`/`seed.go`/a tour anchor. README.md still has `/focus/*` user-facing mentions — deferred owner pass.) |
 | 090 | Ad-hoc card clusters: `ArtifactMarker` + `show_cards` tool + filtered bare `tasks` cluster card | P2 | M | MED | **088** | — | DONE (APPROVED + merged to main `fc81a60`. Dispatched sonnet executor (commit-per-step); its worktree was based on pre-089 main so advisor resolved the merge into current main: `UITools`→`{card_show, show_cards}`, `knowledge.md`→089's single-page IA + the `show_cards` bullet. Merged tree re-gated: build/vet/`gofmt`/`go test ./...` 34 pkgs green, `git diff --check` clean. Landed: `tools.ArtifactMarker`+`MarkArtifact`/`ParseArtifact` (JSON head, runs `ValidateCards`), `show_cards` tool, `chat.Cluster` organism (+story+CSS), `h.artifactBody`, the **both-paths** `ParseArtifact` wiring (`chatstream`+`recap`, same commit), and the bare filtered `tasks` cluster card (+story). knowledge.md updated. `/ui/show` left single-card (clusters agent-only v1).) |
 | 091 | Sidebar chrome (head/model switchers, theme/palette, recap into the rail) + responsive/a11y polish | P2 | M | MED | **088** | — | TODO |
+| 092 | Settings is summoned as per-section, nav-free artifacts (sidebar sub-menu; no in-artifact tabs) | P1 | M | LOW–MED | — | — | DONE (APPROVED + **merged to main `f6b5204`**; `improve/092-settings-per-section-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`gofmt -l`/`go test ./...` 35 pkgs green, `git diff --check` clean; scope clean (6 in-scope files). `SettingsFocus`→`Div(.settings-section, content)`, `settingsNavLink` deleted; `domainSidebar()` split into Domains + a Settings section (Profile/Appearance/Models/Heads, icon-less); orphaned `.settings-nav*`/`.settings-layout` CSS removed; settings tests flipped to assert `settings-section` + section content and reject `settings-nav`/`settings-layout`, + new `?section=models` handler sub-test. 5 commits.) |
+| 093 | Day & Quests artifacts go flat & nav-free (no date stepper, no master/detail rail) | P1 | M–L | MED | — | — | DONE (APPROVED + **merged to main `dd0300f`**; `improve/093-denav-day-quests-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (no FAIL/panic)/`gofmt -l`/`git diff --check` clean; scope clean (11 in-scope files); production greps empty for `quest-rail`/`quest-detail`/`quest-log`/`day-nav`/`QuestRail`, `RecapStart` fully removed. `DayFocus` keeps `.day-focus`+title+recap-summary, drops `day-nav` stepper + transcript expander + dead `Prev`/`Next`/`RecapStart`; `QuestsFocus` is a grouped `.quest-stack` of `TaskCard`s (`QuestRail`/`First`/detail-aside deleted, `data` import dropped); the `#quest-rail` OOB-refresh block + `net/url`/`taskcards` imports removed from `tasks.go`. **Documented judgment call (approved):** the now-orphaned `taskCard` handler (`/ui/tasks/{id}/card`, whose only caller was the deleted rail) was repointed from `#quest-detail` to `#tcard-{id}` outer — verified no remaining caller. Behavior change per plan: completing a quest updates the card in place instead of moving to a rail section. 6 commits.) |
+| 094 | Cap active chat artifacts at 3; older ones collapse to a static "shown earlier" chip | P2 | M | MED | — | — | DONE (APPROVED + **merged to main `3ac018c`**; `improve/094-cap-active-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (no FAIL/panic)/`gofmt -l`/`git diff --check` clean; scope clean (6 in-scope files). Shared `artifactWrap`/`artifactChip` + `activeArtifactCap` in `cards.go`; `messageView` gains `ArtifactTitle/Icon/Collapsed`, `messageViews` sets them (uicard→spec.Label/Icon, cluster→title), `capArtifacts` post-pass marks all-but-newest-3 collapsed (proposals excluded), `renderMessages` wraps artifacts; `endTool` extended to thread title/icon (all 6 callers updated); `balaurCapArtifacts()` hooked into the `#chat` MutationObserver; chip+collapsed CSS. **Documented deviation (approved on merit):** the HTTP cap test can't share a `TestApp` across `ApiScenario` calls (harness `Cleanup()` nukes the dataDir), so the executor wrote 5 direct unit tests of `capArtifacts` (4→1 collapsed/oldest-first, 2→0, 3→0 boundary, proposals-never, 6→oldest-3) — tests the core logic more directly; the rendered chip HTML is build-verified but not asserted E2E.) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -465,7 +468,93 @@ Only **089** adds a migration (`1750850000`); next free timestamp after this pro
 quests/journal/day/knowledge/settings focus) is **superseded** by this program. Those pages
 are retired in 089; the directory is DONE history, not to be re-executed.
 
+## Fourteenth cycle (2026-06-17, owner-requested refinement): plans 092–094
+
+Owner-requested via `improve plan` on 2026-06-17, refining the single-page artifact UI that
+landed in the thirteenth cycle (088–090; 091 was reverted by the owner — see its row):
+*"each spawned artifact should not have its own navigation — split them into smaller units so
+the navigation/UI doesn't get confusing; and keep at most three active artifacts in the UI,
+compacting the rest into a summary so the UI isn't polluted."* Skipped the audit (the owner
+knew the goal); did first-hand recon of the artifact pipeline (`uicardBody`/`cardFocusHTML`,
+`messageViews` reload-replay, `chatstream.handleToolResult`/`endTool` live, the `chat.Cluster`
++ `show_cards` cluster path, the `domainSidebar()` rail, and the `#chat` MutationObserver in
+`basm.js`) plus the seven `ui.Focus` surfaces and their navigation chrome (one Explore agent).
+
+**The decisive recon finding: `ui.Focus` is rendered in exactly ONE place now — the in-chat
+artifact** (`cardFocusHTML`/`uicardBody`); plan 089 retired the `/focus/{type}` pages, so
+redesigning the Focus branches affects nothing else. The three navigation-heavy artifacts are
+**settings** (a `settings-nav` tab bar), **day** (a `day-nav` prev/next date stepper + a recap
+transcript expander), and **quests** (a master/detail `quest-rail` + detail aside). Two more
+helpers were already half-built for the new shape: the settings tile already links to
+`?section=…` and `BuildSettingsFocus` already builds one section at a time (so "per-section
+artifacts" is a renderer + sidebar change, **no new card types**); task transitions already
+self-replace each card via `#tcard-{id}` (so dropping the quest rail's OOB refresh is clean);
+and the bare `tasks` cluster card + `chat.Cluster` already exist.
+
+**Two owner decisions locked the design (asked via AskUserQuestion, 2026-06-17):**
+1. **Artifact shape → "Per-section artifacts"** — navigation moves OUT of the artifact and
+   INTO the sidebar; each settings section is summoned as its own small nav-free card from a
+   Settings sub-menu. (Owner's mock put Profile/Appearance/Models/Heads under Settings.)
+2. **Compaction → "Static chip, re-summon to reopen"** — older artifacts collapse to a
+   non-interactive "⚙ Settings (shown earlier)" chip; re-summoning from the sidebar appends a
+   fresh copy at the bottom. (The "clickable chip re-expands in place" option was rejected —
+   it would let the active count exceed 3.)
+
+**Three plans, split by disjoint file sets so they can land in ANY order / in parallel:**
+- **092 (settings)** — `SettingsFocus` renders one nav-free section (drop `settings-layout`/
+  `settings-nav`/`settingsNavLink`); `domainSidebar()` gains a Settings section with
+  Profile/Appearance/Models/Heads leaves (`@get('/ui/show/settings?section=…')`); orphaned
+  `.settings-nav*` CSS removed; settings tests flip from `settings-layout` to the nav-free
+  profile section. Touches `settingscards/` + `home.go` + settings tests + storybook.
+- **093 (day & quests)** — `DayFocus` drops the `day-nav` stepper + recap transcript expander
+  (and the now-dead `Prev`/`Next`/`RecapStart` view-model fields); `QuestsFocus` becomes a
+  flat, rhythm-grouped stack of full `TaskCard`s (delete `QuestRail` + the detail aside); the
+  `#quest-rail` OOB-refresh block in `tasks.go` is removed (the `#tcard-{id}` in-place replace
+  already covers it — a deliberate behavior change: a completed quest updates in place instead
+  of moving to a rail section). Touches `journalcards/` + `taskcards/` + `tasks.go` + day/quests
+  tests + storybook + CSS.
+- **094 (the cap)** — every uicard/cluster artifact is wrapped in `.artifact` carrying a hidden
+  static chip; the server (`messageViews`→`capArtifacts`) marks all-but-the-newest-3 collapsed
+  on reload (testable in Go), and a `balaurCapArtifacts()` helper hooked into the EXISTING
+  `#chat` MutationObserver enforces the same cap live and across fragments. Const
+  `activeArtifactCap = 3` (Go) / `ACTIVE_ARTIFACT_CAP = 3` (JS) must stay in sync.
+  Proposals/choices are NOT artifacts and are never capped. Touches `recap.go` +
+  `chatstream.go` + `cards.go` + `basm.js`/`basm.css` + a new `artifact_cap_test.go`.
+
+Each plan is commit-anchored to `766b7aa` with a drift check; every cited excerpt was re-read
+first-hand at HEAD during drafting. Baseline at `766b7aa`: build/vet/test green (34 pkgs).
+**None adds a migration** — next free timestamp remains `1750860000`.
+
+**Execution record (2026-06-18):** all three plans executed by dispatched `sonnet` executors in
+isolated git worktrees (one per plan, off `766b7aa`), then reviewed by the advisor (re-ran every
+done criterion in each worktree, audited scope via `git diff --stat`, read the full diffs, audited
+the new tests). All three **APPROVED**: 092 (`improve/092-settings-per-section-artifacts`, 5
+commits), 093 (`improve/093-denav-day-quests-artifacts`, 6 commits), 094
+(`improve/094-cap-active-artifacts`). CGO-free build/vet/`go test ./...`/`gofmt -l`/`git diff
+--check` green in each worktree. Two deviations accepted on merit: 094 substituted 5 direct
+`capArtifacts` unit tests for the HTTP cap test (the `tests.TestApp` `Cleanup()`-per-`ApiScenario`
+limitation blocks the reused-app pattern); 093 repointed the orphaned `taskCard` handler
+(`/ui/tasks/{id}/card` — the deleted rail was its only caller) from `#quest-detail` to
+`#tcard-{id}`. **All three merged to main (2026-06-18) in order — `766b7aa` → `f6b5204` (092)
+→ `dd0300f` (093) → `3ac018c` (094), each `--no-ff`, zero conflicts** (the shared
+`basm.css`/`stories_cards.go`/`handlers_test.go` auto-resolved by region as predicted); the
+advisor re-ran the FULL gate on merged main after each step (CGO-free build/vet/`go test
+./...`/`gofmt -l`/`git diff --check` all green). Not yet pushed.
+
 ## Dependency notes
+
+- **092 / 093 / 094 land in any order (near-independent; a few shared files in DIFFERENT
+  regions)**: each owns its core files — 092 `internal/feature/settingscards/` + `home.go`;
+  093 `journalcards/dayfocus.go` + `taskcards/questsfocus.go` + `tasks.go`; 094 `recap.go` +
+  `chatstream.go` + `cards.go` + `basm.js`. 094 wraps whatever an artifact renders, so it
+  composes with 092/093's nav-free bodies regardless of order. **Shared files (auto-merge
+  expected, distinct line ranges off the common base `766b7aa`):** `basm.css` — 092 removes
+  `.settings-nav*` (~1867–1910), 093 removes `.day-nav`/`.quest-*` (~1446, ~2302–2390) + adds
+  `.quest-stack`, 094 adds `.artifact*` (~1045); `stories_cards.go` — 092 (settings story) vs
+  093 (day+quests stories); `handlers_test.go` — 092 (settings, ~118–130) vs 093 (day, ~501).
+  Ranges don't overlap, so a 3-way merge should resolve without conflict, but **re-run
+  `go build`/`go test ./...` after each merge** and reconcile by region if git flags anything.
+  None re-touches `internal/tools/ui.go` or adds a migration.
 
 - **088 → 089, 090, 091 (strict)**: 088 is the foundation — it introduces `shell.ChatShell`,
   `domainSidebar()` (in `internal/web`), the extended `shell.SidebarItem{Icon, Action}`,
