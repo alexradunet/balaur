@@ -69,7 +69,9 @@ func pageHead() g.Node {
 
 // Topbar is the wood-chrome header: the crest brand links Home (the full-screen
 // companion chat), then the product's top-level domain nav (the active domain
-// rides gold) and the theme toggles. The domain links are the single top-level
+// rides gold) and the light/dark theme toggle. The palette picker (Hearthwood /
+// Forest / Dungeon) lives in Settings → Appearance, not here. The domain links
+// are the single top-level
 // navigation — there is no side rail. Each domain whose own page is not yet
 // migrated to gomponents points at its existing /focus surface. The active link
 // carries aria-current="page".
@@ -85,11 +87,6 @@ func Topbar(active string) g.Node {
 			g.Text("Balaur"),
 		),
 		h.Nav(append([]g.Node{h.Class("topnav-desktop")}, topbarLinks(active)...)...),
-		h.Button(h.Class("theme-cycle"), h.Type("button"),
-			g.Attr("onclick", "basmCycleTheme()"),
-			h.Title("Cycle theme"), h.Aria("label", "Cycle theme"),
-			g.Text("Hearth"),
-		),
 		h.Button(h.Class("theme-toggle"), h.Type("button"),
 			g.Attr("onclick", "basmToggleTheme()"),
 			h.Title("Toggle light/dark mode"),
@@ -123,16 +120,15 @@ func topnavDrawer(active string) g.Node {
 	})
 }
 
-// topbarLinks returns the six domain nav links shared by the desktop nav and
+// topbarLinks returns the five domain nav links shared by the desktop nav and
 // the off-canvas drawer. Keeping them in one place ensures routes and labels
-// never drift between the two navs.
+// never drift between the two navs. (Heads moved under Settings → Heads.)
 func topbarLinks(active string) []g.Node {
 	return []g.Node{
 		navLink("/focus/quests", "Quests", "quests", active),
 		navLink("/focus/memory", "Knowledge", "knowledge", active),
 		navLink("/focus/lifelog", "Life", "life", active),
 		navLink("/focus/journal", "Journal", "journal", active),
-		navLink("/focus/heads", "Heads", "heads", active),
 		navLink("/focus/settings", "Settings", "settings", active),
 	}
 }

@@ -55,6 +55,18 @@ func TestPage(t *testing.T) {
 	if strings.Contains(got, ">Boards<") {
 		t.Error("Boards nav link should be gone (boards is cut)")
 	}
+	// Heads moved under Settings → Heads; the palette cycler moved to
+	// Settings → Appearance. Neither belongs in the topbar anymore.
+	if strings.Contains(got, ">Heads</a>") {
+		t.Error("Heads nav link should be gone (moved under Settings → Heads)")
+	}
+	if strings.Contains(got, "theme-cycle") {
+		t.Error("theme-cycle button should be gone (palette moved to Settings → Appearance)")
+	}
+	// The light/dark toggle stays in the bar.
+	if !strings.Contains(got, "theme-toggle") {
+		t.Error("light/dark theme-toggle must stay in the topbar")
+	}
 }
 
 // TestTopbarDrawer asserts the responsive off-canvas drawer markup added in plan 078:

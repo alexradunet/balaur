@@ -32,18 +32,13 @@ function basmUpdateThemeButtons() {
 
 document.addEventListener('DOMContentLoaded', basmUpdateThemeButtons);
 
-// ── Theme palette cycle (hearthwood → forest → dungeon) ────────────
+// ── Theme palette (hearthwood / forest / dungeon) ──────────────────
 // Orthogonal to light/dark mode (basmToggleTheme). The <head> no-flash
-// script applies the saved palette before paint; this handles the cycle.
-window.basmCycleTheme = function () {
-  var order = ['hearthwood', 'forest', 'dungeon'];
-  var d = document.documentElement;
-  var cur = order.find(function (t) { return d.classList.contains('theme-' + t); }) || 'hearthwood';
-  var next = order[(order.indexOf(cur) + 1) % order.length];
-  basmSetPalette(next);
-};
+// script applies the saved palette before paint. The palette is chosen in
+// Settings → Appearance and the storybook sidebar footer; both call
+// basmSetPalette directly (the topbar cycler was retired).
 
-// Set a specific palette directly — the sidebar footer's three theme buttons.
+// Set a specific palette directly.
 window.basmSetPalette = function (name) {
   var order = ['hearthwood', 'forest', 'dungeon'];
   if (order.indexOf(name) < 0) name = 'hearthwood';
@@ -56,14 +51,11 @@ window.basmSetPalette = function (name) {
 
 function basmUpdatePaletteButtons() {
   var order = ['hearthwood', 'forest', 'dungeon'];
-  var labels = { hearthwood: 'Hearth', forest: 'Forest', dungeon: 'Dungeon' };
   var d = document.documentElement;
   var cur = order.find(function (t) { return d.classList.contains('theme-' + t); }) || 'hearthwood';
-  document.querySelectorAll('.theme-cycle').forEach(function (btn) {
-    btn.textContent = labels[cur];
-    btn.title = 'Cycle theme (now ' + labels[cur] + ')';
-    btn.setAttribute('aria-label', 'Cycle theme (now ' + labels[cur] + ')');
-  });
+  // Storybook sidebar footer buttons. The Settings → Appearance buttons mark
+  // their active state in pure CSS off the <html> palette class, so they need
+  // no sync here.
   document.querySelectorAll('.sb-theme-btn').forEach(function (btn) {
     btn.classList.toggle('is-active', btn.getAttribute('data-theme') === cur);
   });

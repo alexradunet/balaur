@@ -40,7 +40,7 @@ func TestThemePaletteBlocks(t *testing.T) {
 		":root.theme-forest.light {",
 		":root.theme-dungeon {",
 		":root.theme-dungeon.light {",
-		".theme-toggle, .theme-cycle {",
+		".theme-toggle {",
 	} {
 		if !strings.Contains(css, want) {
 			t.Errorf("basm.css missing theme block marker: %q", want)

@@ -46,9 +46,10 @@ type HeadsView struct {
 // Data builder
 // ---------------------------------------------------------------------------
 
-// buildHeads assembles the HeadsView from live data. Mirrors the legacy
-// renderCardHeads (internal/web/cards.go ~586).
-func buildHeads(app core.App) HeadsView {
+// BuildHeads assembles the HeadsView from live data. Mirrors the legacy
+// renderCardHeads (internal/web/cards.go ~586). Exported so the Settings →
+// Heads section (settingscards) can render the same roster.
+func BuildHeads(app core.App) HeadsView {
 	activeID := heads.Active(app).ID
 
 	list := heads.List(app)
@@ -210,6 +211,6 @@ func avatarRadios(avatars []store.AvatarEntry) []g.Node {
 // registerHeads wires the heads card into the ui registry.
 func registerHeads(app core.App) {
 	ui.RegisterCard("heads", func(_ ui.CardSize, _ map[string]string) (g.Node, error) {
-		return HeadsCard(buildHeads(app)), nil
+		return HeadsCard(BuildHeads(app)), nil
 	})
 }

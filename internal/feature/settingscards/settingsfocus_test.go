@@ -6,6 +6,7 @@ import (
 
 	g "maragu.dev/gomponents"
 
+	"github.com/alexradunet/balaur/internal/feature/headscards"
 	"github.com/alexradunet/balaur/internal/feature/settingscards"
 )
 
@@ -157,5 +158,53 @@ func TestSettingsFocusNavModelsActive(t *testing.T) {
 	// Profile cards must not render in the models section
 	if strings.Contains(got, `id="identity-card"`) {
 		t.Error("SettingsFocus models section must not render #identity-card")
+	}
+}
+
+// TestSettingsFocusHeadsSection: section == "heads" renders the heads roster
+// (ucard-heads) and marks the Heads nav tab active. Guards the move of the
+// standalone Heads page into Settings.
+func TestSettingsFocusHeadsSection(t *testing.T) {
+	view := settingscards.SettingsFocusView{
+		Section: "heads",
+		Heads: headscards.HeadsView{
+			Heads: []headscards.HeadRow{{ID: "h1", Name: "Scout", Active: true}},
+		},
+	}
+	got := renderNode(t, settingscards.SettingsFocus(view))
+	for _, want := range []string{
+		`class="settings-nav"`,
+		`class="settings-nav-link settings-nav-active" href="/focus/settings?section=heads"`,
+		`data-on:click__prevent="@get(&#39;/focus/settings?section=heads&#39;)"`,
+		`id="ucard-heads"`,
+		`Scout`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("SettingsFocus (heads) missing %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, `id="identity-card"`) {
+		t.Error("SettingsFocus heads section must not render #identity-card")
+	}
+}
+
+// TestSettingsFocusAppearanceSection: section == "appearance" renders the
+// palette picker wired to basmSetPalette and marks the Appearance tab active.
+func TestSettingsFocusAppearanceSection(t *testing.T) {
+	view := settingscards.SettingsFocusView{Section: "appearance"}
+	got := renderNode(t, settingscards.SettingsFocus(view))
+	for _, want := range []string{
+		`class="settings-nav-link settings-nav-active" href="/focus/settings?section=appearance"`,
+		`id="appearance-section"`,
+		`class="appearance-themes"`,
+		`class="appearance-theme-btn"`,
+		`data-theme="hearthwood"`,
+		`data-theme="forest"`,
+		`data-theme="dungeon"`,
+		`onclick="basmSetPalette(&#39;hearthwood&#39;)"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("SettingsFocus (appearance) missing %q in:\n%s", want, got)
+		}
 	}
 }

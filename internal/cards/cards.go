@@ -180,7 +180,7 @@ func init() {
 			W:     6,
 			H:     24,
 			Params: []ParamSpec{
-				{Name: "section", Enum: []string{"profile", "models"}, Doc: "settings section (default profile)"},
+				{Name: "section", Enum: []string{"profile", "models", "heads", "appearance"}, Doc: "settings section (default profile)"},
 			},
 		},
 	}

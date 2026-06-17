@@ -290,21 +290,29 @@ func seedHeadRec(t testing.TB, app *tests.TestApp, name, _ string) *core.Record 
 	return rec
 }
 
-// TestHeadsFocus: the heads roster is a card focus (plan 054 retired GET
-// /heads). The active head appears in the heads focus body.
+// TestHeadsFocus: the heads roster moved under Settings → Heads. The old
+// standalone /focus/heads page redirects (302) to /focus/settings?section=heads,
+// where the active head appears in the heads section body.
 func TestHeadsFocus(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			Name:   "active head appears on /focus/heads",
+			Name:           "/focus/heads redirects to the settings heads section",
+			Method:         "GET",
+			URL:            "/focus/heads",
+			TestAppFactory: newWebApp,
+			ExpectedStatus: 302,
+		},
+		{
+			Name:   "active head appears in the settings heads section",
 			Method: "GET",
-			URL:    "/focus/heads",
+			URL:    "/focus/settings?section=heads",
 			TestAppFactory: func(tb testing.TB) *tests.TestApp {
 				app := newWebApp(tb)
 				seedHeadRec(tb, app, "Scout", "active")
 				return app
 			},
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"Scout"},
+			ExpectedContent: []string{"Scout", "ucard-heads", "settings-nav"},
 		},
 	}
 	for _, scenario := range scenarios {
@@ -313,10 +321,10 @@ func TestHeadsFocus(t *testing.T) {
 }
 
 // TestRetiredHeadsPages: plan 054 deleted the GET /heads and
-// GET /heads/{id}/chat page routes. The roster now lives at /focus/heads. The
-// old page routes no longer exist; unmatched UI paths fall through to the
-// board-home redirect (302 → /boards), so old bookmarks self-heal onto the
-// boards dashboard.
+// GET /heads/{id}/chat page routes. The roster now lives under Settings → Heads
+// (/focus/settings?section=heads). The old page routes no longer exist;
+// unmatched UI paths fall through to the board-home redirect (302 → /boards), so
+// old bookmarks self-heal onto the boards dashboard.
 func TestRetiredHeadsPages(t *testing.T) {
 	t.Run("GET /heads is retired", func(t *testing.T) {
 		scenario := tests.ApiScenario{

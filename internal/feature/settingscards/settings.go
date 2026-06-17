@@ -1,8 +1,8 @@
 // Package settingscards renders the settings tile as a typed gomponents
-// component. The tile is static — links into the settings focus (Profile +
-// Models); the heavy sections (profile, models, GGUF SSE) live in the focus
-// view, not the tile. Imports internal/ui + gomponents + pocketbase/core only —
-// never internal/web (spec §4.1).
+// component. The tile is static — links into the settings focus (Profile,
+// Models, Heads, Appearance); the heavy sections live in the focus view, not
+// the tile. Imports internal/ui + gomponents + pocketbase/core only — never
+// internal/web (spec §4.1).
 package settingscards
 
 import (
@@ -22,6 +22,8 @@ func SettingsCard() g.Node {
 		Ul(Class("ucard-stats"),
 			Li(A(Href("/focus/settings?section=profile"), g.Text("Profile"))),
 			Li(A(Href("/focus/settings?section=models"), g.Text("Models & APIs"))),
+			Li(A(Href("/focus/settings?section=heads"), g.Text("Heads"))),
+			Li(A(Href("/focus/settings?section=appearance"), g.Text("Appearance"))),
 		),
 		Footer(Class("kcard-actions"), A(Href("/focus/settings"), g.Text("open settings →"))),
 	)

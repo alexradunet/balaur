@@ -109,7 +109,7 @@ func paginationStory() Story {
 func topbarStory() Story {
 	return Story{
 		ID: "topbar", Group: "Navigation", Title: "Topbar", Wide: true,
-		Blurb: "The sticky wood-plank chrome bar: the crest brand links Home (the full-screen companion chat), then the top-level domain nav (Quests / Knowledge / Life / Journal / Heads + Settings) and the theme toggles. This is the product's only top-level navigation — the active domain rides gold. On viewports ≤720px the inline nav is hidden and replaced by an accessible off-canvas drawer (☰ burger → slide-in panel); the theme buttons stay in the bar at ≥44px touch height.",
+		Blurb: "The sticky wood-plank chrome bar: the crest brand links Home (the full-screen companion chat), then the top-level domain nav (Quests / Knowledge / Life / Journal / Settings) and the light/dark theme toggle. This is the product's only top-level navigation — the active domain rides gold. Heads moved under Settings → Heads, and the palette picker (Hearthwood / Forest / Dungeon) lives in Settings → Appearance — only the light/dark toggle stays in the bar. On viewports ≤720px the inline nav is hidden and replaced by an accessible off-canvas drawer (☰ burger → slide-in panel); the toggle stays in the bar at ≥44px touch height.",
 		Variants: []Variant{
 			// position:relative gives the sticky bar a containing block so it
 			// renders in place inside the storybook tile. One example — the
@@ -119,7 +119,7 @@ func topbarStory() Story {
 			{"quests active", h.Div(h.Style("position:relative"), shell.Topbar("quests"))},
 		},
 		Props: []Prop{
-			{"active", "string", "—", `Nav key for the current page — a domain key ("quests", "knowledge", "life", "journal", "heads") or "settings"; that link renders gold with aria-current="page". Home ("/") highlights nothing.`},
+			{"active", "string", "—", `Nav key for the current page — a domain key ("quests", "knowledge", "life", "journal") or "settings"; that link renders gold with aria-current="page". Home ("/") highlights nothing.`},
 		},
 		Dos: []string{
 			"Use for top-level page navigation only.",

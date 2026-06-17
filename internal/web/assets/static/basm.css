@@ -948,7 +948,7 @@ dialog::backdrop {
 
 /* ── Theme toggle ────────────────────────────────────────────────── */
 
-.theme-toggle, .theme-cycle {
+.theme-toggle {
   font-family: var(--font-mono);
   font-size: 13px;
   background: none;
@@ -962,7 +962,7 @@ dialog::backdrop {
   transition: color .1s, border-color .1s;
   line-height: 1;
 }
-.theme-toggle:hover, .theme-cycle:hover {
+.theme-toggle:hover {
   color: var(--gold);
   border-color: var(--gold-deep);
 }
@@ -2306,7 +2306,21 @@ progress.pull-progress-bar::-moz-progress-bar {
   align-items: start;
 }
 
-.quest-rail { display: flex; flex-direction: column; gap: var(--space-3); }
+/* The rail is a parchment panel (like the detail card beside it): its rows,
+   group titles, and hover all use ink/surface/parch-edge tokens, which are only
+   legible ON parchment — rendered bare on the dark page they go brown-on-brown.
+   Matches the .kcard recipe so the two quest-log columns read as a pair. */
+.quest-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  border: 2px solid var(--parch-edge);
+  box-shadow: var(--parch-bevel);
+  padding: var(--space-3);
+}
 
 .quest-group { display: flex; flex-direction: column; gap: var(--space-1); }
 .quest-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -3214,6 +3228,10 @@ html.home #dock {
   z-index: var(--z-overlay);
   border-left: 0;
   box-shadow: none;
+  /* Fluid outer gutter so the full-screen chat (conversation + composer) is not
+     edge-to-edge. The page-gutter token caps both ends; the column inside still
+     centres at --w-chat-home. */
+  padding-inline: var(--pad);
 }
 html.home #dock .dock-grip,
 html.home #dock .dock-head { display: none; }
@@ -3227,7 +3245,7 @@ html.home #dock .recap-band {
   margin-left: auto;
   margin-right: auto;
 }
-html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-5) var(--space-2); }
+html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 0 var(--space-2); }
 html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
 
 @media (max-width: 920px) {
@@ -3312,8 +3330,7 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
   }
 
   /* Bump theme-button touch targets to 44px on mobile; keep visual padding. */
-  .topbar .theme-toggle,
-  .topbar .theme-cycle { min-height: 44px; padding: 0 var(--space-3); }
+  .topbar .theme-toggle { min-height: 44px; padding: 0 var(--space-3); }
 }
 
 /* No slide animation when reduced-motion is preferred. */
@@ -3367,3 +3384,39 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
 }
 
 /* rail variant inherits #dock's fixed width (var(--sidebar-w)) — no extra rule. */
+
+/* ══ Section: Appearance settings — palette picker ═══════════════════════════
+   The three theme buttons live in the Settings → Appearance card (a parchment
+   .profile-card), so they use ink/parch tokens. basmSetPalette() flips the
+   <html> palette class; the active state is pure CSS off that class, so it stays
+   correct after both a full load and an in-app Datastar patch — no JS
+   button-sync needed (the topbar palette cycler moved here). */
+.appearance-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.appearance-theme-btn {
+  flex: 1 1 0;
+  min-width: 120px;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: none;
+  border: 2px solid var(--parch-edge);
+  border-radius: var(--radius);
+  color: var(--ink);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: color .1s, border-color .1s, background .1s;
+}
+.appearance-theme-btn:hover { border-color: var(--gold-deep); }
+html.theme-hearthwood .appearance-theme-btn[data-theme="hearthwood"],
+html.theme-forest .appearance-theme-btn[data-theme="forest"],
+html.theme-dungeon .appearance-theme-btn[data-theme="dungeon"] {
+  border-color: var(--gold-deep);
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+}

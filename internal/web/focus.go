@@ -25,7 +25,8 @@ import (
 // focusActiveKey maps a card type to its top-level topbar nav key (see
 // shell.Topbar) so the active domain rides gold on the focus page. Types that
 // are not a top-level domain (today, calendar, timeline, habits, measure, lines)
-// return "" — no nav item is marked current.
+// return "" — no nav item is marked current. Heads is not here: it moved under
+// Settings, and /focus/heads redirects to /focus/settings?section=heads.
 func focusActiveKey(typ string) string {
 	switch typ {
 	case "quests":
@@ -36,8 +37,6 @@ func focusActiveKey(typ string) string {
 		return "life"
 	case "journal", "day":
 		return "journal"
-	case "heads":
-		return "heads"
 	case "settings":
 		return "settings"
 	}
@@ -112,6 +111,12 @@ func focusCanonicalQuery(q url.Values) string {
 // focusPage handles GET /focus/{type}?params[&from={boardID}].
 func (h *handlers) focusPage(e *core.RequestEvent) error {
 	typ := e.Request.PathValue("type")
+	// Heads moved under Settings → Heads (the standalone Heads page was retired).
+	// Redirect old links/bookmarks to the settings section. The heads *card*
+	// (/ui/cards/heads) still exists for boards/palette; only the page moved.
+	if typ == "heads" {
+		return e.Redirect(http.StatusFound, "/focus/settings?section=heads")
+	}
 	spec, ok := cards.Get(typ)
 	if !ok {
 		return h.renderPageError(e, http.StatusNotFound, "focus: unknown card type", nil, "Not found", "There is nothing at this address.")

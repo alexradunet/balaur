@@ -1,7 +1,8 @@
 package settingscards
 
-// settingsfocus.go — the settings card's full-canvas focus body (Profile +
-// Models) as gomponents components. Ports {{define "settings_body"}} from
+// settingsfocus.go — the settings card's full-canvas focus body (Profile,
+// Models, Heads, Appearance) as gomponents components. Ports {{define
+// "settings_body"}} from
 // web/templates/settings-focus.html and the three profile fragment defines from
 // web/templates/profile.html. Preserves every CSS class, element id, and
 // Datastar attribute so the served basm.css and the existing SSE handlers work
@@ -17,6 +18,7 @@ import (
 	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/feature/headscards"
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/store"
@@ -47,9 +49,10 @@ type ProfileView struct {
 
 // SettingsFocusView is the view-model for the full settings focus body.
 type SettingsFocusView struct {
-	Section string               // "profile" or "models"
-	Profile ProfileView          // the profile section (used when Section == "profile")
-	Models  modelcards.PanelView // the models panel view (used when Section == "models")
+	Section string               // "profile" | "models" | "heads" | "appearance"
+	Profile ProfileView          // used when Section == "profile"
+	Models  modelcards.PanelView // used when Section == "models"
+	Heads   headscards.HeadsView // used when Section == "heads"
 }
 
 // ---------------------------------------------------------------------------
@@ -139,20 +142,29 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 	return view, nil
 }
 
-// BuildSettingsFocus assembles the SettingsFocusView from live data.
+// BuildSettingsFocus assembles the SettingsFocusView from live data. Each
+// section loads only its own data; an unknown section falls back to profile.
 func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusView, error) {
 	section := params["section"]
-	if section != "models" {
+	switch section {
+	case "models", "heads", "appearance":
+		// known sections
+	default:
 		section = "profile"
 	}
 	view := SettingsFocusView{Section: section}
-	if section == "models" {
+	switch section {
+	case "models":
 		pv, err := BuildModelsPanelView(app, "")
 		if err != nil {
 			return view, err
 		}
 		view.Models = pv
-	} else {
+	case "heads":
+		view.Heads = headscards.BuildHeads(app)
+	case "appearance":
+		// static — no data fetch
+	default:
 		view.Profile = BuildProfile(app, false)
 	}
 	return view, nil
@@ -286,23 +298,17 @@ func ProfileBalaurSection(v ProfileView) g.Node {
 
 // SettingsFocus renders the full settings focus body. Ports {{define
 // "settings_body"}} from web/templates/settings-focus.html: the settings nav
-// (Profile / Models tabs) and the section content.
+// (Profile / Models / Heads / Appearance tabs) and the section content.
 func SettingsFocus(v SettingsFocusView) g.Node {
-	profileActive := v.Section != "models"
-
-	profileLinkClass := "settings-nav-link"
-	if profileActive {
-		profileLinkClass += " settings-nav-active"
-	}
-	modelsLinkClass := "settings-nav-link"
-	if !profileActive {
-		modelsLinkClass += " settings-nav-active"
-	}
-
 	var content g.Node
-	if v.Section == "models" {
+	switch v.Section {
+	case "models":
 		content = modelcards.Panel(v.Models)
-	} else {
+	case "heads":
+		content = headscards.HeadsCard(v.Heads)
+	case "appearance":
+		content = AppearanceSection()
+	default:
 		content = g.Group([]g.Node{
 			ProfileIdentityCard(v.Profile),
 			ProfileSoulSection(v.Profile),
@@ -314,19 +320,56 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		Nav(
 			Class("settings-nav"),
 			g.Attr("aria-label", "Settings sections"),
-			A(
-				Class(profileLinkClass),
-				Href("/focus/settings?section=profile"),
-				data.On("click", "@get('/focus/settings?section=profile')", data.ModifierPrevent),
-				g.Text("Profile"),
-			),
-			A(
-				Class(modelsLinkClass),
-				Href("/focus/settings?section=models"),
-				data.On("click", "@get('/focus/settings?section=models')", data.ModifierPrevent),
-				g.Text("Models"),
-			),
+			settingsNavLink(v.Section, "profile", "Profile"),
+			settingsNavLink(v.Section, "models", "Models"),
+			settingsNavLink(v.Section, "heads", "Heads"),
+			settingsNavLink(v.Section, "appearance", "Appearance"),
 		),
 		Div(Class("settings-content"), content),
+	)
+}
+
+// settingsNavLink renders one settings-nav tab. The current section gets
+// settings-nav-active; the @get patches only #main (the dock persists).
+func settingsNavLink(active, section, label string) g.Node {
+	cls := "settings-nav-link"
+	if active == section {
+		cls += " settings-nav-active"
+	}
+	href := "/focus/settings?section=" + section
+	return A(
+		Class(cls),
+		Href(href),
+		data.On("click", "@get('"+href+"')", data.ModifierPrevent),
+		g.Text(label),
+	)
+}
+
+// AppearanceSection renders the Appearance settings card: the palette picker
+// (Hearthwood / Forest / Dungeon). The buttons call basmSetPalette(); the
+// active state is pure CSS off the <html> palette class (see basm.css), so it
+// stays correct after both a full load and an in-app Datastar patch. The
+// light/dark toggle stays in the topbar — only the palette moved here.
+func AppearanceSection() g.Node {
+	return Article(
+		Class("profile-card"), ID("appearance-section"),
+		H2(Class("profile-card-title"), g.Text("Appearance")),
+		P(Class("profile-hint"), g.Text("The palette Balaur wears. Light and dark stay in the top bar (◑).")),
+		Div(Class("appearance-themes"),
+			appearanceThemeBtn("hearthwood", "Hearthwood"),
+			appearanceThemeBtn("forest", "Forest"),
+			appearanceThemeBtn("dungeon", "Dungeon"),
+		),
+	)
+}
+
+// appearanceThemeBtn renders one palette button wired to basmSetPalette.
+func appearanceThemeBtn(key, label string) g.Node {
+	return Button(
+		Class("appearance-theme-btn"), Type("button"),
+		g.Attr("data-theme", key),
+		g.Attr("onclick", "basmSetPalette('"+key+"')"),
+		Title("Palette: "+label),
+		g.Text(label),
 	)
 }
