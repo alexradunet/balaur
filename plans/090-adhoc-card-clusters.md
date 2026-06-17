@@ -4,7 +4,13 @@
 >
 > **Drift check (run first)**:
 > `git diff --stat 3136bad..HEAD -- internal/tools/ui.go internal/cards/cards.go internal/ui/registry.go internal/web/chatstream.go internal/web/recap.go internal/web/cards.go internal/turn/tools.go internal/tasks/tasks.go internal/feature/taskcards internal/feature/storybook/stories_cards.go internal/feature/storybook/story.go`
-> If any of these changed since this plan was written, compare the live code to the "Current state" excerpts below; on mismatch, STOP and report.
+> If any of these changed since `5857eee`, compare the live code to the "Current state" excerpts below; on mismatch NOT explained by the reconciliation note below, STOP and report.
+>
+> **RECONCILED FOR CURRENT MAIN (2026-06-17, anchor `5857eee`) — READ FIRST.** Plans 088 + 089 (and, in parallel, 086 + 087) have all LANDED on main. Confirmed deltas vs this plan's original 3136bad excerpts — reconcile against the live tree, do NOT STOP on these:
+> - **`tools.UITools` is now `[]agent.Tool{cardShowTool(app)}`** (089 removed the board tools). So add `showCardsTool(app)` as the second element: `return []agent.Tool{cardShowTool(app), showCardsTool(app)}`. The "if 089 landed" note in Step 2 is now the ACTUAL case — there are no board tools to keep.
+> - The core seams this plan extends are UNCHANGED since 3136bad and the excerpts still match: `chatstream.handleToolResult` (marker chain at `:177-190`), `recap.messageViews` (`mv.Role=="tool"` at `:262`), `internal/web/cards.go` `cardHTML`/`uicardBody`, `internal/cards/cards.go` (`quests` spec ~`:56`, `ValidateCards` ~`:242`, no `tasks` type yet), `internal/tasks/tasks.go` loaders, and `internal/feature/taskcards` (`taskViewOf` quests.go:88, `viewsOf`:110, `intParam`:157, `TaskCard` taskcard.go:25). Verify by grep, trust the excerpts.
+> - `internal/feature/storybook/story.go`'s `stories` slice GREW (086/087 added settings/runtime stories; 088 added `sidebarStory`; 089 removed `topbarStory`). You only APPEND your new `Cluster` + `tasks` stories — don't rely on old line numbers; just add two registration lines + the builders.
+> - This plan adds NO migration and does not touch the kronk/model code 086/087 changed — no overlap there.
 >
 > **Hard dependency on plan 088**: this plan reuses 088's artifact-append + persistence + reload-re-render pattern. 088 establishes the single-page chat shell and the deterministic `/ui/show` endpoint. Land 088 first. The marker/tool/cluster-card work here is **additive** to the existing card_show seam (`tools.MarkUICard`/`ParseUICard` + `chatStream.handleToolResult` + `recap.messageViews`), so most of it can be built against the pre-088 code; only the "should `/ui/show` accept a cluster?" decision (Step 7) touches 088's surface — and the recommendation is *no*, keeping 090 independent of 088's exact endpoint shape.
 
