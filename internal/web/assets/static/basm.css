@@ -862,6 +862,10 @@ img.tool-icon {
   50%      { box-shadow: inset 0 0 0 2px var(--teal), 0 0 26px color-mix(in srgb, var(--teal) 60%, transparent); }
 }
 
+/* Breakpoints — canonical: 540 (phone) / 720 (tablet) / 920 (desktop-narrow).
+   Native custom media needs a build step, so values are literal + standardized.
+   480/640/860 are intentional outliers kept where a surface depends on them. */
+
 /* Compact table on small screens */
 @media (max-width: 640px) {
   .chat { --portrait-size: 64px; --chat-gutter: 90px; }
@@ -1866,7 +1870,7 @@ dialog::backdrop {
   gap: var(--space-5);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 720px) {
   .settings-layout {
     grid-template-columns: 1fr;
   }
@@ -2482,7 +2486,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dock-full #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-5) var(--space-2); }
 .dock-full #dock .recap-zone, .dock-full #dock .recap-band { display: block; }
 
-@media (max-width: 900px) {
+@media (max-width: 920px) {
   .with-sidebar { padding-right: 0; }
   #dock {
     position: static;
@@ -3079,14 +3083,14 @@ progress.pull-progress-bar::-moz-progress-bar {
   .sb-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(8, 5, 2, .62); }
   .sb-canvas { height: auto; padding: 26px var(--space-4) 80px; }
 }
-@media (max-width: 520px) { .sb-canvas { padding: 20px 10px 72px; } }
+@media (max-width: 540px) { .sb-canvas { padding: 20px 10px 72px; } }
 @media (prefers-reduced-motion: reduce) { .sb-side { transition: none; } }
 
 /* ── Responsive component wrap/reflow fixes ─────────────────────────────── */
 .dayentry-content { min-width: 0; }
 .dayentry-title { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .dayentry { grid-template-columns: 44px 18px 1fr; column-gap: 9px; } }
-@media (max-width: 520px) { .composer-top { grid-template-columns: 1fr auto; } }
+@media (max-width: 540px) { .composer-top { grid-template-columns: 1fr auto; } }
 .list-title, .list-sub { overflow-wrap: anywhere; }
 
 /* Composer "deciding" mode — a decision (dialogue choices) is embedded in place
@@ -3226,7 +3230,7 @@ html.home #dock .recap-band {
 html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-5) var(--space-2); }
 html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
 
-@media (max-width: 900px) {
+@media (max-width: 920px) {
   html.home #dock { position: fixed; inset: 62px 0 0 0; width: auto; height: auto; }
 }
 
