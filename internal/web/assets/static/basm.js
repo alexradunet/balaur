@@ -144,13 +144,30 @@ window.balaurCloseModal = function () {
   if (d) { d.close(); d.innerHTML = ''; }
 };
 
+// ── Cap active artifacts (plan 094) ────────────────────────────────
+// Keep at most ACTIVE_ARTIFACT_CAP artifacts expanded; older ones collapse to
+// their static "shown earlier" chip. Runs on load and on every #chat mutation
+// (covers sidebar injects, agent card_show, and clusters across all fragments).
+var ACTIVE_ARTIFACT_CAP = 3;
+function balaurCapArtifacts() {
+  var chat = document.getElementById('chat');
+  if (!chat) return;
+  var arts = chat.querySelectorAll('.artifact');
+  var cutoff = arts.length - ACTIVE_ARTIFACT_CAP;
+  arts.forEach(function (el, i) {
+    el.classList.toggle('artifact--collapsed', i < cutoff);
+  });
+}
+
 // Datastar appends/morphs #chat directly (no htmx swap events), so watch the
 // chat node and keep the latest message in view.
 document.addEventListener('DOMContentLoaded', () => {
   const chat = document.getElementById('chat');
   if (!chat) return;
   balaurScrollToLatest();
-  new MutationObserver(balaurScrollToLatest).observe(chat, { childList: true, subtree: true });
+  balaurCapArtifacts();
+  new MutationObserver(() => { balaurCapArtifacts(); balaurScrollToLatest(); })
+    .observe(chat, { childList: true, subtree: true });
 });
 
 // ── Dock: full-screen toggle + drag-to-resize the rail ─────────────
