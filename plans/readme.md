@@ -103,6 +103,12 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 083 | Retire orphaned focus-body templates + reconcile the competing `/boards` page shell | P2 | M | MED | — | — | DONE (reviewed; `improve/uxui-program`; /boards→302 retire, 5 focus funcs + 5 templates + orphan helpers deleted (−883 lines), 8 tests repointed to live gomponents path (not gutted), tour anchor fixed; on integration branch) |
 | 084 | Port the companion chat dock to a `chat.Dock` gomponents organism (retire legacy `chat_dock`) | P1 | L | MED–HIGH | 076, 080 | — | DONE (reviewed; `improve/uxui-program`; chat.Dock shell organism (rail/overlay/home variants), all SSE selector ids preserved + tested, legacy chat_dock retired; +flex-chain fix (`a3d8f81`) so composer pins; widths via --w-chat-* tokens; switchers still templated (deferred). NOTE behavioral change: home now mounts the head/model-switcher ledge (old home did not) — confirm/revert post-merge. Streaming round-trip needs a configured model (verify in real deploy). On integration branch) |
 | 085 | Refresh DESIGN.md honesty ledger + self-knowledge to match running architecture | P3 | S | LOW | 075–084 (soft) | — | DONE (reviewed; `improve/uxui-program`@`702548f`; DESIGN.md IA→domain-rail, inference→Kronk in-process, layout-token layer documented, dead shadow-hard mirror removed; knowledge.md already accurate; on integration branch) |
+| 086 | One-click "Get our official model" — in-app GGUF download + verify + auto-activate | P1 | M–L | MED | — (087 resolves its runtime-missing Alert) | — | TODO (1 execute attempt blocked by env perms 2026-06-17 — see note; plan unchanged/ready) |
+| 087 | Owner-initiated llama.cpp runtime install — both CPU + Vulkan, into the lib dir the engine loads from | P1 | L | MED–HIGH | 086 | — | TODO |
+| 088 | Single-page chat shell + left domain sidebar + deterministic `/ui/show` artifact injection | P1 | L | MED–HIGH | — | — | DONE (APPROVED; `improve/088-single-page-chat-sidebar`@`84f37ae`, worktree only — **NOT merged**, handed to owner. Advisor re-ran all gates in the worktree: CGO-free build/vet/`gofmt -l`/`go test ./...` 33 pkgs green, `git diff --check` clean; scope clean (15 in-scope files; `tasks.go`/`tools/ui.go` untouched, no Topbar/`/focus`/boards change); `/ui/show/{type}` registered. Landed: `shell.ChatShell` (sidebar+full-canvas chat), `SidebarItem`+`Icon`/`Action` (additive/byte-stable), `domainSidebar()`, `GET /ui/show/{type}` persisting `role=tool`/`origin=""` via new `conversation.AppendOriginRec` (live==reload through `messageViews`; `origin=""` sidesteps `chatNudges` — no `tasks.go` edit), CSS `.app-shell`/`#dock.app-dock`/`.sb-nav-icon`+≤720 collapse, storybook `sidebarStory`, migrated `home_test`/`handlers_test` + new `show_test` (SSE-append/persist/no-dup-poll/404/400) + `AppendOriginRec` test. `knowledge.md` updated to the accurate hybrid interim state (defers `/focus` retirement to 089). Old shell/`/focus`/boards left intact per scope. Single commit `84f37ae`.) |
+| 089 | Retire the top-nav + `/focus` pages + boards (drop the boards collection) + rewrite DESIGN.md/knowledge.md to the single-page IA | P1 | L | MED–HIGH | **088** | — | TODO |
+| 090 | Ad-hoc card clusters: `ArtifactMarker` + `show_cards` tool + filtered bare `tasks` cluster card | P2 | M | MED | **088** | — | TODO |
+| 091 | Sidebar chrome (head/model switchers, theme/palette, recap into the rail) + responsive/a11y polish | P2 | M | MED | **088** | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -307,8 +313,199 @@ switcher port (084 optional tail) should fix; parch-recipe dedup (082) and the
 free-board collapse R3 (moot after /boards retired) remain deferred; the
 storybook Topbar story no longer renders the drawer (now a Page-level overlay).
 
+## Twelfth cycle (2026-06-17, owner-requested feature): plans 086–087
+
+Owner-requested via `improve plan` on 2026-06-17: *"provide a simple way to let users
+download our official model and use it right away, and embed both cpu and vulkan
+runtimes."* Skipped the audit (the owner already knew the goal); did first-hand recon of
+the model-install path, the Kronk runtime-loading path, and the **vendored** Kronk/yzma
+SDK, cross-checked by a parallel recon+design workflow (9 agents: 4 recon, a 3-approach
+judge panel on runtime delivery, a model-download design, a synthesis). Anchored to
+commit `1f463bb`.
+
+**The decisive finding: the capability is already vendored, so almost none of it is
+net-new native code.** `github.com/hybridgroup/yzma/pkg/download` (already imported in
+`internal/kronk/engine.go`) and `github.com/ardanlabs/kronk@v1.28.0/sdk/tools/libs`
+ship a complete model **and** library installer: `download.GetModelWithProgress` (GGUF
+over go-getter, already an indirect dep) and `libs.DownloadFor(arch,os,proc,version)`,
+which writes a precompiled llama.cpp bundle to **exactly** `<root>/<os>/<arch>/<proc>/`
++ `version.json` — the very layout `resolveLibDir` (`engine.go:80-100`) already loads.
+
+**"Embed both runtimes" → install both, do NOT compile in.** `libggml-vulkan.so` is
+**50 MB** on this box (SPIR-V shaders); `go:embed` is compile-time, so embedding
+cpu+vulkan would bloat the binary ~111 MB → ~168 MB for *every* user (GPU-less
+included) and force a per-platform build matrix — for negative value. The chosen
+approach keeps the binary flat and CGO off, and stays inside the "engine never
+downloads on **boot**" rule because every fetch is an explicit, audited owner click.
+
+**Two plans, split by risk; land in order:**
+- **086 (first, lower-risk, ships standalone)** — one-click official-model download:
+  a code-pinned GGUF (recommend Gemma 4 E4B-it Q4_K_M from the first-party
+  `ggml-org/gemma-4-E4B-it-GGUF`, ~5.34 GB, Apache-2.0 — owner asked for "at least
+  Qwen3.5 or Gemma 4"; Qwen3.5-4B is the documented lighter alt — a
+  *decision to confirm*, with the real sha256 pasted before merge), a small hand-rolled
+  `net/http` downloader (Range-resume + streaming sha256 + cancel) or the SDK's
+  `GetModelWithProgress` as the zero-code fallback, live SSE progress reusing the
+  `chatstream.go` morph pattern, then auto-activate via the **existing**
+  `store.SaveLocalModel`+`SetActiveLLMModel` path so the card flips to "In use" with no
+  path typing. On a box with no runtime it shows a runtime-missing Alert (the seam 087
+  fills) rather than faking a working model.
+- **087 (second, the real "both runtimes" enabler)** — owner-initiated cpu **and**
+  vulkan runtime install via `libs.DownloadFor`, gated by `libs.IsSupported` to
+  linux/amd64 for v1. **Two net-new pieces of work** carry the risk: (1) a single
+  `kronk.LibRoot()` resolver shared by the installer **and** `resolveLibDir`, because
+  today `BALAUR_LIB_PATH` is empty-when-unset and the README's
+  `~/.local/share/balaur/kronk/lib` "default" is not in the code — install-here /
+  load-there would silently break, so a resolver-agreement test is the headline guard;
+  (2) a Balaur-owned `go:embed` sha256 manifest verified post-extract, since the
+  SDK/yzma path does **not** checksum its downloads.
+
+**Open decisions surfaced to the owner (recommended defaults baked into the plans):**
+which exact model is "official" (default Gemma 4 E4B-it Q4_K_M, first-party ggml-org;
+Qwen3.5-4B the lighter alt); fetch from
+upstream HF/GitHub releases vs a Balaur mirror (default upstream, to avoid the MIT
+redistribution duty); binary-size ceiling (default: keep it flat — the reason to reject
+embedding); which platforms get zero-setup (default linux/amd64 {cpu,vulkan}; macOS/
+Windows/CUDA/ROCm deferred to manual `BALAUR_LIB_PATH`). Neither plan adds a migration
+(download state is a transient `app.Store()` sidecar); next free migration timestamp
+remains `1750850000`.
+
+**Precedent**: plan **023** ("GGUF download manager: background, progress, cancel,
+delete") shipped this affordance once in the Ollama era; plan **074** removed it with
+the Ollama/remote path. 086–087 re-introduce it Kronk-native.
+
+**Execution attempt (2026-06-17) — BLOCKED by environment, not by the plan.** A `sonnet`
+executor was dispatched on 086 in an isolated worktree. It ran the drift check (clean at
+`3136bad`, all cited excerpts confirmed) and completed read-only recon, then STOPPED: every
+file-mutation tool (`Write`, `Edit`, and non-allowlisted `Bash` incl. `git checkout -b`) was
+auto-denied in the subagent's non-interactive session. Root cause: `.claude/settings.json`
+allow-lists only read-only-ish Bash (`go build/test/vet/run`, `make`, `git status/diff/log/
+show`) with **no `Write`/`Edit` allow**, so those default to "ask" — which a background
+subagent cannot satisfy (no interactive approver). **No files were changed; the plan needs no
+refinement.** To unblock the `execute` flow, allow `Write`, `Edit`, and `Bash(git checkout:*)`
+for executor subagents (e.g. in `.claude/settings.local.json`), then re-dispatch — or execute
+086 manually/interactively from the plan, which is complete and ready.
+
+## Thirteenth cycle (2026-06-17, owner-requested redesign): plans 088–091
+
+Owner-requested via the `ui-development` brainstorm + `improve plan` on 2026-06-17:
+collapse the UI to **one page — a left domain sidebar + the companion chat as the only
+primary surface** — where domain content arrives as **artifacts rendered INTO the
+conversation stream**, two doors converging on one card registry: (1) **deterministic**
+— a sidebar domain click injects that domain's card into the chat instantly, no model
+call; (2) **conversational** — a natural-language request makes the agent render the
+same card. This is the culmination of the UI journey (card-first boards → domain rail →
+top-nav + full-screen-chat home → **single-page chat + sidebar artifacts**).
+
+**The decisive recon finding: the conversational half already ships.** `card_show`
+(`internal/tools/ui.go`) + the `UICardMarker` + the 14-type `cards` registry +
+`recap.messageViews` reload-replay ALREADY render a live, persisted, reload-surviving
+card into the conversation. The work is therefore mostly the SHELL and the SIDEBAR, plus a
+deterministic injection endpoint — not a generative-UI engine. The atomic-component bet
+paid off exactly as intended.
+
+**Locked owner decisions:** (1) **full replacement now** — retire the top-nav, the
+`/focus/{type}` pages, the right-rail dock layout, and boards; (2) **drop the boards
+collection entirely** ("drop the table completely, I don't care" — a migration drops it,
+no data preserved, no board surface recreated); (3) **persist artifacts in the
+transcript** — a summoned artifact is a permanent, live entry that re-renders from current
+data on reload (the `card_show` contract); (4) **ad-hoc clusters** — the agent can
+hand-pick N cards as one artifact, and a new filtered bare `tasks` card draws individual
+quests as standalone cards.
+
+**The four plans (recommended order 088 → 089 → 090 → 091):**
+- **088 (milestone vertical, first)** — the single-page `ChatShell` (left `shell.Sidebar` +
+  full-canvas chat), `SidebarItem` extended with an `Icon` + a Datastar inject `Action`,
+  and `GET /ui/show/{type}`: the deterministic door that renders a card via `h.cardHTML`,
+  persists it as a `card_show`-style `role=tool`/`origin=""` row (so reload re-renders it
+  through the EXISTING `uicard` branch with zero new reload code), and appends it to
+  `#chat`. Leaves the old shell/`/focus`/boards intact (089 removes them). Preserves every
+  SSE selector id.
+- **089 (depends on 088)** — retire `shell.Topbar`/`topnav`/`/focus`/boards, trim
+  `UITools` to `card_show`, **drop the boards collection** (`migrations/1750850000_drop_boards.go`),
+  re-point ~27 `/focus` inbound links (card footers) to the `/ui/show/{type}` door, and
+  rewrite `DESIGN.md` + `internal/self/knowledge.md` to the single-page IA.
+- **090 (depends on 088)** — `ArtifactMarker` + `MarkArtifact`/`ParseArtifact` (JSON head,
+  mirroring `choices.go`, reusing `cards.Card`/`ValidateCards`), a `show_cards` agent tool,
+  a `chat.Cluster` organism (pre-rendered children — layering-clean), and a filtered bare
+  `tasks` cluster card (reuses `tasks.OpenTasks`/`Bucket` + `TaskCard`). **The headline rule:
+  the new marker MUST be handled in BOTH `chatstream.handleToolResult` (live) AND
+  `recap.messageViews` (reload), same commit.**
+- **091 (depends on 088; P2, last)** — relocate the head/model switchers (still
+  `html/template` fragments, injected via `g.Raw` — the gomponents port stays deferred from
+  plan 084), theme/palette, and a recap affordance into the sidebar rail; close the
+  responsive/a11y debt (off-canvas drawer ≤720px at body level, `--measure` cap,
+  `aria-pressed`, reduced-motion, 44px targets). Preserves the `#chatbar`/`#head-switcher`
+  SSE patch-target ids verbatim.
+
+**Process (per this repo's discipline):** recon via a 5-agent subsystem-mapping workflow
+(turn pipeline, tools, chat gateway, shell/sidebar, cards registry); plans drafted by a
+4-agent workflow reading the tree first-hand against the `087` exemplar; then **adversarially
+re-verified** by a 4-agent workflow against live code at `3136bad` (excerpt-by-excerpt +
+design stress-test). The advisor then re-read every load-bearing file first-hand and applied
+the fixes the verification surfaced:
+- **088**: persist the deterministic artifact with **`origin:""`** (identical to a
+  `card_show` result) so the `chatNudges` (`origin != ''`) 30s poller cannot re-append it —
+  this dissolves the double-append bug with **no `tasks.go` change**; added
+  `conversation.AppendOriginRec` (returns the saved record) so the live append renders
+  through the exact `messageViews` path as reload (live == reload, guaranteed); de-collided
+  the sidebar icons (Heads→`shield`, not the `tome` Knowledge uses); pinned the responsive
+  collapse to the canonical `≤720px`.
+- **089**: aligned the `/focus`-link re-pointing to 088's real route shape
+  (`@get('/ui/show/{type}?…')`, type as a path segment), and made the `grep -rn "/focus/"`
+  Done-criteria the authoritative completeness gate.
+- **090**: made the `UITools` ordering-vs-089 instruction concrete.
+
+Each plan is commit-anchored to `3136bad` with a drift check; every cited excerpt was
+re-confirmed against HEAD during verification. Baseline at `3136bad`: build/vet/test green.
+Only **089** adds a migration (`1750850000`); next free timestamp after this program remains
+`1750860000`.
+
+**Supersession:** `plans/ui-domain-pages/` (the 050–056-era `/focus/{type}` page plans —
+quests/journal/day/knowledge/settings focus) is **superseded** by this program. Those pages
+are retired in 089; the directory is DONE history, not to be re-executed.
+
 ## Dependency notes
 
+- **088 → 089, 090, 091 (strict)**: 088 is the foundation — it introduces `shell.ChatShell`,
+  `domainSidebar()` (in `internal/web`), the extended `shell.SidebarItem{Icon, Action}`,
+  `GET /ui/show/{type}`, the `.app-shell`/`#dock.app-dock` CSS, `conversation.AppendOriginRec`,
+  and the `origin:""` artifact-persistence contract. Each downstream plan has a header
+  **dependency gate that STOPs if 088 has not landed** (verified by the adversarial review,
+  which correctly reported "088 not landed" against the pre-088 tree — that is the gate
+  working, not a plan defect). Land 088 first.
+- **089 before 090 (recommended)**: both edit `internal/tools/ui.go` `UITools` — 089 trims it
+  to `card_show`; 090 adds `show_cards`. Landing 089 first makes 090's slice
+  `{cardShowTool, showCardsTool}`; either order works (090 documents both shapes and its drift
+  check catches the difference). Both also edit `internal/self/knowledge.md` (089 rewrites the
+  IA + tool prose; 090 adds the `show_cards`/`tasks` bullet) — land 089 first, 090 appends.
+- **088 ↔ 089 file overlaps**: `internal/ui/shell/shell.go` (088 ADDS `ChatShell`; 089
+  DELETES `Topbar`/`topnav`/`navLink`), `internal/web/home.go` (088 switches to `ChatShell`;
+  089 leaves it), `shell_test.go` + `home_test.go` (088 migrates the HOME assertions; 089
+  migrates the TOPBAR assertions), and the `web.go` route block (088 adds `/ui/show`; 089
+  removes `/focus` + boards). Different regions/symbols — land in number order on a train.
+- **088 ↔ 090 file overlaps**: `internal/web/chatstream.go` + `recap.go` + `cards.go` (088
+  adds the `/ui/show` render path; 090 adds the `ParseArtifact` branch to the SAME
+  `handleToolResult`/`messageViews`). Additive, different branches; re-run 090's drift check
+  if it lands first.
+- **089 ↔ 091 overlap (`web/templates/home.html`)**: 089's `/focus`-link sweep and 091's
+  switcher-fragment repoint both retarget `/focus/settings` → `/ui/show/settings`. 089 owns
+  the card-FOOTER links; 091 owns the head/model-SWITCHER fragment links. No conflict if both
+  use the `/ui/show/{type}` path-param form; coordinate at merge if they touch the same line.
+- **089 claims migration timestamp `1750850000`** (`_drop_boards.go`; next free after the
+  on-disk `1750840000`). 088/090/091 add NO migration. Next free after the program: `1750860000`.
+
+- **086 → 087 (strict-ish)**: 087 reuses 086's SSE-progress loop, single-in-flight
+  `app.Store()` flag, audit pattern, and `kronk.RuntimeInstalled()` helper, and it
+  *resolves* the runtime-missing Alert 086 stubs. Both edit `internal/web/models.go`
+  (new handlers), `internal/web/web.go` (route block ~`:204-205`),
+  `internal/feature/modelcards/{panel,modelcard}.go`,
+  `internal/feature/settingscards/settingsfocus.go` (`BuildModelsPanelView`),
+  `internal/kronk/presets.go`, and `internal/feature/storybook/stories_settings.go`.
+  Land 086 first or reconcile each plan's drift check on the shared files. Together they
+  deliver the full fresh-box → working-chat flow (the owner's box currently has **no**
+  runtime, so 086 alone downloads a model that can't run until 087 — that's by design
+  and surfaced honestly in the UI).
 - **004 → 005, 009**: the handler harness is the safety net for both the
   origin guard and the streaming-fragment refactor. Land 004 first.
 - **001 → 006 (soft)**: `-race` in CI may flag exactly the cron overlaps 001
