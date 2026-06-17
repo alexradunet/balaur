@@ -3189,8 +3189,8 @@ html.home #dock .msg-draft,
 html.home #dock .chatbar,
 html.home #dock .recap-zone,
 html.home #dock .recap-band {
-  width: auto;
-  max-width: 940px;
+  width: 100%;
+  max-width: 1800px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -3207,7 +3207,7 @@ html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
    (full-screen chat) the composer centers with the conversation column. */
 #dock-convo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 #dock .composer { flex: 0 0 auto; margin: 8px 10px 10px; }
-html.home #dock .composer { width: auto; max-width: 940px; margin-left: auto; margin-right: auto; }
+html.home #dock .composer { width: 100%; max-width: 1800px; margin-left: auto; margin-right: auto; }
 
 /* Chat speech panels (chat.Message) inside the dock: take the full column width
    (the dock is narrower than the storybook stage) and compact the portrait in
