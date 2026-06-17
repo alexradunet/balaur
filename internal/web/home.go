@@ -44,15 +44,15 @@ func composerHTML(d homeData) template.HTML {
 // page. Each item injects its card into the chat via @get (no navigation);
 // Href is the no-JS fallback. Only icon stems that exist under
 // /static/icons/ are used (confirmed: scroll, tome, orb, quill, shield, key).
+// Settings items are icon-less; they summon per-section artifacts (plan 092).
 func domainSidebar() shell.SidebarProps {
 	item := func(label, typ, icon string) shell.SidebarItem {
 		href := "/ui/show/" + typ
-		return shell.SidebarItem{
-			Label:  label,
-			Href:   href,
-			Icon:   icon,
-			Action: "@get('" + href + "')",
-		}
+		return shell.SidebarItem{Label: label, Href: href, Icon: icon, Action: "@get('" + href + "')"}
+	}
+	sect := func(label, section string) shell.SidebarItem {
+		href := "/ui/show/settings?section=" + section
+		return shell.SidebarItem{Label: label, Href: href, Action: "@get('" + href + "')"}
 	}
 	return shell.SidebarProps{
 		Brand: g.Group([]g.Node{
@@ -67,8 +67,12 @@ func domainSidebar() shell.SidebarProps {
 				item("Knowledge", "memory", "tome"),
 				item("Life", "lifelog", "orb"),
 				item("Journal", "journal", "quill"),
-				item("Heads", "heads", "shield"),
-				item("Settings", "settings", "key"),
+			}},
+			{Label: "Settings", Items: []shell.SidebarItem{
+				sect("Profile", "profile"),
+				sect("Appearance", "appearance"),
+				sect("Models", "models"),
+				sect("Heads", "heads"),
 			}},
 		},
 		Footer: g.Group([]g.Node{
