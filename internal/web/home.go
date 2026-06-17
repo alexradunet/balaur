@@ -1,12 +1,9 @@
 package web
 
-// home.go — Home (GET /) is the full-screen companion chat: the conversation
-// with Balaur IS the home. The chat lives in the persistent #dock as on every
-// page; the "home" class on <html> makes that dock fill the canvas (mirroring
-// the dock's full-screen mode). #main is intentionally empty here — navigating
-// to a domain page (e.g. /focus/quests) drops the "home" class and the dock
-// returns to its right-rail form, so the chat moves to the sidebar with the
-// domain content in #main. The dock renders via the chat.Dock gomponents organism.
+// home.go — Home (GET /) is the single-page chat shell: a left domain sidebar
+// rail + the full-canvas companion chat. The chat lives in #dock as on every
+// page; the app-shell grid makes the dock fill the right column. The dock renders
+// via the chat.Dock gomponents organism.
 
 import (
 	"html/template"
@@ -15,6 +12,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
@@ -42,6 +40,50 @@ func composerHTML(d homeData) template.HTML {
 	return template.HTML(b.String())
 }
 
+// domainSidebar builds the SidebarProps for the domain rail shown on the home
+// page. Each item injects its card into the chat via @get (no navigation);
+// Href is the no-JS fallback. Only icon stems that exist under
+// /static/icons/ are used (confirmed: scroll, tome, orb, quill, shield, key).
+func domainSidebar() shell.SidebarProps {
+	item := func(label, typ, icon string) shell.SidebarItem {
+		href := "/ui/show/" + typ
+		return shell.SidebarItem{
+			Label:  label,
+			Href:   href,
+			Icon:   icon,
+			Action: "@get('" + href + "')",
+		}
+	}
+	return shell.SidebarProps{
+		Brand: g.Group([]g.Node{
+			h.Img(h.Class("crest"), h.Src("/static/crest.png"), h.Alt(""), g.Attr("decoding", "async")),
+			h.Div(h.Class("sb-brand-text"),
+				h.Span(h.Class("sb-brand-name"), g.Text("Balaur")),
+			),
+		}),
+		Sections: []shell.SidebarSection{
+			{Label: "Domains", Items: []shell.SidebarItem{
+				item("Quests", "quests", "scroll"),
+				item("Knowledge", "memory", "tome"),
+				item("Life", "lifelog", "orb"),
+				item("Journal", "journal", "quill"),
+				item("Heads", "heads", "shield"),
+				item("Settings", "settings", "key"),
+			}},
+		},
+		Footer: g.Group([]g.Node{
+			h.Button(h.Class("theme-toggle"), h.Type("button"),
+				g.Attr("onclick", "basmToggleTheme()"),
+				h.Title("Toggle light/dark mode"),
+				h.Aria("label", "Toggle light/dark mode"),
+				h.Aria("pressed", "false"),
+				g.Text("◑"),
+			),
+			h.A(h.Href("/"), g.Text("Home")),
+		}),
+	}
+}
+
 // root handles GET / and, because "/" is the router's subtree catch-all, any
 // path with no more-specific route. The exact root renders Home; every other
 // (retired or unknown) path redirects to Home — preserving the catch-all
@@ -53,7 +95,7 @@ func (h *handlers) root(e *core.RequestEvent) error {
 	return h.homePage(e)
 }
 
-// homePage handles GET / — the full-screen companion chat.
+// homePage handles GET / — the single-page chat shell with domain sidebar.
 func (h *handlers) homePage(e *core.RequestEvent) error {
 	dock, err := h.dockData()
 	if err != nil {
@@ -66,11 +108,10 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 		Convo:     g.Raw(string(dock.ChatBodyHTML)),
 		Composer:  composerNode(dock),
 	})
-	page := shell.Page(shell.PageProps{
-		Title:     "Home",
-		Active:    "home",
-		HTMLClass: "home",
-		Dock:      dockNode,
+	page := shell.ChatShell(shell.ChatShellProps{
+		Title:   "Home",
+		Sidebar: shell.Sidebar(domainSidebar()),
+		Dock:    dockNode,
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := page.Render(e.Response); err != nil {
