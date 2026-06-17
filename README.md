@@ -201,6 +201,8 @@ Optional environment variables:
 | `BALAUR_PROCESSOR` | `cpu` | llama.cpp variant to load — `cpu` or `vulkan` |
 | `BALAUR_CHAT_MODEL` | (unset) | Absolute path to a local `.gguf` chat model |
 | `BALAUR_EMBED_MODEL` | (unset) | Absolute path to a local `.gguf` embedding model |
+| `BALAUR_MODELS_DIR` | `~/.local/share/balaur/models` | Directory where in-app model downloads are saved |
+| `BALAUR_HF_TOKEN` | (unset) | Optional Hugging Face token for downloading gated models |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
 | `BALAUR_SOURCE` | (unset) | Path to the Balaur source checkout for self-development (requires `BALAUR_OS_ACCESS=1`) |
 | `BALAUR_MAX_STEPS` | (unset) | Raise the tool-round cap per turn; default is 8 (useful for coding sessions) |

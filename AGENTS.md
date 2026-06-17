@@ -189,8 +189,9 @@ lean and high-signal — add a rule only when it changes a real decision.
   llama.cpp library and GGUF model files are runtime assets, owner-supplied via
   `BALAUR_LIB_PATH`/`BALAUR_CHAT_MODEL`; the engine never downloads them on boot.
   CPU is the default; `BALAUR_PROCESSOR=vulkan` offloads to a Vulkan GPU (the host
-  loader + driver are host setup, outside the repo). Owner-initiated downloads and
-  a richer model UI are deferred work. The full-engine dependency weight (~+33MB
+  loader + driver are host setup, outside the repo). Owner-initiated MODEL download
+  ships (plan 086); owner-initiated runtime download is plan 087. A richer model UI
+  is deferred. The full-engine dependency weight (~+33MB
   binary, incl. AWS/gRPC/OTel via go-getter, MPL-2.0) is an accepted cost (plan 074).
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
   content that may leave the box (logs, exports, audit entries).

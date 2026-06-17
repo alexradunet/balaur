@@ -15,7 +15,8 @@ embedded Kronk engine (internal/kronk) — a local GGUF model loaded through
 yzma/llama.cpp, CGO-free (the native library is dlopen'd at runtime). For v1
 there is a single LLM path: local; there is no remote provider and no Ollama.
 The owner supplies the native library (BALAUR_LIB_PATH) and GGUF files
-(BALAUR_CHAT_MODEL or the Models page); the engine never downloads them on boot.
+(BALAUR_CHAT_MODEL or the Models page); the engine never downloads models on boot.
+The owner can download the official curated model in-app via the Models page (plan 086).
 
 The name is the Romanian fairy-tale dragon with many heads. There is one
 master conversation, persisted forever and summarized by the recap
