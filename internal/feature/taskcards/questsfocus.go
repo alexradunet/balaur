@@ -5,32 +5,30 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	data "maragu.dev/gomponents-datastar"
 	. "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
-// QuestGroupView is one rhythm group in the quest-log rail.
+// QuestGroupView is one rhythm group in the quest stack.
 // Mirrors questGroupView in internal/web/tasks.go.
 type QuestGroupView struct {
 	Name  string
 	Tasks []TaskView
 }
 
-// QuestsFocusView is the full quest-log focus body's view-model.
+// QuestsFocusView is the full quests focus body's view-model.
 // Mirrors questLogView in internal/web/tasks.go.
 type QuestsFocusView struct {
 	Groups       []QuestGroupView
-	First        *TaskView // first open task (server-side panel pre-render)
 	DoneRecently []TaskView
 }
 
 // doneRecentlyFocusCap bounds the "Done recently" tail shown under the quest rail.
 const doneRecentlyFocusCap = 6
 
-// BuildQuestsFocus assembles the quest-log view from live data. Mirrors
+// BuildQuestsFocus assembles the quests focus view from live data. Mirrors
 // buildQuestLog + loadQuestLogRecs in internal/web/tasks.go.
 func BuildQuestsFocus(app core.App) QuestsFocusView {
 	now := time.Now()
@@ -69,15 +67,6 @@ func buildQuestsFocusFrom(openRecs []*core.Record, doneRecs []*core.Record, now 
 		}
 	}
 
-	var first *TaskView
-	for i := range groups {
-		if len(groups[i].Tasks) > 0 {
-			t := groups[i].Tasks[0]
-			first = &t
-			break
-		}
-	}
-
 	var done []TaskView
 	for _, r := range doneRecs {
 		done = append(done, taskViewOf(r, now))
@@ -85,7 +74,6 @@ func buildQuestsFocusFrom(openRecs []*core.Record, doneRecs []*core.Record, now 
 
 	return QuestsFocusView{
 		Groups:       groups,
-		First:        first,
 		DoneRecently: done,
 	}
 }
@@ -106,81 +94,43 @@ func questGroupName(recur string, hasDue bool) string {
 	return "Rituals"
 }
 
-// QuestRail renders the rhythm-grouped rail (<nav class="quest-rail" id="quest-rail">).
-// Ports {{define "quest_rail"}} from web/templates/quests-focus.html byte-for-byte.
-func QuestRail(v QuestsFocusView) g.Node {
-	kids := []g.Node{
-		Class("quest-rail"), ID("quest-rail"),
+// QuestsFocus renders the quests artifact: rhythm-grouped sections, each a
+// flat stack of TaskCards. No rail, no detail pane (plan 093).
+func QuestsFocus(v QuestsFocusView) g.Node {
+	if len(v.Groups) == 0 {
+		return Div(Class("quest-stack"),
+			ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests yet. Speak one in the chat."}))
 	}
-
+	sections := make([]g.Node, 0, len(v.Groups)+1)
 	for _, grp := range v.Groups {
-		items := make([]g.Node, 0, len(grp.Tasks))
+		cards := make([]g.Node, 0, len(grp.Tasks))
 		for _, t := range grp.Tasks {
-			cls := "quest-row"
-			if t.Overdue {
-				cls = "quest-row quest-overdue"
-			}
-			btn := []g.Node{
-				Class(cls),
-				data.On("click", "@get('/ui/tasks/"+t.ID+"/card')"),
-				g.Text(t.Title),
-			}
-			if t.DueLine != "" {
-				btn = append(btn, Span(Class("quest-due"), g.Text(t.DueLine)))
-			}
-			items = append(items, Li(g.El("button", btn...)))
+			cards = append(cards, TaskCard(t))
 		}
-		kids = append(kids,
-			g.El("section", Class("quest-group"),
-				g.El("h3", Class("quest-group-title"),
+		sections = append(sections,
+			Section(Class("k-section"),
+				H2(Class("k-heading"),
 					g.Text(grp.Name+" "),
 					Span(Class("k-count"), g.Text(itoa(len(grp.Tasks)))),
 				),
-				Ul(g.Group(items)),
+				Div(Class("tasks-stack"), g.Group(cards)),
 			),
 		)
 	}
-
-	if len(v.Groups) == 0 {
-		kids = append(kids, ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests yet. Speak one in the chat."}))
-	}
-
 	if len(v.DoneRecently) > 0 {
-		doneItems := make([]g.Node, 0, len(v.DoneRecently))
+		cards := make([]g.Node, 0, len(v.DoneRecently))
 		for _, t := range v.DoneRecently {
-			doneItems = append(doneItems, Li(g.El("button",
-				Class("quest-row"),
-				data.On("click", "@get('/ui/tasks/"+t.ID+"/card')"),
-				g.Text(t.Title),
-			)))
+			cards = append(cards, TaskCard(t))
 		}
-		kids = append(kids,
-			g.El("details", Class("quest-done"),
-				g.El("summary", Class("quest-group-title"),
-					g.Text("Done recently "),
-					Span(Class("k-count"), g.Text(itoa(len(v.DoneRecently)))),
-				),
-				Ul(g.Group(doneItems)),
+		sections = append(sections,
+			Section(Class("k-section"),
+				H2(Class("k-heading"), g.Text("Done recently "),
+					Span(Class("k-count"), g.Text(itoa(len(v.DoneRecently))))),
+				Div(Class("tasks-stack"), g.Group(cards)),
 			),
 		)
 	}
-
-	return g.El("nav", kids...)
-}
-
-// QuestsFocus renders the full quest-log focus body: the rail + detail aside.
-// Ports {{define "tasks_list"}} from web/templates/quests-focus.html.
-func QuestsFocus(v QuestsFocusView) g.Node {
-	var detail g.Node
-	if v.First != nil {
-		detail = TaskCard(*v.First)
-	} else {
-		detail = ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests yet. Speak one in the chat."})
-	}
-	return Div(Class("quest-log"),
-		QuestRail(v),
-		g.El("aside", Class("quest-detail"), ID("quest-detail"), detail),
-	)
+	return Div(Class("quest-stack"), g.Group(sections))
 }
 
 // itoa converts an int to its decimal string — avoids importing fmt/strconv.
