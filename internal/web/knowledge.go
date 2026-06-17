@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"strings"
 
@@ -19,60 +18,6 @@ import (
 // cards inside the memory + skills card focuses (/focus/memory, /focus/skills)
 // and the /settings/skills section. Card actions post back tiny SSE fragments
 // — the server is the single source of truth for state.
-
-// memoryCategories mirrors migrations/1749700000_knowledge.go for the
-// filter tabs. Kept here (not exported from knowledge) until a third
-// consumer appears.
-var memoryCategories = []string{"fact", "preference", "person", "project", "context"}
-
-// skillsData builds the template data map for the skills manager.
-// Used by the skills card focus (knowledgeFocusHTML); skills left the settings
-// shell in plan 056.
-func (h *handlers) skillsData(q string) map[string]any {
-	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusProposed)
-	active, _ := knowledge.FilterActive(h.app, knowledge.Skill, q, "")
-	archived, _ := knowledge.ListByStatus(h.app, knowledge.Skill, knowledge.StatusArchived)
-	return map[string]any{
-		"Title":    "Skills",
-		"Kind":     "skills",
-		"Proposed": proposed,
-		"Active":   active,
-		"Archived": archived,
-		"Query":    q,
-	}
-}
-
-// memoryData builds the knowledge_body data map for memories (mirrors
-// skillsData). Shared by the memory focus.
-func (h *handlers) memoryData(q, cat string) map[string]any {
-	proposed, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusProposed)
-	active, _ := knowledge.FilterActive(h.app, knowledge.Memory, q, cat)
-	archived, _ := knowledge.ListByStatus(h.app, knowledge.Memory, knowledge.StatusArchived)
-	return map[string]any{
-		"Title": "Memory", "Kind": "memories",
-		"Proposed": proposed, "Active": active, "Archived": archived,
-		"Query": q, "Category": cat, "Categories": memoryCategories,
-	}
-}
-
-// knowledgeFocusHTML renders the full knowledge manager (proposed + searchable
-// active grid + archived) as a card focus body. Was the /memory page (and the
-// /settings/skills section). Search/category interactions use the kept
-// /ui/knowledge/{kind}/grid endpoint.
-func (h *handlers) knowledgeFocusHTML(kind knowledge.Kind) template.HTML {
-	var data map[string]any
-	if kind == knowledge.Skill {
-		data = h.skillsData("")
-	} else {
-		data = h.memoryData("", "")
-	}
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "knowledge_body", data); err != nil {
-		h.app.Logger().Warn("knowledge focus render failed", "kind", kind, "err", err)
-		return cardErrorStrip("could not open " + string(kind))
-	}
-	return template.HTML(b.String())
-}
 
 // knowledgeGrid serves just the active-section grid — the Datastar target for
 // live search and category tabs. Validation runs first (a normal HTTP error)

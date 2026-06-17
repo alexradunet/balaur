@@ -127,18 +127,6 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 	return nil
 }
 
-// modelsData returns a modelsPageData for the legacy settings_body template.
-// Dead since plan 05 — called only by settingsFocusHTML (also dead).
-// TODO(ui-redesign): retire together with settingsFocusHTML once templates_test.go
-// is reconciled.
-func (h *handlers) modelsData() (modelsPageData, error) {
-	html, err := h.renderModelsPanel("")
-	if err != nil {
-		return modelsPageData{}, err
-	}
-	return modelsPageData{ModelsHTML: html}, nil
-}
-
 // renderModelsPanel renders the gomponents Models panel to HTML for injection
 // into settings_body on page load. Delegates view assembly to
 // settingscards.BuildModelsPanelView — the single source of truth.

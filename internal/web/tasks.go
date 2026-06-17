@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"html/template"
 	"net/url"
 	"sort"
 	"strconv"
@@ -74,95 +73,6 @@ func questGroup(recur string, hasDue bool) string {
 		return "Dailies"
 	}
 	return "Rituals"
-}
-
-// questGroupView is one rhythm group in the quest-log rail.
-type questGroupView struct {
-	Name  string
-	Tasks []taskView
-}
-
-// questLogView is the full quest-log list template payload.
-type questLogView struct {
-	Groups       []questGroupView
-	First        *taskView // first open task (for server-side panel pre-render)
-	DoneRecently []taskView
-}
-
-// doneRecentlyCap bounds the "Done recently" tail shown under the quest rail.
-const doneRecentlyCap = 6
-
-// loadQuestLogRecs loads the open tasks and the recently-done tail that feed the
-// quest-log rail (the quests focus and the post-transition rail refresh).
-func (h *handlers) loadQuestLogRecs() (open, done []*core.Record) {
-	open, _ = tasks.OpenTasks(h.app, nil)
-	if dr, err := h.app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", doneRecentlyCap, 0); err == nil {
-		done = dr
-	}
-	return
-}
-
-// buildQuestLog groups open tasks by rhythm and returns the view.
-func buildQuestLog(openRecs []*core.Record, doneRecs []*core.Record, now time.Time) questLogView {
-	groups := map[string]*questGroupView{
-		"Dailies":     {Name: "Dailies"},
-		"Rituals":     {Name: "Rituals"},
-		"Quests":      {Name: "Quests"},
-		"Side quests": {Name: "Side quests"},
-	}
-	order := []string{"Dailies", "Rituals", "Quests", "Side quests"}
-
-	for _, rec := range openRecs {
-		tv := taskViewOf(rec, now)
-		grp := questGroup(rec.GetString("recur"), !rec.GetDateTime("due").Time().IsZero())
-		groups[grp].Tasks = append(groups[grp].Tasks, tv)
-	}
-
-	var result []questGroupView
-	for _, name := range order {
-		g := groups[name]
-		if len(g.Tasks) > 0 {
-			result = append(result, *g)
-		}
-	}
-
-	var first *taskView
-	for i := range result {
-		if len(result[i].Tasks) > 0 {
-			t := result[i].Tasks[0]
-			first = &t
-			break
-		}
-	}
-
-	var done []taskView
-	for _, r := range doneRecs {
-		done = append(done, taskViewOf(r, now))
-	}
-
-	return questLogView{
-		Groups:       result,
-		First:        first,
-		DoneRecently: done,
-	}
-}
-
-// questsFocusHTML is dead code — the quests focus body is now rendered by
-// taskcards.QuestsFocus (registered via the ui.Focus seam). Left here because
-// templates_test.go::TestQuestsFocusListRenders still executes the tasks_list
-// template directly; retire both once that test is reconciled.
-// TODO(ui-redesign): retire once TestQuestsFocusListRenders is reconciled.
-func (h *handlers) questsFocusHTML() template.HTML {
-	now := time.Now()
-	openRecs, doneRecs := h.loadQuestLogRecs()
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "tasks_list", map[string]any{
-		"QuestLog": buildQuestLog(openRecs, doneRecs, now),
-	}); err != nil {
-		h.app.Logger().Warn("quests focus render failed", "err", err)
-		return cardErrorStrip("could not render the quest log")
-	}
-	return template.HTML(b.String())
 }
 
 // ---- calendar ----
