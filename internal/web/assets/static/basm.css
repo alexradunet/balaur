@@ -42,6 +42,9 @@
   --ink:       #2c2012;
   --ink-muted: #6f5e3c;
   --on-surface: #2c2012;
+  --ink-deep:   #1c0d04;                       /* darkest ink on a bright gold/ember fill */
+  --portrait-bg: #101314;                      /* near-black portrait backdrop (theme-constant) */
+  --candle-glow: #c88600;                      /* candle breathe glow (theme-constant warm gold) */
 
   /* Bevel edges */
   --bevel-light: light-dark(rgba(255,222,166,.30), rgba(255,196,118,.18));
@@ -386,7 +389,7 @@ textarea:focus-visible,
 }
 .btn-primary {
   background: var(--ember);
-  color: #1c0d04;
+  color: var(--ink-deep);
   box-shadow: inset 0 3px 0 rgba(255,236,200,.42), inset 0 -3px 0 rgba(60,10,0,.38),
               var(--drop-hard);
 }
@@ -527,7 +530,7 @@ textarea:focus-visible,
   width: var(--portrait-size);
   height: var(--portrait-size);
   border: 2px solid var(--outline-2);
-  background: #101314;
+  background: var(--portrait-bg);
   box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
   padding: 3px;
 }
@@ -1069,7 +1072,7 @@ dialog::backdrop {
 }
 .k-tab:hover { color: var(--gold); }
 .k-tab-active {
-  color: #1c0d04;
+  color: var(--ink-deep);
   background: var(--gold);
   border-color: var(--outline-2);
   box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
@@ -1892,7 +1895,7 @@ dialog::backdrop {
 .settings-nav-link:hover { color: var(--gold); border-color: var(--gold-deep); }
 
 .settings-nav-active {
-  color: #1c0d04;
+  color: var(--ink-deep);
   background: var(--gold);
   border-color: var(--outline-2);
   box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
@@ -2072,8 +2075,8 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 
 @keyframes candle-breathe {
-  0%, 100% { filter: drop-shadow(0 0 6px #c8860088); }
-  50%       { filter: drop-shadow(0 0 18px #c88600cc); }
+  0%, 100% { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--candle-glow) 53%, transparent)); }
+  50%       { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--candle-glow) 80%, transparent)); }
 }
 
 .candle-crest {
@@ -2111,7 +2114,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .board-rename-form { display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-1); padding: var(--space-2); background: var(--surface); border: 2px solid var(--parch-edge); border-radius: var(--radius); }
 .board-rename-form input[type="text"] { flex: 1; }
 .board-delete-form { display: inline; }
-.btn-danger { color: var(--ember-deep, #c0392b); border-color: var(--ember-deep, #c0392b); }
+.btn-danger { color: var(--ember-deep); border-color: var(--ember-deep); }
 
 .board-grid {
   display: grid;
@@ -3163,7 +3166,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cmsg-row { display: flex; gap: 10px; align-items: stretch; max-width: 88%; }
 .cmsg-portrait {
   width: 64px; height: 64px; flex-shrink: 0; align-self: flex-start; box-sizing: border-box;
-  overflow: hidden; padding: 3px; border: 2px solid var(--outline-2); background: #101314;
+  overflow: hidden; padding: 3px; border: 2px solid var(--outline-2); background: var(--portrait-bg);
   box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
 }
 .cmsg-user .cmsg-portrait { box-shadow: inset 0 0 0 2px var(--indigo), var(--drop-hard); }
