@@ -34,6 +34,7 @@ func tabsStory() Story {
 			{"Label", "string", "—", "The tab text — short, lowercase in content."},
 			{"Href", "string", "—", "The filter route or Datastar target the tab links to."},
 			{"Active", "bool", "false", `Gold-fills the tab and sets aria-current="page".`},
+			{"Attrs", "[]g.Node", "nil", "Per-tab pass-through attributes — Datastar wiring for in-place switching."},
 		},
 		Dos: []string{
 			"Use to filter one collection in place (memory kinds, task states).",
@@ -60,6 +61,7 @@ func breadcrumbStory() Story {
 		Props: []Prop{
 			{"Label", "string", "—", "The crumb text."},
 			{"Href", "string", "—", "Where the crumb links; empty Href (or the last item) renders as the current page, not a link."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the nav element."},
 		},
 		Dos: []string{
 			"Use when the owner has drilled two or more levels in.",
@@ -91,6 +93,7 @@ func paginationStory() Story {
 			{"Total", "int", "1", "Total pages (1-based); clamped to at least 1."},
 			{"Page", "int", "1", "Current page (1-based); the raised gold chip."},
 			{"HrefFor", "func(int) string", "—", "Maps a page number to its URL — the slab links."},
+			{"attrs …g.Node", "variadic", "—", "Extra root attributes (Datastar) passed through to the nav element."},
 		},
 		Dos: []string{
 			"Use for long archives where infinite scroll would lose the owner.",
@@ -106,11 +109,13 @@ func paginationStory() Story {
 func topbarStory() Story {
 	return Story{
 		ID: "topbar", Group: "Navigation", Title: "Topbar", Wide: true,
-		Blurb: "The sticky wood-plank chrome bar: the crest brand links Home (the full-screen companion chat), then the top-level domain nav (Quests / Knowledge / Life / Journal / Heads + Settings) and the theme toggles. This is the product's only top-level navigation — the active domain rides gold.",
+		Blurb: "The sticky wood-plank chrome bar: the crest brand links Home (the full-screen companion chat), then the top-level domain nav (Quests / Knowledge / Life / Journal / Heads + Settings) and the theme toggles. This is the product's only top-level navigation — the active domain rides gold. On viewports ≤720px the inline nav is hidden and replaced by an accessible off-canvas drawer (☰ burger → slide-in panel); the theme buttons stay in the bar at ≥44px touch height.",
 		Variants: []Variant{
 			// position:relative gives the sticky bar a containing block so it
 			// renders in place inside the storybook tile. One example — the
 			// active domain (here "quests") rides gold; other pages just move it.
+			// Note: the burger and drawer markup render here too (hidden on desktop
+			// via CSS); the storybook tile is wider than 720px so they are invisible.
 			{"quests active", h.Div(h.Style("position:relative"), shell.Topbar("quests"))},
 		},
 		Props: []Prop{
@@ -119,10 +124,12 @@ func topbarStory() Story {
 		Dos: []string{
 			"Use for top-level page navigation only.",
 			"Keep the crest borderless — its frame is in the art.",
+			"On phones (≤720px) the domain links collapse into an accessible off-canvas drawer (the burger ☰); keep that one mechanism — do not add a second mobile nav.",
 		},
 		Donts: []string{
 			"Use it to filter a list — that is Tabs.",
 			"Type nav labels in caps; CSS handles the casing.",
+			"Dedupe basmToggleTopnav (product drawer) with basmToggleNav (storybook drawer) — they coexist by design; the storybook drawer lacks the a11y focus trap; unifying them is a future cleanup.",
 		},
 	}
 }

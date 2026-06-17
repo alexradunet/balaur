@@ -75,9 +75,11 @@ func Composer(p ComposerProps, attrs ...g.Node) g.Node {
 	toolRow := []g.Node{h.Class("composer-tools")}
 	for _, t := range tools {
 		toolRow = append(toolRow, h.Button(h.Class("composer-tool"), h.Type("button"),
+			h.Disabled(), h.Aria("label", t+" (coming soon)"),
 			h.Img(h.Src("/static/icons/"+t+".png"), h.Alt(""), g.Attr("decoding", "async"))))
 	}
 	toolRow = append(toolRow, h.Button(h.Class("composer-tool composer-sound"), h.Type("button"),
+		h.Disabled(), h.Aria("label", "Sound (coming soon)"),
 		h.Img(h.Src("/static/icons/bell.png"), h.Alt(""), g.Attr("decoding", "async"))))
 
 	// Center slot of the top row: empty in draft mode, the prompt kicker when deciding.

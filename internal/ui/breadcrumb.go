@@ -13,7 +13,7 @@ type Crumb struct {
 
 // Breadcrumb renders the Hearthwood breadcrumb bar: link crumbs separated by a
 // muted › glyph, ending in the current page. The trail is a <nav aria-label>.
-func Breadcrumb(items []Crumb) g.Node {
+func Breadcrumb(items []Crumb, attrs ...g.Node) g.Node {
 	kids := []g.Node{h.Class("breadcrumb"), h.Aria("label", "Breadcrumb")}
 	for i, it := range items {
 		last := i == len(items)-1
@@ -26,5 +26,6 @@ func Breadcrumb(items []Crumb) g.Node {
 			kids = append(kids, h.Span(h.Class("crumb-sep"), g.Attr("aria-hidden", "true"), g.Text("›")))
 		}
 	}
+	kids = append(kids, attrs...)
 	return h.Nav(kids...)
 }

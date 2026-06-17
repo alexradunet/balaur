@@ -11,7 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -50,31 +50,31 @@ type MemoryManageView struct {
 
 // MemoryCard is the compact memory summary tile. Port of ucard_memory.
 func MemoryCard(v MemoryView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-memory"), ID("ucard-memory"),
+	return h.Article(
+		h.Class("kcard ucard ucard-memory"), h.ID("ucard-memory"),
 		ui.CardHead("/static/icons/tome.png", "Memory",
-			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
+			g.If(v.ParamLine != "", h.Span(h.Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		memoryBody(v),
-		Footer(Class("kcard-actions"), A(Href("/focus/memory"), g.Text("all memories →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/focus/memory"), g.Text("all memories →"))),
 	)
 }
 
 func memoryBody(v MemoryView) g.Node {
 	if len(v.Rows) == 0 {
-		return P(Class("k-empty"), g.Text("No active memories yet."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No active memories yet."})
 	}
 	items := make([]g.Node, 0, len(v.Rows))
 	for _, row := range v.Rows {
 		items = append(items, memoryRow(row))
 	}
-	return Ul(Class("ucard-list"), g.Group(items))
+	return h.Ul(h.Class("ucard-list"), g.Group(items))
 }
 
 func memoryRow(row MemoryRow) g.Node {
-	return Li(Class("ucard-row"),
-		Span(Class("ucard-title"), A(Href("/focus/memory"), g.Text(row.Title))),
-		Span(Class("kcard-meta"), g.Text(row.Category)),
+	return h.Li(h.Class("ucard-row"),
+		h.Span(h.Class("ucard-title"), h.A(h.Href("/focus/memory"), g.Text(row.Title))),
+		h.Span(h.Class("kcard-meta"), g.Text(row.Category)),
 		ui.Pips(row.Importance, 5, ""),
 	)
 }
@@ -82,15 +82,15 @@ func memoryRow(row MemoryRow) g.Node {
 // MemoryRecordCard renders one memory as a full card with status-specific
 // actions and an edit form. Port of card-memory.html.
 func MemoryRecordCard(r MemoryRecord) g.Node {
-	return Article(
-		Class("kcard kcard-"+r.Status), ID("kcard-"+r.ID),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"), g.Text("▪ "+memoryCategory(r.Category))),
+	return h.Article(
+		h.Class("kcard kcard-"+r.Status), h.ID("kcard-"+r.ID),
+		h.Header(h.Class("kcard-head"),
+			h.Span(h.Class("kcard-kind"), g.Text("▪ "+memoryCategory(r.Category))),
 			ui.Pips(r.Importance, 5, ""),
 		),
-		H3(Class("kcard-title"), g.Text(r.Title)),
-		g.If(r.Content != "", P(Class("kcard-body"), g.Text(r.Content))),
-		g.If(r.WhenToUse != "", P(Class("kcard-when"), g.Text("recall: "+r.WhenToUse))),
+		h.H3(h.Class("kcard-title"), g.Text(r.Title)),
+		g.If(r.Content != "", h.P(h.Class("kcard-body"), g.Text(r.Content))),
+		g.If(r.WhenToUse != "", h.P(h.Class("kcard-when"), g.Text("recall: "+r.WhenToUse))),
 		memoryEditForm(r),
 		memoryFooter(r),
 	)
@@ -110,31 +110,31 @@ func memoryEditForm(r MemoryRecord) g.Node {
 	opts := make([]g.Node, len(categories))
 	for i, c := range categories {
 		if c == r.Category {
-			opts[i] = Option(Value(c), g.Attr("selected", ""), g.Text(c))
+			opts[i] = h.Option(h.Value(c), g.Attr("selected", ""), g.Text(c))
 		} else {
-			opts[i] = Option(Value(c), g.Text(c))
+			opts[i] = h.Option(h.Value(c), g.Text(c))
 		}
 	}
 
-	return Details(Class("kcard-edit"),
-		Summary(g.Text("Edit")),
-		Form(
+	return h.Details(h.Class("kcard-edit"),
+		h.Summary(g.Text("Edit")),
+		h.Form(
 			data.On("submit", "@post('/ui/knowledge/memories/"+r.ID+"/edit', {contentType:'form'})", data.ModifierPrevent),
-			Label(g.Text("Title "), Input(Type("text"), Name("title"), Value(r.Title))),
-			Label(g.Text("Detail "), Textarea(Name("content"), g.Attr("rows", "3"), g.Text(r.Content))),
-			Label(g.Text("Category"),
-				Select(Name("category"), g.Group(opts)),
+			h.Label(g.Text("Title "), h.Input(h.Type("text"), h.Name("title"), h.Value(r.Title))),
+			h.Label(g.Text("Detail "), h.Textarea(h.Name("content"), g.Attr("rows", "3"), g.Text(r.Content))),
+			h.Label(g.Text("Category"),
+				h.Select(h.Name("category"), g.Group(opts)),
 			),
-			Label(g.Text("Importance (1–5) "), Input(Type("number"), Name("importance"), g.Attr("min", "1"), g.Attr("max", "5"), Value(fmt.Sprintf("%d", r.Importance)))),
-			Label(g.Text("When to recall "), Input(Type("text"), Name("when_to_use"), Value(r.WhenToUse))),
-			Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Save")),
+			h.Label(g.Text("Importance (1–5) "), h.Input(h.Type("number"), h.Name("importance"), g.Attr("min", "1"), g.Attr("max", "5"), h.Value(fmt.Sprintf("%d", r.Importance)))),
+			h.Label(g.Text("When to recall "), h.Input(h.Type("text"), h.Name("when_to_use"), h.Value(r.WhenToUse))),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Save")),
 		),
 	)
 }
 
 // memoryFooter renders the status-appropriate action buttons.
 func memoryFooter(r MemoryRecord) g.Node {
-	return Footer(Class("kcard-actions"), memoryActions(r))
+	return h.Footer(h.Class("kcard-actions"), memoryActions(r))
 }
 
 func memoryActions(r MemoryRecord) g.Node {
@@ -142,34 +142,34 @@ func memoryActions(r MemoryRecord) g.Node {
 	switch r.Status {
 	case "proposed":
 		return g.Group([]g.Node{
-			Form(
+			h.Form(
 				data.On("submit", transitionURL, data.ModifierPrevent),
-				Input(Type("hidden"), Name("to"), Value("active")),
-				Button(Class("btn btn-primary btn-sm"), Type("submit"), g.Text("Approve")),
+				h.Input(h.Type("hidden"), h.Name("to"), h.Value("active")),
+				h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Approve")),
 			),
-			Form(
+			h.Form(
 				data.On("submit", transitionURL, data.ModifierPrevent),
-				Input(Type("hidden"), Name("to"), Value("rejected")),
-				Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Dismiss")),
+				h.Input(h.Type("hidden"), h.Name("to"), h.Value("rejected")),
+				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Dismiss")),
 			),
 		})
 	case "active":
 		nodes := []g.Node{
-			Form(
+			h.Form(
 				data.On("submit", transitionURL, data.ModifierPrevent),
-				Input(Type("hidden"), Name("to"), Value("archived")),
-				Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Archive")),
+				h.Input(h.Type("hidden"), h.Name("to"), h.Value("archived")),
+				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Archive")),
 			),
 		}
 		if r.UseCount > 0 {
-			nodes = append(nodes, Span(Class("kcard-meta"), g.Text(fmt.Sprintf("used ×%d", r.UseCount))))
+			nodes = append(nodes, h.Span(h.Class("kcard-meta"), g.Text(fmt.Sprintf("used ×%d", r.UseCount))))
 		}
 		return g.Group(nodes)
 	case "archived":
-		return Form(
+		return h.Form(
 			data.On("submit", transitionURL, data.ModifierPrevent),
-			Input(Type("hidden"), Name("to"), Value("active")),
-			Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Restore")),
+			h.Input(h.Type("hidden"), h.Name("to"), h.Value("active")),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Restore")),
 		)
 	default:
 		return g.Text("")
@@ -179,10 +179,10 @@ func memoryActions(r MemoryRecord) g.Node {
 // MemoryManageCard renders the interactive memory manage card with proposed +
 // active sections. Port of ucard_knowledge_manage (for memories).
 func MemoryManageCard(v MemoryManageView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-manage ucard-memories-manage"), ID("ucard-memories-manage"),
+	return h.Article(
+		h.Class("kcard ucard ucard-manage ucard-memories-manage"), h.ID("ucard-memories-manage"),
 		ui.CardHead("/static/icons/tome.png", "Memory",
-			A(Class("kcard-meta"), Href("/focus/memory"), g.Text("manage all →")),
+			h.A(h.Class("kcard-meta"), h.Href("/focus/memory"), g.Text("manage all →")),
 		),
 		memoryManageBody(v),
 	)
@@ -190,7 +190,7 @@ func MemoryManageCard(v MemoryManageView) g.Node {
 
 func memoryManageBody(v MemoryManageView) g.Node {
 	if len(v.Proposed) == 0 && len(v.Active) == 0 {
-		return P(Class("k-empty"), g.Text("Nothing yet — Memory appears as Balaur proposes."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing yet — Memory appears as Balaur proposes."})
 	}
 
 	var sections []g.Node
@@ -201,8 +201,8 @@ func memoryManageBody(v MemoryManageView) g.Node {
 			items[i] = MemoryRecordCard(r)
 		}
 		sections = append(sections,
-			H4(Class("k-heading k-heading-proposed"), g.Text("Awaiting your word")),
-			Div(Class("ucard-manage-list"), g.Group(items)),
+			h.H4(h.Class("k-heading k-heading-proposed"), g.Text("Awaiting your word")),
+			h.Div(h.Class("ucard-manage-list"), g.Group(items)),
 		)
 	}
 
@@ -212,8 +212,8 @@ func memoryManageBody(v MemoryManageView) g.Node {
 			items[i] = MemoryRecordCard(r)
 		}
 		sections = append(sections,
-			H4(Class("k-heading k-heading-muted"), g.Text("Active")),
-			Div(Class("ucard-manage-list"), g.Group(items)),
+			h.H4(h.Class("k-heading k-heading-muted"), g.Text("Active")),
+			h.Div(h.Class("ucard-manage-list"), g.Group(items)),
 		)
 	}
 

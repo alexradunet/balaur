@@ -1,6 +1,7 @@
 package storybook
 
 import (
+	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
@@ -130,6 +131,59 @@ func composerStory() Story {
 		Donts: []string{
 			"Make the owner scroll back into the chat to act on a card.",
 			"Show two composers, or a floating card and the composer, at once.",
+		},
+	}
+}
+
+func chatdockStory() Story {
+	// Fixture conversation for variant previews — two turns and a tool row.
+	fixtureConvo := g.Group([]g.Node{
+		chat.Message(chat.MessageProps{Role: "user", Who: "You", AvatarSrc: "/static/crest.png", Content: "Remind me to water the tomatoes every 2 days."}),
+		chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", Content: "added task: water the tomatoes · every 2 days 18:00"}),
+		chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Content: "Done — I'll remind you at 18:00 every other day."}),
+	})
+	fixtureComposer := ui.Composer(ui.ComposerProps{
+		AvatarSrc:   "/static/crest.png",
+		Placeholder: "Speak; I am listening.",
+	})
+
+	return Story{
+		ID: "chatdock", Group: "Chat", Title: "Dock", Wide: true, OnDock: true,
+		Blurb: "The companion chat dock chrome — grip, full-screen toggle, recap telescope, conversation region, nudge poller, composer ledge, and model-modal dialog. Three width variants: rail (right sidebar), overlay (.dock-full over page content), home (full-canvas companion chat). Feature slots (Convo, Composer, Switchers) are injected by the caller so the organism stays import-clean.",
+		Variants: []Variant{
+			{"rail", chat.Dock(chat.DockProps{
+				Variant:  chat.DockRail,
+				Convo:    fixtureConvo,
+				Composer: fixtureComposer,
+			})},
+			{"overlay", chat.Dock(chat.DockProps{
+				Variant:  chat.DockOverlay,
+				HasRecap: true,
+				Convo:    fixtureConvo,
+				Composer: fixtureComposer,
+			})},
+			{"home", chat.Dock(chat.DockProps{
+				Variant:  chat.DockHome,
+				HasRecap: true,
+				Convo:    fixtureConvo,
+				Composer: fixtureComposer,
+			})},
+		},
+		Props: []Prop{
+			{"Variant", "DockVariant", `"rail"`, `"rail" | "overlay" | "home" — selects the chat column width via the dock-v-* CSS class.`},
+			{"HasRecap", "bool", "false", "Renders the #recap telescope sentinel when true (older history predates today)."},
+			{"NowMillis", "int64", "0", "Unix millisecond seed for the nudge-poll cursor — only messages after page load are nudged."},
+			{"Convo", "g.Node", "nil", "The #chat section content — history panels (chat.Message/chat.ToolRow) or the hearth greeting, pre-rendered by the caller."},
+			{"Composer", "g.Node", "nil", "The ui.Composer node, pre-rendered by the caller (wired to @post /ui/chat in production)."},
+			{"Switchers", "g.Node", "nil", "The chatbar/head-switcher node, pre-rendered by the caller (still a template fragment — deferred from this plan)."},
+		},
+		Dos: []string{
+			"Inject pre-rendered Convo and Composer nodes — the dock is structurally agnostic.",
+			"Pick the variant from the page context: home for /, rail for focus pages, overlay when .dock-full is toggled at runtime.",
+		},
+		Donts: []string{
+			"Emit <aside id=\"dock\"> from inside Dock — shell.go owns that wrapper.",
+			"Import internal/feature/* from internal/ui/chat — feature data must flow in as pre-rendered nodes.",
 		},
 	}
 }

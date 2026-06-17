@@ -79,6 +79,7 @@ func SidebarPage(p SidebarPageProps) g.Node {
 		h.HTML(h.Lang("en"),
 			h.Head(pageHead(), h.TitleEl(g.Text(p.Title+" · Balaur"))),
 			h.Body(
+				h.A(h.Class("skip-link"), h.Href("#main"), g.Text("Skip to content")),
 				h.Div(h.Class("sb-root"),
 					h.Header(h.Class("sb-topbar"),
 						h.Button(h.Class("sb-burger"), h.Type("button"), g.Attr("onclick", "basmToggleNav()"),
@@ -87,7 +88,7 @@ func SidebarPage(p SidebarPageProps) g.Node {
 						h.Span(h.Class("sb-topbar-brand"), g.Text("Balaur")),
 					),
 					p.Sidebar,
-					h.Main(h.Class("sb-canvas"),
+					h.Main(h.Class("sb-canvas"), h.ID("main"),
 						h.Header(h.Class("sb-crumb"), g.Text(crumb)),
 						p.Body,
 					),
@@ -108,7 +109,7 @@ func sidebarItem(it SidebarItem) g.Node {
 		attrs = append(attrs, h.Aria("current", "page"))
 	}
 	if it.Dot != "" {
-		attrs = append(attrs, h.Span(h.Class("sb-nav-dot"), h.Style("background:"+it.Dot)))
+		attrs = append(attrs, h.Span(h.Class("sb-nav-dot"), h.Style("--sb-nav-dot:"+it.Dot)))
 	}
 	attrs = append(attrs, h.Span(g.Text(it.Label)))
 	return h.A(attrs...)

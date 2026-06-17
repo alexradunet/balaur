@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	g "maragu.dev/gomponents"
+
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -31,5 +33,12 @@ func TestCalendarCellSelectedDim(t *testing.T) {
 	}
 	if strings.Contains(dim, "cal-pip") {
 		t.Errorf("0 pips should render no pip elements: %s", dim)
+	}
+}
+
+func TestCalendarCellAttrsPassThrough(t *testing.T) {
+	got := render(t, ui.CalendarCell(ui.CalendarCellProps{Day: 1}, g.Attr("data-test", "1")))
+	if !strings.Contains(got, `data-test="1"`) {
+		t.Errorf("CalendarCell: attrs not passed through to root button: %s", got)
 	}
 }

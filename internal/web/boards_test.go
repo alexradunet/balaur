@@ -12,57 +12,53 @@ import (
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
-// TestBoardsDefaultsCreated verifies that GET /boards seeds four default
-// boards on a fresh app and redirects to the first one; a second visit is
-// idempotent (still 4 boards).
+// TestBoardsDefaultsCreated verifies that GET /boards redirects home.
+// Default boards are no longer seeded on page visit (the page is retired);
+// seeding is still available via ensureDefaultBoards for write endpoints.
 func TestBoardsDefaultsCreated(t *testing.T) {
-	t.Run("first visit seeds 4 boards", func(t *testing.T) {
+	t.Run("GET /boards redirects to /", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:           "GET /boards creates defaults and redirects",
+			Name:           "GET /boards redirects home",
 			Method:         "GET",
 			URL:            "/boards",
 			TestAppFactory: newWebApp,
 			ExpectedStatus: 302,
-			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, res *http.Response) {
-				recs, err := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
-				if err != nil {
-					tb.Fatalf("loading boards: %v", err)
-				}
-				if len(recs) != 4 {
-					tb.Errorf("expected 4 default boards, got %d", len(recs))
+			AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
+				if loc := res.Header.Get("Location"); loc != "/" {
+					tb.Errorf("GET /boards: Location = %q, want /", loc)
 				}
 			},
 		}
 		s.Test(t)
 	})
 
-	t.Run("second visit is idempotent", func(t *testing.T) {
-		// Seed once, then hit /boards again: still 4 boards.
+	t.Run("ensureDefaultBoards seeds 4 boards and is idempotent", func(t *testing.T) {
+		// The page is retired, but ensureDefaultBoards must still work for
+		// write endpoints that depend on default board state.
 		app := newWebApp(t)
 		h := &handlers{app: app}
 		if err := h.ensureDefaultBoards(); err != nil {
-			t.Fatalf("seed: %v", err)
+			t.Fatalf("first seed: %v", err)
 		}
-		s := tests.ApiScenario{
-			Name:           "second GET /boards still redirects without duplicating",
-			Method:         "GET",
-			URL:            "/boards",
-			TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
-			ExpectedStatus: 302,
-			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, res *http.Response) {
-				recs, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
-				if len(recs) != 4 {
-					tb.Errorf("after second visit: expected 4 boards, got %d", len(recs))
-				}
-			},
+		recs, err := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+		if err != nil {
+			t.Fatalf("loading boards: %v", err)
 		}
-		s.Test(t)
+		if len(recs) != 4 {
+			t.Errorf("expected 4 default boards after seed, got %d", len(recs))
+		}
+		// Second call: still 4 (idempotent).
+		if err := h.ensureDefaultBoards(); err != nil {
+			t.Fatalf("second seed: %v", err)
+		}
+		recs2, _ := app.FindRecordsByFilter("boards", "1=1", "sort", 0, 0, nil)
+		if len(recs2) != 4 {
+			t.Errorf("after second ensureDefaultBoards: expected 4 boards, got %d", len(recs2))
+		}
 	})
 }
 
-// TestBoardsPageRenders verifies GET /boards/{id} returns 200 and contains the
-// board-grid with its cards server-rendered inline (no lazy-load): the Study
-// board's "today" card must be present in the slot, not a Loading… placeholder.
+// TestBoardsPageRenders verifies GET /boards/{id} redirects home (page retired).
 func TestBoardsPageRenders(t *testing.T) {
 	app := newWebApp(t)
 	h := &handlers{app: app}
@@ -76,12 +72,16 @@ func TestBoardsPageRenders(t *testing.T) {
 	id := recs[0].Id
 
 	scenario := tests.ApiScenario{
-		Name:            "GET /boards/{id} renders board grid",
-		Method:          "GET",
-		URL:             "/boards/" + id,
-		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-		ExpectedStatus:  200,
-		ExpectedContent: []string{"board-grid", `class="board-slot-inner"`, `id="ucard-today"`},
+		Name:           "GET /boards/{id} redirects home",
+		Method:         "GET",
+		URL:            "/boards/" + id,
+		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus: 302,
+		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
+			if loc := res.Header.Get("Location"); loc != "/" {
+				tb.Errorf("GET /boards/{id}: Location = %q, want /", loc)
+			}
+		},
 	}
 	scenario.Test(t)
 }
@@ -447,8 +447,8 @@ func TestBoardsLayoutTypeParamsUnchanged(t *testing.T) {
 	scenario.Test(t)
 }
 
-// TestBoardsLegacyFlowRender verifies that a legacy board (no stored layout)
-// renders without grid-row (flow mode — unchanged from before plan 032).
+// TestBoardsLegacyFlowRender verifies GET /boards/{id} redirects home (page retired).
+// Board data exists but the page shell is gone; write endpoints still work.
 func TestBoardsLegacyFlowRender(t *testing.T) {
 	app := newWebApp(t)
 	col, _ := app.FindCollectionByNameOrId("boards")
@@ -460,18 +460,21 @@ func TestBoardsLegacyFlowRender(t *testing.T) {
 	app.Save(rec)
 
 	scenario := tests.ApiScenario{
-		Name:            "legacy board renders without grid-row",
-		Method:          "GET",
-		URL:             "/boards/" + rec.Id,
-		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-		ExpectedStatus:  200,
-		ExpectedContent: []string{"board-grid"},
+		Name:           "GET /boards/{id} (legacy flow) redirects home",
+		Method:         "GET",
+		URL:            "/boards/" + rec.Id,
+		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus: 302,
+		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
+			if loc := res.Header.Get("Location"); loc != "/" {
+				tb.Errorf("Location = %q, want /", loc)
+			}
+		},
 	}
 	scenario.Test(t)
 }
 
-// TestBoardsFreeLayoutRender verifies that a board with stored layout emits
-// grid-row in the rendered HTML.
+// TestBoardsFreeLayoutRender verifies GET /boards/{id} redirects home (page retired).
 func TestBoardsFreeLayoutRender(t *testing.T) {
 	app := newWebApp(t)
 	col, _ := app.FindCollectionByNameOrId("boards")
@@ -486,12 +489,16 @@ func TestBoardsFreeLayoutRender(t *testing.T) {
 	app.Save(rec)
 
 	scenario := tests.ApiScenario{
-		Name:            "free-layout board renders with grid-row",
-		Method:          "GET",
-		URL:             "/boards/" + rec.Id,
-		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-		ExpectedStatus:  200,
-		ExpectedContent: []string{"board-grid-free", "grid-row"},
+		Name:           "GET /boards/{id} (free layout) redirects home",
+		Method:         "GET",
+		URL:            "/boards/" + rec.Id,
+		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus: 302,
+		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
+			if loc := res.Header.Get("Location"); loc != "/" {
+				tb.Errorf("Location = %q, want /", loc)
+			}
+		},
 	}
 	scenario.Test(t)
 }

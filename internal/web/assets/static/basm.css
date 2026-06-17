@@ -42,6 +42,9 @@
   --ink:       #2c2012;
   --ink-muted: #6f5e3c;
   --on-surface: #2c2012;
+  --ink-deep:   #1c0d04;                       /* darkest ink on a bright gold/ember fill */
+  --portrait-bg: #101314;                      /* near-black portrait backdrop (theme-constant) */
+  --candle-glow: #c88600;                      /* candle breathe glow (theme-constant warm gold) */
 
   /* Bevel edges */
   --bevel-light: light-dark(rgba(255,222,166,.30), rgba(255,196,118,.18));
@@ -155,7 +158,34 @@
   /* Layout */
   --radius: 0px;            /* RPG panels are square; rounding is for blobs */
   --maxw: 1080px;
+  --pad: clamp(16px, 6vw, 64px); /* fluid outer page gutter, capped both ends */
+  /* Chat-column widths diverge by surface, deliberately: home IS the full-screen
+     chat (wide), the .dock-full overlay sits OVER page content (narrower). Named
+     so the divergence is intentional and visible, not a missed edit. */
+  --w-chat-home: 1800px;
+  --w-chat-overlay: 940px;
+  --measure: 68ch;          /* prose reading-width cap (~66–75ch legibility) */
+
+  /* Spacing scale — 4px base. Dominant literals (8/12/16/24/32) map to these;
+     10px and 14px are intentionally OFF-SCALE and stay literal, as do bevel
+     offsets (3px), the 7px gold notch, and portrait/geometry one-offs. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
   --chatbar-space: 210px;
+
+  /* z-index tiers — page-level stacking only (component-internal stacking stays local) */
+  --z-base:    1;
+  --z-sticky:  5;
+  --z-tooltip: 30;
+  --z-overlay: 50;
+  --z-scrim:   55;
+  --z-drawer:  60;
 
   /* Bevels & drops (the shadow system) */
   --bevel-up: inset 0 3px 0 var(--bevel-light), inset 3px 0 0 var(--bevel-light),
@@ -165,8 +195,6 @@
   --parch-bevel: inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 0 var(--surface-2),
                  0 3px 0 rgba(0,0,0,.55);
   --drop-hard: 0 3px 0 rgba(0,0,0,.55);
-  /* legacy alias (pre-Hearthwood) */
-  --shadow-hard: 5px 5px 0;
 
   /* Motion — pixel-hard, no soft easing */
   --duration-fast: 80ms; /* @kind other */
@@ -194,7 +222,7 @@ html, body {
 main {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 6vw;
+  padding: 0 var(--pad);
 }
 
 h1, h2, h3 {
@@ -213,7 +241,7 @@ code, pre {
   border-radius: var(--radius);
 }
 pre {
-  padding: 12px;
+  padding: var(--space-3);
   overflow-x: auto;
   border: 2px solid var(--outline-2);
   box-shadow: var(--bevel-in);
@@ -305,7 +333,7 @@ textarea:focus-visible,
   background-size: auto, 4px 4px;
   border-bottom: 2px solid var(--outline-2);
   box-shadow: inset 0 3px 0 var(--bevel-light), inset 0 -3px 0 var(--bevel-dark);
-  z-index: 5;
+  z-index: var(--z-sticky);
 }
 
 /* Brand nameplate — Silkscreen intentional here, kept for identity */
@@ -357,7 +385,7 @@ textarea:focus-visible,
   font-size: 12.5px;
   text-transform: uppercase;
   letter-spacing: .06em;
-  padding: 12px 19px;
+  padding: var(--space-3) 19px;
   border-radius: var(--radius);
   border: 2px solid var(--outline-2);
   cursor: pointer;
@@ -367,7 +395,7 @@ textarea:focus-visible,
 }
 .btn-primary {
   background: var(--ember);
-  color: #1c0d04;
+  color: var(--ink-deep);
   box-shadow: inset 0 3px 0 rgba(255,236,200,.42), inset 0 -3px 0 rgba(60,10,0,.38),
               var(--drop-hard);
 }
@@ -400,7 +428,7 @@ textarea:focus-visible,
   transform: translateY(3px);
   box-shadow: inset 0 3px 0 var(--bevel-dark);
 }
-.btn-sm { padding: 8px 13px; font-size: 11px; }
+.btn-sm { padding: var(--space-2) 13px; font-size: 11px; }
 
 /* ── Cards ───────────────────────────────────────────────────────── */
 
@@ -474,8 +502,8 @@ textarea:focus-visible,
   --chat-gutter: calc(var(--portrait-size) + 14px);   /* portrait column + grid gap — indents tool rows etc. */
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 0 var(--chatbar-space);
+  gap: var(--space-5);
+  padding: var(--space-5) 0 var(--chatbar-space);
 }
 
 /* A spoken line: framed portrait beside a parchment speech panel.
@@ -508,7 +536,7 @@ textarea:focus-visible,
   width: var(--portrait-size);
   height: var(--portrait-size);
   border: 2px solid var(--outline-2);
-  background: #101314;
+  background: var(--portrait-bg);
   box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
   padding: 3px;
 }
@@ -530,7 +558,7 @@ textarea:focus-visible,
   background-size: 4px 4px;
   border: 2px solid var(--outline-2);
   box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
-  padding: 2px 8px;
+  padding: 2px var(--space-2);
   line-height: 1.5;
   max-width: calc(var(--portrait-size) + 18px);
   white-space: nowrap;
@@ -584,7 +612,7 @@ textarea:focus-visible,
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  padding: 12px 14px 10px;
+  padding: var(--space-3) 14px 10px;
 }
 .msg-draft .msg-main::before,
 .msg-draft .msg-main::after { content: none; }
@@ -601,7 +629,7 @@ textarea:focus-visible,
   font: 16px/1.6 var(--font-body);
   color: var(--ink);
   caret-color: var(--ember-deep);
-  padding: 2px 4px;
+  padding: 2px var(--space-1);
   min-height: 52px;
   max-height: 28vh;
 }
@@ -658,7 +686,7 @@ img.tool-icon {
   height: 18px;
   image-rendering: pixelated;
   vertical-align: -4px;
-  margin-right: 8px;
+  margin-right: var(--space-2);
 }
 .msg-tool .body { display: inline; font-size: 13px; }
 
@@ -709,7 +737,7 @@ img.tool-icon {
   border: 2px solid var(--gold-deep);
   border-radius: var(--radius);
   box-shadow: var(--parch-bevel);
-  padding: 12px 14px 13px;
+  padding: var(--space-3) 14px 13px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -747,7 +775,7 @@ img.tool-icon {
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--gold-ink);
-  padding: 2px 8px 8px;
+  padding: 2px var(--space-2) var(--space-2);
 }
 .choices-kicker::before,
 .choices-kicker::after {
@@ -766,7 +794,7 @@ img.tool-icon {
   background: transparent;
   border: 2px solid transparent;
   border-radius: var(--radius);
-  padding: 9px 12px;
+  padding: 9px var(--space-3);
   font: 16px/1.45 var(--font-body);
   color: var(--ink);
   cursor: pointer;
@@ -834,6 +862,10 @@ img.tool-icon {
   50%      { box-shadow: inset 0 0 0 2px var(--teal), 0 0 26px color-mix(in srgb, var(--teal) 60%, transparent); }
 }
 
+/* Breakpoints — canonical: 540 (phone) / 720 (tablet) / 920 (desktop-narrow).
+   Native custom media needs a build step, so values are literal + standardized.
+   480/640/860 are intentional outliers kept where a surface depends on them. */
+
 /* Compact table on small screens */
 @media (max-width: 640px) {
   .chat { --portrait-size: 64px; --chat-gutter: 90px; }
@@ -851,7 +883,7 @@ img.tool-icon {
   background-size: auto, 4px 4px;
   border-top: 2px solid var(--outline-2);
   box-shadow: inset 0 3px 0 var(--bevel-light);
-  padding: 14px 6vw 16px;
+  padding: 14px 6vw var(--space-4);
 }
 .chatbar .chat-form,
 .chatbar-setup {
@@ -870,7 +902,7 @@ img.tool-icon {
   border: 2px solid var(--outline-2);
   border-radius: var(--radius);
   box-shadow: inset 0 3px 0 rgba(0,0,0,.45), inset 0 -2px 0 var(--bevel-light);
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
 }
 .chatbar textarea[name="message"]::placeholder { color: var(--chrome-fg); opacity: .75; }
 .chatbar textarea[name="message"] {
@@ -942,6 +974,7 @@ dialog::backdrop {
   .msg-pending .balaur-avatar,
   .balaur-avatar[data-state="thinking"],
   .balaur-avatar[data-state="working"] { animation: none; }
+  .cmsg-pending .cmsg-portrait { animation: none; }
   .thinking-dots::after { animation: none; content: ""; }
   .type-cursor { animation: none; opacity: 0; }
   .choice:hover::before,
@@ -962,7 +995,7 @@ dialog::backdrop {
   height: 26px;
   image-rendering: pixelated;
   vertical-align: -3px;
-  margin-right: 4px;
+  margin-right: var(--space-1);
 }
 
 .k-section { padding: 26px 0; }
@@ -999,7 +1032,7 @@ dialog::backdrop {
 .k-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 .k-grid-muted { opacity: .72; }
 .k-inline { margin: 10px 0; max-width: 480px; }
@@ -1012,8 +1045,8 @@ dialog::backdrop {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin: 4px 0 16px;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 var(--space-4);
 }
 .k-search {
   flex: 1;
@@ -1027,7 +1060,7 @@ dialog::backdrop {
   border: 2px solid var(--outline-2);
   border-radius: var(--radius);
   box-shadow: inset 0 3px 0 rgba(64,44,18,.18);
-  padding: 9px 12px;
+  padding: 9px var(--space-3);
 }
 .k-search::placeholder { color: var(--ink-muted); }
 .k-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1049,7 +1082,7 @@ dialog::backdrop {
 }
 .k-tab:hover { color: var(--gold); }
 .k-tab-active {
-  color: #1c0d04;
+  color: var(--ink-deep);
   background: var(--gold);
   border-color: var(--outline-2);
   box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
@@ -1062,7 +1095,7 @@ dialog::backdrop {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   background-color: var(--surface);
   background-image: var(--grain-ink);
   background-size: 4px 4px;
@@ -1112,7 +1145,7 @@ dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .kcard-kind {
   font-family: var(--font-mono);
@@ -1155,7 +1188,7 @@ dialog::backdrop {
 .kcard-edit form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: 10px;
 }
 .kcard-edit label {
@@ -1183,16 +1216,16 @@ dialog::backdrop {
 .kcard-actions {
   display: flex;
   gap: 9px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   border-top: 2px dotted var(--parch-edge);
-  padding-top: 12px;
+  padding-top: var(--space-3);
 }
 .card-note {
   font-family: var(--font-mono);
   font-size: 12.5px;
   border: 1px solid var(--parch-edge);
   border-radius: var(--radius);
-  padding: 8px 10px;
+  padding: var(--space-2) 10px;
 }
 .card-note-error { color: var(--ember-red); border-color: var(--ember-red); }
 
@@ -1204,7 +1237,7 @@ dialog::backdrop {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: var(--smoke);
+  color: var(--chrome-fg);
   text-align: center;
 }
 .recap-band { padding: 14px 0; }
@@ -1226,7 +1259,7 @@ dialog::backdrop {
   border-radius: var(--radius);
   box-shadow: var(--bevel-in);
   padding: 10px 14px;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 }
 .recap-card.recap-open { border-left-color: var(--gold); }
 /* Once expanded, the trigger collapses (Datastar adds .recap-open on click;
@@ -1254,19 +1287,19 @@ dialog::backdrop {
   background: none;
   border: 1px solid var(--chrome-fg);
   border-radius: var(--radius);
-  padding: 2px 8px;
+  padding: 2px var(--space-2);
   cursor: pointer;
 }
 .recap-expand:hover { color: var(--gold); border-color: var(--gold-deep); }
 .recap-body    { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--chrome-fg); }
 .recap-children { margin-left: 14px; }
-.recap-children .msg { margin: 8px 0; font-size: 14px; }
+.recap-children .msg { margin: var(--space-2) 0; font-size: 14px; }
 .recap-daylink {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
   color: var(--teal);
-  margin-right: 8px;
+  margin-right: var(--space-2);
 }
 
 /* ── Tasks ───────────────────────────────────────────────────────── */
@@ -1309,7 +1342,7 @@ dialog::backdrop {
   100% { filter: brightness(1); }
 }
 
-.tcard-due     { margin: 2px 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.tcard-due     { margin: 2px 0 var(--space-2); font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
 .tcard-overdue { color: var(--ember-deep); font-weight: 700; }
 .tcard-done .kcard-title,
 .tcard-dropped .kcard-title { color: var(--ink-muted); text-decoration: line-through; }
@@ -1326,7 +1359,7 @@ dialog::backdrop {
 }
 
 /* Calendar — parchment day cells on wood */
-.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
 .cal-label { margin: 0; }
 .cal-table { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }
 .cal-table th {
@@ -1334,7 +1367,7 @@ dialog::backdrop {
   font-size: 11px;
   text-transform: uppercase;
   color: var(--muted);
-  padding: 4px 6px;
+  padding: var(--space-1) 6px;
   text-align: left;
   font-weight: normal;
 }
@@ -1365,7 +1398,7 @@ dialog::backdrop {
   font-size: 11px;
   color: var(--ink-muted);
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 .cal-item {
   display: block;
@@ -1390,27 +1423,27 @@ dialog::backdrop {
 .tl-label { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-strong); }
 .tl-items { list-style: none; margin: 0; padding: 0; }
 .tl-item  { padding: 3px 0; font-size: 15px; }
-.tl-time  { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: 8px; }
+.tl-time  { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: var(--space-2); }
 .tl-quiet { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; color: var(--smoke); }
 
 /* ── Life page ───────────────────────────────────────────────────── */
 
-.habit-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.habit-strip { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .habit-tag   { font-size: 12px; padding: 5px 9px; }
-.life-stat   { margin: 4px 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--ink); }
+.life-stat   { margin: var(--space-1) 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--ink); }
 .life-unit   { font-family: var(--font-mono); font-size: 13px; color: var(--ink-muted); }
 .life-lastat { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
-.life-change { margin: 4px 0 0; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.life-change { margin: var(--space-1) 0 0; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
 .spark { display: block; margin-top: 2px; }
 .spark polyline { stroke: var(--teal-ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .spark circle   { fill: var(--gold-ink); }
-.life-lines { list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
+.life-lines { list-style: none; margin: var(--space-1) 0 0; padding: 0; font-size: 14px; }
 .life-lines li { padding: 3px 0; border-top: 1px dashed var(--parch-edge); }
 .life-lines li:first-child { border-top: none; }
 
 /* ── Day pages ───────────────────────────────────────────────────── */
 
-.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
 .day-title { margin: 0; }
 .day-nav-spacer { min-width: 72px; }
 .journal-list { margin-bottom: 12px; }
@@ -1422,8 +1455,8 @@ dialog::backdrop {
   border: 2px solid var(--parch-edge);
   border-radius: var(--radius);
   box-shadow: var(--parch-bevel);
-  padding: 10px 12px;
-  margin: 8px 0;
+  padding: 10px var(--space-3);
+  margin: var(--space-2) 0;
   position: relative;
 }
 .journal-entry::after {
@@ -1437,10 +1470,10 @@ dialog::backdrop {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
-.journal-text { margin: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.6; }
-.journal-form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.journal-text { margin: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.6; max-width: var(--measure); }
+.journal-form { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
 .journal-form textarea {
   width: 100%;
   background-color: var(--surface);
@@ -1452,7 +1485,7 @@ dialog::backdrop {
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.6;
-  padding: 10px 12px;
+  padding: 10px var(--space-3);
 }
 .journal-form textarea:focus {
   border-style: solid;
@@ -1466,7 +1499,7 @@ dialog::backdrop {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 7px;
-  padding: 10px 4px 4px;
+  padding: 10px var(--space-1) var(--space-1);
   max-height: 320px;
   overflow-y: auto;
 }
@@ -1511,7 +1544,7 @@ dialog::backdrop {
 .profile-page {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 48px 5vw 120px;
+  padding: var(--space-7) var(--pad) 120px;
 }
 .profile-page h1 {
   font-family: var(--font-display);
@@ -1551,7 +1584,7 @@ dialog::backdrop {
 .profile-hint {
   color: var(--ink-muted);
   font-size: 14px;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
 }
 .profile-name-form label {
   font-family: var(--font-mono);
@@ -1560,7 +1593,7 @@ dialog::backdrop {
   letter-spacing: .06em;
   color: var(--ink-muted);
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .profile-name-row {
   display: flex;
@@ -1577,7 +1610,7 @@ dialog::backdrop {
   border: 2px solid var(--parch-edge);
   border-radius: var(--radius);
   box-shadow: inset 0 2px 0 rgba(64,44,18,.15);
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
 }
 .profile-saved {
   font-family: var(--font-mono);
@@ -1598,14 +1631,14 @@ dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
   max-width: var(--maxw);
   margin: 0 auto 10px;
 }
 .model-switcher-head {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 130px;
 }
 .model-switcher-kicker {
@@ -1624,15 +1657,15 @@ dialog::backdrop {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .model-choice-form { margin: 0; }
 .model-choice {
   display: grid;
   grid-template-columns: auto auto;
-  gap: 1px 8px;
+  gap: 1px var(--space-2);
   min-width: 170px;
-  padding: 8px 10px;
+  padding: var(--space-2) 10px;
   color: var(--chrome-fg);
   background-color: var(--chrome-2);
   background-image: var(--grain-warm);
@@ -1687,7 +1720,7 @@ dialog::backdrop {
   cursor: pointer;
   user-select: none;
   list-style: none;
-  padding: 2px 4px;
+  padding: 2px var(--space-1);
 }
 .avatar-picker summary:hover { color: var(--gold); }
 
@@ -1715,7 +1748,7 @@ dialog::backdrop {
 .head-meta {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .head-avatar-preview img {
   width: 64px;
@@ -1768,7 +1801,7 @@ dialog::backdrop {
   align-items: center;
   gap: 10px;
   border-top: 2px solid var(--outline-2);
-  padding: 10px 4px 4px;
+  padding: 10px var(--space-1) var(--space-1);
 }
 .chatbar-profile-link .balaur-avatar {
   --avatar-size: 28px;
@@ -1790,7 +1823,7 @@ dialog::backdrop {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 200px;
 }
 .chatbar-download-label {
@@ -1822,7 +1855,7 @@ dialog::backdrop {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--chrome-fg);
   font-size: 13px;
 }
@@ -1834,10 +1867,10 @@ dialog::backdrop {
 .settings-layout {
   display: grid;
   grid-template-columns: 180px 1fr;
-  gap: 24px;
+  gap: var(--space-5);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 720px) {
   .settings-layout {
     grid-template-columns: 1fr;
   }
@@ -1872,7 +1905,7 @@ dialog::backdrop {
 .settings-nav-link:hover { color: var(--gold); border-color: var(--gold-deep); }
 
 .settings-nav-active {
-  color: #1c0d04;
+  color: var(--ink-deep);
   background: var(--gold);
   border-color: var(--outline-2);
   box-shadow: inset 0 2px 0 rgba(255,244,210,.5), inset 0 -2px 0 rgba(96,62,8,.4);
@@ -1910,8 +1943,8 @@ progress.pull-progress-bar::-moz-progress-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
 }
 
 .pull-download-name {
@@ -1934,8 +1967,8 @@ progress.pull-progress-bar::-moz-progress-bar {
 .pull-file-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
 }
 
 .pull-file-row {
@@ -1977,7 +2010,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 24px 0 10px;
+  padding: var(--space-5) 0 10px;
 }
 .dev-panel h1 { margin: 0; }
 .dev-panel form { margin: 0; }
@@ -2001,7 +2034,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   .chatbar .btn { justify-content: center; width: 100%; }
   .model-choice { min-width: 0; }
   .model-detail { display: none; }
-  .topbar nav { gap: 12px; }
+  .topbar nav { gap: var(--space-3); }
   .topbar nav a { font-size: 11px; }
 }
 
@@ -2023,7 +2056,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .model-card-disabled { border-style: dashed; opacity: .8; }
 
 .model-detail-line {
-  margin: 2px 0 8px;
+  margin: 2px 0 var(--space-2);
   font-size: 14px;
   color: var(--ink-muted);
 }
@@ -2032,7 +2065,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 8px 0;
+  margin: var(--space-2) 0;
 }
 
 /* ── Muted utility ───────────────────────────────────────────────── */
@@ -2048,12 +2081,12 @@ progress.pull-progress-bar::-moz-progress-bar {
 .candle-page {
   max-width: 640px;
   margin: 0 auto;
-  padding: 0 16px 48px;
+  padding: 0 var(--space-4) var(--space-7);
 }
 
 @keyframes candle-breathe {
-  0%, 100% { filter: drop-shadow(0 0 6px #c8860088); }
-  50%       { filter: drop-shadow(0 0 18px #c88600cc); }
+  0%, 100% { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--candle-glow) 53%, transparent)); }
+  50%       { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--candle-glow) 80%, transparent)); }
 }
 
 .candle-crest {
@@ -2065,7 +2098,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 
 .candle-prompt {
-  margin: 12px 0 8px;
+  margin: var(--space-3) 0 var(--space-2);
   font-size: 15px;
   font-style: italic;
   color: var(--ink-muted);
@@ -2076,28 +2109,28 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 .board-tabs { margin-bottom: 20px; }
 
-.board-new-details { display: inline-block; margin-left: 8px; }
+.board-new-details { display: inline-block; margin-left: var(--space-2); }
 .board-new-details summary { list-style: none; cursor: pointer; }
 .board-new-details summary::-webkit-details-marker { display: none; }
-.board-new-form { display: flex; gap: 8px; align-items: center; margin-top: 6px; padding: 8px; background: var(--surface); border: 2px solid var(--parch-edge); border-radius: var(--radius); }
+.board-new-form { display: flex; gap: var(--space-2); align-items: center; margin-top: 6px; padding: var(--space-2); background: var(--surface); border: 2px solid var(--parch-edge); border-radius: var(--radius); }
 .board-new-form input[type="text"] { flex: 1; }
 
-.board-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.board-header { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
 .board-name { margin: 0; }
-.board-actions { display: flex; gap: 8px; }
+.board-actions { display: flex; gap: var(--space-2); }
 .board-rename-details { display: inline-block; }
 .board-rename-details summary { list-style: none; cursor: pointer; }
 .board-rename-details summary::-webkit-details-marker { display: none; }
-.board-rename-form { display: flex; gap: 8px; align-items: center; margin-top: 4px; padding: 8px; background: var(--surface); border: 2px solid var(--parch-edge); border-radius: var(--radius); }
+.board-rename-form { display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-1); padding: var(--space-2); background: var(--surface); border: 2px solid var(--parch-edge); border-radius: var(--radius); }
 .board-rename-form input[type="text"] { flex: 1; }
 .board-delete-form { display: inline; }
-.btn-danger { color: var(--ember-deep, #c0392b); border-color: var(--ember-deep, #c0392b); }
+.btn-danger { color: var(--ember-deep); border-color: var(--ember-deep); }
 
 .board-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 /* Flow mode: rows size to each card's H spec (min-content carries the H-based
@@ -2186,13 +2219,13 @@ progress.pull-progress-bar::-moz-progress-bar {
 .focus {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   height: 100%;
 }
 .focus-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .focus-title { margin: 0; }
 .focus-body {
@@ -2224,9 +2257,9 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .board-palette-open:hover { opacity: 1; }
 
-.board-loading { padding: 16px; text-align: center; color: var(--muted); }
+.board-loading { padding: var(--space-4); text-align: center; color: var(--muted); }
 
-.board-add-card { padding: 4px 0; }
+.board-add-card { padding: var(--space-1) 0; }
 .board-add-details { display: inline-block; }
 .board-add-details summary { list-style: none; cursor: pointer; }
 .board-add-details summary::-webkit-details-marker { display: none; }
@@ -2234,7 +2267,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .board-palette {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
   margin-top: 10px;
   padding: 14px;
   background: var(--surface);
@@ -2273,9 +2306,9 @@ progress.pull-progress-bar::-moz-progress-bar {
   align-items: start;
 }
 
-.quest-rail { display: flex; flex-direction: column; gap: 12px; }
+.quest-rail { display: flex; flex-direction: column; gap: var(--space-3); }
 
-.quest-group { display: flex; flex-direction: column; gap: 4px; }
+.quest-group { display: flex; flex-direction: column; gap: var(--space-1); }
 .quest-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 
 .quest-group-title {
@@ -2284,8 +2317,8 @@ progress.pull-progress-bar::-moz-progress-bar {
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--ink-muted);
-  margin: 0 0 4px;
-  padding-bottom: 4px;
+  margin: 0 0 var(--space-1);
+  padding-bottom: var(--space-1);
   border-bottom: 1px solid var(--parch-edge);
 }
 
@@ -2298,7 +2331,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   background: none;
   border: none;
   border-radius: var(--radius);
-  padding: 6px 8px;
+  padding: 6px var(--space-2);
   text-align: left;
   font-size: 14px;
   color: var(--ink);
@@ -2323,11 +2356,11 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 
 .quest-done {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 .quest-done > summary { cursor: pointer; }
 .quest-done > summary.quest-group-title { display: flex; align-items: center; gap: 6px; }
-.quest-done ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.quest-done ul { list-style: none; margin: var(--space-1) 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 
 @media (max-width: 860px) {
   .quest-log {
@@ -2350,7 +2383,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 /* Slim chatbar — form removed; reduce height pressure. */
 .chatbar-slim {
-  padding: 8px 6vw;
+  padding: var(--space-2) 6vw;
 }
 
 /* ── Card-first shell: board canvas + persistent companion dock ─────────────
@@ -2359,7 +2392,7 @@ progress.pull-progress-bar::-moz-progress-bar {
    the dock — and its live chat — survives. Below 900px the dock stacks under. */
 :root { --sidebar-w: 360px; }
 
-.with-sidebar { padding-right: calc(var(--sidebar-w) + 4vw); }
+.with-sidebar { padding-right: calc(var(--sidebar-w) + clamp(0px, 4vw, 48px)); }
 
 #dock {
   position: fixed;
@@ -2388,7 +2421,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 12px 6px;
+  padding: var(--space-3) var(--space-3) 6px;
   --portrait-size: 40px;
   --chat-gutter: 54px;
 }
@@ -2396,7 +2429,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 /* Compact composer in the rail: drop the avatar column and the chat-bubble
    min-height (which was stretching the portrait to the full row), leaving just
    the textarea + send row. */
-#dock .msg-draft { flex: 0 0 auto; margin: 8px 10px; }
+#dock .msg-draft { flex: 0 0 auto; margin: var(--space-2) 10px; }
 #dock .msg-draft .portrait { display: none; }
 #dock .msg-draft .msg-main { min-height: 0; }
 
@@ -2404,7 +2437,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 #dock .chatbar-slim {
   flex: 0 0 auto;
   position: static;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
 }
 
 #dock #nudge-poll { display: none; }
@@ -2442,18 +2475,18 @@ progress.pull-progress-bar::-moz-progress-bar {
    behind it); content centres for readability and the recap telescope — hidden
    in the rail — returns. Toggled by basmToggleDockFull (class on <html>). */
 .dock-full .with-sidebar { padding-right: 0; }
-.dock-full #dock { left: 0; width: auto; z-index: 50; border-left: 0; box-shadow: none; }
+.dock-full #dock { left: 0; width: auto; z-index: var(--z-overlay); border-left: 0; box-shadow: none; }
 .dock-full #dock .dock-grip { display: none; }
 .dock-full #dock .chat,
 .dock-full #dock .msg-draft,
 .dock-full #dock .chatbar,
 .dock-full #dock .dock-head,
 .dock-full #dock .recap-zone,
-.dock-full #dock .recap-band { width: auto; max-width: 940px; margin-left: auto; margin-right: auto; }
-.dock-full #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 24px 8px; }
+.dock-full #dock .recap-band { width: auto; max-width: var(--w-chat-overlay); margin-left: auto; margin-right: auto; }
+.dock-full #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-5) var(--space-2); }
 .dock-full #dock .recap-zone, .dock-full #dock .recap-band { display: block; }
 
-@media (max-width: 900px) {
+@media (max-width: 920px) {
   .with-sidebar { padding-right: 0; }
   #dock {
     position: static;
@@ -2469,7 +2502,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 /* Interactive knowledge fold (mode=manage): a stacked list of self-contained
    memory/skill cards inside one board card. */
-.ucard-manage .k-heading { margin: 12px 0 6px; }
+.ucard-manage .k-heading { margin: var(--space-3) 0 6px; }
 .ucard-manage-list {
   display: flex;
   flex-direction: column;
@@ -2484,7 +2517,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .sb-section { padding: 28px 0 4px; border-top: 2px dashed var(--hair); }
 .sb-section:first-of-type { border-top: 0; }
 .sb-section > h2 {
-  display: flex; align-items: center; gap: 12px; margin: 0 0 18px;
+  display: flex; align-items: center; gap: var(--space-3); margin: 0 0 18px;
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
 }
@@ -2526,8 +2559,8 @@ progress.pull-progress-bar::-moz-progress-bar {
    Tone drives the stripe + kicker color and the default icon; role is set
    in markup (note for info, alert for warn/danger). */
 .alert {
-  display: grid; grid-template-columns: 26px 1fr; column-gap: 12px;
-  align-items: start; padding: 13px 16px 14px;
+  display: grid; grid-template-columns: 26px 1fr; column-gap: var(--space-3);
+  align-items: start; padding: 13px var(--space-4) 14px;
   background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
   color: var(--ink);
   border: 2px solid var(--parch-edge); border-left: 6px solid var(--alert-edge);
@@ -2536,7 +2569,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 /* Icon atom sizing inside the band (wins on specificity over img.tool-icon). */
 .alert .tool-icon { width: 22px; height: 22px; margin: 1px 0 0 0; image-rendering: pixelated; }
 .alert-kicker {
-  margin-bottom: 4px; font-family: var(--font-mono); font-size: 11px;
+  margin-bottom: var(--space-1); font-family: var(--font-mono); font-size: 11px;
   font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--alert-kick);
 }
 .alert-body { font-size: 14px; line-height: 1.5; }
@@ -2548,14 +2581,14 @@ progress.pull-progress-bar::-moz-progress-bar {
 .tooltip { position: relative; display: inline-flex; }
 .tooltip-bubble {
   position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: 100%; margin-bottom: 8px; z-index: 30; white-space: nowrap;
+  bottom: 100%; margin-bottom: var(--space-2); z-index: var(--z-tooltip); white-space: nowrap;
   font-family: var(--font-mono); font-size: 11px; letter-spacing: .02em;
   color: var(--chrome-fg); background-color: var(--chrome);
   background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
   border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); padding: 5px 9px;
   opacity: 0; visibility: hidden; pointer-events: none;
 }
-.tooltip-bottom .tooltip-bubble { bottom: auto; top: 100%; margin-bottom: 0; margin-top: 8px; }
+.tooltip-bottom .tooltip-bubble { bottom: auto; top: 100%; margin-bottom: 0; margin-top: var(--space-2); }
 .tooltip:hover .tooltip-bubble,
 .tooltip:focus-within .tooltip-bubble { opacity: 1; visibility: visible; }
 
@@ -2641,14 +2674,14 @@ progress.pull-progress-bar::-moz-progress-bar {
   border-right: 2px solid var(--outline-2); box-shadow: var(--bevel-up);
 }
 .sb-brand {
-  display: flex; align-items: center; gap: 12px; padding: 18px 18px 15px;
+  display: flex; align-items: center; gap: var(--space-3); padding: 18px 18px 15px;
   border-bottom: 2px solid var(--outline-2); flex-shrink: 0;
 }
 .sb-brand img { width: 40px; height: 40px; image-rendering: pixelated; }
 .sb-brand-text { display: flex; flex-direction: column; gap: 3px; }
 .sb-brand-name { font-family: var(--font-pixel); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); line-height: 1; }
 .sb-brand-sub { font-family: var(--font-mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--chrome-fg); }
-.sb-nav { flex: 1; padding: 8px 10px 24px; }
+.sb-nav { flex: 1; padding: var(--space-2) 10px var(--space-5); }
 .sb-nav-group { padding: 0; }
 .sb-nav-label {
   display: flex; align-items: center; gap: 9px; padding: 15px 10px 7px;
@@ -2663,24 +2696,24 @@ progress.pull-progress-bar::-moz-progress-bar {
   font-family: var(--font-mono); font-size: 12px; letter-spacing: .02em; text-transform: uppercase;
   color: var(--chrome-fg); border: 2px solid transparent; background: transparent;
 }
-.sb-nav-dot { width: 6px; height: 6px; flex-shrink: 0; }
+.sb-nav-dot { width: 6px; height: 6px; flex-shrink: 0; background: var(--sb-nav-dot); }
 .sb-nav-item:hover:not(.sb-nav-item-active) { color: var(--gold); background: color-mix(in srgb, var(--gold) 8%, transparent); }
 .sb-nav-item-active {
   color: var(--gold); border-color: var(--gold-deep);
   background: color-mix(in srgb, var(--gold) 16%, transparent);
   box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
 }
-.sb-foot { border-top: 2px solid var(--outline-2); padding: 12px 14px; flex-shrink: 0; }
-.sb-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sb-foot { border-top: 2px solid var(--outline-2); padding: var(--space-3) 14px; flex-shrink: 0; }
+.sb-foot-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
 .sb-foot-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--chrome-fg); opacity: .7; }
 .sb-foot-mode { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; background: none; border: 1px solid var(--chrome-fg); color: var(--chrome-fg); padding: 3px 9px; cursor: pointer; }
 .sb-foot-themes { display: flex; gap: 5px; }
-.sb-theme-btn { flex: 1; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; background: none; border: 1px solid var(--chrome-fg); color: var(--chrome-fg); padding: 4px 8px; cursor: pointer; }
+.sb-theme-btn { flex: 1; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; background: none; border: 1px solid var(--chrome-fg); color: var(--chrome-fg); padding: var(--space-1) var(--space-2); cursor: pointer; }
 .sb-theme-btn.is-active { color: var(--gold); border-color: var(--gold-deep); background: color-mix(in srgb, var(--gold) 16%, transparent); }
 .sb-foot-count { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--chrome-fg); opacity: .7; margin-top: 10px; }
-.sb-canvas { height: 100vh; overflow-y: auto; max-width: none; margin: 0; padding: 0 5vw 96px; background: var(--bg); }
+.sb-canvas { height: 100vh; overflow-y: auto; max-width: none; margin: 0; padding: 0 var(--pad) 96px; background: var(--bg); }
 .sb-crumb {
-  position: sticky; top: 0; z-index: 5; margin: 0 0 8px; padding: 14px 0;
+  position: sticky; top: 0; z-index: var(--z-sticky); margin: 0 0 var(--space-2); padding: 14px 0;
   font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--muted);
   background: var(--bg); border-bottom: 2px dashed var(--hair);
@@ -2689,7 +2722,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .sb-lede { margin: 18px 0 6px; font-family: var(--font-display); font-size: 30px; color: var(--fg-strong); }
 .sb-stats { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 28px; }
 .sb-stat {
-  padding: 12px 18px; min-width: 92px; color: var(--ink);
+  padding: var(--space-3) 18px; min-width: 92px; color: var(--ink);
   background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
   border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel);
 }
@@ -2783,7 +2816,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dlg-corner-tr { top: 5px; right: 5px; border-top-width: 3px; border-right-width: 3px; }
 .dlg-corner-bl { bottom: 5px; left: 5px; border-bottom-width: 3px; border-left-width: 3px; }
 .dlg-corner-br { bottom: 5px; right: 5px; border-bottom-width: 3px; border-right-width: 3px; }
-.dlg-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); margin-bottom: 8px; }
+.dlg-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); margin-bottom: var(--space-2); }
 .dlg-title { margin: 0 0 10px; font-family: var(--font-display); font-size: 24px; color: var(--ink); line-height: 1.1; }
 .dlg-body { font-size: 15px; line-height: 1.55; }
 .dlg-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: flex-end; }
@@ -2846,7 +2879,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 
 /* ── Foundations · Colors — token swatches (re-tint live per theme) ──────── */
-.fdn-stack { display: flex; flex-direction: column; gap: 24px; width: 100%; }
+.fdn-stack { display: flex; flex-direction: column; gap: var(--space-5); width: 100%; }
 .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 13px; }
 .swatch { display: flex; flex-direction: column; gap: 7px; }
 .swatch-chip { height: 62px; background: var(--sw); border: 2px solid var(--outline-2); box-shadow: var(--bevel-in); }
@@ -2854,7 +2887,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .swatch-name { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 
 /* ── Foundations · Typography — the four font roles + a scale ────────────── */
-.fdn-col { display: flex; flex-direction: column; gap: 16px; }
+.fdn-col { display: flex; flex-direction: column; gap: var(--space-4); }
 .fdn-card { border: 2px solid var(--parch-edge); background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; box-shadow: var(--parch-bevel); padding: 18px 20px; color: var(--ink); }
 .type-row { display: flex; gap: 20px; align-items: baseline; flex-wrap: wrap; }
 .type-role { width: 84px; flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--gold-ink); }
@@ -2874,7 +2907,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .type-scale-13 { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
 
 /* ── Foundations · Materials — the material specimens ───────────────────── */
-.mat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 16px; }
+.mat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: var(--space-4); }
 .mat-tile { display: flex; flex-direction: column; gap: 10px; }
 .mat-swatch { height: 96px; }
 .mat-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--fg-strong); }
@@ -2939,7 +2972,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .recapcard-when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
 .recapcard-summary { margin: 0 0 11px; font-size: 15px; line-height: 1.55; }
 .recapcard-points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.recapcard-point { display: grid; grid-template-columns: 14px 1fr; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+.recapcard-point { display: grid; grid-template-columns: 14px 1fr; gap: var(--space-2); font-size: 13.5px; line-height: 1.45; color: var(--ink); }
 .recapcard-sq { color: var(--teal-ink); }
 
 /* ── GuardianCard — OS-access consent (reuses .dlg-corner brackets) ──────── */
@@ -2971,7 +3004,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .nudge-kicker { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); }
 .nudge-when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
 .nudge-msg { margin: 0 0 12px; font-size: 15.5px; line-height: 1.5; }
-.nudge-replies { display: flex; flex-wrap: wrap; gap: 8px; }
+.nudge-replies { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .nudge-reply {
   display: inline-flex; align-items: baseline; gap: 9px; cursor: pointer; text-align: left;
   border-radius: 0; background: var(--surface-2); border: 2px solid var(--parch-edge);
@@ -2985,7 +3018,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
   border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: 15px 16px 14px;
 }
-.statcard-head { display: flex; align-items: center; gap: 8px; }
+.statcard-head { display: flex; align-items: center; gap: var(--space-2); }
 .statcard-icon { width: 18px; height: 18px; image-rendering: pixelated; }
 .statcard-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
 .statcard-value-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
@@ -3003,10 +3036,10 @@ progress.pull-progress-bar::-moz-progress-bar {
 .composer {
   position: relative; width: 100%; --portrait-size: 64px;
   background: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
-  border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); padding: 12px 14px 14px;
+  border: 2px solid var(--outline-2); box-shadow: var(--bevel-up); padding: var(--space-3) 14px 14px;
 }
-.composer-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 8px; margin-bottom: 10px; min-height: 42px; }
-.composer-tools { display: flex; align-items: center; gap: 8px; }
+.composer-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-2); margin-bottom: 10px; min-height: 42px; }
+.composer-tools { display: flex; align-items: center; gap: var(--space-2); }
 .composer-tool {
   display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0; cursor: pointer;
   background: var(--chrome-2); background-image: var(--grain-warm); background-size: 4px 4px;
@@ -3017,13 +3050,13 @@ progress.pull-progress-bar::-moz-progress-bar {
 .composer-draft {
   position: relative; min-width: 0; color: var(--ink);
   background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
-  border: 2px dashed var(--parch-edge); padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 6px;
+  border: 2px dashed var(--parch-edge); padding: 10px var(--space-3) var(--space-2); display: flex; flex-direction: column; gap: 6px;
 }
 .composer-draft textarea {
   width: 100%; background: transparent; border: 0; resize: none; font: 16px/1.6 var(--font-body); color: var(--ink);
   caret-color: var(--ember-deep); padding: 2px; min-height: 48px; max-height: 180px; outline: none;
 }
-.composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 2px dotted var(--parch-edge); padding-top: 8px; }
+.composer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 2px dotted var(--parch-edge); padding-top: var(--space-2); }
 .composer-hint { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-muted); }
 
 /* ── Storybook responsive shell — off-canvas drawer ≤920px ──────────────── */
@@ -3032,8 +3065,8 @@ progress.pull-progress-bar::-moz-progress-bar {
 @media (max-width: 920px) {
   .sb-root { grid-template-columns: 1fr; }
   .sb-topbar {
-    display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50;
-    padding: 10px 16px; border-bottom: 2px solid var(--outline-2);
+    display: flex; align-items: center; gap: var(--space-3); position: sticky; top: 0; z-index: var(--z-overlay);
+    padding: 10px var(--space-4); border-bottom: 2px solid var(--outline-2);
     background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm); background-size: auto, 4px 4px;
   }
   .sb-burger {
@@ -3043,21 +3076,21 @@ progress.pull-progress-bar::-moz-progress-bar {
   .sb-topbar-brand { font-family: var(--font-pixel); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
   .sb-topbar .crest { width: 28px; height: 28px; image-rendering: pixelated; }
   .sb-side {
-    position: fixed; inset: 0 auto 0 0; width: min(86vw, 322px); z-index: 60;
+    position: fixed; inset: 0 auto 0 0; width: min(86vw, 322px); z-index: var(--z-drawer);
     transform: translateX(-104%); transition: transform .2s var(--ease-crisp); box-shadow: 6px 0 0 rgba(0, 0, 0, .4);
   }
   .sb-side.is-open { transform: none; }
-  .sb-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(8, 5, 2, .62); }
-  .sb-canvas { height: auto; padding: 26px 16px 80px; }
+  .sb-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(8, 5, 2, .62); }
+  .sb-canvas { height: auto; padding: 26px var(--space-4) 80px; }
 }
-@media (max-width: 520px) { .sb-canvas { padding: 20px 10px 72px; } }
+@media (max-width: 540px) { .sb-canvas { padding: 20px 10px 72px; } }
 @media (prefers-reduced-motion: reduce) { .sb-side { transition: none; } }
 
 /* ── Responsive component wrap/reflow fixes ─────────────────────────────── */
 .dayentry-content { min-width: 0; }
 .dayentry-title { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .dayentry { grid-template-columns: 44px 18px 1fr; column-gap: 9px; } }
-@media (max-width: 520px) { .composer-top { grid-template-columns: 1fr auto; } }
+@media (max-width: 540px) { .composer-top { grid-template-columns: 1fr auto; } }
 .list-title, .list-sub { overflow-wrap: anywhere; }
 
 /* Composer "deciding" mode — a decision (dialogue choices) is embedded in place
@@ -3083,7 +3116,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .sb-head-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
 .sb-head-title { margin: 0; font-family: var(--font-display); font-size: clamp(26px, 4vw, 34px); color: var(--fg-strong); line-height: 1; }
 .sb-head-blurb { margin: 9px 0 0; max-width: 60ch; font-size: 15px; line-height: 1.55; color: var(--fg); }
-.sb-views { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 16px; margin: 0 0 28px; }
+.sb-views { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: var(--space-4); margin: 0 0 28px; }
 /* Full-bleed components (topbar, chat ledges, composer) get one wide column,
    capped at a comfortable max and left-aligned with the page content. They fill
    it up to the cap and shrink below — horizontally responsive, not fixed islands. */
@@ -3111,24 +3144,24 @@ progress.pull-progress-bar::-moz-progress-bar {
   border-color: var(--outline-2); box-shadow: var(--bevel-up);
 }
 .sb-view-cap { margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); text-align: center; }
-.sb-h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin: 0 0 12px; }
+.sb-h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin: 0 0 var(--space-3); }
 .sb-props { margin: 0 0 28px; }
 .sb-props-scroll { overflow-x: auto; border: 2px solid var(--hair); }
 .sb-props table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.sb-props th { text-align: left; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 9px 12px; border-bottom: 2px solid var(--hair); white-space: nowrap; }
-.sb-props td { padding: 9px 12px; border-bottom: 1px solid var(--hair); color: var(--fg); vertical-align: top; }
+.sb-props th { text-align: left; font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 9px var(--space-3); border-bottom: 2px solid var(--hair); white-space: nowrap; }
+.sb-props td { padding: 9px var(--space-3); border-bottom: 1px solid var(--hair); color: var(--fg); vertical-align: top; }
 .sb-props td code { font-family: var(--font-mono); font-size: 12px; color: var(--chrome-fg); white-space: nowrap; }
 .sb-props tr:last-child td { border-bottom: 0; }
-.sb-usage { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 0 0 12px; }
+.sb-usage { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 0 0 var(--space-3); }
 @media (max-width: 640px) { .sb-usage { grid-template-columns: 1fr; } }
-.sb-do, .sb-dont { padding: 14px 16px; border: 2px solid var(--parch-edge); background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; }
+.sb-do, .sb-dont { padding: 14px var(--space-4); border: 2px solid var(--parch-edge); background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; }
 .sb-do { border-left: 4px solid var(--good-ink); }
 .sb-dont { border-left: 4px solid var(--ember-deep); }
 .sb-do h3, .sb-dont h3 { margin: 0 0 9px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .sb-do h3 { color: var(--good-ink); }
 .sb-dont h3 { color: var(--ember-deep); }
 .sb-do ul, .sb-dont ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
-.sb-do li, .sb-dont li { display: grid; grid-template-columns: 16px 1fr; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
+.sb-do li, .sb-dont li { display: grid; grid-template-columns: 16px 1fr; gap: var(--space-2); font-size: 13.5px; line-height: 1.45; color: var(--ink); }
 .sb-mark { font-weight: 700; }
 .sb-do .sb-mark { color: var(--good-ink); }
 .sb-dont .sb-mark { color: var(--ember-deep); }
@@ -3143,7 +3176,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cmsg-row { display: flex; gap: 10px; align-items: stretch; max-width: 88%; }
 .cmsg-portrait {
   width: 64px; height: 64px; flex-shrink: 0; align-self: flex-start; box-sizing: border-box;
-  overflow: hidden; padding: 3px; border: 2px solid var(--outline-2); background: #101314;
+  overflow: hidden; padding: 3px; border: 2px solid var(--outline-2); background: var(--portrait-bg);
   box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
 }
 .cmsg-user .cmsg-portrait { box-shadow: inset 0 0 0 2px var(--indigo), var(--drop-hard); }
@@ -3154,7 +3187,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   position: relative; min-width: 0; min-height: 64px; box-sizing: border-box;
   display: flex; align-items: center; color: var(--ink);
   background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
-  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: 16px 16px 13px;
+  border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel); padding: var(--space-4) var(--space-4) 13px;
 }
 .cmsg-pending .cmsg-panel { border-color: var(--gold-deep); }
 .cmsg-name {
@@ -3165,7 +3198,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .cmsg-balaur .cmsg-name { left: 12px; color: var(--gold-ink); }
 .cmsg-user .cmsg-name { right: 12px; color: var(--indigo-ink); }
-.cmsg-body { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; }
+.cmsg-body { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; max-width: var(--measure); }
 
 /* ── Home: the full-screen companion chat ───────────────────────────────────
    Home is the chat. The chat lives in the persistent #dock as on every page;
@@ -3178,7 +3211,7 @@ html.home .with-sidebar { padding-right: 0; }
 html.home #dock {
   left: 0;
   width: auto;
-  z-index: 50;
+  z-index: var(--z-overlay);
   border-left: 0;
   box-shadow: none;
 }
@@ -3190,14 +3223,14 @@ html.home #dock .chatbar,
 html.home #dock .recap-zone,
 html.home #dock .recap-band {
   width: 100%;
-  max-width: 1800px;
+  max-width: var(--w-chat-home);
   margin-left: auto;
   margin-right: auto;
 }
-html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 24px 8px; }
+html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-5) var(--space-2); }
 html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
 
-@media (max-width: 900px) {
+@media (max-width: 920px) {
   html.home #dock { position: fixed; inset: 62px 0 0 0; width: auto; height: auto; }
 }
 
@@ -3206,8 +3239,8 @@ html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
    pinned at the bottom of the dock with the history scrolling above it. On Home
    (full-screen chat) the composer centers with the conversation column. */
 #dock-convo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-#dock .composer { flex: 0 0 auto; margin: 8px 10px 10px; }
-html.home #dock .composer { width: 100%; max-width: 1800px; margin-left: auto; margin-right: auto; }
+#dock .composer { flex: 0 0 auto; margin: var(--space-2) 10px 10px; }
+html.home #dock .composer { width: 100%; max-width: var(--w-chat-home); margin-left: auto; margin-right: auto; }
 
 /* Chat speech panels (chat.Message) inside the dock: take the full column width
    (the dock is narrower than the storybook stage) and compact the portrait in
@@ -3215,4 +3248,122 @@ html.home #dock .composer { width: 100%; max-width: 1800px; margin-left: auto; m
 #dock .chat .cmsg-row { max-width: 100%; }
 #dock .chat .cmsg-portrait { width: 46px; height: 46px; }
 html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
-#dock .chat .hearth-crest { display: block; margin: 4px auto 14px; }
+#dock .chat .hearth-crest { display: block; margin: var(--space-1) auto 14px; }
+
+/* ── Skip link — keyboard a11y; offscreen until focused ──────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: var(--z-tooltip);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--chrome);
+  color: var(--chrome-fg);
+  border: 2px solid var(--gold-deep);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+.skip-link:focus { left: 8px; top: 8px; }
+
+/* ══ Section: Responsive product topbar — off-canvas nav ≤720px ══════════ */
+/* Desktop default: burger and drawer are hidden; nav is inline in the bar. */
+.topnav-burger { display: none; }
+.topnav-drawer { display: none; }
+.topnav-backdrop { display: none; }
+
+@media (max-width: 720px) {
+  /* Hide the inline desktop nav; the drawer takes over. */
+  .topbar .topnav-desktop { display: none; }
+
+  /* Burger button — shown on mobile, right-aligned via margin-left:auto. */
+  .topnav-burger {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: auto; min-width: 44px; min-height: 44px;
+    font-family: var(--font-mono); font-size: 18px; line-height: 1; cursor: pointer;
+    background: none; border: 1px solid var(--chrome-fg); border-radius: var(--radius);
+    color: var(--gold);
+  }
+
+  /* Off-canvas drawer — slides in from the left below the topbar (inset: 62px auto 0 0). */
+  .topnav-drawer {
+    display: block; position: fixed; inset: 62px auto 0 0; width: min(86vw, 322px); z-index: var(--z-drawer);
+    background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm);
+    background-size: auto, 4px 4px;
+    border-right: 2px solid var(--outline-2);
+    transform: translateX(-104%); transition: transform .2s var(--ease-crisp);
+    box-shadow: 6px 0 0 rgba(0, 0, 0, .4); padding: var(--space-3);
+  }
+  .topnav-drawer.is-open { transform: none; }
+
+  /* Nav links inside the drawer — touch-target height 44px min. */
+  .topnav-drawer-nav { display: flex; flex-direction: column; gap: var(--space-1); }
+  .topnav-drawer-nav a {
+    display: flex; align-items: center; min-height: 44px; padding: 0 var(--space-3);
+    font-family: var(--font-mono); font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--chrome-fg); text-decoration: none; border: 1px solid transparent;
+  }
+  .topnav-drawer-nav a:hover,
+  .topnav-drawer-nav a[aria-current="page"] { color: var(--gold); border-color: var(--gold-deep); }
+
+  /* Scrim — same rgba as the storybook drawer. */
+  .topnav-backdrop.is-open {
+    display: block; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(8, 5, 2, .62);
+  }
+
+  /* Bump theme-button touch targets to 44px on mobile; keep visual padding. */
+  .topbar .theme-toggle,
+  .topbar .theme-cycle { min-height: 44px; padding: 0 var(--space-3); }
+}
+
+/* No slide animation when reduced-motion is preferred. */
+@media (prefers-reduced-motion: reduce) { .topnav-drawer { transition: none; } }
+
+/* ── Section: chat dock variants ────────────────────────────────────────────
+   chat.Dock (dock.go) emits a wrapper div carrying a dock-v-{variant} class.
+   This is the single source of truth for the chat column width — the three
+   hand-synced html.home/#dock/.dock-full blocks above drive overlay/z-index
+   behaviour, but widths now key off the variant class so a future width
+   change touches ONE rule set.
+
+   Divergence between home (1800px) and overlay (940px) is intentional:
+     home    — the companion chat IS the canvas; owns the full viewport width
+     overlay — floats over page content; a narrower column avoids crowding
+   See --w-chat-home / --w-chat-overlay in :root. Do NOT merge the two. */
+
+/* The wrapper is #dock's sole flex child — it must fill the column and re-
+   establish the flex context so #dock-convo fills and the composer pins. */
+.dock-v-rail,
+.dock-v-overlay,
+.dock-v-home {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dock-v-home .chat,
+.dock-v-home .msg-draft,
+.dock-v-home .chatbar,
+.dock-v-home .recap-zone,
+.dock-v-home .recap-band,
+.dock-v-home .composer {
+  width: 100%;
+  max-width: var(--w-chat-home);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dock-v-overlay .chat,
+.dock-v-overlay .msg-draft,
+.dock-v-overlay .chatbar,
+.dock-v-overlay .recap-zone,
+.dock-v-overlay .recap-band,
+.dock-v-overlay .composer {
+  width: auto;
+  max-width: var(--w-chat-overlay);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* rail variant inherits #dock's fixed width (var(--sidebar-w)) — no extra rule. */

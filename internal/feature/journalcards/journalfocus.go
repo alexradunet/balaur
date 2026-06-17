@@ -6,7 +6,8 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	data "maragu.dev/gomponents-datastar"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/store"
 )
@@ -62,50 +63,50 @@ func dayStart(t time.Time) time.Time {
 // Ports {{define "journal_candle_body"}} from web/templates/journal-focus.html.
 func JournalCandleBody(v JournalFocusView) g.Node {
 	kids := []g.Node{
-		ID("journal-candle-body"),
-		Form(
-			Class("journal-form"),
-			g.Attr("data-on:submit__prevent", "@post('/ui/journal', {contentType:'form'})"),
-			Textarea(Name("text"), Rows("8"), Placeholder("What stays with you from this day?")),
-			Button(Class("btn btn-primary btn-sm"), Type("submit"), g.Text("Keep it")),
+		h.ID("journal-candle-body"),
+		h.Form(
+			h.Class("journal-form"),
+			data.On("submit", "@post('/ui/journal', {contentType:'form'})", data.ModifierPrevent),
+			h.Textarea(h.Name("text"), h.Rows("8"), h.Placeholder("What stays with you from this day?")),
+			h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Keep it")),
 		),
 	}
 	if len(v.Journal) > 0 {
 		articles := make([]g.Node, 0, len(v.Journal))
 		for _, e := range v.Journal {
 			articles = append(articles,
-				Article(Class("journal-entry"),
-					Div(Class("journal-meta"),
-						Span(Class("tl-time"), g.Text(e.Time)),
-						A(Class("btn btn-ghost btn-sm"), Href("/focus/day?date="+e.Date), g.Text("→ this day")),
+				h.Article(h.Class("journal-entry"),
+					h.Div(h.Class("journal-meta"),
+						h.Span(h.Class("tl-time"), g.Text(e.Time)),
+						h.A(h.Class("btn btn-ghost btn-sm"), h.Href("/focus/day?date="+e.Date), g.Text("→ this day")),
 					),
-					P(Class("journal-text"), g.Text(e.Text)),
+					h.P(h.Class("journal-text"), g.Text(e.Text)),
 				),
 			)
 		}
-		kids = append(kids, Div(Class("journal-list"), g.Group(articles)))
+		kids = append(kids, h.Div(h.Class("journal-list"), g.Group(articles)))
 	}
-	return Div(kids...)
+	return h.Div(kids...)
 }
 
 // JournalFocus renders the full candle focus body: the tab strip (free /
 // guided), the empty prompt container, and the candle body.
 // Ports {{define "journal_focus"}} from web/templates/journal-focus.html.
 func JournalFocus(v JournalFocusView) g.Node {
-	return Div(Class("candle-focus"),
-		Div(Class("k-tabs"), Role("tablist"),
-			Button(
-				Class("k-tab k-tab-active"), Type("button"),
+	return h.Div(h.Class("candle-focus"),
+		h.Div(h.Class("k-tabs"), h.Role("tablist"),
+			h.Button(
+				h.Class("k-tab k-tab-active"), h.Type("button"),
 				g.Attr("data-on:click", "document.getElementById('candle-prompt').innerHTML='';el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active')"),
 				g.Text("free hand"),
 			),
-			Button(
-				Class("k-tab"), Type("button"),
+			h.Button(
+				h.Class("k-tab"), h.Type("button"),
 				g.Attr("data-on:click", "el.parentElement.querySelectorAll('.k-tab').forEach(b=>b.classList.remove('k-tab-active'));el.classList.add('k-tab-active');@get('/ui/journal/prompt')"),
 				g.Text("guided"),
 			),
 		),
-		Div(ID("candle-prompt")),
+		h.Div(h.ID("candle-prompt")),
 		JournalCandleBody(v),
 	)
 }

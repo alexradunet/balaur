@@ -6,8 +6,7 @@ package web
 // the dock's full-screen mode). #main is intentionally empty here — navigating
 // to a domain page (e.g. /focus/quests) drops the "home" class and the dock
 // returns to its right-rail form, so the chat moves to the sidebar with the
-// domain content in #main. The dock fragment is the legacy chat_dock template
-// injected via g.Raw (the gomponents chat.Dock port is later work).
+// domain content in #main. The dock renders via the chat.Dock gomponents organism.
 
 import (
 	"html/template"
@@ -18,6 +17,7 @@ import (
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/ui"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
@@ -57,17 +57,20 @@ func (h *handlers) root(e *core.RequestEvent) error {
 func (h *handlers) homePage(e *core.RequestEvent) error {
 	dock, err := h.dockData()
 	if err != nil {
-		return e.InternalServerError("loading companion dock", err)
+		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
-	var dockHTML strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&dockHTML, "chat_dock", dock); err != nil {
-		return e.InternalServerError("rendering companion dock", err)
-	}
+	dockNode := chat.Dock(chat.DockProps{
+		Variant:   chat.DockHome,
+		HasRecap:  dock.HasRecap,
+		NowMillis: dock.NowMillis,
+		Convo:     g.Raw(string(dock.ChatBodyHTML)),
+		Composer:  composerNode(dock),
+	})
 	page := shell.Page(shell.PageProps{
 		Title:     "Home",
 		Active:    "home",
 		HTMLClass: "home",
-		Dock:      g.Raw(dockHTML.String()),
+		Dock:      dockNode,
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := page.Render(e.Response); err != nil {

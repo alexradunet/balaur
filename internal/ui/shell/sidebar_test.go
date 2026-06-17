@@ -29,7 +29,8 @@ func TestSidebarPage(t *testing.T) {
 		`<header class="sb-topbar">`,
 		`<button class="sb-burger" type="button" onclick="basmToggleNav()"`,
 		`<aside>SIDE</aside>`,
-		`<main class="sb-canvas">`,
+		`<main class="sb-canvas" id="main">`,
+		`<a class="skip-link" href="#main">Skip to content</a>`,
 		`<div class="sb-backdrop" onclick="basmToggleNav()"></div>`,
 		`<header class="sb-crumb">Storybook / Button</header>`,
 		`CANVAS`,
@@ -61,7 +62,7 @@ func TestSidebar(t *testing.T) {
 		`<aside class="sb-side">`,
 		`<header class="sb-brand">BALAUR</header>`,
 		`<div class="sb-nav-label"><span>Atoms</span><span class="sb-nav-count">2</span><span class="sb-nav-rule"></span></div>`,
-		`<a class="sb-nav-item sb-nav-item-active" href="/storybook/button" aria-current="page"><span class="sb-nav-dot" style="background:var(--teal)"></span><span>Button</span></a>`,
+		`<a class="sb-nav-item sb-nav-item-active" href="/storybook/button" aria-current="page"><span class="sb-nav-dot" style="--sb-nav-dot:var(--teal)"></span><span>Button</span></a>`,
 		`<a class="sb-nav-item" href="/storybook/tag"><span>Tag</span></a>`,
 		`<footer class="sb-foot">FOOT</footer>`,
 	} {

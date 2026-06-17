@@ -6,9 +6,11 @@ import (
 )
 
 // TabItem is one tab: a label, the href it navigates to, and whether it's active.
+// Attrs are optional extra attributes (e.g. Datastar wiring) applied to the <a>.
 type TabItem struct {
 	Label, Href string
 	Active      bool
+	Attrs       []g.Node
 }
 
 // Tabs renders the Hearthwood tab strip: a <nav class="k-tabs"> of link tabs.
@@ -26,6 +28,7 @@ func Tabs(items []TabItem) g.Node {
 		if it.Active {
 			attrs = append(attrs, h.Aria("current", "page"))
 		}
+		attrs = append(attrs, it.Attrs...)
 		attrs = append(attrs, g.Text(it.Label))
 		kids = append(kids, h.A(attrs...))
 	}

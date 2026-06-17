@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	g "maragu.dev/gomponents"
+
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -28,5 +30,12 @@ func TestDayEntryLastNoDetail(t *testing.T) {
 	}
 	if strings.Contains(got, "dayentry-detail") {
 		t.Errorf("no Detail should omit the detail div: %s", got)
+	}
+}
+
+func TestDayEntryAttrsPassThrough(t *testing.T) {
+	got := render(t, ui.DayEntry(ui.DayEntryProps{Time: "08:00", Title: "x"}, g.Attr("data-test", "1")))
+	if !strings.Contains(got, `data-test="1"`) {
+		t.Errorf("DayEntry: attrs not passed through to root div: %s", got)
 	}
 }

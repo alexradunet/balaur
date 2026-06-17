@@ -19,7 +19,7 @@ type PagerProps struct {
 // when the window is clipped. The active page is a raised gold chip; prev/next
 // are disabled (non-link spans) at the bounds. Pure render — navigation is via
 // the slab links.
-func Pagination(p PagerProps) g.Node {
+func Pagination(p PagerProps, attrs ...g.Node) g.Node {
 	if p.Total < 1 {
 		p.Total = 1
 	}
@@ -41,6 +41,7 @@ func Pagination(p PagerProps) g.Node {
 		kids = append(kids, pagerGap())
 	}
 	kids = append(kids, pagerSlab(p, "›", p.Page+1, p.Page >= p.Total, false))
+	kids = append(kids, attrs...)
 	return h.Nav(kids...)
 }
 

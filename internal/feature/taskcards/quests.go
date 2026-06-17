@@ -34,7 +34,7 @@ func QuestsCard(v QuestsView) g.Node {
 
 func questsSummaryBody(v QuestsView) g.Node {
 	if len(v.Rows) == 0 {
-		return P(Class("k-empty"), g.Text("No quests here yet."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests here yet."})
 	}
 	items := make([]g.Node, 0, len(v.Rows))
 	for _, row := range v.Rows {
@@ -75,7 +75,7 @@ func QuestsManageCard(v QuestsView) g.Node {
 
 func questsManageBody(v QuestsView) g.Node {
 	if len(v.Rows) == 0 {
-		return P(Class("k-empty"), g.Text("No open quests — add one in chat."))
+		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No open quests — add one in chat."})
 	}
 	items := make([]g.Node, 0, len(v.Rows))
 	for _, row := range v.Rows {

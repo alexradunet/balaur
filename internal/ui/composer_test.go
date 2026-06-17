@@ -17,8 +17,8 @@ func TestComposer(t *testing.T) {
 	for _, want := range []string{
 		`<div class="composer">`,
 		`<span class="dlg-corner dlg-corner-tl"></span>`,
-		`<button class="composer-tool" type="button"><img src="/static/icons/scroll.png" alt="" decoding="async"></button>`,
-		`<button class="composer-tool composer-sound" type="button"><img src="/static/icons/bell.png" alt="" decoding="async"></button>`,
+		`<button class="composer-tool" type="button" disabled aria-label="scroll (coming soon)"><img src="/static/icons/scroll.png" alt="" decoding="async"></button>`,
+		`<button class="composer-tool composer-sound" type="button" disabled aria-label="Sound (coming soon)"><img src="/static/icons/bell.png" alt="" decoding="async"></button>`,
 		`<div class="composer-portrait">`,
 		`class="balaur-avatar balaur-avatar-soul"`,
 		`<form class="composer-form">`,

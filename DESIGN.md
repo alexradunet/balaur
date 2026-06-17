@@ -86,27 +86,30 @@ never flatter you, say it this way?
 
 All copy must match this. Update it the moment shape changes.
 
-**Information architecture — card-first, no feature pages.** The UI is three
-things: **boards**, **cards**, and a persistent **dock chat**. A *card* is a
-typed, parameterized, server-rendered HATEOAS resource (`/ui/cards/{type}`) that
-renders at two sizes — a **tile** on a board, and a full-canvas **focus**
-(`/focus/{type}`) reached by expanding it; the focus is what an old feature page
-used to be. *Boards* (`/boards`) are owner-composed dashboards of card tiles
-(drag/resize, persisted); the `/ui/cards` palette is the launcher that opens any
-feature in focus, and chat can compose cards/boards too (`card_show` /
-`board_compose`). The *dock chat* is the single persistent chat; a **head
-switcher** in the dock changes the active persona (voice, avatar, tool set)
-without leaving or forking the conversation. There are no feature pages: the
-retired routes (`/tasks`, `/journal`, `/day`,
-`/memory`, `/skills`, `/life`, `/heads`, `/models`,
-`/settings`, `/profile`) **302 → `/boards`**, while their write endpoints
-(`/ui/*`) live on, now driving card focuses.
+**Information architecture — Home is the companion; a domain rail is the nav.**
+`/` is Home: the full-screen companion chat, the conversation Balaur is built
+around. The wood topbar carries the single top-level navigation — six domains
+(Quests, Knowledge, Life, Journal, Heads, Settings), the active one riding gold;
+there is no side rail. Each domain links its `/focus/{type}` surface
+(`/focus/quests`, `/focus/memory`, `/focus/lifelog`, `/focus/journal`,
+`/focus/heads`, `/focus/settings`); leaving Home drops the `home` class so the
+persistent dock chat returns to its right rail with the domain content in
+`#main`. A *card* is a typed, parameterized, server-rendered resource
+(`/ui/cards/{type}`) that renders as a tile or a full-canvas focus; *boards*
+(`/boards`) are owner-composed dashboards of card tiles (drag/resize, persisted),
+and chat can compose cards/boards too (`card_show` / `board_compose` /
+`board_add_card`). A **head switcher** in the dock changes the active persona
+(voice, avatar, tool set) without leaving or forking the conversation. Legacy
+flat routes (`/tasks`, `/journal`, `/day`, `/memory`, `/skills`, `/life`,
+`/heads`, `/models`, `/settings`, `/profile`) **302 → `/`** (Home); their write
+endpoints (`/ui/*`) live on, driving card focuses.
 
 **True today:** single Go binary embedding PocketBase · Datastar web UI ·
 PocketBase collections for conversations, messages, memories, skills, heads,
-audit log · local inference via Ollama, run as a subprocess and reached over
-the OpenAI-compatible API · OpenAI-compatible
-remote providers by explicit choice · heads are switchable personas — name +
+audit log · local inference run in-process via the embedded Kronk engine
+(`internal/kronk`) — a GGUF model loaded through yzma/llama.cpp, CGO-free,
+the native library dlopen'd at runtime; single local provider path (no remote
+provider, no Ollama — both removed in plan 074) · heads are switchable personas — name +
 purpose + avatar + optional capability-group tool filter, applied to the one
 master turn; no branch conversations, no grants ·
 OS access mode (read, write, edit, bash), off by default, fully audited ·
@@ -304,8 +307,23 @@ font, opsz+wght). Retained: `pixelify-sans.woff2`, `silkscreen.woff2`,
 --parch-bevel: inset 0 2px 0 rgba(255,255,255,.45), …;  /* parchment edge */
 --drop-hard:  0 3px 0 rgba(0,0,0,.55);
 
-/* legacy alias */
---shadow-hard: 5px 5px 0;
+/* Layout token layer */
+--pad: clamp(16px, 6vw, 64px);   /* fluid outer page gutter */
+--w-chat-home: 1800px;            /* home chat column max-width */
+--w-chat-overlay: 940px;          /* chat overlay / focus overlay max-width */
+--measure: 68ch;                  /* prose reading-width cap */
+
+/* Spacing scale */
+--space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+--space-5: 24px; --space-6: 32px; --space-7: 48px;
+
+/* Z-index tier */
+--z-base: 1;  --z-overlay: 50;  --z-drawer: 60;
+
+/* Theme-constant ink tokens */
+--ink-deep: #1c0d04;       /* darkest ink on gold/ember fill */
+--portrait-bg: #101314;    /* near-black portrait backdrop */
+--candle-glow: #c88600;    /* candle breathe glow (warm gold) */
 ```
 
 - **Materials**: `.parch` (parchment content: `--surface` bg, `--grain-ink`

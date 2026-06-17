@@ -37,10 +37,16 @@ func TestPage(t *testing.T) {
 		`<a href="/focus/quests" aria-current="page">Quests</a>`,
 		`<a href="/focus/journal">Journal</a>`,
 		`<a href="/focus/settings">Settings</a>`,
+		// Skip link for keyboard users.
+		`<a class="skip-link" href="#main">Skip to content</a>`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("shell missing %q\nfull:\n%s", want, got)
 		}
+	}
+	// Skip link must appear before the topbar.
+	if strings.Index(got, "skip-link") > strings.Index(got, "topbar") {
+		t.Error("skip-link must precede the topbar in the rendered output")
 	}
 	// Today was dropped (Home replaced it); Boards was cut earlier.
 	if strings.Contains(got, ">Today</a>") {
@@ -48,6 +54,40 @@ func TestPage(t *testing.T) {
 	}
 	if strings.Contains(got, ">Boards<") {
 		t.Error("Boards nav link should be gone (boards is cut)")
+	}
+}
+
+// TestTopbarDrawer asserts the responsive off-canvas drawer markup added in plan 078:
+// the burger button, the drawer aside, the backdrop, and the desktop-nav class.
+func TestTopbarDrawer(t *testing.T) {
+	var b strings.Builder
+	page := shell.Page(shell.PageProps{
+		Title:  "Quests",
+		Active: "quests",
+		Body:   g.Text("BODY"),
+		Dock:   g.Text("DOCK"),
+	})
+	if err := page.Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+
+	for _, want := range []string{
+		// Burger button wiring.
+		`class="topnav-burger"`,
+		`onclick="basmToggleTopnav()"`,
+		`aria-controls="topnav-drawer"`,
+		// Drawer container.
+		`id="topnav-drawer"`,
+		`class="topnav-drawer"`,
+		// Scrim backdrop.
+		`class="topnav-backdrop"`,
+		// Desktop nav class (hidden ≤720px via CSS).
+		`class="topnav-desktop"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("topbar drawer missing %q", want)
+		}
 	}
 }
 

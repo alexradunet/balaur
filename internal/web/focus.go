@@ -8,6 +8,7 @@ package web
 import (
 	"fmt"
 	"html/template"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/cards"
+	"github.com/alexradunet/balaur/internal/ui/chat"
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
@@ -112,7 +114,7 @@ func (h *handlers) focusPage(e *core.RequestEvent) error {
 	typ := e.Request.PathValue("type")
 	spec, ok := cards.Get(typ)
 	if !ok {
-		return e.NotFoundError("no such card type", nil)
+		return h.renderPageError(e, http.StatusNotFound, "focus: unknown card type", nil, "Not found", "There is nothing at this address.")
 	}
 
 	q := e.Request.URL.Query()
@@ -155,21 +157,24 @@ func (h *handlers) focusPage(e *core.RequestEvent) error {
 	// the dock and its live chat survive in-app navigation.
 	dock, err := h.dockData()
 	if err != nil {
-		return e.InternalServerError("loading companion dock", err)
+		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
-	var dockHTML strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&dockHTML, "chat_dock", dock); err != nil {
-		return e.InternalServerError("rendering companion dock", err)
-	}
+	dockNode := chat.Dock(chat.DockProps{
+		Variant:   chat.DockRail,
+		HasRecap:  dock.HasRecap,
+		NowMillis: dock.NowMillis,
+		Convo:     g.Raw(string(dock.ChatBodyHTML)),
+		Composer:  composerNode(dock),
+	})
 	var bodyHTML strings.Builder
 	if err := h.tmpl.ExecuteTemplate(&bodyHTML, "focus_main", view); err != nil {
-		return e.InternalServerError("rendering focus", err)
+		return h.renderPageError(e, http.StatusInternalServerError, "rendering focus", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	page := shell.Page(shell.PageProps{
 		Title:  spec.Label,
 		Active: focusActiveKey(typ),
 		Body:   g.Raw(bodyHTML.String()),
-		Dock:   g.Raw(dockHTML.String()),
+		Dock:   dockNode,
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := page.Render(e.Response); err != nil {

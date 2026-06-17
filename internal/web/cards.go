@@ -11,7 +11,6 @@ package web
 
 import (
 	"fmt"
-	"html"
 	"html/template"
 	"io"
 	"net/http"
@@ -60,7 +59,7 @@ func (h *handlers) uiCard(e *core.RequestEvent) error {
 		// Validation error: render a card-note-error strip, HTTP 200.
 		e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 		e.Response.WriteHeader(http.StatusOK)
-		fmt.Fprintf(e.Response, `<div class="card-note card-note-error" id="ucard-%s">%s</div>`, typ, html.EscapeString(err.Error()))
+		_ = ui.ErrorStripID("ucard-"+typ, err.Error()).Render(e.Response)
 		return nil
 	}
 
@@ -137,7 +136,9 @@ func (h *handlers) cardHTML(typ string, params map[string]string) template.HTML 
 // cardErrorStrip is the inline card-error fragment (no id — several cards of the
 // same type may coexist on a board, and the slot already scopes it).
 func cardErrorStrip(msg string) template.HTML {
-	return template.HTML(`<div class="card-note card-note-error">` + html.EscapeString(msg) + `</div>`)
+	var b strings.Builder
+	_ = ui.ErrorStrip(msg).Render(&b)
+	return template.HTML(b.String())
 }
 
 // uicardBody server-renders a registry card ("/ui/cards/{type}?query") for inline

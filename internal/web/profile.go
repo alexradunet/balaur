@@ -9,22 +9,6 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 )
 
-type profileData struct {
-	OwnerName     string
-	AvatarOptions []AvatarOption // soul avatar roster
-	BalaurOptions []AvatarOption // Balaur head roster
-	SavedName     bool           // flash shown once after a successful name save
-}
-
-func (h *handlers) buildProfileData(savedName bool) profileData {
-	return profileData{
-		OwnerName:     store.OwnerName(h.app),
-		AvatarOptions: buildAvatarOptions(h.app),
-		BalaurOptions: buildBalaurHeadOptions(h.app),
-		SavedName:     savedName,
-	}
-}
-
 // saveName handles POST /ui/profile/name — persists the owner display name
 // and re-renders the identity card fragment via the gomponents component.
 func (h *handlers) saveName(e *core.RequestEvent) error {

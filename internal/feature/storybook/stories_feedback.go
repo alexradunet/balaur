@@ -91,7 +91,7 @@ func tooltipStory() Story {
 func skeletonStory() Story {
 	return Story{
 		ID: "skeleton", Group: "Feedback", Title: "Skeleton",
-		Blurb: "A carved loading placeholder with a slow sliding sheen — for while a memory or the day loads. Line, block, or avatar.",
+		Blurb: "A carved loading placeholder with a slow sliding sheen — for while a memory or the day loads. Line, block, or avatar. Not yet wired into any product surface: Datastar patches are synchronous (the handler builds HTML then patches), so there is no async gap today; the chat's thinking indicator covers the one real gap. Wire Skeleton here when a genuinely async surface exists.",
 		Variants: []Variant{
 			{"line · 100%", h.Div(h.Style("width:220px"), ui.SkeletonLine("100%"))},
 			{"line · 60%", h.Div(h.Style("width:220px"), ui.SkeletonLine("60%"))},
@@ -118,7 +118,7 @@ func skeletonStory() Story {
 func emptyStateStory() Story {
 	return Story{
 		ID: "emptystate", Group: "Feedback", Title: "EmptyState", Wide: true, OnDark: true,
-		Blurb: "The hearth when there is nothing yet — the crest, a plain heading, and a dry-warm line that invites without nagging. Used on empty Tasks, Memory, Life and the new conversation.",
+		Blurb: "The hearth when there is nothing yet — the crest, a plain heading, and a dry-warm line that invites without nagging. The full variant is used on empty Tasks, Memory, Life and the new conversation. The compact variant (Compact: true) is what domain cards use inline — it renders a small k-empty line in place of hand-rolled markup.",
 		Variants: []Variant{
 			{"with action", ui.EmptyState(ui.EmptyProps{
 				CrestSrc:    "/static/crest.png",
@@ -126,6 +126,7 @@ func emptyStateStory() Story {
 				ActionLabel: "Start a thread",
 				ActionHref:  "#",
 			})},
+			{"compact (in a card)", ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing due today."})},
 		},
 		Props: []Prop{
 			{"CrestSrc", "string", "—", "The borderless crest, faint."},
@@ -133,6 +134,7 @@ func emptyStateStory() Story {
 			{"Line", "string", "—", "Dry-warm invitation."},
 			{"ActionLabel", "string", "—", "Optional wood button label."},
 			{"ActionHref", "string", "—", "Where the action points."},
+			{"Compact", "bool", "false", "Inline tile placeholder — renders the small k-empty line instead of the centered crest body. CrestSrc, ActionLabel, and ActionHref are ignored. Text comes from Line; Title is used as fallback."},
 		},
 		Dos: []string{
 			"Speak dry and warm — they wait without nagging.",
@@ -148,7 +150,7 @@ func emptyStateStory() Story {
 func toastStory() Story {
 	return Story{
 		ID: "toast", Group: "Feedback", Title: "Toast",
-		Blurb: "The capture-note: a small parchment slab with a pixel icon confirming an action in Balaur's dry-warm voice. Info (quill), success (check), or guardian warning (shield).",
+		Blurb: "The capture-note: a small parchment slab with a pixel icon confirming an action in Balaur's dry-warm voice. Info (quill), success (check), or guardian warning (shield). Not yet wired into any owner action: there is no #toast SSE region in the shell yet. Wire Toast when a surface needs post-action confirmation (e.g. task-transition, memory-approve).",
 		Variants: []Variant{
 			{"info", ui.Toast(ui.ToastProps{}, g.Text("Saved to the book."))},
 			{"success", ui.Toast(ui.ToastProps{Tone: "success"}, g.Text("Task marked done."))},

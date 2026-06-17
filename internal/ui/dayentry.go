@@ -17,7 +17,7 @@ type DayEntryProps struct {
 }
 
 // DayEntry renders one day-timeline row: time rail | node dot | content.
-func DayEntry(p DayEntryProps) g.Node {
+func DayEntry(p DayEntryProps, attrs ...g.Node) g.Node {
 	tone := p.Tone
 	if tone == "" {
 		tone = "gold"
@@ -30,9 +30,12 @@ func DayEntry(p DayEntryProps) g.Node {
 	if p.Detail != "" {
 		content = append(content, h.Div(h.Class("dayentry-detail"), g.Text(p.Detail)))
 	}
-	return h.Div(h.Class(cls),
+	root := []g.Node{
+		h.Class(cls),
 		h.Div(h.Class("dayentry-time"), g.Text(p.Time)),
 		h.Div(h.Class("dayentry-rail"), h.Span(h.Class("dayentry-node"))),
 		h.Div(content...),
-	)
+	}
+	root = append(root, attrs...)
+	return h.Div(root...)
 }

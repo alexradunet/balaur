@@ -26,6 +26,7 @@ function basmUpdateThemeButtons() {
   document.querySelectorAll('.theme-toggle').forEach(btn => {
     btn.textContent = isLight ? '◑' : '☼';
     btn.title       = isLight ? 'Switch to dark mode' : 'Switch to light mode';
+    btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
   });
 }
 
@@ -61,6 +62,7 @@ function basmUpdatePaletteButtons() {
   document.querySelectorAll('.theme-cycle').forEach(function (btn) {
     btn.textContent = labels[cur];
     btn.title = 'Cycle theme (now ' + labels[cur] + ')';
+    btn.setAttribute('aria-label', 'Cycle theme (now ' + labels[cur] + ')');
   });
   document.querySelectorAll('.sb-theme-btn').forEach(function (btn) {
     btn.classList.toggle('is-active', btn.getAttribute('data-theme') === cur);
@@ -207,6 +209,57 @@ document.addEventListener('click', function (e) {
     window.basmToggleNav();
   }
 });
+
+// ── Product topbar off-canvas nav (accessible) ────────────────────
+// Separate from basmToggleNav (storybook). Closed drawer is inert (untabbable);
+// open moves focus in, traps Tab, closes on Escape/backdrop click, restores focus.
+// Two drawer mechanisms now coexist intentionally — see Maintenance notes in plan 078.
+(function () {
+  function drawer()   { return document.getElementById('topnav-drawer'); }
+  function backdrop() { return document.querySelector('.topnav-backdrop'); }
+  function burger()   { return document.querySelector('.topnav-burger'); }
+  function focusables(d) { return d.querySelectorAll('a[href], button:not([disabled])'); }
+  var lastFocus = null;
+
+  // Closed drawer must not participate in tab order.
+  function setClosedInert() { var d = drawer(); if (d && !d.classList.contains('is-open')) d.inert = true; }
+  document.addEventListener('DOMContentLoaded', setClosedInert);
+
+  window.basmToggleTopnav = function () {
+    var d = drawer(); if (!d) return;
+    var open = !d.classList.contains('is-open');
+    d.classList.toggle('is-open', open);
+    var bk = backdrop(); if (bk) bk.classList.toggle('is-open', open);
+    d.inert = !open;
+    d.setAttribute('aria-hidden', open ? 'false' : 'true');
+    var bg = burger(); if (bg) bg.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      lastFocus = document.activeElement;
+      var f = focusables(d); if (f.length) f[0].focus();
+    } else if (lastFocus && lastFocus.focus) {
+      lastFocus.focus();
+    }
+  };
+
+  // Tab trap inside the open drawer.
+  document.addEventListener('keydown', function (e) {
+    var d = drawer(); if (!d || !d.classList.contains('is-open')) return;
+    if (e.key === 'Escape') { e.preventDefault(); window.basmToggleTopnav(); return; }
+    if (e.key !== 'Tab') return;
+    var f = focusables(d); if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  // Navigating via a drawer link dismisses the drawer.
+  document.addEventListener('click', function (e) {
+    var d = drawer();
+    if (d && d.classList.contains('is-open') && e.target.closest('#topnav-drawer a')) {
+      window.basmToggleTopnav();
+    }
+  });
+})();
 
 // ── Sidebar scroll persistence ─────────────────────────────────────
 // Each storybook nav is a full page load, which would reset the sidebar rail to

@@ -105,8 +105,7 @@ func LifelogFocus(v LifelogFocusView) g.Node {
 	}
 
 	if len(v.Kinds) == 0 {
-		out = append(out, P(Class("k-empty"),
-			g.Text("Nothing tracked yet. Tell Balaur what matters — a weight, a mood, a practice, a milestone — and it appears here. The kinds are yours to invent.")))
+		out = append(out, ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing tracked yet. Tell Balaur what matters — a weight, a mood, a practice, a milestone — and it appears here. The kinds are yours to invent."}))
 		return g.Group(out)
 	}
 
