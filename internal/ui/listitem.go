@@ -17,7 +17,7 @@ type ListItemProps struct {
 
 // ListItem renders one row of a List: an optional pixel icon, a title (+ optional
 // subtitle), and an optional right-aligned mono meta. A row with an Href is a link.
-func ListItem(p ListItemProps) g.Node {
+func ListItem(p ListItemProps, attrs ...g.Node) g.Node {
 	cls := "list-item"
 	if p.Icon != "" {
 		cls += " list-item-icon"
@@ -45,6 +45,7 @@ func ListItem(p ListItemProps) g.Node {
 		}
 		root = append(root, h.Div(h.Class(mcls), g.Text(p.Meta)))
 	}
+	root = append(root, attrs...)
 
 	if p.Href != "" {
 		return h.A(root...)

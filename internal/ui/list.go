@@ -14,7 +14,7 @@ type ListProps struct {
 
 // List renders the parchment list card: an optional uppercase mono header over a
 // stack of ListItem rows. With no header, the first row drops its top divider.
-func List(p ListProps) g.Node {
+func List(p ListProps, attrs ...g.Node) g.Node {
 	kids := []g.Node{h.Class("list")}
 	if p.Title != "" {
 		kids = append(kids, h.Div(h.Class("list-head"), g.Text(p.Title)))
@@ -23,5 +23,6 @@ func List(p ListProps) g.Node {
 		it.First = i == 0 && p.Title == ""
 		kids = append(kids, ListItem(it))
 	}
+	kids = append(kids, attrs...)
 	return h.Div(kids...)
 }
