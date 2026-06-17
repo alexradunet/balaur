@@ -111,59 +111,60 @@ func TestProfileBalaurSectionContract(t *testing.T) {
 	}
 }
 
-// TestSettingsFocusNavProfileActive: when section == "profile", the Profile
-// nav link carries settings-nav-active; Models does not.
-func TestSettingsFocusNavProfileActive(t *testing.T) {
+// TestSettingsFocusProfileSection: section == "profile" renders the profile
+// forms in a nav-free settings-section container (plan 092).
+func TestSettingsFocusProfileSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "profile",
 		Profile: settingscards.ProfileView{OwnerName: "Mira"},
 	}
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
-		`class="settings-nav"`,
-		`class="settings-nav-link settings-nav-active"`,
-		`href="/ui/show/settings?section=profile"`,
-		`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)"`,
-		`href="/ui/show/settings?section=models"`,
+		`class="settings-section"`,
 		`id="identity-card"`,
 	} {
 		if !strings.Contains(got, want) {
-			t.Errorf("SettingsFocus (profile active) missing %q in:\n%s", want, got)
+			t.Errorf("SettingsFocus (profile) missing %q in:\n%s", want, got)
 		}
 	}
-	// Models must not render content in the profile section
+	for _, reject := range []string{`settings-nav`, `settings-layout`} {
+		if strings.Contains(got, reject) {
+			t.Errorf("SettingsFocus (profile) must not contain %q", reject)
+		}
+	}
 	if strings.Contains(got, `id="models-panel"`) {
 		t.Error("SettingsFocus profile section must not render #models-panel")
 	}
 }
 
-// TestSettingsFocusNavModelsActive: when section == "models", the Models nav
-// link carries settings-nav-active and #models-panel renders.
-func TestSettingsFocusNavModelsActive(t *testing.T) {
+// TestSettingsFocusModelsSection: section == "models" renders the models panel
+// in a nav-free settings-section container (plan 092).
+func TestSettingsFocusModelsSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "models",
 		Models:  settingscards.ExamplePanelView(),
 	}
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
-		`class="settings-nav"`,
-		`href="/ui/show/settings?section=models"`,
-		`data-on:click__prevent="@get(&#39;/ui/show/settings?section=models&#39;)"`,
+		`class="settings-section"`,
 		`id="models-panel"`,
 	} {
 		if !strings.Contains(got, want) {
-			t.Errorf("SettingsFocus (models active) missing %q in:\n%s", want, got)
+			t.Errorf("SettingsFocus (models) missing %q in:\n%s", want, got)
 		}
 	}
-	// Profile cards must not render in the models section
+	for _, reject := range []string{`settings-nav`, `settings-layout`} {
+		if strings.Contains(got, reject) {
+			t.Errorf("SettingsFocus (models) must not contain %q", reject)
+		}
+	}
 	if strings.Contains(got, `id="identity-card"`) {
 		t.Error("SettingsFocus models section must not render #identity-card")
 	}
 }
 
 // TestSettingsFocusHeadsSection: section == "heads" renders the heads roster
-// (ucard-heads) and marks the Heads nav tab active. Guards the move of the
-// standalone Heads page into Settings.
+// in a nav-free settings-section container (plan 092).
 func TestSettingsFocusHeadsSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "heads",
@@ -173,14 +174,17 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 	}
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
-		`class="settings-nav"`,
-		`class="settings-nav-link settings-nav-active" href="/ui/show/settings?section=heads"`,
-		`data-on:click__prevent="@get(&#39;/ui/show/settings?section=heads&#39;)"`,
+		`class="settings-section"`,
 		`id="ucard-heads"`,
 		`Scout`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (heads) missing %q in:\n%s", want, got)
+		}
+	}
+	for _, reject := range []string{`settings-nav`, `settings-layout`} {
+		if strings.Contains(got, reject) {
+			t.Errorf("SettingsFocus (heads) must not contain %q", reject)
 		}
 	}
 	if strings.Contains(got, `id="identity-card"`) {
@@ -189,12 +193,12 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 }
 
 // TestSettingsFocusAppearanceSection: section == "appearance" renders the
-// palette picker wired to basmSetPalette and marks the Appearance tab active.
+// palette picker in a nav-free settings-section container (plan 092).
 func TestSettingsFocusAppearanceSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{Section: "appearance"}
 	got := renderNode(t, settingscards.SettingsFocus(view))
 	for _, want := range []string{
-		`class="settings-nav-link settings-nav-active" href="/ui/show/settings?section=appearance"`,
+		`class="settings-section"`,
 		`id="appearance-section"`,
 		`class="appearance-themes"`,
 		`class="appearance-theme-btn"`,
@@ -205,6 +209,11 @@ func TestSettingsFocusAppearanceSection(t *testing.T) {
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (appearance) missing %q in:\n%s", want, got)
+		}
+	}
+	for _, reject := range []string{`settings-nav`, `settings-layout`} {
+		if strings.Contains(got, reject) {
+			t.Errorf("SettingsFocus (appearance) must not contain %q", reject)
 		}
 	}
 }

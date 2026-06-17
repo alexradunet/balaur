@@ -115,18 +115,31 @@ func TestChoicesHistoryInert(t *testing.T) {
 func TestSettingsPages(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			// /ui/show/settings injects the FULL settings manager into the chat
-			// (the single-card artifact renders at ui.Focus). The summary tile is
-			// not enough — the owner must be able to actually edit profile/models/
-			// heads/appearance from the injected artifact.
-			Name:           "GET /ui/show/settings injects the settings manager",
+			// /ui/show/settings (no section) defaults to the profile section:
+			// a nav-free artifact showing identity + avatar pickers (plan 092).
+			Name:           "GET /ui/show/settings injects the profile section artifact",
 			Method:         "GET",
 			URL:            "/ui/show/settings",
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
-				`class="settings-layout"`,          // the manager (nav + content), not a summary
 				`id="identity-card"`,               // the Profile section's identity form
 				`@post(&#39;/ui/profile/name&#39;`, // a working write form is present
+			},
+			NotExpectedContent: []string{
+				`settings-layout`, `settings-nav`,
+			},
+		},
+		{
+			// /ui/show/settings?section=models renders the models panel without nav.
+			Name:           "GET /ui/show/settings?section=models injects the models section artifact",
+			Method:         "GET",
+			URL:            "/ui/show/settings?section=models",
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				`id="models-panel"`,
+			},
+			NotExpectedContent: []string{
+				`settings-nav`,
 			},
 		},
 		{
