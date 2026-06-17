@@ -175,7 +175,7 @@ func chatdockStory() Story {
 			{"NowMillis", "int64", "0", "Unix millisecond seed for the nudge-poll cursor — only messages after page load are nudged."},
 			{"Convo", "g.Node", "nil", "The #chat section content — history panels (chat.Message/chat.ToolRow) or the hearth greeting, pre-rendered by the caller."},
 			{"Composer", "g.Node", "nil", "The ui.Composer node, pre-rendered by the caller (wired to @post /ui/chat in production)."},
-			{"Switchers", "g.Node", "nil", "The chatbar/head-switcher node, pre-rendered by the caller. On the single-page shell the switchers live in the sidebar rail Brand/Footer (plan 091); the dock Switchers slot is unused on home."},
+			{"Switchers", "g.Node", "nil", "The chatbar/head-switcher node, pre-rendered by the caller (still a template fragment — deferred from this plan)."},
 		},
 		Dos: []string{
 			"Inject pre-rendered Convo and Composer nodes — the dock is structurally agnostic.",
