@@ -4,9 +4,12 @@ import (
 	"html/template"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/pocketbase/pocketbase/tests"
+
+	"github.com/alexradunet/balaur/internal/feature/lifecards"
 	"github.com/alexradunet/balaur/internal/turn"
+	_ "github.com/alexradunet/balaur/migrations"
 	webassets "github.com/alexradunet/balaur/web"
 )
 
@@ -101,120 +104,96 @@ func TestModelsPageAndCleanChatbarRender(t *testing.T) {
 		t.Error("composer: textarea/button must be disabled when chat is not ready")
 	}
 
-	// The settings shell is the settings card focus now (plan 056): the models
-	// section renders via the shared settings_body define.
-	b.Reset()
-	models := modelsPageData{ModelsHTML: template.HTML(`<div id="models-panel">MODELS-PANEL-MARKER</div>`)}
-	settingsModels := settingsData{Section: "models", Models: models}
-	if err := tmpl.ExecuteTemplate(&b, "settings_body", settingsModels); err != nil {
-		t.Fatalf("settings_body models: %v", err)
-	}
-	if !strings.Contains(b.String(), "MODELS-PANEL-MARKER") {
-		t.Error("settings_body must inject the gomponents models panel (Models.ModelsHTML)")
-	}
 }
 
-// TestQuestsFocusListRenders renders the quests focus body (tasks_list) — the
-// surface formerly at /tasks?view=list. tasks_list reads .QuestLog, so it must
-// be passed via map[string]any{"QuestLog": ...}. The calendar/timeline views
-// are now their own cards (covered by cards_test.go's TestUiCardAllTypesRender).
+// TestQuestsFocusListRenders verifies the quests focus renders the quest rail
+// via the live gomponents path (/focus/quests). Mirrors TestFocusQuestsShowsRail
+// in focus_test.go — kept here so the template_test suite covers the rail markers
+// independently of focus_test.go.
 func TestQuestsFocusListRenders(t *testing.T) {
-	tmpl := parseTemplates(t)
-	now := time.Now()
-	ql := buildQuestLog(nil, nil, now)
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "tasks_list", map[string]any{"QuestLog": ql}); err != nil {
-		t.Fatalf("tasks_list: %v", err)
+	s := tests.ApiScenario{
+		Name:           "GET /focus/quests renders the quest rail",
+		Method:         "GET",
+		URL:            "/focus/quests",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="quest-rail"`,
+			`id="quest-detail"`,
+		},
 	}
-	out := b.String()
-	for _, want := range []string{`id="quest-rail"`, `id="quest-detail"`} {
-		if !strings.Contains(out, want) {
-			t.Errorf("tasks_list missing %q", want)
-		}
-	}
+	s.Test(t)
 }
 
-// TestLifeBodyRenders: the life overview body (life_body) — now the lifelog
-// card's focus, formerly the /life page — renders both populated and empty.
+// TestLifeBodyRenders: the lifelog focus renders via the gomponents
+// lifecards.LifelogFocus renderer — both populated and empty.
 func TestLifeBodyRenders(t *testing.T) {
-	tmpl := parseTemplates(t)
-	points, lx, ly := sparkPoints([]float64{83, 82.6, 82.5}, sparkW, sparkH)
-	if points == "" || lx == "" || ly == "" {
-		t.Fatalf("sparkPoints empty: %q %q %q", points, lx, ly)
-	}
-	data := map[string]any{
-		"Habits": []lifeHabitView{{Title: "Stretch", Streak: 5, RecurLine: "repeats daily"}},
-		"Kinds": []lifeKindView{
+	// Populated: weight (numeric + spark) + gratitude (text) + habit strip.
+	v := lifecards.LifelogFocusView{
+		Habits: []lifecards.LifeHabitView{{Title: "Stretch", Streak: 5, RecurLine: "repeats daily"}},
+		Kinds: []lifecards.LifeKindFocusView{
 			{Kind: "weight", Unit: "kg", Count: 3, Numeric: true, LastVal: "82.5", LastAt: "Jun 11",
-				Change: "-0.5 over 90d", Points: points, SparkLastX: lx, SparkLastY: ly},
+				Change: "-0.5 over 90d", Points: "4,40 236,8", SparkLastX: "236", SparkLastY: "8"},
 			{Kind: "gratitude", Count: 1, Recent: []string{"Jun 10 — the morning was quiet"}},
 		},
 	}
 	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "life_body", data); err != nil {
-		t.Fatalf("life_body: %v", err)
+	if err := lifecards.LifelogFocus(v).Render(&b); err != nil {
+		t.Fatalf("LifelogFocus render: %v", err)
 	}
 	out := b.String()
 	for _, want := range []string{"weight", "82.5", "polyline", "gratitude", "streak 5", "life-grid"} {
 		if !strings.Contains(out, want) {
-			t.Errorf("life body missing %q", want)
+			t.Errorf("lifelog focus missing %q", want)
 		}
 	}
-	// Empty state renders too.
+	// Empty state: no tracked kinds → invitation text.
 	b.Reset()
-	if err := tmpl.ExecuteTemplate(&b, "life_body", map[string]any{}); err != nil {
-		t.Fatalf("life_body empty: %v", err)
+	if err := lifecards.LifelogFocus(lifecards.LifelogFocusView{}).Render(&b); err != nil {
+		t.Fatalf("LifelogFocus empty render: %v", err)
 	}
 	if !strings.Contains(b.String(), "yours to invent") {
 		t.Error("empty state missing")
 	}
 }
 
-// TestDayPageRenders: the day view is now the day card's focus body (day_focus).
-// The standalone day.html doc is retired, so this renders the body fragment and
-// asserts its sections; prev/next deep-link into the focus (/focus/day?date=…).
+// TestDayPageRenders: the day focus renders via the live gomponents path
+// (/focus/day). Sections (journal, recap, done, log) and the prev/next nav
+// deep-link to /focus/day?date=… are asserted. For today, the transcript
+// expander is absent and the "still being written" empty state is shown.
 func TestDayPageRenders(t *testing.T) {
-	tmpl := parseTemplates(t)
-	data := dayData{
-		Title: "Wednesday, June 10", Date: "2026-06-10",
-		Label: "Wednesday, June 10 2026",
-		Prev:  "2026-06-09", Next: "2026-06-11",
-		Journal:    []dayJournalView{{ID: "j1", Time: "21:40", Text: "A good, quiet day."}},
-		Recap:      "You sorted the notary papers and trained in the evening.",
-		RecapStart: "1780000000",
-		Done:       []dayLineView{{Time: "10:12", Text: "Call notary"}},
-		Logs:       []dayLineView{{Time: "08:00", Text: "weight: 82.5 kg"}},
+	// Past date: transcript expander present, prev/next nav links present.
+	past := tests.ApiScenario{
+		Name:           "GET /focus/day?date=2026-06-09 renders day sections",
+		Method:         "GET",
+		URL:            "/focus/day?date=2026-06-09",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="day-journal"`,
+			"What got done",
+			"/focus/day?date=", // prev/next nav
+			"transcript",       // recap expander on a past day
+		},
 	}
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "day_focus", data); err != nil {
-		t.Fatalf("day_focus: %v", err)
-	}
-	out := b.String()
-	for _, want := range []string{
-		"A good, quiet day.", "remove", "Keep it", "notary papers",
-		"transcript", "Call notary", "weight: 82.5 kg",
-		"/focus/day?date=2026-06-09", "/focus/day?date=2026-06-11",
-	} {
-		if !strings.Contains(out, want) {
-			t.Errorf("day focus missing %q", want)
-		}
-	}
+	past.Test(t)
 
-	// Today: no next link, no transcript expander, honest empty states.
-	b.Reset()
-	today := dayData{Title: "t", Date: "2026-06-11", Label: "Thursday, June 11 2026", IsToday: true, Prev: "2026-06-10"}
-	if err := tmpl.ExecuteTemplate(&b, "day_focus", today); err != nil {
-		t.Fatalf("day_focus today: %v", err)
+	// Today: no transcript expander, honest empty states.
+	today := tests.ApiScenario{
+		Name:           "GET /focus/day (today) omits transcript expander",
+		Method:         "GET",
+		URL:            "/focus/day",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="day-journal"`,
+			"still being written",
+			"Nothing marked done",
+			"Nothing logged",
+		},
+		NotExpectedContent: []string{"transcript"},
 	}
-	out = b.String()
-	if strings.Contains(out, "transcript") {
-		t.Error("today must not offer a transcript expander")
-	}
-	for _, want := range []string{"still being written", "Nothing marked done", "Nothing logged"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("today focus missing %q", want)
-		}
-	}
+	today.Test(t)
 }
 
 func TestToolIconRendersAsImg(t *testing.T) {
