@@ -41,7 +41,7 @@
     },
     {
       "file": "internal/web/tasks.go",
-      "line": 401,
+      "line": 305,
       "title": "7.7 — Datastar patches: nudge poll + quest rail",
       "description": "```go\nfunc (h *handlers) chatNudges(e *core.RequestEvent) error {\n    ...\n    sse := datastar.NewSSE(e.Response, e.Request)\n    _ = sse.PatchElements(b.String(),\n        datastar.WithSelectorID(\"chat\"), datastar.WithModeAppend())\n    _ = sse.MarshalAndPatchSignals(struct {\n        NudgeSince int64 `json:\"nudgeSince\"`\n    }{...})\n}\n```\n\nA single SSE response can update several parts of the DOM at once — each `PatchElements` call targets an element by stable id, regardless of order in the stream.\n\nTwo patterns here:\n1. **Nudge poll** — the nudge endpoint appends task-reminder rows to `#chat` (`WithModeAppend`) and patches the `nudgeSince` signal; the page re-polls on a Datastar interval. No WebSocket, no long-poll — plain polling, idempotent.\n2. **Quest rail** — when a task transition (done/snooze/drop) originates from the quests focus (`/focus/quests`, detected by `Referer`), `taskTransition` patches `#quest-rail` by id so the rail re-renders immediately, without touching the rest of the canvas.\n\nThe server stays the single source of truth — Datastar carries fine-grained reactive state in client signals, but the DOM shape is server-rendered and patched by id, so there is no client-side view state to reconcile."
     }

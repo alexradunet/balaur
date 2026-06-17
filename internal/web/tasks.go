@@ -18,10 +18,10 @@ import (
 )
 
 // tasks.go is the life-organization surface, now expressed as cards. The
-// operational list lives in the quests card's focus (questsFocusHTML — the
-// rhythm-grouped quest rail + detail, was /tasks?view=list). The month calendar
-// and forward timeline are their own cards (ucard_calendar/ucard_timeline, via
-// buildCalendar/buildTimelineN in cards.go) — the future-facing mirror of the
+// operational list lives in the quests card's focus (taskcards.QuestsFocus —
+// the rhythm-grouped quest rail + detail, was /tasks?view=list). The month
+// calendar and forward timeline are their own cards (ucard_calendar/ucard_timeline,
+// via buildCalendar/buildTimelineN in cards.go) — the future-facing mirror of the
 // recap telescope. Calendar and timeline are read-only projections of the
 // recurrence rules; actions live on the task cards.
 
