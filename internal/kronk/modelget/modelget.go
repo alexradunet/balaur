@@ -212,8 +212,10 @@ func Fetch(ctx context.Context, url, destDir, fileName, wantSHA256 string,
 		return "", loopErr
 	}
 
-	// Verify checksum.
-	if wantSHA256 != "" && wantSHA256 != "REPLACE_WITH_REAL_SHA256" {
+	// Verify checksum. An empty wantSHA256 means the caller has no pinned hash
+	// to check against (never the case for the official model, whose pin always
+	// carries a real sha256) — anything non-empty is enforced fail-closed.
+	if wantSHA256 != "" {
 		got := hex.EncodeToString(h.Sum(nil))
 		if got != wantSHA256 {
 			_ = os.Remove(partPath)

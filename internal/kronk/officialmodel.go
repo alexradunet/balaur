@@ -20,8 +20,8 @@ func Official() OfficialModel {
 	return OfficialModel{
 		Name:      "Gemma 4 E4B",
 		URL:       "https://huggingface.co/ggml-org/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
-		SHA256:    "REPLACE_WITH_REAL_SHA256", // filled at merge time by the reviewer
-		SizeBytes: 0,                          // filled at merge time (~5.34 GB)
+		SHA256:    "90ce98129eb3e8cc57e62433d500c97c624b1e3af1fcc85dd3b55ad7e0313e9f",
+		SizeBytes: 5335289824, // ~5.34 GB
 		Quant:     "Q4_K_M",
 		Params:    "E4B (~4.5B eff.)",
 		License:   "Apache-2.0",
