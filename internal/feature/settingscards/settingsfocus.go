@@ -357,33 +357,9 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		})
 	}
 
-	return Div(Class("settings-layout"),
-		Nav(
-			Class("settings-nav"),
-			g.Attr("aria-label", "Settings sections"),
-			settingsNavLink(v.Section, "profile", "Profile"),
-			settingsNavLink(v.Section, "models", "Models"),
-			settingsNavLink(v.Section, "heads", "Heads"),
-			settingsNavLink(v.Section, "appearance", "Appearance"),
-		),
-		Div(Class("settings-content"), content),
-	)
-}
-
-// settingsNavLink renders one settings-nav tab. The current section gets
-// settings-nav-active; the @get patches only #main (the dock persists).
-func settingsNavLink(active, section, label string) g.Node {
-	cls := "settings-nav-link"
-	if active == section {
-		cls += " settings-nav-active"
-	}
-	href := "/ui/show/settings?section=" + section
-	return A(
-		Class(cls),
-		Href(href),
-		data.On("click", "@get('"+href+"')", data.ModifierPrevent),
-		g.Text(label),
-	)
+	// One nav-free section. Navigation lives in the sidebar (plan 092);
+	// each settings section is summoned as its own artifact.
+	return Div(Class("settings-section"), content)
 }
 
 // AppearanceSection renders the Appearance settings card: the palette picker
