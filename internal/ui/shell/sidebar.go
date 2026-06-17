@@ -109,7 +109,7 @@ func sidebarItem(it SidebarItem) g.Node {
 		attrs = append(attrs, h.Aria("current", "page"))
 	}
 	if it.Dot != "" {
-		attrs = append(attrs, h.Span(h.Class("sb-nav-dot"), h.Style("background:"+it.Dot)))
+		attrs = append(attrs, h.Span(h.Class("sb-nav-dot"), h.Style("--sb-nav-dot:"+it.Dot)))
 	}
 	attrs = append(attrs, h.Span(g.Text(it.Label)))
 	return h.A(attrs...)

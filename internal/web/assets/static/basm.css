@@ -2682,7 +2682,7 @@ progress.pull-progress-bar::-moz-progress-bar {
   font-family: var(--font-mono); font-size: 12px; letter-spacing: .02em; text-transform: uppercase;
   color: var(--chrome-fg); border: 2px solid transparent; background: transparent;
 }
-.sb-nav-dot { width: 6px; height: 6px; flex-shrink: 0; }
+.sb-nav-dot { width: 6px; height: 6px; flex-shrink: 0; background: var(--sb-nav-dot); }
 .sb-nav-item:hover:not(.sb-nav-item-active) { color: var(--gold); background: color-mix(in srgb, var(--gold) 8%, transparent); }
 .sb-nav-item-active {
   color: var(--gold); border-color: var(--gold-deep);

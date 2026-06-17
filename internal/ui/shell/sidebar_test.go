@@ -62,7 +62,7 @@ func TestSidebar(t *testing.T) {
 		`<aside class="sb-side">`,
 		`<header class="sb-brand">BALAUR</header>`,
 		`<div class="sb-nav-label"><span>Atoms</span><span class="sb-nav-count">2</span><span class="sb-nav-rule"></span></div>`,
-		`<a class="sb-nav-item sb-nav-item-active" href="/storybook/button" aria-current="page"><span class="sb-nav-dot" style="background:var(--teal)"></span><span>Button</span></a>`,
+		`<a class="sb-nav-item sb-nav-item-active" href="/storybook/button" aria-current="page"><span class="sb-nav-dot" style="--sb-nav-dot:var(--teal)"></span><span>Button</span></a>`,
 		`<a class="sb-nav-item" href="/storybook/tag"><span>Tag</span></a>`,
 		`<footer class="sb-foot">FOOT</footer>`,
 	} {
