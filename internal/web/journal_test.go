@@ -22,7 +22,7 @@ func TestJournalArtifact(t *testing.T) {
 		URL:             "/ui/show/journal",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-journal"},
+		ExpectedContent: []string{"candle-focus", `@post(&#39;/ui/journal&#39;`}, // the full candle write-form, not a summary
 	}
 	scenario.Test(t)
 }
@@ -130,14 +130,14 @@ func TestJournalCandleIntegration(t *testing.T) {
 
 	today := now.Format(dayLayout)
 
-	// The day tile must show 1 journal entry after the write.
+	// The day view (ui.Focus) must show the journal entry text after the write.
 	scenario := tests.ApiScenario{
-		Name:            "day tile reflects journal entry written via candle",
+		Name:            "day view reflects journal entry written via candle",
 		Method:          "GET",
 		URL:             "/ui/show/day?date=" + today,
 		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-day", "1 journal"},
+		ExpectedContent: []string{"day-focus", entryText},
 	}
 	scenario.Test(t)
 }

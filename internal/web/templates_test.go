@@ -117,7 +117,8 @@ func TestQuestsArtifact(t *testing.T) {
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
-			`id="ucard-quests"`,
+			`class="quest-log"`, // full quest rail + detail (ui.Focus), not a summary tile
+			`id="quest-rail"`,
 		},
 	}
 	s.Test(t)
@@ -155,7 +156,7 @@ func TestLifeBodyRenders(t *testing.T) {
 	}
 }
 
-// TestDayArtifact verifies /ui/show/day injects a day card tile artifact into chat.
+// TestDayArtifact verifies /ui/show/day injects the full day view (ui.Focus) into chat.
 // Full DayFocus rendering is covered by internal/feature/journalcards/dayfocus_test.go.
 func TestDayArtifact(t *testing.T) {
 	scenario := tests.ApiScenario{
@@ -164,7 +165,7 @@ func TestDayArtifact(t *testing.T) {
 		URL:             "/ui/show/day",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-day"},
+		ExpectedContent: []string{"day-focus"},
 	}
 	scenario.Test(t)
 }

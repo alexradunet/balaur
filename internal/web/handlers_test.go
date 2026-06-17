@@ -115,12 +115,19 @@ func TestChoicesHistoryInert(t *testing.T) {
 func TestSettingsPages(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			// /ui/show/settings injects the settings tile artifact (not the full focus).
-			Name:            "GET /ui/show/settings injects settings artifact",
-			Method:          "GET",
-			URL:             "/ui/show/settings",
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"ucard-settings"},
+			// /ui/show/settings injects the FULL settings manager into the chat
+			// (the single-card artifact renders at ui.Focus). The summary tile is
+			// not enough — the owner must be able to actually edit profile/models/
+			// heads/appearance from the injected artifact.
+			Name:           "GET /ui/show/settings injects the settings manager",
+			Method:         "GET",
+			URL:            "/ui/show/settings",
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				`class="settings-layout"`,          // the manager (nav + content), not a summary
+				`id="identity-card"`,               // the Profile section's identity form
+				`@post(&#39;/ui/profile/name&#39;`, // a working write form is present
+			},
 		},
 		{
 			// Retired route (plan 056): the settings shell is the settings card
@@ -484,14 +491,14 @@ func TestUICardHistoryRendersCardInline(t *testing.T) {
 }
 
 func TestDayCardArtifact(t *testing.T) {
-	// GET /ui/show/day?date=... injects a day card tile into the chat stream.
+	// GET /ui/show/day?date=... injects the full day view (ui.Focus) into chat.
 	scenario := tests.ApiScenario{
 		Name:            "GET /ui/show/day?date=2026-01-15 injects day card artifact",
 		Method:          "GET",
 		URL:             "/ui/show/day?date=2026-01-15",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-day", "January"},
+		ExpectedContent: []string{"day-focus", "day-nav", "January"},
 	}
 	scenario.Test(t)
 }

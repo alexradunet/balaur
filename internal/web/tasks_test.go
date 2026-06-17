@@ -76,7 +76,7 @@ func TestQuestsArtifactEndpoint(t *testing.T) {
 			URL:             "/ui/show/quests",
 			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"ucard-quests", "Morning stretch"},
+			ExpectedContent: []string{"quest-log", "Morning stretch"}, // full rail (ui.Focus), task present
 		}
 		scenario.Test(t)
 	})
@@ -88,7 +88,7 @@ func TestQuestsArtifactEndpoint(t *testing.T) {
 			URL:             "/ui/show/quests",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
-			ExpectedContent: []string{"No quests here yet."},
+			ExpectedContent: []string{"No quests yet. Speak one in the chat."}, // QuestsFocus empty state
 		}
 		scenario.Test(t)
 	})

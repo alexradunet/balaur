@@ -77,10 +77,12 @@ func (h *handlers) cardInto(w io.Writer, typ string, params map[string]string) e
 	return h.cardSizeInto(w, typ, params, ui.Tile)
 }
 
-// cardSizeInto renders one card at the given size. cardInto (chat embeds,
-// the /ui/cards endpoint) always passes ui.Tile; artifact pages pass ui.Focus.
-// A feature renderer that ignores the size argument (most do) renders its tile
-// in both cases — only cards with a real Focus branch (e.g. lifelog) differ.
+// cardSizeInto renders one card at the given size. cardInto passes ui.Tile (the
+// /ui/cards endpoint, refreshCard, and show_cards clusters); a single in-chat
+// artifact passes ui.Focus via cardFocusHTML/uicardBody. A feature renderer that
+// ignores the size argument (most do) renders its tile in both cases — only cards
+// with a real Focus branch (quests/memory/skills/settings/journal/day/lifelog)
+// differ, showing their full interactive surface.
 func (h *handlers) cardSizeInto(w io.Writer, typ string, params map[string]string, size ui.CardSize) error {
 	if fn, ok := ui.LookupCard(typ); ok {
 		node, err := fn(size, params)
@@ -123,12 +125,37 @@ func cardErrorStrip(msg string) template.HTML {
 	return template.HTML(b.String())
 }
 
-// uicardBody server-renders a registry card ("/ui/cards/{type}?query") for inline
-// chat embeds — so the chat stream and reloaded history carry the card directly,
-// with no lazy htmx mount.
+// uicardBody server-renders a single registry card as an in-chat artifact, at
+// ui.Focus — the FULL interactive surface (manager / rail / write-form), not a
+// summary tile. In the single-page UI the chat IS the canvas (there is no board),
+// so a summoned domain artifact is its full working surface; size-agnostic cards
+// render identically to their tile. Used by BOTH the deterministic door
+// (/ui/show, via messageViews) and the agent's card_show, and re-rendered on
+// reload through this same path — so the live append and the reload stay
+// consistent (the #1 invariant from plan 088).
 func (h *handlers) uicardBody(typ, query string) template.HTML {
 	vals, _ := url.ParseQuery(query)
-	return h.cardHTML(typ, queryToMap(vals))
+	return h.cardFocusHTML(typ, queryToMap(vals))
+}
+
+// cardFocusHTML server-renders one card at ui.Focus (its full surface), with the
+// same validate + error-strip discipline as cardHTML. Restored for the in-chat
+// artifact path after plan 089 removed the /focus pages — a sidebar domain click
+// or card_show now shows the real manager, not a dead summary.
+func (h *handlers) cardFocusHTML(typ string, params map[string]string) template.HTML {
+	if _, ok := cards.Get(typ); !ok {
+		return cardErrorStrip("no such card type: " + typ)
+	}
+	cleaned, err := cards.Validate(typ, params)
+	if err != nil {
+		return cardErrorStrip(err.Error())
+	}
+	var b strings.Builder
+	if err := h.cardSizeInto(&b, typ, cleaned, ui.Focus); err != nil {
+		h.app.Logger().Warn("focus card render failed", "type", typ, "err", err)
+		return cardErrorStrip("could not render this card")
+	}
+	return template.HTML(b.String())
 }
 
 // artifactBody server-renders a hand-picked cluster of cards for an inline chat
