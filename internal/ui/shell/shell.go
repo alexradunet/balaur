@@ -37,6 +37,7 @@ func Page(p PageProps) g.Node {
 			h.TitleEl(g.Text(p.Title+" · Balaur")),
 		),
 		h.Body(
+			h.A(h.Class("skip-link"), h.Href("#main"), g.Text("Skip to content")),
 			Topbar(p.Active),
 			h.Div(h.Class("with-sidebar"),
 				h.Main(h.ID("main"), p.Body),
@@ -94,6 +95,7 @@ func Topbar(active string) g.Node {
 			g.Attr("onclick", "basmToggleTheme()"),
 			h.Title("Toggle light/dark mode"),
 			h.Aria("label", "Toggle light/dark mode"),
+			h.Aria("pressed", "false"),
 			g.Text("◑"),
 		),
 	)

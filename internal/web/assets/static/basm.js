@@ -26,6 +26,7 @@ function basmUpdateThemeButtons() {
   document.querySelectorAll('.theme-toggle').forEach(btn => {
     btn.textContent = isLight ? '◑' : '☼';
     btn.title       = isLight ? 'Switch to dark mode' : 'Switch to light mode';
+    btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
   });
 }
 
@@ -61,6 +62,7 @@ function basmUpdatePaletteButtons() {
   document.querySelectorAll('.theme-cycle').forEach(function (btn) {
     btn.textContent = labels[cur];
     btn.title = 'Cycle theme (now ' + labels[cur] + ')';
+    btn.setAttribute('aria-label', 'Cycle theme (now ' + labels[cur] + ')');
   });
   document.querySelectorAll('.sb-theme-btn').forEach(function (btn) {
     btn.classList.toggle('is-active', btn.getAttribute('data-theme') === cur);

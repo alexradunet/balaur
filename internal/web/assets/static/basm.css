@@ -942,6 +942,7 @@ dialog::backdrop {
   .msg-pending .balaur-avatar,
   .balaur-avatar[data-state="thinking"],
   .balaur-avatar[data-state="working"] { animation: none; }
+  .cmsg-pending .cmsg-portrait { animation: none; }
   .thinking-dots::after { animation: none; content: ""; }
   .type-cursor { animation: none; opacity: 0; }
   .choice:hover::before,
@@ -1204,7 +1205,7 @@ dialog::backdrop {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: var(--smoke);
+  color: var(--chrome-fg);
   text-align: center;
 }
 .recap-band { padding: 14px 0; }
@@ -3216,3 +3217,19 @@ html.home #dock .composer { width: 100%; max-width: 1800px; margin-left: auto; m
 #dock .chat .cmsg-portrait { width: 46px; height: 46px; }
 html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
 #dock .chat .hearth-crest { display: block; margin: 4px auto 14px; }
+
+/* ── Skip link — keyboard a11y; offscreen until focused ──────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: var(--z-tooltip, 30);
+  padding: 8px 12px;
+  background-color: var(--chrome);
+  color: var(--chrome-fg);
+  border: 2px solid var(--gold-deep);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+.skip-link:focus { left: 8px; top: 8px; }

@@ -37,10 +37,16 @@ func TestPage(t *testing.T) {
 		`<a href="/focus/quests" aria-current="page">Quests</a>`,
 		`<a href="/focus/journal">Journal</a>`,
 		`<a href="/focus/settings">Settings</a>`,
+		// Skip link for keyboard users.
+		`<a class="skip-link" href="#main">Skip to content</a>`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("shell missing %q\nfull:\n%s", want, got)
 		}
+	}
+	// Skip link must appear before the topbar.
+	if strings.Index(got, "skip-link") > strings.Index(got, "topbar") {
+		t.Error("skip-link must precede the topbar in the rendered output")
 	}
 	// Today was dropped (Home replaced it); Boards was cut earlier.
 	if strings.Contains(got, ">Today</a>") {

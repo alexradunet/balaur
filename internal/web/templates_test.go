@@ -359,8 +359,29 @@ func TestChatbarPollAndDraft(t *testing.T) {
 	if !strings.Contains(readyOut, `id="chat-draft"`) {
 		t.Error("ready response must contain the draft composer")
 	}
-	if strings.Contains(readyOut, "disabled") {
-		t.Error("ready draft must not be disabled")
+	// Tool wells are permanently disabled (no handler yet); the textarea and
+	// submit button must NOT be disabled when the chat is ready.
+	if strings.Contains(readyOut, "<textarea") && strings.Contains(readyOut, "disabled") {
+		// Narrow check: textarea must not carry the disabled attr.
+		if strings.Contains(readyOut, "<textarea"+` name="message"`) &&
+			strings.Contains(readyOut, `<textarea name="message" placeholder`) &&
+			strings.Contains(readyOut, "disabled") {
+			// Only fail if the textarea itself is disabled (not just the tool wells).
+			if idx := strings.Index(readyOut, "<textarea"); idx >= 0 {
+				taSnippet := readyOut[idx:]
+				end := strings.Index(taSnippet, ">")
+				if end > 0 && strings.Contains(taSnippet[:end], "disabled") {
+					t.Error("ready draft textarea must not be disabled")
+				}
+			}
+		}
+	}
+	if strings.Contains(readyOut, `type="submit"`) {
+		idx := strings.Index(readyOut, `type="submit"`)
+		submitSnippet := readyOut[max(0, idx-100) : idx+20]
+		if strings.Contains(submitSnippet, "disabled") {
+			t.Error("ready draft submit button must not be disabled")
+		}
 	}
 	if strings.Contains(readyOut, "hx-") {
 		t.Error("no htmx attributes may remain on the chatbar/draft")

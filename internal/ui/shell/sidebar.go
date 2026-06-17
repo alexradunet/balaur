@@ -79,6 +79,7 @@ func SidebarPage(p SidebarPageProps) g.Node {
 		h.HTML(h.Lang("en"),
 			h.Head(pageHead(), h.TitleEl(g.Text(p.Title+" · Balaur"))),
 			h.Body(
+				h.A(h.Class("skip-link"), h.Href("#main"), g.Text("Skip to content")),
 				h.Div(h.Class("sb-root"),
 					h.Header(h.Class("sb-topbar"),
 						h.Button(h.Class("sb-burger"), h.Type("button"), g.Attr("onclick", "basmToggleNav()"),
@@ -87,7 +88,7 @@ func SidebarPage(p SidebarPageProps) g.Node {
 						h.Span(h.Class("sb-topbar-brand"), g.Text("Balaur")),
 					),
 					p.Sidebar,
-					h.Main(h.Class("sb-canvas"),
+					h.Main(h.Class("sb-canvas"), h.ID("main"),
 						h.Header(h.Class("sb-crumb"), g.Text(crumb)),
 						p.Body,
 					),
