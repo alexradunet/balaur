@@ -93,7 +93,8 @@ func DayCard(v DayView) g.Node {
 			dayRecapLi(v),
 		),
 		Footer(Class("kcard-actions"),
-			A(Href("/focus/day?date="+v.Date), g.Text("open the day →")),
+			A(Href("/ui/show/day?date="+v.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+v.Date+"')"),
+				g.Text("open the day →")),
 		),
 	)
 }

@@ -33,7 +33,7 @@ func TestLinesCard_WithLines(t *testing.T) {
 		`class="life-lines"`, // ul element
 		`Jun 14 — Finished The Pragmatic Programmer`,
 		`Jun 12 — Chapter 5`,
-		`href="/focus/lifelog"`,
+		`href="/ui/show/lifelog"`,
 		`life →`,
 	} {
 		if !strings.Contains(out, want) {

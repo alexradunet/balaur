@@ -103,7 +103,7 @@ func TestJournalCard_Entries(t *testing.T) {
 func TestJournalCard_Footer(t *testing.T) {
 	v := journalcards.JournalView{TodayDate: "2026-06-14"}
 	html := renderNode(t, journalcards.JournalCard(v))
-	if !strings.Contains(html, `href="/focus/day?date=2026-06-14"`) {
+	if !strings.Contains(html, `href="/ui/show/day?date=2026-06-14"`) {
 		t.Errorf("expected footer link with today's date, got:\n%s", html)
 	}
 	if !strings.Contains(html, `today&#39;s page`) {

@@ -57,7 +57,7 @@ func HabitsCard(habits []HabitView) g.Node {
 		Class("kcard ucard ucard-habits"), ID("ucard-habits"),
 		ui.CardHead("/static/icons/flame.png", "Habits"),
 		habitsBody(habits),
-		Footer(Class("kcard-actions"), A(Href("/focus/lifelog"), g.Text("life →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
 	)
 }
 

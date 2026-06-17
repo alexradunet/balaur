@@ -123,7 +123,7 @@ func CalendarCard(v CalView) g.Node {
 				TBody(calBodyRows(v.Weeks)),
 			),
 		),
-		Footer(Class("kcard-actions"), A(Href("/focus/calendar"), g.Text("full calendar →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/calendar"), g.Attr("data-on:click__prevent", "@get('/ui/show/calendar')"), g.Text("full calendar →"))),
 	)
 }
 
@@ -161,7 +161,7 @@ func calCellNode(cell CalCell) g.Node {
 	}
 	children := []g.Node{
 		Class(cls),
-		A(Class("cal-daylink"), Href("/focus/day?date="+cell.Date),
+		A(Class("cal-daylink"), Href("/ui/show/day?date="+cell.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+cell.Date+"')"),
 			Span(Class("cal-daynum"), g.Text(cell.Day)),
 		),
 	}

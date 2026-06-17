@@ -118,7 +118,7 @@ func SkillsCard(rows []SkillRow, paramLine string) g.Node {
 			g.If(paramLine != "", Span(Class("kcard-meta"), g.Text(paramLine))),
 		),
 		skillsSummaryBody(rows),
-		Footer(Class("kcard-actions"), A(Href("/focus/skills"), g.Text("all skills →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text("all skills →"))),
 	)
 }
 
@@ -136,7 +136,7 @@ func skillsSummaryBody(rows []SkillRow) g.Node {
 func skillSummaryRow(row SkillRow) g.Node {
 	children := []g.Node{
 		Class("ucard-row"),
-		Span(Class("ucard-title"), A(Href("/focus/skills"), g.Text(row.Name))),
+		Span(Class("ucard-title"), A(Href("/ui/show/skills"), g.Text(row.Name))),
 		g.If(row.Enabled, Span(Class("kcard-on"), g.Text("enabled"))),
 	}
 	if row.Description != "" {
@@ -223,7 +223,7 @@ func SkillsManageCard(proposed, active []SkillRecord) g.Node {
 	return Article(
 		Class("kcard ucard ucard-manage ucard-skills-manage"), ID("ucard-skills-manage"),
 		ui.CardHead("/static/icons/key.png", "Skills",
-			A(Class("kcard-meta"), Href("/focus/skills"), g.Text("manage all →")),
+			A(Class("kcard-meta"), Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text("manage all →")),
 		),
 		skillsManageBody(proposed, active),
 	)
@@ -262,7 +262,7 @@ func skillsManageBody(proposed, active []SkillRecord) g.Node {
 // ---------------------------------------------------------------------------
 
 // registerSkills wires the skills card into the ui registry: the compact tile,
-// the manage tile, and the full focus body (used by /focus/skills).
+// the manage tile, and the full focus body (used by /ui/show/skills).
 func registerSkills(app core.App) {
 	ui.RegisterCard("skills", func(size ui.CardSize, params map[string]string) (g.Node, error) {
 		if size == ui.Focus {

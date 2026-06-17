@@ -38,12 +38,12 @@ func TestDayFocusContract(t *testing.T) {
 		`<div class="day-nav">`,
 		`<h2 class="day-title">Wednesday, June 10 2026</h2>`,
 		// Prev link (gomponents escapes ' → &#39;)
-		`href="/focus/day?date=2026-06-09"`,
-		`@get(&#39;/focus/day?date=2026-06-09&#39;)`,
+		`href="/ui/show/day?date=2026-06-09"`,
+		`@get(&#39;/ui/show/day?date=2026-06-09&#39;)`,
 		`◂ prev`,
 		// Next link (IsToday=false so next is shown)
-		`href="/focus/day?date=2026-06-11"`,
-		`@get(&#39;/focus/day?date=2026-06-11&#39;)`,
+		`href="/ui/show/day?date=2026-06-11"`,
+		`@get(&#39;/ui/show/day?date=2026-06-11&#39;)`,
 		`next ▸`,
 		// Journal section
 		`<section class="k-section" id="day-journal">`,

@@ -20,12 +20,12 @@ func SettingsCard() g.Node {
 		Class("kcard ucard ucard-settings"), ID("ucard-settings"),
 		ui.CardHead("/static/icons/key.png", "Settings"),
 		Ul(Class("ucard-stats"),
-			Li(A(Href("/focus/settings?section=profile"), g.Text("Profile"))),
-			Li(A(Href("/focus/settings?section=models"), g.Text("Models & APIs"))),
-			Li(A(Href("/focus/settings?section=heads"), g.Text("Heads"))),
-			Li(A(Href("/focus/settings?section=appearance"), g.Text("Appearance"))),
+			Li(A(Href("/ui/show/settings?section=profile"), g.Text("Profile"))),
+			Li(A(Href("/ui/show/settings?section=models"), g.Text("Models & APIs"))),
+			Li(A(Href("/ui/show/settings?section=heads"), g.Text("Heads"))),
+			Li(A(Href("/ui/show/settings?section=appearance"), g.Text("Appearance"))),
 		),
-		Footer(Class("kcard-actions"), A(Href("/focus/settings"), g.Text("open settings →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/settings"), g.Text("open settings →"))),
 	)
 }
 

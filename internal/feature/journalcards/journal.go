@@ -69,7 +69,8 @@ func JournalCard(v JournalView) g.Node {
 		),
 		journalBody(v),
 		Footer(Class("kcard-actions"),
-			A(Href("/focus/day?date="+v.TodayDate), g.Text("today's page →")),
+			A(Href("/ui/show/day?date="+v.TodayDate), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+v.TodayDate+"')"),
+			g.Text("today's page →")),
 		),
 	)
 }

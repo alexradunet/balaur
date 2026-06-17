@@ -145,7 +145,7 @@ func TestLifelogCardFooter(t *testing.T) {
 	var b strings.Builder
 	_ = lifecards.LifelogCard(lifecards.LifelogView{}).Render(&b)
 	out := b.String()
-	if !strings.Contains(out, `/focus/lifelog`) {
+	if !strings.Contains(out, `/ui/show/lifelog`) {
 		t.Errorf("missing footer link in:\n%s", out)
 	}
 	if !strings.Contains(out, "open life →") {

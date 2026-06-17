@@ -61,14 +61,14 @@ func TestMemoryCardStructure(t *testing.T) {
 		"limit: 6",
 		`class="ucard-list"`,
 		`class="ucard-row"`,
-		`<a href="/focus/memory">`,
+		`<a href="/ui/show/memory">`,
 		"Prefers dark mode",
 		"preference",
 		`class="kcard-pips"`,
 		`title="importance 3/5"`,
 		`class="pip pip-on"`,
 		`class="kcard-actions"`,
-		`href="/focus/memory"`,
+		`href="/ui/show/memory"`,
 		"all memories →",
 	} {
 		if !strings.Contains(out, want) {
@@ -156,7 +156,7 @@ func TestMemoryCardFooter(t *testing.T) {
 	if !strings.Contains(out, `<footer class="kcard-actions">`) {
 		t.Errorf("footer missing:\n%s", out)
 	}
-	if !strings.Contains(out, `href="/focus/memory"`) {
+	if !strings.Contains(out, `href="/ui/show/memory"`) {
 		t.Errorf("footer link missing:\n%s", out)
 	}
 	if !strings.Contains(out, "all memories →") {
@@ -452,7 +452,7 @@ func TestMemoryManageCardStructure(t *testing.T) {
 		`src="/static/icons/tome.png"`,
 		"Memory",
 		`class="kcard-meta"`,
-		`href="/focus/memory"`,
+		`href="/ui/show/memory"`,
 		"manage all →",
 		`class="k-heading k-heading-proposed"`,
 		"Awaiting your word",

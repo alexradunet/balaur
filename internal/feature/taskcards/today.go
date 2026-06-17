@@ -69,7 +69,7 @@ func TodayCard(v TodayView) g.Node {
 		Class("kcard ucard ucard-today"), ID("ucard-today"),
 		ui.CardHead("/static/icons/scroll.png", "Today"),
 		todayBody(v),
-		Footer(Class("kcard-actions"), A(Href("/focus/quests"), g.Text("all quests →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →"))),
 	)
 }
 

@@ -86,7 +86,7 @@ func TimelineCard(v TLView) g.Node {
 			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		timelineBody(v),
-		Footer(Class("kcard-actions"), A(Href("/focus/timeline"), g.Text("full timeline →"))),
+		Footer(Class("kcard-actions"), A(Href("/ui/show/timeline"), g.Attr("data-on:click__prevent", "@get('/ui/show/timeline')"), g.Text("full timeline →"))),
 	)
 }
 

@@ -121,7 +121,7 @@ func TestHabitsCardFooter(t *testing.T) {
 	var b strings.Builder
 	_ = taskcards.HabitsCard(nil).Render(&b)
 	out := b.String()
-	if !strings.Contains(out, `/focus/lifelog`) {
+	if !strings.Contains(out, `/ui/show/lifelog`) {
 		t.Errorf("missing footer link in:\n%s", out)
 	}
 	if !strings.Contains(out, "life →") {

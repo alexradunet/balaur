@@ -134,7 +134,7 @@ func TestDayCardFooter(t *testing.T) {
 		Date:  "2026-06-14",
 		Label: "Sunday, June 14 2026",
 	})
-	if !strings.Contains(out, `href="/focus/day?date=2026-06-14"`) {
+	if !strings.Contains(out, `href="/ui/show/day?date=2026-06-14"`) {
 		t.Errorf("missing footer link with date in:\n%s", out)
 	}
 	if !strings.Contains(out, "open the day →") {
