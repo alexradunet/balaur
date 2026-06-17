@@ -24,6 +24,8 @@ import (
 	_ "github.com/alexradunet/balaur/internal/feature/all"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/turn"
+	"github.com/alexradunet/balaur/internal/ui"
+	"github.com/alexradunet/balaur/internal/ui/shell"
 	webstatic "github.com/alexradunet/balaur/internal/web/assets"
 	webassets "github.com/alexradunet/balaur/web"
 )
@@ -257,6 +259,27 @@ func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
 		return e.InternalServerError("rendering page", err)
 	}
 	return nil
+}
+
+// renderPageError renders a sanitized error inside the Hearthwood shell so a
+// full-page handler failure keeps the user in-app instead of falling out to
+// PocketBase's raw JSON error. status sets the HTTP code; title and msg are
+// short, owner-safe sentences — NEVER pass err.Error() directly (may leak
+// paths/tokens).
+func (h *handlers) renderPageError(e *core.RequestEvent, status int, title, msg string) error {
+	page := shell.Page(shell.PageProps{
+		Title:  title,
+		Active: "",
+		Body: ui.EmptyState(ui.EmptyProps{
+			Title:       title,
+			Line:        msg,
+			ActionLabel: "Back home",
+			ActionHref:  "/",
+		}),
+	})
+	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	e.Response.WriteHeader(status)
+	return page.Render(e.Response)
 }
 
 // historyWindow caps the page-load transcript; older turns live behind the

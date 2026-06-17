@@ -74,7 +74,8 @@ func TestFocusBackHrefRejectsUnsafe(t *testing.T) {
 	}
 }
 
-// TestFocusUnknownType: an unregistered card type 404s.
+// TestFocusUnknownType: an unregistered card type 404s and renders the shell
+// error page (HTML), not the raw PocketBase JSON ApiError.
 func TestFocusUnknownType(t *testing.T) {
 	s := tests.ApiScenario{
 		Name:           "GET /focus/nope is 404",
@@ -82,9 +83,14 @@ func TestFocusUnknownType(t *testing.T) {
 		URL:            "/focus/nope",
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 404,
-		// PocketBase's JSON error serializer sentence-cases the message:
-		// "no such card type" is emitted as "No such card type" in the body.
-		ExpectedContent: []string{"No such card type"},
+		ExpectedContent: []string{
+			"<!doctype html>",
+			`class="empty"`, // the EmptyState shell body
+			`href="/"`,      // Back home link
+		},
+		NotExpectedContent: []string{
+			`"status":404`, // not the raw JSON ApiError
+		},
 	}
 	s.Test(t)
 }
