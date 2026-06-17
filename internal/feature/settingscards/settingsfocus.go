@@ -13,6 +13,9 @@ package settingscards
 //   - internal/web/profile.go re-render handlers (one builder, no forked markup)
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
@@ -139,6 +142,18 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 		}
 		view.Models = append(view.Models, mv)
 	}
+
+	// Official model CTA + runtime presence check.
+	official := kronk.Official()
+	finalPath := filepath.Join(kronk.ModelsDir(), official.FileName)
+	_, statErr := os.Stat(finalPath)
+	view.ShowOfficialCTA = os.IsNotExist(statErr)
+	if view.ShowOfficialCTA {
+		view.OfficialCTAName = official.Name
+		view.OfficialCTAMeta = official.Quant + " · " + official.Params + " · " + official.License
+	}
+	view.RuntimeMissing = !kronk.RuntimeInstalled()
+
 	return view, nil
 }
 

@@ -25,22 +25,31 @@ func modelcardStory() Story {
 				ID: "m3", Name: "Llama 3.1 8B", Detail: "/models/llama-3.1-8b.gguf · file not found",
 				Kind: "missing", Status: modelcards.StatusMissing,
 			})},
+			{"downloading · progress meter", modelcards.ModelCard(modelcards.ModelView{
+				ID: "dl1", Name: "Gemma 4 E4B", Detail: "Downloading…",
+				Kind: "local", Status: modelcards.StatusDownloading,
+				Progress: 42, ProgressLabel: "2.2 GB / 5.3 GB · 4.1 MB/s",
+			})},
 		},
 		Props: []Prop{
 			{"ID", "string", "—", "Model record id; drives the element id and the action posts."},
 			{"Name", "string", "—", "Display name."},
 			{"Detail", "string", "—", "One line: GGUF file + location, or 'file not found'."},
 			{"Kind", "string", "—", "Small kicker label, e.g. 'local' or 'missing'."},
-			{"Status", "string", `"available"`, "active → In use (disabled); available → Use this model; missing → Get this model."},
+			{"Status", "string", `"available"`, "active → In use (disabled); available → Use this model; missing → no action; downloading → progress meter + Cancel."},
 			{"VRAM", "string", "—", "Optional estimate (e.g. '~6 GB'); rendered as a tag when set."},
+			{"Progress", "int", "0", "0..100 download progress; only shown when Status == downloading."},
+			{"ProgressLabel", "string", "—", "Human progress line shown under the progress meter."},
 		},
 		Dos: []string{
 			"Make the active model unmistakable — only one is In use.",
 			"Show the GGUF filename so the owner knows exactly what runs.",
+			"Show real bytes + speed so a multi-GB download feels alive.",
 		},
 		Donts: []string{
 			"Offer Use on a missing file — gate selection behind presence on disk.",
 			"Hide why a model is unavailable.",
+			"Mark a model 'In use' before its checksum verifies.",
 		},
 	}
 }
@@ -48,7 +57,7 @@ func modelcardStory() Story {
 func modelspanelStory() Story {
 	return Story{
 		ID: "modelspanel", Group: "Models", Title: "Models panel", Wide: true,
-		Blurb: "The Models settings section: the active processor (cpu or vulkan), the grid of local models (or an empty state on a fresh box), and the add-a-local-model form. It is the SSE patch target for every model action.",
+		Blurb: "The Models settings section: the active processor (cpu or vulkan), the grid of local models (or an empty state on a fresh box), the official-model CTA when applicable, and the add-a-local-model form. It is the SSE patch target for every model action.",
 		Variants: []Variant{
 			{"populated", modelcards.Panel(modelcards.PanelView{
 				Processor: "cpu",
@@ -59,15 +68,41 @@ func modelspanelStory() Story {
 			})},
 			{"empty · fresh box", modelcards.Panel(modelcards.PanelView{Processor: "vulkan"})},
 			{"error", modelcards.Panel(modelcards.PanelView{Processor: "cpu", Error: "local inference engine not initialized"})},
+			{"downloading · official model", modelcards.Panel(modelcards.PanelView{
+				Processor: "cpu",
+				Models: []modelcards.ModelView{
+					{ID: "official-dl", Name: "Gemma 4 E4B", Detail: "Downloading…",
+						Kind: "local", Status: modelcards.StatusDownloading,
+						Progress: 67, ProgressLabel: "3.6 GB / 5.3 GB · 5.2 MB/s"},
+				},
+			})},
+			{"download error", modelcards.Panel(modelcards.PanelView{
+				Processor:       "cpu",
+				Error:           "sha256 mismatch: want abc123 got def456",
+				ShowOfficialCTA: true,
+				OfficialCTAName: "Gemma 4 E4B",
+				OfficialCTAMeta: "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
+			})},
+			{"runtime not installed", modelcards.Panel(modelcards.PanelView{
+				Processor:       "cpu",
+				RuntimeMissing:  true,
+				ShowOfficialCTA: true,
+				OfficialCTAName: "Gemma 4 E4B",
+				OfficialCTAMeta: "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
+			})},
 		},
 		Props: []Prop{
 			{"Processor", "string", `"cpu"`, "The active llama.cpp variant — cpu or vulkan."},
 			{"Models", "[]ModelView", "nil", "Available/active/missing models; empty renders the empty state."},
 			{"Error", "string", "—", "Optional error banner above the grid."},
+			{"ShowOfficialCTA", "bool", "false", "When true, shows the Get our official model CTA."},
+			{"OfficialCTAName", "string", "—", "Official model display name in the CTA."},
+			{"OfficialCTAMeta", "string", "—", "One-line: quant + params + license."},
+			{"RuntimeMissing", "bool", "false", "When true, shows the runtime-not-installed alert."},
 		},
 		Dos: []string{
 			"Show the processor so GPU owners can confirm Vulkan is live.",
-			"Lead a fresh box to the add-a-model form — it is the only install path for now.",
+			"Lead a fresh box to the Download & install CTA — one click to the curated model.",
 		},
 		Donts: []string{
 			"Imply remote/API models — v1 runs local GGUF only.",

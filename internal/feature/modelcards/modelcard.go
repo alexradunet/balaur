@@ -6,6 +6,8 @@
 package modelcards
 
 import (
+	"fmt"
+
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
 	h "maragu.dev/gomponents/html"
@@ -15,19 +17,22 @@ import (
 
 // Model status values.
 const (
-	StatusActive    = "active"    // currently the active model (in use)
-	StatusAvailable = "available" // GGUF present on disk; selectable
-	StatusMissing   = "missing"   // GGUF file not found / not yet installed
+	StatusActive      = "active"      // currently the active model (in use)
+	StatusAvailable   = "available"   // GGUF present on disk; selectable
+	StatusMissing     = "missing"     // GGUF file not found / not yet installed
+	StatusDownloading = "downloading" // download in progress
 )
 
 // ModelView is the presentation model for one local model.
 type ModelView struct {
-	ID     string // model record id — drives the element id and the action posts
-	Name   string // display name
-	Detail string // one line: file + location, or "file not found"
-	Kind   string // small kicker label, e.g. "local" or "missing"
-	Status string // StatusActive | StatusAvailable | StatusMissing
-	VRAM   string // optional estimate, e.g. "~6 GB" — rendered as a tag when set
+	ID            string // model record id — drives the element id and the action posts
+	Name          string // display name
+	Detail        string // one line: file + location, or "file not found"
+	Kind          string // small kicker label, e.g. "local" or "missing"
+	Status        string // StatusActive | StatusAvailable | StatusMissing | StatusDownloading
+	VRAM          string // optional estimate, e.g. "~6 GB" — rendered as a tag when set
+	Progress      int    // 0..100 — only set when Status == StatusDownloading
+	ProgressLabel string // e.g. "1.2 GB / 5.3 GB · 4.2 MB/s" — human progress line
 }
 
 // ModelCard renders one model as a parchment kcard with a status-appropriate
@@ -40,6 +45,8 @@ func ModelCard(v ModelView) g.Node {
 		cls += " model-card-active"
 	case StatusMissing:
 		cls += " model-card-disabled"
+	case StatusDownloading:
+		cls += " model-card-downloading"
 	}
 	return h.Article(
 		h.Class(cls), h.ID("model-card-"+v.ID),
@@ -60,13 +67,32 @@ func modelAction(v ModelView) g.Node {
 	switch v.Status {
 	case StatusActive:
 		return ui.Button(ui.ButtonProps{Variant: "ghost", Size: "sm"}, h.Disabled(), g.Text("In use"))
+	case StatusDownloading:
+		return g.Group([]g.Node{
+			h.Div(h.Class("model-dl-progress"),
+				h.ID("model-dl-progress"),
+				h.Div(h.Class("model-dl-bar"),
+					g.Attr("style", fmt.Sprintf("width:%d%%", v.Progress)),
+				),
+				h.P(h.Class("model-dl-label"), g.Text(v.ProgressLabel)),
+			),
+			cancelForm(),
+		})
 	case StatusMissing:
 		// The GGUF file is gone; there is no per-card fix yet — the install form
-		// re-adds it. (Owner-initiated downloads are a later slice.)
+		// re-adds it.
 		return g.Text("")
 	default:
 		return actionForm("/ui/model/select", v.ID, "Use this model")
 	}
+}
+
+// cancelForm renders a Cancel button that posts to /ui/model/download/cancel.
+func cancelForm() g.Node {
+	return h.Form(
+		data.On("submit", "@post('/ui/model/download/cancel', {contentType:'form'})", data.ModifierPrevent),
+		ui.Button(ui.ButtonProps{Variant: "ghost", Size: "sm"}, h.Type("submit"), g.Text("Cancel")),
+	)
 }
 
 // actionForm is a Datastar form that posts the model key to url; the handler
