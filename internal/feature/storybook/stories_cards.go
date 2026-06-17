@@ -450,10 +450,10 @@ func dayfocusStory() Story {
 	}
 }
 
-// settingsfocusStory documents the settings card's full-canvas focus body —
-// the Profile section (identity + soul avatar + Balaur head) and the Models
-// section (modelcards.Panel). The two tabs in settings-nav drive @get nav
-// between sections.
+// settingsfocusStory documents the settings card's focus body — one nav-free
+// section per invocation. Navigation lives in the sidebar (plan 092); the
+// sidebar's Settings sub-menu summons each section as its own artifact via
+// /ui/show/settings?section=….
 func settingsfocusStory() Story {
 	// Profile variant: one active soul avatar, one active Balaur head.
 	profileView := settingscards.SettingsFocusView{
@@ -479,24 +479,24 @@ func settingsfocusStory() Story {
 
 	return Story{
 		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
-		Blurb: "The settings card's focus body: a nav strip (Profile / Models) and the section content. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
+		Blurb: "The settings card's focus body: one nav-free section per artifact. The sidebar Settings sub-menu summons each section (?section=profile / models / heads / appearance). Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
 		Variants: []Variant{
 			{"profile section", settingscards.SettingsFocus(profileView)},
 			{"models section", settingscards.SettingsFocus(modelsView)},
 		},
 		Props: []Prop{
-			{"Section", "string", `"profile"`, `Active section: "profile" or "models". Controls the active nav tab and which content renders.`},
+			{"Section", "string", `"profile"`, `Active section: "profile", "models", "heads", or "appearance". Controls which content renders.`},
 			{"Profile", "ProfileView", "—", "Profile section view: OwnerName, AvatarOptions (soul), BalaurOptions (head), SavedName flash."},
 			{"Models", "modelcards.PanelView", "—", "Models panel view; passed directly to modelcards.Panel."},
 		},
 		Dos: []string{
 			"Use #identity-card, #soul-section, #balaur-section as the SSE outer-patch targets after profile POSTs.",
 			"Keep the avatar grid as FORM-PER-BUTTON — one hidden input per form, no single wrapper form.",
-			"Use settings-nav-active on the current section's nav link.",
+			"Summon each section from the sidebar Settings sub-menu — navigation is in the sidebar, not the artifact.",
 		},
 		Donts: []string{
 			"Swap the form-per-button avatar grid for a single form — the SSE re-render targets individual sections.",
-			"Add a Skills tab — Skills is its own card now.",
+			"Add an in-artifact tab bar — each section is its own artifact; nav lives in the sidebar.",
 		},
 	}
 }
