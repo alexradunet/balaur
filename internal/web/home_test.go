@@ -69,6 +69,32 @@ func TestHomeDockSelectorIDs(t *testing.T) {
 	s.Test(t)
 }
 
+// TestHomeRailSwitcherIDs: the rendered home page must carry the switcher SSE
+// patch-target ids in the sidebar rail (plan 091). setActiveHead patches
+// #head-switcher; patchChatbar patches #chatbar. Both must be present in the
+// rail Brand/Footer so the handlers keep finding them after the move.
+func TestHomeRailSwitcherIDs(t *testing.T) {
+	s := tests.ApiScenario{
+		Name:           "GET / rail carries switcher SSE patch-target ids",
+		Method:         "GET",
+		URL:            "/",
+		TestAppFactory: newWebApp,
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`id="head-switcher"`,                // Brand slot — setActiveHead patches this
+			`id="chatbar"`,                      // Footer slot — patchChatbar patches this
+			`class="theme-toggle sb-foot-mode"`, // rail theme toggle
+			`data-theme="hearthwood"`,           // palette picker buttons
+			`data-theme="forest"`,
+			`data-theme="dungeon"`,
+		},
+		NotExpectedContent: []string{
+			`/focus/settings`, // links repointed to /ui/show/settings (plan 089 compat)
+		},
+	}
+	s.Test(t)
+}
+
 // TestFocusDockSelectorIDs: the rendered FOCUS page (full document load) must
 // carry the same SSE selector ids as Home — the dock is identical on both pages.
 func TestFocusDockSelectorIDs(t *testing.T) {
