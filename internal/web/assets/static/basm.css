@@ -3245,3 +3245,56 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
   text-decoration: none;
 }
 .skip-link:focus { left: 8px; top: 8px; }
+
+/* ══ Section: Responsive product topbar — off-canvas nav ≤720px ══════════ */
+/* Desktop default: burger and drawer are hidden; nav is inline in the bar. */
+.topnav-burger { display: none; }
+.topnav-drawer { display: none; }
+.topnav-backdrop { display: none; }
+
+@media (max-width: 720px) {
+  /* Hide the inline desktop nav; the drawer takes over. */
+  .topbar .topnav-desktop { display: none; }
+
+  /* Burger button — shown on mobile, right-aligned via margin-left:auto. */
+  .topnav-burger {
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-left: auto; min-width: 44px; min-height: 44px;
+    font-family: var(--font-mono); font-size: 18px; line-height: 1; cursor: pointer;
+    background: none; border: 1px solid var(--chrome-fg); border-radius: var(--radius);
+    color: var(--gold);
+  }
+
+  /* Off-canvas drawer — slides in from the left below the topbar (inset: 62px auto 0 0). */
+  .topnav-drawer {
+    display: block; position: fixed; inset: 62px auto 0 0; width: min(86vw, 322px); z-index: 60;
+    background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm);
+    background-size: auto, 4px 4px;
+    border-right: 2px solid var(--outline-2);
+    transform: translateX(-104%); transition: transform .2s var(--ease-crisp);
+    box-shadow: 6px 0 0 rgba(0, 0, 0, .4); padding: var(--space-3);
+  }
+  .topnav-drawer.is-open { transform: none; }
+
+  /* Nav links inside the drawer — touch-target height 44px min. */
+  .topnav-drawer-nav { display: flex; flex-direction: column; gap: var(--space-1); }
+  .topnav-drawer-nav a {
+    display: flex; align-items: center; min-height: 44px; padding: 0 var(--space-3);
+    font-family: var(--font-mono); font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--chrome-fg); text-decoration: none; border: 1px solid transparent;
+  }
+  .topnav-drawer-nav a:hover,
+  .topnav-drawer-nav a[aria-current="page"] { color: var(--gold); border-color: var(--gold-deep); }
+
+  /* Scrim — same rgba as the storybook drawer. */
+  .topnav-backdrop.is-open {
+    display: block; position: fixed; inset: 0; z-index: 55; background: rgba(8, 5, 2, .62);
+  }
+
+  /* Bump theme-button touch targets to 44px on mobile; keep visual padding. */
+  .topbar .theme-toggle,
+  .topbar .theme-cycle { min-height: 44px; padding: 0 var(--space-3); }
+}
+
+/* No slide animation when reduced-motion is preferred. */
+@media (prefers-reduced-motion: reduce) { .topnav-drawer { transition: none; } }

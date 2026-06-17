@@ -57,6 +57,40 @@ func TestPage(t *testing.T) {
 	}
 }
 
+// TestTopbarDrawer asserts the responsive off-canvas drawer markup added in plan 078:
+// the burger button, the drawer aside, the backdrop, and the desktop-nav class.
+func TestTopbarDrawer(t *testing.T) {
+	var b strings.Builder
+	page := shell.Page(shell.PageProps{
+		Title:  "Quests",
+		Active: "quests",
+		Body:   g.Text("BODY"),
+		Dock:   g.Text("DOCK"),
+	})
+	if err := page.Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+
+	for _, want := range []string{
+		// Burger button wiring.
+		`class="topnav-burger"`,
+		`onclick="basmToggleTopnav()"`,
+		`aria-controls="topnav-drawer"`,
+		// Drawer container.
+		`id="topnav-drawer"`,
+		`class="topnav-drawer"`,
+		// Scrim backdrop.
+		`class="topnav-backdrop"`,
+		// Desktop nav class (hidden ≤720px via CSS).
+		`class="topnav-desktop"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("topbar drawer missing %q", want)
+		}
+	}
+}
+
 // TestPageHTMLClass: PageProps.HTMLClass lands on <html> (used by Home's
 // "home" full-screen-chat layout); an empty HTMLClass leaves <html> plain.
 func TestPageHTMLClass(t *testing.T) {

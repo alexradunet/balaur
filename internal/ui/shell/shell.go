@@ -72,20 +72,18 @@ func pageHead() g.Node {
 // navigation — there is no side rail. Each domain whose own page is not yet
 // migrated to gomponents points at its existing /focus surface. The active link
 // carries aria-current="page".
+//
+// On viewports ≤720px the desktop nav is hidden and a burger button opens an
+// accessible off-canvas drawer (basmToggleTopnav in basm.js). The drawer
+// contains its own copy of the nav links (touch-target height 44px) and is
+// separate from the storybook drawer (basmToggleNav / .sb-side).
 func Topbar(active string) g.Node {
 	return h.Header(h.Class("topbar"),
 		h.A(h.Class("brand"), h.Href("/"),
 			h.Img(h.Class("crest"), h.Src("/static/crest.png"), h.Alt(""), g.Attr("decoding", "async")),
 			g.Text("Balaur"),
 		),
-		h.Nav(
-			navLink("/focus/quests", "Quests", "quests", active),
-			navLink("/focus/memory", "Knowledge", "knowledge", active),
-			navLink("/focus/lifelog", "Life", "life", active),
-			navLink("/focus/journal", "Journal", "journal", active),
-			navLink("/focus/heads", "Heads", "heads", active),
-			navLink("/focus/settings", "Settings", "settings", active),
-		),
+		h.Nav(append([]g.Node{h.Class("topnav-desktop")}, topbarLinks(active)...)...),
 		h.Button(h.Class("theme-cycle"), h.Type("button"),
 			g.Attr("onclick", "basmCycleTheme()"),
 			h.Title("Cycle theme"), h.Aria("label", "Cycle theme"),
@@ -98,7 +96,33 @@ func Topbar(active string) g.Node {
 			h.Aria("pressed", "false"),
 			g.Text("◑"),
 		),
+		h.Button(h.Class("topnav-burger"), h.Type("button"),
+			g.Attr("onclick", "basmToggleTopnav()"),
+			h.Aria("label", "Open navigation"),
+			h.Aria("expanded", "false"),
+			h.Aria("controls", "topnav-drawer"),
+			g.Text("☰"),
+		),
+		h.Div(h.Class("topnav-backdrop"), g.Attr("onclick", "basmToggleTopnav()")),
+		h.Aside(h.ID("topnav-drawer"), h.Class("topnav-drawer"),
+			h.Aria("hidden", "true"),
+			h.Nav(append([]g.Node{h.Class("topnav-drawer-nav")}, topbarLinks(active)...)...),
+		),
 	)
+}
+
+// topbarLinks returns the six domain nav links shared by the desktop nav and
+// the off-canvas drawer. Keeping them in one place ensures routes and labels
+// never drift between the two navs.
+func topbarLinks(active string) []g.Node {
+	return []g.Node{
+		navLink("/focus/quests", "Quests", "quests", active),
+		navLink("/focus/memory", "Knowledge", "knowledge", active),
+		navLink("/focus/lifelog", "Life", "life", active),
+		navLink("/focus/journal", "Journal", "journal", active),
+		navLink("/focus/heads", "Heads", "heads", active),
+		navLink("/focus/settings", "Settings", "settings", active),
+	}
 }
 
 func navLink(href, label, key, active string) g.Node {
