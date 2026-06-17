@@ -195,8 +195,6 @@
   --parch-bevel: inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 0 var(--surface-2),
                  0 3px 0 rgba(0,0,0,.55);
   --drop-hard: 0 3px 0 rgba(0,0,0,.55);
-  /* legacy alias (pre-Hearthwood) */
-  --shadow-hard: 5px 5px 0;
 
   /* Motion — pixel-hard, no soft easing */
   --duration-fast: 80ms; /* @kind other */
