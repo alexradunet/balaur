@@ -234,6 +234,8 @@ func Register(se *core.ServeEvent) error {
 	// Typed card registry (plan 028) — parameterized server resources.
 	se.Router.GET("/ui/cards", h.uiCardPalette)
 	se.Router.GET("/ui/cards/{type}", h.uiCard)
+	// Deterministic artifact injection (plan 088): sidebar click → card in chat.
+	se.Router.GET("/ui/show/{type}", h.uiShow)
 	se.Router.GET("/focus/{type}", h.focusPage)
 	// Boards — owner-composed dashboards of typed cards (plan 029).
 	se.Router.GET("/boards", h.boardsIndex)

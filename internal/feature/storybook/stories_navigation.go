@@ -1,6 +1,7 @@
 package storybook
 
 import (
+	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
@@ -102,6 +103,74 @@ func paginationStory() Story {
 		Donts: []string{
 			"Paginate a short list — just show it.",
 			"Hide prev/next on the edges; they disable themselves instead.",
+		},
+	}
+}
+
+func sidebarStory() Story {
+	// Mirror the live domainSidebar() helper in home.go so the story documents
+	// the real component shape — injecting items that call @get, not navigating.
+	item := func(label, typ, icon string, active bool) shell.SidebarItem {
+		href := "/ui/show/" + typ
+		return shell.SidebarItem{
+			Label:  label,
+			Href:   href,
+			Icon:   icon,
+			Action: "@get('" + href + "')",
+			Active: active,
+		}
+	}
+	brand := g.Group([]g.Node{
+		h.Img(h.Class("crest"), h.Src("/static/crest.png"), h.Alt(""), g.Attr("decoding", "async")),
+		h.Div(h.Class("sb-brand-text"),
+			h.Span(h.Class("sb-brand-name"), g.Text("Balaur")),
+		),
+	})
+	footer := g.Group([]g.Node{
+		h.Button(h.Class("theme-toggle"), h.Type("button"),
+			g.Attr("onclick", "basmToggleTheme()"),
+			h.Title("Toggle light/dark mode"),
+			h.Aria("label", "Toggle light/dark mode"),
+			h.Aria("pressed", "false"),
+			g.Text("◑"),
+		),
+		h.A(h.Href("/"), g.Text("Home")),
+	})
+	return Story{
+		ID: "sidebar-domain", Group: "Navigation", Title: "Sidebar (domain rail)", Wide: true,
+		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the live #chat via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. The active item carries aria-current and the sb-nav-item-active class.",
+		Variants: []Variant{
+			{"quests active", shell.Sidebar(shell.SidebarProps{
+				Brand: brand,
+				Sections: []shell.SidebarSection{
+					{Label: "Domains", Items: []shell.SidebarItem{
+						item("Quests", "quests", "scroll", true),
+						item("Knowledge", "memory", "tome", false),
+						item("Life", "lifelog", "orb", false),
+						item("Journal", "journal", "quill", false),
+						item("Heads", "heads", "shield", false),
+						item("Settings", "settings", "key", false),
+					}},
+				},
+				Footer: footer,
+			})},
+		},
+		Props: []Prop{
+			{"Icon", "string", `""`, "Icon stem (without extension) under /static/icons/; renders a 16×16 pixel-art sprite before the label. Leave empty for icon-less items (e.g. storybook nav)."},
+			{"Action", "string", `""`, "Datastar @get expression that fires on click — e.g. @get('/ui/show/quests'). Href is the no-JS fallback. When empty, the item is a plain link."},
+			{"Label", "string", "—", "The nav link text."},
+			{"Href", "string", "—", "The fallback URL; also the @get target path when Action is set."},
+			{"Active", "bool", "false", `Highlights the item and sets aria-current="page".`},
+		},
+		Dos: []string{
+			"Set Action to @get('/ui/show/{type}') so a click injects the card without navigating.",
+			"Always set Href as the no-JS fallback (same URL the @get targets).",
+			"Use only icon stems that exist under /static/icons/ (scroll, tome, orb, quill, shield, key, …).",
+		},
+		Donts: []string{
+			"Navigate the page on click — inject the card into #chat instead.",
+			"Use Icon on storybook sidebar items — the domain rail only.",
+			"Set Action without also setting Href.",
 		},
 	}
 }

@@ -8,30 +8,31 @@ import (
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
-// TestHomeFullChat: GET / is the full-screen companion chat — the persistent
-// dock (with the chat) fills the canvas via the "home" class on <html>, #main is
-// empty, and the topbar carries the domain nav (Today is gone, Home replaced it).
+// TestHomeFullChat: GET / renders the single-page chat shell — a domain sidebar
+// rail on the left and the full-canvas chat dock on the right. No topbar, no
+// #main, and no focus/nav links; instead the sidebar items inject cards via @get.
 func TestHomeFullChat(t *testing.T) {
 	s := tests.ApiScenario{
-		Name:           "GET / renders the full-screen companion chat",
+		Name:           "GET / renders the single-page chat shell",
 		Method:         "GET",
 		URL:            "/",
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
-			`<html lang="en" class="home">`, // home full-screen layout
+			`<html lang="en" class="app">`, // single-page chat shell layout
 			`<title>Home · Balaur</title>`,
-			`<main id="main"></main>`, // canvas empty; the dock overlays it
-			// the chat lives in the persistent dock
-			`<aside id="dock">`,
-			`class="dock-grip"`,
-			`id="chat"`,
-			// topbar domain nav (no Today)
-			`<a href="/focus/quests">Quests</a>`,
-			`<a href="/focus/settings">Settings</a>`,
+			`class="app-shell"`,   // two-column grid
+			`class="sb-side"`,     // domain sidebar rail
+			`id="chat"`,           // chat append target (SSE contract)
+			`class="sb-nav-icon"`, // pixel icon on sidebar items
+			// injecting sidebar items (no navigation — @get into #chat)
+			`data-on:click__prevent="@get(&#39;/ui/show/quests&#39;)"`,
+			// footer theme toggle
+			`class="theme-toggle"`,
 		},
 		NotExpectedContent: []string{
-			`>Today</a>`, // Today dropped — Home is the chat
+			`<main id="main">`,                   // the old shell's #main content area is gone
+			`<a href="/focus/quests">Quests</a>`, // old topbar nav links are gone
 		},
 	}
 	s.Test(t)

@@ -3420,3 +3420,56 @@ html.theme-dungeon .appearance-theme-btn[data-theme="dungeon"] {
   border-color: var(--gold-deep);
   background: color-mix(in srgb, var(--gold) 16%, transparent);
 }
+
+/* ══ Section: Single-page chat shell (plan 088) ══════════════════════════════
+   The chat IS the only primary surface. .app-shell is a two-column grid:
+   the sb-side rail on the left, #dock.app-dock (full-canvas chat) on the
+   right. The dock rules below generalise the existing html.home #dock block
+   so they fire for the app-shell layout (html.app) too. */
+
+/* Two-column grid: [rail | dock]. Rail matches the storybook sidebar width. */
+html.app .app-shell {
+  display: grid;
+  grid-template-columns: 274px 1fr;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Full-canvas dock inside the app-shell — chat fills the right column. */
+html.app #dock.app-dock {
+  position: relative;
+  left: 0;
+  width: auto;
+  height: 100%;
+  z-index: var(--z-base);
+  border-left: 0;
+  box-shadow: none;
+  padding-inline: var(--pad);
+}
+html.app #dock.app-dock .dock-grip,
+html.app #dock.app-dock .dock-head { display: none; }
+html.app #dock.app-dock .chat,
+html.app #dock.app-dock .msg-draft,
+html.app #dock.app-dock .chatbar,
+html.app #dock.app-dock .recap-zone,
+html.app #dock.app-dock .recap-band {
+  width: 100%;
+  max-width: var(--w-chat-home);
+  margin-left: auto;
+  margin-right: auto;
+}
+html.app #dock.app-dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 0 var(--space-2); }
+html.app #dock.app-dock .recap-zone,
+html.app #dock.app-dock .recap-band { display: block; }
+html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); margin-left: auto; margin-right: auto; }
+
+/* Icon inside a sidebar nav link. */
+.sb-nav-icon { width: 16px; height: 16px; flex-shrink: 0; image-rendering: pixelated; }
+
+/* Collapse to single column on narrow viewports (≤720px). */
+@media (max-width: 720px) {
+  html.app .app-shell {
+    grid-template-columns: 1fr;
+  }
+  html.app .app-shell .sb-side { display: none; }
+}

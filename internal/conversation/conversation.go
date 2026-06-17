@@ -63,9 +63,17 @@ func Append(app core.App, conversationID string, msg llm.Message, toolName strin
 // "briefing") distinguishes them from chat ("") so the UI can poll for
 // them and jobs can derive idempotency from the record.
 func AppendOrigin(app core.App, conversationID string, msg llm.Message, toolName, origin string) error {
+	_, err := AppendOriginRec(app, conversationID, msg, toolName, origin)
+	return err
+}
+
+// AppendOriginRec is the record-returning form of AppendOrigin. It persists the
+// message and returns the saved *core.Record so callers that need to re-render
+// it immediately (e.g. the /ui/show handler) can do so without a second DB read.
+func AppendOriginRec(app core.App, conversationID string, msg llm.Message, toolName, origin string) (*core.Record, error) {
 	col, err := app.FindCollectionByNameOrId("messages")
 	if err != nil {
-		return fmt.Errorf("finding messages collection: %w", err)
+		return nil, fmt.Errorf("finding messages collection: %w", err)
 	}
 	rec := core.NewRecord(col)
 	rec.Set("conversation", conversationID)
@@ -81,9 +89,9 @@ func AppendOrigin(app core.App, conversationID string, msg llm.Message, toolName
 		rec.Set("tool_payload", msg.ToolCalls)
 	}
 	if err := app.Save(rec); err != nil {
-		return fmt.Errorf("saving message: %w", err)
+		return nil, fmt.Errorf("saving message: %w", err)
 	}
-	return nil
+	return rec, nil
 }
 
 // RecentTurns returns the last `limit` user/assistant TEXT turns in

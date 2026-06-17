@@ -4,15 +4,21 @@ import (
 	"strconv"
 
 	g "maragu.dev/gomponents"
+	data "maragu.dev/gomponents-datastar"
 	h "maragu.dev/gomponents/html"
 )
 
 // SidebarItem is one nav link. Active marks the current page. Dot is an optional
-// CSS color for the leading group-dot (e.g. "var(--teal)").
+// CSS color for the leading group-dot (e.g. "var(--teal)"). Icon is an optional
+// icon stem (filename without extension) under /static/icons/; Action is an
+// optional Datastar @get expression that fires on click — Href stays as the no-JS
+// fallback when Action is set.
 type SidebarItem struct {
 	Label, Href string
 	Active      bool
 	Dot         string
+	Icon        string
+	Action      string
 }
 
 // SidebarSection is a labelled group of nav items.
@@ -108,8 +114,19 @@ func sidebarItem(it SidebarItem) g.Node {
 	if it.Active {
 		attrs = append(attrs, h.Aria("current", "page"))
 	}
+	if it.Action != "" {
+		attrs = append(attrs, data.On("click", it.Action, data.ModifierPrevent))
+	}
 	if it.Dot != "" {
 		attrs = append(attrs, h.Span(h.Class("sb-nav-dot"), h.Style("--sb-nav-dot:"+it.Dot)))
+	}
+	if it.Icon != "" {
+		attrs = append(attrs, h.Img(
+			h.Class("sb-nav-icon"),
+			h.Src("/static/icons/"+it.Icon+".png"),
+			h.Alt(""),
+			g.Attr("decoding", "async"),
+		))
 	}
 	attrs = append(attrs, h.Span(g.Text(it.Label)))
 	return h.A(attrs...)

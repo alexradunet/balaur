@@ -71,3 +71,88 @@ func TestSidebar(t *testing.T) {
 		}
 	}
 }
+
+// TestSidebarItemPlain verifies a plain item (no Icon, no Action) renders a
+// bare <a> with no data-on:click and no img.
+func TestSidebarItemPlain(t *testing.T) {
+	var b strings.Builder
+	node := shell.Sidebar(shell.SidebarProps{
+		Sections: []shell.SidebarSection{
+			{Label: "Nav", Items: []shell.SidebarItem{
+				{Label: "Quests", Href: "/focus/quests"},
+			}},
+		},
+	})
+	if err := node.Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+
+	if !strings.Contains(got, `href="/focus/quests"`) {
+		t.Errorf("missing href in plain item; got:\n%s", got)
+	}
+	if strings.Contains(got, "data-on:click") {
+		t.Errorf("plain item must not have data-on:click; got:\n%s", got)
+	}
+	if strings.Contains(got, "sb-nav-icon") {
+		t.Errorf("plain item must not have sb-nav-icon; got:\n%s", got)
+	}
+}
+
+// TestSidebarItemIcon verifies that setting Icon renders an <img class="sb-nav-icon">.
+func TestSidebarItemIcon(t *testing.T) {
+	var b strings.Builder
+	node := shell.Sidebar(shell.SidebarProps{
+		Sections: []shell.SidebarSection{
+			{Label: "Nav", Items: []shell.SidebarItem{
+				{Label: "Quests", Href: "/ui/show/quests", Icon: "scroll"},
+			}},
+		},
+	})
+	if err := node.Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+
+	if !strings.Contains(got, `class="sb-nav-icon"`) {
+		t.Errorf("missing sb-nav-icon class; got:\n%s", got)
+	}
+	if !strings.Contains(got, `src="/static/icons/scroll.png"`) {
+		t.Errorf("missing icon src; got:\n%s", got)
+	}
+}
+
+// TestSidebarItemAction verifies that setting Action renders a
+// data-on:click__prevent attribute AND keeps the href fallback.
+func TestSidebarItemAction(t *testing.T) {
+	var b strings.Builder
+	node := shell.Sidebar(shell.SidebarProps{
+		Sections: []shell.SidebarSection{
+			{Label: "Nav", Items: []shell.SidebarItem{
+				{
+					Label:  "Quests",
+					Href:   "/ui/show/quests",
+					Icon:   "scroll",
+					Action: "@get('/ui/show/quests')",
+				},
+			}},
+		},
+	})
+	if err := node.Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	got := b.String()
+
+	// Datastar renders ModifierPrevent as data-on:click__prevent.
+	if !strings.Contains(got, `data-on:click__prevent`) {
+		t.Errorf("missing data-on:click__prevent; got:\n%s", got)
+	}
+	// The @get expression must appear (HTML-escaped in the attribute value).
+	if !strings.Contains(got, "@get(") && !strings.Contains(got, "&#39;/ui/show/quests&#39;") {
+		t.Errorf("missing @get expression in attribute; got:\n%s", got)
+	}
+	// Href must still be present as the no-JS fallback.
+	if !strings.Contains(got, `href="/ui/show/quests"`) {
+		t.Errorf("missing href fallback; got:\n%s", got)
+	}
+}

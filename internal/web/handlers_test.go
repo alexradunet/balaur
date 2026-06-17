@@ -198,13 +198,13 @@ func TestSettingsPages(t *testing.T) {
 func TestHandlerHomePage(t *testing.T) {
 	scenarios := []tests.ApiScenario{
 		{
-			// Home is the full-screen companion chat: the exact root renders the
-			// shell with the "home" class and the persistent dock.
-			Name:            "/ renders the full-screen companion chat",
+			// Home is the single-page chat shell: the exact root renders the
+			// shell with the "app" class, the domain sidebar, and the dock.
+			Name:            "/ renders the single-page chat shell",
 			Method:          "GET",
 			URL:             "/",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`<html lang="en" class="home">`, `<aside id="dock">`, `id="chat"`},
+			ExpectedContent: []string{`<html lang="en" class="app">`, `class="app-shell"`, `id="chat"`},
 		},
 	}
 

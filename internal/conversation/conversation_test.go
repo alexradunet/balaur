@@ -88,3 +88,41 @@ func TestAppendAndRecentTurnsRoundtrip(t *testing.T) {
 			hist[2].GetString("role"), hist[2].GetString("tool_name"))
 	}
 }
+
+// TestAppendOriginRecReturnsRecord verifies AppendOriginRec returns a non-nil
+// record whose id and content round-trip through the DB.
+func TestAppendOriginRecReturnsRecord(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, _ := Master(app)
+
+	const content = "\x00balaur-uicard:quests?\nshowing the owner the Quests card"
+	rec, err := AppendOriginRec(app, master.Id,
+		llm.Message{Role: "tool", Content: content}, "quests", "")
+	if err != nil {
+		t.Fatalf("AppendOriginRec: %v", err)
+	}
+	if rec == nil {
+		t.Fatal("AppendOriginRec returned nil record")
+	}
+	if rec.Id == "" {
+		t.Error("returned record has empty id")
+	}
+	if got := rec.GetString("content"); got != content {
+		t.Errorf("content = %q, want %q", got, content)
+	}
+	if got := rec.GetString("role"); got != "tool" {
+		t.Errorf("role = %q, want %q", got, "tool")
+	}
+	// origin="" is the contract that sidesteps chatNudges (origin != '').
+	if got := rec.GetString("origin"); got != "" {
+		t.Errorf("origin = %q, want empty (sidesteps chatNudges)", got)
+	}
+	// Confirm it persisted: load from DB and compare id.
+	loaded, err := app.FindRecordById("messages", rec.Id)
+	if err != nil {
+		t.Fatalf("FindRecordById after AppendOriginRec: %v", err)
+	}
+	if loaded.GetString("content") != content {
+		t.Errorf("DB content = %q, want %q", loaded.GetString("content"), content)
+	}
+}
