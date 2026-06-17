@@ -155,6 +155,7 @@
   /* Layout */
   --radius: 0px;            /* RPG panels are square; rounding is for blobs */
   --maxw: 1080px;
+  --pad: clamp(16px, 6vw, 64px); /* fluid outer page gutter, capped both ends */
   /* Chat-column widths diverge by surface, deliberately: home IS the full-screen
      chat (wide), the .dock-full overlay sits OVER page content (narrower). Named
      so the divergence is intentional and visible, not a missed edit. */
@@ -212,7 +213,7 @@ html, body {
 main {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 6vw;
+  padding: 0 var(--pad);
 }
 
 h1, h2, h3 {
@@ -1530,7 +1531,7 @@ dialog::backdrop {
 .profile-page {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: var(--space-7) 5vw 120px;
+  padding: var(--space-7) var(--pad) 120px;
 }
 .profile-page h1 {
   font-family: var(--font-display);
@@ -2378,7 +2379,7 @@ progress.pull-progress-bar::-moz-progress-bar {
    the dock — and its live chat — survives. Below 900px the dock stacks under. */
 :root { --sidebar-w: 360px; }
 
-.with-sidebar { padding-right: calc(var(--sidebar-w) + 4vw); }
+.with-sidebar { padding-right: calc(var(--sidebar-w) + clamp(0px, 4vw, 48px)); }
 
 #dock {
   position: fixed;
@@ -2697,7 +2698,7 @@ progress.pull-progress-bar::-moz-progress-bar {
 .sb-theme-btn { flex: 1; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; background: none; border: 1px solid var(--chrome-fg); color: var(--chrome-fg); padding: var(--space-1) var(--space-2); cursor: pointer; }
 .sb-theme-btn.is-active { color: var(--gold); border-color: var(--gold-deep); background: color-mix(in srgb, var(--gold) 16%, transparent); }
 .sb-foot-count { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--chrome-fg); opacity: .7; margin-top: 10px; }
-.sb-canvas { height: 100vh; overflow-y: auto; max-width: none; margin: 0; padding: 0 5vw 96px; background: var(--bg); }
+.sb-canvas { height: 100vh; overflow-y: auto; max-width: none; margin: 0; padding: 0 var(--pad) 96px; background: var(--bg); }
 .sb-crumb {
   position: sticky; top: 0; z-index: 5; margin: 0 0 var(--space-2); padding: 14px 0;
   font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em;
