@@ -57,11 +57,11 @@ func (h *handlers) root(e *core.RequestEvent) error {
 func (h *handlers) homePage(e *core.RequestEvent) error {
 	dock, err := h.dockData()
 	if err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	var dockHTML strings.Builder
 	if err := h.tmpl.ExecuteTemplate(&dockHTML, "chat_dock", dock); err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "rendering companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	page := shell.Page(shell.PageProps{
 		Title:     "Home",

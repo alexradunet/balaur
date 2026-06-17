@@ -272,11 +272,11 @@ func (h *handlers) ensureDefaultBoards() error {
 // boardsIndex handles GET /boards — redirects to the first board by sort.
 func (h *handlers) boardsIndex(e *core.RequestEvent) error {
 	if err := h.ensureDefaultBoards(); err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "seeding default boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	boards, err := h.loadBoards()
 	if err != nil || len(boards) == 0 {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "loading boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	return e.Redirect(http.StatusFound, "/boards/"+boards[0].ID)
 }
@@ -295,12 +295,12 @@ type boardPageData struct {
 // touched, so switching boards keeps the conversation alive.
 func (h *handlers) boardsPage(e *core.RequestEvent) error {
 	if err := h.ensureDefaultBoards(); err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "seeding default boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	id := e.Request.PathValue("id")
 	boards, err := h.loadBoards()
 	if err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "loading boards", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 
 	var current *boardRecord
@@ -321,7 +321,7 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 			_ = sse.Redirect("/boards")
 			return nil
 		}
-		return h.renderPageError(e, http.StatusNotFound, "Not found", "There is nothing at this address.")
+		return h.renderPageError(e, http.StatusNotFound, "board not found", nil, "Not found", "There is nothing at this address.")
 	}
 
 	// Server-render the current board's cards into their slots (no lazy-load).
@@ -351,7 +351,7 @@ func (h *handlers) boardsPage(e *core.RequestEvent) error {
 
 	dock, err := h.dockData()
 	if err != nil {
-		return h.renderPageError(e, http.StatusInternalServerError, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
+		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
 	return h.render(e, "boards.html", boardPageData{
 		boardView: bv,

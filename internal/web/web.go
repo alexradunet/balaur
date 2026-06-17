@@ -263,10 +263,13 @@ func (h *handlers) render(e *core.RequestEvent, name string, data any) error {
 
 // renderPageError renders a sanitized error inside the Hearthwood shell so a
 // full-page handler failure keeps the user in-app instead of falling out to
-// PocketBase's raw JSON error. status sets the HTTP code; title and msg are
-// short, owner-safe sentences — NEVER pass err.Error() directly (may leak
-// paths/tokens).
-func (h *handlers) renderPageError(e *core.RequestEvent, status int, title, msg string) error {
+// PocketBase's raw JSON error. The underlying err is logged server-side (never
+// shown to the user); title/msg are short, owner-safe sentences — NEVER pass
+// err.Error() into msg (may leak paths/tokens).
+func (h *handlers) renderPageError(e *core.RequestEvent, status int, ctx string, err error, title, msg string) error {
+	if err != nil {
+		h.app.Logger().Warn(ctx, "err", err, "status", status)
+	}
 	page := shell.Page(shell.PageProps{
 		Title:  title,
 		Active: "",
