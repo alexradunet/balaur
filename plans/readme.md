@@ -111,6 +111,8 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 091 | Sidebar chrome (head/model switchers, theme/palette, recap into the rail) + responsive/a11y polish | P2 | M | MED | **088** | — | TODO |
 | 092 | Settings is summoned as per-section, nav-free artifacts (sidebar sub-menu; no in-artifact tabs) | P1 | M | LOW–MED | — | — | DONE (APPROVED + **merged to main `f6b5204`**; `improve/092-settings-per-section-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`gofmt -l`/`go test ./...` 35 pkgs green, `git diff --check` clean; scope clean (6 in-scope files). `SettingsFocus`→`Div(.settings-section, content)`, `settingsNavLink` deleted; `domainSidebar()` split into Domains + a Settings section (Profile/Appearance/Models/Heads, icon-less); orphaned `.settings-nav*`/`.settings-layout` CSS removed; settings tests flipped to assert `settings-section` + section content and reject `settings-nav`/`settings-layout`, + new `?section=models` handler sub-test. 5 commits.) |
 | 093 | Day & Quests artifacts go flat & nav-free (no date stepper, no master/detail rail) | P1 | M–L | MED | — | — | DONE (APPROVED + **merged to main `dd0300f`**; `improve/093-denav-day-quests-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (no FAIL/panic)/`gofmt -l`/`git diff --check` clean; scope clean (11 in-scope files); production greps empty for `quest-rail`/`quest-detail`/`quest-log`/`day-nav`/`QuestRail`, `RecapStart` fully removed. `DayFocus` keeps `.day-focus`+title+recap-summary, drops `day-nav` stepper + transcript expander + dead `Prev`/`Next`/`RecapStart`; `QuestsFocus` is a grouped `.quest-stack` of `TaskCard`s (`QuestRail`/`First`/detail-aside deleted, `data` import dropped); the `#quest-rail` OOB-refresh block + `net/url`/`taskcards` imports removed from `tasks.go`. **Documented judgment call (approved):** the now-orphaned `taskCard` handler (`/ui/tasks/{id}/card`, whose only caller was the deleted rail) was repointed from `#quest-detail` to `#tcard-{id}` outer — verified no remaining caller. Behavior change per plan: completing a quest updates the card in place instead of moving to a rail section. 6 commits.) |
+| 095 | Knowledge artifacts go nav-free per-slice; categories become a Knowledge sidebar group (+ Skills gets a home) | P2 | M | MED | — | — | DONE (APPROVED + **merged to main `95e414e`** via `--no-ff`, clean. `improve/095-knowledge-categories-sidebar-denav`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (37 pkgs, 0 fail)/`gofmt -l`/`git diff --check` all clean; scope clean (11 in-scope files, 1 commit). `KnowledgeFocusView` drops `Categories`, adds `Mode`; `KnowledgeFocus` loses the `k-tabs` strip + `data-signals:category` — `mode=proposed` = the Awaiting queue, `mode=active` = search+grid with the category baked into the `@get` literal. `buildMemoryFocus(app, params)` reads `category`+`view`; `recordsInCategory` filters archived; `memoryCategoryTitle` labels match the sidebar. `memory` spec gains `category`+`view` enums. `domainSidebar()` gains a Knowledge section (Awaiting/Facts/Preferences/People/Projects/Context/Skills, icon-less). Tests: rewritten component contract (category card + new Awaiting + skills), `cards_test` enum cases, new `knowledge_artifact_test.go` (4 HTTP summons + a no-tabs supplement). **Minor (noted, not blocking):** HTTP `AfterTestFunc` can't read the consumed SSE body, so k-tabs-absence is asserted at the unit level; `focusMemoryCategories` retained (only the title helper uses it; `go vet` doesn't flag it).) |
+| 096 | Drop the journal page (the `journal` card); journaling stays in chat + the day card | P2 | M | MED | — | — | DONE (APPROVED + **merged to main `c8a9e39`** via `--no-ff`; only conflicts were the two storybook files, hand-resolved (nav fixture keeps the Knowledge group minus Journal; `journalfocusStory` dropped, 095's nav-free `knowledgefocusStory` kept). `improve/096-drop-journal-page`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (38 pkgs, 0 fail)/`gofmt -l`/`git diff --check` clean; completeness greps empty (no journal-CARD ref in production code). Deleted `journalcards/journal.go`+`journalfocus.go`, `web/journal.go`; removed the `journal` spec, the `/ui/journal` + `/ui/journal/prompt` routes, the sidebar item, the storybook story+nav fixture; `allTypes` 15→14, DESIGN curated list 14→13, candle prose deleted from DESIGN+knowledge.md. **Day card, `journal_write` tool, `life/journal.go`, `web/day.go`, CLI journal — all untouched; journaling preserved** (`TestDayCardReflectsJournalEntry` proves the day card shows a written entry). **Out-of-scope edits accepted on merit (documented in NOTES):** 4 test files the plan's in-scope list missed — `journalcards/journal_test.go` (deleted; tested the removed `JournalCard`), `journalcards/journalcards_test.go` (received the shared `renderNode` helper that `dayfocus_test` depends on), `web/cards_test.go` (dropped `TestUiCardJournal` + the journal palette/all-types entries + orphan `seedJournalEntry`), `web/journal_gomponents_test.go` (dropped the journal-card assertion, kept+renamed the day-card test) — all forced orphan-cleanup of journal-CARD references, day-card coverage preserved. **Plan-criterion correction:** the plan said `cards.All()`→13; the real registry is 14 (DESIGN's curated list omits `tasks`), and the executor correctly reconciled `allTypes`=14 / DESIGN=13.) |
 | 094 | Cap active chat artifacts at 3; older ones collapse to a static "shown earlier" chip | P2 | M | MED | — | — | DONE (APPROVED + **merged to main `3ac018c`**; `improve/094-cap-active-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (no FAIL/panic)/`gofmt -l`/`git diff --check` clean; scope clean (6 in-scope files). Shared `artifactWrap`/`artifactChip` + `activeArtifactCap` in `cards.go`; `messageView` gains `ArtifactTitle/Icon/Collapsed`, `messageViews` sets them (uicard→spec.Label/Icon, cluster→title), `capArtifacts` post-pass marks all-but-newest-3 collapsed (proposals excluded), `renderMessages` wraps artifacts; `endTool` extended to thread title/icon (all 6 callers updated); `balaurCapArtifacts()` hooked into the `#chat` MutationObserver; chip+collapsed CSS. **Documented deviation (approved on merit):** the HTTP cap test can't share a `TestApp` across `ApiScenario` calls (harness `Cleanup()` nukes the dataDir), so the executor wrote 5 direct unit tests of `capArtifacts` (4→1 collapsed/oldest-first, 2→0, 3→0 boundary, proposals-never, 6→oldest-3) — tests the core logic more directly; the rendered chip HTML is build-verified but not asserted E2E.) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
@@ -539,7 +541,86 @@ limitation blocks the reused-app pattern); 093 repointed the orphaned `taskCard`
 → `dd0300f` (093) → `3ac018c` (094), each `--no-ff`, zero conflicts** (the shared
 `basm.css`/`stories_cards.go`/`handlers_test.go` auto-resolved by region as predicted); the
 advisor re-ran the FULL gate on merged main after each step (CGO-free build/vet/`go test
-./...`/`gofmt -l`/`git diff --check` all green). Not yet pushed.
+./...`/`gofmt -l`/`git diff --check` all green). Pushed to `origin/main` (`e533c5a`).
+
+## Fifteenth cycle (2026-06-18, owner-requested refinement): plans 095–096
+
+Owner-requested via `improve` on 2026-06-18: *"apply the same treatment for the other sidebar
+entries"* — extending the fourteenth cycle's "no navigation inside an artifact" decision to the
+Domains entries 092–094 did not touch. Skipped the audit (the goal was set); did first-hand
+recon of the three remaining focus surfaces and the artifact param-flow (`uiShow` →
+`cards.Validate` → marker → `messageViews`/`uicardBody`), anchored to `e533c5a`.
+
+**Recon mapped the in-artifact navigation per entry:**
+- **Knowledge** (`memory` card, `KnowledgeFocus`) — a **category tab strip** (`all / fact /
+  preference / person / project / context`) plus a live search box. Skills shares the same
+  component (no tabs) but has **no sidebar home** at all.
+- **Journal** (`journal` card, `JournalFocus`) — a **free/guided tab strip** (the guided tab
+  fetches one model-composed prompt line).
+- **Life** (`lifelog` card, `LifelogFocus`) — **already nav-free** (two stacked sections, no
+  tabs/rail/search). No change needed; confirmed and left alone (KISS).
+
+Two de-risking facts: `.k-tabs`/`.k-tab` is a **shared design-system atom** (`internal/ui/tabs.go`
+`ui.Tabs`), so removing the tab *markup* from these cards leaves the CSS untouched; and `uiShow`
+already forwards query params through `cards.Validate`, so a sidebar `?category=…`/`?section=…`
+summon "just works" once the spec declares the param (an undeclared param is silently dropped).
+
+**Owner decisions (clarified in chat, 2026-06-18 — the AskUserQuestion button form was declined
+in favor of discussion):**
+1. **Knowledge → "categories as sidebar items"** — a one-level **Knowledge** sidebar group
+   (sibling to Domains/Settings): **Awaiting · Facts · Preferences · People · Projects · Context ·
+   Skills**. Each summons a nav-free card of just that slice (no in-card tabs); the **search box
+   stays** inside each (it filters, it doesn't navigate). Awaiting = the proposed-memory queue;
+   each category card = that category's active + archived; Skills is its own nav-free card. →
+   **plan 095** (the `memory` spec gains `category` + `view` enum params; `KnowledgeFocus` is
+   reworked to render one slice; the `knowledgeGrid` live-search handler is reused unchanged).
+2. **Journal → "drop the journal page"** (not de-nav it) — remove the `journal` card entirely
+   (tile + candle focus + `/ui/journal` + `/ui/journal/prompt` + the spec + story + tests).
+   **Journaling loses nothing**: the chat `journal_write` tool stays, and the **day** card is a
+   full journaling surface in its own right (writes via `POST /ui/day/{date}/journal`, reachable
+   from the calendar card and recap day cards). The day card was confirmed **not** to need its
+   own sidebar entry (calendar + chat reach it). → **plan 096** (mostly deletion + doc/test/nav
+   cleanup; `cards.All()` goes 14 → 13).
+
+Both plans are commit-anchored to `e533c5a` with drift checks; every cited excerpt was re-read
+first-hand at HEAD during drafting (the `dayStart`-vs-`dayStartOf` independence and the
+`stories_navigation.go` Journal fixture were both verified, not assumed). Baseline at `e533c5a`:
+build/vet/test green. **Neither adds a migration** — next free timestamp remains `1750860000`.
+
+**Cross-plan overlap (near-independent, like the fourteenth cycle):** 095 and 096 both edit
+`internal/web/home.go` (the sidebar — 095 splits Knowledge into its own group, 096 drops the
+Journal item from Domains; different lines), `internal/cards/cards_test.go` (different test funcs —
+095 adds a memory-enum test, 096 edits `allTypes`/`TestHasManage`/the clamping case), and
+`internal/feature/storybook/stories_navigation.go` (the same sidebar fixture). Land **095 then
+096**, or reconcile the sidebar fixture + the Domains list at merge. Recommended execution model:
+the prior cycles' pattern — a dispatched `sonnet` executor per plan in an isolated worktree,
+advisor re-runs done-criteria + audits scope/diff/tests before APPROVE, then merge in order.
+
+**Execution record (2026-06-18):** both plans executed by dispatched `sonnet` executors in
+isolated git worktrees (one per plan, off `e533c5a`, in parallel), then reviewed by the advisor
+(re-ran every done criterion in each worktree, audited scope via `git diff --stat`, read the full
+diffs, audited the tests). Both **APPROVED**: 095 (`improve/095-knowledge-categories-sidebar-denav`,
+1 commit) and 096 (`improve/096-drop-journal-page`, 1 commit). CGO-free build/vet/`go test ./...`
+(37 pkgs for 095, 38 for 096)/`gofmt -l`/`git diff --check` green in each worktree. **One accepted
+deviation (096):** the executor touched 4 test files beyond the plan's in-scope list — all forced,
+minimal orphan-cleanup of references to the deleted journal *card* (a palette enumeration, an
+all-types render loop, a card-render test, and a shared `renderNode` helper relocated so the day
+tests still compile); day-card coverage preserved. **One plan-criterion correction (096):** the
+plan's "`cards.All()` → 13" was a miscount — the real registry is 14 (DESIGN's curated list omits
+`tasks`); the executor correctly reconciled `allTypes`=14 / DESIGN-list=13.
+
+**Merged to main (2026-06-18), 095 then 096, both `--no-ff`:** `e533c5a` → `95e414e` (095, clean
+auto-merge) → `c8a9e39` (096). `home.go` auto-merged correctly (Domains = Quests, Life; + the
+Knowledge group; + Settings); `cards.go`/`cards_test.go`/`knowledge.md` auto-merged. The **only
+conflicts** were the two storybook files, hand-resolved as pure integration of the two approved
+branches: `stories_navigation.go` keeps 095's Knowledge-group fixture minus the Journal item;
+`stories_cards.go` drops `journalfocusStory` (096 — journal card gone) and keeps 095's nav-free
+`knowledgefocusStory`. Advisor re-ran the FULL gate on merged main after the final merge (CGO-free
+build/vet/`go test ./...`/`gofmt -l`/`git diff --check` all green). **Not yet pushed.** Known
+deferred docs nit: DESIGN.md line ~92 still reads "five domains (Quests, Knowledge, Life, Heads,
+Settings)" — pre-092-era framing (Heads/Settings are actually the Settings group; Knowledge is now
+its own group). 096 only dropped Journal + "six"→"five"; full IA-prose reconciliation is the
+deferred docs pass.
 
 ## Dependency notes
 
