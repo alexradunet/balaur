@@ -409,7 +409,7 @@ func TestHardeningHeaders(t *testing.T) {
 		URL:             "/",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"sb-side"},
+		ExpectedContent: []string{"app-shell"},
 		AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
 			for _, hdr := range []struct{ name, want string }{
 				{"X-Content-Type-Options", "nosniff"},
@@ -434,7 +434,7 @@ func TestOriginGuard(t *testing.T) {
 		URL:             "/",
 		Headers:         map[string]string{"Host": "localhost"},
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"sb-side"},
+		ExpectedContent: []string{"app-shell"},
 	}
 	scenario.TestAppFactory = newWebApp
 	scenario.Test(t)
