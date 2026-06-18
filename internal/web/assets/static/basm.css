@@ -2,9 +2,8 @@
    Canonical token source: if DESIGN.md and this file disagree, this file wins.
 
    Hearthwood — Basm v2 canon, imported from the Balaur_ds export.
-   Color scheme strategy: light-dark() + color-scheme (Baseline 2024).
-   OS preference is respected automatically. Force a mode with:
-     <html class="light"> or <html class="dark">
+   Color scheme: fixed dark. Tokens are single-value hex/rgba; no dual-mode pairs.
+   Hearthwood dark is the one and only theme; forest/dungeon palettes are gone.
 */
 
 /* ══ Section 1: Color tokens ════════════════════════════════════════ */
@@ -12,31 +11,30 @@
    This project is now the canon; it intentionally diverges from the
    repo's Forest at Dusk palette toward a grounded fantasy-RPG material
    language: tavern oak chrome, candlelit gold, parchment content panels
-   with ink text. Dark is the brand identity; light is a daylight study
-   of the same room. Force a mode with <html class="dark|light">. */
+   with ink text. Dark is the fixed brand identity. */
 
 :root {
-  color-scheme: dark light;
+  color-scheme: dark;
 
   /* Page & wood chrome */
-  --bg:        light-dark(#efe2bd, #140c06);
-  --chrome:    light-dark(#3a2210, #2a1709);  /* topbar, chatbar, tool rows, tags */
-  --chrome-2:  light-dark(#2c1a0c, #1d0f06);  /* deeper wood inset */
-  --chrome-fg: light-dark(#d6bb92, #b59872);  /* text on wood */
+  --bg:        #140c06;
+  --chrome:    #2a1709;  /* topbar, chatbar, tool rows, tags */
+  --chrome-2:  #1d0f06;  /* deeper wood inset */
+  --chrome-fg: #b59872;  /* text on wood */
 
-  /* Parchment content panels (constant across modes) */
-  --surface:    light-dark(#f4e9c4, #e8d9ae);
-  --surface-2:  light-dark(#e4d49e, #d6c188);
-  --surface-3:  light-dark(#d2bf82, #c4ab74);
-  --parch-edge: light-dark(#9a7f4c, #8a6f3c);
+  /* Parchment content panels */
+  --surface:    #e8d9ae;
+  --surface-2:  #d6c188;
+  --surface-3:  #c4ab74;
+  --parch-edge: #8a6f3c;
 
   /* Text */
-  --fg:        light-dark(#3a2c18, #c9b894);  /* body on page bg */
-  --fg-strong: light-dark(#241a0c, #ecdcb2);  /* headings on page bg */
-  --muted:     light-dark(#7a6644, #8a7355);
-  --smoke:     light-dark(#8f7a52, #6b5639);
-  --hair:      light-dark(#c8b488, #3b2a16);
-  --outline-2: light-dark(#241708, #120a04);  /* the near-black pixel outline */
+  --fg:        #c9b894;  /* body on page bg */
+  --fg-strong: #ecdcb2;  /* headings on page bg */
+  --muted:     #8a7355;
+  --smoke:     #6b5639;
+  --hair:      #3b2a16;
+  --outline-2: #120a04;  /* the near-black pixel outline */
 
   /* Ink — text on parchment (constant) */
   --ink:       #2c2012;
@@ -47,27 +45,27 @@
   --candle-glow: #c88600;                      /* candle breathe glow (theme-constant warm gold) */
 
   /* Bevel edges */
-  --bevel-light: light-dark(rgba(255,222,166,.30), rgba(255,196,118,.18));
+  --bevel-light: rgba(255,196,118,.18);
   --bevel-dark:  rgba(0,0,0,.55);
 
-  /* Accents — candlelit on dark, ink-weight on light */
-  --gold:       light-dark(#8a6212, #f2c14e);
-  --gold-deep:  light-dark(#7a5a14, #a87b24);
+  /* Accents — candlelit */
+  --gold:       #f2c14e;
+  --gold-deep:  #a87b24;
   --gold-ink:   #8a6212;                       /* gold on parchment */
-  --ember:      light-dark(#d04f12, #ff7a33);
-  --ember-deep: light-dark(#7e3210, #8f3a12);
-  --ember-red:  light-dark(#a8201f, #e5484d);
-  --teal:       light-dark(#0d6e5c, #3ecfb8);
-  --teal-deep:  light-dark(#0a574a, #169a82);
+  --ember:      #ff7a33;
+  --ember-deep: #8f3a12;
+  --ember-red:  #e5484d;
+  --teal:       #3ecfb8;
+  --teal-deep:  #169a82;
   --teal-ink:   #0d6e5c;                       /* teal on parchment */
-  --folkred:    light-dark(#983f20, #e0563b);
-  --indigo:     light-dark(#3d54a0, #a8c0f0);
+  --folkred:    #e0563b;
+  --indigo:     #a8c0f0;
   --indigo-ink: #3d54a0;                       /* user hue on parchment */
-  --indigo-deep: light-dark(#2c3a72, #6f86c8); /* deep indigo — owner-portrait keyline */
-  --violet:     light-dark(#6d3bb8, #c084fc);
-  --good:       light-dark(#3f6f2f, #7fcf6a);
+  --indigo-deep: #6f86c8; /* deep indigo — owner-portrait keyline */
+  --violet:     #c084fc;
+  --good:       #7fcf6a;
   --good-ink:   #4c7a2c;
-  --steel:      light-dark(#7a6644, #9b8a6c);
+  --steel:      #9b8a6c;
 
   /* Pixel grain (dither) */
   --grain-warm: repeating-conic-gradient(rgba(255,214,150,.022) 0% 25%, transparent 0% 50%); /* @kind other */
@@ -75,9 +73,6 @@
   --wood-planks: none; /* @kind other */
 }
 
-/* Manual color-scheme overrides (toggled via JS on <html>) */
-:root.light { color-scheme: light; }
-:root.dark  { color-scheme: dark;  }
 
 /* ══ Section 2: Typography tokens + self-hosted fonts ══════════════ */
 /* Basm typography tokens + self-hosted fonts.
@@ -2486,10 +2481,9 @@ progress.pull-progress-bar::-moz-progress-bar {
   background: var(--badge-bg); border: 2px solid var(--badge-bd);
   border-radius: var(--radius);
 }
-/* fg flips by scheme: light parchment on the darker light-mode accent,
-   near-black ink on the bright dark-mode accent — legible in both (WCAG AA). */
-.badge-gold  { --badge-bg: var(--gold);      --badge-bd: var(--gold-deep);  --badge-fg: light-dark(var(--surface), var(--ink)); }
-.badge-ember { --badge-bg: var(--ember);     --badge-bd: var(--ember-deep); --badge-fg: light-dark(var(--surface), var(--ink)); }
+/* fg: near-black ink on the bright dark accent — legible (WCAG AA). */
+.badge-gold  { --badge-bg: var(--gold);      --badge-bd: var(--gold-deep);  --badge-fg: var(--ink); }
+.badge-ember { --badge-bg: var(--ember);     --badge-bd: var(--ember-deep); --badge-fg: var(--ink); }
 .badge-teal  { --badge-bg: var(--teal-deep); --badge-bd: var(--outline-2);  --badge-fg: var(--surface); }
 .badge-wood  { --badge-bg: var(--chrome-2);  --badge-bd: var(--outline-2);  --badge-fg: var(--chrome-fg); }
 
@@ -2780,42 +2774,6 @@ progress.pull-progress-bar::-moz-progress-bar {
   margin: 0; font-family: var(--font-display); font-size: clamp(28px, 5vw, 40px); color: var(--fg-strong); line-height: 1;
 }
 
-/* ── Themes — Forest & Dungeon palettes (Hearthwood is the base :root) ───────
-   Additive overrides of the theme-varying tokens only; parchment/ink constants
-   stay constant across themes. Mode is the orthogonal .light/.dark axis. This is
-   the token-definition layer — raw hex is the source of truth here. */
-:root.theme-forest {
-  --bg:#0b140e; --chrome:#16271a; --chrome-2:#0d1a11; --chrome-fg:#a4bd94;
-  --fg:#bcccab; --fg-strong:#dfead0; --muted:#80936f; --smoke:#586b4d; --hair:#21321c; --outline-2:#050c07;
-  --gold:#e6c652; --gold-deep:#8c7a26; --ember:#ff9a45; --ember-deep:#7a4a15; --ember-red:#e0584d;
-  --teal:#46d8b4; --teal-deep:#1a9a7e; --folkred:#d96b3c; --indigo:#a6c2ea; --violet:#bd8cf2; --good:#93d56e; --steel:#8a9c74;
-  --bevel-light:rgba(190,255,170,.16);
-  --grain-warm: repeating-conic-gradient(rgba(150,255,180,.025) 0% 25%, transparent 0% 50%);
-}
-:root.theme-forest.light {
-  --bg:#e4eccf; --chrome:#243d28; --chrome-2:#16271a; --chrome-fg:#cfe0bd;
-  --fg:#2e3d26; --fg-strong:#1a2614; --muted:#5e7050; --smoke:#7d9072; --hair:#bcd0a8; --outline-2:#0d1a11;
-  --gold:#6f7a18; --gold-deep:#5a6312; --ember:#b8541c; --ember-deep:#7a4a15; --ember-red:#a83820;
-  --teal:#0d7a5c; --teal-deep:#0a5a44; --folkred:#8a4320; --indigo:#3d54a0; --violet:#6d3bb8; --good:#3f7a2f; --steel:#5e7050;
-  --bevel-light:rgba(220,255,200,.34);
-  --grain-warm: repeating-conic-gradient(rgba(40,90,40,.04) 0% 25%, transparent 0% 50%);
-}
-:root.theme-dungeon {
-  --bg:#0c0d12; --chrome:#20232c; --chrome-2:#15161d; --chrome-fg:#a0a3b6;
-  --fg:#b7b9c8; --fg-strong:#e3e5f0; --muted:#7c7f93; --smoke:#565a6c; --hair:#2a2d39; --outline-2:#050609;
-  --gold:#d8b552; --gold-deep:#8a6f28; --ember:#ff6a38; --ember-deep:#8a3014; --ember-red:#e5484d;
-  --teal:#5bd2da; --teal-deep:#2a98a0; --folkred:#d84e3c; --indigo:#aab6f2; --violet:#cf90ff; --good:#7fcf8a; --steel:#8a8da2;
-  --bevel-light:rgba(180,200,255,.16);
-  --grain-warm: repeating-conic-gradient(rgba(160,180,255,.028) 0% 25%, transparent 0% 50%);
-}
-:root.theme-dungeon.light {
-  --bg:#dcdde4; --chrome:#2c2f38; --chrome-2:#20232c; --chrome-fg:#cdd0de;
-  --fg:#2a2d38; --fg-strong:#16181f; --muted:#5c5f70; --smoke:#7c7f93; --hair:#c2c4d0; --outline-2:#1a1c24;
-  --gold:#7a6520; --gold-deep:#5e4e18; --ember:#c2461c; --ember-deep:#8a3014; --ember-red:#a8201f;
-  --teal:#0d6e7a; --teal-deep:#0a545c; --folkred:#a8392c; --indigo:#3d54a0; --violet:#6d3bb8; --good:#3f6f4a; --steel:#5c5f70;
-  --bevel-light:rgba(40,60,110,.20);
-  --grain-warm: repeating-conic-gradient(rgba(40,50,90,.045) 0% 25%, transparent 0% 50%);
-}
 
 /* ── Foundations · Colors — token swatches (re-tint live per theme) ──────── */
 .fdn-stack { display: flex; flex-direction: column; gap: var(--space-5); width: 100%; }

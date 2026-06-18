@@ -26,24 +26,24 @@ func TestNoUndefinedHearthwoodTokens(t *testing.T) {
 	}
 }
 
-// TestThemePaletteBlocks guards Slice-1: flat-dither wood default and the Forest
-// + Dungeon palette override blocks (Hearthwood is the base :root, no block).
+// TestThemePaletteBlocks guards plan 108: Balaur ships a single fixed Hearthwood
+// dark theme. color-scheme is locked to dark, every token is a single value (no
+// light-dark() pairs), and the light-mode + forest/dungeon palette blocks are
+// gone. (.theme-toggle / --wood-planks remain until plan 109 removes the UI.)
 func TestThemePaletteBlocks(t *testing.T) {
 	b, err := FS.ReadFile("static/basm.css")
 	if err != nil {
 		t.Fatalf("read basm.css: %v", err)
 	}
 	css := string(b)
-	for _, want := range []string{
-		"--wood-planks: none;",
-		":root.theme-forest {",
-		":root.theme-forest.light {",
-		":root.theme-dungeon {",
-		":root.theme-dungeon.light {",
-		".theme-toggle {",
-	} {
+	for _, want := range []string{"--wood-planks: none;", "color-scheme: dark;"} {
 		if !strings.Contains(css, want) {
-			t.Errorf("basm.css missing theme block marker: %q", want)
+			t.Errorf("basm.css missing single-theme marker: %q", want)
+		}
+	}
+	for _, gone := range []string{"light-dark(", ":root.light", ":root.theme-forest", ":root.theme-dungeon"} {
+		if strings.Contains(css, gone) {
+			t.Errorf("basm.css still references removed dual-theme machinery: %q", gone)
 		}
 	}
 }

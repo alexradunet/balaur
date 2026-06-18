@@ -220,7 +220,7 @@ Canonical in `web/static/basm.css`. Reference copy (dark-mode values):
 
 ```css
 :root {
-  color-scheme: dark light; /* tokens resolve via light-dark() */
+  color-scheme: dark;
 
   /* Page & wood chrome */
   --bg: #140c06;          /* deep tavern-oak dark */
@@ -228,7 +228,7 @@ Canonical in `web/static/basm.css`. Reference copy (dark-mode values):
   --chrome-2: #1d0f06;    /* deeper wood inset */
   --chrome-fg: #b59872;   /* text on wood */
 
-  /* Parchment content panels — constant across dark and light */
+  /* Parchment content panels (constant) */
   --surface: #e8d9ae;     --surface-2: #d6c188;
   --surface-3: #c4ab74;   --parch-edge: #8a6f3c;
 
@@ -255,14 +255,13 @@ Canonical in `web/static/basm.css`. Reference copy (dark-mode values):
 }
 ```
 
-Theming is standard `light-dark()` with `color-scheme: dark light` —
-the OS preference applies automatically; `<html class="dark">` or
-`<html class="light">` force a mode. The light theme applies the same
-material language at daylight intensity (parchment surface, warm oak
-chrome) — exact values live in `basm.css`.
+Balaur ships one fixed theme: Hearthwood dark. `color-scheme: dark` is
+locked; there is no OS-preference flip, no light-mode class, and no
+alternative palettes (forest/dungeon were removed in plan 108). All
+tokens are single-value hex or rgba — no dual-mode pairs.
 
-Two surface regions: **page/chrome** (wood, dark-responsive) and
-**parchment** (constant `--surface: #e8d9ae` in both modes). `--ink` is
+Two surface regions: **page/chrome** (deep tavern-oak wood, `--bg`/`--chrome`)
+and **parchment** (warm cream panels, `--surface: #e8d9ae`). `--ink` is
 the on-parchment text color; `--fg` is text on the page background.
 
 Usage: `--bg` page · `--chrome` topbar/chatbar/tool rows · `--surface`
