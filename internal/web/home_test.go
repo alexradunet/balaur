@@ -10,42 +10,40 @@ import (
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
-// TestHomeFullChat: GET / renders the single-page chat shell — a domain sidebar
-// rail on the left, the full-canvas chat dock in the centre, and the right panel.
-// No topbar, no #main, and no focus/nav links; instead the sidebar items inject
-// cards into the right panel via @get.
+// TestHomeFullChat: GET / renders the single-page two-column chat shell (plan 102)
+// — the full-canvas chat dock on the left and the right panel on the right, with
+// the composer /-command palette as the navigation launcher. No topbar, no domain
+// sidebar rail, no sb-backdrop. The palette items inject their artifact into the
+// right panel via @get (the non-polluting /ui/show door, plan 101).
 func TestHomeFullChat(t *testing.T) {
 	s := tests.ApiScenario{
-		Name:           "GET / renders the single-page chat shell",
+		Name:           "GET / renders the single-page two-column chat shell",
 		Method:         "GET",
 		URL:            "/",
 		TestAppFactory: newWebApp,
 		ExpectedStatus: 200,
 		ExpectedContent: []string{
-			`<html lang="en" class="app">`, // single-page chat shell layout
+			`<html lang="en" class="app`, // class-agnostic prefix (plan 103 may add panel-collapsed)
 			`<title>Home · Balaur</title>`,
-			`class="app-shell"`,   // three-column grid
-			`class="sb-side"`,     // domain sidebar rail
+			`class="app-shell"`,   // two-column grid
 			`id="chat"`,           // chat append target (SSE contract)
 			`id="panel"`,          // right panel column (plan 098)
 			`id="panel-inner"`,    // morph target for panel swaps
-			`class="sb-nav-icon"`, // pixel icon on sidebar items
-			// injecting sidebar items (no navigation — @get into panel)
-			`data-on:click__prevent="@get(&#39;/ui/show/quests&#39;)"`,
-			// top-level domain entries (plan 099 rail simplification)
-			`data-on:click__prevent="@get(&#39;/ui/show/memory?category=fact&#39;)"`,
-			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)"`,
-			// footer theme toggle
+			`class="cmd-palette"`, // composer /-command palette (plan 102)
+			// palette items fire the non-polluting /ui/show door (plan 101)
+			`data-on:click__prevent="@get(&#39;/ui/show/quests&#39;)`,
+			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)`,
+			// composer two-way signal binding (palette depends on this)
+			`data-bind:message`,
+			// theme toggle relocated to .app-chrome (plan 102)
 			`class="theme-toggle"`,
-			// mobile topbar chrome (markup present at all widths; CSS hides it on desktop)
-			`class="app-topbar"`,
-			`class="sb-burger"`,
-			`onclick="basmToggleNav()"`,
-			`class="sb-backdrop"`,
 		},
 		NotExpectedContent: []string{
 			`<main id="main">`,                   // the old shell's #main content area is gone
 			`<a href="/focus/quests">Quests</a>`, // old topbar nav links are gone
+			`class="sb-side"`,                    // domain sidebar rail is gone (plan 102)
+			`class="app-topbar"`,                 // mobile topbar is gone (plan 102)
+			`basmToggleNav()`,                    // no burger/drawer (plan 102)
 		},
 	}
 	s.Test(t)

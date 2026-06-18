@@ -108,10 +108,10 @@ func paginationStory() Story {
 }
 
 func sidebarStory() Story {
-	// Mirror the live domainSidebar() helper in home.go so the story documents
-	// the real component shape — injecting items that call @get, not navigating.
-	// Knowledge and Settings are top-level domain entries (plan 099); category
-	// and section navigation happens via in-panel tabs, not sidebar sub-items.
+	// Documents the generic shell.Sidebar atom — still used by the storybook's
+	// own left nav (internal/web/storybook.go). Home navigates via the composer
+	// /-command palette as of plan 102; the domain rail is retired. The fixture
+	// items use /ui/show/... actions (the valid non-polluting door, plan 101).
 	item := func(label, typ, icon string, active bool) shell.SidebarItem {
 		href := "/ui/show/" + typ
 		return shell.SidebarItem{

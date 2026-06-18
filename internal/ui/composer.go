@@ -47,6 +47,10 @@ type ComposerProps struct {
 	PostURL  string
 	ID       string
 	Disabled bool
+
+	// Palette is an optional command menu rendered inside the composer root so
+	// CSS can anchor it above the textarea (plan 102). It self-shows via Datastar.
+	Palette g.Node
 }
 
 // Composer renders the wood input ledge: corner brackets, a top row of tool
@@ -148,6 +152,9 @@ func Composer(p ComposerProps, attrs ...g.Node) g.Node {
 		),
 		main,
 	)
+	if p.Palette != nil {
+		root = append(root, p.Palette)
+	}
 	return h.Div(root...)
 }
 

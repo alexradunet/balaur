@@ -3294,19 +3294,17 @@ html.theme-dungeon .appearance-theme-btn[data-theme="dungeon"] {
   background: color-mix(in srgb, var(--gold) 16%, transparent);
 }
 
-/* ══ Section: Single-page chat shell (plan 088, extended by plan 098) ════════
-   .app-shell is a three-column grid: the sb-side rail on the left, the chat
-   column in the centre, and the single-active right panel on the right. The
-   dock rules below generalise the existing html.home #dock block so they fire
-   for the app-shell layout (html.app) too. */
+/* ══ Section: Single-page chat shell (plan 088, extended by plan 098, 102) ═══
+   .app-shell is a two-column grid: the chat dock on the left and the
+   single-active right panel on the right. The domain sidebar rail was retired
+   in plan 102 — navigation is via the composer /-command palette. The dock
+   rules below generalise the existing html.home #dock block so they fire for
+   the app-shell layout (html.app) too. */
 
-/* Mobile topbar (burger + crest + brand) — hidden on desktop; shown ≤720px. */
-html.app .app-topbar { display: none; }
-
-/* Three-column grid: [rail | chat | panel]. Rail matches the storybook sidebar width. */
+/* Two-column grid: [chat | panel]. */
 html.app .app-shell {
   display: grid;
-  grid-template-columns: 274px 1fr var(--w-panel);
+  grid-template-columns: 1fr var(--w-panel);
   height: 100dvh;
   overflow: hidden;
 }
@@ -3381,31 +3379,6 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
 @media (max-width: 720px) {
   html.app .app-shell { grid-template-columns: 1fr; }
 
-  /* Mobile top bar (burger + crest + brand). */
-  html.app .app-topbar {
-    display: flex; align-items: center; gap: var(--space-2);
-    height: 56px; padding: 0 var(--space-3);
-    background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm);
-    background-size: auto, 4px 4px; border-bottom: 2px solid var(--outline-2);
-    position: sticky; top: 0; z-index: var(--z-sticky);
-  }
-  html.app .app-topbar .sb-burger {
-    min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
-    background: none; border: 1px solid var(--chrome-fg); color: var(--gold);
-    font-size: 18px; line-height: 1; cursor: pointer;
-  }
-  html.app .app-topbar .sb-topbar-brand { font-family: var(--font-pixel); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
-  html.app .app-topbar .crest { width: 28px; height: 28px; image-rendering: pixelated; }
-
-  /* Rail becomes an off-canvas drawer (replaces display:none). */
-  html.app .sb-side {
-    display: flex; position: fixed; inset: 56px auto 0 0; width: min(86vw, 322px);
-    z-index: var(--z-drawer); transform: translateX(-104%);
-    transition: transform .2s var(--ease-crisp); box-shadow: 6px 0 0 rgba(0, 0, 0, .4);
-  }
-  html.app.sb-nav-open .sb-side { transform: none; }
-  html.app .sb-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(8, 5, 2, .62); }
-
   html.app #panel.app-panel {
     position: fixed; top: 0; right: 0; bottom: 0; width: min(92vw, var(--w-panel));
     z-index: var(--z-drawer); transform: translateX(100%); transition: transform .15s steps(3, end);
@@ -3414,6 +3387,34 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
   html.app.panel-open::after {
     content: ""; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(0,0,0,.45);
   }
+}
+
+/* ── Command palette (plan 102: composer /-command launcher) ─────────────── */
+html.app .composer { position: relative; }
+.cmd-palette {
+  position: absolute;
+  left: var(--space-3); right: var(--space-3);
+  bottom: calc(100% + var(--space-2));
+  z-index: var(--z-overlay);
+  max-height: 40vh; overflow-y: auto;
+  background-color: var(--surface-2); border: 2px solid var(--parch-edge);
+  box-shadow: var(--drop-hard);
+}
+.cmd-list { display: flex; flex-direction: column; }
+.cmd-item {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3); text-decoration: none;
+  color: var(--ink); font-family: var(--font-mono); font-size: 13px;
+}
+.cmd-item:hover { background: var(--surface-3, var(--surface)); color: var(--gold); }
+.cmd-item-icon { width: 20px; height: 20px; image-rendering: pixelated; }
+.cmd-item-label { flex: 1; }
+.cmd-item-key { font-family: var(--font-pixel); font-size: 12px; color: var(--gold); opacity: .7; }
+
+/* ── App chrome: relocated theme toggle (plan 102) ───────────────────────── */
+html.app .app-chrome {
+  position: fixed; right: var(--space-2); bottom: var(--space-2);
+  z-index: var(--z-sticky);
 }
 
 /* ── Card cluster (plan 090: show_cards inline artifact) ──────────────────── */

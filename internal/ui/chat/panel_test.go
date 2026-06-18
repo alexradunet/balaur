@@ -33,7 +33,7 @@ func TestPanelEmpty(t *testing.T) {
 	if !strings.Contains(got, "panel-empty") {
 		t.Errorf("empty panel missing panel-empty: %s", got)
 	}
-	if !strings.Contains(got, "Pick a domain from the rail") {
+	if !strings.Contains(got, "Type / for pages") {
 		t.Errorf("empty panel missing placeholder copy: %s", got)
 	}
 	if strings.Contains(got, "panel-head") {
