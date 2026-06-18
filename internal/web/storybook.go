@@ -28,13 +28,6 @@ var sidebarDots = map[string]string{
 	"Cards":       "var(--ember-deep)",
 }
 
-// paletteBtn renders one footer palette button wired to basmSetPalette.
-func paletteBtn(key, label string) g.Node {
-	return hh.Button(hh.Class("sb-theme-btn"), hh.Type("button"),
-		g.Attr("data-theme", key), g.Attr("onclick", "basmSetPalette('"+key+"')"),
-		hh.Title("Theme: "+label), g.Text(label))
-}
-
 // storybookHome serves the storybook Overview at /storybook.
 func (h *handlers) storybookHome(e *core.RequestEvent) error {
 	return renderStorybook(e, "", "", storybook.Overview())
@@ -94,20 +87,6 @@ func sidebarFor(active string) shell.SidebarProps {
 			),
 		}),
 		Sections: sections,
-		Footer: g.Group([]g.Node{
-			hh.Div(hh.Class("sb-foot-row"),
-				hh.Span(hh.Class("sb-foot-label"), g.Text("Theme")),
-				hh.Button(hh.Class("theme-toggle sb-foot-mode"), hh.Type("button"),
-					g.Attr("onclick", "basmToggleTheme()"),
-					hh.Title("Toggle day / night"), hh.Aria("label", "Toggle light/dark mode"),
-					g.Text("◑")),
-			),
-			hh.Div(hh.Class("sb-foot-themes"),
-				paletteBtn("hearthwood", "Hearth"),
-				paletteBtn("forest", "Forest"),
-				paletteBtn("dungeon", "Dungeon"),
-			),
-			hh.Div(hh.Class("sb-foot-count"), g.Text(strconv.Itoa(len(storybook.Stories()))+" components")),
-		}),
+		Footer:   hh.Div(hh.Class("sb-foot-count"), g.Text(strconv.Itoa(len(storybook.Stories()))+" components")),
 	}
 }

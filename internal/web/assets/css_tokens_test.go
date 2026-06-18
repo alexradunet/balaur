@@ -29,7 +29,7 @@ func TestNoUndefinedHearthwoodTokens(t *testing.T) {
 // TestThemePaletteBlocks guards plan 108: Balaur ships a single fixed Hearthwood
 // dark theme. color-scheme is locked to dark, every token is a single value (no
 // light-dark() pairs), and the light-mode + forest/dungeon palette blocks are
-// gone. (.theme-toggle / --wood-planks remain until plan 109 removes the UI.)
+// gone. (--wood-planks remains — it's a grain token, not theme UI.)
 func TestThemePaletteBlocks(t *testing.T) {
 	b, err := FS.ReadFile("static/basm.css")
 	if err != nil {

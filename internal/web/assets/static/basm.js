@@ -2,66 +2,6 @@
    Keeps home.html's inline script focused on chat-specific behaviour.
    No framework, no build step — just the platform. */
 
-// ── Light/dark theme toggle ────────────────────────────────────────
-// The <head> inline script in page_head reads localStorage and applies
-// the class before render to prevent FOUC. This file handles the toggle
-// interaction and keeps the button glyph in sync.
-
-window.basmToggleTheme = function () {
-  const html    = document.documentElement;
-  const isLight = html.classList.contains('light');
-  html.classList.remove('light', 'dark');
-  if (isLight) {
-    html.classList.add('dark');
-    localStorage.setItem('basm-theme', 'dark');
-  } else {
-    html.classList.add('light');
-    localStorage.setItem('basm-theme', 'light');
-  }
-  basmUpdateThemeButtons();
-};
-
-function basmUpdateThemeButtons() {
-  const isLight = document.documentElement.classList.contains('light');
-  document.querySelectorAll('.theme-toggle').forEach(btn => {
-    btn.textContent = isLight ? '◑' : '☼';
-    btn.title       = isLight ? 'Switch to dark mode' : 'Switch to light mode';
-    btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
-  });
-}
-
-document.addEventListener('DOMContentLoaded', basmUpdateThemeButtons);
-
-// ── Theme palette (hearthwood / forest / dungeon) ──────────────────
-// Orthogonal to light/dark mode (basmToggleTheme). The <head> no-flash
-// script applies the saved palette before paint. The palette is chosen in
-// Settings → Appearance and the storybook sidebar footer; both call
-// basmSetPalette directly (the topbar cycler was retired).
-
-// Set a specific palette directly.
-window.basmSetPalette = function (name) {
-  var order = ['hearthwood', 'forest', 'dungeon'];
-  if (order.indexOf(name) < 0) name = 'hearthwood';
-  var d = document.documentElement;
-  d.classList.remove('theme-hearthwood', 'theme-forest', 'theme-dungeon');
-  d.classList.add('theme-' + name);
-  localStorage.setItem('basm-palette', name);
-  basmUpdatePaletteButtons();
-};
-
-function basmUpdatePaletteButtons() {
-  var order = ['hearthwood', 'forest', 'dungeon'];
-  var d = document.documentElement;
-  var cur = order.find(function (t) { return d.classList.contains('theme-' + t); }) || 'hearthwood';
-  // Storybook sidebar footer buttons. The Settings → Appearance buttons mark
-  // their active state in pure CSS off the <html> palette class, so they need
-  // no sync here.
-  document.querySelectorAll('.sb-theme-btn').forEach(function (btn) {
-    btn.classList.toggle('is-active', btn.getAttribute('data-theme') === cur);
-  });
-}
-document.addEventListener('DOMContentLoaded', basmUpdatePaletteButtons);
-
 // ── Chatbar height → CSS custom property ──────────────────────────
 // The chat section uses padding-bottom: var(--chatbar-space) so the
 // last message is never hidden behind the fixed bar.

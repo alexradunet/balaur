@@ -36,8 +36,6 @@ func TestHomeFullChat(t *testing.T) {
 			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)`,
 			// composer two-way signal binding (palette depends on this)
 			`data-bind:message`,
-			// theme toggle relocated to .app-chrome (plan 102)
-			`class="theme-toggle"`,
 		},
 		NotExpectedContent: []string{
 			`<main id="main">`,                   // the old shell's #main content area is gone
@@ -45,6 +43,7 @@ func TestHomeFullChat(t *testing.T) {
 			`class="sb-side"`,                    // domain sidebar rail is gone (plan 102)
 			`class="app-topbar"`,                 // mobile topbar is gone (plan 102)
 			`basmToggleNav()`,                    // no burger/drawer (plan 102)
+			`class="theme-toggle"`,               // theme/mode switcher removed (plan 109 — single fixed theme)
 		},
 	}
 	s.Test(t)

@@ -1,7 +1,7 @@
 package settingscards
 
 // settingsfocus.go — the settings card's full-canvas focus body (Profile,
-// Models, Heads, Appearance) as gomponents components. Ports {{define
+// Models, Heads) as gomponents components. Ports {{define
 // "settings_body"}} from
 // web/templates/settings-focus.html and the three profile fragment defines from
 // web/templates/profile.html. Preserves every CSS class, element id, and
@@ -57,7 +57,7 @@ type ProfileView struct {
 
 // SettingsFocusView is the view-model for the full settings focus body.
 type SettingsFocusView struct {
-	Section string               // "profile" | "models" | "heads" | "appearance"
+	Section string               // "profile" | "models" | "heads"
 	Profile ProfileView          // used when Section == "profile"
 	Models  modelcards.PanelView // used when Section == "models"
 	Heads   headscards.HeadsView // used when Section == "heads"
@@ -229,7 +229,7 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusView, error) {
 	section := params["section"]
 	switch section {
-	case "models", "heads", "appearance":
+	case "models", "heads":
 		// known sections
 	default:
 		section = "profile"
@@ -244,8 +244,6 @@ func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusVi
 		view.Models = pv
 	case "heads":
 		view.Heads = headscards.BuildHeads(app)
-	case "appearance":
-		// static — no data fetch
 	default:
 		view.Profile = BuildProfile(app, false)
 	}
@@ -386,7 +384,7 @@ func ProfileBalaurSection(v ProfileView) g.Node {
 // /ui/show/settings (morph #panel-inner, no chip).
 func settingsTabs(active string) g.Node {
 	type t struct{ label, section string }
-	defs := []t{{"Profile", "profile"}, {"Appearance", "appearance"}, {"Models", "models"}, {"Heads", "heads"}}
+	defs := []t{{"Profile", "profile"}, {"Models", "models"}, {"Heads", "heads"}}
 	items := make([]ui.TabItem, len(defs))
 	for i, d := range defs {
 		items[i] = ui.TabItem{
@@ -409,8 +407,6 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		content = modelcards.Panel(v.Models)
 	case "heads":
 		content = headscards.HeadsCard(v.Heads)
-	case "appearance":
-		content = AppearanceSection()
 	default:
 		content = g.Group([]g.Node{
 			ProfileIdentityCard(v.Profile),
@@ -422,34 +418,5 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 	return Div(Class("settings-section"),
 		settingsTabs(v.Section),
 		content,
-	)
-}
-
-// AppearanceSection renders the Appearance settings card: the palette picker
-// (Hearthwood / Forest / Dungeon). The buttons call basmSetPalette(); the
-// active state is pure CSS off the <html> palette class (see basm.css), so it
-// stays correct after both a full load and an in-app Datastar patch. The
-// light/dark toggle stays in the topbar — only the palette moved here.
-func AppearanceSection() g.Node {
-	return Article(
-		Class("profile-card"), ID("appearance-section"),
-		H2(Class("profile-card-title"), g.Text("Appearance")),
-		P(Class("profile-hint"), g.Text("The palette Balaur wears. Light and dark stay in the top bar (◑).")),
-		Div(Class("appearance-themes"),
-			appearanceThemeBtn("hearthwood", "Hearthwood"),
-			appearanceThemeBtn("forest", "Forest"),
-			appearanceThemeBtn("dungeon", "Dungeon"),
-		),
-	)
-}
-
-// appearanceThemeBtn renders one palette button wired to basmSetPalette.
-func appearanceThemeBtn(key, label string) g.Node {
-	return Button(
-		Class("appearance-theme-btn"), Type("button"),
-		g.Attr("data-theme", key),
-		g.Attr("onclick", "basmSetPalette('"+key+"')"),
-		Title("Palette: "+label),
-		g.Text(label),
 	)
 }

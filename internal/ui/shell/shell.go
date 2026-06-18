@@ -9,9 +9,10 @@ import (
 	h "maragu.dev/gomponents/html"
 )
 
-// noFlashScript applies the saved theme + dock state before first paint, so the
-// page never flashes the wrong colour scheme. Ported verbatim from layout.html.
-const noFlashScript = `(function(){var d=document.documentElement;d.classList.add(localStorage.getItem('basm-theme')||'dark');d.classList.add('theme-'+(localStorage.getItem('basm-palette')||'hearthwood'));if(localStorage.getItem('basm-dock-full')==='1')d.classList.add('dock-full');var w=parseInt(localStorage.getItem('basm-dock-w'),10);if(w>=280&&w<=720)d.style.setProperty('--sidebar-w',w+'px');}());`
+// noFlashScript applies the saved dock state before first paint, so the page
+// never flashes the wrong sidebar width. The theme is fixed Hearthwood dark
+// (color-scheme: dark in basm.css), so no theme/palette class is applied.
+const noFlashScript = `(function(){var d=document.documentElement;if(localStorage.getItem('basm-dock-full')==='1')d.classList.add('dock-full');var w=parseInt(localStorage.getItem('basm-dock-w'),10);if(w>=280&&w<=720)d.style.setProperty('--sidebar-w',w+'px');}());`
 
 // PageProps configures a full page. Body fills #main; Dock fills the companion
 // #dock. HTMLClass (optional) is added to <html>. Active is retained in the
