@@ -15,9 +15,11 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Prefer direct, practical implementation steps.
 - Keep solutions KISS, inspectable, and reversible.
 - Use Go for all Balaur product runtime code. The user-facing UI is
-  server-rendered `html/template` driven by **Datastar** (SSE-patched
-  hypermedia + client signals); no SPA framework, no Node build step in the
-  product path.
+  server-rendered typed **`gomponents`** patched over **Datastar** (SSE
+  hypermedia + client signals); no SPA framework, no Node build step. gomponents
+  is the one way to build UI — the legacy top-level `web/templates/`
+  (`html/template`) path is being retired, so build new screens as components
+  (see the `ui-development` skill) and never extend `web/templates/`.
 - Use the standard Go command surface: `go build`, `go run .`, `go test ./...`,
   `go vet ./...`. Builds must work with `CGO_ENABLED=0`.
 - For local development, prefer `make run` (single run) and `make dev`
@@ -34,6 +36,23 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Migration timestamp prefixes must be unique and strictly increasing — duplicate prefixes sort by full filename, which is not a reliable ordering contract.
 - Keep host operating-system setup outside this repository; document only
   portable environment variables.
+
+## Landing changes & the shared checkout
+
+- **Land directly on `main`.** There is no PR/review gate: when the owner says
+  "commit and push" (the usual close-out), commit straight to `main` and push to
+  `origin` — don't open a PR or park work on a long-lived feature branch.
+  `/improve` execution worktrees are ephemeral: merge `--no-ff` (subject
+  `merge: NNN — …`), then delete the worktree/branch. Still commit or push ONLY
+  when the owner asks.
+- **Gate every push on a green full suite.** Run `go test ./...` (all packages)
+  before pushing; never push red. Use conventional-commit subjects
+  (`feat`/`fix`/`docs`/`refactor`/`style`).
+- **The checkout is shared by parallel agent sessions** editing the same tree at
+  once. Never revert or "fix" changes you didn't make; stage only your own
+  files; `git fetch` and confirm a clean fast-forward before every push.
+- **Executor worktrees base off `origin/main`, not local `HEAD`** — push (or
+  inline) the plan before dispatching one, or it builds against a stale tree.
 
 ## Product shape: one binary, web-first
 

@@ -89,8 +89,10 @@ A pixel-art, 16-bit Romanian fairy-tale language. Canon (see `DESIGN.md`):
   `8/12/16/24/32px` spacing, a column width, or a stacking value should be the
   token so a global retune touches one place, not hundreds.
 - **Single-dash class names** (`.composer-foot`), never BEM `__`/`--`.
-- **Light/dark is two axes:** mode (`.light`/`.dark`) and palette
-  (`theme-hearthwood`/`theme-forest`/`theme-dungeon`), orthogonal.
+- **One theme: Hearthwood dark.** Light mode and the forest/dungeon palettes
+  were removed (plans 108–109); `basm.css` is a single `:root` with
+  `color-scheme: dark` and **no `light-dark()`**. Author one value per token —
+  don't reintroduce a mode/palette fork or a `light-dark()` call.
 
 ### Layout tokens (the `:root` layout block)
 
@@ -124,23 +126,25 @@ custom-media needs a build step we don't have, so these stay literal but
 fresh breakpoint. (`480/640/860` survive as intentional outliers where a specific
 surface depends on them; don't add more without a reason.)
 
-### Token context — the legibility trap (verify BOTH modes)
+### Token context — the legibility trap (the recurring bug)
 
-`light-dark()` tokens **flip** with mode; some tokens are **always dark**.
-Pick the token for the surface the text sits on:
+One dark theme, three surface families; **text colour must match the surface it
+sits on.** This is the bug that keeps coming back ("brown text on brown", "white
+text on parchment can't be read"). Pick the token for the surface the text sits
+on:
 
-- **Parchment surface** (cards, form fields): use **ink** tokens —
-  `--ink`, `--ink-muted`. Readable in both modes.
-- **Page background** (the dark hearth — empty states, page titles, chat
-  messages): use **page** tokens — `--fg-strong`, `--muted`, `--gold`. These
-  flip; `--bg` (the page) flips with them, so they stay legible.
-- **Wood dock / ledge** (composer, topbar, chat ledges): `--chrome` is
-  **ALWAYS dark** in every mode → use **dock-light** tokens `--chrome-fg` /
-  `--gold`. A flipping token here goes dark-on-dark in light mode.
+- **Parchment surface** (`--surface` — cards, form fields, panels, storybook
+  stages): use **ink** tokens — `--ink`, `--ink-muted`. Parchment is light, so
+  the pale page/dock tokens vanish on it.
+- **Page background** (`--bg`, the dark hearth — empty states, page titles, chat
+  messages): use **page** tokens — `--fg-strong`, `--muted`, `--gold`.
+- **Wood dock / ledge** (`--chrome` — composer, topbar, chat ledges): use
+  **dock** tokens — `--chrome-fg`, `--gold`.
 
-**Bug smell:** a page-bg token (`--fg`/`--muted`) used on parchment → invisible
-in dark mode. An ink token used on the page bg → invisible. Always check both
-light and dark.
+**Bug smell:** a page/dock token (`--fg-strong`/`--muted`/`--chrome-fg`) on
+parchment renders pale-on-light and unreadable — the fix is `--ink`. A new
+parchment surface should set `color: var(--ink)` explicitly rather than inherit
+a page token from an ancestor.
 
 ### Responsive patterns (verify ≤920px)
 
@@ -196,7 +200,7 @@ type Story struct {
     Dos, Donts       []string
     Custom           g.Node      // foundation pages render this verbatim instead
     Wide             bool        // full-width stage for full-bleed components
-    OnDark           bool        // page-bg stage (--bg, flips) for dark-page components
+    OnDark           bool        // page-bg stage (--bg) for dark-page components
     OnDock           bool        // wood stage (--chrome, always dark) for ledge components
 }
 ```
@@ -264,13 +268,17 @@ patches it back in by selector id. Atoms accept variadic `attrs` so callers add
 5. **Verify:**
    - `CGO_ENABLED=0 go build ./...`, `go vet ./...`, `go test ./...`, `gofmt -l`
      (a PostToolUse hook also gofmt-s edited Go).
-   - **Visual, BOTH modes:** run the storybook (`make run`, or build + serve),
-     open `/storybook/<id>` (use `127.0.0.1:8090`, not `localhost`), and check it
-     in light AND dark. The repo's CDP approach: drive the chromium binary over
-     port 9222 with pure Node to screenshot a forced theme/mode
-     (`document.documentElement.className='theme-hearthwood dark'`). **Always
-     content-assert the route** (`curl …/storybook/<id> | grep <class>`) before
-     trusting a screenshot — a stale server serves the Overview fallback.
+   - **See it in a real browser yourself before declaring done** (the owner asks
+     for this every time — don't sign off on UI from the markup alone): run the
+     storybook (`make run`, or build + serve), open `/storybook/<id>` (use
+     `127.0.0.1:8090`, not `localhost`). Drive a browser — the claude-in-chrome
+     or Playwright MCP tools, or the repo's CDP approach (drive the chromium
+     binary over port 9222 with pure Node) — to screenshot the rendered surface.
+     **Always content-assert the route** (`curl …/storybook/<id> | grep <class>`)
+     before trusting a screenshot — a stale server serves the Overview fallback.
+     One Hearthwood dark theme now (no light/dark matrix to sweep), so the visual
+     check is about legibility on each surface (parchment vs page vs dock) and
+     responsiveness, not a mode flip.
    - Check **responsiveness** against the breakpoint scale (540/720/920): the
      product topbar collapses to a body-level off-canvas drawer ≤720px (no
      horizontal scroll at ~390px), the dock stacks ≤920px, long-form text honors
@@ -295,6 +303,7 @@ If a UI change alters Balaur's architecture or capabilities, update
   — its z-index can't escape that stacking context.
 - A new or migrated animation not added to the `prefers-reduced-motion` block.
 - A toggle button with no `aria-pressed`; long-form text with no `--measure` cap.
-- Text that's only legible in one mode (wrong token for the surface).
+- Text that's illegible on its surface — a pale page/dock token
+  (`--fg-strong`/`--chrome-fg`) on parchment instead of `--ink`.
 - `internal/ui` importing `internal/feature/*` (circular — inject a `g.Node`).
 - Putting turn behavior in the web handler instead of `internal/turn`.
