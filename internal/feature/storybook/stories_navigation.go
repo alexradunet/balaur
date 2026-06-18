@@ -144,7 +144,7 @@ func sidebarStory() Story {
 	})
 	return Story{
 		ID: "sidebar-domain", Group: "Navigation", Title: "Sidebar (domain rail)", Wide: true,
-		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the live #chat via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. The Knowledge group expands memory categories as icon-less sub-items (plan 095). The active item carries aria-current and the sb-nav-item-active class.",
+		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the right panel via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. The Knowledge group expands memory categories as icon-less sub-items (plan 095). The active item carries aria-current and the sb-nav-item-active class.",
 		Variants: []Variant{
 			{"quests active", shell.Sidebar(shell.SidebarProps{
 				Brand: brand,
@@ -178,13 +178,13 @@ func sidebarStory() Story {
 			{"Active", "bool", "false", `Highlights the item and sets aria-current="page".`},
 		},
 		Dos: []string{
-			"Set Action to @get('/ui/show/{type}') so a click injects the card without navigating.",
+			"Set Action to @get('/ui/show/{type}') so a click injects the card into the right panel without navigating.",
 			"Always set Href as the no-JS fallback (same URL the @get targets).",
 			"Use only icon stems that exist under /static/icons/ (scroll, tome, orb, quill, shield, key, …).",
 			"Keep Knowledge sub-items icon-less — they read as child items of the Knowledge group.",
 		},
 		Donts: []string{
-			"Navigate the page on click — inject the card into #chat instead.",
+			"Navigate the page on click — inject the card into the right panel instead.",
 			"Add category tabs inside knowledge artifacts — navigation belongs in the sidebar.",
 			"Set Action without also setting Href.",
 		},
