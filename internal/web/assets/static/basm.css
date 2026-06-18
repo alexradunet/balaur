@@ -965,27 +965,6 @@ dialog::backdrop {
 }
 .modal-actions form { margin: 0; }
 
-/* ── Theme toggle ────────────────────────────────────────────────── */
-
-.theme-toggle {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  background: none;
-  border: 1px solid var(--chrome-fg);
-  border-radius: var(--radius);
-  padding: 3px 9px;
-  color: var(--chrome-fg);
-  cursor: pointer;
-  margin-left: 10px;
-  flex-shrink: 0;
-  transition: color .1s, border-color .1s;
-  line-height: 1;
-}
-.theme-toggle:hover {
-  color: var(--gold);
-  border-color: var(--gold-deep);
-}
-
 /* ── Reduced motion ──────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -2637,12 +2616,6 @@ progress.pull-progress-bar::-moz-progress-bar {
   box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
 }
 .sb-foot { border-top: 2px solid var(--outline-2); padding: var(--space-3) 14px; flex-shrink: 0; }
-.sb-foot-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
-.sb-foot-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--chrome-fg); opacity: .7; }
-.sb-foot-mode { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; background: none; border: 1px solid var(--chrome-fg); color: var(--chrome-fg); padding: 3px 9px; cursor: pointer; }
-.sb-foot-themes { display: flex; gap: 5px; }
-.sb-theme-btn { flex: 1; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; background: none; border: 1px solid var(--chrome-fg); color: var(--chrome-fg); padding: var(--space-1) var(--space-2); cursor: pointer; }
-.sb-theme-btn.is-active { color: var(--gold); border-color: var(--gold-deep); background: color-mix(in srgb, var(--gold) 16%, transparent); }
 .sb-foot-count { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--chrome-fg); opacity: .7; margin-top: 10px; }
 .sb-canvas { height: 100vh; overflow-y: auto; max-width: none; margin: 0; padding: 0 var(--pad) 96px; background: var(--bg); }
 .sb-crumb {
@@ -3252,8 +3225,6 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
     display: block; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(8, 5, 2, .62);
   }
 
-  /* Bump theme-button touch targets to 44px on mobile; keep visual padding. */
-  .topbar .theme-toggle { min-height: 44px; padding: 0 var(--space-3); }
 }
 
 /* No slide animation when reduced-motion is preferred. */
@@ -3307,42 +3278,6 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
 }
 
 /* rail variant inherits #dock's fixed width (var(--sidebar-w)) — no extra rule. */
-
-/* ══ Section: Appearance settings — palette picker ═══════════════════════════
-   The three theme buttons live in the Settings → Appearance card (a parchment
-   .profile-card), so they use ink/parch tokens. basmSetPalette() flips the
-   <html> palette class; the active state is pure CSS off that class, so it stays
-   correct after both a full load and an in-app Datastar patch — no JS
-   button-sync needed (the topbar palette cycler moved here). */
-.appearance-themes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-.appearance-theme-btn {
-  flex: 1 1 0;
-  min-width: 120px;
-  min-height: 44px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  background: none;
-  border: 2px solid var(--parch-edge);
-  border-radius: var(--radius);
-  color: var(--ink);
-  padding: var(--space-2) var(--space-3);
-  cursor: pointer;
-  transition: color .1s, border-color .1s, background .1s;
-}
-.appearance-theme-btn:hover { border-color: var(--gold-deep); }
-html.theme-hearthwood .appearance-theme-btn[data-theme="hearthwood"],
-html.theme-forest .appearance-theme-btn[data-theme="forest"],
-html.theme-dungeon .appearance-theme-btn[data-theme="dungeon"] {
-  border-color: var(--gold-deep);
-  background: color-mix(in srgb, var(--gold) 16%, transparent);
-}
 
 /* ══ Section: Single-page chat shell (plan 088, extended by plan 098, 102) ═══
    .app-shell is a two-column grid: the chat dock on the left and the
@@ -3506,12 +3441,6 @@ html.app .composer { position: relative; }
 .cmd-item-icon { width: 20px; height: 20px; image-rendering: pixelated; }
 .cmd-item-label { flex: 1; }
 .cmd-item-key { font-family: var(--font-pixel); font-size: 12px; color: var(--gold); opacity: .7; }
-
-/* ── App chrome: relocated theme toggle (plan 102) ───────────────────────── */
-html.app .app-chrome {
-  position: fixed; right: var(--space-2); bottom: var(--space-2);
-  z-index: var(--z-sticky);
-}
 
 /* ── Card cluster (plan 090: show_cards inline artifact) ──────────────────── */
 /* A vertical stack of pre-rendered cards as one conversation artifact.        */

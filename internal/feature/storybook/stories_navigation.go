@@ -129,13 +129,6 @@ func sidebarStory() Story {
 		),
 	})
 	footer := g.Group([]g.Node{
-		h.Button(h.Class("theme-toggle"), h.Type("button"),
-			g.Attr("onclick", "basmToggleTheme()"),
-			h.Title("Toggle light/dark mode"),
-			h.Aria("label", "Toggle light/dark mode"),
-			h.Aria("pressed", "false"),
-			g.Text("◑"),
-		),
 		h.A(h.Href("/"), g.Text("Home")),
 	})
 	return Story{

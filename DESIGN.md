@@ -158,8 +158,7 @@ avatar picker in the settings card's profile focus (stored in `owner_settings`) 
 `<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
 profile section (the settings card, opens in the right panel at `/ui/show/settings?section=profile`)
 with display name, soul avatar picker (16 options),
-and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
-`localStorage` · switchable head personas: a dock head switcher
+and Balaur head picker (16 options) · switchable head personas: a dock head switcher
 (`/ui/heads/active`) chooses the active head, which flavors the master turn
 and filters its tools by capability group; built-in `balaur`/`scholar`/
 `planner`/`coach` plus owner-created customs managed from the heads card

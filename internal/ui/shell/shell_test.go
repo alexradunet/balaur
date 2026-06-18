@@ -30,9 +30,7 @@ func TestPage(t *testing.T) {
 		`<script type="module" src="/static/datastar.js"></script>`,
 		`<main id="main">BODY</main>`,
 		`<aside id="dock">DOCK</aside>`,
-		`localStorage.getItem('basm-theme')`,
-		`localStorage.getItem('basm-palette')`,
-		`'theme-'`,
+		`localStorage.getItem('basm-dock-full')`,
 		// Skip link for keyboard users.
 		`<a class="skip-link" href="#main">Skip to content</a>`,
 	} {

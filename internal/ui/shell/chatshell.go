@@ -22,7 +22,7 @@ type ChatShellProps struct {
 // single-active right panel on the right. Unlike Page, there is no topbar and
 // no #main content area. Navigation is via the composer /-command palette
 // (plan 102); the mobile layout is chat full-width with the panel sliding in
-// as a fixed overlay (plan 098). The global theme toggle lives in .app-chrome.
+// as a fixed overlay (plan 098).
 // PanelCollapsed adds "panel-collapsed" to <html> (plan 103 collapse-when-empty).
 // PanelStyle is an inline "--w-panel:<px>px" override on <html> so the drag and
 // the SSR width both target the same element (cascade note: .app-shell inherits
@@ -60,15 +60,6 @@ func ChatShell(p ChatShellProps) g.Node {
 					h.Button(h.Class("panel-reveal"), h.Type("button"),
 						g.Attr("onclick", "basmTogglePanel()"),
 						h.Aria("label", "Show panel"), g.Text("‹")),
-				),
-				// Global chrome: the light/dark toggle used to live in the rail footer.
-				// The rail is gone, so it moves here as a low-key fixed control.
-				h.Div(h.Class("app-chrome"),
-					h.Button(h.Class("theme-toggle"), h.Type("button"),
-						g.Attr("onclick", "basmToggleTheme()"),
-						h.Title("Toggle light/dark mode"),
-						h.Aria("label", "Toggle light/dark mode"), h.Aria("pressed", "false"),
-						g.Text("◑")),
 				),
 			),
 		),

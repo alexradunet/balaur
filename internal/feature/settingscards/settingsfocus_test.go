@@ -201,32 +201,3 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 		t.Error("SettingsFocus heads section must not render #identity-card")
 	}
 }
-
-// TestSettingsFocusAppearanceSection: section == "appearance" renders the
-// palette picker with in-panel section tabs (plan 099).
-func TestSettingsFocusAppearanceSection(t *testing.T) {
-	view := settingscards.SettingsFocusView{Section: "appearance"}
-	got := renderNode(t, settingscards.SettingsFocus(view))
-	for _, want := range []string{
-		`class="settings-section"`,
-		`id="appearance-section"`,
-		`class="appearance-themes"`,
-		`class="appearance-theme-btn"`,
-		`data-theme="hearthwood"`,
-		`data-theme="forest"`,
-		`data-theme="dungeon"`,
-		`onclick="basmSetPalette(&#39;hearthwood&#39;)"`,
-		// In-panel tab strip (plan 099)
-		`class="k-tabs"`,
-		`k-tab-active`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("SettingsFocus (appearance) missing %q in:\n%s", want, got)
-		}
-	}
-	for _, reject := range []string{`settings-nav`, `settings-layout`} {
-		if strings.Contains(got, reject) {
-			t.Errorf("SettingsFocus (appearance) must not contain %q", reject)
-		}
-	}
-}
