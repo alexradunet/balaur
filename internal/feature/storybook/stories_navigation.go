@@ -110,7 +110,8 @@ func paginationStory() Story {
 func sidebarStory() Story {
 	// Mirror the live domainSidebar() helper in home.go so the story documents
 	// the real component shape — injecting items that call @get, not navigating.
-	// Knowledge sub-items are icon-less to read as sub-items (plan 095).
+	// Knowledge and Settings are top-level domain entries (plan 099); category
+	// and section navigation happens via in-panel tabs, not sidebar sub-items.
 	item := func(label, typ, icon string, active bool) shell.SidebarItem {
 		href := "/ui/show/" + typ
 		return shell.SidebarItem{
@@ -120,11 +121,6 @@ func sidebarStory() Story {
 			Action: "@get('" + href + "')",
 			Active: active,
 		}
-	}
-	// know mirrors the know() helper in home.go: summons one memory slice.
-	know := func(label, query string) shell.SidebarItem {
-		href := "/ui/show/memory?" + query
-		return shell.SidebarItem{Label: label, Href: href, Action: "@get('" + href + "')"}
 	}
 	brand := g.Group([]g.Node{
 		h.Img(h.Class("crest"), h.Src("/static/crest.png"), h.Alt(""), g.Attr("decoding", "async")),
@@ -144,7 +140,7 @@ func sidebarStory() Story {
 	})
 	return Story{
 		ID: "sidebar-domain", Group: "Navigation", Title: "Sidebar (domain rail)", Wide: true,
-		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the right panel via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. The Knowledge group expands memory categories as icon-less sub-items (plan 095). The active item carries aria-current and the sb-nav-item-active class.",
+		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the right panel via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. Knowledge opens the memory panel with in-panel category tabs (plan 099); Settings opens the settings panel with in-panel section tabs (plan 099). The active item carries aria-current and the sb-nav-item-active class.",
 		Variants: []Variant{
 			{"quests active", shell.Sidebar(shell.SidebarProps{
 				Brand: brand,
@@ -152,26 +148,18 @@ func sidebarStory() Story {
 					{Label: "Domains", Items: []shell.SidebarItem{
 						item("Quests", "quests", "scroll", true),
 						item("Life", "lifelog", "orb", false),
-					}},
-					{Label: "Knowledge", Items: []shell.SidebarItem{
-						know("Awaiting", "view=proposed"),
-						know("Facts", "category=fact"),
-						know("Preferences", "category=preference"),
-						know("People", "category=person"),
-						know("Projects", "category=project"),
-						know("Context", "category=context"),
-						item("Skills", "skills", "", false),
+						{Label: "Knowledge", Href: "/ui/show/memory?category=fact", Icon: "tome", Action: "@get('/ui/show/memory?category=fact')"},
+						item("Skills", "skills", "key", false),
 					}},
 					{Label: "Settings", Items: []shell.SidebarItem{
-						item("Heads", "heads", "shield", false),
-						item("Settings", "settings", "key", false),
+						{Label: "Settings", Href: "/ui/show/settings?section=profile", Action: "@get('/ui/show/settings?section=profile')"},
 					}},
 				},
 				Footer: footer,
 			})},
 		},
 		Props: []Prop{
-			{"Icon", "string", `""`, "Icon stem (without extension) under /static/icons/; renders a 16×16 pixel-art sprite before the label. Leave empty for icon-less items (e.g. Knowledge sub-items)."},
+			{"Icon", "string", `""`, "Icon stem (without extension) under /static/icons/; renders a 16×16 pixel-art sprite before the label. Leave empty for icon-less items."},
 			{"Action", "string", `""`, "Datastar @get expression that fires on click — e.g. @get('/ui/show/quests'). Href is the no-JS fallback. When empty, the item is a plain link."},
 			{"Label", "string", "—", "The nav link text."},
 			{"Href", "string", "—", "The fallback URL; also the @get target path when Action is set."},
@@ -181,11 +169,11 @@ func sidebarStory() Story {
 			"Set Action to @get('/ui/show/{type}') so a click injects the card into the right panel without navigating.",
 			"Always set Href as the no-JS fallback (same URL the @get targets).",
 			"Use only icon stems that exist under /static/icons/ (scroll, tome, orb, quill, shield, key, …).",
-			"Keep Knowledge sub-items icon-less — they read as child items of the Knowledge group.",
+			"Keep the rail as top-level domains — Knowledge and Settings open with in-panel tabs for sub-views.",
 		},
 		Donts: []string{
 			"Navigate the page on click — inject the card into the right panel instead.",
-			"Add category tabs inside knowledge artifacts — navigation belongs in the sidebar.",
+			"Expand domain sub-views as separate sidebar entries — use in-panel tabs on the panel surface instead.",
 			"Set Action without also setting Href.",
 		},
 	}

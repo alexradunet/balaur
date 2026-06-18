@@ -274,9 +274,9 @@ func statcardStory() Story {
 	}
 }
 
-// knowledgefocusStory documents the knowledge manager's nav-free per-slice focus
-// body — memory category cards + skills, with proposed/active/archived sections
-// and live search. Navigation (categories) lives in the sidebar (plan 095).
+// knowledgefocusStory documents the knowledge panel body — memory (with in-panel
+// category tabs, plan 099) + skills (tab-free), with proposed/active/archived
+// sections and live search.
 func knowledgefocusStory() Story {
 	proposed := []knowledgecards.MemoryRecord{
 		{ID: "prop1", Status: "proposed", Category: "fact", Title: "Prefers dark mode", Importance: 3},
@@ -311,7 +311,7 @@ func knowledgefocusStory() Story {
 
 	return Story{
 		ID: "knowledgefocus", Group: "Cards", Title: "KnowledgeFocus", Wide: true, OnDark: true,
-		Blurb: "Nav-free per-slice knowledge card. Each card shows one memory category (or the Awaiting queue, or all skills) without internal navigation — categories live in the sidebar. Proposed/active/archived sections; live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
+		Blurb: "The knowledge panel body: memory categories rendered with an in-panel tab strip (Awaiting / Facts / Preferences / People / Projects / Context), navigated via /ui/panel/memory (plan 099). Skills render without the strip — Skills is a top-level rail entry, not a memory category. Proposed/active/archived sections; live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
 		Variants: []Variant{
 			{"memory · people", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
 				Kind:     "memories",
@@ -349,11 +349,11 @@ func knowledgefocusStory() Story {
 		Dos: []string{
 			"Pass pre-rendered MemoryRecordCard / SkillRecordCard nodes — KnowledgeFocus is kind-agnostic.",
 			"Use KnowledgeGrid for both the initial render and the live-search SSE patch into #k-active-grid.",
-			"Let the sidebar own category navigation — each sidebar item summons one slice.",
+			"Wire tab @get to /ui/panel/memory?{query} (in-panel nav, no chip) not /ui/show/memory (summon).",
 		},
 		Donts: []string{
 			"Re-implement the record card forms here — MemoryRecordCard/SkillRecordCard own them.",
-			"Add category tabs inside the artifact — navigation belongs in the sidebar (plan 095).",
+			"Add category tabs to the Skills variant — Skills has no category axis; tabs are for Kind==\"memories\" only.",
 		},
 	}
 }
@@ -413,10 +413,10 @@ func dayfocusStory() Story {
 	}
 }
 
-// settingsfocusStory documents the settings card's focus body — one nav-free
-// section per invocation. Navigation lives in the sidebar (plan 092); the
-// sidebar's Settings sub-menu summons each section as its own artifact via
-// /ui/show/settings?section=….
+// settingsfocusStory documents the settings panel body — section content with
+// an in-panel tab strip (Profile / Appearance / Models / Heads), navigated via
+// /ui/panel/settings (plan 099). The sidebar Settings entry summons the panel;
+// tabs switch sections without persisting a new chip or transcript row.
 func settingsfocusStory() Story {
 	// Profile variant: one active soul avatar, one active Balaur head.
 	profileView := settingscards.SettingsFocusView{
@@ -442,7 +442,7 @@ func settingsfocusStory() Story {
 
 	return Story{
 		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
-		Blurb: "The settings card's focus body: one nav-free section per artifact. The sidebar Settings sub-menu summons each section (?section=profile / models / heads / appearance). Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
+		Blurb: "The settings panel body: an in-panel tab strip (Profile / Appearance / Models / Heads) navigated via /ui/panel/settings (plan 099). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
 		Variants: []Variant{
 			{"profile section", settingscards.SettingsFocus(profileView)},
 			{"models section", settingscards.SettingsFocus(modelsView)},
@@ -455,11 +455,11 @@ func settingsfocusStory() Story {
 		Dos: []string{
 			"Use #identity-card, #soul-section, #balaur-section as the SSE outer-patch targets after profile POSTs.",
 			"Keep the avatar grid as FORM-PER-BUTTON — one hidden input per form, no single wrapper form.",
-			"Summon each section from the sidebar Settings sub-menu — navigation is in the sidebar, not the artifact.",
+			"Wire section tab @get to /ui/panel/settings?section=… (in-panel nav, no chip) not /ui/show/settings.",
 		},
 		Donts: []string{
 			"Swap the form-per-button avatar grid for a single form — the SSE re-render targets individual sections.",
-			"Add an in-artifact tab bar — each section is its own artifact; nav lives in the sidebar.",
+			"Route section switches through /ui/show — that summons a new artifact and appends a chip; use /ui/panel instead.",
 		},
 	}
 }

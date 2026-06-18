@@ -32,6 +32,9 @@ func TestHomeFullChat(t *testing.T) {
 			`class="sb-nav-icon"`, // pixel icon on sidebar items
 			// injecting sidebar items (no navigation — @get into panel)
 			`data-on:click__prevent="@get(&#39;/ui/show/quests&#39;)"`,
+			// top-level domain entries (plan 099 rail simplification)
+			`data-on:click__prevent="@get(&#39;/ui/show/memory?category=fact&#39;)"`,
+			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)"`,
 			// footer theme toggle
 			`class="theme-toggle"`,
 		},

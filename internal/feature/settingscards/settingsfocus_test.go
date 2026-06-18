@@ -112,7 +112,7 @@ func TestProfileBalaurSectionContract(t *testing.T) {
 }
 
 // TestSettingsFocusProfileSection: section == "profile" renders the profile
-// forms in a nav-free settings-section container (plan 092).
+// forms with in-panel section tabs (plan 099).
 func TestSettingsFocusProfileSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "profile",
@@ -122,6 +122,10 @@ func TestSettingsFocusProfileSection(t *testing.T) {
 	for _, want := range []string{
 		`class="settings-section"`,
 		`id="identity-card"`,
+		// In-panel tab strip (plan 099)
+		`class="k-tabs"`,
+		`k-tab-active`,
+		`aria-current="page"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (profile) missing %q in:\n%s", want, got)
@@ -138,7 +142,7 @@ func TestSettingsFocusProfileSection(t *testing.T) {
 }
 
 // TestSettingsFocusModelsSection: section == "models" renders the models panel
-// in a nav-free settings-section container (plan 092).
+// with in-panel section tabs (plan 099).
 func TestSettingsFocusModelsSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "models",
@@ -148,6 +152,9 @@ func TestSettingsFocusModelsSection(t *testing.T) {
 	for _, want := range []string{
 		`class="settings-section"`,
 		`id="models-panel"`,
+		// In-panel tab strip (plan 099)
+		`class="k-tabs"`,
+		`k-tab-active`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (models) missing %q in:\n%s", want, got)
@@ -164,7 +171,7 @@ func TestSettingsFocusModelsSection(t *testing.T) {
 }
 
 // TestSettingsFocusHeadsSection: section == "heads" renders the heads roster
-// in a nav-free settings-section container (plan 092).
+// with in-panel section tabs (plan 099).
 func TestSettingsFocusHeadsSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "heads",
@@ -177,6 +184,9 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 		`class="settings-section"`,
 		`id="ucard-heads"`,
 		`Scout`,
+		// In-panel tab strip (plan 099)
+		`class="k-tabs"`,
+		`k-tab-active`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (heads) missing %q in:\n%s", want, got)
@@ -193,7 +203,7 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 }
 
 // TestSettingsFocusAppearanceSection: section == "appearance" renders the
-// palette picker in a nav-free settings-section container (plan 092).
+// palette picker with in-panel section tabs (plan 099).
 func TestSettingsFocusAppearanceSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{Section: "appearance"}
 	got := renderNode(t, settingscards.SettingsFocus(view))
@@ -206,6 +216,9 @@ func TestSettingsFocusAppearanceSection(t *testing.T) {
 		`data-theme="forest"`,
 		`data-theme="dungeon"`,
 		`onclick="basmSetPalette(&#39;hearthwood&#39;)"`,
+		// In-panel tab strip (plan 099)
+		`class="k-tabs"`,
+		`k-tab-active`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (appearance) missing %q in:\n%s", want, got)

@@ -6,7 +6,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -82,41 +81,45 @@ func TestKnowledgeArtifacts(t *testing.T) {
 	})
 }
 
-// TestKnowledgeArtifactNoTabs verifies the rendered SSE body for category and
-// skills artifacts does not contain k-tabs. This supplements the unit tests by
-// exercising the full HTTP handler path.
-func TestKnowledgeArtifactNoTabs(t *testing.T) {
-	cases := []struct {
-		name string
-		url  string
-	}{
-		{"memory category=fact", "/ui/show/memory?category=fact"},
-		{"memory category=person", "/ui/show/memory?category=person"},
-		{"skills", "/ui/show/skills"},
-	}
-	for _, c := range cases {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			s := tests.ApiScenario{
-				Name:            c.name + " no k-tabs",
-				Method:          "GET",
-				URL:             c.url,
-				TestAppFactory:  newWebApp,
-				ExpectedStatus:  200,
-				ExpectedContent: []string{"k-active-grid"},
-				AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
-					// Read the body and verify k-tabs is absent.
-					// Note: the body is a streaming SSE response; ApiScenario reads it
-					// for ExpectedContent before calling AfterTestFunc. We rely on
-					// the unit tests (TestKnowledgeFocusMemoryContract,
-					// TestKnowledgeFocusSkillsNoCategories) for the k-tabs absence
-					// assertion at the component level.
-					if strings.Contains(res.Header.Get("Content-Type"), "text/html") {
-						tb.Log("unexpected HTML content-type; expected event-stream")
-					}
-				},
-			}
-			s.Test(t)
-		})
-	}
+// TestKnowledgeArtifactRouting verifies routing + content for category and skills
+// artifacts. Memory artifacts now contain k-tabs (plan 099 in-panel tabs);
+// skills artifacts do not. The unit tests (TestKnowledgeFocusMemoryContract,
+// TestKnowledgeFocusSkillsNoCategories) cover the component-level detail.
+func TestKnowledgeArtifactRouting(t *testing.T) {
+	t.Run("memory category=fact has k-tabs", func(t *testing.T) {
+		s := tests.ApiScenario{
+			Name:            "memory category=fact routing",
+			Method:          "GET",
+			URL:             "/ui/show/memory?category=fact",
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"k-active-grid", "k-tabs"},
+		}
+		s.Test(t)
+	})
+
+	t.Run("memory category=person has k-tabs", func(t *testing.T) {
+		s := tests.ApiScenario{
+			Name:            "memory category=person routing",
+			Method:          "GET",
+			URL:             "/ui/show/memory?category=person",
+			TestAppFactory:  newWebApp,
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"k-active-grid", "k-tabs"},
+		}
+		s.Test(t)
+	})
+
+	t.Run("skills no k-tabs", func(t *testing.T) {
+		s := tests.ApiScenario{
+			Name:               "skills routing",
+			Method:             "GET",
+			URL:                "/ui/show/skills",
+			TestAppFactory:     newWebApp,
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"k-active-grid"},
+			NotExpectedContent: []string{`class="k-tabs"`},
+		}
+		s.Test(t)
+	})
 }
