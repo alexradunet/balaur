@@ -442,7 +442,7 @@ func settingsfocusStory() Story {
 
 	return Story{
 		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
-		Blurb: "The settings panel body: an in-panel tab strip (Profile / Appearance / Models / Heads) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
+		Blurb: "The settings panel body: an in-panel tab strip (Profile / Appearance / Models / Heads) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel — runtime rows, the CPU/GPU control, and the official-model download/install CTA.",
 		Variants: []Variant{
 			{"profile section", settingscards.SettingsFocus(profileView)},
 			{"models section", settingscards.SettingsFocus(modelsView)},

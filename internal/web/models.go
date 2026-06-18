@@ -161,29 +161,27 @@ func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
 	return nil
 }
 
-// installModel registers a local GGUF model by absolute path and makes it active.
-// The file must already be on this box (owner-initiated downloads are a later
-// slice). It patches #models-panel.
-func (h *handlers) installModel(e *core.RequestEvent) error {
-	path := strings.TrimSpace(e.Request.FormValue("path"))
-	embed := strings.TrimSpace(e.Request.FormValue("embed_path"))
-	if path == "" {
-		return h.modelsPanel(e, "a GGUF file path is required")
+// setProcessor saves the owner's CPU-vs-GPU choice (owner_settings
+// "llm_processor"). It cannot switch the live engine — the native library loads
+// once per process — so this is a restart-pending preference, resolved at the
+// next boot (see resolveProcessor in main.go). It patches #models-panel, which
+// renders the restart note when the saved choice differs from what's running.
+func (h *handlers) setProcessor(e *core.RequestEvent) error {
+	processor := e.Request.FormValue("processor")
+	if processor != "cpu" && processor != "vulkan" {
+		return h.modelsPanel(e, "processor must be cpu or vulkan")
 	}
-	if !filepath.IsAbs(path) || !strings.HasSuffix(strings.ToLower(path), ".gguf") {
-		return h.modelsPanel(e, "path must be an absolute .gguf file")
+	// Don't let the owner save a variant whose runtime isn't installed — the
+	// engine loads once with no fallback, so it would strand inference at the
+	// next restart. resolveProcessor degrades to cpu as a backstop, but reject
+	// here so the UI says why instead of silently ignoring the choice.
+	if processor != "cpu" && !kronk.RuntimeInstalledFor(processor) {
+		return h.modelsPanel(e, "the "+processor+" runtime isn't installed yet — install it above first")
 	}
-	if _, err := os.Stat(path); err != nil {
-		return h.modelsPanel(e, "file not found: "+path)
-	}
-	id, err := store.SaveLocalModel(h.app, path, embed)
-	if err != nil {
+	if err := store.SetOwnerSetting(h.app, "llm_processor", processor); err != nil {
 		return h.modelsPanel(e, err.Error())
 	}
-	if err := store.SetActiveLLMModel(h.app, id, "owner"); err != nil {
-		return h.modelsPanel(e, err.Error())
-	}
-	store.Audit(h.app, "owner", "llm.model.install", path, true, nil)
+	store.Audit(h.app, "owner", "llm.processor.select", processor, true, nil)
 	return h.modelsPanel(e, "")
 }
 
@@ -195,9 +193,11 @@ const downloadStoreKey = "modeldownload.cancel"
 var kronkOfficial = kronk.Official
 
 // downloadOfficialModel is a long-lived SSE handler that streams the official GGUF
-// download with a live progress meter, then activates it through the same atomic
-// path as installModel. Only one download may be in flight at a time; a concurrent
-// POST reflects the current panel state instead of starting a second writer.
+// download with a live progress meter, then registers and activates it
+// (store.SaveLocalModel + SetActiveLLMModel). When the file is already on disk,
+// modelget.Fetch dedupes and this is just a (re-)install. Only one download may be
+// in flight at a time; a concurrent POST reflects the current panel state instead
+// of starting a second writer.
 func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 	m := kronkOfficial()
 
@@ -220,15 +220,22 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 
 	sse := datastar.NewSSE(e.Response, e.Request)
 
+	// If the file is already on disk at full size, Fetch dedupes instantly and
+	// this is really just a (re-)install — say so instead of "Downloading…".
+	detail, starting := "Downloading…", "Starting…"
+	if fi, err := os.Stat(filepath.Join(kronk.ModelsDir(), m.FileName)); err == nil && fi.Size() == m.SizeBytes {
+		detail, starting = "Installing…", "Verifying…"
+	}
+
 	// Render the panel with a downloading card upfront.
 	inFlight := modelcards.ModelView{
 		ID:            "official-dl",
 		Name:          m.Name,
-		Detail:        "Downloading…",
+		Detail:        detail,
 		Kind:          "local",
 		Status:        modelcards.StatusDownloading,
 		Progress:      0,
-		ProgressLabel: "Starting…",
+		ProgressLabel: starting,
 	}
 	view, err := settingscards.BuildModelsPanelView(h.app, "")
 	if err == nil {
@@ -248,7 +255,7 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 		card := modelcards.ModelView{
 			ID:            "official-dl",
 			Name:          m.Name,
-			Detail:        "Downloading…",
+			Detail:        detail, // "Downloading…" or "Installing…" (already-on-disk dedup)
 			Kind:          "local",
 			Status:        modelcards.StatusDownloading,
 			Progress:      pct,

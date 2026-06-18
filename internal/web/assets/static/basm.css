@@ -2013,6 +2013,31 @@ progress.pull-progress-bar::-moz-progress-bar {
 .model-card-active .kcard-kind { color: var(--gold-ink); }
 .model-card-disabled { border-style: dashed; opacity: .8; }
 
+/* "Run on" CPU/GPU segmented control — wood pills, one selected (plan: model
+   processor choice). The native lib loads once per process, so a change is a
+   restart-pending preference; the note below the pills says so. */
+.proc-toggle { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 6px 0; }
+.proc-pill-form { margin: 0; }
+.proc-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--parch-edge);
+  border-radius: 999px;
+  padding: .3rem .9rem;
+  background: transparent;
+  color: var(--chrome-fg);
+  font: inherit;
+  cursor: pointer;
+}
+.proc-pill:hover { border-color: var(--gold); }
+.proc-pill-active { border-color: var(--gold); background: var(--surface); font-weight: 600; }
+.proc-pill-disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  font-size: .9em;
+}
+.proc-pill-disabled:hover { border-color: var(--parch-edge); }
+
 .model-detail-line {
   margin: 2px 0 var(--space-2);
   font-size: 14px;

@@ -56,57 +56,91 @@ func modelcardStory() Story {
 }
 
 func modelspanelStory() Story {
+	cpuGpu := []modelcards.ProcessorOption{
+		{Key: "cpu", Installed: true, Selected: true},
+		{Key: "vulkan", Installed: true},
+	}
 	return Story{
 		ID: "modelspanel", Group: "Models", Title: "Models panel", Wide: true,
-		Blurb: "The Models settings section: the active processor (cpu or vulkan), the grid of local models (or an empty state on a fresh box), the official-model CTA when applicable, and the add-a-local-model form. It is the SSE patch target for every model action.",
+		Blurb: "The Models settings section: the runtime rows, the \"Run on\" CPU/GPU control (with a restart note when the saved choice differs from what's live), the grid of local models (or an empty state on a fresh box), and the official-model download/install CTA. It is the SSE patch target for every model action. There is no manual GGUF-path form — the curated model is the single supported path.",
 		Variants: []Variant{
 			{"populated", modelcards.Panel(modelcards.PanelView{
-				Processor: "cpu",
+				ProcessorRunning: "cpu",
+				Processors:       cpuGpu,
 				Models: []modelcards.ModelView{
 					{ID: "m1", Name: "Qwen3 0.6B", Detail: "qwen3-0.6b-q8_0.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~1 GB"},
 					{ID: "m2", Name: "Gemma 4 E4B", Detail: "gemma4-e4b.gguf · on this box", Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~6 GB"},
 				},
 			})},
-			{"empty · fresh box", modelcards.Panel(modelcards.PanelView{Processor: "vulkan"})},
-			{"error", modelcards.Panel(modelcards.PanelView{Processor: "cpu", Error: "local inference engine not initialized"})},
+			{"empty · fresh box", modelcards.Panel(modelcards.PanelView{
+				ProcessorRunning: "cpu",
+				Processors:       []modelcards.ProcessorOption{{Key: "cpu", Installed: true, Selected: true}, {Key: "vulkan", Installed: false}},
+				ShowOfficialCTA:  true,
+				OfficialCTAName:  "Gemma 4 E4B",
+				OfficialCTAMeta:  "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
+			})},
+			{"run on GPU · restart pending", modelcards.Panel(modelcards.PanelView{
+				ProcessorRunning: "cpu",
+				RestartPending:   true,
+				Processors:       []modelcards.ProcessorOption{{Key: "cpu", Installed: true}, {Key: "vulkan", Installed: true, Selected: true}},
+				Models: []modelcards.ModelView{
+					{ID: "m1", Name: "Gemma 4 E4B", Detail: "gemma-4-E4B-it-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~6 GB"},
+				},
+			})},
+			{"already downloaded · install", modelcards.Panel(modelcards.PanelView{
+				ProcessorRunning: "cpu",
+				Processors:       cpuGpu,
+				ShowOfficialCTA:  true,
+				OfficialOnDisk:   true,
+				OfficialCTAName:  "Gemma 4 E4B",
+				OfficialCTAMeta:  "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
+			})},
+			{"error", modelcards.Panel(modelcards.PanelView{ProcessorRunning: "cpu", Processors: cpuGpu, Error: "local inference engine not initialized"})},
 			{"downloading · official model", modelcards.Panel(modelcards.PanelView{
-				Processor: "cpu",
+				ProcessorRunning: "cpu",
+				Processors:       cpuGpu,
 				Models: []modelcards.ModelView{
 					{ID: "official-dl", Name: "Gemma 4 E4B", Detail: "Downloading…",
 						Kind: "local", Status: modelcards.StatusDownloading,
 						Progress: 67, ProgressLabel: "3.6 GB / 5.3 GB · 5.2 MB/s"},
 				},
 			})},
-			{"download error", modelcards.Panel(modelcards.PanelView{
-				Processor:       "cpu",
-				Error:           "sha256 mismatch: want abc123 got def456",
-				ShowOfficialCTA: true,
-				OfficialCTAName: "Gemma 4 E4B",
-				OfficialCTAMeta: "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
+			{"runtime not installed · both install-first", modelcards.Panel(modelcards.PanelView{
+				ProcessorRunning: "cpu",
+				Processors:       []modelcards.ProcessorOption{{Key: "cpu"}, {Key: "vulkan"}},
+				RuntimeMissing:   true,
+				ShowOfficialCTA:  true,
+				OfficialCTAName:  "Gemma 4 E4B",
+				OfficialCTAMeta:  "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
 			})},
-			{"runtime not installed", modelcards.Panel(modelcards.PanelView{
-				Processor:       "cpu",
-				RuntimeMissing:  true,
-				ShowOfficialCTA: true,
-				OfficialCTAName: "Gemma 4 E4B",
-				OfficialCTAMeta: "Q4_K_M · E4B (~4.5B eff.) · Apache-2.0",
+			{"GPU unsupported on this platform", modelcards.Panel(modelcards.PanelView{
+				ProcessorRunning: "cpu",
+				Processors:       []modelcards.ProcessorOption{{Key: "cpu", Installed: true, Selected: true}, {Key: "vulkan", Unsupported: true}},
+				Models: []modelcards.ModelView{
+					{ID: "m1", Name: "Gemma 4 E4B", Detail: "gemma-4-E4B-it-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~6 GB"},
+				},
 			})},
 		},
 		Props: []Prop{
-			{"Processor", "string", `"cpu"`, "The active llama.cpp variant — cpu or vulkan."},
+			{"Processors", "[]ProcessorOption", "nil", "The \"Run on\" choices (cpu/gpu) with Installed + Selected flags; empty hides the control."},
+			{"ProcessorRunning", "string", "—", "The variant the live engine actually loaded — shown in the restart note."},
+			{"RestartPending", "bool", "false", "When true, the saved processor differs from the running one → shows the restart note."},
 			{"Models", "[]ModelView", "nil", "Available/active/missing models; empty renders the empty state."},
 			{"Error", "string", "—", "Optional error banner above the grid."},
-			{"ShowOfficialCTA", "bool", "false", "When true, shows the Get our official model CTA."},
+			{"ShowOfficialCTA", "bool", "false", "When true, shows the official-model CTA (until the model is registered)."},
+			{"OfficialOnDisk", "bool", "false", "When true, the file is already downloaded → the CTA installs without re-downloading."},
 			{"OfficialCTAName", "string", "—", "Official model display name in the CTA."},
 			{"OfficialCTAMeta", "string", "—", "One-line: quant + params + license."},
 			{"RuntimeMissing", "bool", "false", "When true, shows the runtime-not-installed alert."},
 		},
 		Dos: []string{
-			"Show the processor so GPU owners can confirm Vulkan is live.",
+			"Offer CPU vs GPU as one clear control, and say plainly that switching needs a restart.",
 			"Lead a fresh box to the Download & install CTA — one click to the curated model.",
+			"Reuse an already-downloaded file: offer Install, never a second 5 GB download.",
 		},
 		Donts: []string{
 			"Imply remote/API models — v1 runs local GGUF only.",
+			"Offer a GPU pill whose runtime isn't installed as if it were selectable.",
 		},
 	}
 }

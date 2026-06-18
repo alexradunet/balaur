@@ -82,7 +82,28 @@ func main() {
 // runtime nor loads a model — both happen lazily on first inference, so a box
 // with no model and no native library still boots.
 func registerKronkEngine(app core.App) {
-	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibRoot(), kronk.Processor()))
+	app.Store().Set(kronk.StoreKey, kronk.NewEngine(kronk.LibRoot(), resolveProcessor(app)))
+}
+
+// resolveProcessor picks the llama.cpp variant to load: the owner's saved choice
+// from the Models page (owner_settings "llm_processor") wins; absent a valid one,
+// it falls back to BALAUR_PROCESSOR / the cpu default. Resolved once at boot — the
+// native library loads once per process, so a change takes effect on the next
+// restart (the Models page tells the owner this).
+//
+// Fail-safe: the runtime loads once with no fallback, so a chosen non-cpu variant
+// whose .so isn't installed (a stale preference, a removed lib, or BALAUR_PROCESSOR
+// set on a box that never installed it) would strand ALL inference at boot. Degrade
+// to cpu in that case rather than brick the engine.
+func resolveProcessor(app core.App) string {
+	candidate := kronk.Processor() // BALAUR_PROCESSOR or the cpu default
+	if p := store.GetOwnerSetting(app, "llm_processor", ""); p == "cpu" || p == "vulkan" {
+		candidate = p // the owner's Models-page choice wins
+	}
+	if candidate != "cpu" && !kronk.RuntimeInstalledFor(candidate) {
+		return "cpu"
+	}
+	return candidate
 }
 
 // registerRecap wires summary generation: an idempotent catch-up at serve

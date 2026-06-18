@@ -10,19 +10,35 @@ import (
 
 // PanelView drives the Models settings section.
 type PanelView struct {
-	Processor       string        // "cpu" | "vulkan" — the active llama.cpp variant
 	RuntimeSection  []RuntimeView // per-variant runtime status rows (cpu + vulkan)
 	Models          []ModelView   // available/active/missing local models
 	Error           string        // optional error banner
 	OfficialCTAName string        // display name of the official model — shown in the CTA
 	OfficialCTAMeta string        // one-line: quant + params + license
-	ShowOfficialCTA bool          // true when official model not yet installed
+	ShowOfficialCTA bool          // true when the official model isn't registered yet
+	OfficialOnDisk  bool          // file already downloaded → the CTA installs (no re-download)
 	RuntimeMissing  bool          // true when BALAUR_LIB_PATH is unset / lib absent
+
+	// Processor selection (cpu vs gpu/vulkan). The native llama.cpp library is
+	// dlopen'd once per process, so a change applies on the next restart.
+	Processors       []ProcessorOption // the cpu/gpu choices, with installed + selected flags
+	ProcessorRunning string            // the variant the live engine actually loaded
+	RestartPending   bool              // the selected variant differs from the running one
 }
 
-// Panel renders #models-panel: an optional error, the processor tag, the model
-// grid (or an empty state), the official-model CTA when applicable, and the
-// add-a-local-model form. It is the SSE patch target for every /ui/model/* action.
+// ProcessorOption is one choice in the "Run on" segmented control. The display
+// label is derived from Key (procLabel), so callers set only the state. The zero
+// value is a supported-but-not-installed variant.
+type ProcessorOption struct {
+	Key         string // "cpu" | "vulkan"
+	Installed   bool   // its runtime is present → selectable
+	Selected    bool   // the owner's saved preference (highlighted)
+	Unsupported bool   // not in the build matrix for this OS/arch (e.g. vulkan on macOS)
+}
+
+// Panel renders #models-panel: an optional error, the runtime rows, the "Run on"
+// CPU/GPU control, the model grid (or an empty state), and the official-model
+// download/install CTA. It is the SSE patch target for every /ui/model/* action.
 func Panel(v PanelView) g.Node {
 	kids := []g.Node{h.ID("models-panel")}
 
@@ -42,15 +58,18 @@ func Panel(v PanelView) g.Node {
 			g.Text("The local AI runtime isn't installed yet. Set BALAUR_LIB_PATH to a llama.cpp build (see the README env table), or install it from the runtime section above.")))
 	}
 
+	if len(v.Processors) > 0 {
+		kids = append(kids, processorControl(v))
+	}
+
 	kids = append(kids, h.Div(h.Class("k-heading"),
 		ui.SectionLabel(ui.SectionLabelProps{Text: "Models"}),
-		ui.Tag(g.Text("processor: "+v.Processor)),
 	))
 
 	if len(v.Models) == 0 {
 		kids = append(kids, ui.EmptyState(ui.EmptyProps{
 			Title: "No local models yet",
-			Line:  "Add a GGUF model file below to run it in-process.",
+			Line:  "Download the official model below to run it in-process.",
 		}))
 	} else {
 		grid := []g.Node{h.Class("k-grid models-grid")}
@@ -61,46 +80,91 @@ func Panel(v PanelView) g.Node {
 	}
 
 	if v.ShowOfficialCTA {
-		kids = append(kids, officialCTA(v.OfficialCTAName, v.OfficialCTAMeta))
+		kids = append(kids, officialCTA(v))
 	}
 
-	kids = append(kids, installForm())
 	return h.Div(kids...)
 }
 
-// officialCTA renders the "Get our official model" call-to-action section.
-// It is shown only when the official model has not yet been installed.
-func officialCTA(name, meta string) g.Node {
+// processorControl renders the "Run on" segmented control: one pill per variant
+// (CPU, GPU), the saved choice highlighted, variants without an installed runtime
+// shown disabled. Because the native library loads once per process, switching
+// only takes effect after a restart — surfaced by the restart note.
+func processorControl(v PanelView) g.Node {
+	pills := []g.Node{h.Class("proc-toggle")}
+	for _, p := range v.Processors {
+		pills = append(pills, processorPill(p))
+	}
+	section := []g.Node{h.Class("k-section"), h.ID("processor-control"),
+		ui.SectionLabel(ui.SectionLabelProps{Text: "Run on"}),
+		h.Div(pills...),
+	}
+	if v.RestartPending {
+		section = append(section, h.P(h.Class("model-detail-line"),
+			g.Text("Restart Balaur to apply — the selected processor loads at startup (currently running on "+procLabel(v.ProcessorRunning)+").")))
+	}
+	return h.Section(section...)
+}
+
+// processorPill renders one "Run on" choice. An installed variant is a Datastar
+// form-per-button (the established pattern), and the selected one is disabled +
+// aria-current like the avatar pickers so it can't re-POST itself. A variant
+// that's unsupported on this platform or not yet installed is a non-actionable
+// disabled span with copy that says which.
+func processorPill(p ProcessorOption) g.Node {
+	label := procLabel(p.Key)
+	switch {
+	case p.Unsupported:
+		return h.Span(h.Class("proc-pill proc-pill-disabled"),
+			g.Attr("aria-disabled", "true"), g.Text(label+" · not available here"))
+	case !p.Installed:
+		return h.Span(h.Class("proc-pill proc-pill-disabled"),
+			g.Attr("aria-disabled", "true"), g.Text(label+" · install first"))
+	}
+	cls := "proc-pill"
+	if p.Selected {
+		cls += " proc-pill-active"
+	}
+	return h.Form(h.Class("proc-pill-form"),
+		data.On("submit", "@post('/ui/model/processor', {contentType:'form'})", data.ModifierPrevent),
+		h.Input(h.Type("hidden"), h.Name("processor"), h.Value(p.Key)),
+		h.Button(h.Class(cls), h.Type("submit"),
+			g.If(p.Selected, g.Attr("aria-current", "true")),
+			g.If(p.Selected, h.Disabled()),
+			g.Text(label)),
+	)
+}
+
+// procLabel maps a processor key to its display label.
+func procLabel(processor string) string {
+	switch processor {
+	case "vulkan":
+		return "GPU (Vulkan)"
+	case "cpu":
+		return "CPU"
+	default:
+		return processor
+	}
+}
+
+// officialCTA renders the "Get our official model" call-to-action. It is shown
+// when the official model isn't registered yet. When the file is already on disk
+// (e.g. a prior download whose record was lost) the action installs it without
+// re-downloading; otherwise it downloads and installs.
+func officialCTA(v PanelView) g.Node {
+	label := "Download & install"
+	if v.OfficialOnDisk {
+		label = "Install"
+	}
 	return h.Section(h.Class("k-section"),
 		ui.SectionLabel(ui.SectionLabelProps{Text: "Get our official model"}),
 		h.Form(h.Class("card model-official-cta"),
 			data.On("submit", "@post('/ui/model/download', {contentType:'form'})", data.ModifierPrevent),
-			h.P(g.Text(name)),
-			g.If(meta != "", h.P(h.Class("model-detail-line"), g.Text(meta))),
-			ui.Button(ui.ButtonProps{Variant: "primary"}, h.Type("submit"), g.Text("Download & install")),
-		),
-	)
-}
-
-// installForm registers a local GGUF model by absolute path. It posts to
-// /ui/model/install, which validates the file and patches #models-panel.
-func installForm() g.Node {
-	return h.Section(h.Class("k-section"),
-		ui.SectionLabel(ui.SectionLabelProps{Text: "Add a local model"}),
-		h.Form(h.Class("card model-install-form"),
-			data.On("submit", "@post('/ui/model/install', {contentType:'form'})", data.ModifierPrevent),
-			ui.TextField(ui.FieldProps{
-				Label:       "GGUF file path",
-				Name:        "path",
-				Placeholder: "/models/qwen3.gguf",
-				Hint:        "Absolute path to a .gguf model file already on this box.",
-			}),
-			ui.TextField(ui.FieldProps{
-				Label:       "Embedding GGUF path",
-				Name:        "embed_path",
-				Placeholder: "/models/embed.gguf  (optional)",
-			}),
-			ui.Button(ui.ButtonProps{Variant: "primary"}, h.Type("submit"), g.Text("Add model")),
+			h.P(g.Text(v.OfficialCTAName)),
+			g.If(v.OfficialCTAMeta != "", h.P(h.Class("model-detail-line"), g.Text(v.OfficialCTAMeta))),
+			g.If(v.OfficialOnDisk, h.P(h.Class("model-detail-line"),
+				g.Text("Already downloaded on this box — install to start using it."))),
+			ui.Button(ui.ButtonProps{Variant: "primary"}, h.Type("submit"), g.Text(label)),
 		),
 	)
 }

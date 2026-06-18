@@ -63,6 +63,12 @@ func FromStore(app core.App) *Engine {
 	return nil
 }
 
+// Processor returns the llama.cpp variant this engine loads (cpu|vulkan). It is
+// captured at NewEngine and never changes: the native library is dlopen'd once
+// per process, so running on a different processor needs a restart. The Models
+// page reads this to show what's actually live vs. the owner's saved choice.
+func (e *Engine) Processor() string { return e.processor }
+
 // ensureInit runs kronk.Init at most once per process. Caller holds e.mu.
 func (e *Engine) ensureInit() error {
 	if e.inited || kronk.Initialized() {
