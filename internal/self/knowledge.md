@@ -106,19 +106,20 @@ self tool, which reports the actual registry):
 
 Surfaces: the web UI — / is Home, the single-page chat shell.
 Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
-"app" on <html>, a three-column .app-shell grid: a domain sidebar rail on the
-left (#sb-side), the full-canvas companion dock in the centre (#dock.app-dock),
-and a single-active right panel on the right (#panel.app-panel, #panel-inner).
-There is no topbar and no /focus/* pages. On narrow viewports (≤720px) the
-rail collapses to an off-canvas drawer reached via the .app-topbar burger
-(basmToggleNav); the panel becomes a slide-in overlay (plan 098). The domain
-rail has collapsed to top-level entries: Quests, Life, Knowledge, Skills
-(Domains group) and Settings.
+"app" on <html>, a two-column .app-shell grid: the full-canvas companion dock
+on the left (#dock.app-dock) and the single-active right panel on the right
+(#panel.app-panel, #panel-inner). The domain sidebar rail was retired in plan
+102 — navigation is via a composer /-command palette (ui.CommandPalette) that
+appears when the draft starts with "/". There is no topbar, no burger, and no
+off-canvas rail drawer. On narrow viewports (≤720px) the layout collapses to
+one column (chat full-width); the panel slides in as a fixed overlay
+(plan 098). Navigation: Quests, Life, Knowledge, Skills, Settings — each item
+fires GET /ui/show/{type} from the palette.
 Knowledge opens the memory panel with in-panel category tabs; Settings opens
 with in-panel section tabs.
 
-  GET /ui/show/{type}  — the owner-facing panel door (rail, card links, the
-    palette, chip re-open, in-panel tabs). Morphs #panel-inner and sets
+  GET /ui/show/{type}  — the owner-facing panel door (palette items, card
+    links, chip re-open, in-panel tabs). Morphs #panel-inner and sets
     panel_active; it does not persist a conversation row or add a chip.
     type=close clears the panel. Only Balaur's own card_show/show_cards
     artifacts enter the transcript — persisted by the turn pipeline, chipped

@@ -86,20 +86,20 @@ never flatter you, say it this way?
 
 All copy must match this. Update it the moment shape changes.
 
-**Information architecture — Home is the companion; a domain sidebar rail is the nav.**
+**Information architecture — Home is the companion; the composer /-palette is the nav.**
 `/` is Home: the full-screen companion chat, the conversation Balaur is built
-around. There is no topbar on desktop. On narrow viewports (≤720px) a sticky
-`.app-topbar` with a burger button slides the rail in as an off-canvas
-drawer (`basmToggleNav`); the panel becomes a fixed overlay (plan 098).
-A domain sidebar rail (`#sb-side`) on the left carries the five domains
-(Quests, Knowledge, Life, Heads, Settings); clicking one calls
-`GET /ui/show/{type}`, which renders the card in the
-**single-active right panel** (`#panel-inner`) — no navigation, no page load,
-no LLM. A compact re-open chip (`chat.ArtifactChip`) is appended to `#chat` as
-the durable transcript trace. A *card* is a typed, parameterized, server-rendered
-resource (`/ui/cards/{type}`) that renders as a tile; `card_show` is the single
-agent UI tool that opens a card in the right panel. The panel restores the
-last-active artifact on reload (`owner_settings["panel_active"]`).
+around. There is no topbar and no domain sidebar rail (both retired in plan 102).
+Navigation is via the composer /-command palette (`ui.CommandPalette`): typing
+`/` in the composer reveals the five domains (Quests, Life, Knowledge, Skills,
+Settings); selecting one calls `GET /ui/show/{type}`, which renders the card in
+the **single-active right panel** (`#panel-inner`) — no navigation, no page load,
+no LLM. On narrow viewports (≤720px) the layout is one column (chat full-width);
+the panel becomes a fixed overlay (plan 098). A compact re-open chip
+(`chat.ArtifactChip`) is appended to `#chat` as the durable transcript trace.
+A *card* is a typed, parameterized, server-rendered resource (`/ui/cards/{type}`)
+that renders as a tile; `card_show` is the single agent UI tool that opens a card
+in the right panel. The panel restores the last-active artifact on reload
+(`owner_settings["panel_active"]`).
 A **head switcher** in the dock changes the active persona (voice, avatar, tool
 set) without leaving or forking the conversation. Legacy flat routes (`/tasks`,
 `/journal`, `/day`, `/memory`, `/skills`, `/life`, `/heads`, `/models`,
