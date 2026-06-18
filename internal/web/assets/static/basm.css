@@ -3328,6 +3328,7 @@ html.app #panel.app-panel {
 .panel-close:hover { color: var(--ink); }
 .panel-body { padding: var(--space-4); }
 .panel-body .kcard { padding: 15px 18px; }
+.panel-body > .k-tabs { margin-bottom: var(--space-3); }
 
 /* Re-open chip — compact transcript trace for a summoned artifact. */
 .art-chip {
