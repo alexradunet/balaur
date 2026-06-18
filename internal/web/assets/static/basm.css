@@ -164,6 +164,7 @@
      so the divergence is intentional and visible, not a missed edit. */
   --w-chat-home: 1800px;
   --w-chat-overlay: 940px;
+  --w-panel: 480px;
   --measure: 68ch;          /* prose reading-width cap (~66–75ch legibility) */
 
   /* Spacing scale — 4px base. Dominant literals (8/12/16/24/32) map to these;
@@ -1040,45 +1041,6 @@ dialog::backdrop {
    and full width as the speech panels — same UI, same space. */
 .chat .k-inline { margin: 0 0 0 var(--chat-gutter, 124px); max-width: none; }
 .chat .k-inline .kcard { padding: 15px 18px; }
-
-/* ── In-chat artifact: titled "sub-window" frame (plan 097) ───────────────── */
-/* Each summoned artifact (a Focus card or a cluster) is framed as a            */
-/* self-contained window so the owner sees where one ends and the next message */
-/* begins. Replaces the frameless body + collapse-only chip (plan 094).        */
-.artifact {
-  margin: 10px 0;
-  border: 2px solid var(--parch-edge);
-  background-color: var(--surface);
-  background-image: var(--grain-ink);
-  background-size: 4px 4px;
-  box-shadow: var(--parch-bevel);
-}
-.chat .artifact { margin-left: var(--chat-gutter, 124px); }
-.artifact-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-2);
-  border-bottom: 2px solid var(--parch-edge);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--ink);
-}
-.artifact-head-icon { width: 16px; height: 16px; image-rendering: pixelated; }
-.artifact-body { padding: var(--space-4); }
-.artifact-body .kcard { padding: 15px 18px; }
-/* Aged-out (cap, plan 094): fold to the title bar; body hidden. */
-.artifact--collapsed > .artifact-body { display: none; }
-.artifact--collapsed .artifact-head { color: var(--ink-muted); }
-.artifact--collapsed .artifact-head-title::after {
-  content: " · shown earlier";
-  font-weight: 400;
-  opacity: .8;
-}
 
 .k-controls {
   display: flex;
@@ -3332,19 +3294,53 @@ html.theme-dungeon .appearance-theme-btn[data-theme="dungeon"] {
   background: color-mix(in srgb, var(--gold) 16%, transparent);
 }
 
-/* ══ Section: Single-page chat shell (plan 088) ══════════════════════════════
-   The chat IS the only primary surface. .app-shell is a two-column grid:
-   the sb-side rail on the left, #dock.app-dock (full-canvas chat) on the
-   right. The dock rules below generalise the existing html.home #dock block
-   so they fire for the app-shell layout (html.app) too. */
+/* ══ Section: Single-page chat shell (plan 088, extended by plan 098) ════════
+   .app-shell is a three-column grid: the sb-side rail on the left, the chat
+   column in the centre, and the single-active right panel on the right. The
+   dock rules below generalise the existing html.home #dock block so they fire
+   for the app-shell layout (html.app) too. */
 
-/* Two-column grid: [rail | dock]. Rail matches the storybook sidebar width. */
+/* Three-column grid: [rail | chat | panel]. Rail matches the storybook sidebar width. */
 html.app .app-shell {
   display: grid;
-  grid-template-columns: 274px 1fr;
+  grid-template-columns: 274px 1fr var(--w-panel);
   height: 100dvh;
   overflow: hidden;
 }
+
+/* Right panel column — single-active artifact canvas (plan 098). */
+html.app #panel.app-panel {
+  position: relative; height: 100%; overflow-y: auto; z-index: var(--z-base);
+  border-left: 2px solid var(--parch-edge);
+  background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+}
+#panel-inner { display: flex; flex-direction: column; min-height: 100%; }
+.panel-empty { padding: var(--space-6); color: var(--ink-muted); font-family: var(--font-mono); font-size: 13px; }
+.panel-head {
+  display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+  background: var(--surface-2); border-bottom: 2px solid var(--parch-edge);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--ink); position: sticky; top: 0; z-index: var(--z-sticky);
+}
+.panel-head-icon { width: 16px; height: 16px; image-rendering: pixelated; }
+.panel-head-title { flex: 1 1 auto; }
+.panel-close { background: none; border: 0; cursor: pointer; color: var(--ink-muted); font-size: 13px; line-height: 1; padding: 2px 4px; }
+.panel-close:hover { color: var(--ink); }
+.panel-body { padding: var(--space-4); }
+.panel-body .kcard { padding: 15px 18px; }
+
+/* Re-open chip — compact transcript trace for a summoned artifact. */
+.art-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  margin: 6px 0 6px var(--chat-gutter, 124px);
+  padding: var(--space-1) var(--space-3); text-decoration: none;
+  border: 2px solid var(--parch-edge); background: var(--surface-2); box-shadow: var(--drop-hard);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--ink); cursor: pointer;
+}
+a.art-chip:hover { background: var(--surface-3, var(--surface)); }
+.art-chip-icon { width: 14px; height: 14px; image-rendering: pixelated; }
+.art-chip-hint { color: var(--ink-muted); font-weight: 400; }
 
 /* Full-canvas dock inside the app-shell — chat fills the right column. */
 html.app #dock.app-dock {
@@ -3377,12 +3373,18 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
 /* Icon inside a sidebar nav link. */
 .sb-nav-icon { width: 16px; height: 16px; flex-shrink: 0; image-rendering: pixelated; }
 
-/* Collapse to single column on narrow viewports (≤720px). */
+/* Collapse to single column on narrow viewports (≤720px); panel becomes a fixed overlay. */
 @media (max-width: 720px) {
-  html.app .app-shell {
-    grid-template-columns: 1fr;
-  }
+  html.app .app-shell { grid-template-columns: 1fr; }
   html.app .app-shell .sb-side { display: none; }
+  html.app #panel.app-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(92vw, var(--w-panel));
+    z-index: var(--z-drawer); transform: translateX(100%); transition: transform .15s steps(3, end);
+  }
+  html.app.panel-open #panel.app-panel { transform: translateX(0); }
+  html.app.panel-open::after {
+    content: ""; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(0,0,0,.45);
+  }
 }
 
 /* ── Card cluster (plan 090: show_cards inline artifact) ──────────────────── */
