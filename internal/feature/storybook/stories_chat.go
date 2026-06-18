@@ -235,36 +235,64 @@ func chatclusterStory() Story {
 	}
 }
 
-func chatartifactStory() Story {
+func chatpanelStory() Story {
 	sample := taskcards.TaskCard(taskcards.TaskView{
 		ID: "t1", Title: "Ship the sidebar rework", Status: "open", DueLine: "due today 18:00",
 	})
 	return Story{
-		ID: "chatartifact", Group: "Chat", Title: "Artifact", Wide: true,
-		Blurb: "The titled 'sub-window' frame around one in-chat artifact (a Focus card or a cluster). " +
-			"An always-visible .artifact-head bar (icon + name) tops a bordered .artifact-body, so the owner " +
-			"sees where one artifact ends and the next message begins. Body is pre-rendered by the web layer; " +
-			"the organism imports no feature/cards. Collapsed is the aged-out cap state (plan 094) — body hidden, " +
-			"title bar kept.",
+		ID: "chatpanel", Group: "Chat", Title: "Panel", Wide: true,
+		Blurb: "The single-active right-panel frame. A sticky .panel-head bar (icon + title + close control) " +
+			"tops the scrollable #panel-body. Only one artifact is active at a time — the gateway morphs " +
+			"#panel-inner by root id to swap. Body is pre-rendered by the web layer; the organism imports no " +
+			"feature/cards. The close control (@get /ui/panel/close) is inert in the storybook.",
 		Variants: []Variant{
-			{"expanded", chat.Artifact(chat.ArtifactProps{Title: "Quests", Icon: "scroll", Body: sample})},
-			{"collapsed", chat.Artifact(chat.ArtifactProps{Title: "Quests", Icon: "scroll", Collapsed: true, Body: sample})},
-			{"no icon", chat.Artifact(chat.ArtifactProps{Title: "Memory", Body: sample})},
+			{"with artifact", chat.Panel(chat.PanelProps{Title: "Quest Log", Icon: "scroll", Body: sample})},
+			{"empty", chat.Panel(chat.PanelProps{})},
 		},
 		Props: []Prop{
-			{"Title", "string", `""`, `Artifact name shown in the .artifact-head title bar. Empty falls back to "Artifact".`},
+			{"Title", "string", `""`, "Artifact name shown in the .panel-head bar. Empty + nil Body → placeholder."},
 			{"Icon", "string", `""`, "/static/icons stem shown left of the title. Omit for no icon."},
-			{"Collapsed", "bool", "false", "Aged-out cap state: adds .artifact--collapsed; CSS hides the body, keeps the title bar."},
-			{"InnerID", "string", `""`, "Optional id on the body div — preserves the live path's tool-card id."},
 			{"Body", "g.Node", "nil", "Pre-rendered artifact body (a Focus card or a chat.Cluster). The organism never renders cards itself."},
 		},
 		Dos: []string{
 			"Pass a pre-rendered body g.Node from the web layer (cardFocusHTML / Cluster).",
-			"Let the cap (capArtifacts + balaurCapArtifacts) toggle Collapsed / .artifact--collapsed.",
+			"Morph #panel-inner (root id) via selector-less PatchElements to swap the active artifact.",
 		},
 		Donts: []string{
 			"Import internal/feature or internal/cards from internal/ui/chat.",
-			"Wrap proposals or plain inline cards in Artifact — those stay frameless (.k-inline).",
+			"Render more than one panel — single-active is the invariant.",
+		},
+	}
+}
+
+func chatartifactchipStory() Story {
+	return Story{
+		ID: "chatartifactchip", Group: "Chat", Title: "ArtifactChip", Wide: true,
+		Blurb: "The durable transcript trace of a summoned artifact: a compact re-open affordance appended " +
+			"to #chat. Clicking a chip re-summons the artifact into the right panel via @get. Clusters have no " +
+			"deterministic re-open URL and render as non-clickable labels.",
+		Variants: []Variant{
+			{"clickable", chat.ArtifactChip(chat.ArtifactChipProps{
+				Title:     "Quest Log",
+				Icon:      "scroll",
+				ReopenURL: "/ui/show/quests",
+			})},
+			{"non-clickable (cluster)", chat.ArtifactChip(chat.ArtifactChipProps{
+				Title: "Your open tasks",
+			})},
+		},
+		Props: []Prop{
+			{"Title", "string", `""`, "Artifact or cluster name shown in the chip."},
+			{"Icon", "string", `""`, "/static/icons stem. Omit for no icon."},
+			{"ReopenURL", "string", `""`, `Set → renders <a> with @get re-summon. Empty → non-clickable <div> with "shown earlier".`},
+		},
+		Dos: []string{
+			"Set ReopenURL to the /ui/show/{type}?{query} URL for single-card artifacts.",
+			"Leave ReopenURL empty for agent clusters (show_cards) — no deterministic re-open URL.",
+		},
+		Donts: []string{
+			"Import internal/feature or internal/cards from internal/ui/chat.",
+			"Add chip chrome (border, icon) inside the rail — chips live in #chat only.",
 		},
 	}
 }
