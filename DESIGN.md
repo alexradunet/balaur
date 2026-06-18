@@ -99,7 +99,13 @@ the panel becomes a fixed overlay (plan 098). A compact re-open chip
 A *card* is a typed, parameterized, server-rendered resource (`/ui/cards/{type}`)
 that renders as a tile; `card_show` is the single agent UI tool that opens a card
 in the right panel. The panel restores the last-active artifact on reload
-(`owner_settings["panel_active"]`).
+(`owner_settings["panel_active"]`). The panel is **collapsible** (plan 103):
+the owner clicks the ‹/› button to toggle; the state persists as
+`owner_settings["panel_collapsed"]` (collapse-when-empty by default). The panel
+is **owner-resizable** by dragging the `.panel-resizer` divider; the committed
+width persists as `owner_settings["panel_width"]` (clamped 320–1100px). Both the
+SSR width override and the live drag set `--w-panel` on `<html>` so the grid
+track cascade resolves through one element.
 A **head switcher** in the dock changes the active persona (voice, avatar, tool
 set) without leaving or forking the conversation. Legacy flat routes (`/tasks`,
 `/journal`, `/day`, `/memory`, `/skills`, `/life`, `/heads`, `/models`,

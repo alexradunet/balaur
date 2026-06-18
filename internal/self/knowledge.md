@@ -106,15 +106,26 @@ self tool, which reports the actual registry):
 
 Surfaces: the web UI — / is Home, the single-page chat shell.
 Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
-"app" on <html>, a two-column .app-shell grid: the full-canvas companion dock
-on the left (#dock.app-dock) and the single-active right panel on the right
-(#panel.app-panel, #panel-inner). The domain sidebar rail was retired in plan
-102 — navigation is via a composer /-command palette (ui.CommandPalette) that
-appears when the draft starts with "/". There is no topbar, no burger, and no
-off-canvas rail drawer. On narrow viewports (≤720px) the layout collapses to
-one column (chat full-width); the panel slides in as a fixed overlay
-(plan 098). Navigation: Quests, Life, Knowledge, Skills, Settings — each item
-fires GET /ui/show/{type} from the palette.
+"app" (optionally "app panel-collapsed") on <html>, a two-column .app-shell
+grid: the full-canvas companion dock on the left (#dock.app-dock) and the
+single-active right panel on the right (#panel.app-panel, #panel-inner). The
+domain sidebar rail was retired in plan 102 — navigation is via a composer
+/-command palette (ui.CommandPalette) that appears when the draft starts with
+"/". There is no topbar, no burger, and no off-canvas rail drawer. On narrow
+viewports (≤720px) the layout collapses to one column (chat full-width); the
+panel slides in as a fixed overlay (plan 098). Navigation: Quests, Life,
+Knowledge, Skills, Settings — each item fires GET /ui/show/{type} from the palette.
+
+The panel is collapsible and owner-resizable (plan 103). Collapse state is
+persisted as owner_settings["panel_collapsed"] ("1"/"0"/unset — unset derives
+from emptiness: collapsed when nothing is open). Opening an artifact via
+/ui/show expands the panel (sets "0"); closing sets "1". The owner can also
+toggle via the ‹/› button (basmTogglePanel() in basm.js, POST /ui/panel/collapse).
+Panel width is persisted as owner_settings["panel_width"] (integer px string,
+clamped to 320–1100); the owner drags the .panel-resizer divider and the width
+is committed on release via POST /ui/panel/width. Both the SSR width override
+and the live drag set --w-panel on the <html> element so the CSS custom property
+cascade resolves through one owner (the .app-shell grid track inherits it).
 Knowledge opens the memory panel with in-panel category tabs; Settings opens
 with in-panel section tabs.
 
