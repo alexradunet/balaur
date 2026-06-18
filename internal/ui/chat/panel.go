@@ -22,7 +22,7 @@ func Panel(p PanelProps) g.Node {
 	inner := []g.Node{h.ID("panel-inner")}
 	if p.Title == "" && p.Body == nil {
 		inner = append(inner, h.Div(h.Class("panel-empty"),
-			g.Text("Pick a domain from the rail, or ask Balaur to show you something.")))
+			g.Text("Type / for pages, or ask Balaur to show you something.")))
 		return h.Div(inner...)
 	}
 	head := []g.Node{h.Class("panel-head")}
