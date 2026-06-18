@@ -82,30 +82,33 @@ func TestKnowledgeArtifacts(t *testing.T) {
 }
 
 // TestKnowledgeArtifactRouting verifies routing + content for category and skills
-// artifacts. Memory artifacts now contain k-tabs (plan 099 in-panel tabs);
-// skills artifacts do not. The unit tests (TestKnowledgeFocusMemoryContract,
-// TestKnowledgeFocusSkillsNoCategories) cover the component-level detail.
+// artifacts. Memory and skills artifacts render without an in-panel tab strip
+// (plan 110); sub-views are reached via the /-command palette. The unit tests
+// (TestKnowledgeFocusMemoryContract, TestKnowledgeFocusSkillsNoCategories) cover
+// the component-level detail.
 func TestKnowledgeArtifactRouting(t *testing.T) {
-	t.Run("memory category=fact has k-tabs", func(t *testing.T) {
+	t.Run("memory category=fact has no k-tabs", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:            "memory category=fact routing",
-			Method:          "GET",
-			URL:             "/ui/show/memory?category=fact",
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"k-active-grid", "k-tabs"},
+			Name:               "memory category=fact routing",
+			Method:             "GET",
+			URL:                "/ui/show/memory?category=fact",
+			TestAppFactory:     newWebApp,
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"k-active-grid"},
+			NotExpectedContent: []string{`class="k-tabs"`},
 		}
 		s.Test(t)
 	})
 
-	t.Run("memory category=person has k-tabs", func(t *testing.T) {
+	t.Run("memory category=person has no k-tabs", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:            "memory category=person routing",
-			Method:          "GET",
-			URL:             "/ui/show/memory?category=person",
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"k-active-grid", "k-tabs"},
+			Name:               "memory category=person routing",
+			Method:             "GET",
+			URL:                "/ui/show/memory?category=person",
+			TestAppFactory:     newWebApp,
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"k-active-grid"},
+			NotExpectedContent: []string{`class="k-tabs"`},
 		}
 		s.Test(t)
 	})

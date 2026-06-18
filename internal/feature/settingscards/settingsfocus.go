@@ -30,7 +30,6 @@ import (
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
-	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // ---------------------------------------------------------------------------
@@ -380,26 +379,9 @@ func ProfileBalaurSection(v ProfileView) g.Node {
 	return Article(kids...)
 }
 
-// settingsTabs renders the in-panel section strip. Tabs navigate the panel via
-// /ui/show/settings (morph #panel-inner, no chip).
-func settingsTabs(active string) g.Node {
-	type t struct{ label, section string }
-	defs := []t{{"Profile", "profile"}, {"Models", "models"}, {"Heads", "heads"}}
-	items := make([]ui.TabItem, len(defs))
-	for i, d := range defs {
-		items[i] = ui.TabItem{
-			Label:  d.label,
-			Href:   "/ui/show/settings?section=" + d.section,
-			Active: active == d.section,
-			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section="+d.section+"')")},
-		}
-	}
-	return ui.Tabs(items)
-}
-
-// SettingsFocus renders the full settings focus body with an in-panel section
-// tab strip (plan 099). Ports {{define "settings_body"}} from
-// web/templates/settings-focus.html.
+// SettingsFocus renders the settings focus body for one section (profile /
+// models / heads). Sections are reached via /-command palette entries (plan
+// 110), not an in-panel tab strip.
 func SettingsFocus(v SettingsFocusView) g.Node {
 	var content g.Node
 	switch v.Section {
@@ -415,8 +397,5 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		})
 	}
 
-	return Div(Class("settings-section"),
-		settingsTabs(v.Section),
-		content,
-	)
+	return Div(Class("settings-section"), content)
 }

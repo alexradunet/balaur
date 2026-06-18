@@ -112,7 +112,7 @@ func TestProfileBalaurSectionContract(t *testing.T) {
 }
 
 // TestSettingsFocusProfileSection: section == "profile" renders the profile
-// forms with in-panel section tabs (plan 099).
+// forms without an in-panel tab strip (plan 110).
 func TestSettingsFocusProfileSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "profile",
@@ -122,14 +122,13 @@ func TestSettingsFocusProfileSection(t *testing.T) {
 	for _, want := range []string{
 		`class="settings-section"`,
 		`id="identity-card"`,
-		// In-panel tab strip (plan 099)
-		`class="k-tabs"`,
-		`k-tab-active`,
-		`aria-current="page"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (profile) missing %q in:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, `class="k-tabs"`) {
+		t.Errorf("SettingsFocus (profile) must not contain tab strip:\n%s", got)
 	}
 	for _, reject := range []string{`settings-nav`, `settings-layout`} {
 		if strings.Contains(got, reject) {
@@ -142,7 +141,7 @@ func TestSettingsFocusProfileSection(t *testing.T) {
 }
 
 // TestSettingsFocusModelsSection: section == "models" renders the models panel
-// with in-panel section tabs (plan 099).
+// without an in-panel tab strip (plan 110).
 func TestSettingsFocusModelsSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "models",
@@ -152,13 +151,13 @@ func TestSettingsFocusModelsSection(t *testing.T) {
 	for _, want := range []string{
 		`class="settings-section"`,
 		`id="models-panel"`,
-		// In-panel tab strip (plan 099)
-		`class="k-tabs"`,
-		`k-tab-active`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (models) missing %q in:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, `class="k-tabs"`) {
+		t.Errorf("SettingsFocus (models) must not contain tab strip:\n%s", got)
 	}
 	for _, reject := range []string{`settings-nav`, `settings-layout`} {
 		if strings.Contains(got, reject) {
@@ -171,7 +170,7 @@ func TestSettingsFocusModelsSection(t *testing.T) {
 }
 
 // TestSettingsFocusHeadsSection: section == "heads" renders the heads roster
-// with in-panel section tabs (plan 099).
+// without an in-panel tab strip (plan 110).
 func TestSettingsFocusHeadsSection(t *testing.T) {
 	view := settingscards.SettingsFocusView{
 		Section: "heads",
@@ -184,13 +183,13 @@ func TestSettingsFocusHeadsSection(t *testing.T) {
 		`class="settings-section"`,
 		`id="ucard-heads"`,
 		`Scout`,
-		// In-panel tab strip (plan 099)
-		`class="k-tabs"`,
-		`k-tab-active`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("SettingsFocus (heads) missing %q in:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, `class="k-tabs"`) {
+		t.Errorf("SettingsFocus (heads) must not contain tab strip:\n%s", got)
 	}
 	for _, reject := range []string{`settings-nav`, `settings-layout`} {
 		if strings.Contains(got, reject) {
