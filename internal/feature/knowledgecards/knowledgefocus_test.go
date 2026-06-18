@@ -69,15 +69,19 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 		}
 	}
 
-	// Must NOT have category tabs or the category signal.
-	for _, absent := range []string{
-		`id="k-tabs"`,
-		`data-class:k-tab-active`,
-		`data-signals:category`,
+	// Must have the in-panel tab strip (plan 099): class="k-tabs", active tab has
+	// k-tab-active and aria-current="page". The category signal stays absent.
+	for _, want := range []string{
+		`class="k-tabs"`,
+		`k-tab-active`,
+		`aria-current="page"`,
 	} {
-		if strings.Contains(got, absent) {
-			t.Errorf("KnowledgeFocus (memory category) must not contain %q:\n%s", absent, got)
+		if !strings.Contains(got, want) {
+			t.Errorf("KnowledgeFocus (memory category) missing tab strip %q in:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, `data-signals:category`) {
+		t.Errorf("KnowledgeFocus (memory category) must not contain data-signals:category:\n%s", got)
 	}
 
 	// No proposed section (Proposed is empty).
@@ -104,6 +108,8 @@ func TestKnowledgeFocusAwaiting(t *testing.T) {
 		`class="k-heading k-heading-proposed"`,
 		`Awaiting your word`,
 		`id="kcard-p1"`,
+		// In-panel tab strip present for memories (plan 099)
+		`class="k-tabs"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("KnowledgeFocus (awaiting) missing %q in:\n%s", want, got)
@@ -143,9 +149,9 @@ func TestKnowledgeFocusSkillsNoCategories(t *testing.T) {
 	if !strings.Contains(got, `/ui/knowledge/skills/grid`) {
 		t.Errorf("skills focus missing skills/grid endpoint:\n%s", got)
 	}
-	// Must NOT have category tabs
-	if strings.Contains(got, `id="k-tabs"`) {
-		t.Errorf("skills focus must not have category tabs:\n%s", got)
+	// Must NOT have category tabs (Kind=="skills" gate — memories get the strip, skills do not)
+	if strings.Contains(got, `class="k-tabs"`) {
+		t.Errorf("skills focus must not have category tab strip:\n%s", got)
 	}
 	// No proposed or archived sections
 	if strings.Contains(got, `k-heading-proposed`) {
