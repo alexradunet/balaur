@@ -265,6 +265,44 @@ func chatpanelStory() Story {
 	}
 }
 
+func commandpaletteStory() Story {
+	return Story{
+		ID: "commandpalette", Group: "Chat", Title: "CommandPalette", Wide: true, OnDock: true,
+		Blurb: "The composer /-command menu: the navigation launcher that replaced the domain rail (plan 102). " +
+			"Appears when the draft starts with '/' and filters as the owner types — via data-show expressions " +
+			"over the $message signal (presentational; no round-trip). Selecting an item fires the non-polluting " +
+			"/ui/show door (plan 101) and clears the draft. The story wrapper seeds data-signals:message=\"'/'\" " +
+			"so all items show in the static storybook.",
+		Variants: []Variant{
+			{"all items visible (draft = /)", h.Div(
+				g.Attr("data-signals:message", "'/'"),
+				ui.CommandPalette([]ui.CommandItem{
+					{Label: "Quests", Key: "quests", Icon: "scroll", URL: "/ui/show/quests"},
+					{Label: "Life", Key: "life", Icon: "orb", URL: "/ui/show/lifelog"},
+					{Label: "Knowledge", Key: "knowledge", Icon: "tome", URL: "/ui/show/memory?category=fact"},
+					{Label: "Skills", Key: "skills", Icon: "key", URL: "/ui/show/skills"},
+					{Label: "Settings", Key: "settings", URL: "/ui/show/settings?section=profile"},
+				}),
+			)},
+		},
+		Props: []Prop{
+			{"Label", "string", "—", "Display name shown in the menu row."},
+			{"Key", "string", "—", "Lowercase slug the owner types after '/' to filter to this item. The menu shows items whose Key starts with the typed query."},
+			{"Icon", "string", `""`, "Optional /static/icons stem (without extension) — pixel-art sprite shown left of the label."},
+			{"URL", "string", "—", "The /ui/show/{type}?{query} URL; fired as @get on click and used as the no-JS href fallback."},
+		},
+		Dos: []string{
+			"Fire the non-polluting /ui/show door — the same door card-footer links use.",
+			"Clear the draft ($message = '') on item click so the menu hides itself.",
+			"Keep Keys lowercase and slug-like so prefix filtering is predictable.",
+		},
+		Donts: []string{
+			"Server-filter per keystroke — the command set is tiny and fixed; client-side data-show is sufficient.",
+			"Add CommandPalette to any composer other than the home composerNode — the palette is scoped there.",
+		},
+	}
+}
+
 func chatartifactchipStory() Story {
 	return Story{
 		ID: "chatartifactchip", Group: "Chat", Title: "ArtifactChip", Wide: true,
