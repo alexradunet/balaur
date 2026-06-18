@@ -41,25 +41,15 @@ func composerHTML(d homeData) template.HTML {
 }
 
 // domainSidebar builds the SidebarProps for the domain rail shown on the home
-// page. Each item injects its card into the chat via @get (no navigation);
+// page. Each item injects its card into the panel via @get (no navigation);
 // Href is the no-JS fallback. Only icon stems that exist under
 // /static/icons/ are used (confirmed: scroll, tome, orb, quill, shield, key).
-// Settings items are icon-less; they summon per-section artifacts (plan 092).
-// Knowledge sub-items are icon-less to read as sub-items (plan 095).
+// Knowledge opens with an in-panel category tab strip (plan 099); Settings
+// opens with an in-panel section tab strip (plan 099).
 func domainSidebar() shell.SidebarProps {
 	item := func(label, typ, icon string) shell.SidebarItem {
 		href := "/ui/show/" + typ
 		return shell.SidebarItem{Label: label, Href: href, Icon: icon, Action: "@get('" + href + "')"}
-	}
-	// know summons one memory slice (a category, or the Awaiting queue) as a
-	// nav-free artifact. Icon-less to read as a sub-item (plan 095).
-	know := func(label, query string) shell.SidebarItem {
-		href := "/ui/show/memory?" + query
-		return shell.SidebarItem{Label: label, Href: href, Action: "@get('" + href + "')"}
-	}
-	sect := func(label, section string) shell.SidebarItem {
-		href := "/ui/show/settings?section=" + section
-		return shell.SidebarItem{Label: label, Href: href, Action: "@get('" + href + "')"}
 	}
 	return shell.SidebarProps{
 		Brand: g.Group([]g.Node{
@@ -72,21 +62,13 @@ func domainSidebar() shell.SidebarProps {
 			{Label: "Domains", Items: []shell.SidebarItem{
 				item("Quests", "quests", "scroll"),
 				item("Life", "lifelog", "orb"),
-			}},
-			{Label: "Knowledge", Items: []shell.SidebarItem{
-				know("Awaiting", "view=proposed"),
-				know("Facts", "category=fact"),
-				know("Preferences", "category=preference"),
-				know("People", "category=person"),
-				know("Projects", "category=project"),
-				know("Context", "category=context"),
-				item("Skills", "skills", ""),
+				// Knowledge opens the memory artifact with in-panel category tabs (plan 099).
+				{Label: "Knowledge", Href: "/ui/show/memory?category=fact", Icon: "tome", Action: "@get('/ui/show/memory?category=fact')"},
+				item("Skills", "skills", "key"),
 			}},
 			{Label: "Settings", Items: []shell.SidebarItem{
-				sect("Profile", "profile"),
-				sect("Appearance", "appearance"),
-				sect("Models", "models"),
-				sect("Heads", "heads"),
+				// Settings opens with in-panel section tabs (plan 099).
+				{Label: "Settings", Href: "/ui/show/settings?section=profile", Action: "@get('/ui/show/settings?section=profile')"},
 			}},
 		},
 		Footer: g.Group([]g.Node{
