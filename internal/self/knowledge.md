@@ -109,8 +109,11 @@ Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
 "app" on <html>, a three-column .app-shell grid: a domain sidebar rail on the
 left (#sb-side), the full-canvas companion dock in the centre (#dock.app-dock),
 and a single-active right panel on the right (#panel.app-panel, #panel-inner).
-There is no topbar and no /focus/* pages. The domain rail has collapsed to
-top-level entries: Quests, Life, Knowledge, Skills (Domains group) and Settings.
+There is no topbar and no /focus/* pages. On narrow viewports (≤720px) the
+rail collapses to an off-canvas drawer reached via the .app-topbar burger
+(basmToggleNav); the panel becomes a slide-in overlay (plan 098). The domain
+rail has collapsed to top-level entries: Quests, Life, Knowledge, Skills
+(Domains group) and Settings.
 Knowledge opens the memory panel with in-panel category tabs; Settings opens
 with in-panel section tabs. Two summon doors exist:
 
