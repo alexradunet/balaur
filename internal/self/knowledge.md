@@ -18,9 +18,12 @@ The engine never downloads anything on boot. From the Models page the owner
 installs the llama.cpp runtime in-app (cpu and vulkan variants, into
 ~/.local/share/balaur/kronk/lib; BALAUR_LIB_PATH overrides the root), downloads
 a curated model with a single click (plan 086) — the catalog is a small set of
-git-pinned, checksum-verified tiers (small: Qwen3.5 4B ~2.7 GB; medium: Gemma 4
-E4B ~5.3 GB) the owner switches between like any local model — and chooses
-whether they run on CPU or GPU/Vulkan. That processor choice is saved
+git-pinned, checksum-verified Qwen3.5 tiers (small: Qwen3.5 2B ~1.3 GB; medium:
+Qwen3.5 4B ~2.7 GB) the owner switches between like any local model — and chooses
+whether they run on CPU or GPU/Vulkan. The catalog is Qwen-only on purpose: the
+agent loop always sends tool specs, and Qwen3.5's chat template renders tool calls
+correctly under the embedded engine, whereas Gemma 4's bundled template crashes
+when tools are present, so it was removed. That processor choice is saved
 (owner_settings "llm_processor") and applied at the next restart — the native
 library loads once per process, so it cannot switch live. There is no manual
 GGUF-path form; the curated catalog is the supported path.
@@ -213,7 +216,7 @@ chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. No model is seeded — a fresh box
 has only the "Local model" provider; the owner downloads a curated model from
 the Models page (/ui/show/settings?section=models) with one click — the catalog
-(kronk.OfficialModels: small Qwen3.5 4B, medium Gemma 4 E4B) shows a card per
+(kronk.OfficialModels: small Qwen3.5 2B, medium Qwen3.5 4B) shows a card per
 not-yet-registered tier — which registers it and makes it active (the same card
 re-installs an already-downloaded file whose record was lost, instead of
 re-downloading). The owner switches between downloaded tiers like any local

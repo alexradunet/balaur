@@ -19,17 +19,17 @@ func modelcardStory() Story {
 				Kind: "local", Status: modelcards.StatusActive, VRAM: "~1 GB",
 			})},
 			{"available", modelcards.ModelCard(modelcards.ModelView{
-				ID: "m2", Name: "Gemma 4 E4B", Detail: "gemma4-e4b.gguf · on this box",
-				Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~6 GB",
+				ID: "m2", Name: "Qwen3.5 4B", Detail: "Qwen3.5-4B-Q4_K_M.gguf · on this box",
+				Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~3 GB",
 			})},
 			{"missing · file not found", modelcards.ModelCard(modelcards.ModelView{
 				ID: "m3", Name: "Llama 3.1 8B", Detail: "/models/llama-3.1-8b.gguf · file not found",
 				Kind: "missing", Status: modelcards.StatusMissing,
 			})},
 			{"downloading · progress meter", modelcards.ModelCard(modelcards.ModelView{
-				ID: "dl1", Name: "Gemma 4 E4B", Detail: "Downloading…",
+				ID: "dl1", Name: "Qwen3.5 4B", Detail: "Downloading…",
 				Kind: "local", Status: modelcards.StatusDownloading,
-				Progress: 42, ProgressLabel: "2.2 GB / 5.3 GB · 4.1 MB/s",
+				Progress: 42, ProgressLabel: "1.1 GB / 2.7 GB · 4.1 MB/s",
 			})},
 		},
 		Props: []Prop{
@@ -61,8 +61,8 @@ func modelspanelStory() Story {
 		{Key: "vulkan", Installed: true},
 	}
 	catalog := []modelcards.OfficialCTA{
-		{Key: "small", Name: "Qwen3.5 4B", Tagline: "Small & fast", Meta: "Q4_K_M · 4B · Apache-2.0", SizeLabel: "2.7 GB"},
-		{Key: "medium", Name: "Gemma 4 E4B", Tagline: "Balanced · recommended", Meta: "Q4_K_M · E4B (~4.5B eff.) · Gemma", SizeLabel: "5.3 GB"},
+		{Key: "small", Name: "Qwen3.5 2B", Tagline: "Small & fast", Meta: "Q4_K_M · 2B · Apache-2.0", SizeLabel: "1.3 GB"},
+		{Key: "medium", Name: "Qwen3.5 4B", Tagline: "Balanced · recommended", Meta: "Q4_K_M · 4B · Apache-2.0", SizeLabel: "2.7 GB"},
 	}
 	return Story{
 		ID: "modelspanel", Group: "Models", Title: "Models panel", Wide: true,
@@ -72,8 +72,8 @@ func modelspanelStory() Story {
 				ProcessorRunning: "cpu",
 				Processors:       cpuGpu,
 				Models: []modelcards.ModelView{
-					{ID: "m1", Name: "Qwen3 0.6B", Detail: "qwen3-0.6b-q8_0.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~1 GB"},
-					{ID: "m2", Name: "Gemma 4 E4B", Detail: "gemma4-e4b.gguf · on this box", Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~6 GB"},
+					{ID: "m1", Name: "Qwen3.5 2B", Detail: "Qwen3.5-2B-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~1.5 GB"},
+					{ID: "m2", Name: "Qwen3.5 4B", Detail: "Qwen3.5-4B-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~3 GB"},
 				},
 			})},
 			{"empty · fresh box · both tiers", modelcards.Panel(modelcards.PanelView{
@@ -86,14 +86,14 @@ func modelspanelStory() Story {
 				RestartPending:   true,
 				Processors:       []modelcards.ProcessorOption{{Key: "cpu", Installed: true}, {Key: "vulkan", Installed: true, Selected: true}},
 				Models: []modelcards.ModelView{
-					{ID: "m1", Name: "Gemma 4 E4B", Detail: "gemma-4-E4B-it-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~6 GB"},
+					{ID: "m1", Name: "Qwen3.5 4B", Detail: "Qwen3.5-4B-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~3 GB"},
 				},
 			})},
 			{"already downloaded · install", modelcards.Panel(modelcards.PanelView{
 				ProcessorRunning: "cpu",
 				Processors:       cpuGpu,
 				OfficialCTAs: []modelcards.OfficialCTA{
-					{Key: "medium", Name: "Gemma 4 E4B", Tagline: "Balanced · recommended", Meta: "Q4_K_M · E4B (~4.5B eff.) · Gemma", SizeLabel: "5.3 GB", OnDisk: true},
+					{Key: "medium", Name: "Qwen3.5 4B", Tagline: "Balanced · recommended", Meta: "Q4_K_M · 4B · Apache-2.0", SizeLabel: "2.7 GB", OnDisk: true},
 				},
 			})},
 			{"error", modelcards.Panel(modelcards.PanelView{ProcessorRunning: "cpu", Processors: cpuGpu, Error: "local inference engine not initialized"})},
@@ -101,9 +101,9 @@ func modelspanelStory() Story {
 				ProcessorRunning: "cpu",
 				Processors:       cpuGpu,
 				Models: []modelcards.ModelView{
-					{ID: "official-dl", Name: "Gemma 4 E4B", Detail: "Downloading…",
+					{ID: "official-dl", Name: "Qwen3.5 4B", Detail: "Downloading…",
 						Kind: "local", Status: modelcards.StatusDownloading,
-						Progress: 67, ProgressLabel: "3.6 GB / 5.3 GB · 5.2 MB/s"},
+						Progress: 67, ProgressLabel: "1.8 GB / 2.7 GB · 5.2 MB/s"},
 				},
 			})},
 			{"runtime not installed · both install-first", modelcards.Panel(modelcards.PanelView{
@@ -116,7 +116,7 @@ func modelspanelStory() Story {
 				ProcessorRunning: "cpu",
 				Processors:       []modelcards.ProcessorOption{{Key: "cpu", Installed: true, Selected: true}, {Key: "vulkan", Unsupported: true}},
 				Models: []modelcards.ModelView{
-					{ID: "m1", Name: "Gemma 4 E4B", Detail: "gemma-4-E4B-it-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~6 GB"},
+					{ID: "m1", Name: "Qwen3.5 4B", Detail: "Qwen3.5-4B-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~3 GB"},
 				},
 			})},
 		},
