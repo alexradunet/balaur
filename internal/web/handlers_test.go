@@ -450,7 +450,7 @@ func TestChatCardShow(t *testing.T) {
 		return app
 	}
 
-	t.Run("streamed card_show yields k-inline embed", func(t *testing.T) {
+	t.Run("streamed card_show yields titled artifact frame", func(t *testing.T) {
 		scenario := tests.ApiScenario{
 			Name:           "chat card_show inline embed",
 			Method:         "POST",
@@ -459,8 +459,8 @@ func TestChatCardShow(t *testing.T) {
 			Headers:        map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory: newCardShowApp,
 			ExpectedStatus: 200,
-			// The card is now server-rendered inline (no lazy hx-get mount).
-			ExpectedContent: []string{`class="k-inline"`, `id="ucard-today"`},
+			// The card is server-rendered in a titled sub-window frame (plan 097).
+			ExpectedContent: []string{`class="artifact"`, `artifact-head`, `id="ucard-today"`},
 		}
 		scenario.Test(t)
 	})

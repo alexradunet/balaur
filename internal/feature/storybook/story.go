@@ -83,6 +83,7 @@ var stories = []Story{
 	composerStory(),
 	chatdockStory(),
 	chatclusterStory(),
+	chatartifactStory(),
 	taskcardStory(),
 	tasksbareStory(),
 	knowledgecardStory(),

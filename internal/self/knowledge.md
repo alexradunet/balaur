@@ -112,7 +112,10 @@ There is no topbar and no /focus/* pages. Clicking a sidebar domain item calls
 GET /ui/show/{type} (the deterministic artifact injection door): the server
 persists a messages row (role="tool", origin="", content=uicard-marker) and
 SSE-appends the rendered card tile to #chat — no navigation, no page load, no
-LLM. The chat renders through the storybook components: messages are
+LLM. Each in-chat artifact is framed as a self-contained titled sub-window
+(chat.Artifact: an .artifact-head bar with icon + name atop a bordered
+.artifact-body), so the owner can see where one artifact ends; aged-out
+artifacts (the cap, plan 094) fold to their title bar. The chat renders through the storybook components: messages are
 chat.Message speech panels + chat.ToolRow rows (page-load history via
 h.renderMessages and the live SSE stream in chatstream.go share one markup
 source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at

@@ -1041,17 +1041,44 @@ dialog::backdrop {
 .chat .k-inline { margin: 0 0 0 var(--chat-gutter, 124px); max-width: none; }
 .chat .k-inline .kcard { padding: 15px 18px; }
 
-/* Artifact cap (plan 094): collapsed artifacts hide the body, show the chip. */
-.artifact-chip { display: none; }
-.artifact--collapsed > .k-inline { display: none; }
-.artifact--collapsed > .artifact-chip {
-  display: flex; align-items: center; gap: var(--space-2);
-  margin: 10px 0; padding: var(--space-2) var(--space-3);
-  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
-  letter-spacing: .06em; color: var(--ink-muted);
+/* ── In-chat artifact: titled "sub-window" frame (plan 097) ───────────────── */
+/* Each summoned artifact (a Focus card or a cluster) is framed as a            */
+/* self-contained window so the owner sees where one ends and the next message */
+/* begins. Replaces the frameless body + collapse-only chip (plan 094).        */
+.artifact {
+  margin: 10px 0;
+  border: 2px solid var(--parch-edge);
+  background-color: var(--surface);
+  background-image: var(--grain-ink);
+  background-size: 4px 4px;
+  box-shadow: var(--parch-bevel);
 }
-.chat .artifact--collapsed > .artifact-chip { margin-left: var(--chat-gutter, 124px); }
-.artifact-chip-icon { width: 16px; height: 16px; }
+.chat .artifact { margin-left: var(--chat-gutter, 124px); }
+.artifact-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--parch-edge);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink);
+}
+.artifact-head-icon { width: 16px; height: 16px; image-rendering: pixelated; }
+.artifact-body { padding: var(--space-4); }
+.artifact-body .kcard { padding: 15px 18px; }
+/* Aged-out (cap, plan 094): fold to the title bar; body hidden. */
+.artifact--collapsed > .artifact-body { display: none; }
+.artifact--collapsed .artifact-head { color: var(--ink-muted); }
+.artifact--collapsed .artifact-head-title::after {
+  content: " · shown earlier";
+  font-weight: 400;
+  opacity: .8;
+}
 
 .k-controls {
   display: flex;

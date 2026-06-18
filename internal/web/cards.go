@@ -170,45 +170,30 @@ func (h *handlers) artifactBody(title string, cs []cards.Card) template.HTML {
 		nodes = append(nodes, g.Raw(string(h.cardHTML(c.Type, c.Params))))
 	}
 	var b strings.Builder
-	_ = chat.Cluster(chat.ClusterProps{Title: title, Cards: nodes}).Render(&b)
+	// The artifact window header (artifactWrap) owns the title now; render the
+	// cluster body untitled so the heading isn't duplicated (plan 097).
+	_ = chat.Cluster(chat.ClusterProps{Cards: nodes}).Render(&b)
 	return template.HTML(b.String())
 }
 
 // activeArtifactCap bounds how many artifacts stay fully rendered in the chat;
-// older ones collapse to a static "shown earlier" chip (plan 094). The live
-// path enforces the same cap client-side (balaurCapArtifacts in basm.js).
+// older ones fold to their title bar (plan 094). The live path enforces the
+// same cap client-side (balaurCapArtifacts in basm.js).
 const activeArtifactCap = 3
 
-// artifactChip is the static, non-interactive summary shown when an artifact
-// is collapsed. icon is a /static/icons stem ("" → no icon).
-func artifactChip(title, icon string) g.Node {
-	if title == "" {
-		title = "Artifact"
-	}
-	kids := []g.Node{g.Attr("class", "artifact-chip"), g.Attr("aria-hidden", "true")}
-	if icon != "" {
-		kids = append(kids, g.El("img", g.Attr("class", "artifact-chip-icon"),
-			g.Attr("src", "/static/icons/"+icon+".png"), g.Attr("alt", ""), g.Attr("decoding", "async")))
-	}
-	kids = append(kids, g.El("span", g.Text(title+" (shown earlier)")))
-	return g.El("div", kids...)
-}
-
-// artifactWrap wraps a rendered artifact body in the .artifact container with
-// its (hidden) chip. collapsed adds .artifact--collapsed (CSS then hides the
-// body and reveals the chip). innerID, when set, is placed on the .k-inline
-// body (preserves the live path's tool-card id).
+// artifactWrap frames a rendered artifact body as a self-contained titled
+// "sub-window" (plan 097), delegating to the chat.Artifact organism so the
+// chrome lives once in the design system. collapsed (the cap, plan 094) folds
+// the window down to its title bar. innerID, when set, rides the body div
+// (preserves the live path's tool-card id).
 func artifactWrap(title, icon string, collapsed bool, innerID string, body template.HTML) g.Node {
-	cls := "artifact"
-	if collapsed {
-		cls += " artifact--collapsed"
-	}
-	inner := []g.Node{g.Attr("class", "k-inline")}
-	if innerID != "" {
-		inner = append(inner, g.Attr("id", innerID))
-	}
-	inner = append(inner, g.Raw(string(body)))
-	return g.El("div", g.Attr("class", cls), artifactChip(title, icon), g.El("div", inner...))
+	return chat.Artifact(chat.ArtifactProps{
+		Title:     title,
+		Icon:      icon,
+		Collapsed: collapsed,
+		InnerID:   innerID,
+		Body:      g.Raw(string(body)),
+	})
 }
 
 // proposalBody server-renders an approval/proposal card (a task, or a knowledge

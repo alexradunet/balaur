@@ -234,3 +234,37 @@ func chatclusterStory() Story {
 		},
 	}
 }
+
+func chatartifactStory() Story {
+	sample := taskcards.TaskCard(taskcards.TaskView{
+		ID: "t1", Title: "Ship the sidebar rework", Status: "open", DueLine: "due today 18:00",
+	})
+	return Story{
+		ID: "chatartifact", Group: "Chat", Title: "Artifact", Wide: true,
+		Blurb: "The titled 'sub-window' frame around one in-chat artifact (a Focus card or a cluster). " +
+			"An always-visible .artifact-head bar (icon + name) tops a bordered .artifact-body, so the owner " +
+			"sees where one artifact ends and the next message begins. Body is pre-rendered by the web layer; " +
+			"the organism imports no feature/cards. Collapsed is the aged-out cap state (plan 094) — body hidden, " +
+			"title bar kept.",
+		Variants: []Variant{
+			{"expanded", chat.Artifact(chat.ArtifactProps{Title: "Quests", Icon: "scroll", Body: sample})},
+			{"collapsed", chat.Artifact(chat.ArtifactProps{Title: "Quests", Icon: "scroll", Collapsed: true, Body: sample})},
+			{"no icon", chat.Artifact(chat.ArtifactProps{Title: "Memory", Body: sample})},
+		},
+		Props: []Prop{
+			{"Title", "string", `""`, `Artifact name shown in the .artifact-head title bar. Empty falls back to "Artifact".`},
+			{"Icon", "string", `""`, "/static/icons stem shown left of the title. Omit for no icon."},
+			{"Collapsed", "bool", "false", "Aged-out cap state: adds .artifact--collapsed; CSS hides the body, keeps the title bar."},
+			{"InnerID", "string", `""`, "Optional id on the body div — preserves the live path's tool-card id."},
+			{"Body", "g.Node", "nil", "Pre-rendered artifact body (a Focus card or a chat.Cluster). The organism never renders cards itself."},
+		},
+		Dos: []string{
+			"Pass a pre-rendered body g.Node from the web layer (cardFocusHTML / Cluster).",
+			"Let the cap (capArtifacts + balaurCapArtifacts) toggle Collapsed / .artifact--collapsed.",
+		},
+		Donts: []string{
+			"Import internal/feature or internal/cards from internal/ui/chat.",
+			"Wrap proposals or plain inline cards in Artifact — those stay frameless (.k-inline).",
+		},
+	}
+}
