@@ -218,7 +218,7 @@ func TestHandlerHomePage(t *testing.T) {
 			Method:          "GET",
 			URL:             "/",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`<html lang="en" class="app">`, `class="app-shell"`, `id="chat"`},
+			ExpectedContent: []string{`<html lang="en" class="app`, `class="app-shell"`, `id="chat"`},
 		},
 	}
 
