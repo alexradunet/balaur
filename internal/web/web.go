@@ -236,8 +236,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/cards/{type}", h.uiCard)
 	// Deterministic artifact injection (plan 088/098): sidebar click → card in panel.
 	se.Router.GET("/ui/show/{type}", h.uiShow)
-	// Panel control: close clears the active artifact and persisted pointer.
-	se.Router.GET("/ui/panel/close", h.panelClose)
+	// In-panel navigation (tab switches) + close — morphs #panel-inner, no chip (plan 099).
+	se.Router.GET("/ui/panel/{type}", h.uiPanelNav)
 	return nil
 }
 

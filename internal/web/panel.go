@@ -117,3 +117,32 @@ func (h *handlers) panelClose(e *core.RequestEvent) error {
 	_ = sse.PatchElements(renderNodeHTML(emptyPanelNode())) // morph #panel-inner → empty
 	return nil
 }
+
+// uiPanelNav handles GET /ui/panel/{type}: in-panel navigation (e.g. switching a
+// Knowledge category or Settings section tab). It morphs #panel-inner with the
+// new sub-view and updates panel_active — but does NOT persist a transcript row
+// or append a chip (that is the summon door /ui/show). type=="close" clears.
+func (h *handlers) uiPanelNav(e *core.RequestEvent) error {
+	typ := e.Request.PathValue("type")
+	if typ == "close" {
+		return h.panelClose(e)
+	}
+	if _, ok := cards.Get(typ); !ok {
+		return e.NotFoundError("no such card type", nil)
+	}
+	params, err := cards.Validate(typ, queryToMap(e.Request.URL.Query()))
+	if err != nil {
+		return e.BadRequestError("invalid card params: "+err.Error(), err)
+	}
+	// Canonical, key-sorted query (matches the chip/restore URL form).
+	vals := url.Values{}
+	for k, v := range params {
+		vals.Set(k, v)
+	}
+	queryStr := vals.Encode()
+
+	_ = store.SetOwnerSetting(h.app, panelActiveKey, showURL(typ, queryStr))
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(renderNodeHTML(h.panelNode(typ, queryStr))) // morph #panel-inner; NO chip
+	return nil
+}
