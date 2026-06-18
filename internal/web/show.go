@@ -25,6 +25,7 @@ import (
 func (h *handlers) uiShow(e *core.RequestEvent) error {
 	typ := e.Request.PathValue("type")
 	if typ == "close" {
+		_ = store.SetOwnerSetting(h.app, panelCollapsedKey, "1") // collapse on close
 		return h.panelClose(e)
 	}
 	spec, ok := cards.Get(typ)
@@ -40,6 +41,7 @@ func (h *handlers) uiShow(e *core.RequestEvent) error {
 	_, queryStr, _, _ := tools.ParseUICard(marker)
 
 	_ = store.SetOwnerSetting(h.app, panelActiveKey, showURL(typ, queryStr))
+	_ = store.SetOwnerSetting(h.app, panelCollapsedKey, "0") // expand on open
 	sse := datastar.NewSSE(e.Response, e.Request)
 	_ = sse.PatchElements(renderNodeHTML(h.panelNode(typ, queryStr))) // morph #panel-inner; NO chip, NO persisted row
 	return nil

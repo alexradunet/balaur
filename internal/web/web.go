@@ -236,6 +236,9 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/cards/{type}", h.uiCard)
 	// Deterministic artifact injection (plan 088/098): sidebar click → card in panel.
 	se.Router.GET("/ui/show/{type}", h.uiShow)
+	// Panel collapse + width persistence (plan 103). POST-only; no GET door.
+	se.Router.POST("/ui/panel/collapse", h.uiPanelCollapse)
+	se.Router.POST("/ui/panel/width", h.uiPanelWidth)
 	return nil
 }
 
