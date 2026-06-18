@@ -1,11 +1,12 @@
 package web
 
-// show_test.go — handler tests for GET /ui/show/{type} (plan 088).
+// show_test.go — handler tests for GET /ui/show/{type} (plan 088, updated plan 098).
 // Correctness pins:
-//   - 200 + SSE patch → #chat (append) with the card markup
+//   - 200 + SSE morph → #panel-inner (panel swap) with the card markup
+//   - 200 + SSE append → #chat with an art-chip re-open affordance
 //   - Persists role="tool", origin="" (sidesteps chatNudges origin != '')
 //   - Content carries the uicard marker (\x00balaur-uicard:)
-//   - Reload (GET /) shows the card (recap.messageViews uicard branch)
+//   - panel_active owner_setting is written with the canonical re-summon URL
 //   - chatNudges does NOT duplicate the card (origin="" skips the filter)
 //   - GET /ui/show/bogus → 404
 
@@ -16,6 +17,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/tests"
 
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	_ "github.com/alexradunet/balaur/migrations"
 )
@@ -33,19 +35,20 @@ func TestUIShow(t *testing.T) {
 		s.Test(t)
 	})
 
-	t.Run("GET /ui/show/quests → 200 SSE append to #chat, persists uicard row", func(t *testing.T) {
+	t.Run("GET /ui/show/quests → 200 SSE: morphs panel + appends chip, persists uicard row", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:           "quests show → 200 SSE patch to #chat",
+			Name:           "quests show → 200 SSE: panel morph + chip append",
 			Method:         "GET",
 			URL:            "/ui/show/quests",
 			TestAppFactory: newWebApp,
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
 				"datastar-patch-elements",
-				"selector #chat",
+				`id="panel-inner"`, // panel morph (single-active)
+				"quest-stack",      // card body is in the panel
+				"art-chip",         // re-open chip in #chat
+				"selector #chat",   // chip goes to #chat
 				"mode append",
-				"quest-stack",   // flat stack (ui.Focus), not the summary tile
-				"artifact-head", // titled sub-window frame (plan 097)
 			},
 			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, res *http.Response) {
 				// Verify the persisted messages row: role=tool, origin="",
@@ -69,6 +72,11 @@ func TestUIShow(t *testing.T) {
 				}
 				if typ != "quests" {
 					tb.Errorf("parsed typ = %q, want %q", typ, "quests")
+				}
+				// panel_active must be written with the canonical re-summon URL.
+				active := store.GetOwnerSetting(app, panelActiveKey, "")
+				if active != "/ui/show/quests" {
+					tb.Errorf("panel_active = %q, want %q", active, "/ui/show/quests")
 				}
 			},
 		}
