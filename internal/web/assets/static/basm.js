@@ -132,23 +132,73 @@ window.balaurScrollToLatest = function () {
   }
 };
 
+// Visible (not filtered-out, menu-open) command rows, top-to-bottom.
+// A row hidden by Datastar data-show has inline display:none → offsetParent null.
+function balaurCmdVisibleItems(palette) {
+  if (!palette) return [];
+  return Array.prototype.filter.call(
+    palette.querySelectorAll('.cmd-item'),
+    function (el) { return el.offsetParent !== null; });
+}
+
 window.balaurSubmitOnEnter = function (event) {
   if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
       event.ctrlKey || event.metaKey || event.isComposing) return;
   event.preventDefault();
   var ta = event.currentTarget;
-  // Slash-command: pick the first visible palette item instead of sending.
+  // Slash-command: act on the highlighted palette row (or the first visible
+  // one) instead of sending the "/foo" line to chat.
   if (ta.value.trimStart().startsWith('/')) {
     var palette = ta.closest('.composer') &&
       ta.closest('.composer').querySelector('.cmd-palette');
-    var first = palette && Array.prototype.find.call(
-      palette.querySelectorAll('.cmd-item'),
-      function (el) { return el.offsetParent !== null; }); // visible
-    if (first) first.click();   // triggers the item's data-on:click @get
-    return;                     // never post a "/foo" line to chat
+    var items = balaurCmdVisibleItems(palette);
+    var target = items.filter(function (el) {
+      return el.classList.contains('is-active');
+    })[0] || items[0];
+    if (target) target.click();   // triggers the row's data-on:click @get
+    return;                       // never post a "/foo" line to chat
   }
   ta.form && ta.form.requestSubmit();
 };
+
+// ── Composer /-command menu: ↑/↓ navigate the active row ───────────────
+// The active row is DOM state (.cmd-item.is-active), not a Datastar signal:
+// "the active row" = "the Nth currently-visible row", a value only the browser
+// knows after data-show filtering. Enter (balaurSubmitOnEnter) reads it.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  var ta = e.target;
+  if (!ta || ta.tagName !== 'TEXTAREA' || !ta.closest('.composer')) return;
+  var palette = ta.closest('.composer').querySelector('.cmd-palette');
+  if (!palette || palette.offsetParent === null) return; // menu not open
+  var items = balaurCmdVisibleItems(palette);
+  if (!items.length) return;
+  e.preventDefault(); // own the arrow: don't move the textarea caret
+  var cur = -1;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].classList.contains('is-active')) { cur = i; break; }
+  }
+  var next = e.key === 'ArrowDown'
+    ? (cur + 1) % items.length
+    : (cur - 1 + items.length) % items.length; // wraps at both ends
+  items.forEach(function (el) { el.classList.remove('is-active'); });
+  items[next].classList.add('is-active');
+  items[next].scrollIntoView({ block: 'nearest' });
+});
+
+// As the owner types and the menu re-filters, default the highlight to the top
+// match so Enter's target is always visible. Deferred one frame so Datastar's
+// data-show has re-evaluated visibility before we read offsetParent.
+document.addEventListener('input', function (e) {
+  var ta = e.target;
+  if (!ta || ta.tagName !== 'TEXTAREA' || !ta.closest('.composer')) return;
+  var palette = ta.closest('.composer').querySelector('.cmd-palette');
+  if (!palette) return;
+  requestAnimationFrame(function () {
+    var items = balaurCmdVisibleItems(palette);
+    items.forEach(function (el, i) { el.classList.toggle('is-active', i === 0); });
+  });
+});
 
 window.balaurCloseModal = function () {
   const d = document.getElementById('model-modal');

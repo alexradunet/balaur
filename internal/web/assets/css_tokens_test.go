@@ -48,6 +48,19 @@ func TestThemePaletteBlocks(t *testing.T) {
 	}
 }
 
+// TestCmdPaletteActiveStyle guards plan 105: the composer /-command menu is
+// keyboard-navigable (↑/↓ move .cmd-item.is-active; Enter selects it via
+// balaurSubmitOnEnter). The highlight is invisible without this CSS rule.
+func TestCmdPaletteActiveStyle(t *testing.T) {
+	b, err := FS.ReadFile("static/basm.css")
+	if err != nil {
+		t.Fatalf("read basm.css: %v", err)
+	}
+	if !strings.Contains(string(b), ".cmd-item.is-active") {
+		t.Error(".cmd-item.is-active highlight is missing — keyboard nav in the /-command menu would be invisible (plan 105)")
+	}
+}
+
 // TestAppDockResetsTop guards plan 104: the single-page chat shell re-uses the
 // base #dock element (which is position:fixed; top:62px to clear a topbar) as a
 // position:relative grid column. Under relative positioning that inherited
