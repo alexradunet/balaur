@@ -199,15 +199,20 @@ func (h *handlers) renderMessages(views []messageView) template.HTML {
 				Role: "user", AvatarSrc: mv.SoulAvatarURL, Who: mv.OwnerName, Content: mv.Content,
 			}))
 		case "tool":
-			nodes = append(nodes, chat.ToolRow(chat.ToolRowProps{
-				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Content: mv.Content,
-			}))
+			// Re-open chip rides inside the tool card body (matching the live
+			// stream) so a tool call reads as one consistent Balaur turn.
+			var chip g.Node
 			switch {
 			case mv.ArtifactType != "": // single card → clickable re-open chip
-				nodes = append(nodes, h.chipNode(mv.ArtifactType, mv.ArtifactQuery))
+				chip = h.chipNode(mv.ArtifactType, mv.ArtifactQuery)
 			case mv.ArtifactTitle != "": // cluster → non-clickable chip
-				nodes = append(nodes, clusterChipNode(mv.ArtifactTitle))
-			case mv.CardBody != "": // proposal etc. → inline k-inline (unchanged)
+				chip = clusterChipNode(mv.ArtifactTitle)
+			}
+			nodes = append(nodes, chat.ToolRow(chat.ToolRowProps{
+				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Who: mv.WhoLabel,
+				AvatarSrc: mv.BalaurAvatarURL, Content: mv.Content, Chip: chip,
+			}))
+			if mv.CardBody != "" { // proposal etc. → inline k-inline below (unchanged)
 				nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), g.Raw(string(mv.CardBody))))
 			}
 		default: // assistant

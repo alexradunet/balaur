@@ -3116,6 +3116,35 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cmsg-user .cmsg-name { right: 12px; color: var(--indigo-ink); }
 .cmsg-body { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; max-width: var(--measure); }
 
+/* Tool call — a Balaur turn in the speech-panel frame whose body is the audit
+   trail: the tool indicator, its result, and any surfaced artifact chip. Reuses
+   the .cmsg* frame (portrait, parchment panel, nameplate "Balaur · Tool"); only
+   the body is tuned — a mono trail stacked into a column rather than prose. */
+.cmsg-tool .cmsg-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 13px;
+  white-space: normal;
+}
+.cmsg-tool .tool-line {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: var(--teal-ink);
+}
+.cmsg-tool .tool-result {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* The artifact chip now lives inside the card — drop the transcript gutter indent,
+   and keep it a content-sized pill (the column flex would otherwise stretch it full-width). */
+.cmsg-tool .art-chip { margin: 2px 0 0; align-self: flex-start; }
+
 /* ── Home: the full-screen companion chat ───────────────────────────────────
    Home is the chat. The chat lives in the persistent #dock as on every page;
    the "home" class on <html> makes that dock fill the canvas (mirroring the

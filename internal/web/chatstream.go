@@ -103,6 +103,17 @@ func (s *chatStream) balaurBubble(content string, pending bool) g.Node {
 	})
 }
 
+// toolCard builds the current tool turn's speech panel (chat.ToolRow): pending
+// while the tool runs, finalized with its result + optional artifact chip once
+// it returns. Same id/avatar/name as the head's spoken turns so a tool call
+// reads as a consistent Balaur turn ("{who} · Tool").
+func (s *chatStream) toolCard(content string, chip g.Node, pending bool) g.Node {
+	return chat.ToolRow(chat.ToolRowProps{
+		Tool: s.toolName, Icon: toolIconFile(s.toolName), Who: s.who, AvatarSrc: s.balaURL,
+		ID: s.toolID, BodyID: s.toolBody, Content: content, Chip: chip, Pending: pending,
+	})
+}
+
 // start clears any stale choice panels and the composer signal, echoes the
 // owner's message, and opens the first assistant bubble.
 func (s *chatStream) start(userMsg string) {
@@ -157,9 +168,7 @@ func (s *chatStream) emit(ev agent.Event) {
 		s.toolName = ev.Tool
 		s.toolID = fmt.Sprintf("tool-%s-%d", s.base, s.toolN)
 		s.toolBody = s.toolID + "-body"
-		s.appendNode(chat.ToolRow(chat.ToolRowProps{
-			Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody,
-		}))
+		s.appendNode(s.toolCard("", nil, true)) // pending "running…" until the result lands
 	case "tool_result":
 		s.handleToolResult(ev)
 		s.openBubble()
@@ -208,9 +217,7 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 // attached, appends it inline (proposals stay in the transcript). Artifact
 // callers use endArtifactCard / endArtifactCluster instead.
 func (s *chatStream) endTool(content string, card template.HTML) {
-	s.morphNode(chat.ToolRow(chat.ToolRowProps{
-		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
-	}))
+	s.morphNode(s.toolCard(content, nil, false))
 	if card == "" {
 		return
 	}
@@ -218,27 +225,22 @@ func (s *chatStream) endTool(content string, card template.HTML) {
 	s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
 }
 
-// endArtifactCard morphs the tool row, then routes a single card to the panel
-// (single-active) and drops a re-open chip into #chat. Mirrors the owner door
-// (show.go) so live and reload agree.
+// endArtifactCard morphs the tool card (its body carrying the re-open chip),
+// then routes the single card to the panel (single-active). Mirrors the owner
+// door (show.go) so live and reload agree; the chip lives inside the tool turn
+// (plan: tool-call consistency) rather than as a loose #chat sibling.
 func (s *chatStream) endArtifactCard(content, typ, query string) {
-	s.morphNode(chat.ToolRow(chat.ToolRowProps{
-		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
-	}))
+	s.morphNode(s.toolCard(content, s.h.chipNode(typ, query), false))
 	_ = store.SetOwnerSetting(s.h.app, panelActiveKey, showURL(typ, query))
 	s.morphNode(s.h.panelNode(typ, query)) // morph #panel-inner
-	s.appendNode(s.h.chipNode(typ, query)) // chip → #chat
 }
 
-// endArtifactCluster routes an agent cluster to the panel with a non-clickable
-// chip (clusters have no deterministic re-open URL — plan 090). Clusters do not
-// update panel_active (no restore URL).
+// endArtifactCluster routes an agent cluster to the panel; the non-clickable
+// chip (clusters have no deterministic re-open URL — plan 090) rides inside the
+// tool card body. Clusters do not update panel_active (no restore URL).
 func (s *chatStream) endArtifactCluster(content, title string, cs []cards.Card) {
-	s.morphNode(chat.ToolRow(chat.ToolRowProps{
-		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
-	}))
+	s.morphNode(s.toolCard(content, clusterChipNode(title), false))
 	s.morphNode(s.h.panelClusterNode(title, cs))
-	s.appendNode(clusterChipNode(title))
 }
 
 // refreshCard re-renders one registry card from live data and morphs it in

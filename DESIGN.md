@@ -388,9 +388,15 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
 - The composer is a `.msg-draft` parchment row in the chat flow (`#chat-draft`);
   the chatbar is a slim status ledge (`.chatbar-slim`) holding only the model
   switcher and profile link — it no longer contains the message form.
-- Tool/OS-access events render as wood-inset slab rows (`.msg-tool`) with a
-  pixel icon (`<img class="tool-icon">`) from `web/static/icons/` — the
-  audit trail is part of the UI language, visible, never hidden.
+- Tool/OS-access events render as a Balaur turn in the speech-panel frame
+  (`.cmsg.cmsg-tool`, nameplate "Balaur · Tool") so a tool call reads as the
+  same kind of message Balaur speaks; the parchment body is the audit trail —
+  a pixel icon (`<img class="tool-icon">`) from `web/static/icons/`, the
+  `tool · {name}` indicator, the result, and any artifact chip it surfaced
+  (running tools show a breathing glow + "running…"). The trail is part of the
+  UI language, visible, never hidden. (The legacy `.msg-tool` inset-slab styling
+  and the `chat-msg-tool` html/template remain only for the pre-gomponents
+  fallback path, unused by the live UI.)
 - Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
   visible focus states (`--focus-ring: 2px solid var(--teal)`).
 

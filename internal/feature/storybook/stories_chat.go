@@ -45,29 +45,36 @@ func chatmessageStory() Story {
 }
 
 func chattoolrowStory() Story {
+	settingsChip := chat.ArtifactChip(chat.ArtifactChipProps{Title: "Settings", Icon: "key", ReopenURL: "/ui/show/settings"})
 	return Story{
 		ID: "chattoolrow", Group: "Chat", Title: "ToolRow", Wide: true, OnDark: true,
-		Blurb: "A dark wood inset slab recording one tool / OS-access event. The visible audit trail, indented to the text column.",
+		Blurb: "A tool call rendered as a Balaur turn in the same speech-panel frame as chat.Message: the framed portrait beside a parchment panel, the nameplate reading \"Balaur · Tool\". The body is the audit trail — the tool indicator, its result, and any artifact chip the tool surfaced. While the tool runs it shows a breathing glow + \"running…\".",
 		Variants: []Variant{
 			{"task_add", h.Div(h.Class("chat"),
-				chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", Content: "added task: water the tomatoes · every 2 days 18:00"}))},
-			{"remember", h.Div(h.Class("chat"),
-				chat.ToolRow(chat.ToolRowProps{Tool: "remember", Icon: "tome", Content: "saved: prefers tea over coffee"}))},
+				chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", AvatarSrc: "/static/crest.png", Content: "added task: water the tomatoes · every 2 days 18:00"}))},
+			{"running", h.Div(h.Class("chat"),
+				chat.ToolRow(chat.ToolRowProps{Tool: "settings", Icon: "key", AvatarSrc: "/static/crest.png", Pending: true}))},
+			{"with artifact", h.Div(h.Class("chat"),
+				chat.ToolRow(chat.ToolRowProps{Tool: "card_show", Icon: "key", AvatarSrc: "/static/crest.png", Content: "showing the owner the Settings card", Chip: settingsChip}))},
 		},
 		Props: []Prop{
 			{"Tool", "string", "—", `Machine name of the tool call; rendered "tool · {Tool}", mono.`},
 			{"Icon", "string", "—", "A /static/icons name, composed via ui.Icon."},
-			{"Content", "string", "—", "The event detail / result line."},
+			{"Who", "string", `"Balaur"`, `Nameplate name; rendered "{Who} · Tool" (matches the head's spoken turns).`},
+			{"AvatarSrc", "string", "—", "Path to the Balaur portrait PNG — the same avatar as the head's message turns."},
+			{"Content", "string", "—", "The result / detail line (empty while pending)."},
+			{"Chip", "g.Node", "nil", "Optional artifact re-open chip, rendered inside the card body."},
+			{"Pending", "bool", "false", `Running state — breathing glow + "running…" — before the tool returns.`},
 			{"ID", "string", "—", "Optional root element id — lets the chat stream morph the row once the tool returns."},
 			{"BodyID", "string", "—", "Optional body element id — the morph target for the tool's result."},
 		},
 		Dos: []string{
 			"Show every tool and OS-access event — the trail is the trust.",
-			"Prefer a pixel icon over a bare glyph.",
+			"Keep the tool turn in the same speech-panel frame as Balaur's words.",
 		},
 		Donts: []string{
 			"Hide or collapse tool rows.",
-			"Frame the icon — the row border is the frame.",
+			"Render a tool call as a separate inset slab divorced from Balaur's turns.",
 		},
 	}
 }
@@ -139,7 +146,7 @@ func chatdockStory() Story {
 	// Fixture conversation for variant previews — two turns and a tool row.
 	fixtureConvo := g.Group([]g.Node{
 		chat.Message(chat.MessageProps{Role: "user", Who: "You", AvatarSrc: "/static/crest.png", Content: "Remind me to water the tomatoes every 2 days."}),
-		chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", Content: "added task: water the tomatoes · every 2 days 18:00"}),
+		chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", AvatarSrc: "/static/crest.png", Content: "added task: water the tomatoes · every 2 days 18:00"}),
 		chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Content: "Done — I'll remind you at 18:00 every other day."}),
 	})
 	fixtureComposer := ui.Composer(ui.ComposerProps{
