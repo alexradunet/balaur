@@ -109,14 +109,21 @@ Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
 "app" on <html>, a three-column .app-shell grid: a domain sidebar rail on the
 left (#sb-side), the full-canvas companion dock in the centre (#dock.app-dock),
 and a single-active right panel on the right (#panel.app-panel, #panel-inner).
-There is no topbar and no /focus/* pages. A summoned artifact (owner rail click
-via GET /ui/show/{type}, or the agent's card_show/show_cards) renders in the
-single-active right panel (chat.Panel, #panel-inner); the chat keeps a compact
-re-open chip (chat.ArtifactChip) as the durable, auditable transcript trace.
+There is no topbar and no /focus/* pages. The domain rail has collapsed to
+top-level entries: Quests, Life, Knowledge, Skills (Domains group) and Settings.
+Knowledge opens the memory panel with in-panel category tabs; Settings opens
+with in-panel section tabs. Two summon doors exist:
+
+  GET /ui/show/{type}  — owner rail click (summon): persists a messages row
+    (role="tool", origin="", content=uicard-marker), morphs #panel-inner,
+    appends a re-open chip (chat.ArtifactChip) to #chat, sets panel_active.
+
+  GET /ui/panel/{type} — in-panel navigation (tab switch): morphs #panel-inner
+    and sets panel_active — NO chip, NO persisted row. type=="close" clears.
+
 The panel restores the last-active artifact on reload via
 owner_settings["panel_active"]. Clusters render in the panel with a
-non-clickable chip. The server persists a messages row (role="tool", origin="",
-content=uicard-marker) — no navigation, no page load, no LLM.
+non-clickable chip. No navigation, no page load, no LLM.
 The chat renders through the storybook components: messages are
 chat.Message speech panels + chat.ToolRow rows (page-load history via
 h.renderMessages and the live SSE stream in chatstream.go share one markup
