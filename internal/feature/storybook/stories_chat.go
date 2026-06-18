@@ -281,7 +281,7 @@ func commandpaletteStory() Story {
 			"Appears when the draft starts with '/' and filters as the owner types — via data-show expressions " +
 			"over the $message signal (presentational; no round-trip). Selecting an item fires the non-polluting " +
 			"/ui/show door (plan 101) and clears the draft. The story wrapper seeds data-signals:message=\"'/'\" " +
-			"so all items show in the static storybook.",
+			"so all items show in the static storybook. Navigate the menu with ↑/↓ and select the highlighted row with Enter; the active row carries .cmd-item.is-active (set by basm.js).",
 		Variants: []Variant{
 			{"all items visible (draft = /)", h.Div(
 				g.Attr("data-signals:message", "'/'"),
@@ -304,6 +304,7 @@ func commandpaletteStory() Story {
 			"Fire the non-polluting /ui/show door — the same door card-footer links use.",
 			"Clear the draft ($message = '') on item click so the menu hides itself.",
 			"Keep Keys lowercase and slug-like so prefix filtering is predictable.",
+			"Drive it from the keyboard: ↑/↓ move the active row, Enter selects it, mouse hover and click still work.",
 		},
 		Donts: []string{
 			"Server-filter per keystroke — the command set is tiny and fixed; client-side data-show is sufficient.",
