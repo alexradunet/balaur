@@ -152,8 +152,7 @@ status param), calendar (month grid, month param), timeline (forward days,
 days param), journal (recent entries, limit param), day (a day-of-life summary
 tile + full focus, date param), measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
-kind, kind required + limit param), memory (active memories, query + limit
-params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
+kind, kind required + limit param), memory (a memory slice — category or the Awaiting proposed queue; category + view + query + limit params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
 habits (recurring tasks with their streak, no params), tasks (bare stack of
 individual TaskCards filtered by status/bucket/terms/limit — the "draw the
 cards for THOSE quests" surface; contrast quests which is a rolled-up summary).

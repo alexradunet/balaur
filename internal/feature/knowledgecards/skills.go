@@ -266,7 +266,7 @@ func skillsManageBody(proposed, active []SkillRecord) g.Node {
 func registerSkills(app core.App) {
 	ui.RegisterCard("skills", func(size ui.CardSize, params map[string]string) (g.Node, error) {
 		if size == ui.Focus {
-			return KnowledgeFocus(buildSkillsFocus(app, "")), nil
+			return KnowledgeFocus(buildSkillsFocus(app, params)), nil
 		}
 		if params["mode"] == "manage" {
 			p, a := buildSkillsManage(app)

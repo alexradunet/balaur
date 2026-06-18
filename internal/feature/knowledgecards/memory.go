@@ -295,7 +295,7 @@ func mapMemoryRecords(recs []*core.Record) []MemoryRecord {
 func registerMemory(app core.App) {
 	ui.RegisterCard("memory", func(size ui.CardSize, params map[string]string) (g.Node, error) {
 		if size == ui.Focus {
-			return KnowledgeFocus(buildMemoryFocus(app, "", "")), nil
+			return KnowledgeFocus(buildMemoryFocus(app, params)), nil
 		}
 		if params["mode"] == "manage" {
 			return MemoryManageCard(buildMemoryManage(app)), nil
