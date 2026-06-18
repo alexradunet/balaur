@@ -29,6 +29,7 @@ import (
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // ---------------------------------------------------------------------------
@@ -337,9 +338,26 @@ func ProfileBalaurSection(v ProfileView) g.Node {
 	return Article(kids...)
 }
 
-// SettingsFocus renders the full settings focus body. Ports {{define
-// "settings_body"}} from web/templates/settings-focus.html: the settings nav
-// (Profile / Models / Heads / Appearance tabs) and the section content.
+// settingsTabs renders the in-panel section strip. Tabs navigate the panel via
+// /ui/panel/settings (morph #panel-inner, no chip).
+func settingsTabs(active string) g.Node {
+	type t struct{ label, section string }
+	defs := []t{{"Profile", "profile"}, {"Appearance", "appearance"}, {"Models", "models"}, {"Heads", "heads"}}
+	items := make([]ui.TabItem, len(defs))
+	for i, d := range defs {
+		items[i] = ui.TabItem{
+			Label:  d.label,
+			Href:   "/ui/show/settings?section=" + d.section,
+			Active: active == d.section,
+			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/panel/settings?section="+d.section+"')")},
+		}
+	}
+	return ui.Tabs(items)
+}
+
+// SettingsFocus renders the full settings focus body with an in-panel section
+// tab strip (plan 099). Ports {{define "settings_body"}} from
+// web/templates/settings-focus.html.
 func SettingsFocus(v SettingsFocusView) g.Node {
 	var content g.Node
 	switch v.Section {
@@ -357,9 +375,10 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		})
 	}
 
-	// One nav-free section. Navigation lives in the sidebar (plan 092);
-	// each settings section is summoned as its own artifact.
-	return Div(Class("settings-section"), content)
+	return Div(Class("settings-section"),
+		settingsTabs(v.Section),
+		content,
+	)
 }
 
 // AppearanceSection renders the Appearance settings card: the palette picker
