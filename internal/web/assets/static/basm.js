@@ -136,7 +136,18 @@ window.balaurSubmitOnEnter = function (event) {
   if (event.key !== 'Enter' || event.shiftKey || event.altKey ||
       event.ctrlKey || event.metaKey || event.isComposing) return;
   event.preventDefault();
-  event.currentTarget.form?.requestSubmit();
+  var ta = event.currentTarget;
+  // Slash-command: pick the first visible palette item instead of sending.
+  if (ta.value.trimStart().startsWith('/')) {
+    var palette = ta.closest('.composer') &&
+      ta.closest('.composer').querySelector('.cmd-palette');
+    var first = palette && Array.prototype.find.call(
+      palette.querySelectorAll('.cmd-item'),
+      function (el) { return el.offsetParent !== null; }); // visible
+    if (first) first.click();   // triggers the item's data-on:click @get
+    return;                     // never post a "/foo" line to chat
+  }
+  ta.form && ta.form.requestSubmit();
 };
 
 window.balaurCloseModal = function () {
