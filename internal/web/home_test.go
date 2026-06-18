@@ -37,6 +37,11 @@ func TestHomeFullChat(t *testing.T) {
 			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)"`,
 			// footer theme toggle
 			`class="theme-toggle"`,
+			// mobile topbar chrome (markup present at all widths; CSS hides it on desktop)
+			`class="app-topbar"`,
+			`class="sb-burger"`,
+			`onclick="basmToggleNav()"`,
+			`class="sb-backdrop"`,
 		},
 		NotExpectedContent: []string{
 			`<main id="main">`,                   // the old shell's #main content area is gone

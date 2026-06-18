@@ -88,9 +88,12 @@ All copy must match this. Update it the moment shape changes.
 
 **Information architecture — Home is the companion; a domain sidebar rail is the nav.**
 `/` is Home: the full-screen companion chat, the conversation Balaur is built
-around. There is no topbar. A domain sidebar rail (`#sb-side`) on the left
-carries the five domains (Quests, Knowledge, Life, Heads, Settings);
-clicking one calls `GET /ui/show/{type}`, which renders the card in the
+around. There is no topbar on desktop. On narrow viewports (≤720px) a sticky
+`.app-topbar` with a burger button slides the rail in as an off-canvas
+drawer (`basmToggleNav`); the panel becomes a fixed overlay (plan 098).
+A domain sidebar rail (`#sb-side`) on the left carries the five domains
+(Quests, Knowledge, Life, Heads, Settings); clicking one calls
+`GET /ui/show/{type}`, which renders the card in the
 **single-active right panel** (`#panel-inner`) — no navigation, no page load,
 no LLM. A compact re-open chip (`chat.ArtifactChip`) is appended to `#chat` as
 the durable transcript trace. A *card* is a typed, parameterized, server-rendered
