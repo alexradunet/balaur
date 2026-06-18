@@ -147,7 +147,6 @@ func sidebarStory() Story {
 						item("Quests", "quests", "scroll", true),
 						item("Knowledge", "memory", "tome", false),
 						item("Life", "lifelog", "orb", false),
-						item("Journal", "journal", "quill", false),
 						item("Heads", "heads", "shield", false),
 						item("Settings", "settings", "key", false),
 					}},

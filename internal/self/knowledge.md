@@ -132,14 +132,6 @@ owner's engine room, never your surface.
 
 The quest log (the quests card, artifact at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
 
-The candle (the journal card's writing surface, artifact at /ui/show/journal): an
-immersive writing surface — free-hand (default) or guided by one model-composed
-prompt line (deterministic fallback: "Write what the day left behind. I am listening." —
-returned on any error or no active model). Entries written here are the same
-journal records as the chat journal_write tool and the day card; they also appear
-in the day card artifact (/ui/show/day?date={date}). The guided prompt is the
-only LLM call on the surface and is strictly opt-in (the owner clicks the "guided" button).
-
 The day card (artifact at /ui/show/day?date={date}): a day-of-life aggregation —
 the owner's journal entries, the day's recap, what got done, and what was logged,
 with prev/next day nav. The tile shows a read-only summary (journal/done/log
@@ -149,7 +141,7 @@ Typed card registry: Balaur's UI supports parameterized card types at
 GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment
 (HATEOAS). The types are: today (open tasks due today), quests (task list,
 status param), calendar (month grid, month param), timeline (forward days,
-days param), journal (recent entries, limit param), day (a day-of-life summary
+days param), day (a day-of-life summary
 tile + full focus, date param), measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
 kind, kind required + limit param), memory (active memories, query + limit

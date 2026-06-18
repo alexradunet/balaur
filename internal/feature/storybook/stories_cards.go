@@ -274,35 +274,6 @@ func statcardStory() Story {
 	}
 }
 
-// journalfocusStory documents the journal card's full-canvas focus body — the
-// candle: a free/guided write surface with today's entry history.
-func journalfocusStory() Story {
-	return Story{
-		ID: "journalfocus", Group: "Cards", Title: "JournalFocus", Wide: true, OnDark: true,
-		Blurb: "The candle: the journal card's focus body. A free/guided tab strip, a write form, and today's entry history. The guided tab fetches one model-composed prompt line into #candle-prompt.",
-		Variants: []Variant{
-			{"with entries", journalcards.JournalFocus(journalcards.JournalFocusView{
-				Journal: []journalcards.JournalEntryView{
-					{ID: "e1", Time: "08:30", Text: "The morning was quiet and still.", Date: "2026-06-16"},
-					{ID: "e2", Time: "21:00", Text: "Ended the day with a long walk by the river.", Date: "2026-06-16"},
-				},
-			})},
-			{"empty", journalcards.JournalFocus(journalcards.JournalFocusView{})},
-		},
-		Props: []Prop{
-			{"Journal", "[]JournalEntryView", "nil", "Today's journal entries; omit the list when empty."},
-		},
-		Dos: []string{
-			"Keep the free tab active by default.",
-			"Use #journal-candle-body and #candle-prompt as the SSE patch targets.",
-		},
-		Donts: []string{
-			"Add date parameterisation — this surface is today-only.",
-			"Patch #candle-prompt from outside journalPrompt (the LLM handler owns it).",
-		},
-	}
-}
-
 // knowledgefocusStory documents the knowledge manager's full-canvas focus body
 // — memory + skills, with proposed/active/archived sections, live search, and
 // category tabs (memory only).

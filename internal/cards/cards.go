@@ -85,16 +85,6 @@ func init() {
 			},
 		},
 		{
-			Type:  "journal",
-			Label: "Journal",
-			Icon:  "quill",
-			W:     4,
-			H:     18,
-			Params: []ParamSpec{
-				{Name: "limit", Doc: "number of recent journal entries to show (default 5, max 50)"},
-			},
-		},
-		{
 			Type:  "day",
 			Label: "Day",
 			Icon:  "scroll",

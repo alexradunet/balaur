@@ -89,7 +89,7 @@ All copy must match this. Update it the moment shape changes.
 **Information architecture — Home is the companion; a domain sidebar rail is the nav.**
 `/` is Home: the full-screen companion chat, the conversation Balaur is built
 around. There is no topbar. A domain sidebar rail (`#sb-side`) on the left
-carries the six domains (Quests, Knowledge, Life, Journal, Heads, Settings);
+carries the five domains (Quests, Knowledge, Life, Heads, Settings);
 clicking one calls `GET /ui/show/{type}`, which SSE-appends a rendered card
 artifact to `#chat` — no navigation, no page load, no LLM. A *card* is a typed,
 parameterized, server-rendered resource (`/ui/cards/{type}`) that renders as a
@@ -162,13 +162,10 @@ with no model calls: data dir writable, core collections present, model
 readiness (non-fatal), OS-access gate state, extension count.
 
 dialogue choices — `offer_choices` renders 2–5 numbered reply buttons in chat
-(keyboard 1–9); a choice posts as the owner's turn · typed card registry — 14
+(keyboard 1–9); a choice posts as the owner's turn · typed card registry — 13
 parameterized, server-rendered card resources under `/ui/cards/{type}`: today, quests, calendar,
-timeline, journal, day, measure, lines, memory, skills, heads, habits, lifelog,
+timeline, day, measure, lines, memory, skills, heads, habits, lifelog,
 settings ·
-the candle (the journal card's artifact at /ui/show/journal): immersive writing
-surface — free-hand or guided by one model-composed prompt line (deterministic
-fallback), entries shared with the day card ·
 on-the-spot UI — `card_show` is the single agent UI tool: it embeds any typed
 card inline in chat (Balaur composes from the registry only — no free-form markup) ·
 FTS5 memory recall (bm25-ranked sidecar index, rebuilt on boot, synced on

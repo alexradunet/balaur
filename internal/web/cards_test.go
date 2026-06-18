@@ -36,22 +36,6 @@ func seedTask(t testing.TB, app *tests.TestApp, title string, status string, due
 	return rec
 }
 
-func seedJournalEntry(t testing.TB, app *tests.TestApp, text string, notedAt time.Time) *core.Record {
-	t.Helper()
-	coll, err := app.FindCollectionByNameOrId("entries")
-	if err != nil {
-		t.Fatalf("find entries collection: %v", err)
-	}
-	rec := core.NewRecord(coll)
-	rec.Set("kind", "journal")
-	rec.Set("text", text)
-	rec.Set("noted_at", notedAt.UTC())
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save journal entry: %v", err)
-	}
-	return rec
-}
-
 func seedLifeEntry(t testing.TB, app *tests.TestApp, kind string, valueNum float64, text string, notedAt time.Time) *core.Record {
 	t.Helper()
 	coll, err := app.FindCollectionByNameOrId("entries")
@@ -80,7 +64,7 @@ func TestUiCardPalette(t *testing.T) {
 		URL:             "/ui/cards",
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-palette", "today", "quests", "calendar", "timeline", "journal", "day", "measure", "lines", "memory", "skills", "heads", "habits", "lifelog"},
+		ExpectedContent: []string{"ucard-palette", "today", "quests", "calendar", "timeline", "day", "measure", "lines", "memory", "skills", "heads", "habits", "lifelog"},
 	}
 	scenario.Test(t)
 }
@@ -165,7 +149,6 @@ func TestUiCardAllTypesRender(t *testing.T) {
 		{"quests", ""},
 		{"calendar", ""},
 		{"timeline", ""},
-		{"journal", ""},
 		{"day", ""},
 		{"measure", "?kind=weight"},
 		{"lines", "?kind=notes"},
@@ -219,23 +202,6 @@ func TestUiCardQuestsBadStatus(t *testing.T) {
 		TestAppFactory:  newWebApp,
 		ExpectedStatus:  200,
 		ExpectedContent: []string{"card-note-error"},
-	}
-	scenario.Test(t)
-}
-
-// ---- journal: seeded entry appears ----
-
-func TestUiCardJournal(t *testing.T) {
-	app := newWebApp(t)
-	seedJournalEntry(t, app, "The sun rose over the Keep.", time.Now().Add(-time.Hour))
-
-	scenario := tests.ApiScenario{
-		Name:            "journal card shows entry text",
-		Method:          "GET",
-		URL:             "/ui/cards/journal",
-		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
-		ExpectedStatus:  200,
-		ExpectedContent: []string{"ucard-journal", "The sun rose over the Keep."},
 	}
 	scenario.Test(t)
 }

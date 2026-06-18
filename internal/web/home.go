@@ -66,7 +66,6 @@ func domainSidebar() shell.SidebarProps {
 				item("Quests", "quests", "scroll"),
 				item("Knowledge", "memory", "tome"),
 				item("Life", "lifelog", "orb"),
-				item("Journal", "journal", "quill"),
 			}},
 			{Label: "Settings", Items: []shell.SidebarItem{
 				sect("Profile", "profile"),
