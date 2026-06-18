@@ -152,7 +152,6 @@ func sidebarStory() Story {
 					{Label: "Domains", Items: []shell.SidebarItem{
 						item("Quests", "quests", "scroll", true),
 						item("Life", "lifelog", "orb", false),
-						item("Journal", "journal", "quill", false),
 					}},
 					{Label: "Knowledge", Items: []shell.SidebarItem{
 						know("Awaiting", "view=proposed"),

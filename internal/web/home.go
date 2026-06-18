@@ -72,7 +72,6 @@ func domainSidebar() shell.SidebarProps {
 			{Label: "Domains", Items: []shell.SidebarItem{
 				item("Quests", "quests", "scroll"),
 				item("Life", "lifelog", "orb"),
-				item("Journal", "journal", "quill"),
 			}},
 			{Label: "Knowledge", Items: []shell.SidebarItem{
 				know("Awaiting", "view=proposed"),

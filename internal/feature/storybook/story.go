@@ -95,7 +95,6 @@ var stories = []Story{
 	statcardStory(),
 	questsfocusStory(),
 	lifelogfocusStory(),
-	journalfocusStory(),
 	knowledgefocusStory(),
 	dayfocusStory(),
 	settingsfocusStory(),

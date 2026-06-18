@@ -12,7 +12,7 @@ import (
 // multiple sub-tests to ensure the registry is complete and consistent.
 var allTypes = []string{
 	"today", "quests", "calendar", "timeline",
-	"journal", "day", "measure", "lines", "memory", "skills", "heads", "habits", "lifelog", "tasks", "settings",
+	"day", "measure", "lines", "memory", "skills", "heads", "habits", "lifelog", "tasks", "settings",
 }
 
 func TestAll(t *testing.T) {
@@ -111,7 +111,7 @@ func TestValidateNumericClamping(t *testing.T) {
 		},
 		{
 			name:      "limit=3 passes through",
-			typ:       "journal",
+			typ:       "memory",
 			params:    map[string]string{"limit": "3"},
 			key:       "limit",
 			wantValue: "3",
@@ -214,7 +214,7 @@ func TestHasManage(t *testing.T) {
 			t.Errorf("HasManage(%q) = false, want true", typ)
 		}
 	}
-	for _, typ := range []string{"today", "calendar", "journal", "day", "habits", "lifelog", "timeline", "settings", "heads", "nope"} {
+	for _, typ := range []string{"today", "calendar", "day", "habits", "lifelog", "timeline", "settings", "heads", "nope"} {
 		if cards.HasManage(typ) {
 			t.Errorf("HasManage(%q) = true, want false", typ)
 		}

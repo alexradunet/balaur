@@ -15,14 +15,12 @@ import (
 // Register wires the journal-family cards into the ui registry. Call once at
 // serve time (via feature.RegisterAll from web.Register).
 func Register(app core.App) {
-	registerJournal(app)
 	registerDay(app)
 }
 
 // Unregister removes them. Called from web.Register's OnTerminate hook so the
 // global ui registry stays clean between test apps.
 func Unregister() {
-	ui.UnregisterCard("journal")
 	ui.UnregisterCard("day")
 }
 
