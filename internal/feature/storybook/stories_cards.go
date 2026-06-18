@@ -311,7 +311,7 @@ func knowledgefocusStory() Story {
 
 	return Story{
 		ID: "knowledgefocus", Group: "Cards", Title: "KnowledgeFocus", Wide: true, OnDark: true,
-		Blurb: "The knowledge panel body: memory categories rendered with an in-panel tab strip (Awaiting / Facts / Preferences / People / Projects / Context), navigated via /ui/panel/memory (plan 099). Skills render without the strip — Skills is a top-level rail entry, not a memory category. Proposed/active/archived sections; live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
+		Blurb: "The knowledge panel body: memory categories rendered with an in-panel tab strip (Awaiting / Facts / Preferences / People / Projects / Context), navigated via /ui/show/memory — the panel door, no chip (plan 101). Skills render without the strip — Skills is a top-level rail entry, not a memory category. Proposed/active/archived sections; live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
 		Variants: []Variant{
 			{"memory · people", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
 				Kind:     "memories",
@@ -349,7 +349,7 @@ func knowledgefocusStory() Story {
 		Dos: []string{
 			"Pass pre-rendered MemoryRecordCard / SkillRecordCard nodes — KnowledgeFocus is kind-agnostic.",
 			"Use KnowledgeGrid for both the initial render and the live-search SSE patch into #k-active-grid.",
-			"Wire tab @get to /ui/panel/memory?{query} (in-panel nav, no chip) not /ui/show/memory (summon).",
+			"Wire tab @get to /ui/show/memory?{query} — the panel door morphs #panel-inner and never adds a chip (plan 101).",
 		},
 		Donts: []string{
 			"Re-implement the record card forms here — MemoryRecordCard/SkillRecordCard own them.",
@@ -415,7 +415,7 @@ func dayfocusStory() Story {
 
 // settingsfocusStory documents the settings panel body — section content with
 // an in-panel tab strip (Profile / Appearance / Models / Heads), navigated via
-// /ui/panel/settings (plan 099). The sidebar Settings entry summons the panel;
+// /ui/show/settings (plan 101). The sidebar Settings entry summons the panel;
 // tabs switch sections without persisting a new chip or transcript row.
 func settingsfocusStory() Story {
 	// Profile variant: one active soul avatar, one active Balaur head.
@@ -442,7 +442,7 @@ func settingsfocusStory() Story {
 
 	return Story{
 		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
-		Blurb: "The settings panel body: an in-panel tab strip (Profile / Appearance / Models / Heads) navigated via /ui/panel/settings (plan 099). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
+		Blurb: "The settings panel body: an in-panel tab strip (Profile / Appearance / Models / Heads) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel with the install form.",
 		Variants: []Variant{
 			{"profile section", settingscards.SettingsFocus(profileView)},
 			{"models section", settingscards.SettingsFocus(modelsView)},
@@ -455,11 +455,11 @@ func settingsfocusStory() Story {
 		Dos: []string{
 			"Use #identity-card, #soul-section, #balaur-section as the SSE outer-patch targets after profile POSTs.",
 			"Keep the avatar grid as FORM-PER-BUTTON — one hidden input per form, no single wrapper form.",
-			"Wire section tab @get to /ui/panel/settings?section=… (in-panel nav, no chip) not /ui/show/settings.",
+			"Wire section tab @get to /ui/show/settings?section=… — the panel door, no chip (plan 101).",
 		},
 		Donts: []string{
 			"Swap the form-per-button avatar grid for a single form — the SSE re-render targets individual sections.",
-			"Route section switches through /ui/show — that summons a new artifact and appends a chip; use /ui/panel instead.",
+			"Owner opens (rail, card links, tabs) never enter the transcript; only Balaur's card_show/show_cards leave a chip (plan 101).",
 		},
 	}
 }

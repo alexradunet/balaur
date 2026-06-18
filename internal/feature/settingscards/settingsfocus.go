@@ -339,7 +339,7 @@ func ProfileBalaurSection(v ProfileView) g.Node {
 }
 
 // settingsTabs renders the in-panel section strip. Tabs navigate the panel via
-// /ui/panel/settings (morph #panel-inner, no chip).
+// /ui/show/settings (morph #panel-inner, no chip).
 func settingsTabs(active string) g.Node {
 	type t struct{ label, section string }
 	defs := []t{{"Profile", "profile"}, {"Appearance", "appearance"}, {"Models", "models"}, {"Heads", "heads"}}
@@ -349,7 +349,7 @@ func settingsTabs(active string) g.Node {
 			Label:  d.label,
 			Href:   "/ui/show/settings?section=" + d.section,
 			Active: active == d.section,
-			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/panel/settings?section="+d.section+"')")},
+			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section="+d.section+"')")},
 		}
 	}
 	return ui.Tabs(items)

@@ -1,24 +1,23 @@
 package web
 
-// show_test.go — handler tests for GET /ui/show/{type} (plan 088, updated plan 098).
+// show_test.go — handler tests for GET /ui/show/{type} (plan 101).
 // Correctness pins:
 //   - 200 + SSE morph → #panel-inner (panel swap) with the card markup
-//   - 200 + SSE append → #chat with an art-chip re-open affordance
-//   - Persists role="tool", origin="" (sidesteps chatNudges origin != '')
-//   - Content carries the uicard marker (\x00balaur-uicard:)
+//   - Does NOT append a chip or persist a tool row (owner directive: no pollution)
 //   - panel_active owner_setting is written with the canonical re-summon URL
-//   - chatNudges does NOT duplicate the card (origin="" skips the filter)
+//   - GET /ui/show/close clears panel_active and morphs the empty panel
 //   - GET /ui/show/bogus → 404
+//   - GET /ui/show/quests?status=bogusvalue → 400
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/store"
-	"github.com/alexradunet/balaur/internal/tools"
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
@@ -35,9 +34,9 @@ func TestUIShow(t *testing.T) {
 		s.Test(t)
 	})
 
-	t.Run("GET /ui/show/quests → 200 SSE: morphs panel + appends chip, persists uicard row", func(t *testing.T) {
+	t.Run("GET /ui/show/quests → 200 SSE: morphs panel, no chip, no persisted row", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:           "quests show → 200 SSE: panel morph + chip append",
+			Name:           "quests show → 200 SSE: panel morph, no chip",
 			Method:         "GET",
 			URL:            "/ui/show/quests",
 			TestAppFactory: newWebApp,
@@ -46,33 +45,13 @@ func TestUIShow(t *testing.T) {
 				"datastar-patch-elements",
 				`id="panel-inner"`, // panel morph (single-active)
 				"quest-stack",      // card body is in the panel
-				"art-chip",         // re-open chip in #chat
-				"selector #chat",   // chip goes to #chat
-				"mode append",
 			},
-			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, res *http.Response) {
-				// Verify the persisted messages row: role=tool, origin="",
-				// content carries the uicard marker.
-				recs, err := app.FindRecordsByFilter("messages", "role = 'tool'", "-@rowid", 1, 0, nil)
-				if err != nil || len(recs) == 0 {
-					tb.Fatalf("no tool message persisted after /ui/show/quests: %v", err)
-				}
-				rec := recs[0]
-				// origin="" sidesteps chatNudges filter (origin != '').
-				if got := rec.GetString("origin"); got != "" {
-					tb.Errorf("origin = %q, want empty (must sidestep chatNudges)", got)
-				}
-				content := rec.GetString("content")
-				if !strings.HasPrefix(content, tools.UICardMarker) {
-					tb.Errorf("content does not start with UICardMarker; got %q", content)
-				}
-				typ, _, _, ok := tools.ParseUICard(content)
-				if !ok {
-					tb.Errorf("ParseUICard returned ok=false for persisted content %q", content)
-				}
-				if typ != "quests" {
-					tb.Errorf("parsed typ = %q, want %q", typ, "quests")
-				}
+			// Must NOT append a chip or persist a chat row.
+			NotExpectedContent: []string{
+				"art-chip",
+				`selector "#chat"`,
+			},
+			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, _ *http.Response) {
 				// panel_active must be written with the canonical re-summon URL.
 				active := store.GetOwnerSetting(app, panelActiveKey, "")
 				if active != "/ui/show/quests" {
@@ -83,66 +62,90 @@ func TestUIShow(t *testing.T) {
 		s.Test(t)
 	})
 
-	t.Run("GET /ui/show/quests: chatNudges does not duplicate the card", func(t *testing.T) {
-		// Inject the card, then verify chatNudges does not surface it (origin="").
+	t.Run("GET /ui/show/quests: no tool row persisted (headline regression guard)", func(t *testing.T) {
+		// This is the owner directive test: opening a card must NOT persist a
+		// role=tool row. Count tool rows before and after; expect unchanged.
 		s := tests.ApiScenario{
-			Name:            "quests show + chatNudges since=0 — no duplication",
+			Name:            "quests show — no tool row persisted",
 			Method:          "GET",
 			URL:             "/ui/show/quests",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  200,
 			ExpectedContent: []string{"datastar-patch-elements"},
-			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, _ *http.Response) {
-				// chatNudges filters origin != ''. The injected row has origin="",
-				// so it must never appear in the nudge stream.
-				recs, err := app.FindRecordsByFilter("messages", "origin != ''", "@rowid", 20, 0, nil)
+			BeforeTestFunc: func(tb testing.TB, app *tests.TestApp, _ *core.ServeEvent) {
+				// Capture the tool-row count before the request.
+				master, err := conversation.Master(app)
 				if err != nil {
-					tb.Fatalf("nudge filter query: %v", err)
+					tb.Fatalf("conversation.Master: %v", err)
 				}
-				for _, r := range recs {
-					if strings.Contains(r.GetString("content"), "quests") {
-						tb.Errorf("chatNudges would return the /ui/show card (origin=%q, content=%q)",
-							r.GetString("origin"), r.GetString("content"))
+				hist, err := conversation.History(app, master.Id, 200)
+				if err != nil {
+					tb.Fatalf("conversation.History: %v", err)
+				}
+				var count int
+				for _, r := range hist {
+					if r.GetString("role") == "tool" {
+						count++
 					}
+				}
+				// Store the count for AfterTestFunc by setting an owner setting
+				// we can read back — this avoids shared mutable state.
+				_ = store.SetOwnerSetting(app, "test_tool_row_count_before", string(rune('0'+count)))
+			},
+			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, _ *http.Response) {
+				before := store.GetOwnerSetting(app, "test_tool_row_count_before", "?")
+				master, err := conversation.Master(app)
+				if err != nil {
+					tb.Fatalf("conversation.Master: %v", err)
+				}
+				hist, err := conversation.History(app, master.Id, 200)
+				if err != nil {
+					tb.Fatalf("conversation.History: %v", err)
+				}
+				var after int
+				for _, r := range hist {
+					if r.GetString("role") == "tool" {
+						after++
+					}
+				}
+				afterStr := string(rune('0' + after))
+				if afterStr != before {
+					tb.Errorf("tool row count changed: before=%s after=%s — /ui/show/quests persisted a row (owner-pollution regression)", before, afterStr)
 				}
 			},
 		}
 		s.Test(t)
 	})
 
-	t.Run("GET / after /ui/show/quests shows card in history", func(t *testing.T) {
-		// Inject card via /ui/show/quests; then verify the persisted row is in
-		// History (the DB record that recap.messageViews would re-render on reload).
+	t.Run("GET /ui/show/close → 200: morphs empty panel, panel_active cleared", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:            "inject quests — DB history contains the tool row",
-			Method:          "GET",
-			URL:             "/ui/show/quests",
-			TestAppFactory:  newWebApp,
-			ExpectedStatus:  200,
-			ExpectedContent: []string{"datastar-patch-elements"},
+			Name:           "close → empty panel + panel_active cleared",
+			Method:         "GET",
+			URL:            "/ui/show/close",
+			TestAppFactory: newWebApp,
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				"datastar-patch-elements",
+				`id="panel-inner"`,
+				"panel-empty",
+			},
+			BeforeTestFunc: func(tb testing.TB, app *tests.TestApp, _ *core.ServeEvent) {
+				// Pre-seed panel_active so we can verify it is cleared.
+				if err := store.SetOwnerSetting(app, panelActiveKey, "/ui/show/quests"); err != nil {
+					tb.Fatalf("SetOwnerSetting: %v", err)
+				}
+			},
 			AfterTestFunc: func(tb testing.TB, app *tests.TestApp, _ *http.Response) {
-				// History returns all roles including tool; the injected row
-				// must be present with role=tool and uicard marker content.
-				recs, err := app.FindRecordsByFilter("messages", "role = 'tool'", "-@rowid", 10, 0, nil)
-				if err != nil {
-					tb.Fatalf("loading tool messages: %v", err)
-				}
-				var found bool
-				for _, r := range recs {
-					if strings.HasPrefix(r.GetString("content"), tools.UICardMarker) {
-						found = true
-					}
-				}
-				if !found {
-					tb.Errorf("no tool message with uicard marker found in history after /ui/show/quests")
+				got := store.GetOwnerSetting(app, panelActiveKey, "")
+				if got != "" {
+					tb.Errorf("panel_active after close = %q; want empty", got)
 				}
 			},
 		}
 		s.Test(t)
 	})
 
-	t.Run("GET /ui/show/quests with invalid params → 400", func(t *testing.T) {
-		// quests supports a status param with an enum; bogusvalue is not in it.
+	t.Run("GET /ui/show/quests?status=bogusvalue → 400", func(t *testing.T) {
 		s := tests.ApiScenario{
 			Name:            "invalid quests params → 400",
 			Method:          "GET",

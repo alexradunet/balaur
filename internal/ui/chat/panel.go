@@ -34,7 +34,7 @@ func Panel(p PanelProps) g.Node {
 		h.Span(h.Class("panel-head-title"), g.Text(p.Title)),
 		// Close control: clears the panel (and the persisted pointer) via @get.
 		h.Button(h.Class("panel-close"), h.Type("button"),
-			g.Attr("data-on:click__prevent", "@get('/ui/panel/close')"),
+			g.Attr("data-on:click__prevent", "@get('/ui/show/close')"),
 			h.Aria("label", "Close panel"), g.Text("✕")),
 	)
 	inner = append(inner,
