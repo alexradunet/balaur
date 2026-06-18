@@ -87,3 +87,32 @@ func TestAppDockResetsTop(t *testing.T) {
 		t.Errorf("html.app #dock.app-dock must reset top (e.g. `top: 0`) so the leaked base #dock top:62px does not clip the composer; block was:\n%s", block)
 	}
 }
+
+// TestStorybookStageInkText guards plan 107: the storybook's default story stage
+// (.sb-view-stage) is a parchment surface, so it must set ink text (else
+// dark-mode content inherits the page-bg --fg/--fg-strong tokens and goes
+// pale/near-white on parchment). The dark/dock stage variants keep their own
+// (page/wood) text colors; the explicit --fg-strong headings are re-anchored to
+// ink only on the parchment stage, preserving the proposed/muted modifiers.
+func TestStorybookStageInkText(t *testing.T) {
+	b, err := FS.ReadFile("static/basm.css")
+	if err != nil {
+		t.Fatalf("read basm.css: %v", err)
+	}
+	css := string(b)
+
+	// The parchment-stage --fg-strong override is the load-bearing rule; its
+	// exact selector exists only because of this change.
+	if !strings.Contains(css, ".sb-views:not(.sb-views-dark):not(.sb-views-dock) .sb-view-stage .k-heading:not(.k-heading-proposed):not(.k-heading-muted)") {
+		t.Error("storybook parchment stage must re-anchor headings to ink (panel-stage scoped, modifiers preserved) — plan 107")
+	}
+	// The dark and dock stages must re-assert their own text colors, else the
+	// base .sb-view-stage ink would leak onto those dark backgrounds.
+	if !strings.Contains(css, ".sb-views-dock .sb-view-stage") || !strings.Contains(css, "color: var(--chrome-fg)") {
+		t.Error("storybook dock stage must set --chrome-fg text (ink would be invisible on wood) — plan 107")
+	}
+	// The modifier the override must NOT clobber is still gold.
+	if !strings.Contains(css, ".k-heading-proposed { color: var(--gold)") {
+		t.Error(".k-heading-proposed must stay gold (plan 107 must not flatten it to ink)")
+	}
+}

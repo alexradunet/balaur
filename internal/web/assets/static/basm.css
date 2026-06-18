@@ -3069,18 +3069,29 @@ progress.pull-progress-bar::-moz-progress-bar {
   flex: 1; display: flex; align-items: center; justify-content: center; min-height: 96px; padding: 20px;
   background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
   border: 2px solid var(--parch-edge); box-shadow: var(--parch-bevel);
+  color: var(--ink);
 }
 /* Dark stage for dock/page components (chat ledges, the empty hearth, page
    titles) — they render light-on-dark and would vanish on parchment. */
 .sb-views-dark .sb-view-stage {
   background-color: var(--bg); background-image: var(--grain-warm); background-size: 4px 4px;
   border-color: var(--outline-2); box-shadow: var(--bevel-up);
+  color: var(--fg);
 }
 /* Dock stage: the always-dark wood ledge (--chrome) for chat ledge sub-pieces
    whose text is dock-light in both modes (so --bg, which flips, won't do). */
 .sb-views-dock .sb-view-stage {
   background-color: var(--chrome); background-image: var(--wood-planks);
   border-color: var(--outline-2); box-shadow: var(--bevel-up);
+  color: var(--chrome-fg);
+}
+/* Explicit --fg-strong headings/labels (panel/card headings) won't inherit the
+   parchment stage's ink from the rule above, so re-anchor them — but ONLY on the
+   parchment (default) stage. On the dark/dock stages --fg-strong stays correct.
+   :not() leaves the gold "proposed" and muted .k-heading modifiers intact. */
+.sb-views:not(.sb-views-dark):not(.sb-views-dock) .sb-view-stage :is(h1, h2, h3, .empty-title, .tl-label, .pull-download-name),
+.sb-views:not(.sb-views-dark):not(.sb-views-dock) .sb-view-stage .k-heading:not(.k-heading-proposed):not(.k-heading-muted) {
+  color: var(--ink);
 }
 .sb-view-cap { margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); text-align: center; }
 .sb-h2 { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin: 0 0 var(--space-3); }
