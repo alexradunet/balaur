@@ -7,6 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 
 	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/ui/shell"
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
@@ -76,6 +77,85 @@ func TestHomePanelRestore(t *testing.T) {
 	if !strings.Contains(out, "panel-head") {
 		t.Errorf("restore: missing panel-head bar:\n%s", out)
 	}
+}
+
+// TestHomePanelChrome verifies the shell reflects persisted panel state (plan 103):
+//   - Fresh app (nothing open): <html> has class="app panel-collapsed" (collapse-when-empty),
+//     and both the resizer and reveal handle are present.
+//   - With panel_active set + panel_collapsed="0" + panel_width="600": <html> has no
+//     panel-collapsed class, and carries style="--w-panel:600px" on <html> (not .app-shell).
+func TestHomePanelChrome(t *testing.T) {
+	t.Run("fresh app: panel-collapsed class + resizer + reveal handle", func(t *testing.T) {
+		app := newWebApp(t)
+		h := &handlers{app: app, tmpl: parseTemplates(t)}
+		page := shell.ChatShell(shell.ChatShellProps{
+			Title:          "Home",
+			Panel:          h.restoredPanelNode(),
+			PanelCollapsed: h.panelCollapsed(),
+			PanelStyle:     h.panelWidthCSS(),
+		})
+		var b strings.Builder
+		if err := page.Render(&b); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		out := b.String()
+		if !strings.Contains(out, `class="app panel-collapsed"`) {
+			t.Errorf("fresh app: expected html class=app panel-collapsed:\n%s", out[:min(500, len(out))])
+		}
+		if !strings.Contains(out, `class="panel-resizer"`) {
+			t.Errorf("fresh app: missing panel-resizer")
+		}
+		if !strings.Contains(out, `class="panel-reveal"`) {
+			t.Errorf("fresh app: missing panel-reveal")
+		}
+	})
+
+	t.Run("with panel_active + collapsed=0 + width=600: expanded + width on <html>", func(t *testing.T) {
+		app := newWebApp(t)
+		if err := store.SetOwnerSetting(app, panelActiveKey, "/ui/show/quests"); err != nil {
+			t.Fatalf("SetOwnerSetting active: %v", err)
+		}
+		if err := store.SetOwnerSetting(app, panelCollapsedKey, "0"); err != nil {
+			t.Fatalf("SetOwnerSetting collapsed: %v", err)
+		}
+		if err := store.SetOwnerSetting(app, panelWidthKey, "600"); err != nil {
+			t.Fatalf("SetOwnerSetting width: %v", err)
+		}
+		h := &handlers{app: app, tmpl: parseTemplates(t)}
+		page := shell.ChatShell(shell.ChatShellProps{
+			Title:          "Home",
+			Panel:          h.restoredPanelNode(),
+			PanelCollapsed: h.panelCollapsed(),
+			PanelStyle:     h.panelWidthCSS(),
+		})
+		var b strings.Builder
+		if err := page.Render(&b); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		out := b.String()
+		// Should NOT have panel-collapsed class.
+		if strings.Contains(out, "panel-collapsed") {
+			t.Errorf("expanded panel must not have panel-collapsed class")
+		}
+		// Width override must appear on <html> (the opening tag), not .app-shell.
+		// Find the <html opening tag and extract it to the closing >.
+		htmlStart := strings.Index(out, "<html")
+		if htmlStart < 0 {
+			t.Fatalf("no <html tag found in output")
+		}
+		htmlTagEnd := strings.Index(out[htmlStart:], ">")
+		if htmlTagEnd < 0 {
+			t.Fatalf("no > after <html in output")
+		}
+		htmlTag := out[htmlStart : htmlStart+htmlTagEnd+1]
+		if !strings.Contains(htmlTag, `style="--w-panel:600px"`) {
+			t.Errorf("--w-panel:600px override must be on <html> opening tag, got tag: %s", htmlTag)
+		}
+		// Must NOT appear on .app-shell.
+		if strings.Contains(out, `class="app-shell" style=`) {
+			t.Errorf("width override must not be on .app-shell")
+		}
+	})
 }
 
 // TestHomeDockSelectorIDs: the rendered HOME page must carry every selector id

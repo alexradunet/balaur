@@ -32,6 +32,10 @@ func Panel(p PanelProps) g.Node {
 	}
 	head = append(head,
 		h.Span(h.Class("panel-head-title"), g.Text(p.Title)),
+		// Collapse control: hides the panel (persisted server-side via basmTogglePanel).
+		h.Button(h.Class("panel-collapse"), h.Type("button"),
+			g.Attr("onclick", "basmTogglePanel()"),
+			h.Aria("label", "Collapse panel"), g.Text("›")),
 		// Close control: clears the panel (and the persisted pointer) via @get.
 		h.Button(h.Class("panel-close"), h.Type("button"),
 			g.Attr("data-on:click__prevent", "@get('/ui/show/close')"),

@@ -3375,6 +3375,36 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
 /* Icon inside a sidebar nav link. */
 .sb-nav-icon { width: 16px; height: 16px; flex-shrink: 0; image-rendering: pixelated; }
 
+/* Panel collapse (plan 103) — DESKTOP only. The display:none MUST be scoped to
+   ≥721px: on ≤720px the panel is a transform-based overlay (plan 098) and the
+   fresh-app default is collapsed (collapse-when-empty), so an unscoped
+   display:none would make the mobile overlay un-openable. */
+@media (min-width: 721px) {
+  html.app.panel-collapsed .app-shell { grid-template-columns: 1fr; }
+  html.app.panel-collapsed #panel.app-panel { display: none; }
+}
+
+/* Draggable divider on the panel's left edge (plan 103). */
+html.app .panel-resizer {
+  position: absolute; left: -3px; top: 0; bottom: 0; width: 6px;
+  border: 0; padding: 0; background: transparent; cursor: col-resize;
+  z-index: var(--z-sticky);
+}
+html.app .panel-resizer:hover,
+html.app .panel-resizer.dragging { background: var(--gold-deep); opacity: .5; }
+
+/* Reveal handle: hidden unless collapsed; sits on the right viewport edge. */
+html.app .panel-reveal {
+  position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+  display: none;
+  z-index: var(--z-sticky);
+}
+html.app.panel-collapsed .panel-reveal { display: block; }
+
+/* Collapse control in the panel head bar — same look as .panel-close. */
+html.app .panel-collapse { background: none; border: 0; cursor: pointer; color: var(--ink-muted); font-size: 13px; line-height: 1; padding: 2px 4px; }
+html.app .panel-collapse:hover { color: var(--ink); }
+
 /* Collapse to single column on narrow viewports (≤720px); panel becomes a fixed overlay. */
 @media (max-width: 720px) {
   html.app .app-shell { grid-template-columns: 1fr; }

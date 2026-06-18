@@ -78,9 +78,11 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 		Composer:  composerNode(dock),
 	})
 	page := shell.ChatShell(shell.ChatShellProps{
-		Title: "Home",
-		Dock:  dockNode,
-		Panel: h.restoredPanelNode(),
+		Title:          "Home",
+		Dock:           dockNode,
+		Panel:          h.restoredPanelNode(),
+		PanelCollapsed: h.panelCollapsed(),
+		PanelStyle:     h.panelWidthCSS(),
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := page.Render(e.Response); err != nil {

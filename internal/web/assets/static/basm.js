@@ -188,6 +188,47 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ── Panel: collapse toggle + drag-to-resize (plan 103) ─────────────
+// State lives on <html> and persists server-side (owner_settings), so the
+// committed width and collapsed flag survive reload without a flash.
+// Both the server render (chatshell.go) and this drag set --w-panel on
+// document.documentElement (<html>) — they MUST target the same element so the
+// CSS custom property cascade resolves through one owner; .app-shell inherits it.
+window.basmTogglePanel = function () {
+  var on = document.documentElement.classList.toggle('panel-collapsed');
+  fetch('/ui/panel/collapse', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'on=' + (on ? '1' : '0'),
+  });
+};
+
+// Drag the panel divider to resize. Commits the width to the server on release.
+document.addEventListener('pointerdown', function (e) {
+  var grip = e.target.closest('.panel-resizer');
+  if (!grip) return;
+  e.preventDefault();
+  grip.setPointerCapture(e.pointerId);
+  grip.classList.add('dragging');
+  var onMove = function (ev) {
+    var w = Math.max(320, Math.min(1100, window.innerWidth - ev.clientX));
+    document.documentElement.style.setProperty('--w-panel', w + 'px');
+  };
+  var onUp = function () {
+    grip.classList.remove('dragging');
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    var w = parseInt(document.documentElement.style.getPropertyValue('--w-panel'), 10);
+    if (w) fetch('/ui/panel/width', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'px=' + w,
+    });
+  };
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
+});
+
 // ── Dock: full-screen toggle + drag-to-resize the rail ─────────────
 // State lives on <html> (applied early by the page_head inline script to avoid
 // a flash) and persists in localStorage.
