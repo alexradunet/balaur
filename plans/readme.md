@@ -118,6 +118,9 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 099 | Domain tabs inside the panel; simplify the rail to top-level domains ("same treatment for the other sidebar entries") | P1 | M–L | MED | **098** | — | DONE (APPROVED + **merged to main `6d64c6d`** via `--no-ff`). Expanded to step detail post-098, cold-critiqued (caught: ui.Tabs emits `class="k-tabs"`/`k-tab-active`, NOT the retired `id="k-tabs"`/`data-class:` the 092/095 tests asserted; the `/ui/panel/close` route MUST be deleted since Go's ServeMux silently accepts both; two stale storybook files — `sidebarStory` mirror + `stories_cards.go` story texts — needed updating). First dispatch STOPPED correctly (worktree based off origin/main still had the PLANNED stub — fixed by pushing the expanded plan, then re-dispatch). Advisor re-ran every gate in the worktree: `gofmt`/`vet`/CGO-free build/`go test ./...` (exit 0)/`git diff --check` clean; scope clean (14 files); done-criteria greps pass. New `GET /ui/panel/{type}` (`uiPanelNav`) — morphs `#panel-inner` + sets `panel_active`, **no chip / no persisted row** (type==close clears, the old literal route deleted); `memoryTabs` (gated `Kind=="memories"` — skills stay tab-free) + `settingsTabs` re-add in-panel strips via `ui.Tabs`; rail collapsed to Domains[Quests/Life/Knowledge/Skills]+Settings (`know`/`sect` closures removed). Reverts 092/095's no-in-artifact-tabs on the panel surface, by design. Tests: `TestUIPanelNav` (nav/close/404, `art-chip`-absence guard), flipped knowledge/settings contract tests to the correct markers. Docs: `knowledge.md` (both doors), both storybook files; DESIGN.md correctly needed no change (no stale prose). |
 | 100 | Mobile rail reveal — burger + off-canvas drawer ≤720px — **supersedes 091** | P2 | S–M | LOW–MED | **098**, **099** | — | DONE (APPROVED + **merged to main `f79d09f`** via `--no-ff`). Scoped TIGHT to the responsive gap the canvas opened: the live `html.app` rail was `display:none` ≤720px with no reveal. Added `.app-topbar` (burger + crest + brand) + `.sb-backdrop` to `ChatShell`, and ≤720px CSS turning `html.app .sb-side` into an off-canvas drawer — reusing the existing `basmToggleNav` (NO new JS). Reveal selector `html.app.sb-nav-open .sb-side` (0,3,1) correctly out-specifies the base (0,2,1). Advisor re-ran every gate in the worktree: `gofmt`/`vet`/CGO-free build/`go test ./...` (exit 0)/`git diff --check` clean; scope clean (5 files; `basm.js` untouched). `TestHomeFullChat` asserts the rendered mobile chrome (`app-topbar`/`sb-burger`/`onclick=basmToggleNav()`/`sb-backdrop`). **Verification caveat:** the drawer SLIDE is not browser-verifiable (no browser in the executor/review loop) — markup+wiring test-verified, visual reviewed against the proven storybook `.sb-side` pattern; owner eyeball pending on a ≤720px viewport. **DEFERRED (a future 091-successor cycle, noted in the plan):** panel focus-trap a11y parity, head/model switcher chrome in the rail, owner-resizable panel width — orthogonal, lower-value, browser-verification-bound. |
 | 094 | Cap active chat artifacts at 3; older ones collapse to a static "shown earlier" chip | P2 | M | MED | — | — | DONE (APPROVED + **merged to main `3ac018c`**; `improve/094-cap-active-artifacts`. Advisor re-ran all gates in the worktree: CGO-free build/vet/`go test ./...` (no FAIL/panic)/`gofmt -l`/`git diff --check` clean; scope clean (6 in-scope files). Shared `artifactWrap`/`artifactChip` + `activeArtifactCap` in `cards.go`; `messageView` gains `ArtifactTitle/Icon/Collapsed`, `messageViews` sets them (uicard→spec.Label/Icon, cluster→title), `capArtifacts` post-pass marks all-but-newest-3 collapsed (proposals excluded), `renderMessages` wraps artifacts; `endTool` extended to thread title/icon (all 6 callers updated); `balaurCapArtifacts()` hooked into the `#chat` MutationObserver; chip+collapsed CSS. **Documented deviation (approved on merit):** the HTTP cap test can't share a `TestApp` across `ApiScenario` calls (harness `Cleanup()` nukes the dataDir), so the executor wrote 5 direct unit tests of `capArtifacts` (4→1 collapsed/oldest-first, 2→0, 3→0 boundary, proposals-never, 6→oldest-3) — tests the core logic more directly; the rendered chip HTML is build-verified but not asserted E2E.) |
+| 101 | One non-polluting panel door — owner opens never enter the conversation; only Balaur's `card_show`/`show_cards` chip | P1 | M | MED | 098, 099 | — | TODO (cold-critiqued: premise verified — Balaur's chips persist via the turn pipeline, not `uiShow`, so stripping `uiShow`'s persist+chip leaves them intact; fixed the tree-wide `/ui/panel` grep, the missed doc-comment/blurb sites, the knowledge.md line ref, the ExpectedContent-vs-AfterTestFunc conflation) |
+| 102 | Two-column shell + composer `/`-command palette navigation (delete the rail entirely) | P1 | L | MED–HIGH | **101** | — | TODO (cold-critiqued: fixed the theme-toggle deletion regression — relocated to `.app-chrome` so the toggle + its test survive; corrected the storybook story file/group + registration site; made the `<html>` test assertion class-agnostic for 103; added the stale "from the rail" empty-panel copy + the dead `html.app .sb-` companion CSS) |
+| 103 | Panel collapse + free-drag resize, persisted in `owner_settings` | P2 | M–L | MED | **102**, **101** | — | TODO (cold-critiqued: fixed a BACKWARDS CSS-cascade claim that would silently kill the drag — render `--w-panel` on `<html>` in both server + JS; added the missing `net/http` import; desktop-scoped the collapsed `display:none` so the mobile overlay still opens; relabeled excerpts as post-101/102) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
@@ -698,6 +701,48 @@ placement, and the panel-resize decision. Per this repo's commit-anchored plan d
 is expanded to step detail; 099/100 are authored against the real tree once 098 lands. Execution
 model unchanged: dispatched `sonnet` executor in an isolated worktree, advisor re-runs done-criteria
 + audits scope/diff/tests before APPROVE, then merge.
+
+## Eighteenth cycle (2026-06-18, owner-requested refinement): plans 101–103
+
+Owner-requested, building straight on the canvas pivot (098–100). Two directives:
+(1) *"remove the left sidebar and just leave the main chat and the right artifact page … add some sort
+of autocomplete to the composer so that on /quests or /settings to display the page artifact"* — locked
+via AskUserQuestion to **delete the rail entirely** (palette is the only launcher) and **collapse + free
+drag** (gesture in JS, committed width persisted server-side); (2) *"Opened artifact should not show in
+the main conversation … only from balaur."* Anchored to `4e933d7`.
+
+**The reframe that shaped the split.** Recon surfaced that the "stop polluting the chat" rule is not a
+rail problem — there are **40+ `/ui/show/` links across every feature card** ("all quests →", "open
+life →", "→ this day"…), all owner-initiated opens that today persist a `role=tool` row + a chip. Rather
+than rewrite 40 call sites, the fix is structural: make the **`/ui/show` door itself non-polluting** (one
+handler), so every owner open stops cluttering at once, while Balaur's in-stream `card_show`/`show_cards`
+(persisted by the turn pipeline, not the door) keep their chip. That became its own plan, split three ways
+so each ships independently and the executor scope stays tight:
+
+- **101 — One non-polluting panel door.** Strip persist+chip from `uiShow`; collapse the redundant
+  `/ui/panel/{type}` (099) into it; repoint the ~3 panel-door sites + storybook blurbs. Pure behavior, no
+  layout; ships the owner's "polluting it too much" fix alone.
+- **102 — Two-column shell + `/`-palette.** Delete the rail (+ retire 100's mobile burger/drawer); new
+  `ui.CommandPalette` mounted in `ui.Composer`, driven by the existing `data-bind:message` signal
+  (filtering client-presentational, navigation server-driven); Enter-selects-first via an ~8-line
+  `balaurSubmitOnEnter` branch. Depends on 101.
+- **103 — Panel collapse + free-drag resize.** Collapse toggle + draggable divider reusing the existing
+  `dock-full`/`.dock-grip` JS patterns, but persisting to `owner_settings` (server) instead of
+  localStorage; collapse-when-empty default. Depends on 102.
+
+**Cold-critique before dispatch** (the 098–100 discipline): a 4-agent fan-out (one fresh reader per plan +
+a cross-plan consistency reader), each reading the real tree. The premise of 101 was independently verified
+(Balaur's `card_show` row is persisted by `turn.go`, not `uiShow` — so stripping the door's persist/chip
+leaves Balaur's chips intact). Real fixes applied to the plans (no hard logic blockers): the
+self-contradiction where deleting the rail also deletes the only home theme-toggle a test asserts
+(relocated to `.app-chrome`); a **backwards CSS-cascade claim** in 103 that would silently kill the drag
+after the first resize (render `--w-panel` on `<html>` in both server + JS); missed `/ui/panel`
+doc-comment/blurb sites and a tree-wide grep that could never pass; wrong storybook story file/group +
+the unnamed registration site; the desktop-scoping of the collapsed `display:none` so the mobile overlay
+still opens; a class-agnostic `<html>` test assertion so 103 doesn't break 102's test. Execution order
+**101 → 102 → 103** (strict — 102 needs 101's non-polluting door; 103 needs 102's two-column shell).
+Not yet executed; awaiting the owner's go-ahead (auto-merge/push authorization was scoped to 098–100 and
+does not carry over).
 
 ## Dependency notes
 
