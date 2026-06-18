@@ -121,9 +121,29 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 101 | One non-polluting panel door — owner opens never enter the conversation; only Balaur's `card_show`/`show_cards` chip | P1 | M | MED | 098, 099 | — | TODO (cold-critiqued: premise verified — Balaur's chips persist via the turn pipeline, not `uiShow`, so stripping `uiShow`'s persist+chip leaves them intact; fixed the tree-wide `/ui/panel` grep, the missed doc-comment/blurb sites, the knowledge.md line ref, the ExpectedContent-vs-AfterTestFunc conflation) |
 | 102 | Two-column shell + composer `/`-command palette navigation (delete the rail entirely) | P1 | L | MED–HIGH | **101** | — | TODO (cold-critiqued: fixed the theme-toggle deletion regression — relocated to `.app-chrome` so the toggle + its test survive; corrected the storybook story file/group + registration site; made the `<html>` test assertion class-agnostic for 103; added the stale "from the rail" empty-panel copy + the dead `html.app .sb-` companion CSS) |
 | 103 | Panel collapse + free-drag resize, persisted in `owner_settings` | P2 | M–L | MED | **102**, **101** | — | TODO (cold-critiqued: fixed a BACKWARDS CSS-cascade claim that would silently kill the drag — render `--w-panel` on `<html>` in both server + JS; added the missing `net/http` import; desktop-scoped the collapsed `display:none` so the mobile overlay still opens; relabeled excerpts as post-101/102) |
+| 104 | Stop the chat composer being clipped (reset leaked `top:62px` on the app-shell dock) + chat-area spacing polish | P1 | S | LOW | — | — | DONE (APPROVED, **awaiting owner merge** — advisor never pushes/merges). Root cause confirmed in-browser at `1ba3b62`: `html.app #dock.app-dock` switches the base fixed `#dock` to `position:relative` but leaks `top:62px`, shoving the 100dvh dock down 62px so the composer footer/Send is clipped by `.app-shell{overflow:hidden}`. Dispatched sonnet executor → branch `improve/104-app-dock-composer-clip` @ `dc577c6` (worktree `agent-a453654b87595c704`). Advisor re-ran all gates in the worktree: `gofmt -l`/`git diff --check` clean, CGO-free build + `go vet` OK, full `go test ./...` (36 pkgs, 0 FAIL), `TestAppDockResetsTop` PASS. Scope clean (2 files: `basm.css` `+top:0` & chat bottom pad `space-2→space-4`; `css_tokens_test.go` `+TestAppDockResetsTop`). Diff matches the live-verified fix. |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
+
+## Nineteenth cycle (2026-06-18, owner-reported bug): plan 104
+
+Owner: *"some part of the composer is cut, is it being drawn behind the
+scrollable view, it should be always visible at the bottom with proper padding
+and the chat content should also be properly designed with space and ui/ux."*
+
+Reproduced and root-caused **in-browser** against the running app at `1ba3b62`
+(1440×681): the single-page chat shell (`html.app`) re-uses the base `#dock`
+element — which is `position: fixed; top: 62px` to clear a 62px topbar — as a
+`position: relative` grid column (`html.app #dock.app-dock`, basm.css:3373) but
+never resets `top`. Under relative positioning the leaked `top: 62px` becomes a
+downward offset, so the `height:100%` (=100dvh) dock runs `62 → 62+100dvh` and
+its bottom 62px (the pinned composer's footer + **Send**) is clipped by
+`.app-shell { overflow: hidden }`. Measured: composer bottom 733 vs viewport 681
+(52px clipped); setting `top:0` brought it to 671 (10px inset, fully visible)
+with chat scrolling intact. `ChatShell` has no topbar, so the 62px is pure
+leaked cruft. Plan 104 = the one-line CSS reset + a `~24px` chat-to-ledge
+clearance polish + a regression test. CSS-only, single file (+ test); LOW risk.
 
 ## Eighth cycle — Card-first: kill the pages (plans 050–057)
 
