@@ -122,8 +122,10 @@ domain sidebar rail was retired in plan 102 — navigation is via a composer
 /-command palette (ui.CommandPalette) that appears when the draft starts with
 "/". There is no topbar, no burger, and no off-canvas rail drawer. On narrow
 viewports (≤720px) the layout collapses to one column (chat full-width); the
-panel slides in as a fixed overlay (plan 098). Navigation: Quests, Life,
-Knowledge, Skills, Settings — each item fires GET /ui/show/{type} from the palette.
+panel slides in as a fixed overlay (plan 098). Navigation: Quests, Life, the
+five memory categories (Facts, Preferences, People, Projects, Context) +
+Awaiting, Skills, and the three settings sections (Profile, Models, Heads) —
+each `/`-command item fires GET /ui/show/{type} from the palette (plan 110).
 
 The panel is collapsible and owner-resizable (plan 103). Collapse state is
 persisted as owner_settings["panel_collapsed"] ("1"/"0"/unset — unset derives
@@ -135,11 +137,11 @@ clamped to 320–1100); the owner drags the .panel-resizer divider and the width
 is committed on release via POST /ui/panel/width. Both the SSR width override
 and the live drag set --w-panel on the <html> element so the CSS custom property
 cascade resolves through one owner (the .app-shell grid track inherits it).
-Knowledge opens the memory panel with in-panel category tabs; Settings opens
-with in-panel section tabs.
+Memory categories and settings sections are each their own `/`-command; the
+panels render without in-panel tab strips (plan 110).
 
   GET /ui/show/{type}  — the owner-facing panel door (palette items, card
-    links, chip re-open, in-panel tabs). Morphs #panel-inner and sets
+    links, chip re-open). Morphs #panel-inner and sets
     panel_active; it does not persist a conversation row or add a chip.
     type=close clears the panel. Only Balaur's own card_show/show_cards
     artifacts enter the transcript — persisted by the turn pipeline, chipped

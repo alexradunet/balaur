@@ -69,16 +69,10 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 		}
 	}
 
-	// Must have the in-panel tab strip (plan 099): class="k-tabs", active tab has
-	// k-tab-active and aria-current="page". The category signal stays absent.
-	for _, want := range []string{
-		`class="k-tabs"`,
-		`k-tab-active`,
-		`aria-current="page"`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("KnowledgeFocus (memory category) missing tab strip %q in:\n%s", want, got)
-		}
+	// No in-panel tab strip (plan 110): sub-views are reached via /-command
+	// palette entries, not a tab strip. The category signal stays absent too.
+	if strings.Contains(got, `class="k-tabs"`) {
+		t.Errorf("KnowledgeFocus (memory category) must not contain tab strip:\n%s", got)
 	}
 	if strings.Contains(got, `data-signals:category`) {
 		t.Errorf("KnowledgeFocus (memory category) must not contain data-signals:category:\n%s", got)
@@ -108,12 +102,15 @@ func TestKnowledgeFocusAwaiting(t *testing.T) {
 		`class="k-heading k-heading-proposed"`,
 		`Awaiting your word`,
 		`id="kcard-p1"`,
-		// In-panel tab strip present for memories (plan 099)
-		`class="k-tabs"`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("KnowledgeFocus (awaiting) missing %q in:\n%s", want, got)
 		}
+	}
+
+	// No in-panel tab strip (plan 110).
+	if strings.Contains(got, `class="k-tabs"`) {
+		t.Errorf("KnowledgeFocus (awaiting) must not contain tab strip:\n%s", got)
 	}
 
 	// Must NOT have the active grid or search input.

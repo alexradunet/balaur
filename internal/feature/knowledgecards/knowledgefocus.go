@@ -52,34 +52,6 @@ func KnowledgeGrid(active []g.Node, kind, query string) g.Node {
 	return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing here yet. Speak with Balaur — when something is worth keeping, it will ask."})
 }
 
-// memoryTabs renders the in-panel category strip for the memory artifact. The
-// Awaiting tab is view=proposed; the rest are categories (view=active). Tabs
-// navigate the panel via /ui/show/memory (morph #panel-inner, no chip).
-func memoryTabs(mode, category string) g.Node {
-	type t struct {
-		label, query string
-		active       bool
-	}
-	defs := []t{
-		{"Awaiting", "view=proposed", mode == "proposed"},
-		{"Facts", "category=fact", mode == "active" && category == "fact"},
-		{"Preferences", "category=preference", mode == "active" && category == "preference"},
-		{"People", "category=person", mode == "active" && category == "person"},
-		{"Projects", "category=project", mode == "active" && category == "project"},
-		{"Context", "category=context", mode == "active" && category == "context"},
-	}
-	items := make([]ui.TabItem, len(defs))
-	for i, d := range defs {
-		items[i] = ui.TabItem{
-			Label:  d.label,
-			Href:   "/ui/show/memory?" + d.query, // no-JS fallback (summon)
-			Active: d.active,
-			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/show/memory?"+d.query+"')")},
-		}
-	}
-	return ui.Tabs(items)
-}
-
 // knowledgeFocusBody renders the sections and search grid for a knowledge slice
 // (the main body without the tab strip).
 func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
@@ -153,18 +125,14 @@ func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
 	return g.Group(out)
 }
 
-// KnowledgeFocus renders the knowledge panel body. For memories, a tab strip
-// (plan 099) navigates categories in-panel. Skills has no category axis and
-// renders without the strip.
+// KnowledgeFocus renders the knowledge panel body — memories or skills. Memory
+// sub-views (categories + the Awaiting queue) are reached via /-command palette
+// entries (plan 110), not an in-panel tab strip.
 //
 // mode="proposed" → the Awaiting queue (proposed records only, no search).
 // mode="active" (default) → Proposed-if-present + Active (search + grid) + Archived-if-present.
 func KnowledgeFocus(v KnowledgeFocusView) g.Node {
-	body := knowledgeFocusBody(v)
-	if v.Kind == "memories" {
-		return g.Group([]g.Node{memoryTabs(v.Mode, v.Category), body})
-	}
-	return body // skills: no tabs
+	return knowledgeFocusBody(v)
 }
 
 // ---------------------------------------------------------------------------
