@@ -220,6 +220,26 @@ html, body {
   font: 17px/1.6 var(--font-body);
 }
 
+/* ── Scrollbars — themed, app-wide ──────────────────────────────────
+   Native scrollbars clash with the Hearthwood chrome. Theme every scroll
+   container to a slim candlelit-gold thumb on a transparent track that reads
+   on both the dark wood chrome and the light parchment panels. Tokens are
+   theme-aware (--gold-deep / --gold), so it tracks every palette.
+   Firefox uses the standard properties; WebKit/Blink the pseudo-elements.
+   The 3px transparent border + padding-box clip slims the visible thumb
+   inside a 12px channel, so it never butts against content. */
+* { scrollbar-width: thin; scrollbar-color: var(--gold-deep) transparent; }
+*::-webkit-scrollbar { width: 12px; height: 12px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background-color: var(--gold-deep);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--gold); }
+*::-webkit-scrollbar-corner { background: transparent; }
+
 main {
   max-width: var(--maxw);
   margin: 0 auto;
@@ -505,6 +525,9 @@ textarea:focus-visible,
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-5) 0 var(--chatbar-space);
+  /* Reserve the scrollbar channel symmetrically so it never butts against the
+     owner's right-aligned avatar, and the centered column stays centered. */
+  scrollbar-gutter: stable both-edges;
 }
 
 /* A spoken line: framed portrait beside a parchment speech panel.
@@ -3176,7 +3199,7 @@ html.home #dock .recap-band {
   margin-left: auto;
   margin-right: auto;
 }
-html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 0 var(--space-2); }
+html.home #dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-3) var(--space-2); }
 html.home #dock .recap-zone, html.home #dock .recap-band { display: block; }
 
 @media (max-width: 920px) {
@@ -3426,7 +3449,7 @@ html.app #dock.app-dock .recap-band {
   margin-left: auto;
   margin-right: auto;
 }
-html.app #dock.app-dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 0 var(--space-4); }
+html.app #dock.app-dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px var(--space-3) var(--space-4); }
 html.app #dock.app-dock .recap-zone,
 html.app #dock.app-dock .recap-band { display: block; }
 html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); margin-left: auto; margin-right: auto; }
