@@ -3390,11 +3390,24 @@ html.app .app-shell {
   overflow: hidden;
 }
 
-/* Right panel column — single-active artifact canvas (plan 098). */
+/* Right panel column — single-active artifact canvas (plan 098). The panel
+   surface is constant parchment in BOTH schemes (--surface), so its text must be
+   ink — not the page-bg --fg* tokens, which flip pale in dark mode and would
+   render near-invisible on parchment. Mirror the .parch bg+ink pairing. */
 html.app #panel.app-panel {
   position: relative; height: 100%; overflow-y: auto; z-index: var(--z-base);
   border-left: 2px solid var(--parch-edge);
   background-color: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px;
+  color: var(--ink);
+}
+/* Headings/labels inside the panel set color explicitly to the page-bg
+   --fg-strong (near-white in dark mode, correct only on the dark page) — so the
+   inherited ink from the column rule above can't reach them. Re-anchor them to
+   ink. Panel-scoped: the same classes on the page bg / in /storybook keep
+   --fg-strong. :not() leaves the gold "proposed" and muted heading modifiers. */
+html.app #panel.app-panel :is(h1, h2, h3, .empty-title, .tl-label, .pull-download-name),
+html.app #panel.app-panel .k-heading:not(.k-heading-proposed):not(.k-heading-muted) {
+  color: var(--ink);
 }
 #panel-inner { display: flex; flex-direction: column; min-height: 100%; }
 .panel-empty { padding: var(--space-6); color: var(--ink-muted); font-family: var(--font-mono); font-size: 13px; }
