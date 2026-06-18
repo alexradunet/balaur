@@ -54,7 +54,7 @@ func KnowledgeGrid(active []g.Node, kind, query string) g.Node {
 
 // memoryTabs renders the in-panel category strip for the memory artifact. The
 // Awaiting tab is view=proposed; the rest are categories (view=active). Tabs
-// navigate the panel via /ui/panel/memory (morph #panel-inner, no chip).
+// navigate the panel via /ui/show/memory (morph #panel-inner, no chip).
 func memoryTabs(mode, category string) g.Node {
 	type t struct {
 		label, query string
@@ -74,7 +74,7 @@ func memoryTabs(mode, category string) g.Node {
 			Label:  d.label,
 			Href:   "/ui/show/memory?" + d.query, // no-JS fallback (summon)
 			Active: d.active,
-			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/panel/memory?"+d.query+"')")},
+			Attrs:  []g.Node{g.Attr("data-on:click__prevent", "@get('/ui/show/memory?"+d.query+"')")},
 		}
 	}
 	return ui.Tabs(items)
