@@ -18,22 +18,22 @@ import (
 )
 
 // focusMemoryCategories mirrors the migration constant and the web-side list.
-// Kept here as the focus component's canonical source.
+// Kept here for the title helper below.
 var focusMemoryCategories = []string{"fact", "preference", "person", "project", "context"}
 
-// KnowledgeFocusView is the view-model for the full knowledge manager. Proposed,
+// KnowledgeFocusView is the view-model for a nav-free knowledge slice. Proposed,
 // Active, and Archived carry pre-rendered record-card nodes so the component is
 // kind-agnostic; the builders below map *core.Record → MemoryRecordCard or
 // SkillRecordCard before populating these slices.
 type KnowledgeFocusView struct {
-	Kind       string   // "memories" or "skills" — used in URLs
-	Title      string   // "Memory" or "Skills" — used in the search placeholder
-	Query      string   // current search query
-	Category   string   // current category filter (memory only)
-	Categories []string // available category tabs (nil for skills)
-	Proposed   []g.Node // pre-rendered proposed record cards
-	Active     []g.Node // pre-rendered active record cards
-	Archived   []g.Node // pre-rendered archived record cards
+	Kind     string   // "memories" or "skills" — used in URLs
+	Title    string   // heading / search-placeholder label, e.g. "People", "Skills"
+	Category string   // fixed memory category baked into the search @get; "" = all / skills
+	Query    string   // current search query
+	Mode     string   // "active" (listing + search) or "proposed" (the Awaiting queue)
+	Proposed []g.Node // pre-rendered proposed record cards
+	Active   []g.Node // pre-rendered active record cards
+	Archived []g.Node // pre-rendered archived record cards
 }
 
 // KnowledgeGrid renders the active-section grid fragment (#k-active-grid inner
@@ -52,14 +52,30 @@ func KnowledgeGrid(active []g.Node, kind, query string) g.Node {
 	return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing here yet. Speak with Balaur — when something is worth keeping, it will ask."})
 }
 
-// KnowledgeFocus renders the full knowledge manager focus body. Ports
-// {{define "knowledge_body"}} from knowledge-focus.html, preserving every CSS
-// class, element id, and Datastar attribute so the served basm.css and the
-// existing SSE handlers work unchanged.
+// KnowledgeFocus renders a nav-free knowledge slice. Navigation (categories)
+// lives in the sidebar (plan 095), not inside the artifact.
+//
+// mode="proposed" → the Awaiting queue (proposed records only, no search).
+// mode="active" (default) → Proposed-if-present + Active (search + grid, no
+// category tabs) + Archived-if-present.
 func KnowledgeFocus(v KnowledgeFocusView) g.Node {
+	// Awaiting queue: proposed records only. No search, no active/archived.
+	if v.Mode == "proposed" {
+		body := KnowledgeGrid(v.Proposed, v.Kind, "")
+		return Section(Class("k-section"),
+			H2(Class("k-heading k-heading-proposed"),
+				g.Text("Awaiting your word "),
+				Span(Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Proposed)))),
+			),
+			P(Class("k-sub"), g.Text("Balaur proposed these. Nothing becomes memory without your approval.")),
+			body,
+		)
+	}
+
 	var out []g.Node
 
-	// --- Proposed section (only when there are proposed records) ---
+	// Proposed (only when present — e.g. skills proposals; memory category
+	// cards leave this empty, sending proposals to the Awaiting card).
 	if len(v.Proposed) > 0 {
 		out = append(out,
 			Section(Class("k-section"),
@@ -74,69 +90,30 @@ func KnowledgeFocus(v KnowledgeFocusView) g.Node {
 		)
 	}
 
-	// --- Active section (always rendered) ---
-	// The search input @get expression and category tab @get expressions must
-	// reproduce the template strings byte-for-byte (modulo gomponents escaping:
-	// ' → &#39;, & → &amp;).
-	searchGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q)+'&category='+encodeURIComponent($category))"
-
-	controls := []g.Node{
-		Class("k-controls"),
-		g.Attr("data-signals:q", "'"+v.Query+"'"),
-		g.Attr("data-signals:category", "'"+v.Category+"'"),
-		Input(
-			Class("k-search"),
-			Type("search"),
-			Name("q"),
-			Value(v.Query),
-			g.Attr("placeholder", "Search "+v.Title+"…"),
-			g.Attr("autocomplete", "off"),
-			g.Attr("data-bind:q", ""),
-			g.Attr("data-on:input__debounce.250ms", searchGet),
-		),
-	}
-
-	if len(v.Categories) > 0 {
-		allGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q)+'&category=')"
-		tabs := []g.Node{
-			Class("k-tabs"),
-			ID("k-tabs"),
-			A(
-				Class("k-tab"),
-				g.Attr("data-class:k-tab-active", "$category === ''"),
-				g.Attr("data-on:click__prevent", "$category=''; "+allGet),
-				Href("/"+v.Kind),
-				g.Text("all"),
-			),
-		}
-		for _, cat := range v.Categories {
-			cat := cat // capture
-			tabGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q)+'&category=" + cat + "')"
-			tabs = append(tabs,
-				A(
-					Class("k-tab"),
-					g.Attr("data-class:k-tab-active", "$category === '"+cat+"'"),
-					g.Attr("data-on:click__prevent", "$category='"+cat+"'; "+tabGet),
-					Href("/"+v.Kind+"?category="+cat),
-					g.Text(cat),
-				),
-			)
-		}
-		controls = append(controls, Nav(tabs...))
-	}
-
+	// Active section: search + grid. NO category tabs (navigation lives in the
+	// sidebar, plan 095). The category is fixed per-card — baked into the @get.
+	searchGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q)+'&category=" + v.Category + "')"
 	out = append(out,
 		Section(Class("k-section"),
 			H2(Class("k-heading"),
 				g.Text("Active "),
 				Span(Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Active)))),
 			),
-			Div(controls...),
+			Div(Class("k-controls"),
+				g.Attr("data-signals:q", "'"+v.Query+"'"),
+				Input(
+					Class("k-search"), Type("search"), Name("q"), Value(v.Query),
+					g.Attr("placeholder", "Search "+v.Title+"…"),
+					g.Attr("autocomplete", "off"),
+					g.Attr("data-bind:q", ""),
+					g.Attr("data-on:input__debounce.250ms", searchGet),
+				),
+			),
 			Div(ID("k-active-grid"), KnowledgeGrid(v.Active, v.Kind, v.Query)),
 		),
 	)
 
-	// --- Archived section (only when there are archived records) ---
+	// Archived (only when present).
 	if len(v.Archived) > 0 {
 		out = append(out,
 			Div(Class("stitch")),
@@ -157,36 +134,79 @@ func KnowledgeFocus(v KnowledgeFocusView) g.Node {
 // Builders
 // ---------------------------------------------------------------------------
 
-// buildMemoryFocus assembles the KnowledgeFocusView for the memory manager.
-// Mirrors memoryData in internal/web/knowledge.go; no internal/web import.
-func buildMemoryFocus(app core.App, q, cat string) KnowledgeFocusView {
-	precs, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusProposed)
-	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, q, cat)
-	archived, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusArchived)
-
-	return KnowledgeFocusView{
-		Kind:       "memories",
-		Title:      "Memory",
-		Query:      q,
-		Category:   cat,
-		Categories: focusMemoryCategories,
-		Proposed:   mapToMemoryNodes(precs),
-		Active:     mapToMemoryNodes(arecs),
-		Archived:   mapToMemoryNodes(archived),
+// memoryCategoryTitle maps a category key to its sidebar/heading label. The
+// labels MUST match the Knowledge sidebar items in internal/web/home.go.
+func memoryCategoryTitle(cat string) string {
+	switch cat {
+	case "fact":
+		return "Facts"
+	case "preference":
+		return "Preferences"
+	case "person":
+		return "People"
+	case "project":
+		return "Projects"
+	case "context":
+		return "Context"
+	default:
+		return "Memory"
 	}
 }
 
-// buildSkillsFocus assembles the KnowledgeFocusView for the skills manager.
-// Mirrors skillsData in internal/web/knowledge.go; no internal/web import.
-func buildSkillsFocus(app core.App, q string) KnowledgeFocusView {
+// recordsInCategory filters records to one category; "" returns all.
+func recordsInCategory(recs []*core.Record, cat string) []*core.Record {
+	if cat == "" {
+		return recs
+	}
+	out := make([]*core.Record, 0, len(recs))
+	for _, r := range recs {
+		if r.GetString("category") == cat {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// buildMemoryFocus assembles a nav-free memory slice. view=proposed → the
+// Awaiting queue (all proposed). Otherwise → one category's active + archived
+// (category="" = all active), with search.
+func buildMemoryFocus(app core.App, params map[string]string) KnowledgeFocusView {
+	if params["view"] == "proposed" {
+		precs, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusProposed)
+		return KnowledgeFocusView{
+			Kind:     "memories",
+			Title:    "Awaiting",
+			Mode:     "proposed",
+			Proposed: mapToMemoryNodes(precs),
+		}
+	}
+	q := params["query"]
+	cat := params["category"]
+	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, q, cat)
+	archived, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusArchived)
+	return KnowledgeFocusView{
+		Kind:     "memories",
+		Title:    memoryCategoryTitle(cat),
+		Category: cat,
+		Query:    q,
+		Mode:     "active",
+		Active:   mapToMemoryNodes(arecs),
+		Archived: mapToMemoryNodes(recordsInCategory(archived, cat)),
+	}
+}
+
+// buildSkillsFocus assembles the skills slice: proposed + active + archived in
+// one nav-free card (skills has no category axis), with search.
+func buildSkillsFocus(app core.App, params map[string]string) KnowledgeFocusView {
+	q := params["query"]
 	precs, _ := knowledge.ListByStatus(app, knowledge.Skill, knowledge.StatusProposed)
 	arecs, _ := knowledge.FilterActive(app, knowledge.Skill, q, "")
 	archived, _ := knowledge.ListByStatus(app, knowledge.Skill, knowledge.StatusArchived)
-
 	return KnowledgeFocusView{
 		Kind:     "skills",
 		Title:    "Skills",
 		Query:    q,
+		Mode:     "active",
 		Proposed: mapToSkillNodes(precs),
 		Active:   mapToSkillNodes(arecs),
 		Archived: mapToSkillNodes(archived),

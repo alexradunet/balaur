@@ -303,19 +303,19 @@ func journalfocusStory() Story {
 	}
 }
 
-// knowledgefocusStory documents the knowledge manager's full-canvas focus body
-// — memory + skills, with proposed/active/archived sections, live search, and
-// category tabs (memory only).
+// knowledgefocusStory documents the knowledge manager's nav-free per-slice focus
+// body — memory category cards + skills, with proposed/active/archived sections
+// and live search. Navigation (categories) lives in the sidebar (plan 095).
 func knowledgefocusStory() Story {
 	proposed := []knowledgecards.MemoryRecord{
 		{ID: "prop1", Status: "proposed", Category: "fact", Title: "Prefers dark mode", Importance: 3},
 	}
 	active := []knowledgecards.MemoryRecord{
 		{ID: "act1", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups.", WhenToUse: "pet care", Importance: 4, UseCount: 7},
-		{ID: "act2", Status: "active", Category: "preference", Title: "Prefers tea over coffee", Importance: 3},
+		{ID: "act2", Status: "active", Category: "person", Title: "Designer: Yuki at Studio Mura", Importance: 3},
 	}
 	archived := []knowledgecards.MemoryRecord{
-		{ID: "arc1", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Importance: 1},
+		{ID: "arc1", Status: "archived", Category: "person", Title: "Old contact: Jean at Birch Co", Importance: 1},
 	}
 	proposedNodes := make([]g.Node, len(proposed))
 	for i, r := range proposed {
@@ -340,19 +340,26 @@ func knowledgefocusStory() Story {
 
 	return Story{
 		ID: "knowledgefocus", Group: "Cards", Title: "KnowledgeFocus", Wide: true, OnDark: true,
-		Blurb: "The knowledge manager focus body: proposed queue, a searchable active grid with live Datastar filtering, category tabs (memory only), and an archived section. Reuses MemoryRecordCard / SkillRecordCard for individual records.",
+		Blurb: "Nav-free per-slice knowledge card. Each card shows one memory category (or the Awaiting queue, or all skills) without internal navigation — categories live in the sidebar. Proposed/active/archived sections; live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
 		Variants: []Variant{
-			{"memory · proposed + active + archived", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
-				Kind:       "memories",
-				Title:      "Memory",
-				Categories: []string{"fact", "preference", "person", "project", "context"},
-				Proposed:   proposedNodes,
-				Active:     activeNodes,
-				Archived:   archivedNodes,
+			{"memory · people", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
+				Kind:     "memories",
+				Title:    "People",
+				Category: "person",
+				Mode:     "active",
+				Active:   activeNodes,
+				Archived: archivedNodes,
 			})},
-			{"skills · active only", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
+			{"memory · awaiting", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
+				Kind:     "memories",
+				Title:    "Awaiting",
+				Mode:     "proposed",
+				Proposed: proposedNodes,
+			})},
+			{"skills", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
 				Kind:   "skills",
 				Title:  "Skills",
+				Mode:   "active",
 				Active: skillActiveNodes,
 			})},
 			{"empty grid (no query)", knowledgecards.KnowledgeGrid(nil, "memories", "")},
@@ -360,10 +367,10 @@ func knowledgefocusStory() Story {
 		},
 		Props: []Prop{
 			{"Kind", "string", `"memories"`, `URL segment for Datastar @get calls: "memories" or "skills".`},
-			{"Title", "string", "—", `Used in the search placeholder: "Search Memory…".`},
+			{"Title", "string", "—", `Heading and search placeholder label, e.g. "People", "Skills".`},
+			{"Category", "string", "—", "Fixed memory category baked into the search @get; empty string = all memories."},
+			{"Mode", "string", `"active"`, `"active" (listing + search) or "proposed" (Awaiting queue only).`},
 			{"Query", "string", "—", "Current search query; pre-populates the search input signal."},
-			{"Category", "string", "—", "Current category signal value (memory only)."},
-			{"Categories", "[]string", "nil", "Available category tabs; nil for skills (no tabs rendered)."},
 			{"Proposed", "[]g.Node", "nil", "Pre-rendered proposed record cards."},
 			{"Active", "[]g.Node", "nil", "Pre-rendered active record cards — also feeds KnowledgeGrid."},
 			{"Archived", "[]g.Node", "nil", "Pre-rendered archived record cards; section omitted when nil."},
@@ -371,10 +378,11 @@ func knowledgefocusStory() Story {
 		Dos: []string{
 			"Pass pre-rendered MemoryRecordCard / SkillRecordCard nodes — KnowledgeFocus is kind-agnostic.",
 			"Use KnowledgeGrid for both the initial render and the live-search SSE patch into #k-active-grid.",
+			"Let the sidebar own category navigation — each sidebar item summons one slice.",
 		},
 		Donts: []string{
 			"Re-implement the record card forms here — MemoryRecordCard/SkillRecordCard own them.",
-			"Add category tabs for skills — only memory has categories.",
+			"Add category tabs inside the artifact — navigation belongs in the sidebar (plan 095).",
 		},
 	}
 }

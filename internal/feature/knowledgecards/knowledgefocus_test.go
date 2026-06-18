@@ -28,14 +28,10 @@ func renderKnowledgeGrid(t *testing.T, active []g.Node, kind, query string) stri
 }
 
 // TestKnowledgeFocusMemoryContract guards the class/id/Datastar contract the
-// served CSS and SSE handlers depend on. Asserts the escaped form for Datastar
-// attributes (gomponents HTML-escapes ' → &#39; and & → &amp;).
+// served CSS and SSE handlers depend on for a category card (mode=active).
+// Asserts the escaped form for Datastar attributes (gomponents HTML-escapes
+// ' → &#39; and & → &amp;).
 func TestKnowledgeFocusMemoryContract(t *testing.T) {
-	proposed := []g.Node{
-		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
-			ID: "p1", Status: "proposed", Title: "Proposed memory",
-		}),
-	}
 	active := []g.Node{
 		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
 			ID: "a1", Status: "active", Category: "fact", Title: "Active memory", Importance: 3,
@@ -47,44 +43,80 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 		}),
 	}
 	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
-		Kind:       "memories",
-		Title:      "Memory",
-		Categories: []string{"fact", "preference", "person", "project", "context"},
-		Proposed:   proposed,
-		Active:     active,
-		Archived:   archived,
+		Kind:     "memories",
+		Title:    "Facts",
+		Category: "fact",
+		Mode:     "active",
+		Active:   active,
+		Archived: archived,
 	})
 
 	for _, want := range []string{
-		// Proposed section
-		`class="k-heading k-heading-proposed"`,
-		`Awaiting your word`,
-		`class="k-count"`,
-		`class="k-sub"`,
-		`class="k-grid"`,
-		`id="kcard-p1"`,
-		// stitch between proposed and active
-		`class="stitch"`,
 		// Active section
 		`class="k-heading"`,
 		`id="k-active-grid"`,
-		// Controls — signals (&#39; is the gomponents-escaped ')
+		// Controls — q signal only (no category signal)
 		`data-signals:q="&#39;&#39;"`,
-		`data-signals:category="&#39;&#39;"`,
-		// Search input with debounce @get — & → &amp; and ' → &#39;
-		`data-on:input__debounce.250ms="@get(&#39;/ui/knowledge/memories/grid?q=&#39;+encodeURIComponent($q)+&#39;&amp;category=&#39;+encodeURIComponent($category))"`,
-		// Category tabs
-		`id="k-tabs"`,
-		`class="k-tab"`,
-		`data-class:k-tab-active="$category === &#39;&#39;"`,
-		`data-class:k-tab-active="$category === &#39;fact&#39;"`,
+		// Search input with fixed category baked into @get — & → &amp; and ' → &#39;
+		`data-on:input__debounce.250ms="@get(&#39;/ui/knowledge/memories/grid?q=&#39;+encodeURIComponent($q)+&#39;&amp;category=fact&#39;)"`,
 		// Archived section
 		`class="k-heading k-heading-muted"`,
 		`class="k-grid k-grid-muted"`,
 		`id="kcard-ar1"`,
 	} {
 		if !strings.Contains(got, want) {
-			t.Errorf("KnowledgeFocus (memory) missing %q in:\n%s", want, got)
+			t.Errorf("KnowledgeFocus (memory category) missing %q in:\n%s", want, got)
+		}
+	}
+
+	// Must NOT have category tabs or the category signal.
+	for _, absent := range []string{
+		`id="k-tabs"`,
+		`data-class:k-tab-active`,
+		`data-signals:category`,
+	} {
+		if strings.Contains(got, absent) {
+			t.Errorf("KnowledgeFocus (memory category) must not contain %q:\n%s", absent, got)
+		}
+	}
+
+	// No proposed section (Proposed is empty).
+	if strings.Contains(got, `k-heading-proposed`) {
+		t.Errorf("KnowledgeFocus: empty Proposed must not render proposed section:\n%s", got)
+	}
+}
+
+// TestKnowledgeFocusAwaiting: mode=proposed renders only the Awaiting queue.
+func TestKnowledgeFocusAwaiting(t *testing.T) {
+	proposed := []g.Node{
+		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
+			ID: "p1", Status: "proposed", Title: "Proposed memory",
+		}),
+	}
+	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
+		Kind:     "memories",
+		Title:    "Awaiting",
+		Mode:     "proposed",
+		Proposed: proposed,
+	})
+
+	for _, want := range []string{
+		`class="k-heading k-heading-proposed"`,
+		`Awaiting your word`,
+		`id="kcard-p1"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("KnowledgeFocus (awaiting) missing %q in:\n%s", want, got)
+		}
+	}
+
+	// Must NOT have the active grid or search input.
+	for _, absent := range []string{
+		`id="k-active-grid"`,
+		`class="k-search"`,
+	} {
+		if strings.Contains(got, absent) {
+			t.Errorf("KnowledgeFocus (awaiting) must not contain %q:\n%s", absent, got)
 		}
 	}
 }
@@ -99,6 +131,7 @@ func TestKnowledgeFocusSkillsNoCategories(t *testing.T) {
 	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
 		Kind:   "skills",
 		Title:  "Skills",
+		Mode:   "active",
 		Active: active,
 	})
 
@@ -126,9 +159,10 @@ func TestKnowledgeFocusSkillsNoCategories(t *testing.T) {
 // TestKnowledgeFocusNoProposedNoSection: proposed section is omitted when empty.
 func TestKnowledgeFocusNoProposedNoSection(t *testing.T) {
 	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
-		Kind:       "memories",
-		Title:      "Memory",
-		Categories: []string{"fact"},
+		Kind:     "memories",
+		Title:    "Facts",
+		Category: "fact",
+		Mode:     "active",
 	})
 	if strings.Contains(got, "k-heading-proposed") {
 		t.Errorf("empty proposed must not render proposed section:\n%s", got)
