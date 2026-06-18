@@ -122,10 +122,55 @@ commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 | 102 | Two-column shell + composer `/`-command palette navigation (delete the rail entirely) | P1 | L | MED–HIGH | **101** | — | TODO (cold-critiqued: fixed the theme-toggle deletion regression — relocated to `.app-chrome` so the toggle + its test survive; corrected the storybook story file/group + registration site; made the `<html>` test assertion class-agnostic for 103; added the stale "from the rail" empty-panel copy + the dead `html.app .sb-` companion CSS) |
 | 103 | Panel collapse + free-drag resize, persisted in `owner_settings` | P2 | M–L | MED | **102**, **101** | — | TODO (cold-critiqued: fixed a BACKWARDS CSS-cascade claim that would silently kill the drag — render `--w-panel` on `<html>` in both server + JS; added the missing `net/http` import; desktop-scoped the collapsed `display:none` so the mobile overlay still opens; relabeled excerpts as post-101/102) |
 | 104 | Stop the chat composer being clipped (reset leaked `top:62px` on the app-shell dock) + chat-area spacing polish | P1 | S | LOW | — | — | DONE (APPROVED, **awaiting owner merge** — advisor never pushes/merges). Root cause confirmed in-browser at `1ba3b62`: `html.app #dock.app-dock` switches the base fixed `#dock` to `position:relative` but leaks `top:62px`, shoving the 100dvh dock down 62px so the composer footer/Send is clipped by `.app-shell{overflow:hidden}`. Dispatched sonnet executor → branch `improve/104-app-dock-composer-clip` @ `dc577c6` (worktree `agent-a453654b87595c704`). Advisor re-ran all gates in the worktree: `gofmt -l`/`git diff --check` clean, CGO-free build + `go vet` OK, full `go test ./...` (36 pkgs, 0 FAIL), `TestAppDockResetsTop` PASS. Scope clean (2 files: `basm.css` `+top:0` & chat bottom pad `space-2→space-4`; `css_tokens_test.go` `+TestAppDockResetsTop`). Diff matches the live-verified fix. |
+| 107 | Ink text on the storybook story stage (`.sb-view-stage`) — same dark-mode parchment bug, in the component catalog | P2 | S | LOW | — | — | DONE (APPROVED + **merged to main `2c78238`** via `--no-ff` at owner's request; pushed). Dispatched sonnet executor → branch `improve/107-storybook-stage-dark-mode-legibility` @ `a8e0ce4`, one clean commit off `85c0d0d` (worktree `agent-aac8e3bde9fb07d6a`). Advisor re-ran ALL done criteria in the worktree: `color: var(--ink);` confirmed INSIDE the `.sb-view-stage` block (basm.css:3072); `.sb-views-dark .sb-view-stage` → `--fg` and `.sb-views-dock .sb-view-stage` → `--chrome-fg` (so the base ink doesn't leak onto the dark/wood stages); parchment-stage `:not()` override present (exactly 1); `--fg-strong` count held at 10; `.k-heading-proposed` still gold; `gofmt -l`/`git diff --check` clean; `go vet`/`CGO_ENABLED=0 build`/full `go test ./...` all exit 0; `TestStorybookStageInkText` PASS. Scope clean (2 in-scope files; test APPENDED at file end so it does NOT conflict with 106's mid-file insert; clean tree). Diff matches the plan exactly. **Independent of 106** (different basm.css region 3068–3094 vs 106's 3393–3411; non-overlapping → both branches merge cleanly in any order). **Visual re-confirmation pending:** built the 107 binary and served it on `:8097` (served CSS confirmed to contain the fix), but the Chrome extension dropped its connection before the dark-mode screenshot — to be retried. Confidence remains high: the storybook bug was already VISUALLY confirmed (model titles near-invisible on the 106 build's storybook), and 107 applies the identical `--surface`→`--ink` + scoped `--fg-strong`-override mechanism that WAS visually proven working in the real app panel during 106's review. |
+| 106 | Ink text on the right panel — fix pale/white-on-parchment in dark mode (Models, Quests, Life, Skills) | P1 | S | LOW | — | — | DONE (APPROVED + **merged to main `e94658a`** via `--no-ff` at owner's request; pushed). Dispatched sonnet executor → branch `improve/106-panel-dark-mode-legibility` @ `387dea5` (worktree `agent-af7c7d293ebbdbd7f`), one clean commit off `85c0d0d`. Advisor re-ran ALL done criteria in the worktree (did not trust the report): `color: var(--ink);` confirmed INSIDE the `#panel.app-panel` block (basm.css:3401, awk block-extract); the panel-scoped override rule present with the `:not(.k-heading-proposed):not(.k-heading-muted)` modifier guard (exactly 1 match); `.k-heading-proposed` still gold (unchanged); `--fg-strong` count held at 10 (no base rule edited); `gofmt -l`/`git diff --check` clean; `go vet ./...` + `CGO_ENABLED=0 go build ./...` exit 0; full `go test ./...` exit 0 (no FAIL); `TestPanelInkText` PASS. Scope clean (2 in-scope files only; `git status` clean). Diff matches the plan exactly (additive, panel-scoped — no global token change, so storybook/page-bg renderings untouched). **Unverified (no browser/model in the executor/review loop):** the live dark-mode eyeball — the fix is deterministic at the CSS-cascade level and rule-guarded by the test, but the running `:8090` air instance serves the OLD main-tree assets; a real visual check needs the worktree assets served in dark mode. Minor note: `TestPanelInkText`'s first assertion (`color: var(--ink)` present anywhere) is weak since that token is repo-wide — the load-bearing guard is the unique `:not()` selector string, which is meaningful; manual awk confirmed the ink line is inside the block. |
 | 105 | Arrow-key navigation + Enter-to-select in the composer `/`-command menu | P2 | S | LOW | — | — | DONE (APPROVED + **merged to main `052d110`** via `--no-ff` at owner's request; pushed). Dispatched sonnet executor → branch `improve/105-cmd-palette-keyboard-nav` @ `712e2cf` (worktree `agent-a1223a0a984708c23`), one clean commit off `d0b44a5`. Advisor re-ran all gates in the worktree: `gofmt -l`/`git diff --check` clean, CGO-free build + `go vet` exit 0, full `go test ./...` (exit 0, no FAIL), `TestCmdPaletteActiveStyle` PASS. Scope clean (4 in-scope files; `command_palette.go`/`composer.go` confirmed untouched). Diff matches the plan: `basm.js` `+balaurCmdVisibleItems` helper + Enter prefers `.is-active` else first-visible (no-arrow path byte-identical) + doc-level ↑/↓ keydown listener (wraps) + rAF-deferred `input` reset to top match; `basm.css` `+.cmd-item.is-active` (shared hover fill + inset `--gold-deep` keyline + scroll-margin); `css_tokens_test.go` `+TestCmdPaletteActiveStyle` (meaningful — fails if the rule is dropped); `stories_chat.go` Blurb+Dos doc. **Unverified (no browser in the executor/review loop):** the live ↑/↓ + Enter interaction — JS is build/vet-gated only; the running `:8090` air instance serves the OLD main-tree assets, so a real check needs the worktree binary built+served. Escape-close + combobox ARIA deferred (per plan). |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) |
 REJECTED (one-line rationale).
+
+## Twenty-first cycle (2026-06-18, discovered during 106 verification): plan 107
+
+While browser-verifying plan 106 in dark mode, the advisor opened the running
+app (worktree build on `:8099`, fixed CSS) AND the owner's open tab
+`/storybook/modelspanel`. The real-app panels (Skills, Life, Quest log, Models)
+were confirmed FIXED — headings/model-card titles render dark ink on parchment.
+But the **storybook** still showed the bug: model-card titles near-invisible
+(pale on parchment) in dark mode. Root cause is the same as 106 in a second
+surface — the storybook story **stage** `.sb-view-stage` (basm.css:3068) defaults
+to `background: var(--surface)` (parchment) but sets no text color, so dark-mode
+stories inherit the flipping `--fg`/explicit `--fg-strong`. Plan 106's fix is
+correctly scoped to `html.app #panel.app-panel`, so it doesn't (and shouldn't)
+touch the storybook. Plan 107 = the parallel fix on the stage: ink on the
+parchment default, re-assert `--fg`/`--chrome-fg` on the dark/dock stage variants
+(so the base ink doesn't leak onto those dark backgrounds), and a
+parchment-stage-scoped `--fg-strong` heading override with the same `:not()`
+modifier guard. Independent of 106 (different basm.css region; test appended at
+file end) so both branches merge cleanly. CSS-only + one test; LOW risk.
+
+## Twentieth cycle (2026-06-18, owner-reported bug): plan 106
+
+Owner: *"Some UI is not shown properly. Sometimes I have white text on parchment
+background which can't be seen properly in dark mode. Example Models panel, quest
+log, life, skills. I think in all of them, let's fix that."*
+
+Root-caused from the CSS cascade (deterministic; no browser needed to diagnose).
+The single-page chat shell's right-hand artifact panel `#panel.app-panel`
+(basm.css:3393) is a **constant parchment** surface — `background: var(--surface)`,
+which stays light in *both* light and dark themes — but the column never sets a
+text `color`. So its body content inherits the page default `html, body { color:
+var(--fg) }`, and `--fg` flips to pale tan (`#c9b894`) in dark mode → pale text on
+parchment. Worse, five selectors set `color: var(--fg-strong)` explicitly
+(`h1,h2,h3`, `.k-heading`, `.empty-title`, `.tl-label`, `.pull-download-name`) and
+`--fg-strong` in dark mode is near-white cream (`#ecdcb2`) — that is literally the
+"white text on parchment" reported. Every other parchment material (`.parch`,
+`.card`, `.kcard`) correctly pairs `--surface` bg with `--ink` text; the panel
+column simply forgot. Plan 106 = add `color: var(--ink)` to the column +
+a panel-scoped override re-anchoring the explicit `--fg-strong` headings/labels to
+ink (with a `:not()` guard so the gold "proposed" + muted `.k-heading` modifiers
+survive), plus a `TestPanelInkText` CSS-invariant guard. Scoped under
+`html.app #panel.app-panel` so storybook/page-bg renderings (where `--fg-strong`
+is correct) are untouched. CSS-only, single stylesheet + one test; LOW risk.
 
 ## Nineteenth cycle (2026-06-18, owner-reported bug): plan 104
 
