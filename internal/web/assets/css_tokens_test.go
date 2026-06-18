@@ -47,3 +47,30 @@ func TestThemePaletteBlocks(t *testing.T) {
 		}
 	}
 }
+
+// TestAppDockResetsTop guards plan 104: the single-page chat shell re-uses the
+// base #dock element (which is position:fixed; top:62px to clear a topbar) as a
+// position:relative grid column. Under relative positioning that inherited
+// top:62px becomes a downward offset that shoves the composer's footer past the
+// clipped viewport. The html.app dock MUST reset it, or the Send button is cut off.
+func TestAppDockResetsTop(t *testing.T) {
+	b, err := FS.ReadFile("static/basm.css")
+	if err != nil {
+		t.Fatalf("read basm.css: %v", err)
+	}
+	css := string(b)
+
+	const sel = "html.app #dock.app-dock {"
+	i := strings.Index(css, sel)
+	if i < 0 {
+		t.Fatalf("rule %q not found — the app-shell dock was renamed; re-check plan 104", sel)
+	}
+	end := strings.Index(css[i:], "}")
+	if end < 0 {
+		t.Fatalf("unterminated rule for %q", sel)
+	}
+	block := css[i : i+end]
+	if !strings.Contains(block, "top: 0") {
+		t.Errorf("html.app #dock.app-dock must reset top (e.g. `top: 0`) so the leaked base #dock top:62px does not clip the composer; block was:\n%s", block)
+	}
+}
