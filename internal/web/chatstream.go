@@ -11,6 +11,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/cards"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/ui/chat"
 )
@@ -172,54 +173,72 @@ func (s *chatStream) emit(ev agent.Event) {
 }
 
 // handleToolResult mirrors the prior consumer order: uicard → choices →
-// proposal → plain. The open tool row's body is morphed with the result; an
-// inline card (when present) is appended server-rendered to the stream.
+// proposal → plain. The open tool row's body is morphed with the result.
+// uicard and cluster artifacts route to the panel + chip; proposals/choices/
+// refresh stay inline in the transcript.
 func (s *chatStream) handleToolResult(ev agent.Event) {
 	if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {
-		if spec, ok := cards.Get(typ); ok {
-			s.endTool(rest, s.h.uicardBody(typ, query), spec.Label, spec.Icon)
-		} else {
-			s.endTool(rest, s.h.uicardBody(typ, query), typ, "")
-		}
+		s.endArtifactCard(rest, typ, query)
 		return
 	}
 	if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
-		s.endTool("choices offered", "", "", "")
+		s.endTool("choices offered", "")
 		s.appendChoices(prompt, choices)
 		return
 	}
 	if kind, id, rest, ok := tools.ParseProposal(ev.Text); ok {
-		s.endTool(rest, s.h.proposalBody(kind, id), "", "")
+		s.endTool(rest, s.h.proposalBody(kind, id))
 		return
 	}
 	if types, rest, ok := tools.ParseRefresh(ev.Text); ok {
-		s.endTool(clipText(rest, 2000), "", "", "")
+		s.endTool(clipText(rest, 2000), "")
 		for _, typ := range types {
 			s.refreshCard(typ)
 		}
 		return
 	}
 	if title, cs, rest, ok := tools.ParseArtifact(ev.Text); ok {
-		s.endTool(rest, s.h.artifactBody(title, cs), title, "")
+		s.endArtifactCluster(rest, title, cs)
 		return
 	}
-	s.endTool(clipText(ev.Text, 2000), "", "", "")
+	s.endTool(clipText(ev.Text, 2000), "")
 }
 
-// endTool morphs the open tool row with its result and, when a card is attached,
-// appends it server-rendered (no lazy mount, no htmx) so it survives in history.
-func (s *chatStream) endTool(content string, card template.HTML, artTitle, artIcon string) {
+// endTool morphs the open tool row with its result and, when a card is
+// attached, appends it inline (proposals stay in the transcript). Artifact
+// callers use endArtifactCard / endArtifactCluster instead.
+func (s *chatStream) endTool(content string, card template.HTML) {
 	s.morphNode(chat.ToolRow(chat.ToolRowProps{
 		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
 	}))
 	if card == "" {
 		return
 	}
-	if artTitle == "" { // proposal etc. — not an artifact; keep the plain inline card
-		s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
-		return
-	}
-	s.appendNode(artifactWrap(artTitle, artIcon, false, s.toolID+"-card", card))
+	// Only proposals reach here with a card; they stay inline in the transcript.
+	s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
+}
+
+// endArtifactCard morphs the tool row, then routes a single card to the panel
+// (single-active) and drops a re-open chip into #chat. Mirrors the owner door
+// (show.go) so live and reload agree.
+func (s *chatStream) endArtifactCard(content, typ, query string) {
+	s.morphNode(chat.ToolRow(chat.ToolRowProps{
+		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
+	}))
+	_ = store.SetOwnerSetting(s.h.app, panelActiveKey, showURL(typ, query))
+	s.morphNode(s.h.panelNode(typ, query)) // morph #panel-inner
+	s.appendNode(s.h.chipNode(typ, query)) // chip → #chat
+}
+
+// endArtifactCluster routes an agent cluster to the panel with a non-clickable
+// chip (clusters have no deterministic re-open URL — plan 090). Clusters do not
+// update panel_active (no restore URL).
+func (s *chatStream) endArtifactCluster(content, title string, cs []cards.Card) {
+	s.morphNode(chat.ToolRow(chat.ToolRowProps{
+		Tool: s.toolName, Icon: toolIconFile(s.toolName), ID: s.toolID, BodyID: s.toolBody, Content: content,
+	}))
+	s.morphNode(s.h.panelClusterNode(title, cs))
+	s.appendNode(clusterChipNode(title))
 }
 
 // refreshCard re-renders one registry card from live data and morphs it in

@@ -450,26 +450,26 @@ func TestChatCardShow(t *testing.T) {
 		return app
 	}
 
-	t.Run("streamed card_show yields titled artifact frame", func(t *testing.T) {
+	t.Run("streamed card_show morphs panel and appends chip", func(t *testing.T) {
 		scenario := tests.ApiScenario{
-			Name:           "chat card_show inline embed",
+			Name:           "chat card_show panel+chip",
 			Method:         "POST",
 			URL:            "/ui/chat",
 			Body:           strings.NewReader("message=show+me+today"),
 			Headers:        map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 			TestAppFactory: newCardShowApp,
 			ExpectedStatus: 200,
-			// The card is server-rendered in a titled sub-window frame (plan 097).
-			ExpectedContent: []string{`class="artifact"`, `artifact-head`, `id="ucard-today"`},
+			// The card is server-rendered in the right panel; a re-open chip goes into #chat.
+			ExpectedContent: []string{`id="panel-inner"`, `art-chip`, `id="ucard-today"`},
 		}
 		scenario.Test(t)
 	})
 }
 
-// TestUICardHistoryRendersCardInline verifies that a uicard tool result loaded
-// from history embeds the card SERVER-RENDERED inline (the k-inline div carries
-// the card markup directly — no lazy hx-get mount).
-func TestUICardHistoryRendersCardInline(t *testing.T) {
+// TestUICardHistoryRendersChip verifies that a uicard tool result loaded from
+// history renders as a re-open chip (not an inline card body). The chip is the
+// durable transcript trace; the artifact lives in the right panel (plan 098).
+func TestUICardHistoryRendersChip(t *testing.T) {
 	app := newWebApp(t)
 	h := &handlers{app: app, tmpl: parseTemplates(t)}
 
@@ -480,23 +480,26 @@ func TestUICardHistoryRendersCardInline(t *testing.T) {
 		t.Fatal("ParseUICard: ok=false on well-formed marked text")
 	}
 
+	// messageViews records coordinates, not body — replicate that here.
 	mv := messageView{
-		Role:     "tool",
-		Tool:     "card_show",
-		Content:  rest,
-		CardBody: h.uicardBody(typ, query),
+		Role:          "tool",
+		Tool:          "card_show",
+		Content:       rest,
+		ArtifactType:  typ,
+		ArtifactQuery: query,
+		ArtifactTitle: "Today",
 	}
 
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
-		t.Fatalf("chat-msg-tool: %v", err)
+	// renderMessages is a *handlers method; use it directly.
+	out := string(h.renderMessages([]messageView{mv}))
+	if !strings.Contains(out, `art-chip`) {
+		t.Errorf("history uicard render: missing art-chip. output:\n%s", out)
 	}
-	out := b.String()
-	if !strings.Contains(out, `class="k-inline"`) {
-		t.Errorf("history uicard render: missing k-inline wrapper. output:\n%s", out)
+	if !strings.Contains(out, `/ui/show/today`) {
+		t.Errorf("history uicard render: chip missing re-open URL. output:\n%s", out)
 	}
-	if !strings.Contains(out, `id="ucard-today"`) {
-		t.Errorf("history uicard render: card not embedded inline. output:\n%s", out)
+	if strings.Contains(out, `k-inline`) {
+		t.Errorf("history uicard render: must not contain k-inline (card is in the panel). output:\n%s", out)
 	}
 	if strings.Contains(out, "hx-get") {
 		t.Errorf("history uicard render: stale lazy hx-get mount present. output:\n%s", out)

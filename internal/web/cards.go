@@ -158,42 +158,18 @@ func (h *handlers) cardFocusHTML(typ string, params map[string]string) template.
 	return template.HTML(b.String())
 }
 
-// artifactBody server-renders a hand-picked cluster of cards for an inline chat
-// artifact: each card is rendered via cardHTML (validated + error-stripped per
-// card) and wrapped in the chat.Cluster organism as one template.HTML.
-// Mirrors uicardBody for the single-card seam; a bad card error-strips without
-// blanking the whole cluster. Placed in the single mv.CardBody slot on both the
-// live stream (endTool) and the reload path (messageViews).
+// artifactBody server-renders a hand-picked cluster of cards as a chat.Cluster.
+// Used by panelClusterNode (the panel body for show_cards); each card is
+// rendered via cardHTML (validated + error-stripped). The panel head owns the
+// title so the cluster is untitled here (no duplicate heading).
 func (h *handlers) artifactBody(title string, cs []cards.Card) template.HTML {
 	nodes := make([]g.Node, 0, len(cs))
 	for _, c := range cs {
 		nodes = append(nodes, g.Raw(string(h.cardHTML(c.Type, c.Params))))
 	}
 	var b strings.Builder
-	// The artifact window header (artifactWrap) owns the title now; render the
-	// cluster body untitled so the heading isn't duplicated (plan 097).
 	_ = chat.Cluster(chat.ClusterProps{Cards: nodes}).Render(&b)
 	return template.HTML(b.String())
-}
-
-// activeArtifactCap bounds how many artifacts stay fully rendered in the chat;
-// older ones fold to their title bar (plan 094). The live path enforces the
-// same cap client-side (balaurCapArtifacts in basm.js).
-const activeArtifactCap = 3
-
-// artifactWrap frames a rendered artifact body as a self-contained titled
-// "sub-window" (plan 097), delegating to the chat.Artifact organism so the
-// chrome lives once in the design system. collapsed (the cap, plan 094) folds
-// the window down to its title bar. innerID, when set, rides the body div
-// (preserves the live path's tool-card id).
-func artifactWrap(title, icon string, collapsed bool, innerID string, body template.HTML) g.Node {
-	return chat.Artifact(chat.ArtifactProps{
-		Title:     title,
-		Icon:      icon,
-		Collapsed: collapsed,
-		InnerID:   innerID,
-		Body:      g.Raw(string(body)),
-	})
 }
 
 // proposalBody server-renders an approval/proposal card (a task, or a knowledge
