@@ -130,6 +130,7 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 		Title:   "Home",
 		Sidebar: shell.Sidebar(domainSidebar()),
 		Dock:    dockNode,
+		Panel:   h.restoredPanelNode(),
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := page.Render(e.Response); err != nil {
