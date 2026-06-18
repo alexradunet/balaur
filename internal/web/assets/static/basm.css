@@ -3300,6 +3300,9 @@ html.theme-dungeon .appearance-theme-btn[data-theme="dungeon"] {
    dock rules below generalise the existing html.home #dock block so they fire
    for the app-shell layout (html.app) too. */
 
+/* Mobile topbar (burger + crest + brand) — hidden on desktop; shown ≤720px. */
+html.app .app-topbar { display: none; }
+
 /* Three-column grid: [rail | chat | panel]. Rail matches the storybook sidebar width. */
 html.app .app-shell {
   display: grid;
@@ -3377,7 +3380,32 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
 /* Collapse to single column on narrow viewports (≤720px); panel becomes a fixed overlay. */
 @media (max-width: 720px) {
   html.app .app-shell { grid-template-columns: 1fr; }
-  html.app .app-shell .sb-side { display: none; }
+
+  /* Mobile top bar (burger + crest + brand). */
+  html.app .app-topbar {
+    display: flex; align-items: center; gap: var(--space-2);
+    height: 56px; padding: 0 var(--space-3);
+    background-color: var(--chrome); background-image: var(--wood-planks), var(--grain-warm);
+    background-size: auto, 4px 4px; border-bottom: 2px solid var(--outline-2);
+    position: sticky; top: 0; z-index: var(--z-sticky);
+  }
+  html.app .app-topbar .sb-burger {
+    min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--chrome-fg); color: var(--gold);
+    font-size: 18px; line-height: 1; cursor: pointer;
+  }
+  html.app .app-topbar .sb-topbar-brand { font-family: var(--font-pixel); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+  html.app .app-topbar .crest { width: 28px; height: 28px; image-rendering: pixelated; }
+
+  /* Rail becomes an off-canvas drawer (replaces display:none). */
+  html.app .sb-side {
+    display: flex; position: fixed; inset: 56px auto 0 0; width: min(86vw, 322px);
+    z-index: var(--z-drawer); transform: translateX(-104%);
+    transition: transform .2s var(--ease-crisp); box-shadow: 6px 0 0 rgba(0, 0, 0, .4);
+  }
+  html.app.sb-nav-open .sb-side { transform: none; }
+  html.app .sb-backdrop.is-open { display: block; position: fixed; inset: 0; z-index: var(--z-scrim); background: rgba(8, 5, 2, .62); }
+
   html.app #panel.app-panel {
     position: fixed; top: 0; right: 0; bottom: 0; width: min(92vw, var(--w-panel));
     z-index: var(--z-drawer); transform: translateX(100%); transition: transform .15s steps(3, end);
