@@ -115,14 +115,14 @@ rail collapses to an off-canvas drawer reached via the .app-topbar burger
 rail has collapsed to top-level entries: Quests, Life, Knowledge, Skills
 (Domains group) and Settings.
 Knowledge opens the memory panel with in-panel category tabs; Settings opens
-with in-panel section tabs. Two summon doors exist:
+with in-panel section tabs.
 
-  GET /ui/show/{type}  — owner rail click (summon): persists a messages row
-    (role="tool", origin="", content=uicard-marker), morphs #panel-inner,
-    appends a re-open chip (chat.ArtifactChip) to #chat, sets panel_active.
-
-  GET /ui/panel/{type} — in-panel navigation (tab switch): morphs #panel-inner
-    and sets panel_active — NO chip, NO persisted row. type=="close" clears.
+  GET /ui/show/{type}  — the owner-facing panel door (rail, card links, the
+    palette, chip re-open, in-panel tabs). Morphs #panel-inner and sets
+    panel_active; it does not persist a conversation row or add a chip.
+    type=close clears the panel. Only Balaur's own card_show/show_cards
+    artifacts enter the transcript — persisted by the turn pipeline, chipped
+    by chatstream.go live and messageViews on reload.
 
 The panel restores the last-active artifact on reload via
 owner_settings["panel_active"]. Clusters render in the panel with a
