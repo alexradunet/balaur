@@ -41,14 +41,42 @@ func InstallRuntime(ctx context.Context, processor string, log libs.Logger) erro
 		}
 		return verifyInstall(InstallDirFor(LibRoot(), goarch, goos, processor), runtimeVersion, goos, goarch, processor)
 	}
-	lib, err := libs.New(libs.WithLibPath(LibRoot()))
+	// The SDK refuses to install into a libraries root it considers read-only:
+	// any non-empty directory without a root-level version.json (see
+	// libs.resolvePaths). Once the first runtime lands, LibRoot() is non-empty,
+	// so a second processor's install is rejected with ErrReadOnly. Stage every
+	// download in a fresh empty dir — always seen as a writable root — then move
+	// the finished triple bundle into place. Install dir stays == load dir
+	// (InstallDirFor) for unlimited triples.
+	if err := os.MkdirAll(LibRoot(), 0o755); err != nil {
+		return fmt.Errorf("preparing lib root: %w", err)
+	}
+	staging, err := os.MkdirTemp(LibRoot(), ".staging-")
+	if err != nil {
+		return fmt.Errorf("creating staging dir: %w", err)
+	}
+	defer os.RemoveAll(staging)
+
+	lib, err := libs.New(libs.WithLibPath(staging))
 	if err != nil {
 		return fmt.Errorf("resolving lib root: %w", err)
 	}
 	if _, err := lib.DownloadFor(ctx, log, goarch, goos, processor, runtimeVersion); err != nil {
 		return fmt.Errorf("installing %s runtime: %w", processor, err)
 	}
-	return verifyInstall(InstallDirFor(LibRoot(), goarch, goos, processor), runtimeVersion, goos, goarch, processor)
+
+	dest := InstallDirFor(LibRoot(), goarch, goos, processor)
+	src := InstallDirFor(staging, goarch, goos, processor)
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return fmt.Errorf("preparing install dir: %w", err)
+	}
+	if err := os.RemoveAll(dest); err != nil {
+		return fmt.Errorf("clearing previous %s install: %w", processor, err)
+	}
+	if err := os.Rename(src, dest); err != nil {
+		return fmt.Errorf("moving %s runtime into place: %w", processor, err)
+	}
+	return verifyInstall(dest, runtimeVersion, goos, goarch, processor)
 }
 
 // InstallDirFor returns the canonical install directory for a triple under root.
