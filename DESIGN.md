@@ -90,10 +90,13 @@ All copy must match this. Update it the moment shape changes.
 `/` is Home: the full-screen companion chat, the conversation Balaur is built
 around. There is no topbar. A domain sidebar rail (`#sb-side`) on the left
 carries the five domains (Quests, Knowledge, Life, Heads, Settings);
-clicking one calls `GET /ui/show/{type}`, which SSE-appends a rendered card
-artifact to `#chat` — no navigation, no page load, no LLM. A *card* is a typed,
-parameterized, server-rendered resource (`/ui/cards/{type}`) that renders as a
-tile; `card_show` is the single agent UI tool that embeds a card inline in chat.
+clicking one calls `GET /ui/show/{type}`, which renders the card in the
+**single-active right panel** (`#panel-inner`) — no navigation, no page load,
+no LLM. A compact re-open chip (`chat.ArtifactChip`) is appended to `#chat` as
+the durable transcript trace. A *card* is a typed, parameterized, server-rendered
+resource (`/ui/cards/{type}`) that renders as a tile; `card_show` is the single
+agent UI tool that opens a card in the right panel. The panel restores the
+last-active artifact on reload (`owner_settings["panel_active"]`).
 A **head switcher** in the dock changes the active persona (voice, avatar, tool
 set) without leaving or forking the conversation. Legacy flat routes (`/tasks`,
 `/journal`, `/day`, `/memory`, `/skills`, `/life`, `/heads`, `/models`,
@@ -122,7 +125,7 @@ the `tasks` collection — tiny recurrence DSL, completions logged to the
 idempotent catch-up after downtime, one batched message per tick,
 model-composed in the companion voice with a deterministic fallback,
 origin-tagged in `messages` and polled live into the open chat · the
-the quests card (artifact at `/ui/show/quests`): quest-log list (rhythm groups: Dailies/Rituals/Quests/Side quests), with month calendar and 14-day
+the quests card (opens in the right panel at `/ui/show/quests`): quest-log list (rhythm groups: Dailies/Rituals/Quests/Side quests), with month calendar and 14-day
 timeline as their own cards (read-only recurrence projections) · task cards inline in chat ·
 the morning briefing (once per local day, hour-gated with wake catch-up,
 idempotency derived from the origin-tagged message, quiet days skipped,
@@ -131,9 +134,9 @@ commitments and a present-moment line (date, time, timezone) injected
 into every chat turn, so relative dates resolve against the box's clock ·
 the owner-defined life log (`log_entry` / `entry_series` / `entry_drop`,
 free-form kinds, numeric or textual, backdatable, audited) and the lifelog
-card (tile + artifact at /ui/show/lifelog) mirroring what is actually logged — sparklines
+card (tile + opens in the right panel at /ui/show/lifelog) mirroring what is actually logged — sparklines
 for numeric kinds, recent lines for text kinds, live habit streaks · a one-line yesterday
-reflection in the briefing · the day card and its artifact (/ui/show/day?date={date}):
+reflection in the briefing · the day card (/ui/show/day?date={date}, opens in the right panel):
 the owner's journal (verbatim via journal_write in chat or the focus form,
 focus-side removal only), the day's recap with transcript expand, completions,
 and logs, with prev/next day nav — a read-only tile summary plus the full focus;
@@ -144,14 +147,14 @@ avatar picker in the settings card's profile focus (stored in `owner_settings`) 
 16-personality Balaur head library under `web/static/avatars/balaur-01..16.png`
 · a Balaur head medallion favicon at `web/static/logo.png` wired via
 `<link rel="icon">` and `apple-touch-icon` in the `page_head` partial · a
-profile section (the settings card, artifact at `/ui/show/settings?section=profile`)
+profile section (the settings card, opens in the right panel at `/ui/show/settings?section=profile`)
 with display name, soul avatar picker (16 options),
 and Balaur head picker (16 options) · a light/dark theme toggle in the topbar persisted to
 `localStorage` · switchable head personas: a dock head switcher
 (`/ui/heads/active`) chooses the active head, which flavors the master turn
 and filters its tools by capability group; built-in `balaur`/`scholar`/
 `planner`/`coach` plus owner-created customs managed from the heads card
-(`/ui/heads/new`, `/ui/heads/{id}/delete`, artifact at `/ui/show/heads`), each with
+(`/ui/heads/new`, `/ui/heads/{id}/delete`, opens in the right panel at `/ui/show/heads`), each with
 its own Balaur avatar.
 
 the CLI speaks API v1 — every JSON output is enveloped `{v, kind, data}`
@@ -385,8 +388,8 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
 ### Knowledge cards (memory & skill approval)
 
 The growth surface: Balaur proposes, the owner decides. One card template
-per kind serves chat (inline, server-rendered) and the memory & skills card
-artifacts (`/ui/show/memory`, `/ui/show/skills`).
+per kind serves chat (inline, server-rendered) and the memory & skills cards
+(open in the right panel at `/ui/show/memory`, `/ui/show/skills`).
 
 - **Proposed cards** pop: `--gold-deep` border, ornate gold corner brackets
   (`.ornate`), ember notch, Approve as the only primary button. The section

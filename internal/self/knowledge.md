@@ -101,21 +101,23 @@ self tool, which reports the actual registry):
   any change re-proposes it, and every invocation is audited. Extensions
   add verbs, not privileges — no filesystem, no shell, no npm.
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
-- Card composition: card_show renders one live card inline (single-card seam); show_cards renders a hand-picked cluster of 1–8 cards as ONE inline artifact — use it when the owner asks to see multiple domains at once ("show my quests and my weight together"). Both are always-on UI tools available to all heads.
+- Card composition: card_show renders one live card in the right panel (single-card seam); show_cards renders a hand-picked cluster of 1–8 cards in the right panel as a single active artifact — use it when the owner asks to see multiple domains at once ("show my quests and my weight together"). Both are always-on UI tools available to all heads.
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI — / is Home, the single-page chat shell.
 Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
-"app" on <html>, a two-column .app-shell grid: a domain sidebar rail on the
-left (#sb-side) and the full-canvas companion dock on the right (#dock.app-dock).
-There is no topbar and no /focus/* pages. Clicking a sidebar domain item calls
-GET /ui/show/{type} (the deterministic artifact injection door): the server
-persists a messages row (role="tool", origin="", content=uicard-marker) and
-SSE-appends the rendered card tile to #chat — no navigation, no page load, no
-LLM. Each in-chat artifact is framed as a self-contained titled sub-window
-(chat.Artifact: an .artifact-head bar with icon + name atop a bordered
-.artifact-body), so the owner can see where one artifact ends; aged-out
-artifacts (the cap, plan 094) fold to their title bar. The chat renders through the storybook components: messages are
+"app" on <html>, a three-column .app-shell grid: a domain sidebar rail on the
+left (#sb-side), the full-canvas companion dock in the centre (#dock.app-dock),
+and a single-active right panel on the right (#panel.app-panel, #panel-inner).
+There is no topbar and no /focus/* pages. A summoned artifact (owner rail click
+via GET /ui/show/{type}, or the agent's card_show/show_cards) renders in the
+single-active right panel (chat.Panel, #panel-inner); the chat keeps a compact
+re-open chip (chat.ArtifactChip) as the durable, auditable transcript trace.
+The panel restores the last-active artifact on reload via
+owner_settings["panel_active"]. Clusters render in the panel with a
+non-clickable chip. The server persists a messages row (role="tool", origin="",
+content=uicard-marker) — no navigation, no page load, no LLM.
+The chat renders through the storybook components: messages are
 chat.Message speech panels + chat.ToolRow rows (page-load history via
 h.renderMessages and the live SSE stream in chatstream.go share one markup
 source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
@@ -133,9 +135,9 @@ audit, verify, model, self, ext, seed) printing v1 JSON envelopes
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.
 
-The quest log (the quests card, artifact at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
+The quest log (the quests card, opens in the right panel at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
 
-The day card (artifact at /ui/show/day?date={date}): a day-of-life aggregation —
+The day card (opens in the right panel at /ui/show/day?date={date}): a day-of-life aggregation —
 the owner's journal entries, the day's recap, what got done, and what was logged,
 with prev/next day nav. The tile shows a read-only summary (journal/done/log
 counts); calendar cells and recap day cards deep-link into the artifact.
@@ -161,19 +163,19 @@ shared dispatch (cardInto/cardHTML) and the chat embeds.
 Agent UI tools: two tools let you render on-the-spot UI from the typed card
 registry — you never author markup, only {type, params} validated by the registry.
 
-- card_show: renders ONE live card inline in the conversation. Call it with a type
-  from the registry and optional params; the server fetches real data and embeds
-  the card in the chat server-rendered into the stream. Example: show the owner their
-  weight trend by calling card_show with type="measure" and params.kind set to
-  their weight kind. The composition rule: only the registry-validated type and
-  params reach the card URL — no free-form text, no model-authored markup.
-- show_cards: renders a hand-picked cluster of 1–8 cards as ONE inline artifact.
-  Use when the owner asks to see multiple domains at once ("show my quests and my
-  weight together") or when individual tasks should each render as their own card
-  (use type="tasks" with bucket/terms/status params). The server renders each card
-  from live data and wraps them in a titled vertical stack (chat.Cluster). Persists
-  as a marker in the tool message — the cluster re-renders on page reload. Clusters
-  are agent-only in v1; /ui/show (sidebar) maps to single cards only.
+- card_show: renders ONE live card in the right panel (single-active). Call it with
+  a type from the registry and optional params; the server fetches real data, morphs
+  #panel-inner with the card, and drops a re-open chip into #chat. Example: show the
+  owner their weight trend by calling card_show with type="measure" and params.kind
+  set to their weight kind. The composition rule: only the registry-validated type
+  and params reach the card URL — no free-form text, no model-authored markup.
+- show_cards: renders a hand-picked cluster of 1–8 cards in the right panel as a
+  single active artifact. Use when the owner asks to see multiple domains at once
+  ("show my quests and my weight together") or when individual tasks should each
+  render as their own card (use type="tasks" with bucket/terms/status params). The
+  server renders each card from live data and wraps them in chat.Cluster. Persists
+  as a marker in the tool message — a non-clickable chip appears in the transcript
+  on reload. Clusters are agent-only in v1; /ui/show (sidebar) maps to single cards only.
 
 The registry vocabulary for both tools is embedded in the tool description at
 registration time — when new card types are added the model sees them for free.
