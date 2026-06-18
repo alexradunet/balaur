@@ -61,6 +61,34 @@ func TestCmdPaletteActiveStyle(t *testing.T) {
 	}
 }
 
+// TestPanelInkText guards plan 106: the right-panel column is a constant
+// parchment surface, so it must set ink text (else dark-mode content inherits
+// the page-bg --fg/--fg-strong tokens and goes pale/near-white on parchment).
+// Two rules: the column defaults to ink, and the explicit --fg-strong
+// headings/labels are re-anchored to ink (panel-scoped, modifiers preserved).
+func TestPanelInkText(t *testing.T) {
+	b, err := FS.ReadFile("static/basm.css")
+	if err != nil {
+		t.Fatalf("read basm.css: %v", err)
+	}
+	css := string(b)
+
+	// The column must set its own ink color (not inherit the page-bg --fg).
+	if !strings.Contains(css, "html.app #panel.app-panel {") ||
+		!strings.Contains(css, "color: var(--ink)") {
+		t.Error("right panel column must set color: var(--ink) — dark-mode parchment text would be illegible (plan 106)")
+	}
+	// The explicit --fg-strong headings/labels must be re-anchored, panel-scoped,
+	// without clobbering the gold/muted .k-heading modifiers.
+	if !strings.Contains(css, "html.app #panel.app-panel .k-heading:not(.k-heading-proposed):not(.k-heading-muted)") {
+		t.Error("panel headings (.k-heading) must be re-anchored to ink while preserving the proposed/muted modifiers (plan 106)")
+	}
+	// The modifier the override must NOT clobber is still gold.
+	if !strings.Contains(css, ".k-heading-proposed { color: var(--gold)") {
+		t.Error(".k-heading-proposed must stay gold (plan 106 must not flatten it to ink)")
+	}
+}
+
 // TestAppDockResetsTop guards plan 104: the single-page chat shell re-uses the
 // base #dock element (which is position:fixed; top:62px to clear a topbar) as a
 // position:relative grid column. Under relative positioning that inherited
