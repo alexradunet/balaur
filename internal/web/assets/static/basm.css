@@ -3372,6 +3372,7 @@ a.art-chip:hover { background: var(--surface-3, var(--surface)); }
 /* Full-canvas dock inside the app-shell — chat fills the right column. */
 html.app #dock.app-dock {
   position: relative;
+  top: 0;                  /* reset the base #dock top:62px (no topbar here) — else the composer is clipped off the bottom */
   left: 0;
   width: auto;
   height: 100%;
@@ -3392,7 +3393,7 @@ html.app #dock.app-dock .recap-band {
   margin-left: auto;
   margin-right: auto;
 }
-html.app #dock.app-dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 0 var(--space-2); }
+html.app #dock.app-dock .chat { --portrait-size: 56px; --chat-gutter: 84px; padding: 20px 0 var(--space-4); }
 html.app #dock.app-dock .recap-zone,
 html.app #dock.app-dock .recap-band { display: block; }
 html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); margin-left: auto; margin-right: auto; }
