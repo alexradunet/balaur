@@ -17,11 +17,13 @@ there is a single LLM path: local; there is no remote provider and no Ollama.
 The engine never downloads anything on boot. From the Models page the owner
 installs the llama.cpp runtime in-app (cpu and vulkan variants, into
 ~/.local/share/balaur/kronk/lib; BALAUR_LIB_PATH overrides the root), downloads
-the one curated official model with a single click (plan 086), and chooses
-whether it runs on CPU or GPU/Vulkan. That processor choice is saved
+a curated model with a single click (plan 086) — the catalog is a small set of
+git-pinned, checksum-verified tiers (small: Qwen3.5 4B ~2.7 GB; medium: Gemma 4
+E4B ~5.3 GB) the owner switches between like any local model — and chooses
+whether they run on CPU or GPU/Vulkan. That processor choice is saved
 (owner_settings "llm_processor") and applied at the next restart — the native
 library loads once per process, so it cannot switch live. There is no manual
-GGUF-path form; the curated model is the single supported path.
+GGUF-path form; the curated catalog is the supported path.
 
 The name is the Romanian fairy-tale dragon with many heads. There is one
 master conversation, persisted forever and summarized by the recap
@@ -209,11 +211,13 @@ registration time — when new card types are added the model sees them for free
 Models: provider and model configuration lives in PocketBase. The owner
 chooses one explicit active model in llm_settings, pointing at an
 llm_models row and its llm_providers row. No model is seeded — a fresh box
-has only the "Local model" provider; the owner downloads the curated official
-model from the Models page (/ui/show/settings?section=models) with one click,
-which registers it and makes it active (the same CTA re-installs an
-already-downloaded file whose record was lost, instead of re-downloading). The
-owner also picks CPU vs GPU there, saved as owner_settings "llm_processor" and
+has only the "Local model" provider; the owner downloads a curated model from
+the Models page (/ui/show/settings?section=models) with one click — the catalog
+(kronk.OfficialModels: small Qwen3.5 4B, medium Gemma 4 E4B) shows a card per
+not-yet-registered tier — which registers it and makes it active (the same card
+re-installs an already-downloaded file whose record was lost, instead of
+re-downloading). The owner switches between downloaded tiers like any local
+model, and picks CPU vs GPU there, saved as owner_settings "llm_processor" and
 applied at restart. There is no manual GGUF-path entry. V1 has a single provider
 path — local;
 the model runs in-process via the embedded Kronk engine. There is no remote

@@ -623,18 +623,19 @@ func TestDownloadOfficialModel(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	// Override the official model pin to point at our httptest server.
-	origOfficial := kronkOfficial
-	kronkOfficial = func() kronk.OfficialModel {
+	// Override the curated pin lookup to point at our httptest server (any key).
+	origOfficial := kronkOfficialByKey
+	kronkOfficialByKey = func(string) (kronk.OfficialModel, bool) {
 		return kronk.OfficialModel{
+			Key:       "medium",
 			Name:      "Test Model",
 			URL:       srv.URL + "/model.gguf",
 			SHA256:    fakeHash,
 			SizeBytes: int64(len(fakeContent)),
 			FileName:  "test-model.gguf",
-		}
+		}, true
 	}
-	t.Cleanup(func() { kronkOfficial = origOfficial })
+	t.Cleanup(func() { kronkOfficialByKey = origOfficial })
 
 	// Set models dir to a temp dir.
 	modelsDir := t.TempDir()

@@ -47,6 +47,32 @@ func TestProcessorControlContract(t *testing.T) {
 	}
 }
 
+// TestOfficialCTACards: each curated model renders a download/install card whose
+// hidden "model" input carries the catalog key, posting to /ui/model/download. An
+// on-disk model offers "Install" (no re-download); others show the size.
+func TestOfficialCTACards(t *testing.T) {
+	got := render(t, Panel(PanelView{
+		OfficialCTAs: []OfficialCTA{
+			{Key: "small", Name: "Qwen3.5 4B", Tagline: "Small & fast", Meta: "Q4_K_M · 4B · Apache-2.0", SizeLabel: "2.7 GB"},
+			{Key: "medium", Name: "Gemma 4 E4B", Tagline: "Balanced", Meta: "Q4_K_M · E4B · Gemma", SizeLabel: "5.3 GB", OnDisk: true},
+		},
+	}))
+	for _, want := range []string{
+		`data-on:submit__prevent="@post(&#39;/ui/model/download&#39;, {contentType:&#39;form&#39;})"`,
+		`type="hidden" name="model" value="small"`,
+		`type="hidden" name="model" value="medium"`,
+		`Qwen3.5 4B`,
+		`Small &amp; fast`,
+		`Download &amp; install · 2.7 GB`, // small: not on disk → download w/ size
+		`Install`,                         // medium: on disk → install, no re-download
+		`Already downloaded`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("official CTA cards missing %q in:\n%s", want, got)
+		}
+	}
+}
+
 // TestProcessorPillDisabledStates: an uninstalled variant says "install first";
 // an unsupported one says "not available here" — never a form/button, and never
 // the wrong copy.

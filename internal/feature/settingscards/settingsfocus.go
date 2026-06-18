@@ -13,6 +13,7 @@ package settingscards
 //   - internal/web/profile.go re-render handlers (one builder, no forked markup)
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -147,26 +148,33 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 		view.Models = append(view.Models, mv)
 	}
 
-	// Official model: show the CTA until it's registered as an enabled model —
+	// Curated catalog: offer each model until it's registered as an enabled model —
 	// keyed on registration, NOT mere file presence, so a downloaded-but-unknown
-	// file (e.g. a prior download whose DB record was lost) still surfaces a way
-	// to install it instead of stranding the owner. OfficialOnDisk lets the CTA
-	// install without re-downloading.
-	official := kronk.Official()
-	officialPath := filepath.Join(kronk.ModelsDir(), official.FileName)
-	_, statErr := os.Stat(officialPath)
-	view.OfficialOnDisk = statErr == nil
-	officialRegistered := false
-	for _, c := range choices {
-		if c.Model == officialPath && !c.Disabled {
-			officialRegistered = true
-			break
+	// file (e.g. a prior download whose DB record was lost) still surfaces a way to
+	// install it instead of stranding the owner. OnDisk lets the card install
+	// without re-downloading.
+	modelsDir := kronk.ModelsDir()
+	for _, om := range kronk.OfficialModels() {
+		path := filepath.Join(modelsDir, om.FileName)
+		registered := false
+		for _, c := range choices {
+			if c.Model == path && !c.Disabled {
+				registered = true
+				break
+			}
 		}
-	}
-	view.ShowOfficialCTA = !officialRegistered
-	if view.ShowOfficialCTA {
-		view.OfficialCTAName = official.Name
-		view.OfficialCTAMeta = official.Quant + " · " + official.Params + " · " + official.License
+		if registered {
+			continue
+		}
+		_, statErr := os.Stat(path)
+		view.OfficialCTAs = append(view.OfficialCTAs, modelcards.OfficialCTA{
+			Key:       om.Key,
+			Name:      om.Name,
+			Tagline:   om.Tagline,
+			Meta:      om.Quant + " · " + om.Params + " · " + om.License,
+			SizeLabel: fmt.Sprintf("%.1f GB", float64(om.SizeBytes)/1e9),
+			OnDisk:    statErr == nil,
+		})
 	}
 	view.RuntimeMissing = !kronk.RuntimeInstalled()
 

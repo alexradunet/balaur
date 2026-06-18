@@ -10,14 +10,11 @@ import (
 
 // PanelView drives the Models settings section.
 type PanelView struct {
-	RuntimeSection  []RuntimeView // per-variant runtime status rows (cpu + vulkan)
-	Models          []ModelView   // available/active/missing local models
-	Error           string        // optional error banner
-	OfficialCTAName string        // display name of the official model — shown in the CTA
-	OfficialCTAMeta string        // one-line: quant + params + license
-	ShowOfficialCTA bool          // true when the official model isn't registered yet
-	OfficialOnDisk  bool          // file already downloaded → the CTA installs (no re-download)
-	RuntimeMissing  bool          // true when BALAUR_LIB_PATH is unset / lib absent
+	RuntimeSection []RuntimeView // per-variant runtime status rows (cpu + vulkan)
+	Models         []ModelView   // available/active/missing local models
+	Error          string        // optional error banner
+	OfficialCTAs   []OfficialCTA // curated models not yet registered — one download/install card each
+	RuntimeMissing bool          // true when BALAUR_LIB_PATH is unset / lib absent
 
 	// Processor selection (cpu vs gpu/vulkan). The native llama.cpp library is
 	// dlopen'd once per process, so a change applies on the next restart.
@@ -34,6 +31,19 @@ type ProcessorOption struct {
 	Installed   bool   // its runtime is present → selectable
 	Selected    bool   // the owner's saved preference (highlighted)
 	Unsupported bool   // not in the build matrix for this OS/arch (e.g. vulkan on macOS)
+}
+
+// OfficialCTA is one curated model offered for download/install. It appears only
+// while that model isn't registered yet. OnDisk means the file is already present
+// (e.g. a prior download whose record was lost), so the action installs it
+// without re-downloading.
+type OfficialCTA struct {
+	Key       string // catalog key the download posts ("small" | "medium" | …)
+	Name      string // display name
+	Tagline   string // short role kicker, e.g. "Small & fast"
+	Meta      string // one-line: quant · params · license
+	SizeLabel string // e.g. "2.7 GB" — shown on the download button
+	OnDisk    bool   // file already present → "Install" instead of "Download"
 }
 
 // Panel renders #models-panel: an optional error, the runtime rows, the "Run on"
@@ -79,8 +89,12 @@ func Panel(v PanelView) g.Node {
 		kids = append(kids, h.Div(grid...))
 	}
 
-	if v.ShowOfficialCTA {
-		kids = append(kids, officialCTA(v))
+	if len(v.OfficialCTAs) > 0 {
+		sec := []g.Node{h.Class("k-section"), ui.SectionLabel(ui.SectionLabelProps{Text: "Get a model"})}
+		for _, c := range v.OfficialCTAs {
+			sec = append(sec, officialCTACard(c))
+		}
+		kids = append(kids, h.Section(sec...))
 	}
 
 	return h.Div(kids...)
@@ -147,24 +161,30 @@ func procLabel(processor string) string {
 	}
 }
 
-// officialCTA renders the "Get our official model" call-to-action. It is shown
-// when the official model isn't registered yet. When the file is already on disk
-// (e.g. a prior download whose record was lost) the action installs it without
-// re-downloading; otherwise it downloads and installs.
-func officialCTA(v PanelView) g.Node {
+// officialCTACard renders one curated model's download/install card. The hidden
+// "model" input carries the catalog key so the handler knows which to fetch. When
+// the file is already on disk (e.g. a prior download whose record was lost) the
+// action installs it without re-downloading; otherwise it downloads and installs.
+func officialCTACard(c OfficialCTA) g.Node {
 	label := "Download & install"
-	if v.OfficialOnDisk {
+	if c.SizeLabel != "" {
+		label += " · " + c.SizeLabel
+	}
+	if c.OnDisk {
 		label = "Install"
 	}
-	return h.Section(h.Class("k-section"),
-		ui.SectionLabel(ui.SectionLabelProps{Text: "Get our official model"}),
-		h.Form(h.Class("card model-official-cta"),
-			data.On("submit", "@post('/ui/model/download', {contentType:'form'})", data.ModifierPrevent),
-			h.P(g.Text(v.OfficialCTAName)),
-			g.If(v.OfficialCTAMeta != "", h.P(h.Class("model-detail-line"), g.Text(v.OfficialCTAMeta))),
-			g.If(v.OfficialOnDisk, h.P(h.Class("model-detail-line"),
-				g.Text("Already downloaded on this box — install to start using it."))),
-			ui.Button(ui.ButtonProps{Variant: "primary"}, h.Type("submit"), g.Text(label)),
+	return h.Form(h.Class("card model-official-cta"),
+		data.On("submit", "@post('/ui/model/download', {contentType:'form'})", data.ModifierPrevent),
+		h.Input(h.Type("hidden"), h.Name("model"), h.Value(c.Key)),
+		h.Header(h.Class("kcard-head"),
+			h.Div(
+				g.If(c.Tagline != "", h.Div(h.Class("kcard-kind"), g.Text(c.Tagline))),
+				h.Strong(g.Text(c.Name)),
+			),
 		),
+		g.If(c.Meta != "", h.P(h.Class("model-detail-line"), g.Text(c.Meta))),
+		g.If(c.OnDisk, h.P(h.Class("model-detail-line"),
+			g.Text("Already downloaded on this box — install to start using it."))),
+		ui.Button(ui.ButtonProps{Variant: "primary"}, h.Type("submit"), g.Text(label)),
 	)
 }

@@ -2038,6 +2038,10 @@ progress.pull-progress-bar::-moz-progress-bar {
 }
 .proc-pill-disabled:hover { border-color: var(--parch-edge); }
 
+/* Curated-model download/install cards stack one per tier under "Get a model". */
+.model-official-cta { margin-top: var(--space-2); }
+.model-official-cta + .model-official-cta { margin-top: var(--space-3); }
+
 .model-detail-line {
   margin: 2px 0 var(--space-2);
   font-size: 14px;

@@ -188,18 +188,26 @@ func (h *handlers) setProcessor(e *core.RequestEvent) error {
 // downloadStoreKey is the app.Store() sidecar key for an in-flight download cancel func.
 const downloadStoreKey = "modeldownload.cancel"
 
-// kronkOfficial is an injectable seam so tests can replace the official model
-// pin without touching the real one (which has a placeholder sha256).
-var kronkOfficial = kronk.Official
+// kronkOfficialByKey is an injectable seam so tests can replace the curated pins
+// without touching the real catalog (whose files are multi-GB real downloads).
+var kronkOfficialByKey = kronk.OfficialByKey
 
-// downloadOfficialModel is a long-lived SSE handler that streams the official GGUF
+// downloadOfficialModel is a long-lived SSE handler that streams a curated GGUF
 // download with a live progress meter, then registers and activates it
-// (store.SaveLocalModel + SetActiveLLMModel). When the file is already on disk,
-// modelget.Fetch dedupes and this is just a (re-)install. Only one download may be
-// in flight at a time; a concurrent POST reflects the current panel state instead
-// of starting a second writer.
+// (store.SaveLocalModel + SetActiveLLMModel). The "model" form value selects the
+// catalog entry (defaults to the recommended "medium"). When the file is already
+// on disk, modelget.Fetch dedupes and this is just a (re-)install. Only one
+// download may be in flight at a time; a concurrent POST reflects the current
+// panel state instead of starting a second writer.
 func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
-	m := kronkOfficial()
+	key := e.Request.FormValue("model")
+	if key == "" {
+		key = "medium"
+	}
+	m, ok := kronkOfficialByKey(key)
+	if !ok {
+		return h.modelsPanel(e, "unknown model")
+	}
 
 	// Guard single in-flight download.
 	if _, ok := h.app.Store().GetOk(downloadStoreKey); ok {
@@ -239,7 +247,7 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 	}
 	view, err := settingscards.BuildModelsPanelView(h.app, "")
 	if err == nil {
-		view.ShowOfficialCTA = false
+		view.OfficialCTAs = nil // hide the download cards while one is in flight
 		view.Models = append(view.Models, inFlight)
 		var b strings.Builder
 		_ = modelcards.Panel(view).Render(&b)

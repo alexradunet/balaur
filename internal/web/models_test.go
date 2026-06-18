@@ -10,6 +10,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/tests"
 
+	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/feature/settingscards"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/store"
@@ -105,25 +106,37 @@ func TestSetProcessor(t *testing.T) {
 	})
 }
 
-// TestModelsPanelOfficialCTAGate guards the official-model CTA gate. The CTA must
+// ctaFor returns the CTA for catalog key, or ok=false if none is offered.
+func ctaFor(ctas []modelcards.OfficialCTA, key string) (modelcards.OfficialCTA, bool) {
+	for _, c := range ctas {
+		if c.Key == key {
+			return c, true
+		}
+	}
+	return modelcards.OfficialCTA{}, false
+}
+
+// TestModelsPanelOfficialCTAGate guards the curated-catalog CTA gate. A CTA must
 // follow REGISTRATION, not mere file presence — otherwise a downloaded-but-unknown
 // file (a prior download whose DB record was lost) hides the only install path and
 // strands the owner with a usable model the UI won't surface.
 func TestModelsPanelOfficialCTAGate(t *testing.T) {
-	official := kronk.Official()
+	medium, _ := kronk.OfficialByKey("medium")
 
-	t.Run("fresh box: download CTA, not on disk", func(t *testing.T) {
+	t.Run("fresh box: every model offered, none on disk", func(t *testing.T) {
 		app := newWebApp(t)
 		t.Setenv("BALAUR_MODELS_DIR", t.TempDir())
 		v, err := settingscards.BuildModelsPanelView(app, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !v.ShowOfficialCTA {
-			t.Error("fresh box must show the official CTA")
+		if len(v.OfficialCTAs) != len(kronk.OfficialModels()) {
+			t.Fatalf("fresh box must offer all %d curated models, got %d", len(kronk.OfficialModels()), len(v.OfficialCTAs))
 		}
-		if v.OfficialOnDisk {
-			t.Error("fresh box: OfficialOnDisk must be false")
+		for _, c := range v.OfficialCTAs {
+			if c.OnDisk {
+				t.Errorf("%s: OnDisk must be false on a fresh box", c.Key)
+			}
 		}
 	})
 
@@ -131,26 +144,27 @@ func TestModelsPanelOfficialCTAGate(t *testing.T) {
 		app := newWebApp(t)
 		dir := t.TempDir()
 		t.Setenv("BALAUR_MODELS_DIR", dir)
-		if err := os.WriteFile(filepath.Join(dir, official.FileName), []byte("GGUF"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, medium.FileName), []byte("GGUF"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		v, err := settingscards.BuildModelsPanelView(app, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !v.ShowOfficialCTA {
-			t.Error("a downloaded-but-unregistered model must still surface the CTA")
+		c, ok := ctaFor(v.OfficialCTAs, "medium")
+		if !ok {
+			t.Fatal("a downloaded-but-unregistered model must still surface its CTA")
 		}
-		if !v.OfficialOnDisk {
-			t.Error("OfficialOnDisk must be true when the file is on disk")
+		if !c.OnDisk {
+			t.Error("OnDisk must be true when the file is on disk")
 		}
 	})
 
-	t.Run("registered + on disk: no CTA", func(t *testing.T) {
+	t.Run("registered + on disk: no CTA for it", func(t *testing.T) {
 		app := newWebApp(t)
 		dir := t.TempDir()
 		t.Setenv("BALAUR_MODELS_DIR", dir)
-		path := filepath.Join(dir, official.FileName)
+		path := filepath.Join(dir, medium.FileName)
 		if err := os.WriteFile(path, []byte("GGUF"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -161,8 +175,8 @@ func TestModelsPanelOfficialCTAGate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if v.ShowOfficialCTA {
-			t.Error("a registered official model on disk must NOT show the CTA")
+		if _, ok := ctaFor(v.OfficialCTAs, "medium"); ok {
+			t.Error("a registered model on disk must NOT show its CTA")
 		}
 	})
 }
