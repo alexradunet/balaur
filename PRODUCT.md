@@ -32,12 +32,15 @@ SQLite, systemd, or environment variables to own one.
 
 **This is a stated direction, not the current reality.** Today Balaur asks its
 owner to install a service, edit an env file, and supply a model path — work that
-fits a technical self-hoster, not the north-star owner. That gap is the product's
-central unfinished business: every step that moves setup, model acquisition, and
-daily operation toward zero-friction for a non-technical owner is on-mission;
-every feature that deepens power-user surface without closing that gap should
-justify itself against this brief. The technical self-hoster is the *beachhead*
-who can run Balaur today — not the destination.
+fits a technical self-hoster, not the north-star owner. The intended delivery for
+the non-technical owner is **a single standalone executable**: download one file,
+run it, get a working companion — no terminal, no env file, no model hunt. That
+gap is the product's central unfinished business: every step that moves setup,
+model acquisition, and daily operation toward that one-file experience is
+on-mission; every feature that deepens power-user surface without closing that
+gap should justify itself against this brief. The technical self-hoster — the
+person building Balaur today — is the *beachhead* who can run it now, not the
+destination.
 
 ## The bet
 
@@ -97,9 +100,10 @@ What Balaur refuses to become. Point at this section to kill scope creep.
   heads. No orchestration of autonomous agents acting unsupervised.
 - **Not a plugin marketplace.** Extensions add verbs through a consent ledger,
   not a store with discovery, ratings, or third-party trust.
-- **Not a cloud-model router.** V1 is local-only on purpose; remote providers are
-  not a missing feature to add back, they are a line the product chose not to
-  cross in v1.
+- **Not a cloud-model router *by default*.** The MVP is local-only on purpose, and
+  the local path stays the sovereignty-preserving default forever. Opt-in remote
+  providers are a planned future bet (see Direction) — but they are never the
+  default, and a turn must never silently leave the box.
 - **Not an internet-exposed service.** Loopback-first; reaching it remotely is
   the owner's explicit, deliberate act, never a default.
 
@@ -108,8 +112,10 @@ What Balaur refuses to become. Point at this section to kill scope creep.
 The *why* behind sharp choices. (Engineering rationale lives in the specs under
 `docs/superpowers/specs/`; this records the product reason.)
 
-- **Local-only inference in v1** — sovereignty over raw capability. A companion
-  that can leak is not the product, even if it is smarter (plan 074).
+- **Local-only inference in the MVP** — sovereignty over raw capability, and the
+  simplest thing that proves the wager. A companion that can leak is not the
+  default the product ships (plan 074). Opt-in remote models come later, never as
+  the default.
 - **One shared conversation, full trust** — heads are personas, not sandboxed
   agents; there is no per-head data scoping. The simplicity *is* the trust model.
 - **Consent over autonomy** — friction at the consent boundary is the feature,
@@ -126,15 +132,20 @@ The arc beyond v1, framed as bets with rationale. README.md keeps the honest
 shipped/unshipped ledger; this records *why each bet is worth making*. None of
 these is a promise.
 
-- **Zero-terminal onboarding.** The biggest bet, straight from the north-star
-  persona: model acquisition, runtime install, and first run reachable without a
-  shell. Until this lands, the non-technical owner is aspiration, not audience.
+- **The single standalone executable.** The biggest bet, straight from the
+  north-star persona: one downloadable file that a non-technical owner runs to get
+  a working companion — model acquisition, runtime install, and first run all
+  reachable without a shell. Until this lands, the non-technical owner is
+  aspiration, not audience.
 - **The Johnny Decimal vault mirror.** One-way export of the life record to
   Markdown + git, so sovereignty is provable and portable, not just claimed.
 - **Encrypted export.** Sovereignty includes safe backup; an owner should be able
   to carry their box's record without carrying its risk.
 - **Sharper recall.** Embedding recall behind the existing FTS5 seam — the
   companion remembers what matters more precisely as the record grows.
+- **Opt-in remote models.** A consent-gated path to a hosted model for owners who
+  knowingly trade some sovereignty for capability — never the default, always the
+  owner's explicit, informed choice, with the local path remaining first-class.
 - **More gateways, same pipeline.** A messenger or CLI surface that adapts the
   one shared turn pipeline (`internal/turn`) rather than re-implementing it —
   meeting the owner where they already are without forking behavior.
