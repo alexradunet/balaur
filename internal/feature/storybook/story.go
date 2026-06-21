@@ -105,6 +105,7 @@ var stories = []Story{
 	modelcardStory(),
 	modelspanelStory(),
 	runtimesectionStory(),
+	cloudmodelStory(),
 }
 
 // Stories returns the ordered registry.

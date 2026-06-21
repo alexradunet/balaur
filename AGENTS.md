@@ -93,8 +93,12 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Local inference runs in-process via the embedded Kronk SDK (`internal/kronk`):
   a local GGUF model is loaded by yzma (purego — CGO stays off; the native
   llama.cpp lib is `dlopen`'d at runtime), behind the internal `llm` interface.
-  V1 has a single provider path: local. There is no remote/HTTP provider and no
-  Ollama (both removed in plan 074).
+  Local is the default provider path and stays first-class. There is also an
+  opt-in, consent-gated OpenAI-compatible remote path (provider kind `openai`,
+  `internal/llm/openai.go`) the owner can add from the Models page — never the
+  default, never auto-selected, and a turn only leaves the box on the owner's
+  explicit, confirmed selection (embeddings stay local; the API key is stored
+  on-box and never logged). There is no Ollama (removed in plan 074).
 - Keep context transparent: durable state lives in PocketBase collections
   (inspectable SQLite) and exported Markdown, never hidden in-session state.
 

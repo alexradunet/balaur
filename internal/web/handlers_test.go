@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/alexradunet/balaur/internal/feature"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llmtest"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
 	_ "github.com/alexradunet/balaur/migrations"
@@ -669,4 +671,125 @@ func TestDownloadOfficialModel(t *testing.T) {
 		},
 	}
 	scenario.Test(t)
+}
+
+// TestCloudModelConsentFlow exercises the opt-in cloud path: saving a cloud model
+// does NOT activate it; the first selection returns the consent dialog (nothing
+// active); confirming activates it with a cloud badge. The API key must never
+// appear in any rendered response. One ApiScenario per app — the harness tears an
+// app's DB down after .Test(), so prerequisites are seeded via store beforehand.
+func TestCloudModelConsentFlow(t *testing.T) {
+	const leakKey = "sk-LEAKTEST-must-not-appear"
+	hdr := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	body := func(v url.Values) *strings.Reader { return strings.NewReader(v.Encode()) }
+
+	t.Run("save does not activate and never leaks the key", func(t *testing.T) {
+		app := newWebApp(t)
+		scenario := tests.ApiScenario{
+			Name:   "POST /ui/model/cloud",
+			Method: "POST",
+			URL:    "/ui/model/cloud",
+			Body: body(url.Values{
+				"name": {"OpenAI"}, "base_url": {"https://api.openai.com/v1"},
+				"chat_model": {"gpt-4o"}, "label": {"GPT-4o"},
+				"api_key": {leakKey}, "consent": {"1"},
+			}),
+			Headers:            hdr,
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			NotExpectedContent: []string{leakKey},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				_, active, err := turn.ModelChoices(a)
+				if err != nil {
+					tb.Fatalf("choices: %v", err)
+				}
+				if active.Key != "" {
+					tb.Fatalf("cloud model must not auto-activate, active=%q", active.Key)
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("save requires the consent checkbox", func(t *testing.T) {
+		app := newWebApp(t)
+		scenario := tests.ApiScenario{
+			Name:   "POST /ui/model/cloud without consent",
+			Method: "POST",
+			URL:    "/ui/model/cloud",
+			Body: body(url.Values{
+				"name": {"OpenAI"}, "base_url": {"https://api.openai.com/v1"},
+				"chat_model": {"gpt-4o"}, "label": {"GPT-4o"}, "api_key": {leakKey},
+			}),
+			Headers:            hdr,
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"confirm you understand"},
+			NotExpectedContent: []string{leakKey},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				models, _, err := turn.ModelChoices(a)
+				if err == nil && len(models) != 0 {
+					tb.Fatalf("no model should be saved without consent, got %d", len(models))
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("first selection requires consent; nothing activates", func(t *testing.T) {
+		app := newWebApp(t)
+		id, err := store.SaveCloudModel(app, "OpenAI", "https://api.openai.com/v1", leakKey, "GPT-4o", "gpt-4o", "")
+		if err != nil {
+			t.Fatalf("seed cloud model: %v", err)
+		}
+		scenario := tests.ApiScenario{
+			Name:               "POST /ui/model/select cloud first time",
+			Method:             "POST",
+			URL:                "/ui/model/select",
+			Body:               body(url.Values{"key": {id}, "target": {"models"}}),
+			Headers:            hdr,
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"Keep local", "Yes, use GPT-4o"},
+			NotExpectedContent: []string{leakKey},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				_, active, _ := turn.ModelChoices(a)
+				if active.Key != "" {
+					tb.Fatalf("consent dialog must not activate, active=%q", active.Key)
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("confirm activates with cloud badge", func(t *testing.T) {
+		app := newWebApp(t)
+		id, err := store.SaveCloudModel(app, "OpenAI", "https://api.openai.com/v1", leakKey, "GPT-4o", "gpt-4o", "")
+		if err != nil {
+			t.Fatalf("seed cloud model: %v", err)
+		}
+		scenario := tests.ApiScenario{
+			Name:               "POST /ui/model/cloud/confirm",
+			Method:             "POST",
+			URL:                "/ui/model/cloud/confirm",
+			Body:               body(url.Values{"key": {id}, "consent": {"1"}}),
+			Headers:            hdr,
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			NotExpectedContent: []string{leakKey},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				_, active, err := turn.ModelChoices(a)
+				if err != nil {
+					tb.Fatalf("choices: %v", err)
+				}
+				if active.Key != id {
+					tb.Fatalf("active key = %q, want %q", active.Key, id)
+				}
+				if active.Badge != "cloud" {
+					tb.Errorf("active badge = %q, want cloud", active.Badge)
+				}
+			},
+		}
+		scenario.Test(t)
+	})
 }

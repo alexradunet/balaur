@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 const llmSettingsKey = "default"
+
+// localProviderName is the reserved name of the single local-inference provider
+// (created by EnsureDefaultLLMConfig). Cloud providers must not reuse it.
+const localProviderName = "Local model"
 
 type LLMConfig struct {
 	ModelID      string
@@ -38,7 +43,7 @@ func (c LLMConfig) DisplayName() string {
 // GGUF file via the Models page, so a fresh box never reports a model as ready.
 // The dataDir param is retained for call-site compatibility.
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
-	_, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
+	_, err := findOrCreateLLMProvider(app, localProviderName, "local", "", "", true, true)
 	return err
 }
 
@@ -66,6 +71,23 @@ func ListLLMModels(app core.App) ([]LLMConfig, error) {
 		return out[i].DisplayName() < out[j].DisplayName()
 	})
 	return out, nil
+}
+
+// LLMConfigByModelID returns the config for a model record id, with the API key
+// redacted — callers that need the key for inference use ActiveLLMConfig. ok is
+// false when the model does not exist. Used by the web layer to read a model's
+// kind/provider before activating it (e.g. the cloud consent gate).
+func LLMConfigByModelID(app core.App, modelID string) (LLMConfig, bool, error) {
+	model, err := app.FindRecordById("llm_models", modelID)
+	if err != nil {
+		return LLMConfig{}, false, nil
+	}
+	cfg, err := configForModel(app, model)
+	if err != nil {
+		return LLMConfig{}, false, err
+	}
+	cfg.APIKey = ""
+	return cfg, true, nil
 }
 
 func ActiveLLMConfig(app core.App) (LLMConfig, bool, error) {
@@ -99,7 +121,7 @@ func SaveLocalModel(app core.App, path, embedPath string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("model path is required")
 	}
-	provider, err := findOrCreateLLMProvider(app, "Local model", "local", "", "", true, true)
+	provider, err := findOrCreateLLMProvider(app, localProviderName, "local", "", "", true, true)
 	if err != nil {
 		return "", err
 	}
@@ -108,8 +130,80 @@ func SaveLocalModel(app core.App, path, embedPath string) (string, error) {
 		return "", err
 	}
 	Audit(app, "owner", "llm.model.upsert", model.Id, true,
-		map[string]any{"provider": "Local model", "kind": "local", "local": true, "path": path})
+		map[string]any{"provider": localProviderName, "kind": "local", "local": true, "path": path})
 	return model.Id, nil
+}
+
+// SaveCloudModel registers an OpenAI-compatible remote model under a provider
+// named by the owner and returns the model record id. The provider holds the
+// base URL and (optional) API key; the key is written to the hidden api_key
+// field and never echoed in audit entries. Cloud models are always local=false
+// — selecting one routes turns off the box, so the web layer gates activation
+// behind explicit consent. The model is saved but NOT activated here.
+func SaveCloudModel(app core.App, name, baseURL, apiKey, label, chatModel, embedModel string) (string, error) {
+	if name == "" || baseURL == "" || label == "" || chatModel == "" {
+		return "", fmt.Errorf("name, base URL, label, and chat model are required")
+	}
+	// Providers are keyed by name; "Local model" is the reserved local provider
+	// (EnsureDefaultLLMConfig owns it). Reusing that name would hijack the local
+	// record and the two would fight over its kind on every render.
+	if strings.EqualFold(strings.TrimSpace(name), localProviderName) {
+		return "", fmt.Errorf("%q is reserved for the local model — choose another provider name", localProviderName)
+	}
+	provider, err := findOrCreateLLMProvider(app, name, "openai", baseURL, apiKey, false, true)
+	if err != nil {
+		return "", err
+	}
+	if apiKey != "" {
+		Audit(app, "owner", "llm.provider_key.set", provider.Id, true, map[string]any{"provider": name})
+	}
+	model, err := findOrCreateLLMModel(app, provider.Id, label, chatModel, embedModel, true)
+	if err != nil {
+		return "", err
+	}
+	Audit(app, "owner", "llm.model.upsert", model.Id, true,
+		map[string]any{"provider": name, "kind": "openai", "local": false})
+	return model.Id, nil
+}
+
+// DeleteLLMModel removes a cloud (kind=openai) model. It refuses to delete the
+// active model. When the deleted model was its provider's last one, the provider
+// record is removed too so its stored API key does not linger after the model
+// the owner sees is gone. Local models are managed via the engine, not here.
+func DeleteLLMModel(app core.App, modelID string) error {
+	model, err := app.FindRecordById("llm_models", modelID)
+	if err != nil {
+		return err
+	}
+	cfg, err := configForModel(app, model)
+	if err != nil {
+		return err
+	}
+	if cfg.Kind != "openai" {
+		return fmt.Errorf("not a cloud model")
+	}
+	if activeCfg, ok, _ := ActiveLLMConfig(app); ok && activeCfg.ModelID == modelID {
+		return fmt.Errorf("model is the active model — choose another model first")
+	}
+	if err := app.Delete(model); err != nil {
+		return err
+	}
+	Audit(app, "owner", "llm.model.delete", modelID, true, map[string]any{"provider": cfg.ProviderName})
+
+	// Drop the provider (and its API key) once it has no models left.
+	siblings, err := app.FindRecordsByFilter("llm_models", "provider = {:p}", "", 1, 0, dbx.Params{"p": cfg.ProviderID})
+	if err != nil {
+		return err
+	}
+	if len(siblings) == 0 {
+		if provider, err := app.FindRecordById("llm_providers", cfg.ProviderID); err == nil {
+			if err := app.Delete(provider); err != nil {
+				return err
+			}
+			Audit(app, "owner", "llm.provider.delete", cfg.ProviderID, true, map[string]any{"provider": cfg.ProviderName})
+		}
+	}
+	return nil
 }
 
 func SetActiveLLMModel(app core.App, modelID, actor string) error {

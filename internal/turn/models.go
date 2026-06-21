@@ -2,6 +2,7 @@ package turn
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,7 +118,7 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 			Model:    cfg.ChatModel,
 			Name:     cfg.DisplayName(),
 			Detail:   modelDetail(cfg),
-			Badge:    modelBadge(),
+			Badge:    modelBadge(cfg),
 		}
 		if cfg.Kind == "local" {
 			if _, faked := injectedClient(app); !faked {
@@ -142,10 +143,23 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 }
 
 func modelDetail(cfg store.LLMConfig) string {
+	if cfg.Kind == "openai" {
+		host := cfg.BaseURL
+		if u, err := url.Parse(cfg.BaseURL); err == nil && u.Host != "" {
+			host = u.Host
+		}
+		return cfg.ChatModel + " · " + host
+	}
 	return filepath.Base(cfg.ChatModel) + " · on this box"
 }
 
-func modelBadge() string {
+// modelBadge labels a choice by where it runs. "cloud" flags a remote model
+// whose turns leave the box — the badge the web layer surfaces beside the model
+// everywhere so the owner always sees when a turn is not local.
+func modelBadge(cfg store.LLMConfig) string {
+	if cfg.Kind == "openai" {
+		return "cloud"
+	}
 	return "local"
 }
 
@@ -191,7 +205,8 @@ func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, 
 }
 
 func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.Client, error) {
-	if cfg.Kind == "local" {
+	switch cfg.Kind {
+	case "local":
 		if !isLocalFile(cfg.ChatModel) {
 			return nil, fmt.Errorf("local model %q is not a GGUF file", cfg.ChatModel)
 		}
@@ -199,6 +214,20 @@ func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.C
 			return nil, fmt.Errorf("local inference engine not initialized")
 		}
 		return s.Engine.Client(cfg.ChatModel, cfg.EmbedModel), nil
+	case "openai":
+		// Opt-in remote path. The owner has explicitly selected (and consented
+		// to) this cloud model; turns reach the provider over the OpenAI-
+		// compatible HTTP API. Embeddings stay local — nothing calls this
+		// client's Embed on the default recall path.
+		if cfg.BaseURL == "" {
+			return nil, fmt.Errorf("cloud model %q has no base URL", cfg.DisplayName())
+		}
+		return &llm.OpenAIClient{
+			BaseURL:    cfg.BaseURL,
+			APIKey:     cfg.APIKey,
+			Model:      cfg.ChatModel,
+			EmbedModel: cfg.EmbedModel,
+		}, nil
 	}
 	return nil, fmt.Errorf("unknown model provider %q", cfg.Kind)
 }

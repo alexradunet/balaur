@@ -99,14 +99,15 @@ func RuntimeCard(v RuntimeView) g.Node {
 	)
 }
 
-// ModelView is the presentation model for one local model.
+// ModelView is the presentation model for one model (local or cloud).
 type ModelView struct {
 	ID            string // model record id — drives the element id and the action posts
 	Name          string // display name
 	Detail        string // one line: file + location, or "file not found"
-	Kind          string // small kicker label, e.g. "local" or "missing"
+	Kind          string // small kicker label, e.g. "local", "cloud", or "missing"
 	Status        string // StatusActive | StatusAvailable | StatusMissing | StatusDownloading
 	VRAM          string // optional estimate, e.g. "~6 GB" — rendered as a tag when set
+	Cloud         bool   // a remote model — turns leave the box; surfaces a "cloud" tag
 	Progress      int    // 0..100 — only set when Status == StatusDownloading
 	ProgressLabel string // e.g. "1.2 GB / 5.3 GB · 4.2 MB/s" — human progress line
 }
@@ -124,6 +125,9 @@ func ModelCard(v ModelView) g.Node {
 	case StatusDownloading:
 		cls += " model-card-downloading"
 	}
+	if v.Cloud {
+		cls += " model-card-cloud"
+	}
 	return h.Article(
 		h.Class(cls), h.ID("model-card-"+v.ID),
 		h.Header(h.Class("kcard-head"),
@@ -131,6 +135,7 @@ func ModelCard(v ModelView) g.Node {
 				h.Div(h.Class("kcard-kind"), g.Text(v.Kind)),
 				h.H3(g.Text(v.Name)),
 			),
+			g.If(v.Cloud, ui.Tag(g.Text("cloud"))),
 			g.If(v.Status == StatusActive, ui.Tag(g.Text("active"))),
 		),
 		h.P(h.Class("model-detail-line"), g.Text(v.Detail)),
@@ -159,8 +164,27 @@ func modelAction(v ModelView) g.Node {
 		// re-adds it.
 		return g.Text("")
 	default:
+		// A cloud model can be removed (taking its stored key with it); a local
+		// model is managed via the runtime/catalog, not a per-card delete.
+		if v.Cloud {
+			return g.Group([]g.Node{
+				actionForm("/ui/model/select", v.ID, "Use this model"),
+				deleteForm(v.ID),
+			})
+		}
 		return actionForm("/ui/model/select", v.ID, "Use this model")
 	}
+}
+
+// deleteForm posts a cloud model's key to /ui/model/cloud/delete; the handler
+// removes it (and its provider+key when last) and re-renders #models-panel.
+func deleteForm(id string) g.Node {
+	return h.Form(
+		data.On("submit", "@post('/ui/model/cloud/delete', {contentType:'form'})", data.ModifierPrevent),
+		h.Input(h.Type("hidden"), h.Name("target"), h.Value("models")),
+		h.Input(h.Type("hidden"), h.Name("key"), h.Value(id)),
+		ui.Button(ui.ButtonProps{Variant: "ghost", Size: "sm"}, h.Type("submit"), g.Text("Remove")),
+	)
 }
 
 // cancelForm renders a Cancel button that posts to /ui/model/download/cancel.

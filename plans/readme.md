@@ -29,6 +29,12 @@ are **not** deleted until 117 — earlier plans leave the `.html` files in place
 gomponents ports (`profile.html`, `journal-focus.html`, `knowledge-grid.html`,
 and all `chat-msg-*` fragments) — they are simply deleted with the rest in 117.
 
+Standalone feature (plan 123), 2026-06-21: re-adds the **opt-in
+OpenAI-compatible cloud provider** path removed in plan 074 — a consent-gated
+remote `llm.Client` the owner adds from the Models page. Local stays the default;
+a turn only leaves the box on explicit, confirmed selection. Implemented directly
+on `main` (status DONE); see `plans/123-opt-in-cloud-providers.md`.
+
 ## Execution order & status
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |

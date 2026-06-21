@@ -359,6 +359,23 @@ func (h *handlers) selectModel(e *core.RequestEvent) error {
 		if choice.Disabled {
 			return e.BadRequestError("model is not available", nil)
 		}
+		// Cloud models leave the box. The first time the owner activates one
+		// from a given provider, confirm explicitly before it goes live —
+		// a turn never leaves the box on a single click. Once acknowledged,
+		// later selections of that provider skip the dialog.
+		if choice.Provider == "openai" {
+			cfg, ok, err := store.LLMConfigByModelID(h.app, choice.Key)
+			if err != nil {
+				return e.InternalServerError("loading model", err)
+			}
+			if ok && store.GetOwnerSetting(h.app, cloudAckKey(cfg.ProviderID), "") != "1" {
+				return h.cloudConsentDialog(e, modelcards.CloudConsentView{
+					ModelID:      cfg.ModelID,
+					ModelName:    cfg.DisplayName(),
+					ProviderName: cfg.ProviderName,
+				})
+			}
+		}
 		if err := store.SetActiveLLMModel(h.app, choice.Key, "owner"); err != nil {
 			return e.InternalServerError("saving model choice", err)
 		}
@@ -368,6 +385,84 @@ func (h *handlers) selectModel(e *core.RequestEvent) error {
 		return h.chatbar(e)
 	}
 	return e.BadRequestError("model is not available", nil)
+}
+
+// cloudAckKey is the owner_settings key recording that the owner has consented to
+// send turns to a given cloud provider. Per-provider so each distinct destination
+// is acknowledged once.
+func cloudAckKey(providerID string) string { return "cloud_ack:" + providerID }
+
+// cloudConsentDialog patches #models-panel with the first-use confirmation for a
+// cloud model. It activates nothing — only confirmCloudModel does, after consent.
+func (h *handlers) cloudConsentDialog(e *core.RequestEvent, v modelcards.CloudConsentView) error {
+	var b strings.Builder
+	if err := modelcards.CloudConsent(v).Render(&b); err != nil {
+		return e.InternalServerError("rendering consent", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+	return nil
+}
+
+// saveCloudModel registers an OpenAI-compatible cloud model from the add form. It
+// requires the consent checkbox and does NOT activate the model — the owner
+// selects it (and confirms once more) to go live. The panel re-renders with the
+// new model shown as available.
+func (h *handlers) saveCloudModel(e *core.RequestEvent) error {
+	if e.Request.FormValue("consent") != "1" {
+		return h.modelsPanel(e, "please confirm you understand messages will leave your box")
+	}
+	name := strings.TrimSpace(e.Request.FormValue("name"))
+	baseURL := strings.TrimSpace(e.Request.FormValue("base_url"))
+	chatModel := strings.TrimSpace(e.Request.FormValue("chat_model"))
+	label := strings.TrimSpace(e.Request.FormValue("label"))
+	embedModel := strings.TrimSpace(e.Request.FormValue("embed_model"))
+	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
+	if _, err := store.SaveCloudModel(h.app, name, baseURL, apiKey, label, chatModel, embedModel); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	return h.modelsPanel(e, "")
+}
+
+// confirmCloudModel handles the first-use consent dialog. consent=1 records the
+// per-provider acknowledgement, audits it (never the key), and activates the
+// model; anything else is a cancel that just restores the panel.
+func (h *handlers) confirmCloudModel(e *core.RequestEvent) error {
+	key := e.Request.FormValue("key")
+	if key == "" {
+		return e.BadRequestError("missing model key", nil)
+	}
+	if e.Request.FormValue("consent") != "1" {
+		return h.modelsPanel(e, "") // cancelled — nothing activated
+	}
+	cfg, ok, err := store.LLMConfigByModelID(h.app, key)
+	if err != nil {
+		return e.InternalServerError("loading model", err)
+	}
+	if !ok || cfg.Kind != "openai" {
+		return e.BadRequestError("not a cloud model", nil)
+	}
+	if err := store.SetOwnerSetting(h.app, cloudAckKey(cfg.ProviderID), "1"); err != nil {
+		return e.InternalServerError("saving consent", err)
+	}
+	store.Audit(h.app, "owner", "llm.cloud.consent", cfg.ProviderID, true, map[string]any{"provider": cfg.ProviderName})
+	if err := store.SetActiveLLMModel(h.app, key, "owner"); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	return h.modelsPanel(e, "")
+}
+
+// deleteCloudModel removes a cloud model (and its provider+key when it was the
+// last one). store.DeleteLLMModel refuses to delete the active model.
+func (h *handlers) deleteCloudModel(e *core.RequestEvent) error {
+	key := e.Request.FormValue("key")
+	if key == "" {
+		return e.BadRequestError("missing model key", nil)
+	}
+	if err := store.DeleteLLMModel(h.app, key); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	return h.modelsPanel(e, "")
 }
 
 // buildAvatarOptions returns the full roster of chooseable soul avatars with

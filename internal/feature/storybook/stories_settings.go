@@ -31,6 +31,10 @@ func modelcardStory() Story {
 				Kind: "local", Status: modelcards.StatusDownloading,
 				Progress: 42, ProgressLabel: "1.1 GB / 2.7 GB · 4.1 MB/s",
 			})},
+			{"cloud · active", modelcards.ModelCard(modelcards.ModelView{
+				ID: "c1", Name: "GPT-4o", Detail: "gpt-4o · api.openai.com",
+				Kind: "cloud", Status: modelcards.StatusActive, Cloud: true,
+			})},
 		},
 		Props: []Prop{
 			{"ID", "string", "—", "Model record id; drives the element id and the action posts."},
@@ -38,7 +42,8 @@ func modelcardStory() Story {
 			{"Detail", "string", "—", "One line: GGUF file + location, or 'file not found'."},
 			{"Kind", "string", "—", "Small kicker label, e.g. 'local' or 'missing'."},
 			{"Status", "string", `"available"`, "active → In use (disabled); available → Use this model; missing → no action; downloading → progress meter + Cancel."},
-			{"VRAM", "string", "—", "Optional estimate (e.g. '~6 GB'); rendered as a tag when set."},
+			{"VRAM", "string", "—", "Optional estimate (e.g. '~6 GB'); rendered as a tag when set (local only)."},
+			{"Cloud", "bool", "false", "Remote model — turns leave the box; renders a 'cloud' tag and skips VRAM."},
 			{"Progress", "int", "0", "0..100 download progress; only shown when Status == downloading."},
 			{"ProgressLabel", "string", "—", "Human progress line shown under the progress meter."},
 		},
@@ -135,8 +140,52 @@ func modelspanelStory() Story {
 			"Reuse an already-downloaded file: offer Install, never a second multi-GB download.",
 		},
 		Donts: []string{
-			"Imply remote/API models — v1 runs local GGUF only.",
+			"Default to a cloud model — local is the first-class default; cloud is opt-in.",
 			"Offer a GPU pill whose runtime isn't installed as if it were selectable.",
+		},
+	}
+}
+
+// cloudmodelStory documents the opt-in cloud path: the add-a-cloud-model form,
+// the first-use consent dialog, and how a cloud model reads in the panel. Local
+// inference stays the default; this surface is reached only by the owner's
+// deliberate, consented choice.
+func cloudmodelStory() Story {
+	return Story{
+		ID: "cloudmodel", Group: "Models", Title: "Cloud model (opt-in)", Wide: true,
+		Blurb: "Balaur runs local by default, but an owner can opt in to an OpenAI-compatible cloud model (OpenAI, OpenRouter, Groq, Anthropic via its compat shim, LM Studio…). The add form makes the trade-off explicit and requires a consent checkbox before a key is stored; a first-use dialog confirms the destination before the model can go active. A turn never leaves the box without the owner's deliberate, informed click.",
+		Variants: []Variant{
+			{"add a cloud model · form", modelcards.CloudForm(modelcards.CloudFormView{})},
+			{"add form · error", modelcards.CloudForm(modelcards.CloudFormView{Error: "name, base URL, label, and chat model are required"})},
+			{"first-use consent dialog", modelcards.CloudConsent(modelcards.CloudConsentView{
+				ModelID: "c1", ModelName: "GPT-4o", ProviderName: "OpenAI",
+			})},
+			{"panel · local + cloud, with add form", modelcards.Panel(modelcards.PanelView{
+				ProcessorRunning: "cpu",
+				Processors:       []modelcards.ProcessorOption{{Key: "cpu", Installed: true, Selected: true}, {Key: "vulkan", Installed: true}},
+				ShowCloudForm:    true,
+				Models: []modelcards.ModelView{
+					{ID: "m1", Name: "Qwen3.5 4B", Detail: "Qwen3.5-4B-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~3 GB"},
+					{ID: "c1", Name: "GPT-4o", Detail: "gpt-4o · api.openai.com", Kind: "cloud", Status: modelcards.StatusAvailable, Cloud: true},
+				},
+			})},
+		},
+		Props: []Prop{
+			{"CloudFormView.Error", "string", "—", "Inline error banner above the add form (missing field, save failure)."},
+			{"CloudConsentView.ModelID", "string", "—", "Model record id posted on confirm/cancel."},
+			{"CloudConsentView.ModelName", "string", "—", "Display label of the model being activated."},
+			{"CloudConsentView.ProviderName", "string", "—", "The destination the owner is consenting to send messages to."},
+			{"PanelView.ShowCloudForm", "bool", "false", "Render the opt-in add-a-cloud-model section at the bottom of the panel."},
+		},
+		Dos: []string{
+			"Name the destination plainly — the owner consents to a specific provider.",
+			"Require the consent checkbox before storing a key, and confirm again on first activation.",
+			"Keep the local model first-class and the obvious default.",
+		},
+		Donts: []string{
+			"Activate a cloud model on a single click — confirm the box-leaving first.",
+			"Echo the API key back in the UI, audit log, or any export.",
+			"Auto-select or fall back to a cloud model — selection is always explicit.",
 		},
 	}
 }

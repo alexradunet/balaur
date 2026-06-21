@@ -12,8 +12,10 @@ from one Go binary on a box the owner controls. The binary embeds
 PocketBase (data, auth, migrations — plain SQLite under pb_data/), a
 Datastar web interface, and local LLM inference run in-process via the
 embedded Kronk engine (internal/kronk) — a local GGUF model loaded through
-yzma/llama.cpp, CGO-free (the native library is dlopen'd at runtime). For v1
-there is a single LLM path: local; there is no remote provider and no Ollama.
+yzma/llama.cpp, CGO-free (the native library is dlopen'd at runtime). Local
+inference is the default path and stays first-class; there is also an opt-in,
+consent-gated OpenAI-compatible remote path the owner can add and explicitly
+confirm from the Models page. There is no Ollama.
 The engine never downloads anything on boot. From the Models page the owner
 installs the llama.cpp runtime in-app (cpu and vulkan variants, into
 ~/.local/share/balaur/kronk/lib; BALAUR_LIB_PATH overrides the root), downloads
@@ -223,10 +225,14 @@ not-yet-registered tier — which registers it and makes it active (the same car
 re-installs an already-downloaded file whose record was lost, instead of
 re-downloading). The owner switches between downloaded tiers like any local
 model, and picks CPU vs GPU there, saved as owner_settings "llm_processor" and
-applied at restart. There is no manual GGUF-path entry. V1 has a single provider
-path — local;
-the model runs in-process via the embedded Kronk engine. There is no remote
-provider and no Ollama (both removed in plan 074).
+applied at restart. There is no manual GGUF-path entry. Local is the default
+provider path and the model runs in-process via the embedded Kronk engine. The
+owner can also add an opt-in OpenAI-compatible cloud model (provider kind
+`openai`) from the same Models page: it is never the default and never
+auto-selected, the first activation per provider requires an explicit
+"messages will leave your box" confirmation, embeddings stay local, and the API
+key is stored on-box (hidden field, redacted from the UI and audit log) and
+never logged. There is no Ollama (removed in plan 074).
 
 ## Source
 

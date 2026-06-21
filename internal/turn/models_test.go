@@ -1,9 +1,12 @@
 package turn
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alexradunet/balaur/internal/kronk"
+	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -58,5 +61,45 @@ func TestClientSourceLocalGGUFUsesKronk(t *testing.T) {
 	var bare ClientSource
 	if _, err := bare.ClientFor(nil, ModelChoice{Provider: "local", Model: path}); err == nil {
 		t.Fatal("expected error resolving a GGUF model with no engine")
+	}
+}
+
+func TestCloudModelResolvesToOpenAIClient(t *testing.T) {
+	app := storetest.NewApp(t)
+	id, err := store.SaveCloudModel(app, "OpenAI", "https://api.openai.com/v1", "sk-x", "GPT-4o", "gpt-4o", "")
+	if err != nil {
+		t.Fatalf("save cloud model: %v", err)
+	}
+	if err := store.SetActiveLLMModel(app, id, "owner"); err != nil {
+		t.Fatalf("activate: %v", err)
+	}
+
+	// The active cloud model resolves to the remote client — no engine needed.
+	var src ClientSource
+	client, err := src.Active(app)
+	if err != nil {
+		t.Fatalf("Active: %v", err)
+	}
+	oc, ok := client.(*llm.OpenAIClient)
+	if !ok {
+		t.Fatalf("client type = %T, want *llm.OpenAIClient", client)
+	}
+	if oc.Model != "gpt-4o" || oc.BaseURL != "https://api.openai.com/v1" || oc.APIKey != "sk-x" {
+		t.Fatalf("client wired wrong: %+v", oc)
+	}
+
+	// The choice carries the cloud badge and a host-based detail.
+	choices, active, err := ModelChoices(app)
+	if err != nil {
+		t.Fatalf("ModelChoices: %v", err)
+	}
+	if len(choices) != 1 {
+		t.Fatalf("got %d choices, want 1", len(choices))
+	}
+	if active.Badge != "cloud" {
+		t.Errorf("badge = %q, want cloud", active.Badge)
+	}
+	if !strings.Contains(active.Detail, "api.openai.com") {
+		t.Errorf("detail = %q, want it to name the host", active.Detail)
 	}
 }

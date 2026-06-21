@@ -15,6 +15,8 @@ type PanelView struct {
 	Error          string        // optional error banner
 	OfficialCTAs   []OfficialCTA // curated models not yet registered — one download/install card each
 	RuntimeMissing bool          // true when BALAUR_LIB_PATH is unset / lib absent
+	ShowCloudForm  bool          // render the opt-in "Add a cloud model" section
+	CloudForm      CloudFormView // state for that form (inline error, if any)
 
 	// Processor selection (cpu vs gpu/vulkan). The native llama.cpp library is
 	// dlopen'd once per process, so a change applies on the next restart.
@@ -95,6 +97,10 @@ func Panel(v PanelView) g.Node {
 			sec = append(sec, officialCTACard(c))
 		}
 		kids = append(kids, h.Section(sec...))
+	}
+
+	if v.ShowCloudForm {
+		kids = append(kids, CloudForm(v.CloudForm))
 	}
 
 	return h.Div(kids...)

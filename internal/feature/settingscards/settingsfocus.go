@@ -127,14 +127,20 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 	if err != nil {
 		return modelcards.PanelView{}, err
 	}
-	view := modelcards.PanelView{Error: errMsg}
+	view := modelcards.PanelView{Error: errMsg, ShowCloudForm: true}
 	for _, c := range choices {
+		cloud := c.Badge == "cloud"
 		mv := modelcards.ModelView{
 			ID:     c.Key,
 			Name:   c.Name,
 			Detail: c.Detail,
 			Kind:   c.Badge,
-			VRAM:   kronk.EstimateVRAM(c.Model),
+			Cloud:  cloud,
+		}
+		if !cloud {
+			// VRAM estimation reads a local GGUF header; there is no file for a
+			// cloud model, so leave it blank.
+			mv.VRAM = kronk.EstimateVRAM(c.Model)
 		}
 		switch {
 		case c.Active:
@@ -253,9 +259,11 @@ func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusVi
 // and tests — no live app required.
 func ExamplePanelView() modelcards.PanelView {
 	return modelcards.PanelView{
+		ShowCloudForm: true,
 		Models: []modelcards.ModelView{
 			{ID: "m1", Name: "Qwen3 8B", Detail: "qwen3-8b.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~6 GB"},
 			{ID: "m2", Name: "Mistral 7B", Detail: "mistral-7b.gguf · on this box", Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~5 GB"},
+			{ID: "c1", Name: "GPT-4o", Detail: "gpt-4o · api.openai.com", Kind: "cloud", Status: modelcards.StatusAvailable, Cloud: true},
 		},
 		ProcessorRunning: "cpu",
 		Processors: []modelcards.ProcessorOption{

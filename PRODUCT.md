@@ -100,10 +100,11 @@ What Balaur refuses to become. Point at this section to kill scope creep.
   heads. No orchestration of autonomous agents acting unsupervised.
 - **Not a plugin marketplace.** Extensions add verbs through a consent ledger,
   not a store with discovery, ratings, or third-party trust.
-- **Not a cloud-model router *by default*.** The MVP is local-only on purpose, and
-  the local path stays the sovereignty-preserving default forever. Opt-in remote
-  providers are a planned future bet (see Direction) — but they are never the
-  default, and a turn must never silently leave the box.
+- **Not a cloud-model router *by default*.** The local path stays the
+  sovereignty-preserving default forever. An opt-in, consent-gated remote
+  provider now ships — but it is never the default, never auto-selected, and a
+  turn never silently leaves the box (first activation requires an explicit
+  "this leaves your box" confirmation).
 - **Not an internet-exposed service.** Loopback-first; reaching it remotely is
   the owner's explicit, deliberate act, never a default.
 
@@ -112,10 +113,10 @@ What Balaur refuses to become. Point at this section to kill scope creep.
 The *why* behind sharp choices. (Engineering rationale lives in the specs under
 `docs/superpowers/specs/`; this records the product reason.)
 
-- **Local-only inference in the MVP** — sovereignty over raw capability, and the
-  simplest thing that proves the wager. A companion that can leak is not the
-  default the product ships (plan 074). Opt-in remote models come later, never as
-  the default.
+- **Local-first inference** — sovereignty over raw capability, and the simplest
+  thing that proves the wager. A companion that can leak is not the default the
+  product ships (plan 074). An opt-in remote model is now available for owners who
+  knowingly trade some sovereignty for capability, but local stays the default.
 - **One shared conversation, full trust** — heads are personas, not sandboxed
   agents; there is no per-head data scoping. The simplicity *is* the trust model.
 - **Consent over autonomy** — friction at the consent boundary is the feature,
@@ -143,9 +144,11 @@ these is a promise.
   to carry their box's record without carrying its risk.
 - **Sharper recall.** Embedding recall behind the existing FTS5 seam — the
   companion remembers what matters more precisely as the record grows.
-- **Opt-in remote models.** A consent-gated path to a hosted model for owners who
-  knowingly trade some sovereignty for capability — never the default, always the
-  owner's explicit, informed choice, with the local path remaining first-class.
+- **Opt-in remote models (shipped, plan 123).** A consent-gated path to a hosted
+  OpenAI-compatible model for owners who knowingly trade some sovereignty for
+  capability — never the default, always the owner's explicit, informed choice
+  (first-use confirmation, a cloud badge everywhere, the key never logged), with
+  the local path remaining first-class and embeddings staying on-box.
 - **More gateways, same pipeline.** A messenger or CLI surface that adapts the
   one shared turn pipeline (`internal/turn`) rather than re-implementing it —
   meeting the owner where they already are without forking behavior.
