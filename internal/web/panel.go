@@ -156,7 +156,9 @@ func parseShowURL(raw string) (typ, query string, ok bool) {
 // panelClose clears the persisted pointer and morphs #panel-inner to the empty
 // placeholder. Called by uiShow when type=="close" (GET /ui/show/close).
 func (h *handlers) panelClose(e *core.RequestEvent) error {
-	_ = store.SetOwnerSetting(h.app, panelActiveKey, "")
+	if err := store.SetOwnerSetting(h.app, panelActiveKey, ""); err != nil {
+		h.app.Logger().Warn("persisting panel state failed", "key", panelActiveKey, "err", err)
+	}
 	sse := datastar.NewSSE(e.Response, e.Request)
 	_ = sse.PatchElements(renderNodeHTML(emptyPanelNode())) // morph #panel-inner → empty
 	return nil
@@ -169,7 +171,9 @@ func (h *handlers) uiPanelCollapse(e *core.RequestEvent) error {
 	if e.Request.FormValue("on") == "1" {
 		on = "1"
 	}
-	_ = store.SetOwnerSetting(h.app, panelCollapsedKey, on)
+	if err := store.SetOwnerSetting(h.app, panelCollapsedKey, on); err != nil {
+		h.app.Logger().Warn("persisting panel state failed", "key", panelCollapsedKey, "err", err)
+	}
 	return e.NoContent(http.StatusNoContent)
 }
 
@@ -186,6 +190,8 @@ func (h *handlers) uiPanelWidth(e *core.RequestEvent) error {
 	if px > panelMaxPx {
 		px = panelMaxPx
 	}
-	_ = store.SetOwnerSetting(h.app, panelWidthKey, strconv.Itoa(px))
+	if err := store.SetOwnerSetting(h.app, panelWidthKey, strconv.Itoa(px)); err != nil {
+		h.app.Logger().Warn("persisting panel state failed", "key", panelWidthKey, "err", err)
+	}
 	return e.NoContent(http.StatusNoContent)
 }

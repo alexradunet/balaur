@@ -1,6 +1,10 @@
 package store
 
-import "github.com/pocketbase/pocketbase/core"
+import (
+	"fmt"
+
+	"github.com/pocketbase/pocketbase/core"
+)
 
 // AvatarEntry is one selectable avatar: key (stored in owner_settings /
 // head records), human label, and served URL. The exported rosters are the
@@ -25,19 +29,32 @@ func GetOwnerSetting(app core.App, key, defaultVal string) string {
 	return v
 }
 
-// SetOwnerSetting upserts a key/value pair in owner_settings.
+// SetOwnerSetting upserts a key/value pair in owner_settings. The collection
+// has a UNIQUE index on key, so two concurrent writers that both miss the
+// initial lookup would otherwise collide on insert; on a failed save we retry
+// once, by which point the row exists and the retry updates it.
 func SetOwnerSetting(app core.App, key, value string) error {
 	col, err := app.FindCollectionByNameOrId("owner_settings")
 	if err != nil {
 		return err
 	}
-	rec, err := app.FindFirstRecordByData("owner_settings", "key", key)
-	if err != nil {
-		rec = core.NewRecord(col)
-		rec.Set("key", key)
+	save := func() error {
+		rec, err := app.FindFirstRecordByData("owner_settings", "key", key)
+		if err != nil {
+			rec = core.NewRecord(col)
+			rec.Set("key", key)
+		}
+		rec.Set("value", value)
+		return app.Save(rec)
 	}
-	rec.Set("value", value)
-	return app.Save(rec)
+	if err := save(); err != nil {
+		// A concurrent insert may have created the row between our lookup and
+		// save (UNIQUE on key). Retry once: the row now exists, so we update it.
+		if err := save(); err != nil {
+			return fmt.Errorf("set owner setting %q: %w", key, err)
+		}
+	}
+	return nil
 }
 
 // ── Soul avatar ────────────────────────────────────────────────────────
