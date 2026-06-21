@@ -40,6 +40,11 @@ and all `chat-msg-*` fragments) — they are simply deleted with the rest in 117
 | 115 | gomponents migration: live dialogue choices → new `chat.Choices` organism + storybook story (port `chat-choices`) | P2 | S–M | LOW | — | — | TODO |
 | 116 | gomponents migration: remove the `template.HTML` bridge type — helpers/view-models carry `g.Node`/`string`; drop `html/template` from 5 web files; delete dead `ComposerHTML`/`modelsPageData`/`renderModelsPanel` | P2 | M | MED | 111, 112, 113, 114, 115 | — | TODO |
 | 117 | gomponents migration: delete the `html/template` engine (`funcs`/`tmpl`/`ParseFS`), the `web/` template package (embed.go + 11 `.html`), `templates_test.go`, the `tmpl: parseTemplates(t)` plumbing in ~18 tests; sync AGENTS/README/DESIGN/knowledge.md + 3 tours | P2 | M | MED | 111, 112, 113, 114, 115, 116 | — | TODO |
+| 118 | Docs truth-sync (main.go HTMX→Datastar, README /focus→/ui/show + drop `boards`, restore 2 still-referenced docs) + delete 2 dead symbols (`focusMemoryCategories`, `isDatastarRequest`) | P1 | S | LOW | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a3a0ba2eb7d2aec54` @ `c27c19d`+`4892c2e`; advisor re-ran all gates in the worktree: build/vet/`go test ./...` 36 pkgs green, scope = exactly the 6 in-scope files, `git diff --check` clean, all done-criteria greps empty. Restored `docs/hyperagent-sandbox.md`+`docs/netbird.md` from `8c58aad`; README route swaps + boards removal faithful; README:430 "templates" correctly left for 117) |
+| 119 | Web dedup + turn simplify: `cardHTMLAt` helper, `cardTitleIcon` helper (3 sites), drop `modelBadge` unused param | P2 | S | LOW | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a1ac31eef37c4f132`; advisor re-ran all gates in the worktree: build/vet/full `go test ./...` green, gofmt + `git diff --check` clean, scope = exactly 4 in-scope files, output-preserving (all web tests pass unchanged). Two documented, in-scope, sound adaptations: (1) removed the now-orphaned `internal/cards` import from `recap.go` — its only package use was the replaced `cards.Get` block (the remaining "cards" tokens there are a comment + a local var in `"recap-cards.html"`); (2) the done-criterion grep for `if spec, ok := cards.Get(typ)` returns 1 not 0 because that line is now the `cardTitleIcon` helper body itself — the 3 original dup sites are gone, intent met) |
+| 120 | Fix `SetOwnerSetting` check-then-act upsert race (retry-on-conflict) + concurrency test | P1 | S | MED | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a70a0379f82fe4c90` @ `22bfe7c`; advisor re-ran all gates in the worktree: build/vet green, full `go test ./...` green, fresh `-race -count=3 TestSetOwnerSettingConcurrent` clean (15.4s, no data race), `git diff --check` clean, migration untouched, scope = exactly 3 files. Retry-closure fix as specified; `GetOwnerSetting` untouched; test asserts the single-row invariant (not gamed); executor also did optional Step 3 — panel handlers log instead of swallowing) |
+| 121 | Delete the unwired embedding-rerank spike (`knowledge/rerank.go` + test; owner chose delete over wiring) | P2 | S | LOW | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a5dd106cd273a28af` @ `805287c`; advisor re-ran all gates in the worktree: build/vet/full `go test ./...` green, scope = exactly the 2 file deletions (301 lines), all rerank symbols gone, `plans/073`+`PRODUCT.md` untouched, `git diff --check` clean. `internal/llm` import vanished with the file, no orphan; `internal/llmtest` correctly left intact) |
+| 122 | Test hardening: `remember`-tool error cases + turn plain-reply test + strengthen 2 assertion-only web tests | P2 | M | LOW | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a89b2f9eb54afcf7d`; advisor re-ran all gates in the worktree: build green, the 4 new/strengthened tests pass, full `go test ./...` green, gofmt + `git diff --check` clean, scope = exactly the 4 test files (no production code touched). Assertions audited as meaningful: plain-reply test checks `Calls==1`/empty `CheckNote`/persisted roles `user,assistant`; timeline now requires `"Ship it"`; heads seeds `"Scout"` (signature `seedHeadRec(t, app, name, _)`) and asserts it) |
 | 001 | Serialize nudge/recap/briefing background jobs | P1 | S | LOW | — | [#16](https://github.com/alexradunet/balaur/issues/16) | DONE |
 | 002 | Hot-query SQLite indexes (messages, tasks, audit) | P1 | S | LOW | — | [#17](https://github.com/alexradunet/balaur/issues/17) | DONE |
 | 003 | Surface turn persistence + chat run errors | P2 | S | LOW | — | [#18](https://github.com/alexradunet/balaur/issues/18) | DONE |
@@ -1241,3 +1246,68 @@ First cycle (`c4fce47`):
   message-before-marks ordering; audit-log pruning command;
   `SyntheticClient` dead exported API (documented by plan 007, removal
   needs an owner decision).
+
+## Cleanup cycle (2026-06-21, owner-requested deep clean): plans 118–122
+
+Owner: *"deep — I want to fully clean the codebase, delete any stuff that are
+not needed anymore and make sure the code is simple enough and properly
+architectured for our goals."* Generated by the improve skill against commit
+`ce2ba72` with a deep, read-only audit: 8 parallel category finders, each
+finding adversarially re-verified, then advisor-vetted by re-reading the cited
+code. Verification baseline at `ce2ba72`: `go vet ./...` clean, `go test ./...`
+all 40 packages `ok`, `CGO_ENABLED=0 go build ./...` ok.
+
+**Headline:** the architecture is already sound for the stated goals — the
+architecture finder returned **zero** findings (`internal/store` is genuinely
+cross-cutting; `internal/turn` is the gateway line; packages are small and
+single-purpose). The biggest remaining "delete unneeded code" item — retiring
+the `html/template` engine — is already planned as **111–117** (TODO) and was
+deliberately NOT re-planned here. What's left is surgical: docs truth-sync, two
+small web dedups, one real concurrency bug, one dead-spike deletion, and test
+quality.
+
+**Repo hygiene done in-session (owner-approved, not a plan):** pruned leftover
+executor worktrees 28 → 10 (kept all locked/unmerged/dirty) and deleted merged
+executor branches 87 → 23 (`git worktree remove` + `git branch -d`, both
+refuse-if-unsafe). Untracked local cruft `__debug_bin*` (~116MB) and
+`tmp/balaur` (~112MB) are gitignored and can be `rm`'d at will.
+
+Plans are largely independent and may run in any order; soft-overlaps:
+- **119** edits `internal/web/cards.go` in a different function than **112**
+  (`uiCardPalette`); trivial merge if both are in flight.
+- **118** and **122** touch files that **117** also touches later (README
+  "templates" wording; the `tmpl: parseTemplates(t)` test line) but on
+  independent lines.
+
+### Findings considered and rejected / deferred (so they aren't re-audited)
+
+- **Architecture (0 findings):** store/turn/gateway boundaries are clean — no
+  store-as-junk-drawer, no gateway re-implementing turn/domain behavior.
+- **DUPE-03 `cardTemplateName`/`renderCard` duplication** (`web/knowledge.go`):
+  rejected as a standalone item — it lives inside the `html/template`
+  `ExecuteTemplate` code that **plan 111** deletes.
+- **KISS-01 `ClientFor` vs `clientForConfig`** (`turn/models.go`): rejected —
+  not duplication; they differ in `embedModel` semantics (`""` vs `cfg.EmbedModel`).
+  (`ClientFor` is exported but test-only; left in place as it backs a real test.)
+- **KISS-03 Detail/Badge "compute then overwrite"** (`turn/availableChoices`):
+  rejected — the initial values ARE used on the happy path (a valid local GGUF);
+  only error cases overwrite. Not redundant.
+- **CORRECT-02 `rand.Read` error ignored** (`web/chat.go`/`chatstream.go`):
+  rejected — `crypto/rand.Read` does not meaningfully error in Go 1.26;
+  idiomatic.
+- **TEST-06 `internal/web` 55.7% coverage**: downgraded — the evidence overstated
+  the gap (handlers_test.go is 672 lines, not 120). Its one real nugget — the
+  dead `isDatastarRequest` — is folded into **plan 118**. The `sameHost`
+  cross-origin POST path having 0% coverage is noted as a deferred test gap.
+- **SEC-01 bash tool logs full command to `audit_log` unredacted**
+  (`tools/os.go:150` → `store/audit.go`): real (MED) but **deferred this cycle**
+  by owner choice — the fix must redact secret patterns while preserving
+  auditability (blanking the command would break the transparency pillar), so it
+  needs deliberate design. Re-surface when ready.
+- **TEST-01 flaky `time.Sleep(2ms)`** (`store/llm_settings_test.go:111`) and
+  **TEST-05 `splitSentences` edge cases** (`internal/verify`): deferred — tiny,
+  owner chose to skip this cycle. Do opportunistically.
+- **Turn infra-error paths** (`conversation.Master`/`RecentTurns`/`Append`
+  failures in `turn.Run`): deferred — clean testing needs a failure-injection
+  seam in `internal/turn` (a production refactor / separate decision); noted in
+  plan 122.
