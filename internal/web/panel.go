@@ -61,6 +61,15 @@ func (h *handlers) panelWidthCSS() string {
 	return "--w-panel:" + strconv.Itoa(px) + "px"
 }
 
+// cardTitleIcon returns the display title and icon for a card type, falling
+// back to the raw type name and no icon when the type is unregistered.
+func cardTitleIcon(typ string) (title, icon string) {
+	if spec, ok := cards.Get(typ); ok {
+		return spec.Label, spec.Icon
+	}
+	return typ, ""
+}
+
 // showURL is the canonical re-summon/restore URL for a single card.
 func showURL(typ, query string) string {
 	if query == "" {
@@ -72,10 +81,7 @@ func showURL(typ, query string) string {
 // panelNode renders chat.Panel for one single-card artifact (typ + raw query
 // string). The body is the full Focus surface (same as the old inline path).
 func (h *handlers) panelNode(typ, query string) g.Node {
-	title, icon := typ, ""
-	if spec, ok := cards.Get(typ); ok {
-		title, icon = spec.Label, spec.Icon
-	}
+	title, icon := cardTitleIcon(typ)
 	return chat.Panel(chat.PanelProps{Title: title, Icon: icon, Body: g.Raw(string(h.uicardBody(typ, query)))})
 }
 
@@ -99,10 +105,7 @@ func renderNodeHTML(n g.Node) string {
 
 // chipNode renders the transcript re-open chip for a single card.
 func (h *handlers) chipNode(typ, query string) g.Node {
-	title, icon := typ, ""
-	if spec, ok := cards.Get(typ); ok {
-		title, icon = spec.Label, spec.Icon
-	}
+	title, icon := cardTitleIcon(typ)
 	return chat.ArtifactChip(chat.ArtifactChipProps{Title: title, Icon: icon, ReopenURL: showURL(typ, query)})
 }
 
