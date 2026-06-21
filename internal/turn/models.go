@@ -117,7 +117,7 @@ func availableChoices(app core.App) ([]ModelChoice, error) {
 			Model:    cfg.ChatModel,
 			Name:     cfg.DisplayName(),
 			Detail:   modelDetail(cfg),
-			Badge:    modelBadge(cfg),
+			Badge:    modelBadge(),
 		}
 		if cfg.Kind == "local" {
 			if _, faked := injectedClient(app); !faked {
@@ -145,7 +145,7 @@ func modelDetail(cfg store.LLMConfig) string {
 	return filepath.Base(cfg.ChatModel) + " · on this box"
 }
 
-func modelBadge(_ store.LLMConfig) string {
+func modelBadge() string {
 	return "local"
 }
 

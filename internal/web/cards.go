@@ -97,11 +97,10 @@ func (h *handlers) cardSizeInto(w io.Writer, typ string, params map[string]strin
 	return fmt.Errorf("unhandled card type %q", typ)
 }
 
-// cardHTML server-renders one card to HTML for inline embedding in a board grid.
-// It validates the stored params (defending against hand-edited board JSON) and
-// renders the same error strip the HTTP endpoint uses on failure, so a single
-// bad card never blanks the whole board.
-func (h *handlers) cardHTML(typ string, params map[string]string) template.HTML {
+// cardHTMLAt server-renders one card at the given size to HTML for inline
+// embedding, with validate + error-strip discipline. cardHTML/cardFocusHTML are
+// thin wrappers choosing the size and the log context.
+func (h *handlers) cardHTMLAt(typ string, params map[string]string, size ui.CardSize, logMsg string) template.HTML {
 	if _, ok := cards.Get(typ); !ok {
 		return cardErrorStrip("no such card type: " + typ)
 	}
@@ -110,11 +109,19 @@ func (h *handlers) cardHTML(typ string, params map[string]string) template.HTML 
 		return cardErrorStrip(err.Error())
 	}
 	var b strings.Builder
-	if err := h.cardInto(&b, typ, cleaned); err != nil {
-		h.app.Logger().Warn("board card render failed", "type", typ, "err", err)
+	if err := h.cardSizeInto(&b, typ, cleaned, size); err != nil {
+		h.app.Logger().Warn(logMsg, "type", typ, "err", err)
 		return cardErrorStrip("could not render this card")
 	}
 	return template.HTML(b.String())
+}
+
+// cardHTML server-renders one card to HTML for inline embedding in a board grid.
+// It validates the stored params (defending against hand-edited board JSON) and
+// renders the same error strip the HTTP endpoint uses on failure, so a single
+// bad card never blanks the whole board.
+func (h *handlers) cardHTML(typ string, params map[string]string) template.HTML {
+	return h.cardHTMLAt(typ, params, ui.Tile, "board card render failed")
 }
 
 // cardErrorStrip is the inline card-error fragment (no id — several cards of the
@@ -143,19 +150,7 @@ func (h *handlers) uicardBody(typ, query string) template.HTML {
 // artifact path after plan 089 removed the /focus pages — a sidebar domain click
 // or card_show now shows the real manager, not a dead summary.
 func (h *handlers) cardFocusHTML(typ string, params map[string]string) template.HTML {
-	if _, ok := cards.Get(typ); !ok {
-		return cardErrorStrip("no such card type: " + typ)
-	}
-	cleaned, err := cards.Validate(typ, params)
-	if err != nil {
-		return cardErrorStrip(err.Error())
-	}
-	var b strings.Builder
-	if err := h.cardSizeInto(&b, typ, cleaned, ui.Focus); err != nil {
-		h.app.Logger().Warn("focus card render failed", "type", typ, "err", err)
-		return cardErrorStrip("could not render this card")
-	}
-	return template.HTML(b.String())
+	return h.cardHTMLAt(typ, params, ui.Focus, "focus card render failed")
 }
 
 // artifactBody server-renders a hand-picked cluster of cards as a chat.Cluster.

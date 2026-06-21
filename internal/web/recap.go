@@ -11,7 +11,6 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 	g "maragu.dev/gomponents"
 
-	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/store"
@@ -279,11 +278,7 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 				// uicard: record coordinates for the re-open chip; artifact lives in the panel.
 				mv.Content = rest
 				mv.ArtifactType, mv.ArtifactQuery = typ, query
-				if spec, ok := cards.Get(typ); ok {
-					mv.ArtifactTitle, mv.ArtifactIcon = spec.Label, spec.Icon
-				} else {
-					mv.ArtifactTitle = typ
-				}
+				mv.ArtifactTitle, mv.ArtifactIcon = cardTitleIcon(typ)
 			} else if _, _, modelText, ok := tools.ParseChoices(mv.Content); ok {
 				mv.Content = clipText(modelText, 2000)
 			} else if kind, id, rest, ok := tools.ParseProposal(mv.Content); ok {
