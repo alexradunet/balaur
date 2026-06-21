@@ -38,3 +38,19 @@ func TestRememberToolAcceptsStringFallback(t *testing.T) {
 		t.Fatalf("importance = %d, want 3", got)
 	}
 }
+
+func TestRememberToolRejectsBadJSON(t *testing.T) {
+	app := storetest.NewApp(t)
+	tool := rememberTool(app)
+	if _, err := tool.Execute(context.Background(), `{bad json`); err == nil {
+		t.Fatal("expected an error for malformed JSON args")
+	}
+}
+
+func TestRememberToolRejectsEmptyTitle(t *testing.T) {
+	app := storetest.NewApp(t)
+	tool := rememberTool(app)
+	if _, err := tool.Execute(context.Background(), `{"content":"x","category":"fact","importance":3}`); err == nil {
+		t.Fatal("expected an error when the title is empty")
+	}
+}
