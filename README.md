@@ -81,21 +81,21 @@ database you own and can open with any SQLite tool.
   at wake; quiet days stay quiet. `BALAUR_BRIEFING=0` disables. The model
   also sees a Today block of open commitments in every chat turn, so the
   companion knows your day unprompted.
-- **The quests focus — life organization:** the operational list (cards
-  with Done / Snooze / Drop) lives in the quests card's focus
-  (`/focus/quests`); a month calendar and a 14-day timeline are their own
+- **The quests card — life organization:** the operational list (cards
+  with Done / Snooze / Drop) opens as the quests card in the right panel
+  (`/ui/show/quests`); a month calendar and a 14-day timeline are their own
   cards — the forward mirror of the recap telescope. Calendar and timeline
   project recurrence rules forward, read-only; actions live on the task cards.
 - **The life log — owner-defined:** Balaur does not decide what a life is
   made of. `log_entry` keeps whatever you track under kinds you invent
   (weight, mood, sleep, pages-read…), numeric or textual, backdatable;
   `entry_series` reads trends, `entry_drop` corrects. The lifelog card
-  (`/focus/lifelog`) mirrors what exists: sparklines for numeric kinds,
+  (`/ui/show/lifelog`) mirrors what exists: sparklines for numeric kinds,
   recent lines for the rest, live habit streaks on top. Nothing is
   predefined; the briefing reflects
   yesterday's log in one line.
-- **The day card — where a day lives:** the `day` card's focus
-  (`/focus/day?date={date}`) assembles your journal (written in chat via
+- **The day card — where a day lives:** the `day` card
+  (`/ui/show/day?date={date}`) assembles your journal (written in chat via
   `journal_write` — your words, verbatim — or in the focus itself), the day's
   recap with its preserved transcript, what got done, and what was logged.
   Prev/next navigation; calendar cells and recap day cards deep-link in. The
@@ -175,7 +175,7 @@ runtime, so the Go build stays CGO-free. Two runtime assets are owner-supplied
 - the native llama.cpp library — point `BALAUR_LIB_PATH` at its directory
   (CPU by default; `BALAUR_PROCESSOR=vulkan` selects the Vulkan variant)
 - a GGUF model file — install it from the settings models section
-  (`/focus/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`.
+  (`/ui/show/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`.
   That page can also fetch Balaur's official curated model in one click
   (owner-initiated download into `BALAUR_MODELS_DIR`; plan 086)
 
@@ -425,7 +425,7 @@ internal/store/    shared PocketBase helpers (audit)
 internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
 internal/self/     self-awareness: embedded self-knowledge + live inventory
 internal/ext/      balaur-extensions: consent-gated runtime tools (JS/goja)
-internal/web/      Datastar gateway: dock chat, boards, cards & focuses, recap
+internal/web/      Datastar gateway: dock chat, cards & panels, recap
 internal/cli/      machine-facing gateway: balaur subcommands, JSON out
 web/               embedded templates and static assets (Basm CSS)
 ```

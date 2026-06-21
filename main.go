@@ -1,5 +1,5 @@
 // Balaur is a local-first personal AI companion: one Go binary embedding
-// PocketBase (data, auth, migrations), an HTMX web UI, and local LLM
+// PocketBase (data, auth, migrations), a Datastar web UI, and local LLM
 // inference. Run with: balaur serve
 package main
 
