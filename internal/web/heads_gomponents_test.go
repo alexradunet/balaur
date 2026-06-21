@@ -18,11 +18,13 @@ func TestHeadsRenderViaGomponents(t *testing.T) {
 	headscards.Register(app)
 	defer ui.UnregisterCard("heads")
 
+	seedHeadRec(t, app, "Scout", "active")
+
 	if _, ok := ui.LookupCard("heads"); !ok {
 		t.Fatal("heads not registered via gomponents")
 	}
 
-	if out := string(h.cardHTML("heads", nil)); !strings.Contains(out, `id="ucard-heads"`) {
-		t.Fatalf("heads card not rendered:\n%s", out)
+	if out := string(h.cardHTML("heads", nil)); !strings.Contains(out, `id="ucard-heads"`) || !strings.Contains(out, "Scout") {
+		t.Fatalf("heads card missing id or the seeded head name:\n%s", out)
 	}
 }

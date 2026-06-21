@@ -222,6 +222,37 @@ func TestMaxStepsEnvRaisesTheCap(t *testing.T) {
 	}
 }
 
+func TestRunPlainReplyNoCaptureClaim(t *testing.T) {
+	app := storetest.NewApp(t)
+	client := llmtest.New(llmtest.Text("The capital of France is Paris."))
+
+	res, err := Run(context.Background(), app, client, "what's the capital of France?", nil)
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.CheckNote != "" {
+		t.Errorf("a plain reply must not be noted, got %q", res.CheckNote)
+	}
+	if client.Calls != 1 {
+		t.Errorf("a plain reply needs exactly one model call, got %d", client.Calls)
+	}
+	if !strings.Contains(res.Reply, "Paris") {
+		t.Errorf("reply lost: %q", res.Reply)
+	}
+	// Only user + assistant persist — no tool round, no check note.
+	msgs, err := app.FindRecordsByFilter("messages", "id != ''", "@rowid", 0, 0)
+	if err != nil {
+		t.Fatalf("messages: %v", err)
+	}
+	var roles []string
+	for _, m := range msgs {
+		roles = append(roles, m.GetString("role"))
+	}
+	if strings.Join(roles, ",") != "user,assistant" {
+		t.Errorf("persisted roles = %v, want [user assistant]", roles)
+	}
+}
+
 func TestNowLineGroundsTheMoment(t *testing.T) {
 	loc, err := time.LoadLocation("Europe/Bucharest")
 	if err != nil {
