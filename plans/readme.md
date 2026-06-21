@@ -14,10 +14,32 @@ drift check first, and update your row when done.
 Sandbox note for all plans: in a TLS-intercepting sandbox (Hyperagent), Go
 commands need the GOPROXY shim — see `docs/hyperagent-sandbox.md`.
 
+gomponents migration cycle (plans 111–117), generated 2026-06-19 against commit
+`0dd2457`: finishes making `gomponents` Balaur's single UI engine by removing the
+last `html/template` usage. At `0dd2457` the migration is ~80% done — the live
+page path and most fragments are already gomponents; what remains is 9 live
+`ExecuteTemplate` call sites, the `template.HTML` bridge type, the `funcs`/`tmpl`
+engine machinery, and the 11 dead-or-live `web/templates/*.html` files. **Order:**
+111–115 each convert one independent group of `ExecuteTemplate` callers (any
+order, build+tests green after each); 116 removes the `template.HTML` bridge
+(needs 111–115 so the bridge is the only `html/template` use left); 117 deletes
+the engine + templates + tests and syncs docs/tours (needs 111–116). Templates
+are **not** deleted until 117 — earlier plans leave the `.html` files in place so
+`Register`'s template parse keeps working. Several "templates" are already dead
+gomponents ports (`profile.html`, `journal-focus.html`, `knowledge-grid.html`,
+and all `chat-msg-*` fragments) — they are simply deleted with the rest in 117.
+
 ## Execution order & status
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |
 |------|-------|----------|--------|------|------------|-------|--------|
+| 111 | gomponents migration: render task/memory/skill cards via the existing `taskcards.TaskCard` / `knowledgecards.*RecordCard` components (swap 3 `ExecuteTemplate` sites) | P1 | S | LOW | — | — | TODO |
+| 112 | gomponents migration: `/ui/cards` palette → `cardPaletteNode` (port `ucard_palette`) | P2 | S | LOW | — | — | TODO |
+| 113 | gomponents migration: recap telescope → `recapBandsNode`/`recapCardsNode` (port `recap-bands.html`/`recap-cards.html`, build new — `ui.RecapCard` is a different card) | P2 | M | MED | — | — | TODO |
+| 114 | gomponents migration: chatbar + model/head switchers → `chatBarNode`/`headSwitcherNode` (port `chat_bar`/`model_switcher`/`head_switcher`) | P2 | M | MED | — | — | TODO |
+| 115 | gomponents migration: live dialogue choices → new `chat.Choices` organism + storybook story (port `chat-choices`) | P2 | S–M | LOW | — | — | TODO |
+| 116 | gomponents migration: remove the `template.HTML` bridge type — helpers/view-models carry `g.Node`/`string`; drop `html/template` from 5 web files; delete dead `ComposerHTML`/`modelsPageData`/`renderModelsPanel` | P2 | M | MED | 111, 112, 113, 114, 115 | — | TODO |
+| 117 | gomponents migration: delete the `html/template` engine (`funcs`/`tmpl`/`ParseFS`), the `web/` template package (embed.go + 11 `.html`), `templates_test.go`, the `tmpl: parseTemplates(t)` plumbing in ~18 tests; sync AGENTS/README/DESIGN/knowledge.md + 3 tours | P2 | M | MED | 111, 112, 113, 114, 115, 116 | — | TODO |
 | 001 | Serialize nudge/recap/briefing background jobs | P1 | S | LOW | — | [#16](https://github.com/alexradunet/balaur/issues/16) | DONE |
 | 002 | Hot-query SQLite indexes (messages, tasks, audit) | P1 | S | LOW | — | [#17](https://github.com/alexradunet/balaur/issues/17) | DONE |
 | 003 | Surface turn persistence + chat run errors | P2 | S | LOW | — | [#18](https://github.com/alexradunet/balaur/issues/18) | DONE |
