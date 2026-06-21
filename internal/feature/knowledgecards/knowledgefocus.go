@@ -17,10 +17,6 @@ import (
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
-// focusMemoryCategories mirrors the migration constant and the web-side list.
-// Kept here for the title helper below.
-var focusMemoryCategories = []string{"fact", "preference", "person", "project", "context"}
-
 // KnowledgeFocusView is the view-model for a nav-free knowledge slice. Proposed,
 // Active, and Archived carry pre-rendered record-card nodes so the component is
 // kind-agnostic; the builders below map *core.Record → MemoryRecordCard or

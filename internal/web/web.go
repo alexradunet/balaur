@@ -298,10 +298,3 @@ func (h *handlers) dockData() (homeData, error) {
 	data.ChatBodyHTML = h.chatBodyHTML(data) // history (or greeting), via chat.Message
 	return data, nil
 }
-
-// isDatastarRequest reports whether the request is a Datastar @get/@post fetch
-// (which expects an SSE patch stream) rather than a full document load. A
-// Datastar fetch advertises Accept: text/event-stream.
-func isDatastarRequest(e *core.RequestEvent) bool {
-	return strings.Contains(e.Request.Header.Get("Accept"), "text/event-stream")
-}
