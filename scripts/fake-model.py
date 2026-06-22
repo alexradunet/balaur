@@ -9,8 +9,9 @@ script exactly what the "model" says and which tools it calls.
 Usage:
     python3 scripts/fake-model.py script.json [port]    # default port 11435
 
-    BALAUR_REMOTE_URL=http://127.0.0.1:11435/v1 \
-    BALAUR_REMOTE_MODEL=fake \
+    # Register as a cloud model (Models page → add an OpenAI-compatible model
+    # with base URL http://127.0.0.1:11435/v1 and model ID "fake"), or seed
+    # the llm_providers/llm_models/llm_settings rows as ci.yml's harness job does.
     balaur --dir /tmp/box chat "remind me to water the plants tomorrow"
 
 script.json is a list of replies, consumed one per /chat/completions call

@@ -25,9 +25,10 @@ database you own and can open with any SQLite tool.
 - **Data:** PocketBase collections — `conversations`, `messages`,
   `memories`, `skills`, `heads`, `audit_log` — in plain SQLite
   under `pb_data/`.
-- **UI:** server-rendered Go templates + Datastar, styled by the Basm design
-  system (see `DESIGN.md`). The PocketBase dashboard at `/_/` stays the
-  superuser engine room.
+- **UI:** server-rendered typed `gomponents` over Datastar (SSE hypermedia),
+  styled by the Hearthwood/Basm design system (see `DESIGN.md`); the legacy
+  `html/template` path is being retired. The PocketBase dashboard at `/_/`
+  stays the superuser engine room.
 - **Models:** Balaur runs local GGUF models in-process. Install one from the
   settings models section (an absolute `.gguf` path) or via `BALAUR_CHAT_MODEL`;
   it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
@@ -350,7 +351,10 @@ cat > script.json <<'EOF'
 EOF
 python3 scripts/fake-model.py script.json &
 
-export BALAUR_REMOTE_URL=http://127.0.0.1:11435/v1 BALAUR_REMOTE_MODEL=fake
+# Register the fake server as a cloud model (Models page → add an
+# OpenAI-compatible model with base URL http://127.0.0.1:11435/v1 and
+# model ID "fake"), or seed the provider/model/settings rows directly as
+# .github/workflows/ci.yml does in its harness job.
 balaur --dir /tmp/box chat "remind me to water the plants on march 1"
 balaur --dir /tmp/box verify            # words vs deeds, from the record
 balaur --dir /tmp/box audit --action task.
@@ -430,7 +434,7 @@ internal/self/     self-awareness: embedded self-knowledge + live inventory
 internal/ext/      balaur-extensions: consent-gated runtime tools (JS/goja)
 internal/web/      Datastar gateway: dock chat, cards & panels, recap
 internal/cli/      machine-facing gateway: balaur subcommands, JSON out
-web/               embedded templates and static assets (Basm CSS)
+web/               legacy html/template files + static assets (being retired; gomponents in internal/ui + internal/feature/*cards is the UI engine)
 ```
 
 Read `AGENTS.md` for the engineering rules (KISS, YAGNI, suckless, the rule
