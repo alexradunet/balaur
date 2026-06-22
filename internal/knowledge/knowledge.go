@@ -134,9 +134,9 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 	from := rec.GetString("status")
 
 	allowed := slices.Contains(validTransitions[from], to)
-	store.Audit(app, "owner", "knowledge."+to, string(kind)+"/"+rec.Id, allowed,
-		map[string]any{"from": from})
 	if !allowed {
+		store.Audit(app, "owner", "knowledge."+to, string(kind)+"/"+rec.Id, false,
+			map[string]any{"from": from})
 		return nil, fmt.Errorf("knowledge: cannot move %s from %q to %q", kind, from, to)
 	}
 
@@ -147,6 +147,8 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("updating %s status: %w", kind, err)
 	}
+	store.Audit(app, "owner", "knowledge."+to, string(kind)+"/"+rec.Id, true,
+		map[string]any{"from": from})
 	return rec, nil
 }
 

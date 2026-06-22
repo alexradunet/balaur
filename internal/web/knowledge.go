@@ -173,7 +173,8 @@ func (h *handlers) renderCard(e *core.RequestEvent, kind knowledge.Kind, rec *co
 }
 
 func (h *handlers) cardError(e *core.RequestEvent, err error) error {
+	h.app.Logger().Warn("rendering card failed", "error", err)
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	e.Response.WriteHeader(http.StatusUnprocessableEntity)
-	return ui.ErrorStrip(err.Error()).Render(e.Response)
+	return ui.ErrorStrip("could not load this card").Render(e.Response)
 }

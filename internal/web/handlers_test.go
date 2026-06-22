@@ -794,6 +794,22 @@ func TestCloudModelConsentFlow(t *testing.T) {
 	})
 }
 
+// TestKnowledgeCardErrorSanitized verifies that fetching a nonexistent knowledge
+// card via GET /ui/knowledge/{kind}/{id}/card renders the generic "could not load
+// this card" message and does NOT expose the raw PocketBase error text.
+func TestKnowledgeCardErrorSanitized(t *testing.T) {
+	scenario := tests.ApiScenario{
+		Name:               "GET /ui/knowledge/memories/nonexistent/card returns generic error",
+		Method:             "GET",
+		URL:                "/ui/knowledge/memories/nonexistent/card",
+		TestAppFactory:     newWebApp,
+		ExpectedStatus:     422,
+		ExpectedContent:    []string{"could not load this card"},
+		NotExpectedContent: []string{"sql:", "no rows", "nonexistent"},
+	}
+	scenario.Test(t)
+}
+
 // TestDeleteCloudModelHandler verifies the POST /ui/model/cloud/delete handler
 // removes a non-active cloud model and re-renders the models panel.
 func TestDeleteCloudModelHandler(t *testing.T) {
