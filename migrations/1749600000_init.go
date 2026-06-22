@@ -1,4 +1,9 @@
 // Package migrations owns the Balaur schema as Go-code migrations.
+//
+// This is the consolidated baseline (plan 156): one Up that creates the whole
+// schema, replacing the pre-launch migration archaeology. It assumes a FRESH
+// pb_data/ — PocketBase records this file as applied on first boot. Do not run
+// it against a database that already holds the old collections.
 package migrations
 
 import (
@@ -11,57 +16,52 @@ func init() {
 	m.Register(InitCollections, dropCollections)
 }
 
-// ruleOwner limits direct REST access to the human owner (the built-in
-// `users` auth collection). Heads never get direct REST access to data
-// collections in v1: their access goes through the grant-checked Go path
-// in internal/heads, which audits every call. See AGENTS.md "The rule
-// boundary is sacred".
+// ruleOwner limits direct REST access to the human owner (the built-in `users`
+// auth collection). Collections written only by trusted Go code (audit_log,
+// summaries) expose just List/View to the owner; their writes bypass API rules
+// by design (app.Save).
 const ruleOwner = "@request.auth.collectionName = 'users'"
 
-// collectionNames in dependency order (relations point left).
+// collectionNames in dependency order (relations point left); dropped in reverse.
 var collectionNames = []string{
-	"heads", "conversations", "messages", "memories", "skills", "grants", "audit_log",
+	"heads", "conversations", "messages", "memories", "skills", "audit_log",
+	"summaries", "tasks", "entries", "extensions",
+	"llm_providers", "llm_models", "llm_settings", "owner_settings",
 }
 
-// InitCollections creates the Balaur schema. Exported so tests can build a
-// fresh app without going through the migrate command.
+// InitCollections creates the Balaur schema. Exported so tests can build a fresh
+// app without going through the migrate command.
 func InitCollections(app core.App) error {
 	owner := types.Pointer(ruleOwner)
 
-	// heads: auth collection for agent sub-identities. Password auth is
-	// disabled — heads cannot log in; the runtime mints short-lived static
-	// tokens for them (internal/heads).
-	heads := core.NewAuthCollection("heads")
-	heads.PasswordAuth.Enabled = false
-	heads.ListRule = owner
-	heads.ViewRule = owner
+	// heads: switchable persona roster (name + purpose + avatar + capability
+	// groups). Not an auth collection — heads cannot log in.
+	heads := core.NewBaseCollection("heads")
+	setOwnerRules(heads, owner)
 	heads.Fields.Add(
 		&core.TextField{Name: "name", Required: true, Max: 120},
 		&core.TextField{Name: "purpose", Max: 2000},
-		&core.SelectField{Name: "status", Required: true, Values: []string{"active", "merged", "revoked"}},
-		&core.DateField{Name: "expires"},
+		&core.TextField{Name: "balaur_avatar", Max: 20},
+		&core.JSONField{Name: "tools"},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)
 	if err := app.Save(heads); err != nil {
 		return err
 	}
 
-	// conversations: one master conversation plus branch sub-conversations.
+	// conversations: the single master thread (kind stays a select so
+	// conversation.Master() keeps filtering on it; "branch" is currently unused).
 	conversations := core.NewBaseCollection("conversations")
 	setOwnerRules(conversations, owner)
 	conversations.Fields.Add(
 		&core.TextField{Name: "title", Required: true, Max: 300},
 		&core.SelectField{Name: "kind", Required: true, Values: []string{"master", "branch"}},
 		&core.SelectField{Name: "status", Required: true, Values: []string{"open", "merged", "archived"}},
-		&core.RelationField{Name: "head", CollectionId: heads.Id},
-		&core.TextField{Name: "summary", Max: 20000},
 		&core.AutodateField{Name: "created", OnCreate: true},
 		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)
-	if err := app.Save(conversations); err != nil {
-		return err
-	}
-	// Self-relation needs the collection id, which exists only after save.
-	conversations.Fields.Add(&core.RelationField{Name: "parent", CollectionId: conversations.Id})
+	conversations.AddIndex("idx_conversations_open_master", true, "kind", "kind = 'master' AND status = 'open'")
 	if err := app.Save(conversations); err != nil {
 		return err
 	}
@@ -74,9 +74,11 @@ func InitCollections(app core.App) error {
 		&core.TextField{Name: "content", Max: 200000},
 		&core.TextField{Name: "tool_name", Max: 120},
 		&core.JSONField{Name: "tool_payload"},
+		&core.TextField{Name: "origin", Max: 30},
 		&core.AutodateField{Name: "created", OnCreate: true},
 	)
-	messages.AddIndex("idx_messages_conversation", false, "conversation", "")
+	messages.AddIndex("idx_messages_conv_created", false, "conversation, created", "")
+	messages.AddIndex("idx_messages_origin_created", false, "origin, created", "")
 	if err := app.Save(messages); err != nil {
 		return err
 	}
@@ -86,11 +88,18 @@ func InitCollections(app core.App) error {
 	memories.Fields.Add(
 		&core.TextField{Name: "title", Required: true, Max: 300},
 		&core.TextField{Name: "content", Max: 100000},
-		&core.JSONField{Name: "tags"},
 		&core.TextField{Name: "source", Max: 300},
+		&core.SelectField{Name: "status", Required: true, Values: []string{"proposed", "active", "archived", "rejected"}},
+		&core.SelectField{Name: "category", Values: []string{"fact", "preference", "person", "project", "context"}},
+		&core.NumberField{Name: "importance", OnlyInt: true, Min: types.Pointer(1.0), Max: types.Pointer(5.0)},
+		&core.TextField{Name: "when_to_use", Max: 500},
+		&core.DateField{Name: "last_used"},
+		&core.NumberField{Name: "use_count", OnlyInt: true},
 		&core.AutodateField{Name: "created", OnCreate: true},
 		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)
+	memories.AddIndex("idx_memories_status", false, "status", "")
+	memories.AddIndex("idx_memories_status_importance", false, "status, importance", "")
 	if err := app.Save(memories); err != nil {
 		return err
 	}
@@ -101,39 +110,24 @@ func InitCollections(app core.App) error {
 		&core.TextField{Name: "name", Required: true, Max: 120},
 		&core.TextField{Name: "description", Max: 2000},
 		&core.TextField{Name: "content", Max: 100000},
-		&core.BoolField{Name: "enabled"},
+		&core.SelectField{Name: "status", Required: true, Values: []string{"proposed", "active", "archived", "rejected"}},
+		&core.TextField{Name: "when_to_use", Max: 500},
+		&core.DateField{Name: "last_used"},
+		&core.NumberField{Name: "use_count", OnlyInt: true},
 		&core.AutodateField{Name: "created", OnCreate: true},
 		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)
 	skills.AddIndex("idx_skills_name", true, "name", "")
+	skills.AddIndex("idx_skills_status", false, "status", "")
 	if err := app.Save(skills); err != nil {
 		return err
 	}
 
-	// grants: what a head may touch. Mutated only by the runtime (Go),
-	// readable by the owner for inspection.
-	grants := core.NewBaseCollection("grants")
-	grants.ListRule = owner
-	grants.ViewRule = owner
-	grants.Fields.Add(
-		&core.RelationField{Name: "head", Required: true, CollectionId: heads.Id, CascadeDelete: true},
-		&core.SelectField{Name: "target", Required: true, Values: []string{"conversations", "messages", "memories", "skills"}},
-		&core.BoolField{Name: "read"},
-		&core.BoolField{Name: "write"},
-		&core.DateField{Name: "expires"},
-		&core.AutodateField{Name: "created", OnCreate: true},
-	)
-	grants.AddIndex("idx_grants_head", false, "head", "")
-	if err := app.Save(grants); err != nil {
-		return err
-	}
-
-	// audit_log: append-only from Go; owner can read. No REST writes.
+	// audit_log: append-only from Go; owner reads only.
 	audit := core.NewBaseCollection("audit_log")
 	audit.ListRule = owner
 	audit.ViewRule = owner
 	audit.Fields.Add(
-		&core.RelationField{Name: "head", CollectionId: heads.Id},
 		&core.TextField{Name: "actor", Required: true, Max: 120},
 		&core.TextField{Name: "action", Required: true, Max: 120},
 		&core.TextField{Name: "target", Max: 300},
@@ -141,8 +135,159 @@ func InitCollections(app core.App) error {
 		&core.BoolField{Name: "allowed"},
 		&core.AutodateField{Name: "created", OnCreate: true},
 	)
-	audit.AddIndex("idx_audit_created", false, "created", "")
-	return app.Save(audit)
+	audit.AddIndex("idx_audit_actor", false, "actor", "")
+	if err := app.Save(audit); err != nil {
+		return err
+	}
+
+	// summaries: the recap telescope; owner reads only (Go writes).
+	summaries := core.NewBaseCollection("summaries")
+	summaries.ListRule = owner
+	summaries.ViewRule = owner
+	summaries.Fields.Add(
+		&core.RelationField{Name: "conversation", Required: true, CollectionId: conversations.Id, CascadeDelete: true},
+		&core.SelectField{Name: "period_type", Required: true, Values: []string{"day", "week", "month", "quarter", "year"}},
+		&core.DateField{Name: "period_start", Required: true},
+		&core.DateField{Name: "period_end", Required: true},
+		&core.TextField{Name: "content", Max: 20000},
+		&core.NumberField{Name: "message_count", OnlyInt: true},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	summaries.AddIndex("idx_summaries_period", true, "conversation, period_type, period_start", "")
+	if err := app.Save(summaries); err != nil {
+		return err
+	}
+
+	tasks := core.NewBaseCollection("tasks")
+	setOwnerRules(tasks, owner)
+	tasks.Fields.Add(
+		&core.TextField{Name: "title", Required: true, Max: 300},
+		&core.TextField{Name: "notes", Max: 5000},
+		&core.SelectField{Name: "status", Required: true, Values: []string{"open", "done", "dropped"}},
+		&core.DateField{Name: "due"},
+		&core.TextField{Name: "recur", Max: 60},
+		&core.BoolField{Name: "recur_from_done"},
+		&core.DateField{Name: "snoozed_until"},
+		&core.DateField{Name: "nudged_at"},
+		&core.DateField{Name: "done_at"},
+		&core.TextField{Name: "source", Max: 120},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	tasks.AddIndex("idx_tasks_due", false, "due", "")
+	tasks.AddIndex("idx_tasks_nudge", false, "status, nudged_at, due", "")
+	tasks.AddIndex("idx_tasks_done_at", false, "status, done_at", "")
+	if err := app.Save(tasks); err != nil {
+		return err
+	}
+
+	// entries: the life log. value(json) is the seed-idempotency marker
+	// (internal/seed/seed.go) AND structured extras — keep it.
+	entries := core.NewBaseCollection("entries")
+	setOwnerRules(entries, owner)
+	entries.Fields.Add(
+		&core.TextField{Name: "kind", Required: true, Max: 60},
+		&core.RelationField{Name: "task", CollectionId: tasks.Id},
+		&core.JSONField{Name: "value"},
+		&core.TextField{Name: "text", Max: 5000},
+		&core.DateField{Name: "noted_at", Required: true},
+		&core.NumberField{Name: "value_num"},
+		&core.TextField{Name: "unit", Max: 20},
+		&core.AutodateField{Name: "created", OnCreate: true},
+	)
+	entries.AddIndex("idx_entries_kind_noted", false, "kind, noted_at", "")
+	entries.AddIndex("idx_entries_task", false, "task", "")
+	if err := app.Save(entries); err != nil {
+		return err
+	}
+
+	extensions := core.NewBaseCollection("extensions")
+	setOwnerRules(extensions, owner)
+	extensions.Fields.Add(
+		&core.TextField{Name: "name", Required: true, Max: 120},
+		&core.TextField{Name: "description", Max: 1000},
+		&core.TextField{Name: "path", Required: true, Max: 300},
+		&core.TextField{Name: "sha256", Required: true, Max: 64},
+		&core.SelectField{Name: "status", Required: true, Values: []string{"proposed", "active", "disabled"}},
+		&core.JSONField{Name: "tools"},
+		&core.TextField{Name: "source", Max: 120},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	extensions.AddIndex("idx_extensions_name", true, "name", "")
+	extensions.AddIndex("idx_extensions_status", false, "status", "")
+	if err := app.Save(extensions); err != nil {
+		return err
+	}
+
+	// llm_providers: api_key is hidden from REST; base_url Max matches the
+	// SaveCloudModel cap (2048). No `local` bool — locality is kind == "local".
+	providers := core.NewBaseCollection("llm_providers")
+	setOwnerRules(providers, owner)
+	providers.Fields.Add(
+		&core.TextField{Name: "name", Required: true, Max: 120},
+		&core.SelectField{Name: "kind", Required: true, Values: []string{"local", "openai"}},
+		&core.TextField{Name: "base_url", Max: 2048},
+		&core.TextField{Name: "api_key", Max: 10000},
+		&core.BoolField{Name: "enabled"},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	if f := providers.Fields.GetByName("api_key"); f != nil {
+		f.SetHidden(true)
+	}
+	providers.AddIndex("idx_llm_providers_name", true, "name", "")
+	if err := app.Save(providers); err != nil {
+		return err
+	}
+
+	models := core.NewBaseCollection("llm_models")
+	setOwnerRules(models, owner)
+	models.Fields.Add(
+		&core.RelationField{Name: "provider", Required: true, CollectionId: providers.Id, CascadeDelete: true},
+		&core.TextField{Name: "label", Required: true, Max: 200},
+		&core.TextField{Name: "chat_model", Required: true, Max: 2000},
+		&core.TextField{Name: "embed_model", Max: 2000},
+		&core.BoolField{Name: "enabled"},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	models.AddIndex("idx_llm_models_provider", false, "provider", "")
+	if err := app.Save(models); err != nil {
+		return err
+	}
+
+	settings := core.NewBaseCollection("llm_settings")
+	setOwnerRules(settings, owner)
+	settings.Fields.Add(
+		&core.TextField{Name: "key", Required: true, Max: 40},
+		&core.RelationField{Name: "active_model", CollectionId: models.Id},
+		&core.AutodateField{Name: "created", OnCreate: true},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	settings.AddIndex("idx_llm_settings_key", true, "key", "")
+	if err := app.Save(settings); err != nil {
+		return err
+	}
+
+	ownerSettings := core.NewBaseCollection("owner_settings")
+	setOwnerRules(ownerSettings, owner)
+	ownerSettings.Fields.Add(
+		&core.TextField{Name: "key", Required: true, Max: 80},
+		&core.TextField{Name: "value", Max: 500},
+		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
+	)
+	ownerSettings.AddIndex("idx_owner_settings_key", true, "key", "")
+	if err := app.Save(ownerSettings); err != nil {
+		return err
+	}
+
+	// Seed the one real default: soul avatar = male.
+	seed := core.NewRecord(ownerSettings)
+	seed.Set("key", "soul_avatar")
+	seed.Set("value", "male")
+	return app.Save(seed)
 }
 
 func setOwnerRules(c *core.Collection, owner *string) {
