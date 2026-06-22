@@ -19,6 +19,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	hh "maragu.dev/gomponents/html" // aliased: the handler receiver is named h
 
 	"github.com/alexradunet/balaur/internal/cards"
 	"github.com/alexradunet/balaur/internal/knowledge"
@@ -39,14 +40,49 @@ func queryToMap(q url.Values) map[string]string {
 	return m
 }
 
+// cardPaletteNode renders the GET /ui/cards palette: the human/agent index of
+// every registered card spec. Port of ucard_palette (web/templates/cards.html).
+func cardPaletteNode(specs []cards.Spec) g.Node {
+	rows := make([]g.Node, 0, len(specs))
+	for _, s := range specs {
+		var params g.Node = g.Text("")
+		if len(s.Params) > 0 {
+			items := make([]g.Node, 0, len(s.Params))
+			for _, p := range s.Params {
+				var req g.Node = g.Text("")
+				if p.Required {
+					req = g.Group([]g.Node{g.Text(" "), ui.Tag(g.Text("required"))})
+				}
+				enum := ""
+				if len(p.Enum) > 0 {
+					enum = " [" + strings.Join(p.Enum, ", ") + "]"
+				}
+				items = append(items, hh.Li(
+					hh.Code(g.Text(p.Name)), req,
+					g.Text(enum+" — "+p.Doc),
+				))
+			}
+			params = hh.Ul(hh.Class("ucard-params"), g.Group(items))
+		}
+		rows = append(rows, hh.Li(hh.Class("ucard-row"),
+			hh.Span(hh.Class("ucard-title"),
+				hh.Img(hh.Class("tool-icon"), hh.Src("/static/icons/"+s.Icon+".png"), hh.Alt("")),
+				hh.Code(g.Text(s.Type)), g.Text(" — "+s.Label),
+			),
+			hh.Span(hh.Class("kcard-meta"), g.Text(fmt.Sprintf("w=%d", s.W))),
+			params,
+		))
+	}
+	return hh.Section(hh.Class("k-section ucard-palette"),
+		hh.H2(hh.Class("k-heading"), g.Text("Card palette")),
+		hh.Ul(hh.Class("ucard-list"), g.Group(rows)),
+	)
+}
+
 // uiCardPalette handles GET /ui/cards — the palette listing all card specs.
 func (h *handlers) uiCardPalette(e *core.RequestEvent) error {
-	specs := cards.All()
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(e.Response, "ucard_palette", specs); err != nil {
-		return e.InternalServerError("rendering card palette", err)
-	}
-	return nil
+	return cardPaletteNode(cards.All()).Render(e.Response)
 }
 
 // uiCard handles GET /ui/cards/{type}?params — one rendered card fragment.
