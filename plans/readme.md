@@ -98,10 +98,33 @@ Reconcile (2026-06-22, at `494475e`) — processed the remaining non-DONE rows:
   a separate full tour-refresh should precede 117's doc step.
 - **091** remains correctly SUPERSEDED (by 100).
 
+Fifteenth cycle (plans **147–152**), 2026-06-22, against commit `ab2c0a9`, generated
+from a **ponytail-lens over-engineering audit** (graphify-oriented; 14 parallel finders
+— 11 package deep-dives + 3 cross-cutting sweeps — → per-finding adversarial verification
+against AGENTS.md's own rules → 52 candidates, **44 verified**, ~26 distinct refactors).
+The literal `ponytail:`-marker scan was **clean (0 markers)** — no rotting deferrals in
+comments; this is the broader over-engineering debt. **Headline:** the repo enforces
+KISS/YAGNI hard and it shows — the debt is modest, mechanical, and **all LOW-risk**: no
+architectural smells, no oversized god-files (nothing crosses the ~500-line line), no
+unjustified dependencies. Only the **six bigger-ripple items** became plans (147–152);
+the ~20 trivial wins (stdlib swaps, orphan deletes, reuse-existing-helper collapses) were
+left as an un-planned do-now sweep, recorded in the deferred section below. **All six are
+independent (no hard dependencies)**; recommended order is the trivial deletes first
+(147, 148, 151) then the helper-introduction refactors (149, 150, 152). Each plan was
+written by a fresh-context writer that re-read the live source at `ab2c0a9` and corrected
+the audit's line-number estimates (several findings undercounted scope — see each plan's
+"Current state").
+
 ## Execution order & status
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |
 |------|-------|----------|--------|------|------------|-------|--------|
+| 147 | Remove the never-used Composer "deciding mode" — delete `ComposerChoice`/`composerChoices` + the `Prompt`/`Choices`/`Decision` props + both dead render arms + dead storybook variants + composer-deciding-only CSS; live in-chat choice UI is `chat.Choices` (separate component). Writer caught TWO dead sub-branches + 2 orphaned-import traps | P2 | S | LOW | — | — | TODO |
+| 148 | Avatar roster single source — drop the `soulAvatarMap`/`balaurAvatarMap` literals in `internal/store/owner_settings.go`, derive the lookups from the `SoulAvatars()`/`BalaurHeads()` slices (legacy `male`/`female` aliases live on the soul map only); test file is the behavior contract (out of scope, must pass unchanged) | P2 | S | LOW | — | — | TODO |
+| 149 | Hoist the triplicated `intParam` into one `ui.IntParam` (`strconv.Atoi`, `n>0`) — 4 copies + 8 call sites across knowledge/life/task cards; writer proved unify-on-`n>0` is a prod no-op via `cards.Validate` clamping | P2 | S | LOW | — | — | TODO |
+| 150 | Extract one shared `internal/uitest.Render` test helper — 8 byte-equivalent `render(t,n)` copies converted to one-line delegates (KISS slice: keep each helper's name/signature, touch ZERO call sites); test-only, per-file import math tabulated | P2 | M | LOW | — | — | TODO |
+| 151 | Collapse the three cron registrars into one `scheduleJob` helper in `main.go` — owns the per-job mutex/TryLock/Active-check/`MustAdd`/goroutine; `tolerateNoModel` flag encodes recap(needs model) vs nudge/briefing(tolerate nil) | P2 | S | LOW | — | — | TODO |
+| 152 | Consolidate web SSE render/patch boilerplate — `patchOuter`(node)+`patchOuterHTML`(string) helpers over the existing `renderNodeHTML` collapse the "build→render→PatchElements(outer)" tail across 8 `internal/web` files; error-checked renders kept out of scope (1:1, behavior-preserving) | P2 | M | LOW | — | — | TODO |
 | 144 | Curated cloud-provider preset catalog (Go data + lookup) — `internal/llm/presets.go`, Mistral Small the featured EU/GDPR default + OpenAI; pure data, fully unit-tested, no behavior change | P1 | S | LOW | — | — | DONE — **APPROVED**, awaiting owner merge. Worktree `agent-a4767528fb7ddfafb`, branch `worktree-agent-a4767528fb7ddfafb`, commit `28b770f`. Scope clean (2 files, +166). Gates green (gofmt/vet/`go test ./internal/llm/...`/`CGO_ENABLED=0` build/`diff --check`). Tests audited as meaningful (5 real invariants). **Data web-verified vs official docs (June 2026):** Mistral `https://api.mistral.ai/v1` + `mistral-small-latest` (→ Mistral Small 4 `mistral-small-2603`) CONFIRMED, free tier + EU/GDPR confirmed; OpenAI model **corrected** `gpt-4o-mini`/`o4-mini` (both deprecated/sunsetting) → **`gpt-5-mini`** (current cheapest mini w/ tool calling), label → "OpenAI GPT-5 mini". `OpenAIClient` sends no sampling params, so already compatible with gpt-5-mini (no client change). NOT pushed/merged (owner's call). |
 | 145 | Cloud-preset picker UI — pick a provider, add only an API key + consent; existing free-form moves behind an "Advanced · custom endpoint" disclosure; consent gate untouched | P1 | M | MED | 144 | — | DONE — **APPROVED + merged to main `f45b3a9`** (`merge: 145`), pushed. Worktree `agent-ab309551cad98fcd3`, commit `fc9a405`, scope clean (8 in-scope files, +313/−21). Advisor verified: full `go test ./...` green (36 pkgs), gofmt/vet/CGO-free build/`diff --check` clean. **Consent invariant preserved** — shared `consentCheck()` (required) on both preset cards + custom form; `saveCloudPreset` saves-not-activates, calls only `store.SaveCloudModel`, never logs the key; existing `saveCloudModel`/`confirmCloudModel`/routes byte-unchanged; CloudForm only gained a `<details>` wrapper. **Tests audited real:** `TestCloudPresetSaveFlow` asserts provider+model created from preset, `active.Key==""` (no auto-activate), key absent from every audit row + response, and zero-records-saved on missing-consent/unknown-preset/missing-key. `modelcards` stays presentation-only (no web/turn/llm import); no `g.Raw`. Data uses verified `mistral-small-latest` + `gpt-5-mini`. Documented drift fixes: test filters target real fields (`chat_model` on models, `kind` on providers). |
 | 146 | Models page UX/UI polish — style the unstyled `.runtime-row*` + `.model-dl-*` download meter (confirmed CSS gaps), sharpen the selected-processor pill + empty state; additive CSS only | P2 | M | LOW | — | — | DONE — **APPROVED + merged to main `eda098b`** (`merge: 146`), pushed. Worktree `agent-a8c107dc925621e9f`, commit `967c5a7`, scope clean (3 in-scope files, +75/−4). Advisor verified: full `go test ./...` green (36 pkgs), gofmt/vet/CGO-free build/`diff --check` clean; done-criteria greps (`.runtime-row`=7, `.model-dl-bar`=3). **Additive-only** — 145's `.cloud-preset-*` rules untouched (0 lines in diff), inline data-driven `width:%d%%` on `.model-dl-bar` intact; only the 1-line `.proc-pill-active` replaced (gold ring + `✓` glyph). All-token CSS, no raw hex; runtime-row flex layout + mobile reflow; download meter `.model-dl-track` wrapper + gold-gradient fill + `prefers-reduced-motion` guard; empty-state copy points at "Get a model". |
@@ -1146,6 +1169,32 @@ Ordering notes:
   embedding recall second stage. Revisit next cycle.
 
 ## Findings considered and rejected (do not re-audit)
+
+Fifteenth cycle (`ab2c0a9`, ponytail-lens over-engineering audit) — verified findings
+deliberately NOT turned into plans, plus the 8 rejected by adversarial verification:
+
+- **The ~20 trivial do-now wins** (verified real, but too small to each warrant a plan —
+  left as one un-planned sweep, do directly): reinvented-stdlib swaps — `itoa()`→`strconv.Itoa`
+  (`taskcards/questsfocus.go`), manual min/max loops→`slices.Min/Max` (`ui/spark.go`,
+  `lifecards/measure.go`, `ui/sparkline.go`), clamps→`max(lo,min(n,hi))` (`cards/cards.go`,
+  `knowledge/knowledge.go`), `enumContains`→`slices.Contains` (`cards/cards.go`),
+  `sort.*`→`slices.Sort/SortFunc` (`self.go`/`ext.go`/`knowledge.go`/`llm_settings.go`/
+  `dayfocus.go`/`calendar.go`); orphan deletes — dead `internal/web/settings.go`, the web
+  soul-avatar picker plumbing (`models.go` `AvatarOptions`/`AvatarOption`/`buildAvatarOptions`),
+  `turn.ClientFor` (test-only dup of `clientForConfig`), `heads.Builtins()`, `OpenAIClient.HTTP`
+  uninjected seam, the RuntimeCard ASCII byte-math, the "Appearance" settings nav stub;
+  reuse-existing-helper collapses — `ui.Clip` (drop local `clip()`/`clipDay()` in lifecards/
+  journalcards), `ui.SparkPoints`/`NumericValues` (lifecards `measure.go`), `ui.Avatar`
+  (`chat/choices.go`), `store.PBTime` (`web/dev_seed.go`), shared `loadByStatus`/`cardRegistryDoc`/
+  `*RecordOf`+`*RecordCard` mappers, storybook generic `cards[T]`, hoisted `llm.ToolSpecsToWire`/
+  `ToolCallsToWire` (kronk+llm), and dropping the always-nil `error` return from card-render
+  helpers. None block anything; each is LOW-risk and independently verifiable.
+- **8 candidate findings REJECTED by adversarial verification** (real-seam interfaces,
+  the storybook's existence, embedded-kronk binary weight, records-as-domain-model, the
+  `app.Save` API-rule bypass — all AGENTS.md-endorsed by design, not debt).
+- **Oversized/decompose & dependency-removal:** none found — no audited file crosses the
+  ~500-line line, and every `go.mod` module is load-bearing (the swaps drop only unused
+  *imports* like `sort`/`math`/`fmt`, never a third-party dep).
 
 Eleventh cycle (`12a2ff5`, UX/UI) — raised or hypothesized but rejected after
 advisor vetting against the live code + a live visual pass in both modes:
