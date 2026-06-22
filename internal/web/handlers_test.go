@@ -783,6 +783,129 @@ func TestCloudModelConsentFlow(t *testing.T) {
 	})
 }
 
+// TestCloudPresetSaveFlow exercises the curated-preset save path (plan 145): a
+// preset save still requires consent, derives the endpoint/model/label/name from
+// the catalog, SAVES but does NOT activate, and never leaks the API key — not in
+// the rendered response, not in any audit row. It also covers the rejection paths
+// (missing consent, unknown preset, missing key).
+func TestCloudPresetSaveFlow(t *testing.T) {
+	const leakKey = "sk-PRESETLEAK-must-not-appear"
+	hdr := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	body := func(v url.Values) *strings.Reader { return strings.NewReader(v.Encode()) }
+
+	t.Run("happy path saves, does not activate, never leaks the key", func(t *testing.T) {
+		app := newWebApp(t)
+		scenario := tests.ApiScenario{
+			Name:               "POST /ui/model/cloud/preset",
+			Method:             "POST",
+			URL:                "/ui/model/cloud/preset",
+			Body:               body(url.Values{"preset": {"mistral"}, "api_key": {leakKey}, "consent": {"1"}}),
+			Headers:            hdr,
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			NotExpectedContent: []string{leakKey},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				// The provider was created from the preset (name + base URL).
+				provs, err := a.FindRecordsByFilter("llm_providers", "name = 'Mistral'", "", 0, 0)
+				if err != nil || len(provs) != 1 {
+					tb.Fatalf("Mistral provider lookup: %v (n=%d)", err, len(provs))
+				}
+				if got := provs[0].GetString("base_url"); got != "https://api.mistral.ai/v1" {
+					tb.Fatalf("provider base_url = %q, want preset value", got)
+				}
+				// A model with the preset's chat model id exists.
+				models, err := a.FindRecordsByFilter("llm_models", "chat_model = 'mistral-small-latest'", "", 0, 0)
+				if err != nil || len(models) != 1 {
+					tb.Fatalf("Mistral model lookup: %v (n=%d)", err, len(models))
+				}
+				// Save must not activate — no active model.
+				_, active, err := turn.ModelChoices(a)
+				if err != nil {
+					tb.Fatalf("choices: %v", err)
+				}
+				if active.Key != "" {
+					tb.Fatalf("preset save must not auto-activate, active=%q", active.Key)
+				}
+				// The API key must appear in no audit row's detail.
+				rows, err := store.ListAudit(a, "", "", 100)
+				if err != nil {
+					tb.Fatalf("audit list: %v", err)
+				}
+				for _, r := range rows {
+					if strings.Contains(r.GetString("detail"), leakKey) {
+						tb.Fatalf("audit row %q leaked the API key", r.GetString("action"))
+					}
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("missing consent re-renders the consent message; nothing saved", func(t *testing.T) {
+		app := newWebApp(t)
+		scenario := tests.ApiScenario{
+			Name:               "POST /ui/model/cloud/preset without consent",
+			Method:             "POST",
+			URL:                "/ui/model/cloud/preset",
+			Body:               body(url.Values{"preset": {"mistral"}, "api_key": {leakKey}}),
+			Headers:            hdr,
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			ExpectedContent:    []string{"confirm you understand"},
+			NotExpectedContent: []string{leakKey},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				provs, _ := a.FindRecordsByFilter("llm_providers", "name = 'Mistral'", "", 0, 0)
+				if len(provs) != 0 {
+					tb.Fatalf("no provider should be saved without consent, got %d", len(provs))
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("unknown preset is rejected", func(t *testing.T) {
+		app := newWebApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "POST /ui/model/cloud/preset unknown key",
+			Method:          "POST",
+			URL:             "/ui/model/cloud/preset",
+			Body:            body(url.Values{"preset": {"bogus"}, "api_key": {"x"}, "consent": {"1"}}),
+			Headers:         hdr,
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"unknown provider preset"},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				provs, _ := a.FindRecordsByFilter("llm_providers", "kind = 'openai'", "", 0, 0)
+				if len(provs) != 0 {
+					tb.Fatalf("unknown preset must save nothing, got %d cloud providers", len(provs))
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+
+	t.Run("missing key is rejected", func(t *testing.T) {
+		app := newWebApp(t)
+		scenario := tests.ApiScenario{
+			Name:            "POST /ui/model/cloud/preset missing key",
+			Method:          "POST",
+			URL:             "/ui/model/cloud/preset",
+			Body:            body(url.Values{"preset": {"mistral"}, "consent": {"1"}}),
+			Headers:         hdr,
+			TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:  200,
+			ExpectedContent: []string{"API key is required"},
+			AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+				provs, _ := a.FindRecordsByFilter("llm_providers", "name = 'Mistral'", "", 0, 0)
+				if len(provs) != 0 {
+					tb.Fatalf("missing key must save nothing, got %d providers", len(provs))
+				}
+			},
+		}
+		scenario.Test(t)
+	})
+}
+
 // TestKnowledgeCardErrorSanitized verifies that fetching a nonexistent knowledge
 // card via GET /ui/knowledge/{kind}/{id}/card renders the generic "could not load
 // this card" message and does NOT expose the raw PocketBase error text.

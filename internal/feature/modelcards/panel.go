@@ -10,13 +10,14 @@ import (
 
 // PanelView drives the Models settings section.
 type PanelView struct {
-	RuntimeSection []RuntimeView // per-variant runtime status rows (cpu + vulkan)
-	Models         []ModelView   // available/active/missing local models
-	Error          string        // optional error banner
-	OfficialCTAs   []OfficialCTA // curated models not yet registered — one download/install card each
-	RuntimeMissing bool          // true when BALAUR_LIB_PATH is unset / lib absent
-	ShowCloudForm  bool          // render the opt-in "Add a cloud model" section
-	CloudForm      CloudFormView // state for that form (inline error, if any)
+	RuntimeSection []RuntimeView     // per-variant runtime status rows (cpu + vulkan)
+	Models         []ModelView       // available/active/missing local models
+	Error          string            // optional error banner
+	OfficialCTAs   []OfficialCTA     // curated models not yet registered — one download/install card each
+	RuntimeMissing bool              // true when BALAUR_LIB_PATH is unset / lib absent
+	ShowCloudForm  bool              // render the opt-in "Add a cloud model" section
+	CloudForm      CloudFormView     // state for that form (inline error, if any)
+	CloudPresets   []CloudPresetView // curated provider preset cards shown above the custom form
 
 	// Processor selection (cpu vs gpu/vulkan). The native llama.cpp library is
 	// dlopen'd once per process, so a change applies on the next restart.
@@ -100,6 +101,9 @@ func Panel(v PanelView) g.Node {
 	}
 
 	if v.ShowCloudForm {
+		if len(v.CloudPresets) > 0 {
+			kids = append(kids, CloudPresetPicker(v.CloudPresets))
+		}
 		kids = append(kids, CloudForm(v.CloudForm))
 	}
 

@@ -2022,6 +2022,37 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cloud-consent-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
 .cloud-consent-actions form { margin: 0; }
 
+/* Cloud-provider preset picker (plan 145): a responsive grid of provider cards,
+   each a self-contained form that needs only an API key + the same consent
+   checkbox as the custom form. The featured (recommended) provider gets the gold
+   accent border, mirroring .model-card-active. */
+.cloud-preset-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  margin-top: var(--space-2);
+}
+.cloud-preset-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+.cloud-preset-featured { border-color: var(--gold-deep); }
+.cloud-preset-featured .kcard-head strong { color: var(--gold-ink); }
+
+/* The free-form custom endpoint sits behind a muted, collapsed-by-default
+   disclosure — power-user path, not the headline. */
+.cloud-custom-disclosure { margin-top: var(--space-3); }
+.cloud-custom-disclosure > summary {
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: var(--space-2) 0;
+}
+.cloud-custom-disclosure > summary:hover { color: var(--ink); }
+
 /* "Run on" CPU/GPU segmented control — wood pills, one selected (plan: model
    processor choice). The native lib loads once per process, so a change is a
    restart-pending preference; the note below the pills says so. */

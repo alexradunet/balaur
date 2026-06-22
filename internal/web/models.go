@@ -19,6 +19,7 @@ import (
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/kronk/modelget"
+	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
@@ -405,6 +406,29 @@ func (h *handlers) saveCloudModel(e *core.RequestEvent) error {
 	embedModel := strings.TrimSpace(e.Request.FormValue("embed_model"))
 	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
 	if _, err := store.SaveCloudModel(h.app, name, baseURL, apiKey, label, chatModel, embedModel); err != nil {
+		return h.modelsPanel(e, err.Error())
+	}
+	return h.modelsPanel(e, "")
+}
+
+// saveCloudPreset registers a cloud model from a curated preset (plan 144): the
+// owner supplies only an API key + consent; the base URL, model id, label, and
+// provider name come from the preset. Like saveCloudModel it SAVES but does not
+// activate — first use still goes through the consent dialog.
+func (h *handlers) saveCloudPreset(e *core.RequestEvent) error {
+	if e.Request.FormValue("consent") != "1" {
+		return h.modelsPanel(e, "please confirm you understand messages will leave your box")
+	}
+	preset, ok := llm.CloudPresetByKey(strings.TrimSpace(e.Request.FormValue("preset")))
+	if !ok {
+		return h.modelsPanel(e, "unknown provider preset")
+	}
+	apiKey := strings.TrimSpace(e.Request.FormValue("api_key"))
+	if apiKey == "" {
+		return h.modelsPanel(e, "an API key is required for "+preset.Name)
+	}
+	if _, err := store.SaveCloudModel(h.app, preset.Name, preset.BaseURL, apiKey,
+		preset.Label, preset.ChatModel, preset.EmbedModel); err != nil {
 		return h.modelsPanel(e, err.Error())
 	}
 	return h.modelsPanel(e, "")
