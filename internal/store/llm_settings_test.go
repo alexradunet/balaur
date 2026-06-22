@@ -233,6 +233,74 @@ func TestEnsureDefaultLLMConfigIsWriteIdempotent(t *testing.T) {
 	}
 }
 
+// TestListLLMModelsMultipleProviders seeds models across two different providers
+// and asserts that each returned config carries the correct provider metadata.
+// This exercises the batched map lookup introduced to replace the per-model N+1
+// query — the query-count reduction itself is not directly measured, but correct
+// provider resolution per model is the meaningful invariant.
+func TestListLLMModelsMultipleProviders(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// Provider 1: local.
+	localID, err := SaveLocalModel(app, "gemma4:e4b", "")
+	if err != nil {
+		t.Fatalf("save local model: %v", err)
+	}
+
+	// Provider 2: cloud (OpenAI-compatible).
+	cloudID, err := SaveCloudModel(app, "MyCloud", "https://api.mycloud.example/v1", cloudTestKey, "Cloud-7", "cloud-7", "")
+	if err != nil {
+		t.Fatalf("save cloud model: %v", err)
+	}
+
+	models, err := ListLLMModels(app)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(models) != 2 {
+		t.Fatalf("expected 2 models, got %d", len(models))
+	}
+
+	byID := make(map[string]LLMConfig, len(models))
+	for _, m := range models {
+		byID[m.ModelID] = m
+	}
+
+	local, ok := byID[localID]
+	if !ok {
+		t.Fatal("local model not in list")
+	}
+	if local.Kind != "local" || !local.Local {
+		t.Fatalf("local model: kind=%q local=%v, want local/true", local.Kind, local.Local)
+	}
+	if local.ProviderName != localProviderName {
+		t.Fatalf("local model provider name = %q, want %q", local.ProviderName, localProviderName)
+	}
+	if local.APIKey != "" {
+		t.Fatalf("ListLLMModels leaked key for local model: %q", local.APIKey)
+	}
+
+	cloud, ok := byID[cloudID]
+	if !ok {
+		t.Fatal("cloud model not in list")
+	}
+	if cloud.Kind != "openai" || cloud.Local {
+		t.Fatalf("cloud model: kind=%q local=%v, want openai/false", cloud.Kind, cloud.Local)
+	}
+	if cloud.ProviderName != "MyCloud" {
+		t.Fatalf("cloud model provider name = %q, want MyCloud", cloud.ProviderName)
+	}
+	if cloud.BaseURL != "https://api.mycloud.example/v1" {
+		t.Fatalf("cloud model base URL = %q", cloud.BaseURL)
+	}
+	if cloud.APIKey != "" {
+		t.Fatalf("ListLLMModels leaked key for cloud model: %q", cloud.APIKey)
+	}
+	if !cloud.KeySet {
+		t.Fatal("KeySet should be true when a key was stored")
+	}
+}
+
 func TestFindOrCreateLLMModelChangePathPersists(t *testing.T) {
 	app := storetest.NewApp(t)
 

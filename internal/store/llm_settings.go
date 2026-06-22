@@ -52,12 +52,31 @@ func ListLLMModels(app core.App) ([]LLMConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := make([]LLMConfig, 0, len(models))
-	for _, model := range models {
-		cfg, err := configForModel(app, model)
-		if err != nil {
-			return nil, err
+	// Collect distinct provider ids then fetch them in one query (avoids N+1).
+	ids := make([]string, 0, len(models))
+	seen := map[string]bool{}
+	for _, m := range models {
+		pid := m.GetString("provider")
+		if pid != "" && !seen[pid] {
+			seen[pid] = true
+			ids = append(ids, pid)
 		}
+	}
+	providers, err := app.FindRecordsByIds("llm_providers", ids)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[string]*core.Record, len(providers))
+	for _, p := range providers {
+		byID[p.Id] = p
+	}
+	out := make([]LLMConfig, 0, len(models))
+	for _, m := range models {
+		p := byID[m.GetString("provider")]
+		if p == nil {
+			return nil, fmt.Errorf("model %q references missing provider %q", m.Id, m.GetString("provider"))
+		}
+		cfg := configFrom(m, p)
 		cfg.APIKey = ""
 		out = append(out, cfg)
 	}
@@ -332,12 +351,8 @@ func findOrCreateLLMModel(app core.App, providerID, label, chatModel, embedModel
 	return rec, nil
 }
 
-func configForModel(app core.App, model *core.Record) (LLMConfig, error) {
-	providerID := model.GetString("provider")
-	provider, err := app.FindRecordById("llm_providers", providerID)
-	if err != nil {
-		return LLMConfig{}, err
-	}
+// configFrom builds an LLMConfig from a model + its provider record (no query).
+func configFrom(model, provider *core.Record) LLMConfig {
 	apiKey := provider.GetString("api_key")
 	return LLMConfig{
 		ModelID:      model.Id,
@@ -352,5 +367,13 @@ func configForModel(app core.App, model *core.Record) (LLMConfig, error) {
 		EmbedModel:   model.GetString("embed_model"),
 		Enabled:      provider.GetBool("enabled") && model.GetBool("enabled"),
 		KeySet:       apiKey != "",
-	}, nil
+	}
+}
+
+func configForModel(app core.App, model *core.Record) (LLMConfig, error) {
+	provider, err := app.FindRecordById("llm_providers", model.GetString("provider"))
+	if err != nil {
+		return LLMConfig{}, err
+	}
+	return configFrom(model, provider), nil
 }
