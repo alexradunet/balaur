@@ -4,7 +4,6 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
-	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
@@ -132,43 +131,9 @@ func chatchoicesStory() Story {
 func composerStory() Story {
 	return Story{
 		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
-		Blurb: "The owner's single seat of action — every input is given here, so the owner never looks anywhere else. Draft mode is the textarea; when Balaur surfaces a decision it embeds in place of the draft: dialogue choices (closing with a type-your-own row), a TaskCard to settle, a proposed KnowledgeCard to keep, or a GuardianCard granting OS access.",
+		Blurb: "The owner's single seat of action — every input is given here. The parchment draft is a textarea with a send button, the tool wells, the sound toggle, and the owner's soul portrait.",
 		Variants: []Variant{
 			{"draft", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})},
-			{"deciding · choices", ui.Composer(ui.ComposerProps{
-				AvatarSrc: "/static/crest.png",
-				Prompt:    "How should I log this?",
-				Choices: []ui.ComposerChoice{
-					{Label: "As a quick note", Hint: "1 line"},
-					{Label: "As a full journal entry"},
-					{Label: "Don't save it", Hint: "skip"},
-				},
-			})},
-			{"deciding · task", ui.Composer(ui.ComposerProps{
-				AvatarSrc: "/static/crest.png",
-				Prompt:    "The hour has come",
-				Decision: taskcards.TaskCard(taskcards.TaskView{
-					ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due now · 18:00", RecurLine: "every 2 days",
-				}),
-			})},
-			{"deciding · memory", ui.Composer(ui.ComposerProps{
-				AvatarSrc: "/static/crest.png",
-				Prompt:    "Shall I keep this?",
-				Decision: knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
-					ID: "m1", Status: "proposed", Category: "preference", Title: "Prefers tea over coffee",
-					Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3,
-				}),
-			})},
-			{"deciding · guardian", ui.Composer(ui.ComposerProps{
-				AvatarSrc: "/static/crest.png",
-				Prompt:    "May I look?",
-				Decision: ui.GuardianCard(ui.GuardianProps{
-					Kicker: "OS access", Title: "Read your Documents folder?",
-					Detail:        "To find the budget spreadsheet you mentioned. Read-only, and only this once.",
-					Scope:         "read · ~/Documents · this session",
-					AllowOnceHref: "#", AllowAlwaysHref: "#", DenyHref: "#",
-				}),
-			})},
 		},
 		Props: []Prop{
 			{"Who", "string", `"You"`, "Nameplate under the owner portrait."},
@@ -177,9 +142,6 @@ func composerStory() Story {
 			{"Hint", "string", "unsent · enter speaks", "Foot hint; defaults to the live copy."},
 			{"SendLabel", "string", `"Send"`, "The submit button label."},
 			{"Tools", "[]string", "scroll·tome·lens", "/static/icons names for the tool wells, left of the sound toggle."},
-			{"Prompt", "string", `"Your word"`, "Kicker question shown in the top row when deciding."},
-			{"Choices", "[]ComposerChoice", "nil", "When set, the draft is replaced by these numbered choices + a manual-input row."},
-			{"Decision", "g.Node", "nil", "A surfaced card (TaskCard / KnowledgeCard / GuardianCard, rendered by the caller) shown in place of the draft — its own actions are the decision."},
 		},
 		Dos: []string{
 			"Route every owner input through this one surface — text, choices, task and memory decisions.",

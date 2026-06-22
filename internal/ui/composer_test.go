@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	g "maragu.dev/gomponents"
-
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -39,48 +37,5 @@ func TestComposerDefaults(t *testing.T) {
 		if !strings.Contains(got, `/static/icons/`+name+`.png`) {
 			t.Errorf("default tool %q missing: %s", name, got)
 		}
-	}
-}
-
-func TestComposerDeciding(t *testing.T) {
-	got := render(t, ui.Composer(ui.ComposerProps{
-		AvatarSrc: "/static/crest.png", Prompt: "How should I log this?",
-		Choices: []ui.ComposerChoice{{Label: "A quick note", Hint: "1 line"}, {Label: "A journal entry"}},
-	}))
-	for _, want := range []string{
-		`<div class="composer composer-deciding">`,
-		`<div class="composer-kicker">How should I log this?</div>`,
-		`<div class="choices-panel composer-choices">`,
-		`<span class="choice-label">A quick note</span>`,
-		// the embedded manual-input row, keyed after the choices (3rd here)
-		`<div class="choice choice-type"><span class="choice-key">3</span><input type="text" placeholder="type your answer…" autocomplete="off">`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("deciding composer missing %q in: %s", want, got)
-		}
-	}
-	// deciding mode replaces the draft — no textarea.
-	if strings.Contains(got, "<textarea") {
-		t.Errorf("deciding composer should not render the draft textarea: %s", got)
-	}
-}
-
-func TestComposerDecision(t *testing.T) {
-	card := g.El("article", g.Attr("class", "kcard"), g.Text("CARD"))
-	got := render(t, ui.Composer(ui.ComposerProps{
-		AvatarSrc: "/static/crest.png", Prompt: "Shall I keep this?", Decision: card,
-	}))
-	for _, want := range []string{
-		`<div class="composer composer-deciding">`,
-		`<div class="composer-kicker">Shall I keep this?</div>`,
-		`<div class="composer-decision"><article class="kcard">CARD</article></div>`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("decision composer missing %q in: %s", want, got)
-		}
-	}
-	// the surfaced card replaces both draft and choices.
-	if strings.Contains(got, "<textarea") || strings.Contains(got, "choices-panel") {
-		t.Errorf("decision mode should render neither draft nor choices: %s", got)
 	}
 }
