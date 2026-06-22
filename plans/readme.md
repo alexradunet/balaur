@@ -115,10 +115,59 @@ written by a fresh-context writer that re-read the live source at `ab2c0a9` and 
 the audit's line-number estimates (several findings undercounted scope — see each plan's
 "Current state").
 
+Sixteenth cycle (plans **154–157**), 2026-06-22, against commit `4a8c8c9`, generated
+by the improve skill from a focused **SQL-schema + PocketBase-leverage** audit (the
+owner explicitly OK'd dropping `pb_data/` + all migrations and rebuilding fresh).
+Method: graphify-oriented recon → a 7-agent workflow (5 per-collection field-usage
+census readers + a migration-consolidation analyst + a PB-leverage/normalization
+analyst, each fed the ground-truth field list) → advisor re-read every cited file
+before planning. **Headline:** the schema is already appropriately normalized for a
+single-user PocketBase/SQLite app (real relations with `CascadeDelete`, consistent
+`ruleOwner` API rules, JSON fields used correctly as opaque blobs, justified
+key/value tables) — there is **no 3NF restructuring worth doing**, and it would
+fight PocketBase's records-as-domain-model grain. The real mess is *migration
+archaeology*: 21 files (~900 lines) of decisions reversed before launch (boards &
+grants born-then-killed, heads auth→persona rebuild, llm_settings rebuilt, the
+`kind` enum cycled kronk→local→remove→re-add, head/parent/audit-head fields +
+branch indexes added-then-removed, 5 data-only fixups that no-op on an empty DB).
+So the work is **consolidate + clean**, not normalize: 154 drops the redundant
+`llm_providers.local` bool (derive from `kind`), 155 drops the redundant
+`skills.enabled` bool (derive from `status`), 156 collapses the 21 migrations into
+one clean baseline (also dropping dead fields `conversations.summary` +
+`memories.tags`, redundant indexes, and folding in `idx_memories_status_importance`,
+an `importance` 1–5 constraint, `base_url` Max 2048 to match `SaveCloudModel`, and
+the dead `cli/audit.go` head read), and 157 renames `heads.tools` →
+`capability_groups`. **Order: 154 + 155 (independent) → 156 (drops their columns;
+needs both) → 157 (renames a field in 156's baseline; needs 156).** 156 requires a
+fresh `pb_data/` (the one consolidation hazard — a rewritten baseline filename
+re-run against an existing DB; does not apply to a fresh install).
+
+**Considered and corrected/rejected this cycle** (so they aren't re-audited):
+- `entries.value` (JSON) — the census flagged it "write-only dead", but advisor
+  re-read found `internal/seed/seed.go:310` reads it as the seed-idempotency marker
+  (`value LIKE '%"seed":true%'`). **Kept** (a clean removal would mean re-homing the
+  seed marker — not worth it).
+- `memories.source` / `tasks.source` — flagged "never read", but both are read in
+  CLI export (`cli/knowledge.go:22`, `cli/task.go:27`). **Kept** as exported
+  provenance metadata; not dead.
+- `last_used` / `use_count` (memories, skills) — speculative instrumentation
+  (`Touch()` writes, only CLI reads). **Kept** (cheap; plausibly feeds future
+  ranking). `use_count`'s read-modify-write is non-atomic — accepted for one user.
+- `memories.created`/`updated`, `skills.created`/`updated` flagged "dead" — standard
+  autodate, `created` drives sorting. **Rejected** (over-report).
+- `entries.task` ("barely used") is the streak-count relation; `entries.kind`
+  text-widening is by-design for owner trackers. **Rejected.**
+- 3NF-ing JSON fields / key-value tables into typed columns — **rejected** (fights
+  PocketBase + YAGNI for one user).
+
 ## Execution order & status
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |
 |------|-------|----------|--------|------|------------|-------|--------|
+| 154 | Remove redundant `llm_providers.local` bool — derive locality from `kind` (sort + `findOrCreateLLMProvider` + `configFrom` + 3 audit maps + `self.go` + test) | P2 | S | LOW | — | — | TODO |
+| 155 | Remove redundant `skills.enabled` bool — derive from `status` (knowledge lifecycle+queries, skill cards, CLI export). Scope trap: `llm_models`/`llm_providers.enabled` stays | P2 | S–M | MED | — | — | TODO |
+| 156 | Collapse the 21 churned migrations into one clean schema baseline — rewrite `1749600000_init.go` (14 collections), delete 20 migrations + 6 coupled tests, add `schema_test.go`. Folds: drop dead `summary`/`tags`, drop redundant indexes, add `idx_memories_status_importance` + `importance` 1–5, `base_url` Max 2048, remove dead `cli/audit.go` head read. Keeps `entries.value` (seed marker). **Requires fresh `pb_data/`** | P1 | M | LOW | 154, 155 | — | TODO |
+| 157 | Rename `heads.tools` → `capability_groups` (disambiguate from `extensions.tools`) — column + 2 accessors only; form field name unchanged | P3 | S | LOW | 156 | — | TODO |
 | 147 | Remove the never-used Composer "deciding mode" — delete `ComposerChoice`/`composerChoices` + the `Prompt`/`Choices`/`Decision` props + both dead render arms + dead storybook variants + composer-deciding-only CSS; live in-chat choice UI is `chat.Choices` (separate component). Writer caught TWO dead sub-branches + 2 orphaned-import traps | P2 | S | LOW | — | — | DONE — APPROVED + merged to main `d8eb968` (`merge: 147`), pushed. Advisor-reviewed: scope clean (4 files), draft-form path preserved byte-for-byte, shared `.choice*`/`.choices-panel` CSS kept, `taskcards` import retained (staticcheck-green); +26/−197. Full `go test ./...` + `make lint` green on the combined tree. |
 | 148 | Avatar roster single source — drop the `soulAvatarMap`/`balaurAvatarMap` literals in `internal/store/owner_settings.go`, derive the lookups from the `SoulAvatars()`/`BalaurHeads()` slices (legacy `male`/`female` aliases live on the soul map only); test file is the behavior contract (out of scope, must pass unchanged) | P2 | S | LOW | — | — | DONE — APPROVED + merged to main `459acdb` (`merge: 148`), pushed. Advisor-reviewed: scope clean (1 file), lookup maps derived from rosters via `avatarMap`, legacy `male`/`female` aliases re-added on the soul map only, out-of-scope contract test passes unchanged; +25/−40; suite green on combined tree. |
 | 149 | Hoist the triplicated `intParam` into one `ui.IntParam` (`strconv.Atoi`, `n>0`) — 4 copies + 8 call sites across knowledge/life/task cards; writer proved unify-on-`n>0` is a prod no-op via `cards.Validate` clamping | P2 | S | LOW | — | — | DONE — APPROVED + merged to main `440540e` (`merge: 149`), pushed. Advisor-reviewed: `ui.IntParam` + meaningful table test (zero/neg/empty/junk), all 8 call sites rewired, 3 local `intParam` + `daysParam` deleted, `strconv` dropped only from quests/timeline; +51/−50; staticcheck + suite green on combined tree. |
