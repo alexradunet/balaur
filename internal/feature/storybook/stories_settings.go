@@ -155,6 +155,16 @@ func cloudmodelStory() Story {
 		ID: "cloudmodel", Group: "Models", Title: "Cloud model (opt-in)", Wide: true,
 		Blurb: "Balaur runs local by default, but an owner can opt in to an OpenAI-compatible cloud model (OpenAI, OpenRouter, Groq, Anthropic via its compat shim, LM Studio…). The add form makes the trade-off explicit and requires a consent checkbox before a key is stored; a first-use dialog confirms the destination before the model can go active. A turn never leaves the box without the owner's deliberate, informed click.",
 		Variants: []Variant{
+			{"provider presets · picker", modelcards.CloudPresetPicker([]modelcards.CloudPresetView{
+				{Key: "mistral", Name: "Mistral", Label: "Mistral Small", Region: "EU · GDPR",
+					Blurb:     "French, GDPR-compliant, OpenAI-compatible. Generous free tier.",
+					ChatModel: "mistral-small-latest", KeyHint: "your Mistral API key",
+					SignupURL: "https://console.mistral.ai/api-keys", Featured: true},
+				{Key: "openai", Name: "OpenAI", Label: "OpenAI GPT-5 mini", Region: "US",
+					Blurb:     "OpenAI's hosted models via the official API.",
+					ChatModel: "gpt-5-mini", KeyHint: "sk-…",
+					SignupURL: "https://platform.openai.com/api-keys"},
+			})},
 			{"add a cloud model · form", modelcards.CloudForm(modelcards.CloudFormView{})},
 			{"add form · error", modelcards.CloudForm(modelcards.CloudFormView{Error: "name, base URL, label, and chat model are required"})},
 			{"first-use consent dialog", modelcards.CloudConsent(modelcards.CloudConsentView{
@@ -176,16 +186,19 @@ func cloudmodelStory() Story {
 			{"CloudConsentView.ModelName", "string", "—", "Display label of the model being activated."},
 			{"CloudConsentView.ProviderName", "string", "—", "The destination the owner is consenting to send messages to."},
 			{"PanelView.ShowCloudForm", "bool", "false", "Render the opt-in add-a-cloud-model section at the bottom of the panel."},
+			{"PanelView.CloudPresets", "[]CloudPresetView", "nil", "Curated provider preset cards (from llm.CloudPresets) shown above the custom form; each needs only an API key + consent."},
 		},
 		Dos: []string{
 			"Name the destination plainly — the owner consents to a specific provider.",
 			"Require the consent checkbox before storing a key, and confirm again on first activation.",
 			"Keep the local model first-class and the obvious default.",
+			"Pick a preset to add only a key — the endpoint, model, and label come from the catalog.",
 		},
 		Donts: []string{
 			"Activate a cloud model on a single click — confirm the box-leaving first.",
 			"Echo the API key back in the UI, audit log, or any export.",
 			"Auto-select or fall back to a cloud model — selection is always explicit.",
+			"Weaken or drop the consent checkbox on the preset form — it is required there too.",
 		},
 	}
 }

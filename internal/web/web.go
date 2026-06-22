@@ -157,6 +157,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/model/download", h.downloadOfficialModel)
 	se.Router.POST("/ui/model/download/cancel", h.cancelDownload)
 	se.Router.POST("/ui/model/cloud", h.saveCloudModel)
+	se.Router.POST("/ui/model/cloud/preset", h.saveCloudPreset)
 	se.Router.POST("/ui/model/cloud/confirm", h.confirmCloudModel)
 	se.Router.POST("/ui/model/cloud/delete", h.deleteCloudModel)
 	se.Router.POST("/ui/runtime/install", h.installRuntime)

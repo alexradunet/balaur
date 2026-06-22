@@ -28,9 +28,26 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/headscards"
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/kronk"
+	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
+
+// cloudPresetViews maps the curated catalog (llm.CloudPresets) into the
+// presentation-only view-models the preset picker renders, so modelcards stays
+// dependency-light (no internal/llm import).
+func cloudPresetViews() []modelcards.CloudPresetView {
+	presets := llm.CloudPresets()
+	views := make([]modelcards.CloudPresetView, 0, len(presets))
+	for _, p := range presets {
+		views = append(views, modelcards.CloudPresetView{
+			Key: p.Key, Name: p.Name, Label: p.Label, Region: p.Region,
+			Blurb: p.Blurb, ChatModel: p.ChatModel, KeyHint: p.KeyHint,
+			SignupURL: p.SignupURL, Featured: p.Default,
+		})
+	}
+	return views
+}
 
 // ---------------------------------------------------------------------------
 // View-models
@@ -127,7 +144,7 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 	if err != nil {
 		return modelcards.PanelView{}, err
 	}
-	view := modelcards.PanelView{Error: errMsg, ShowCloudForm: true}
+	view := modelcards.PanelView{Error: errMsg, ShowCloudForm: true, CloudPresets: cloudPresetViews()}
 	for _, c := range choices {
 		cloud := c.Badge == "cloud"
 		mv := modelcards.ModelView{
@@ -260,6 +277,7 @@ func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusVi
 func ExamplePanelView() modelcards.PanelView {
 	return modelcards.PanelView{
 		ShowCloudForm: true,
+		CloudPresets:  cloudPresetViews(),
 		Models: []modelcards.ModelView{
 			{ID: "m1", Name: "Qwen3 8B", Detail: "qwen3-8b.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~6 GB"},
 			{ID: "m2", Name: "Mistral 7B", Detail: "mistral-7b.gguf · on this box", Kind: "local", Status: modelcards.StatusAvailable, VRAM: "~5 GB"},
