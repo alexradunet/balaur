@@ -264,13 +264,19 @@ func taskUpdateTool(app core.App) agent.Tool {
 			}
 			var b strings.Builder
 			fmt.Fprintf(&b, "Task updated: %q", rec.GetString("title"))
-			if storedDue := rec.GetDateTime("due").Time(); !storedDue.IsZero() {
+			storedDue := rec.GetDateTime("due").Time()
+			if !storedDue.IsZero() {
 				fmt.Fprintf(&b, " — due %s", fmtDue(storedDue, loc))
 			} else {
 				b.WriteString(" — no due (someday)")
 			}
 			if rule, _ := tasks.Parse(rec.GetString("recur")); !rule.IsZero() {
 				fmt.Fprintf(&b, ", %s", tasks.Describe(rule))
+			}
+			// A calendar rule snaps a non-matching due forward; say so, exactly
+			// as task_add does, or the owner is told the wrong day.
+			if !opts.Due.IsZero() && !storedDue.IsZero() && !storedDue.Equal(opts.Due) {
+				b.WriteString(". NOTE: the requested date did not land on the rule's days — it was adjusted to match; tell the owner the corrected time")
 			}
 			if dateOnly {
 				b.WriteString(". No hour was given, so it is set for 09:00 — adjust if another time suits the owner better")

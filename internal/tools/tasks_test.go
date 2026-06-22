@@ -243,6 +243,28 @@ func TestTaskUpdateClearsDue(t *testing.T) {
 	}
 }
 
+func TestTaskUpdateWarnsOnCalendarSnap(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := TaskTools(app)
+	ctx := context.Background()
+
+	// A weekly Mon/Thu task...
+	out, _ := findTool(t, ts, "task_add").Execute(ctx,
+		`{"title":"Gym","due":"2026-06-11T18:00","recur":"weekly:mon,thu"}`) // Thu
+	_, id, _, _ := ParseProposal(out)
+
+	// ...rescheduled to a Tuesday must report the snap, not silently land Thu.
+	res, err := findTool(t, ts, "task_update").Execute(ctx,
+		`{"id":"`+id+`","due":"2026-06-16T18:00"}`) // Tue
+	if err != nil {
+		t.Fatalf("task_update: %v", err)
+	}
+	_, _, rest, _ := ParseProposal(res)
+	if !strings.Contains(rest, "adjusted") {
+		t.Errorf("snap to the rule's day was not reported: %q", rest)
+	}
+}
+
 func TestTaskListEmptyScopeReportsOtherTasks(t *testing.T) {
 	app := storetest.NewApp(t)
 	ts := TaskTools(app)
