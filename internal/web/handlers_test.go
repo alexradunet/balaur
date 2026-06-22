@@ -793,3 +793,31 @@ func TestCloudModelConsentFlow(t *testing.T) {
 		scenario.Test(t)
 	})
 }
+
+// TestDeleteCloudModelHandler verifies the POST /ui/model/cloud/delete handler
+// removes a non-active cloud model and re-renders the models panel.
+func TestDeleteCloudModelHandler(t *testing.T) {
+	hdr := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	app := newWebApp(t)
+	id, err := store.SaveCloudModel(app, "OpenAI", "https://api.openai.com/v1", "sk-x", "GPT-4o", "gpt-4o", "")
+	if err != nil {
+		t.Fatalf("seed cloud model: %v", err)
+	}
+	scenario := tests.ApiScenario{
+		Name:            "POST /ui/model/cloud/delete removes non-active model",
+		Method:          "POST",
+		URL:             "/ui/model/cloud/delete",
+		Body:            strings.NewReader(url.Values{"key": {id}}.Encode()),
+		Headers:         hdr,
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"models-panel"},
+		AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+			_, err := a.FindRecordById("llm_models", id)
+			if err == nil {
+				tb.Fatalf("model %q should have been deleted but still exists", id)
+			}
+		},
+	}
+	scenario.Test(t)
+}

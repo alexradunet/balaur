@@ -266,6 +266,36 @@ func TestToWireEmptyArgsBecomesObject(t *testing.T) {
 	}
 }
 
+func TestChatStreamSendsBearerKey(t *testing.T) {
+	cases := []struct {
+		apiKey   string
+		wantAuth string
+	}{
+		{"sk-test-123", "Bearer sk-test-123"},
+		{"", ""},
+	}
+	for _, tc := range cases {
+		var gotAuth string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotAuth = r.Header.Get("Authorization")
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		}))
+		c := &OpenAIClient{BaseURL: srv.URL, Model: "test", APIKey: tc.apiKey}
+		ch, err := c.ChatStream(context.Background(), []Message{{Role: "user", Content: "hi"}}, nil)
+		if err != nil {
+			srv.Close()
+			t.Fatalf("apiKey=%q ChatStream: %v", tc.apiKey, err)
+		}
+		for range ch { //nolint:revive // drain
+		}
+		srv.Close()
+		if gotAuth != tc.wantAuth {
+			t.Errorf("apiKey=%q: Authorization header = %q, want %q", tc.apiKey, gotAuth, tc.wantAuth)
+		}
+	}
+}
+
 func TestEmbedIndexMapping(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return rows out of order to exercise index-based placement.
