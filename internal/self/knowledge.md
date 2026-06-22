@@ -158,9 +158,9 @@ h.renderMessages and the live SSE stream in chatstream.go share one markup
 source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
 the bottom). The surrounding dock chrome (grip, recap zone, nudge poller,
 composer, model-modal dialog) renders via the chat.Dock gomponents organism
-(internal/ui/chat/dock.go). The head/model switcher fragments
-(chat_bar/model_switcher/head_switcher) remain as legacy template SSE patch
-targets for patchChatbar and setActiveHead — deferred from plan 084. The active
+(internal/ui/chat/dock.go). The chatbar and head-switcher now render via gomponents node builders
+(`chatBarNode`/`headSwitcherNode` in `internal/web/home.go`); they are still SSE
+patch targets for `patchChatbar`/`setActiveHead`. The active
 head is switched from the dock via POST /ui/heads/active, and the heads section
 manages personas via POST /ui/heads/new and POST /ui/heads/{id}/delete; the
 machine-facing

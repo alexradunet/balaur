@@ -12,6 +12,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
@@ -69,6 +70,89 @@ func (h *handlers) root(e *core.RequestEvent) error {
 		return e.Redirect(http.StatusFound, "/")
 	}
 	return h.homePage(e)
+}
+
+// chatBarNode renders the slim chatbar (#chatbar) — the head + model switchers.
+// Port of the chat_bar template; patchChatbar outer-patches #chatbar with it.
+// While no model is ready it carries the 2s self-refresh poll; the ready chatbar
+// drops the interval, so polling stops.
+func chatBarNode(d homeData) g.Node {
+	attrs := []g.Node{h.Class("chatbar chatbar-slim"), h.ID("chatbar")}
+	if !d.ChatReady {
+		attrs = append(attrs, g.Attr("data-on:interval__duration.2s", "@get('/ui/chatbar')"))
+	}
+	attrs = append(attrs, headSwitcherNode(d), modelSwitcherNode(d))
+	return h.Div(attrs...)
+}
+
+// modelSwitcherNode renders the model panel (nested in the chatbar). Port of
+// model_switcher. model_switcher is DEAD as an ExecuteTemplate target — this
+// node is only composed via chatBarNode.
+func modelSwitcherNode(d homeData) g.Node {
+	head := []g.Node{
+		h.Span(h.Class("model-switcher-kicker"), g.Text("Model")),
+	}
+	if d.ActiveModel != "" {
+		head = append(head, h.Span(h.Class("model-current"), g.Text(d.ActiveModel)))
+	}
+	head = append(head, h.A(h.Class("model-switcher-manage"),
+		h.Href("/ui/show/settings?section=models"), g.Text("Manage models →")))
+
+	kids := []g.Node{
+		g.Attr("aria-label", "Model"),
+		h.Div(h.Class("model-switcher-head"), g.Group(head)),
+	}
+	if !d.ChatReady {
+		msg := "No model is ready yet."
+		if d.ModelError != "" {
+			msg = d.ModelError
+		}
+		kids = append(kids, h.Div(h.Class("model-switcher-empty"),
+			h.Span(g.Text(msg)),
+			h.A(h.Href("/ui/show/settings?section=models"), g.Text("Set up a model →")),
+		))
+	}
+	kids = append(kids, h.Div(h.Class("chatbar-profile-link"),
+		h.Span(h.Class("balaur-avatar balaur-avatar-soul"), g.Attr("aria-hidden", "true"),
+			h.Img(h.Class("px"), h.Src(d.SoulAvatarURL), h.Alt(""), g.Attr("decoding", "async"))),
+		h.A(h.Href("/ui/show/settings?section=profile"), h.Class("chatbar-profile-href"),
+			g.Text("Your avatar & profile →")),
+	))
+	return h.Section(append([]g.Node{h.Class("model-switcher")}, kids...)...)
+}
+
+// headSwitcherNode renders the dock persona picker (#head-switcher). Port of
+// head_switcher; setActiveHead outer-patches #head-switcher with it.
+func headSwitcherNode(d homeData) g.Node {
+	choices := make([]g.Node, 0, len(d.HeadChoices))
+	for _, c := range d.HeadChoices {
+		btnClass := "head-switcher-choice"
+		if c.Active {
+			btnClass += " head-switcher-choice-active"
+		}
+		btnAttrs := []g.Node{
+			h.Type("submit"), h.Class(btnClass),
+			g.Attr("data-attr:disabled", "$streaming"),
+		}
+		if c.Active {
+			btnAttrs = append(btnAttrs, g.Attr("aria-current", "true"))
+		}
+		btnAttrs = append(btnAttrs,
+			h.Img(h.Class("px"), h.Src(c.AvatarURL), h.Alt(""), g.Attr("decoding", "async")),
+			h.Span(g.Text(c.Name)),
+		)
+		choices = append(choices, h.Li(
+			h.Form(g.Attr("data-on:submit__prevent", "@post('/ui/heads/active', {contentType:'form'})"),
+				h.Input(h.Type("hidden"), h.Name("head"), h.Value(c.ID)),
+				h.Button(btnAttrs...),
+			),
+		))
+	}
+	return h.Section(h.Class("head-switcher"), h.ID("head-switcher"), g.Attr("aria-label", "Head"),
+		h.Span(h.Class("model-switcher-kicker"), g.Text("Head")),
+		h.Span(h.Class("head-switcher-current"), g.Text(d.ActiveHeadName)),
+		h.Ul(h.Class("head-switcher-list"), g.Group(choices)),
+	)
 }
 
 // homePage handles GET / — the single-page two-column chat shell (plan 102).
