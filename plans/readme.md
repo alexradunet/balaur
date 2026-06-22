@@ -69,7 +69,7 @@ see the rejected/deferred section.
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |
 |------|-------|----------|--------|------|------------|-------|--------|
-| 137 | Tighten `kronk.Embed` to error instead of returning silent nil vectors | P3 | S | LOW | — | — | TODO |
+| 137 | Tighten `kronk.Embed` to error instead of returning silent nil vectors | P3 | S | LOW | — | — | DONE (APPROVED + **merged to main `cdcbfe4`** via `--no-ff`, pushed). Worktree `agent-abfe445bcc5d9b321`, commit `5ff5023`. Advisor verified: fail-closed guard `if len(resp.Data)==0 { return err }` (client.go:79), old `> 0` form gone, build/`go test`/`make lint` green, scope = 1 file, no live `.Embed()` recall caller (contract-tightening only). |
 | 138 | Batch the provider lookup in `ListLLMModels` (kill the N+1) | P3 | S | LOW | — | — | TODO |
 | 139 | Make the recurring `tasks.Done` completion+advance atomic (`RunInTransaction`) | P2 | M | MED | — | — | TODO |
 | 140 | Parse & format reminders in the owner's configured timezone (thread `loc` through `ParseDue`/`fmtDue` + turn/life/journal; CLI stays host-zone) | P1 | M | MED | — | — | TODO |
