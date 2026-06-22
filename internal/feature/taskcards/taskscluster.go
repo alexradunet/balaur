@@ -19,7 +19,7 @@ import (
 func renderTasks(app core.App, params map[string]string) g.Node {
 	now := time.Now()
 	// cards.Validate already clamped limit to [1,50]; intParam handles missing/invalid.
-	limit := intParam(params, "limit", 12)
+	limit := ui.IntParam(params, "limit", 12)
 	status := params["status"]
 	if status == "" {
 		status = "open"

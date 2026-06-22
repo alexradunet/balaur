@@ -31,7 +31,7 @@ type LinesView struct {
 // Mirrors renderCardLines (internal/web/cards.go ~477).
 func buildLines(app core.App, params map[string]string) LinesView {
 	kind := params["kind"]
-	limit := intParam(params, "limit", 5)
+	limit := ui.IntParam(params, "limit", 5)
 	since := time.Now().AddDate(-1, 0, 0) // look back up to one year
 
 	v := LinesView{Kind: kind}

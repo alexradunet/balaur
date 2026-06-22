@@ -2,7 +2,6 @@ package taskcards
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -124,18 +123,10 @@ func timelineDay(day TLDay) g.Node {
 	)
 }
 
-// daysParam reads the "days" key from params, defaulting to tlDefaultDays.
-func daysParam(params map[string]string) int {
-	if n, err := strconv.Atoi(params["days"]); err == nil && n > 0 {
-		return n
-	}
-	return tlDefaultDays
-}
-
 // registerTimeline wires the timeline card into the ui registry.
 // Called by the coordinator; do not call from init().
 func registerTimeline(app core.App) {
 	ui.RegisterCard("timeline", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
-		return TimelineCard(buildTimeline(app, daysParam(params))), nil
+		return TimelineCard(buildTimeline(app, ui.IntParam(params, "days", tlDefaultDays))), nil
 	})
 }

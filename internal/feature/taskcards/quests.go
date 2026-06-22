@@ -2,7 +2,6 @@ package taskcards
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -116,7 +115,7 @@ func renderQuests(app core.App, params map[string]string) g.Node {
 	now := time.Now()
 	if params["mode"] == "manage" {
 		recs, _ := tasks.OpenTasks(app, nil)
-		if limit := intParam(params, "limit", 12); len(recs) > limit {
+		if limit := ui.IntParam(params, "limit", 12); len(recs) > limit {
 			recs = recs[:limit]
 		}
 		return QuestsManageCard(QuestsView{Rows: viewsOf(recs, now)})
@@ -126,7 +125,7 @@ func renderQuests(app core.App, params map[string]string) g.Node {
 	if status == "" {
 		status = "open"
 	}
-	limit := intParam(params, "limit", 10)
+	limit := ui.IntParam(params, "limit", 10)
 
 	var recs []*core.Record
 	switch status {
@@ -145,15 +144,6 @@ func renderQuests(app core.App, params map[string]string) g.Node {
 		Rows:      viewsOf(recs, now),
 		ParamLine: fmt.Sprintf("status: %s · limit: %d", status, limit),
 	})
-}
-
-// intParam reads an int param, falling back to def. cards.Validate already
-// clamped limit/days upstream, so a plain Atoi is enough (empty/invalid → def).
-func intParam(p map[string]string, key string, def int) int {
-	if n, err := strconv.Atoi(p[key]); err == nil {
-		return n
-	}
-	return def
 }
 
 // registerQuests wires the quests card (tile + focus) into the ui registry.
