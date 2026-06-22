@@ -1,7 +1,9 @@
 package knowledge
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -99,13 +101,9 @@ func recallTerms(msg string) []string {
 		}
 	}
 	// Longest first, keep the top 3.
-	for i := 0; i < len(candidates); i++ {
-		for j := i + 1; j < len(candidates); j++ {
-			if len(candidates[j]) > len(candidates[i]) {
-				candidates[i], candidates[j] = candidates[j], candidates[i]
-			}
-		}
-	}
+	slices.SortStableFunc(candidates, func(a, b string) int {
+		return cmp.Compare(len(b), len(a)) // longest first; stable for equal lengths
+	})
 	if len(candidates) > 3 {
 		candidates = candidates[:3]
 	}

@@ -138,7 +138,7 @@ func isAllowedHost(host string) bool {
 	if allowed == "" {
 		return false
 	}
-	for _, h := range strings.Split(allowed, ",") {
+	for h := range strings.SplitSeq(allowed, ",") {
 		if strings.TrimSpace(h) == host {
 			return true
 		}

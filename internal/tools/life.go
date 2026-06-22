@@ -142,10 +142,7 @@ func entrySeriesTool(app core.App) agent.Tool {
 				fmt.Fprintf(&b, "%s over %dd: last %g %s (min %g, max %g, first %g, change %+.4g)\n",
 					life.NormalizeKind(args.Kind), args.Days, s.Last, s.Unit, s.Min, s.Max, s.First, s.Last-s.First)
 			}
-			from := len(recs) - 5
-			if from < 0 {
-				from = 0
-			}
+			from := max(len(recs)-5, 0)
 			for _, r := range recs[from:] {
 				fmt.Fprintf(&b, "- [%s] %s", r.Id, r.GetDateTime("noted_at").Time().In(time.Local).Format("Jan 2 15:04"))
 				if v := r.GetFloat("value_num"); v != 0 {

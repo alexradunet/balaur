@@ -137,10 +137,3 @@ func TestOfferChoicesDefaultPrompt(t *testing.T) {
 		t.Errorf("default prompt = %q, want %q", prompt, "Your word")
 	}
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

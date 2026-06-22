@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -37,8 +38,8 @@ func verifyCmd(app core.App) *cobra.Command {
 		// (verify.Correction is scaffolding and never persisted, so every
 		// user row is a real owner message).
 		start := -1
-		for i := len(recs) - 1; i >= 0; i-- {
-			if recs[i].GetString("role") == "user" {
+		for i, rec := range slices.Backward(recs) {
+			if rec.GetString("role") == "user" {
 				start = i
 				break
 			}

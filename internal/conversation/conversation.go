@@ -13,6 +13,7 @@ package conversation
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -112,10 +113,10 @@ func RecentTurns(app core.App, conversationID string, limit int) ([]llm.Message,
 	}
 	// Query returns newest-first; context wants oldest-first.
 	msgs := make([]llm.Message, 0, len(recs))
-	for i := len(recs) - 1; i >= 0; i-- {
+	for _, rec := range slices.Backward(recs) {
 		msgs = append(msgs, llm.Message{
-			Role:    recs[i].GetString("role"),
-			Content: recs[i].GetString("content"),
+			Role:    rec.GetString("role"),
+			Content: rec.GetString("content"),
 		})
 	}
 	return msgs, nil
@@ -155,8 +156,6 @@ func History(app core.App, conversationID string, limit int) ([]*core.Record, er
 	if err != nil {
 		return nil, fmt.Errorf("loading history: %w", err)
 	}
-	for i, j := 0, len(recs)-1; i < j; i, j = i+1, j-1 {
-		recs[i], recs[j] = recs[j], recs[i]
-	}
+	slices.Reverse(recs)
 	return recs, nil
 }

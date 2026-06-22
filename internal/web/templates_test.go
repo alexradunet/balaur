@@ -321,8 +321,8 @@ func TestChatbarPollAndDraft(t *testing.T) {
 	}
 	// Locate the submit button by finding type="submit" then walking back to its
 	// enclosing <button tag, and confirm that opening tag carries no disabled attr.
-	if idx := strings.Index(readyOut, `type="submit"`); idx >= 0 {
-		start := strings.LastIndex(readyOut[:idx], "<button")
+	if before, _, ok := strings.Cut(readyOut, `type="submit"`); ok {
+		start := strings.LastIndex(before, "<button")
 		if start >= 0 && strings.Contains(openingTag(readyOut[start:], "<button"), "disabled") {
 			t.Error("ready draft submit button must not be disabled")
 		}

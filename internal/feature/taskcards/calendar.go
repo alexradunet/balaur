@@ -79,7 +79,7 @@ func buildCalendar(app core.App, monthParam string) CalView {
 	var weeks [][]CalCell
 	for ws := gridStart; ws.Before(gridEnd); ws = ws.AddDate(0, 0, 7) {
 		week := make([]CalCell, 0, 7)
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			d := ws.AddDate(0, 0, i)
 			key := d.Format("2006-01-02")
 			week = append(week, CalCell{

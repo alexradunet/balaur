@@ -136,8 +136,8 @@ func parseShowURL(raw string) (typ, query string, ok bool) {
 		return "", "", false
 	}
 	rest := strings.TrimPrefix(raw, prefix)
-	if i := strings.IndexByte(rest, '?'); i >= 0 {
-		typ, query = rest[:i], rest[i+1:]
+	if before, after, ok := strings.Cut(rest, "?"); ok {
+		typ, query = before, after
 	} else {
 		typ = rest
 	}

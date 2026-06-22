@@ -9,6 +9,7 @@ package cards
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -262,10 +263,7 @@ func ValidateCards(cs []Card) ([]Card, error) {
 		card.H = clampLayout(c.H, 0, 120)
 		// Ensure X+W ≤ 12 (shrink W if needed; 0 means "use spec default" so skip).
 		if card.W > 0 && card.X+card.W > 12 {
-			card.W = 12 - card.X
-			if card.W < 1 {
-				card.W = 1
-			}
+			card.W = max(12-card.X, 1)
 		}
 		out = append(out, card)
 	}
@@ -355,12 +353,7 @@ func Validate(typ string, params map[string]string) (map[string]string, error) {
 }
 
 func enumContains(enum []string, v string) bool {
-	for _, e := range enum {
-		if e == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(enum, v)
 }
 
 // clampInt parses s as an int, clamps it to [lo, hi], and returns the

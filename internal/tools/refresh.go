@@ -30,7 +30,7 @@ func ParseRefresh(s string) (types []string, rest string, ok bool) {
 	}
 	s = strings.TrimPrefix(s, RefreshMarker)
 	head, rest, _ := strings.Cut(s, "\n")
-	for _, t := range strings.Split(head, ",") {
+	for t := range strings.SplitSeq(head, ",") {
 		t = strings.TrimSpace(t)
 		if t == "" {
 			continue

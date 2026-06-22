@@ -10,7 +10,9 @@ package knowledge
 
 import (
 	"fmt"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,13 +133,7 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 	}
 	from := rec.GetString("status")
 
-	allowed := false
-	for _, t := range validTransitions[from] {
-		if t == to {
-			allowed = true
-			break
-		}
-	}
+	allowed := slices.Contains(validTransitions[from], to)
 	store.Audit(app, "owner", "knowledge."+to, string(kind)+"/"+rec.Id, allowed,
 		map[string]any{"from": from})
 	if !allowed {
@@ -171,8 +167,10 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 			continue
 		}
 		if f == "importance" {
-			n := 0
-			fmt.Sscanf(v, "%d", &n)
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				continue // ignore a malformed importance rather than coercing to 0
+			}
 			rec.Set(f, clampImportance(n))
 			continue
 		}
