@@ -254,16 +254,15 @@ func (s *chatStream) refreshCard(typ string) {
 
 // appendChoices appends a live dialogue-choice panel.
 func (s *chatStream) appendChoices(prompt string, choices []tools.Choice) {
-	cv := choicesView{
-		Prompt: prompt, Nonce: newNonce(), Choices: choices,
-		SoulAvatarURL: s.soulURL, OwnerName: s.ownerName,
+	items := make([]chat.ChoiceItem, len(choices))
+	for i, c := range choices {
+		items[i] = chat.ChoiceItem{Label: c.Label, Hint: c.Hint}
 	}
-	var b strings.Builder
-	if err := s.h.tmpl.ExecuteTemplate(&b, "chat-choices", cv); err != nil {
-		s.h.app.Logger().Warn("chat fragment render failed", "fragment", "chat-choices", "err", err)
-		return
-	}
-	_ = s.sse.PatchElements(b.String(), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
+	node := chat.Choices(chat.ChoicesProps{
+		Prompt: prompt, Nonce: newNonce(), OwnerName: s.ownerName,
+		SoulAvatarSrc: s.soulURL, Choices: items,
+	})
+	_ = s.sse.PatchElements(s.renderNode(node), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
 }
 
 // note appends a standalone assistant message (e.g. the honesty check note).

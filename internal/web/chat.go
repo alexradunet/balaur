@@ -9,19 +9,9 @@ import (
 
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/store"
-	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/ui/chat"
 )
-
-// choicesView is the template payload for the chat-choices fragment.
-type choicesView struct {
-	Prompt        string
-	Nonce         string // unique per render, used for element IDs
-	Choices       []tools.Choice
-	SoulAvatarURL string
-	OwnerName     string
-}
 
 // newNonce generates a random 8-byte hex string for unique element IDs.
 func newNonce() string {
