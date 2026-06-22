@@ -84,6 +84,49 @@ func TestLifecycleRejectsInvalidTransitions(t *testing.T) {
 	}
 }
 
+// TestTransitionAuditOrdering verifies the consent-ledger ordering:
+// denied transitions emit an allowed=false audit entry and return an error;
+// allowed transitions emit exactly one allowed=true audit entry only after the
+// record's status has changed (save-first, audit-after).
+func TestTransitionAuditOrdering(t *testing.T) {
+	app := storetest.NewApp(t)
+	rec, err := ProposeMemory(app, MemoryProposal{Title: "audit order test", Importance: 1})
+	if err != nil {
+		t.Fatalf("ProposeMemory: %v", err)
+	}
+
+	// --- denied case ---
+	_, err = Transition(app, Memory, rec.Id, StatusArchived) // proposed→archived invalid
+	if err == nil {
+		t.Fatal("denied transition must return an error")
+	}
+	if countAudit(t, app, "knowledge.archived", false) != 1 {
+		t.Fatal("denied transition: expected exactly one allowed=false audit entry")
+	}
+	if countAudit(t, app, "knowledge.archived", true) != 0 {
+		t.Fatal("denied transition: must not produce an allowed=true audit entry")
+	}
+	// status must not have changed
+	fresh, _ := app.FindRecordById(string(Memory), rec.Id)
+	if fresh.GetString("status") != StatusProposed {
+		t.Fatalf("denied transition changed status to %q", fresh.GetString("status"))
+	}
+
+	// --- allowed case ---
+	_, err = Transition(app, Memory, rec.Id, StatusActive)
+	if err != nil {
+		t.Fatalf("Transition to active: %v", err)
+	}
+	if countAudit(t, app, "knowledge.active", true) != 1 {
+		t.Fatal("allowed transition: expected exactly one allowed=true audit entry")
+	}
+	// status must have changed to active
+	fresh, _ = app.FindRecordById(string(Memory), rec.Id)
+	if fresh.GetString("status") != StatusActive {
+		t.Fatalf("status = %q, want active", fresh.GetString("status"))
+	}
+}
+
 func TestSearchActiveOnlyFindsActive(t *testing.T) {
 	app := storetest.NewApp(t)
 
