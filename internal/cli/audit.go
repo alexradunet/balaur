@@ -33,9 +33,6 @@ func auditCmd(app core.App) *cobra.Command {
 				"allowed": r.GetBool("allowed"),
 				"created": jsonTime(r.GetDateTime("created").Time()),
 			}
-			if v := r.GetString("head"); v != "" {
-				row["head"] = v
-			}
 			if v := r.GetString("detail"); v != "" && v != "null" {
 				row["detail"] = r.Get("detail")
 			}
