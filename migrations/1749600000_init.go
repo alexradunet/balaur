@@ -42,7 +42,7 @@ func InitCollections(app core.App) error {
 		&core.TextField{Name: "name", Required: true, Max: 120},
 		&core.TextField{Name: "purpose", Max: 2000},
 		&core.TextField{Name: "balaur_avatar", Max: 20},
-		&core.JSONField{Name: "tools"},
+		&core.JSONField{Name: "capability_groups"},
 		&core.AutodateField{Name: "created", OnCreate: true},
 		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)

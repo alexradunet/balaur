@@ -1,16 +1,16 @@
-# Graph Report - agent-a1e71a7409c3f0c9f  (2026-06-22)
+# Graph Report - agent-a5e11f16cefb400a5  (2026-06-22)
 
 ## Corpus Check
-- 506 files · ~548,663 words
+- 506 files · ~548,811 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5882 nodes · 9728 edges · 329 communities (314 shown, 15 thin omitted)
+- 5882 nodes · 9728 edges · 327 communities (311 shown, 16 thin omitted)
 - Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2062 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `75f4b360`
+- Built from commit: `afae489b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -118,7 +118,6 @@
 - [[_COMMUNITY_Community 100|Community 100]]
 - [[_COMMUNITY_Community 101|Community 101]]
 - [[_COMMUNITY_Community 102|Community 102]]
-- [[_COMMUNITY_Community 103|Community 103]]
 - [[_COMMUNITY_Community 104|Community 104]]
 - [[_COMMUNITY_Community 105|Community 105]]
 - [[_COMMUNITY_Community 106|Community 106]]
@@ -160,7 +159,6 @@
 - [[_COMMUNITY_Community 148|Community 148]]
 - [[_COMMUNITY_Community 149|Community 149]]
 - [[_COMMUNITY_Community 150|Community 150]]
-- [[_COMMUNITY_Community 151|Community 151]]
 - [[_COMMUNITY_Community 152|Community 152]]
 - [[_COMMUNITY_Community 153|Community 153]]
 - [[_COMMUNITY_Community 154|Community 154]]
@@ -370,7 +368,7 @@
 - **Three governing principles** — self_knowledge_persistence_principle, self_knowledge_consent_boundary, self_knowledge_verify_principle [EXTRACTED 0.90]
 - **Typed card rendering system** — self_knowledge_card_show, self_knowledge_show_cards, self_knowledge_card_registry, self_knowledge_feature_cards, self_knowledge_right_panel [EXTRACTED 0.85]
 
-## Communities (329 total, 15 thin omitted)
+## Communities (327 total, 16 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.08
@@ -457,16 +455,16 @@ Cohesion: 0.19
 Nodes (29): execute(), executeEnvelope(), executeList(), TestChatReportsToolsAndVerdict(), TestDoctorHealthyBox(), TestDoctorModelReadyNonFatal(), TestEnvelopeFamilies(), TestEnvelopePanicRecovered() (+21 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.15
-Nodes (30): App, TB, Record, T, TB, TestApp, activateLocalModel(), seedScriptedModel() (+22 more)
+Cohesion: 0.12
+Nodes (29): App, TB, Record, T, TB, TestApp, activateLocalModel(), seedScriptedModel() (+21 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.36
-Nodes (13): App, Record, Time, Buckets, CreateOpts, DoneResult, addEntry(), Bucket() (+5 more)
+Cohesion: 0.24
+Nodes (15): App, Record, Time, RequestEvent, handlers, Buckets, CreateOpts, DoneResult (+7 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.16
-Nodes (10): RequestEvent, handlers, Card, Node, RequestEvent, handlers, SetOwnerSetting(), cardTitleIcon() (+2 more)
+Cohesion: 0.15
+Nodes (17): Card, Node, RequestEvent, handlers, T, SetOwnerSetting(), cardTitleIcon(), clusterChipNode() (+9 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.13
@@ -545,16 +543,16 @@ Cohesion: 0.21
 Nodes (19): App, Card, Tool, T, MarkArtifact(), ParseArtifact(), showCardsTool(), TestMarkParseArtifactNoTitle() (+11 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.60
-Nodes (4): T, TestMessageViewsClusterRendersNonClickableChip(), TestMessageViewsStripsRefreshMarker(), TestMessageViewsUicardRendersChip()
+Cohesion: 0.33
+Nodes (7): Node, T, Alert(), alertTone(), TestAlertInfoDefaultsNoTitle(), TestAlertWarn(), AlertProps
 
 ### Community 44 - "Community 44"
 Cohesion: 0.25
 Nodes (17): App, Node, T, buildHabits(), habitRow(), habitsBody(), HabitsCard(), registerHabits() (+9 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.31
-Nodes (11): T, AvatarEntry, avatarMap(), BalaurHeads(), SoulAvatars(), TestAvatarRosters(), TestLegacySoulAvatarAliases(), TestSetOwnerSettingConcurrent() (+3 more)
+Cohesion: 0.18
+Nodes (19): App, T, RequestEvent, handlers, AvatarEntry, avatarMap(), BalaurAvatarURL(), BalaurAvatarURLForKey() (+11 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.39
@@ -665,8 +663,8 @@ Cohesion: 0.21
 Nodes (11): Node, Node, T, ListItemProps, List(), ListItem(), TestListItemAttrsPassThrough(), TestListItemLink() (+3 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.31
-Nodes (8): Record, RequestEvent, Time, handlers, snoozeUntil(), taskCardViewOf(), taskViewOf(), taskView
+Cohesion: 0.46
+Nodes (6): Record, Time, snoozeUntil(), taskCardViewOf(), taskViewOf(), taskView
 
 ### Community 74 - "Community 74"
 Cohesion: 0.11
@@ -681,8 +679,8 @@ Cohesion: 0.23
 Nodes (12): Period, RequestEvent, Time, handlers, ServeEvent, demoSummaries(), demoTurns(), devSeedEnabled() (+4 more)
 
 ### Community 77 - "Community 77"
-Cohesion: 0.33
-Nodes (12): T, TB, TestApp, seedActiveMemory(), seedProposedMemory(), TestKnowledgeEditDatastar(), TestKnowledgeGridBadKindIsHTTPError(), TestKnowledgeGridDatastar() (+4 more)
+Cohesion: 0.19
+Nodes (20): T, T, TB, TestApp, T, TestHandleToolResultRefreshRoutes(), TestRefreshCardPatchesToday(), newWebApp() (+12 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.17
@@ -748,10 +746,6 @@ Nodes (11): Record, T, TB, TestApp, Time, questGroup(), seedTaskWithRecur(), Tes
 Cohesion: 0.24
 Nodes (6): basmSyncChatbarSpace(), basmWatchChatbar(), drawer(), rail(), save(), setClosedInert()
 
-### Community 94 - "Community 94"
-Cohesion: 0.36
-Nodes (8): App, RequestEvent, handlers, BalaurAvatarURL(), BalaurAvatarURLForKey(), GetOwnerSetting(), OwnerName(), SoulAvatarURL()
-
 ### Community 95 - "Community 95"
 Cohesion: 0.27
 Nodes (8): ClientSource, App, RequestEvent, handlers, guardLocalUI(), isAllowedHost(), sameHost(), toolIconFile()
@@ -781,12 +775,8 @@ Cohesion: 0.58
 Nodes (8): CalView, T, renderCalendar(), syntheticCalView(), TestCalendarCard(), TestCalendarCardCellClasses(), TestCalendarCardDayLink(), TestCalendarCardItem()
 
 ### Community 102 - "Community 102"
-Cohesion: 0.15
-Nodes (21): Node, Story, Node, T, CloudConsent(), CloudForm(), CloudPresetPicker(), cloudWarning() (+13 more)
-
-### Community 103 - "Community 103"
-Cohesion: 0.31
-Nodes (9): T, parseShowURL(), showURL(), TestPanelCollapsed(), TestPanelWidthCSS(), TestParseShowURL(), TestShowURL(), TestUIPanelCollapse() (+1 more)
+Cohesion: 0.25
+Nodes (14): Node, Story, CloudConsent(), CloudForm(), CloudPresetPicker(), cloudWarning(), consentCheck(), CloudConsentView (+6 more)
 
 ### Community 104 - "Community 104"
 Cohesion: 0.43
@@ -947,10 +937,6 @@ Nodes (3): T, TestRecapCard(), TestRecapCardEmpty()
 ### Community 150 - "Community 150"
 Cohesion: 0.67
 Nodes (3): T, TestSparkPointsBuildsPolyline(), TestSparkPointsNeedsTwo()
-
-### Community 151 - "Community 151"
-Cohesion: 0.67
-Nodes (3): T, TestHandleToolResultRefreshRoutes(), TestRefreshCardPatchesToday()
 
 ### Community 152 - "Community 152"
 Cohesion: 0.07
@@ -1603,14 +1589,14 @@ Nodes (3): seedCmd(), App, Command
 ## Knowledge Gaps
 - **2919 isolated node(s):** `$schema`, `allow`, `PostToolUse`, `PreToolUse`, `ponytail@ponytail` (+2914 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Append()` connect `Community 34` to `Community 0`, `Community 1`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 9`, `Community 10`, `Community 11`, `Community 16`, `Community 18`, `Community 19`, `Community 20`, `Community 22`, `Community 24`, `Community 25`, `Community 26`, `Community 27`, `Community 29`, `Community 31`, `Community 33`, `Community 35`, `Community 36`, `Community 38`, `Community 40`, `Community 41`, `Community 42`, `Community 44`, `Community 47`, `Community 48`, `Community 50`, `Community 52`, `Community 53`, `Community 55`, `Community 57`, `Community 58`, `Community 60`, `Community 61`, `Community 62`, `Community 64`, `Community 66`, `Community 67`, `Community 70`, `Community 71`, `Community 72`, `Community 74`, `Community 75`, `Community 76`, `Community 78`, `Community 81`, `Community 82`, `Community 84`, `Community 86`, `Community 87`, `Community 94`, `Community 96`, `Community 97`, `Community 98`, `Community 99`, `Community 100`, `Community 102`, `Community 109`, `Community 113`, `Community 119`, `Community 121`, `Community 136`, `Community 137`, `Community 147`, `Community 149`, `Community 178`, `Community 183`, `Community 230`, `Community 295`, `Community 301`, `Community 306`, `Community 310`, `Community 318`, `Community 320`, `Community 332`?**
+- **Why does `Append()` connect `Community 34` to `Community 0`, `Community 1`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 9`, `Community 10`, `Community 11`, `Community 16`, `Community 18`, `Community 19`, `Community 20`, `Community 22`, `Community 24`, `Community 25`, `Community 26`, `Community 27`, `Community 29`, `Community 31`, `Community 33`, `Community 35`, `Community 36`, `Community 38`, `Community 40`, `Community 41`, `Community 42`, `Community 43`, `Community 44`, `Community 45`, `Community 47`, `Community 48`, `Community 50`, `Community 52`, `Community 53`, `Community 55`, `Community 57`, `Community 58`, `Community 60`, `Community 61`, `Community 62`, `Community 64`, `Community 66`, `Community 67`, `Community 70`, `Community 71`, `Community 72`, `Community 74`, `Community 75`, `Community 76`, `Community 78`, `Community 81`, `Community 82`, `Community 84`, `Community 86`, `Community 87`, `Community 96`, `Community 97`, `Community 98`, `Community 99`, `Community 100`, `Community 102`, `Community 109`, `Community 113`, `Community 119`, `Community 121`, `Community 136`, `Community 137`, `Community 147`, `Community 149`, `Community 178`, `Community 183`, `Community 230`, `Community 295`, `Community 301`, `Community 306`, `Community 310`, `Community 318`, `Community 320`, `Community 332`?**
   _High betweenness centrality (0.091) - this node is a cross-community bridge._
-- **Why does `Text()` connect `Community 48` to `Community 5`, `Community 6`, `Community 7`, `Community 137`, `Community 10`, `Community 11`, `Community 16`, `Community 17`, `Community 19`, `Community 20`, `Community 147`, `Community 21`, `Community 25`, `Community 26`, `Community 30`, `Community 33`, `Community 35`, `Community 36`, `Community 295`, `Community 40`, `Community 41`, `Community 44`, `Community 301`, `Community 178`, `Community 50`, `Community 52`, `Community 306`, `Community 310`, `Community 183`, `Community 57`, `Community 58`, `Community 60`, `Community 61`, `Community 62`, `Community 66`, `Community 67`, `Community 72`, `Community 332`, `Community 78`, `Community 82`, `Community 84`, `Community 98`, `Community 100`, `Community 102`, `Community 105`, `Community 108`, `Community 113`, `Community 121`?**
+- **Why does `Text()` connect `Community 48` to `Community 5`, `Community 6`, `Community 7`, `Community 137`, `Community 10`, `Community 11`, `Community 16`, `Community 17`, `Community 19`, `Community 20`, `Community 147`, `Community 21`, `Community 25`, `Community 26`, `Community 30`, `Community 33`, `Community 35`, `Community 36`, `Community 295`, `Community 40`, `Community 41`, `Community 43`, `Community 44`, `Community 301`, `Community 178`, `Community 50`, `Community 52`, `Community 306`, `Community 310`, `Community 183`, `Community 57`, `Community 58`, `Community 60`, `Community 61`, `Community 62`, `Community 66`, `Community 67`, `Community 72`, `Community 332`, `Community 78`, `Community 82`, `Community 84`, `Community 98`, `Community 100`, `Community 102`, `Community 105`, `Community 108`, `Community 113`, `Community 121`?**
   _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Why does `NewApp()` connect `Community 20` to `Community 0`, `Community 1`, `Community 3`, `Community 5`, `Community 135`, `Community 10`, `Community 19`, `Community 24`, `Community 30`, `Community 31`, `Community 34`, `Community 165`, `Community 42`, `Community 45`, `Community 52`, `Community 54`, `Community 56`, `Community 319`, `Community 64`, `Community 74`, `Community 75`, `Community 339`, `Community 84`, `Community 87`, `Community 90`, `Community 230`, `Community 107`, `Community 109`, `Community 118`?**
   _High betweenness centrality (0.030) - this node is a cross-community bridge._
