@@ -6,9 +6,7 @@ package web
 // in #dock; the app-shell grid makes the dock fill the left column.
 
 import (
-	"html/template"
 	"net/http"
-	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
@@ -52,13 +50,6 @@ func composerNode(d homeData) g.Node {
 		Disabled:    !d.ChatReady,
 		Palette:     commandPaletteNode(),
 	})
-}
-
-// composerHTML renders composerNode to HTML for embedding in the dock template.
-func composerHTML(d homeData) template.HTML {
-	var b strings.Builder
-	_ = composerNode(d).Render(&b)
-	return template.HTML(b.String())
 }
 
 // root handles GET / and, because "/" is the router's subtree catch-all, any
@@ -165,7 +156,7 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 		Variant:   chat.DockHome,
 		HasRecap:  dock.HasRecap,
 		NowMillis: dock.NowMillis,
-		Convo:     g.Raw(string(dock.ChatBodyHTML)),
+		Convo:     dock.ChatBodyHTML,
 		Composer:  composerNode(dock),
 	})
 	page := shell.ChatShell(shell.ChatShellProps{

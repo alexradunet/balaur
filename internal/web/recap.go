@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"html/template"
 	"strconv"
 	"strings"
 	"time"
@@ -140,7 +139,7 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 		if err != nil {
 			return e.InternalServerError("loading day", err)
 		}
-		b.WriteString(string(h.renderMessages(h.messageViews(msgs))))
+		b.WriteString(renderNodeHTML(h.renderMessages(h.messageViews(msgs))))
 	} else {
 		var cards []recapView
 		for _, child := range recap.Children(p) {
@@ -163,17 +162,17 @@ type messageView struct {
 	Role            string
 	Tool            string
 	Content         string
-	Origin          string        // agent-initiated marker: "nudge" | "briefing"; "" = chat
-	CardURL         string        // inline card embed endpoint (legacy; kept for the lazy-mount tests)
-	CardBody        template.HTML // server-rendered inline card, embedded directly (proposals/inline only)
-	ArtifactTitle   string        // non-empty for uicard/cluster artifacts (drives the chip label)
-	ArtifactIcon    string        // /static/icons stem for the chip ("" = none)
-	ArtifactType    string        // non-empty for single-card artifacts (drives the clickable chip URL)
-	ArtifactQuery   string        // raw query string for the single-card re-open URL
-	SoulAvatarURL   string        // resolved soul avatar URL (same for all views in one call)
-	BalaurAvatarURL string        // resolved Balaur head avatar URL
-	OwnerName       string        // display name for the "You" label
-	WhoLabel        string        // assistant display name ("Balaur", or the active head's name)
+	Origin          string // agent-initiated marker: "nudge" | "briefing"; "" = chat
+	CardURL         string // inline card embed endpoint (legacy; kept for the lazy-mount tests)
+	CardBody        g.Node // server-rendered inline card, embedded directly (proposals/inline only)
+	ArtifactTitle   string // non-empty for uicard/cluster artifacts (drives the chip label)
+	ArtifactIcon    string // /static/icons stem for the chip ("" = none)
+	ArtifactType    string // non-empty for single-card artifacts (drives the clickable chip URL)
+	ArtifactQuery   string // raw query string for the single-card re-open URL
+	SoulAvatarURL   string // resolved soul avatar URL (same for all views in one call)
+	BalaurAvatarURL string // resolved Balaur head avatar URL
+	OwnerName       string // display name for the "You" label
+	WhoLabel        string // assistant display name ("Balaur", or the active head's name)
 
 	// Datastar streaming fields (master chat dock). BubbleID/BodyID give a
 	// streamed element a stable id so the SSE handler can morph it in place;
@@ -188,7 +187,7 @@ type messageView struct {
 // markup for page-load history, the Home greeting, and day-recap expansion. The
 // live stream (chatstream.go) renders the same components, so history and
 // streamed turns match.
-func (h *handlers) renderMessages(views []messageView) template.HTML {
+func (h *handlers) renderMessages(views []messageView) g.Node {
 	nodes := make([]g.Node, 0, len(views))
 	for _, mv := range views {
 		switch mv.Role {
@@ -210,8 +209,8 @@ func (h *handlers) renderMessages(views []messageView) template.HTML {
 				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Who: mv.WhoLabel,
 				AvatarSrc: mv.BalaurAvatarURL, Content: mv.Content, Chip: chip,
 			}))
-			if mv.CardBody != "" { // proposal etc. → inline k-inline below (unchanged)
-				nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), g.Raw(string(mv.CardBody))))
+			if mv.CardBody != nil { // proposal etc. → inline k-inline below (unchanged)
+				nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), mv.CardBody))
 			}
 		default: // assistant
 			nodes = append(nodes, chat.Message(chat.MessageProps{
@@ -219,16 +218,14 @@ func (h *handlers) renderMessages(views []messageView) template.HTML {
 			}))
 		}
 	}
-	var b strings.Builder
-	_ = g.Group(nodes).Render(&b)
-	return template.HTML(b.String())
+	return g.Group(nodes)
 }
 
 // chatBodyHTML renders the #chat body: the conversation history when present,
 // otherwise the hearth greeting (the crest + a balaur welcome, or the model
 // setup notice). Everything goes through the chat components so the empty state,
 // history, and the live stream share one look.
-func (h *handlers) chatBodyHTML(d homeData) template.HTML {
+func (h *handlers) chatBodyHTML(d homeData) g.Node {
 	if len(d.History) > 0 {
 		return h.renderMessages(d.History)
 	}
@@ -242,9 +239,7 @@ func (h *handlers) chatBodyHTML(d homeData) template.HTML {
 	crest := g.El("img", g.Attr("class", "hearth-crest"), g.Attr("src", "/static/crest.png"),
 		g.Attr("alt", "The Balaur crest — a three-headed dragon holding a glowing orb and a tome"))
 	greeting := chat.Message(chat.MessageProps{Role: "balaur", AvatarSrc: d.BalaurAvatarURL, Who: "Balaur", Content: content})
-	var b strings.Builder
-	_ = g.Group([]g.Node{crest, greeting}).Render(&b)
-	return template.HTML(b.String())
+	return g.Group([]g.Node{crest, greeting})
 }
 
 func (h *handlers) messageViews(recs []*core.Record) []messageView {

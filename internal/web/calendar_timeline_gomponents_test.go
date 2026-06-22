@@ -34,10 +34,10 @@ func TestCalendarTimelineRenderViaGomponents(t *testing.T) {
 		}
 	}
 
-	if cal := string(h.cardHTML("calendar", nil)); !strings.Contains(cal, `id="ucard-calendar"`) {
+	if cal := renderNodeHTML(h.cardHTML("calendar", nil)); !strings.Contains(cal, `id="ucard-calendar"`) {
 		t.Fatalf("calendar card not rendered:\n%s", cal)
 	}
-	if tl := string(h.cardHTML("timeline", nil)); !strings.Contains(tl, `id="ucard-timeline"`) || !strings.Contains(tl, "Ship it") {
+	if tl := renderNodeHTML(h.cardHTML("timeline", nil)); !strings.Contains(tl, `id="ucard-timeline"`) || !strings.Contains(tl, "Ship it") {
 		t.Fatalf("timeline card missing id or the seeded task:\n%s", tl)
 	}
 }

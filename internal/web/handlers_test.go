@@ -493,7 +493,7 @@ func TestUICardHistoryRendersChip(t *testing.T) {
 	}
 
 	// renderMessages is a *handlers method; use it directly.
-	out := string(h.renderMessages([]messageView{mv}))
+	out := renderNodeHTML(h.renderMessages([]messageView{mv}))
 	if !strings.Contains(out, `art-chip`) {
 		t.Errorf("history uicard render: missing art-chip. output:\n%s", out)
 	}

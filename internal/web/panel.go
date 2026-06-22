@@ -82,12 +82,12 @@ func showURL(typ, query string) string {
 // string). The body is the full Focus surface (same as the old inline path).
 func (h *handlers) panelNode(typ, query string) g.Node {
 	title, icon := cardTitleIcon(typ)
-	return chat.Panel(chat.PanelProps{Title: title, Icon: icon, Body: g.Raw(string(h.uicardBody(typ, query)))})
+	return chat.Panel(chat.PanelProps{Title: title, Icon: icon, Body: h.uicardBody(typ, query)})
 }
 
 // panelClusterNode renders chat.Panel for an agent cluster (show_cards).
 func (h *handlers) panelClusterNode(title string, cs []cards.Card) g.Node {
-	return chat.Panel(chat.PanelProps{Title: title, Body: g.Raw(string(h.artifactBody(title, cs)))})
+	return chat.Panel(chat.PanelProps{Title: title, Body: h.artifactBody(title, cs)})
 }
 
 // emptyPanelNode is the placeholder shown when nothing is open.

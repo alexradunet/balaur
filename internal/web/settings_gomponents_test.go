@@ -20,7 +20,7 @@ func TestSettingsRenderViaGomponents(t *testing.T) {
 	if _, ok := ui.LookupCard("settings"); !ok {
 		t.Fatal("settings not registered via gomponents")
 	}
-	if s := string(h.cardHTML("settings", nil)); !strings.Contains(s, `id="ucard-settings"`) {
+	if s := renderNodeHTML(h.cardHTML("settings", nil)); !strings.Contains(s, `id="ucard-settings"`) {
 		t.Fatalf("settings card not rendered:\n%s", s)
 	}
 }

@@ -34,10 +34,10 @@ func TestKnowledgeRenderViaGomponents(t *testing.T) {
 		{"skills", "ucard-skills"},
 	}
 	for _, c := range cases {
-		if s := string(h.cardHTML(c.typ, nil)); !strings.Contains(s, `id="`+c.summaryID+`"`) {
+		if s := renderNodeHTML(h.cardHTML(c.typ, nil)); !strings.Contains(s, `id="`+c.summaryID+`"`) {
 			t.Fatalf("%s summary not rendered:\n%s", c.typ, s)
 		}
-		if m := string(h.cardHTML(c.typ, map[string]string{"mode": "manage"})); !strings.Contains(m, "ucard-manage") {
+		if m := renderNodeHTML(h.cardHTML(c.typ, map[string]string{"mode": "manage"})); !strings.Contains(m, "ucard-manage") {
 			t.Fatalf("%s manage not rendered:\n%s", c.typ, m)
 		}
 	}

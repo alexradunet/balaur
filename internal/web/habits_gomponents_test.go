@@ -38,7 +38,7 @@ func TestHabitsRendersViaGomponents(t *testing.T) {
 		t.Fatal("habits not registered via gomponents")
 	}
 
-	out := string(h.cardHTML("habits", nil))
+	out := renderNodeHTML(h.cardHTML("habits", nil))
 	if !strings.Contains(out, `id="ucard-habits"`) {
 		t.Fatalf("habits card root id missing:\n%s", out)
 	}

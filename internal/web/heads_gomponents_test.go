@@ -24,7 +24,7 @@ func TestHeadsRenderViaGomponents(t *testing.T) {
 		t.Fatal("heads not registered via gomponents")
 	}
 
-	if out := string(h.cardHTML("heads", nil)); !strings.Contains(out, `id="ucard-heads"`) || !strings.Contains(out, "Scout") {
+	if out := renderNodeHTML(h.cardHTML("heads", nil)); !strings.Contains(out, `id="ucard-heads"`) || !strings.Contains(out, "Scout") {
 		t.Fatalf("heads card missing id or the seeded head name:\n%s", out)
 	}
 }

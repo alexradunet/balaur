@@ -297,7 +297,6 @@ func (h *handlers) dockData() (homeData, error) {
 			data.HasRecap = oldest.Before(startOfToday)
 		}
 	}
-	data.ComposerHTML = composerHTML(data)   // the live chat input, rendered in Go
 	data.ChatBodyHTML = h.chatBodyHTML(data) // history (or greeting), via chat.Message
 	return data, nil
 }

@@ -11,7 +11,6 @@ package web
 
 import (
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"net/url"
@@ -133,10 +132,10 @@ func (h *handlers) cardSizeInto(w io.Writer, typ string, params map[string]strin
 	return fmt.Errorf("unhandled card type %q", typ)
 }
 
-// cardHTMLAt server-renders one card at the given size to HTML for inline
+// cardHTMLAt server-renders one card at the given size to a g.Node for inline
 // embedding, with validate + error-strip discipline. cardHTML/cardFocusHTML are
 // thin wrappers choosing the size and the log context.
-func (h *handlers) cardHTMLAt(typ string, params map[string]string, size ui.CardSize, logMsg string) template.HTML {
+func (h *handlers) cardHTMLAt(typ string, params map[string]string, size ui.CardSize, logMsg string) g.Node {
 	if _, ok := cards.Get(typ); !ok {
 		return cardErrorStrip("no such card type: " + typ)
 	}
@@ -149,23 +148,21 @@ func (h *handlers) cardHTMLAt(typ string, params map[string]string, size ui.Card
 		h.app.Logger().Warn(logMsg, "type", typ, "err", err)
 		return cardErrorStrip("could not render this card")
 	}
-	return template.HTML(b.String())
+	return g.Raw(b.String())
 }
 
-// cardHTML server-renders one card to HTML for inline embedding in a board grid.
+// cardHTML server-renders one card to a g.Node for inline embedding in a board grid.
 // It validates the stored params (defending against hand-edited board JSON) and
 // renders the same error strip the HTTP endpoint uses on failure, so a single
 // bad card never blanks the whole board.
-func (h *handlers) cardHTML(typ string, params map[string]string) template.HTML {
+func (h *handlers) cardHTML(typ string, params map[string]string) g.Node {
 	return h.cardHTMLAt(typ, params, ui.Tile, "board card render failed")
 }
 
 // cardErrorStrip is the inline card-error fragment (no id — several cards of the
 // same type may coexist on a board, and the slot already scopes it).
-func cardErrorStrip(msg string) template.HTML {
-	var b strings.Builder
-	_ = ui.ErrorStrip(msg).Render(&b)
-	return template.HTML(b.String())
+func cardErrorStrip(msg string) g.Node {
+	return ui.ErrorStrip(msg)
 }
 
 // uicardBody server-renders a single registry card as an in-chat artifact, at
@@ -176,7 +173,7 @@ func cardErrorStrip(msg string) template.HTML {
 // (/ui/show, via messageViews) and the agent's card_show, and re-rendered on
 // reload through this same path — so the live append and the reload stay
 // consistent (the #1 invariant from plan 088).
-func (h *handlers) uicardBody(typ, query string) template.HTML {
+func (h *handlers) uicardBody(typ, query string) g.Node {
 	vals, _ := url.ParseQuery(query)
 	return h.cardFocusHTML(typ, queryToMap(vals))
 }
@@ -185,7 +182,7 @@ func (h *handlers) uicardBody(typ, query string) template.HTML {
 // same validate + error-strip discipline as cardHTML. Restored for the in-chat
 // artifact path after plan 089 removed the /focus pages — a sidebar domain click
 // or card_show now shows the real manager, not a dead summary.
-func (h *handlers) cardFocusHTML(typ string, params map[string]string) template.HTML {
+func (h *handlers) cardFocusHTML(typ string, params map[string]string) g.Node {
 	return h.cardHTMLAt(typ, params, ui.Focus, "focus card render failed")
 }
 
@@ -193,38 +190,36 @@ func (h *handlers) cardFocusHTML(typ string, params map[string]string) template.
 // Used by panelClusterNode (the panel body for show_cards); each card is
 // rendered via cardHTML (validated + error-stripped). The panel head owns the
 // title so the cluster is untitled here (no duplicate heading).
-func (h *handlers) artifactBody(title string, cs []cards.Card) template.HTML {
+func (h *handlers) artifactBody(title string, cs []cards.Card) g.Node {
 	nodes := make([]g.Node, 0, len(cs))
 	for _, c := range cs {
-		nodes = append(nodes, g.Raw(string(h.cardHTML(c.Type, c.Params))))
+		nodes = append(nodes, h.cardHTML(c.Type, c.Params))
 	}
-	var b strings.Builder
-	_ = chat.Cluster(chat.ClusterProps{Cards: nodes}).Render(&b)
-	return template.HTML(b.String())
+	return chat.Cluster(chat.ClusterProps{Cards: nodes})
 }
 
 // proposalBody server-renders an approval/proposal card (a task, or a knowledge
-// record) for inline chat embeds. Returns "" when the record can't be loaded, so
+// record) for inline chat embeds. Returns nil when the record can't be loaded, so
 // the tool row degrades to plain text rather than a broken card.
-func (h *handlers) proposalBody(kind, id string) template.HTML {
+func (h *handlers) proposalBody(kind, id string) g.Node {
 	if kind == "tasks" {
 		rec, err := h.app.FindRecordById("tasks", id)
 		if err != nil {
-			return ""
+			return nil
 		}
 		s, err := h.taskCardHTML(rec)
 		if err != nil {
-			return ""
+			return nil
 		}
-		return template.HTML(s)
+		return g.Raw(s)
 	}
 	rec, err := h.app.FindRecordById(kind, id) // collection name == kind ("memories"/"skills")
 	if err != nil {
-		return ""
+		return nil
 	}
 	s, err := h.renderCardHTML(knowledge.Kind(kind), rec)
 	if err != nil {
-		return ""
+		return nil
 	}
-	return template.HTML(s)
+	return g.Raw(s)
 }

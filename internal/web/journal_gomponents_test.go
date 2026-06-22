@@ -23,7 +23,7 @@ func TestDayRenderViaGomponents(t *testing.T) {
 		t.Fatal("day not registered via gomponents")
 	}
 
-	if d := string(h.cardHTML("day", nil)); !strings.Contains(d, `id="ucard-day"`) {
+	if d := renderNodeHTML(h.cardHTML("day", nil)); !strings.Contains(d, `id="ucard-day"`) {
 		t.Fatalf("day card not rendered:\n%s", d)
 	}
 }
