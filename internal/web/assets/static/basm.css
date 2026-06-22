@@ -2070,7 +2070,16 @@ progress.pull-progress-bar::-moz-progress-bar {
   cursor: pointer;
 }
 .proc-pill:hover { border-color: var(--gold); }
-.proc-pill-active { border-color: var(--gold); background: var(--surface); font-weight: 600; }
+.proc-pill-active {
+  border-color: var(--gold-deep);
+  box-shadow: inset 0 0 0 1px var(--gold);
+  background: var(--surface);
+  color: var(--gold-ink);
+  font-weight: 600;
+}
+/* A leading check makes the selected processor unmistakable at a glance,
+   distinct from a mere hover border. */
+.proc-pill-active::before { content: "\2713\00a0"; color: var(--gold-deep); }
 .proc-pill-disabled {
   opacity: .6;
   cursor: not-allowed;
@@ -2086,6 +2095,66 @@ progress.pull-progress-bar::-moz-progress-bar {
   margin: 2px 0 var(--space-2);
   font-size: 14px;
   color: var(--ink-muted);
+}
+
+/* Runtime variant rows (CPU, Vulkan) inside the "Local AI runtime" section:
+   info column grows left, the action hugs right, stacked rows separated by a
+   parchment hairline. Reflows to a stack on narrow widths. */
+.runtime-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+.runtime-row + .runtime-row { border-top: 1px solid var(--parch-edge); }
+.runtime-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.runtime-row-info .model-detail-line { margin: 0; }
+.runtime-row-action {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-width: 640px) {
+  .runtime-row { flex-direction: column; align-items: stretch; }
+  .runtime-row-action { justify-content: flex-start; }
+}
+
+/* Download progress meter (StatusDownloading): a stacked container with a track
+   behind the gold fill and a muted byte/speed line below. The fill width is
+   data-driven via the inline style="width:NN%" on .model-dl-bar — never set it
+   here. */
+.model-dl-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+.model-dl-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.model-dl-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+  border-radius: 999px;
+  transition: width .2s ease;
+}
+.model-dl-label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .model-dl-bar { transition: none; }
 }
 
 .model-form-checks {

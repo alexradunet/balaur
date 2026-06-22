@@ -82,7 +82,7 @@ func Panel(v PanelView) g.Node {
 	if len(v.Models) == 0 {
 		kids = append(kids, ui.EmptyState(ui.EmptyProps{
 			Title: "No local models yet",
-			Line:  "Download the official model below to run it in-process.",
+			Line:  "Download a curated model from the “Get a model” section below to run one in-process — no account needed.",
 		}))
 	} else {
 		grid := []g.Node{h.Class("k-grid models-grid")}
