@@ -1,18 +1,14 @@
-// Package web serves Balaur's Datastar interface: server-rendered html/template
-// pages with fragment swaps. The PocketBase admin dashboard stays the
+// Package web serves Balaur's Datastar interface: server-rendered gomponents
+// pages with SSE fragment patches. The PocketBase admin dashboard stays the
 // superuser engine room; this is the product surface.
 package web
 
 import (
-	"fmt"
-	"html/template"
 	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
@@ -27,7 +23,6 @@ import (
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/shell"
 	webstatic "github.com/alexradunet/balaur/internal/web/assets"
-	webassets "github.com/alexradunet/balaur/web"
 )
 
 // toolIconFile maps a tool name to a pixel icon filename under /static/icons/.
@@ -51,48 +46,6 @@ func toolIconFile(name string) string {
 		return "shield"
 	}
 	return "orb"
-}
-
-// funcs are the template helpers the Basm cards and chat messages need.
-var funcs = template.FuncMap{
-	// iter 5 → [0 1 2 3 4]; used for the importance pips.
-	"iter": func(n int) []int {
-		out := make([]int, n)
-		for i := range out {
-			out[i] = i
-		}
-		return out
-	},
-	"list":  func(items ...string) []string { return items },
-	"lower": strings.ToLower,
-	// reverse flips any slice for templates (recap bands render oldest-up).
-	"reverse": func(in reflect.Value) reflect.Value {
-		out := reflect.MakeSlice(in.Type(), in.Len(), in.Len())
-		for i := 0; i < in.Len(); i++ {
-			out.Index(in.Len() - 1 - i).Set(in.Index(i))
-		}
-		return out
-	},
-	// toolIcon returns a pixel icon filename for a tool name, used in chat-messages.html.
-	// The template renders <img src="/static/icons/{{toolIcon .Tool}}.png">.
-	"toolIcon": toolIconFile,
-	// addOne increments an integer by 1; used in chat-choices to show 1-based indices.
-	"addOne": func(i int) int { return i + 1 },
-	// base returns the last element of a path (filepath.Base), used in templates.
-	"base": filepath.Base,
-	// fmtBytes formats a byte count as a human-readable string (KB/MB/GB).
-	"fmtBytes": func(n int64) string {
-		switch {
-		case n >= 1<<30:
-			return fmt.Sprintf("%.1f GB", float64(n)/float64(1<<30))
-		case n >= 1<<20:
-			return fmt.Sprintf("%.1f MB", float64(n)/float64(1<<20))
-		case n >= 1<<10:
-			return fmt.Sprintf("%.1f KB", float64(n)/float64(1<<10))
-		default:
-			return fmt.Sprintf("%d B", n)
-		}
-	},
 }
 
 // guardLocalUI rejects browser-driven cross-site requests to Balaur's own
@@ -161,8 +114,6 @@ func sameHost(origin, request string) bool {
 
 // Register mounts the Balaur UI and static assets on the PocketBase router.
 func Register(se *core.ServeEvent) error {
-	tmpl := template.Must(template.New("").Funcs(funcs).ParseFS(webassets.FS, "templates/*.html"))
-
 	staticFS, err := fs.Sub(webstatic.FS, "static")
 	if err != nil {
 		panic("web: static assets missing from embed: " + err.Error())
@@ -172,7 +123,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.BindFunc(guardLocalUI)
 
 	// Hardening headers on Balaur's own surfaces. PocketBase's /api and /_
-	// manage their own; CSP is deferred — templates still use inline scripts.
+	// manage their own; CSP is deferred — the UI still emits inline scripts/handlers.
 	se.Router.BindFunc(func(e *core.RequestEvent) error {
 		p := e.Request.URL.Path
 		if !strings.HasPrefix(p, "/api/") && !strings.HasPrefix(p, "/_") {
@@ -186,7 +137,7 @@ func Register(se *core.ServeEvent) error {
 
 	se.Router.GET("/static/{path...}", apis.Static(staticFS, false))
 
-	h := &handlers{app: se.App, tmpl: tmpl, clients: turn.ClientSource{Engine: kronk.FromStore(se.App)}}
+	h := &handlers{app: se.App, clients: turn.ClientSource{Engine: kronk.FromStore(se.App)}}
 	// Feature modules self-register (internal/feature/all blank import); the
 	// cardInto shim serves their gomponents renderers in place of the legacy
 	// switch. UnregisterAll on terminate keeps the global registry clean between
@@ -247,7 +198,6 @@ func Register(se *core.ServeEvent) error {
 
 type handlers struct {
 	app     core.App
-	tmpl    *template.Template
 	clients turn.ClientSource
 }
 

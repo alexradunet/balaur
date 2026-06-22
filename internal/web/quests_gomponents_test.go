@@ -12,7 +12,7 @@ import (
 
 func TestQuestsRendersViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 	if _, err := tasks.Create(app, tasks.CreateOpts{Title: "Draft the letter", Due: time.Now().Add(2 * time.Hour), Source: "test"}); err != nil {
 		t.Fatalf("seed: %v", err)
 	}

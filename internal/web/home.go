@@ -64,7 +64,7 @@ func (h *handlers) root(e *core.RequestEvent) error {
 }
 
 // chatBarNode renders the slim chatbar (#chatbar) — the head + model switchers.
-// Port of the chat_bar template; patchChatbar outer-patches #chatbar with it.
+// patchChatbar outer-patches #chatbar with it.
 // While no model is ready it carries the 2s self-refresh poll; the ready chatbar
 // drops the interval, so polling stops.
 func chatBarNode(d homeData) g.Node {
@@ -76,9 +76,8 @@ func chatBarNode(d homeData) g.Node {
 	return h.Div(attrs...)
 }
 
-// modelSwitcherNode renders the model panel (nested in the chatbar). Port of
-// model_switcher. model_switcher is DEAD as an ExecuteTemplate target — this
-// node is only composed via chatBarNode.
+// modelSwitcherNode renders the model panel (nested in the chatbar);
+// it is only composed via chatBarNode.
 func modelSwitcherNode(d homeData) g.Node {
 	head := []g.Node{
 		h.Span(h.Class("model-switcher-kicker"), g.Text("Model")),

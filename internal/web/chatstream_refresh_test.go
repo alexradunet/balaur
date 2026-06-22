@@ -15,7 +15,7 @@ import (
 // ucard-{type} root id into the open stream.
 func TestRefreshCardPatchesToday(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/ui/chat", nil)
@@ -31,7 +31,7 @@ func TestRefreshCardPatchesToday(t *testing.T) {
 // A refresh-marked tool result morphs the tool row AND patches the named card.
 func TestHandleToolResultRefreshRoutes(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/ui/chat", nil)

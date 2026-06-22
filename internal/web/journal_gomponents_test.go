@@ -12,7 +12,7 @@ import (
 // gomponents renderer via the cardInto shim.
 func TestDayRenderViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	journalcards.Register(app)
 	defer func() {

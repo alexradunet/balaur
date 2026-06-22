@@ -79,35 +79,24 @@ func TestChatChoices(t *testing.T) {
 // choices tool result is loaded from history (page-load path), the choices
 // render as a plain inert tool row — no live panel, no clickable buttons.
 func TestChoicesHistoryInert(t *testing.T) {
-	tmpl := parseTemplates(t)
-
-	// Simulate what messageViews produces for a tool message that carried choices.
 	marked := tools.MarkChoices("Your word",
 		[]tools.Choice{{Label: "Option A"}, {Label: "Option B"}},
 		"offered choices: 1) Option A 2) Option B")
 
-	// Parse as messageViews would.
 	var content string
 	if _, _, modelText, ok := tools.ParseChoices(marked); ok {
 		content = clipText(modelText, 2000)
 	}
 
-	mv := messageView{
-		Role:    "tool",
-		Tool:    "offer_choices",
-		Content: content,
-	}
+	mv := messageView{Role: "tool", Tool: "offer_choices", Content: content}
 
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "chat-msg-tool", mv); err != nil {
-		t.Fatalf("chat-msg-tool: %v", err)
-	}
-	out := b.String()
+	h := &handlers{}
+	out := renderNodeHTML(h.renderMessages([]messageView{mv}))
 	if strings.Contains(out, "choices-panel") {
-		t.Error("history render of choices tool result must not contain choices-panel (must be inert)")
+		t.Error("history render of a choices tool result must be inert (no choices-panel)")
 	}
 	if strings.Contains(out, `class="choice"`) {
-		t.Error("history render of choices tool result must not contain clickable choice buttons")
+		t.Error("history render must not contain clickable choice buttons")
 	}
 	if !strings.Contains(out, "offered choices:") {
 		t.Errorf("history render missing model text 'offered choices:': %s", out)
@@ -473,7 +462,7 @@ func TestChatCardShow(t *testing.T) {
 // durable transcript trace; the artifact lives in the right panel (plan 098).
 func TestUICardHistoryRendersChip(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	// Simulate what messageViews produces for a uicard-marked tool result.
 	marked := tools.MarkUICard("today", map[string]string{}, "showing the owner the Today card")

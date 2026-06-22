@@ -13,7 +13,7 @@ import (
 // cardInto shim — end-to-end within the web layer.
 func TestHeadsRenderViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	headscards.Register(app)
 	defer ui.UnregisterCard("heads")

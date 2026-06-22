@@ -13,7 +13,7 @@ import (
 // and manage modes.
 func TestKnowledgeRenderViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	knowledgecards.Register(app)
 	defer func() {

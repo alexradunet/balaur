@@ -63,7 +63,7 @@ func TestHomePanelRestore(t *testing.T) {
 	}
 
 	// Render the home page via the handler directly.
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 	node := h.restoredPanelNode()
 	var b strings.Builder
 	if err := node.Render(&b); err != nil {
@@ -89,7 +89,7 @@ func TestHomePanelRestore(t *testing.T) {
 func TestHomePanelChrome(t *testing.T) {
 	t.Run("fresh app: panel-collapsed class + resizer + reveal handle", func(t *testing.T) {
 		app := newWebApp(t)
-		h := &handlers{app: app, tmpl: parseTemplates(t)}
+		h := &handlers{app: app}
 		page := shell.ChatShell(shell.ChatShellProps{
 			Title:          "Home",
 			Panel:          h.restoredPanelNode(),
@@ -123,7 +123,7 @@ func TestHomePanelChrome(t *testing.T) {
 		if err := store.SetOwnerSetting(app, panelWidthKey, "600"); err != nil {
 			t.Fatalf("SetOwnerSetting width: %v", err)
 		}
-		h := &handlers{app: app, tmpl: parseTemplates(t)}
+		h := &handlers{app: app}
 		page := shell.ChatShell(shell.ChatShellProps{
 			Title:          "Home",
 			Panel:          h.restoredPanelNode(),

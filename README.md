@@ -26,9 +26,8 @@ database you own and can open with any SQLite tool.
   `memories`, `skills`, `heads`, `audit_log` — in plain SQLite
   under `pb_data/`.
 - **UI:** server-rendered typed `gomponents` over Datastar (SSE hypermedia),
-  styled by the Hearthwood/Basm design system (see `DESIGN.md`); the legacy
-  `html/template` path is being retired. The PocketBase dashboard at `/_/`
-  stays the superuser engine room.
+  styled by the Hearthwood/Basm design system (see `DESIGN.md`). The PocketBase
+  dashboard at `/_/` stays the superuser engine room.
 - **Models:** Balaur runs local GGUF models in-process. Install one from the
   settings models section (an absolute `.gguf` path) or via `BALAUR_CHAT_MODEL`;
   it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
@@ -156,7 +155,7 @@ Then open http://127.0.0.1:8090/ for Balaur, or
 http://127.0.0.1:8090/_/ to create the superuser and inspect data.
 
 `make dev` uses the repo-local `pb_data/` directory and restarts Balaur
-whenever Go, template, CSS, JS, or static asset files change. If the
+whenever Go, HTML, CSS, JS, or static asset files change. If the
 always-on user service is running, stop it first or move one process to a
 different port:
 
@@ -433,8 +432,8 @@ internal/tools/    agent tools: knowledge (always) + OS access (opt-in)
 internal/self/     self-awareness: embedded self-knowledge + live inventory
 internal/ext/      balaur-extensions: consent-gated runtime tools (JS/goja)
 internal/web/      Datastar gateway: dock chat, cards & panels, recap
+internal/web/assets/ embedded static assets (Basm CSS, JS, icons, fonts, avatars)
 internal/cli/      machine-facing gateway: balaur subcommands, JSON out
-web/               legacy html/template files + static assets (being retired; gomponents in internal/ui + internal/feature/*cards is the UI engine)
 ```
 
 Read `AGENTS.md` for the engineering rules (KISS, YAGNI, suckless, the rule
