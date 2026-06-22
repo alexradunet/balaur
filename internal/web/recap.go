@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/recap"
@@ -31,6 +32,12 @@ type recapView struct {
 	Date     string // day cards: YYYY-MM-DD link to the day page
 	HasChild bool
 	Missing  bool // period in range but not summarised yet
+}
+
+// bandView is one telescope band (a heading over a row of recap cards).
+type bandView struct {
+	Heading string
+	Cards   []recapView
 }
 
 func (h *handlers) recapCard(p recap.Period, rec *core.Record) recapView {
@@ -65,10 +72,6 @@ func (h *handlers) recapBands(e *core.RequestEvent) error {
 	loc := store.OwnerLocation(h.app)
 	oldest = oldest.In(loc)
 
-	type bandView struct {
-		Heading string
-		Cards   []recapView
-	}
 	var view []bandView
 	for _, band := range recap.Bands(time.Now().In(loc), oldest) {
 		bv := bandView{Heading: bandHeading(band.Type)}
@@ -85,14 +88,10 @@ func (h *handlers) recapBands(e *core.RequestEvent) error {
 		}
 	}
 
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "recap-bands.html", view); err != nil {
-		return e.InternalServerError("rendering recap", err)
-	}
 	// The #recap sentinel (data-on:intersect__once) stays as the container; the
 	// bands fill its inner so the once-fired sentinel is never re-armed.
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("recap"), datastar.WithModeInner())
+	_ = sse.PatchElements(renderNodeHTML(recapBandsNode(view)), datastar.WithSelectorID("recap"), datastar.WithModeInner())
 	return nil
 }
 
@@ -151,8 +150,8 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 		}
 		if len(cards) == 0 {
 			b.WriteString(`<p class="k-empty">Nothing recorded in this stretch.</p>`)
-		} else if err := h.tmpl.ExecuteTemplate(&b, "recap-cards.html", cards); err != nil {
-			return e.InternalServerError("rendering recap cards", err)
+		} else {
+			b.WriteString(renderNodeHTML(recapCardsNode(cards)))
 		}
 	}
 	_ = sse.PatchElements(b.String(), datastar.WithSelectorID(targetID), datastar.WithModeInner())
@@ -299,4 +298,51 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 		out = append(out, mv)
 	}
 	return out
+}
+
+// recapBandsNode renders the telescope bands into #recap. Bands render in
+// reverse (the year band sits highest); empty input renders nothing.
+func recapBandsNode(view []bandView) g.Node {
+	if len(view) == 0 {
+		return g.Text("")
+	}
+	bands := make([]g.Node, 0, len(view)+1)
+	for i := len(view) - 1; i >= 0; i-- {
+		b := view[i]
+		bands = append(bands, h.Section(h.Class("recap-band"),
+			h.H2(h.Class("recap-heading"),
+				h.Span(h.Class("recap-rune"), g.Text("◇")), g.Text(" "+b.Heading)),
+			recapCardsNode(b.Cards),
+		))
+	}
+	bands = append(bands, h.Div(h.Class("stitch")))
+	return g.Group(bands)
+}
+
+// recapCardsNode renders a row of expandable recap cards.
+func recapCardsNode(cards []recapView) g.Node {
+	items := make([]g.Node, 0, len(cards))
+	for _, c := range cards {
+		var controls []g.Node
+		controls = append(controls, h.Span(h.Class("recap-label"), g.Text(c.Label)))
+		if c.HasChild {
+			expr := "el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=" + c.Type + "&start=" + c.Start + "')"
+			controls = append(controls, h.Button(h.Class("recap-expand"), h.Type("button"),
+				g.Attr("data-on:click", expr), g.Text("open")))
+		} else {
+			if c.Date != "" {
+				controls = append(controls, h.A(h.Class("recap-daylink"),
+					h.Href("/ui/show/day?date="+c.Date), g.Text("visit")))
+			}
+			expr := "el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start=" + c.Start + "')"
+			controls = append(controls, h.Button(h.Class("recap-expand"), h.Type("button"),
+				g.Attr("data-on:click", expr), g.Text("transcript")))
+		}
+		items = append(items, h.Article(h.Class("recap-card recap-"+c.Type),
+			h.Header(h.Class("recap-head"), g.Group(controls)),
+			h.P(h.Class("recap-body"), g.Text(c.Content)),
+			h.Div(h.Class("recap-children"), h.ID("recap-children-"+c.Type+"-"+c.Start)),
+		))
+	}
+	return g.Group(items)
 }
