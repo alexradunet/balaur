@@ -110,6 +110,21 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 	return nil
 }
 
+// refreshDockChrome re-patches the persistent dock chrome (#chatbar and, when a
+// model is ready, the #chat-draft composer) on the same SSE stream. Panel saves
+// (avatar, active model) re-render only their own card fragment; without this the
+// dock's soul avatar, head avatar, and active-model label stay stale until a full
+// reload — the bug this fixes. Best-effort: a chrome refresh must never fail a
+// save that already persisted, so a homeData error is logged and swallowed.
+func (h *handlers) refreshDockChrome(sse *datastar.ServerSentEventGenerator) {
+	data, err := h.homeData()
+	if err != nil {
+		h.app.Logger().Warn("refreshing dock chrome failed", "err", err)
+		return
+	}
+	_ = h.patchChatbar(sse, data)
+}
+
 func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
 	view, err := settingscards.BuildModelsPanelView(h.app, msg)
 	if err != nil {
@@ -121,6 +136,7 @@ func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
 	patchOuterHTML(sse, "models-panel", b.String())
+	h.refreshDockChrome(sse) // a changed/activated model must update the dock's model label + ready state live
 	return nil
 }
 

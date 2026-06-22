@@ -33,7 +33,9 @@ func TestSaveNameDatastar(t *testing.T) {
 }
 
 // TestSetSoulAvatarDatastar: a valid soul-avatar key re-renders the soul
-// section via an outer patch targeting #soul-section.
+// section via an outer patch targeting #soul-section AND refreshes the dock
+// chrome (#chatbar) so the soul avatar updates live in the composer/chatbar
+// without a full reload.
 func TestSetSoulAvatarDatastar(t *testing.T) {
 	if !store.ValidSoulAvatarKey("soul-02") {
 		t.Fatal("expected soul-02 to be a valid avatar key")
@@ -51,6 +53,7 @@ func TestSetSoulAvatarDatastar(t *testing.T) {
 			"datastar-patch-elements",
 			"selector #soul-section",
 			"avatar-choice-active",
+			"selector #chatbar",
 		},
 		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 	}
@@ -93,6 +96,7 @@ func TestSetBalaurAvatarDatastar(t *testing.T) {
 			"datastar-patch-elements",
 			"selector #balaur-section",
 			"avatar-choice-active",
+			"selector #chatbar",
 		},
 		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
 	}

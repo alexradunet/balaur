@@ -47,6 +47,7 @@ func (h *handlers) setSoulAvatarFromProfile(e *core.RequestEvent) error {
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
 	patchOuterHTML(sse, "soul-section", b.String())
+	h.refreshDockChrome(sse) // the soul avatar also lives in the dock composer + chatbar thumb
 	return nil
 }
 
@@ -67,5 +68,6 @@ func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
 	patchOuterHTML(sse, "balaur-section", b.String())
+	h.refreshDockChrome(sse) // the default head's avatar falls back to this, so the head switcher must refresh
 	return nil
 }

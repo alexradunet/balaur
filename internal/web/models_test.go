@@ -57,7 +57,9 @@ func TestSetProcessor(t *testing.T) {
 		app := newWebApp(t)
 		s := postProcessor(app, "cpu")
 		s.Name = "select cpu"
-		s.ExpectedContent = []string{"models-panel"}
+		// modelsPanel also refreshes the dock chrome so an activated model
+		// reflects in the composer/chatbar without a full reload.
+		s.ExpectedContent = []string{"models-panel", "selector #chatbar"}
 		s.AfterTestFunc = func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
 			if got := store.GetOwnerSetting(a, "llm_processor", ""); got != "cpu" {
 				tb.Errorf("llm_processor = %q, want %q", got, "cpu")
