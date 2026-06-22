@@ -153,13 +153,15 @@ func invoke(ctx context.Context, src, name, tool, argsJSON string) (out string, 
 
 	// Interrupt on deadline or caller cancellation; never let a handler
 	// hold the turn hostage.
+	t := time.NewTimer(invokeTimeout)
+	defer t.Stop()
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
 		select {
 		case <-ctx.Done():
 			vm.Interrupt("context cancelled")
-		case <-time.After(invokeTimeout):
+		case <-t.C:
 			vm.Interrupt("extension timed out")
 		case <-done:
 		}

@@ -156,8 +156,6 @@ func History(app core.App, conversationID string, limit int) ([]*core.Record, er
 	if err != nil {
 		return nil, fmt.Errorf("loading history: %w", err)
 	}
-	for i, j := 0, len(recs)-1; i < j; i, j = i+1, j-1 {
-		recs[i], recs[j] = recs[j], recs[i]
-	}
+	slices.Reverse(recs)
 	return recs, nil
 }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -166,8 +167,10 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 			continue
 		}
 		if f == "importance" {
-			n := 0
-			fmt.Sscanf(v, "%d", &n)
+			n, err := strconv.Atoi(v)
+			if err != nil {
+				continue // ignore a malformed importance rather than coercing to 0
+			}
 			rec.Set(f, clampImportance(n))
 			continue
 		}
