@@ -172,6 +172,20 @@ const downloadStoreKey = "modeldownload.cancel"
 // without touching the real catalog (whose files are multi-GB real downloads).
 var kronkOfficialByKey = kronk.OfficialByKey
 
+// claimInFlight atomically claims a single-flight slot under key, storing
+// cancel as the in-flight token (so cancelDownload can find and call it).
+// It returns true iff this caller won the slot; a loser must cancel its own
+// context and bail. GetOrSet runs setFunc only when the key is absent, under
+// the store's write lock — so exactly one concurrent caller wins.
+func claimInFlight(app core.App, key string, cancel context.CancelFunc) bool {
+	won := false
+	app.Store().GetOrSet(key, func() any {
+		won = true
+		return cancel
+	})
+	return won
+}
+
 // downloadOfficialModel is a long-lived SSE handler that streams a curated GGUF
 // download with a live progress meter, then registers and activates it
 // (store.SaveLocalModel + SetActiveLLMModel). The "model" form value selects the
@@ -189,15 +203,14 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 		return h.modelsPanel(e, "unknown model")
 	}
 
-	// Guard single in-flight download.
-	if _, ok := h.app.Store().GetOk(downloadStoreKey); ok {
+	// Guard single in-flight download atomically.
+	ctx, cancel := context.WithCancel(e.Request.Context())
+	if !claimInFlight(h.app, downloadStoreKey, cancel) {
+		cancel()
 		return h.modelsPanel(e, "")
 	}
-
-	ctx, cancel := context.WithCancel(e.Request.Context())
-	h.app.Store().Set(downloadStoreKey, cancel)
 	defer func() {
-		// Remove (not Set-nil): GetOk is a presence check, so a nil value would
+		// Remove (not Set-nil): GetOrSet is a presence check, so a nil value would
 		// leave the in-flight guard permanently tripped and block every later download.
 		h.app.Store().Remove(downloadStoreKey)
 		cancel()
@@ -484,13 +497,12 @@ func (h *handlers) installRuntime(e *core.RequestEvent) error {
 		return h.modelsPanel(e, "processor must be cpu or vulkan")
 	}
 
-	// Guard single in-flight install.
-	if _, ok := h.app.Store().GetOk(runtimeInstallStoreKey); ok {
+	// Guard single in-flight install atomically.
+	ctx, cancel := context.WithCancel(e.Request.Context())
+	if !claimInFlight(h.app, runtimeInstallStoreKey, cancel) {
+		cancel()
 		return h.modelsPanel(e, "")
 	}
-
-	ctx, cancel := context.WithCancel(e.Request.Context())
-	h.app.Store().Set(runtimeInstallStoreKey, cancel)
 	defer func() {
 		h.app.Store().Remove(runtimeInstallStoreKey)
 		cancel()
