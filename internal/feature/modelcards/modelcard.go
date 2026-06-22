@@ -152,8 +152,10 @@ func modelAction(v ModelView) g.Node {
 		return g.Group([]g.Node{
 			h.Div(h.Class("model-dl-progress"),
 				h.ID("model-dl-progress"),
-				h.Div(h.Class("model-dl-bar"),
-					g.Attr("style", fmt.Sprintf("width:%d%%", v.Progress)),
+				h.Div(h.Class("model-dl-track"),
+					h.Div(h.Class("model-dl-bar"),
+						g.Attr("style", fmt.Sprintf("width:%d%%", v.Progress)),
+					),
 				),
 				h.P(h.Class("model-dl-label"), g.Text(v.ProgressLabel)),
 			),
