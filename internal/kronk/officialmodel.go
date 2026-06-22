@@ -57,13 +57,6 @@ func OfficialModels() []OfficialModel {
 	}
 }
 
-// Official returns the default curated pick (the balanced "medium"). Retained for
-// callers that just want the single recommended model.
-func Official() OfficialModel {
-	m, _ := OfficialByKey("medium")
-	return m
-}
-
 // OfficialByKey returns the catalog entry for key, or ok=false if unknown.
 func OfficialByKey(key string) (OfficialModel, bool) {
 	for _, m := range OfficialModels() {

@@ -69,13 +69,6 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	return nil
 }
 
-func cardURL(kind, id string) string {
-	if kind == "tasks" {
-		return "/ui/tasks/" + id + "/card"
-	}
-	return "/ui/knowledge/" + kind + "/" + id + "/card"
-}
-
 func clipText(s string, n int) string {
 	if len(s) <= n {
 		return s
