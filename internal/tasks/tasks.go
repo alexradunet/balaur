@@ -103,9 +103,6 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		return DoneResult{}, nil
 	}
 
-	if err := addEntry(app, "completion", rec.Id, nil, rec.GetString("title"), now); err != nil {
-		return DoneResult{}, err
-	}
 	anchor := rec.GetDateTime("due").Time().In(now.Location())
 	// From-done anchoring is an interval concept; calendar-pattern rules
 	// keep their day-and-hour pattern even on records that predate the
@@ -117,8 +114,20 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 	rec.Set("due", next.UTC())
 	rec.Set("nudged_at", "")
 	rec.Set("snoozed_until", "")
-	if err := app.Save(rec); err != nil {
-		return DoneResult{}, fmt.Errorf("saving task: %w", err)
+	// addEntry + Save are one logical operation: if the process dies between
+	// them, the task still reads as due and the nudger re-fires. RunInTransaction
+	// makes them all-or-nothing. Audit and the post-commit count stay outside so
+	// a failed audit never rolls back the completion.
+	if err := app.RunInTransaction(func(txApp core.App) error {
+		if err := addEntry(txApp, "completion", rec.Id, nil, rec.GetString("title"), now); err != nil {
+			return err
+		}
+		if err := txApp.Save(rec); err != nil {
+			return fmt.Errorf("saving task: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return DoneResult{}, err
 	}
 	n, _ := app.CountRecords("entries", dbx.HashExp{"kind": "completion", "task": rec.Id})
 	store.Audit(app, "tasks", "task.done", rec.Id, true, map[string]any{"next_due": next.UTC().Format(time.RFC3339)})
