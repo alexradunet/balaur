@@ -51,12 +51,7 @@ func rowOf(rec *core.Record, now time.Time) TodayRow {
 		Status: rec.GetString("status"),
 	}
 	if d := rec.GetDateTime("due").Time(); !d.IsZero() {
-		local := d.In(now.Location())
-		if local.Before(now) && row.Status == "open" {
-			row.DueLine = tasks.Lateness(d, now) + " — was " + local.Format("Mon, Jan 2 at 15:04")
-		} else {
-			row.DueLine = "due " + local.Format("Mon, Jan 2 at 15:04")
-		}
+		row.DueLine = tasks.DueLine(d, now, row.Status)
 	}
 	return row
 }
