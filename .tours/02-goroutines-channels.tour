@@ -5,31 +5,31 @@
   "steps": [
     {
       "file": "internal/kronk/engine.go",
-      "line": 33,
+      "line": 36,
       "title": "2.1 — Engine: struct with a mutex",
       "description": "```go\ntype Engine struct {\n    mu        sync.Mutex\n    libPath   string\n    processor string\n    inited    bool\n\n    chatPath string\n    chat     *kronk.Kronk\n    embPath  string\n    emb      *kronk.Kronk\n}\n```\n\n`sync.Mutex` is Go's mutual-exclusion lock. The lowercase fields are unexported — nothing outside the `kronk` package can touch them.\n\nThe mutex is needed because the resident `*kronk.Kronk` models are mutable shared state: a web turn and a cron turn (recap/nudge/briefing) can both reach the engine concurrently. Loading or swapping a model mutates `chat`/`chatPath`; without the lock two goroutines could load at once — a data race the Go race detector would catch.\n\nThe canonical Go mutex pattern: **lock immediately, defer unlock immediately**, so you can never forget to unlock even if you add early returns later."
     },
     {
       "file": "internal/kronk/engine.go",
-      "line": 64,
+      "line": 73,
       "title": "2.2 — ensureInit: run-once, the check-then-act guard",
       "description": "```go\nfunc (e *Engine) ensureInit() error {\n    if e.inited || kronk.Initialized() {\n        e.inited = true\n        return nil\n    }\n    libDir, err := resolveLibDir(e.libPath, e.processor)\n    if err != nil {\n        return err\n    }\n    if err := kronk.Init(kronk.WithLibPath(libDir)); err != nil {\n        return fmt.Errorf(\"initializing local inference runtime (%s): %w\", e.processor, err)\n    }\n    e.inited = true\n    return nil\n}\n```\n\nThe Kronk SDK's `Init` may run only **once per process**. This is the idiomatic Go \"check-then-act\" guard: if the runtime is already initialized, return immediately; otherwise resolve the native library directory and initialize.\n\nThe caller holds `e.mu` (see 2.3), so the guard is safe against concurrent first-inference calls racing to initialize. Initialization is lazy — a box with no model and no native library still boots; the cost is paid on first real inference."
     },
     {
       "file": "internal/kronk/engine.go",
-      "line": 106,
+      "line": 125,
       "title": "2.3 — chatModel: load/swap a resident model under the lock",
       "description": "```go\nfunc (e *Engine) chatModel(ctx context.Context, ggufPath string) (*kronk.Kronk, error) {\n    e.mu.Lock()\n    defer e.mu.Unlock()\n    if e.chat != nil && e.chatPath == ggufPath {\n        return e.chat, nil\n    }\n    if err := e.ensureInit(); err != nil {\n        return nil, err\n    }\n    if e.chat != nil {\n        _ = e.chat.Unload(ctx)\n        e.chat, e.chatPath = nil, \"\"\n    }\n    krn, err := kronk.New(model.WithModelFiles([]string{ggufPath}), ...)\n    ...\n}\n```\n\n`Lock()` then `defer Unlock()` on the first two lines — the whole load/swap is serialized. If the resident model already matches the requested path, return it warm. Otherwise unload the old native model (freeing its memory) and load the new one.\n\nThis is reload-on-switch: one model stays resident, and changing the active model pays a full unload+load on the next turn. Holding `mu` for the duration means a concurrent turn waits rather than racing on `e.chat`."
     },
     {
       "file": "internal/kronk/client.go",
-      "line": 74,
+      "line": 92,
       "title": "2.4 — bridge: goroutine + buffered channel",
       "description": "```go\nout := make(chan llm.Chunk, 8)\ngo func() {\n    defer close(out)\n    ...\n}()\nreturn out\n```\n\n`make(chan llm.Chunk, 8)` creates a **buffered channel** with capacity 8: up to 8 `Chunk` values can sit in the pipe before a send blocks. Without a buffer every send would block until the caller reads; a small buffer lets the goroutine run slightly ahead of the reader — useful when the model emits tokens faster than the gateway can render them.\n\n`bridge` returns `out` immediately — the goroutine keeps running in the background, translating Kronk's `model.ChatResponse` stream into Balaur's provider-neutral `llm.Chunk`s.\n\n`defer close(out)` is the critical safety guarantee: **when the goroutine exits for any reason, the channel closes**, so the consumer's `for chunk := range out` cleanly ends. Without it the range loop would wait forever."
     },
     {
       "file": "internal/kronk/client.go",
-      "line": 81,
+      "line": 100,
       "title": "2.5 — Select for cancellation (the most important pattern)",
       "description": "```go\nselect {\ncase out <- ch:\n    return true\ncase <-ctx.Done():\n    return false\n}\n```\n\n`select` is Go's **switch for channels**: it waits until one case is ready, then runs exactly that one.\n\nHere it guards every send:\n- Try to send a chunk into `out`. If the reader is keeping up, this case fires.\n- If the context was cancelled (the owner navigated away, the request closed, a timeout hit), `ctx.Done()` fires instead and the bridge stops.\n\nWithout `select`, a cancelled context would leave the goroutine blocked on `out <-` forever when nobody is reading — leaking the goroutine until the process dies. This is the canonical Go cancellation idiom; you will see it in every production Go networking codebase."
     }

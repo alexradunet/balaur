@@ -11,13 +11,13 @@
     },
     {
       "file": "internal/cli/cli.go",
-      "line": 95,
+      "line": 102,
       "title": "10.2 — envelope: the v1 wire shape",
       "description": "```go\ntype envelope struct {\n    V    int    `json:\"v\"`\n    Kind string `json:\"kind\"`\n    Data any    `json:\"data\"`\n}\n\nfunc emit(w io.Writer, kind string, data any) error {\n    enc := json.NewEncoder(w)\n    enc.SetIndent(\"\", \"  \")\n    return enc.Encode(envelope{V: apiVersion, Kind: kind, Data: data})\n}\n```\n\nEvery command emits exactly one JSON object:\n- **`v`** — API version integer, currently `1`. Bumped only on breaking changes to the envelope shape or any command's `data` shape. Additive fields inside `data` are free without a bump.\n- **`kind`** — `<command>` or `<command>.<subcommand>` (e.g. `\"task.add\"`, `\"memory.recall\"`, `\"doctor\"`, `\"chat\"`). The discriminator for consumers switching on response type.\n- **`data`** — whatever the command emits. Shape is command-specific and documented in each command file.\n\n`json.SetIndent(\"\", \"  \")` makes the output human-readable — the few extra bytes are irrelevant for harness I/O, and readable JSON is easier to debug.\n\nFailures write `{\"v\":1,\"kind\":\"error\",\"data\":{\"error\":\"...\"}}` to **stderr** and exit non-zero. Stdout stays clean — parsers can pipe stdout without filtering stderr."
     },
     {
       "file": "internal/cli/cli.go",
-      "line": 80,
+      "line": 81,
       "title": "10.3 — run: the command wrapper",
       "description": "```go\nfunc run(app core.App, kind string, body func(cmd *cobra.Command, args []string) (any, error)) func(*cobra.Command, []string) error {\n    return func(cmd *cobra.Command, args []string) error {\n        cmd.SilenceUsage = true\n        cmd.SilenceErrors = true\n        if err := app.RunAllMigrations(); err != nil {\n            return failJSON(cmd, fmt.Errorf(\"applying migrations: %w\", err))\n        }\n        out, err := body(cmd, args)\n        if err != nil {\n            return failJSON(cmd, err)\n        }\n        return emit(cmd.OutOrStdout(), kind, out)\n    }\n}\n```\n\n`run` is a higher-order function: it takes a command body and returns a `cobra.Command`-compatible function. This is the CLI equivalent of HTTP middleware.\n\nTwo things it handles before every command:\n1. **Migration check** — `app.RunAllMigrations()` applies any pending migrations. CLI commands must work on a fresh `--dir` that has never been `serve`d; PocketBase only auto-migrates in `serve` or `migrate` modes.\n2. **Uniform output** — success calls `emit`, failure calls `failJSON` (which writes to stderr and sets the exit code).\n\n`SilenceUsage = true` prevents cobra from printing the usage message when a command returns an error — errors go through the JSON contract, not prose."
     },

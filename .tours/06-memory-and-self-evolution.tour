@@ -17,7 +17,7 @@
     },
     {
       "file": "internal/knowledge/knowledge.go",
-      "line": 159,
+      "line": 162,
       "title": "6.3 — UpdateFields: the whitelist",
       "description": "```go\nwritable := map[Kind][]string{\n    Memory: {\"title\", \"content\", \"category\", \"importance\", \"when_to_use\"},\n    Skill:  {\"name\", \"description\", \"content\", \"when_to_use\"},\n}\n```\n\nThe edit form posts arbitrary form fields; only whitelisted ones are applied. `status` is deliberately NOT writable here — editing a proposal and approving it stay two separate, deliberate actions.\n\n`TestUpdateFieldsWhitelist` proves the boundary: posting `status=active` through the edit path leaves the record proposed."
     },
@@ -29,13 +29,13 @@
     },
     {
       "file": "internal/knowledge/context.go",
-      "line": 30,
+      "line": 32,
       "title": "6.5 — BuildContext returns what it used",
       "description": "```go\nfunc BuildContext(app core.App, userMessage string) (string, []*core.Record)\n```\n\nTwo return values: the prompt block AND the records it injected. The chat handler calls `knowledge.Touch` on each used record after the turn — bumping `use_count` and `last_used`.\n\nUsage stats feed the owner's curation: on the Memory page you can see which memories actually earn their context tokens (\"used ×7\") and which are dead weight worth archiving. Self-evolution needs feedback loops, and this is the simplest honest one."
     },
     {
       "file": "internal/knowledge/knowledge.go",
-      "line": 231,
+      "line": 233,
       "title": "6.6 — SearchActive: FTS5 fast path + LIKE fallback",
       "description": "```go\n// FTS5 fast path\nif raw, ok := app.Store().GetOk(search.StoreKey); ok {\n    if ix, ok := raw.(*search.Index); ok && ix != nil {\n        ids, err := ix.Query(terms, limit)\n        if err == nil && len(ids) > 0 {\n            // fetch + filter + preserve rank order\n            return active, nil\n        }\n    }\n}\n// LIKE fallback (unchanged)\n...\n```\n\nThe FTS5 sidecar index (`internal/search`) is opened at boot and stored in `app.Store()` under `search.StoreKey`. `SearchActive` reads it from the store — no import cycle, no global variable.\n\nThe fallback is the plain LIKE path that existed before the index landed: exact same semantics, always available even if the index file was deleted or corrupted. The FTS5 path is purely additive — better ranking, same API.\n\nThe index is **disposable**: deleting `pb_data/search.db` is always safe; it is rebuilt on the next boot from the active memories in PocketBase."
     },
@@ -43,25 +43,25 @@
       "file": "internal/tools/knowledge.go",
       "line": 28,
       "title": "6.7 — The proposal marker protocol",
-      "description": "```go\nconst ProposalMarker = \"\\x00balaur-proposal:\"\n```\n\nWhen `remember` or `propose_skill` succeeds, the tool result is *marked*: a NUL-prefixed header carrying `kind/id`, then the model-facing text.\n\nTwo consumers read the same string:\n- **The model** sees \"Memory proposal … sent to the owner for approval. It is NOT yet part of your memory.\" — wording that prevents it from claiming success.\n- **The web layer** (`ParseProposal` in chat.go) detects the marker and renders an approval card instead of a raw tool row.\n\nA NUL byte never appears in normal model output, so there are no false positives — and if the model ever echoes the marker, it carries no instructions, just an id.\n\nNote: three marker types coexist with the same design — `ProposalMarker`, `ChoicesMarker` (`offer_choices`), and `UICardMarker` (`card_show`). The consumer order in `chat.go` is: uicard → choices → proposal → plain."
+      "description": "```go\nconst ProposalMarker = \"\\x00balaur-proposal:\"\n```\n\nWhen `remember` or `propose_skill` succeeds, the tool result is *marked*: a NUL-prefixed header carrying `kind/id`, then the model-facing text.\n\nTwo consumers read the same string:\n- **The model** sees \"Memory proposal … sent to the owner for approval. It is NOT yet part of your memory.\" — wording that prevents it from claiming success.\n- **The web layer** (`ParseProposal` in chatstream.go) detects the marker and renders an approval card instead of a raw tool row.\n\nA NUL byte never appears in normal model output, so there are no false positives — and if the model ever echoes the marker, it carries no instructions, just an id.\n\nNote: **five** marker types coexist with the same design — `UICardMarker` (`card_show`), `ChoicesMarker` (`offer_choices`), `ProposalMarker` (`remember`/`propose_skill`), `RefreshMarker` (mutating tools), and `ArtifactMarker` (`show_cards`). The consumer order in `chatstream.go` is: uicard → choices → proposal → refresh → artifact → plain."
     },
     {
       "file": "internal/web/chatstream.go",
       "line": 184,
       "title": "6.8 — Inline approval cards (the consumer order)",
-      "description": "```go\ncase \"tool_result\":\n    // Consumer order: uicard → choices → proposal → plain.\n    if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {\n        // render live card embed\n        break\n    }\n    if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {\n        // render choice panel\n        break\n    }\n    kind, id, rest, ok := tools.ParseProposal(ev.Text)\n    // render proposal card or plain tool row\n```\n\nThe consumer order is not arbitrary:\n- **UICard first**: `card_show` and `board_compose` show live data — always safe to re-render on reload.\n- **Choices second**: `offer_choices` renders interactive buttons — inert on reload (stale decision context, but no harm).\n- **Proposal third**: renders an approval card via HTMX slot pointing to `/ui/knowledge/{kind}/{id}/card` — the same template the Memory page uses.\n- **Plain fallback**: any ordinary tool row.\n\nEach marker type uses a NUL-byte prefix with a distinct tag, so collisions are impossible: a choices result can never parse as a proposal."
+      "description": "```go\nfunc (s *chatStream) handleToolResult(ev agent.Event) {\n    if typ, query, rest, ok := tools.ParseUICard(ev.Text); ok {\n        // render live card embed inline\n        return\n    }\n    if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {\n        // render choice panel\n        return\n    }\n    if kind, id, rest, ok := tools.ParseProposal(ev.Text); ok {\n        // render proposal card\n        return\n    }\n    if types, rest, ok := tools.ParseRefresh(ev.Text); ok {\n        // re-render live panel cards\n        return\n    }\n    if title, cs, rest, ok := tools.ParseArtifact(ev.Text); ok {\n        // render 1–8 card cluster\n        return\n    }\n    // plain: clipped preview of raw tool output\n}\n```\n\nThe consumer order is not arbitrary — it is a fixed 6-way early-return:\n- **UICard first**: `card_show` embeds a single live card inline in the chat stream. Server-renders the card from the registry so it survives in history.\n- **Choices second**: `offer_choices` renders 2–5 numbered reply buttons. Inert on reload (stale decision context, but no harm).\n- **Proposal third**: renders a knowledge approval card (proposal card is a gomponents node via `proposalBody`).\n- **Refresh fourth**: mutating tools (e.g. task status change) re-render one or more panel cards by type in the single right panel via `/ui/show`.\n- **Artifact fifth**: `show_cards` renders a 1–8 card cluster as one conversation artifact in the right panel.\n- **Plain fallback**: a clipped text preview of the raw tool output.\n\nEach marker uses a NUL-byte prefix with a distinct tag, so collisions are impossible."
     },
     {
-      "file": "web/templates/card-memory.html",
-      "line": 1,
+      "file": "internal/feature/knowledgecards/memory.go",
+      "line": 84,
       "title": "6.9 — The card template",
-      "description": "One memory card: category tag, importance pips (the gold squares — Basm pixels, not stars), title, content, recall hint, an Edit `<details>` with the form, and status-dependent actions:\n\n- `proposed` → Approve (ember primary) + Dismiss\n- `active` → Archive + \"used ×N\" meta\n- `archived` → Restore\n\nThe template receives a `*core.Record` directly — `{{.GetString \"title\"}}` calls the Go method from the template. No view-model layer; PocketBase records are already the data.\n\nNote the Basm details: 2px borders, hard shadow on proposed cards (they pop), gold notch, mono uppercase labels. Proposed cards use `--gold-deep` borders — growth waiting for your word."
+      "description": "One memory card rendered as a **typed gomponents node** via `MemoryRecordCard(r MemoryRecord) g.Node`. The function receives a `MemoryRecord` view-model (not a raw `*core.Record`) — see `MemoryRecordOf` for the mapping layer.\n\nThe card displays: category tag, importance pips (the gold squares — Basm pixels, not stars), title, content, recall hint, an Edit `<details>` with the form, and status-dependent actions:\n\n- `proposed` → Approve (ember primary) + Dismiss\n- `active` → Archive + \"used ×N\" meta\n- `archived` → Restore\n\nNote the Basm details: 2px borders, hard shadow on proposed cards (they pop), gold notch, mono uppercase labels. Proposed cards use `--gold-deep` borders — growth waiting for your word.\n\nThis is the gomponents render path: typed Go functions produce `g.Node` trees, not `{{.GetString}}` template calls. User-visible text goes through `g.Text` (HTML-escaped); trusted HTML through `g.Raw` only."
     },
     {
       "file": "migrations/1749700000_knowledge.go",
       "line": 26,
       "title": "6.10 — Schema evolution by migration",
-      "description": "The second migration in the project — a template for every future schema change:\n\n1. `FindCollectionByNameOrId` to load the existing collection\n2. `Fields.Add(...)` for the new fields\n3. `AddIndex` for query paths (`status` is filtered on constantly)\n4. **Backfill**: pre-lifecycle records become `active` (they were implicitly owner-approved)\n5. A `down` function that removes exactly what `up` added\n\nRun order is filename order — the `1749700000` timestamp sorts after the init migration's `1749600000`.\n\n**Verify the lifecycle end-to-end yourself:**\n```\ngo test ./internal/knowledge/ -v\n```\nSeven tests cover propose→approve, invalid transitions, active-only search, skill loading, context assembly, and the edit whitelist."
+      "description": "The second migration in the project — a template for every future schema change:\n\n1. `FindCollectionByNameOrId` to load the existing collection\n2. `Fields.Add(...)` for the new fields\n3. `AddIndex` for query paths (`status` is filtered on constantly)\n4. **Backfill**: pre-lifecycle records become `active` (they were implicitly owner-approved)\n5. A `down` function that removes exactly what `up` added\n\nRun order is filename order — the `1749700000` timestamp sorts after the init migration's `1749600000`.\n\n**Verify the lifecycle end-to-end yourself:**\n```\ngo test ./internal/knowledge/ -v\n```\nEleven tests cover propose→approve, invalid transitions, active-only search, skill loading, context assembly, the edit whitelist, FTS5 path, LIKE fallback, and integration scenarios."
     }
   ]
 }
