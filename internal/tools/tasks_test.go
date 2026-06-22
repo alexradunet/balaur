@@ -90,6 +90,9 @@ func TestTaskDoneMarksRefresh(t *testing.T) {
 	if err != nil {
 		t.Fatalf("task_add: %v", err)
 	}
+	if !strings.Contains(out, "Task saved") || !strings.Contains(out, "Buy milk") {
+		t.Errorf("task_add reply: %q", out)
+	}
 
 	// lift its id from task_list (same technique as TestTaskAddListDone)
 	out, err = findTool(t, ts, "task_list").Execute(ctx, `{"scope":"open"}`)

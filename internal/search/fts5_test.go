@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	_ "github.com/ncruces/go-sqlite3/driver" // registers driver "sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"  // embeds the SQLite WASM build
 )
 
 func TestFTS5Available(t *testing.T) {

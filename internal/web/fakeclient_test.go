@@ -1,7 +1,6 @@
 package web
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -18,14 +17,6 @@ import (
 func seedScriptedModel(tb testing.TB, app core.App, replies ...llmtest.Reply) string {
 	tb.Helper()
 	turn.SetTestClient(app, llmtest.New(replies...))
-	return activateLocalModel(tb, app)
-}
-
-// seedFailingModel injects a scripted client whose ChatStream/Embed always error,
-// for exercising the handlers' fallback paths.
-func seedFailingModel(tb testing.TB, app core.App) string {
-	tb.Helper()
-	turn.SetTestClient(app, &llmtest.ScriptedClient{Err: errors.New("fake model unavailable")})
 	return activateLocalModel(tb, app)
 }
 

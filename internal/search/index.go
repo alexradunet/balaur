@@ -12,7 +12,6 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	_ "github.com/ncruces/go-sqlite3/driver" // registers driver "sqlite3"
-	_ "github.com/ncruces/go-sqlite3/embed"  // embeds the SQLite WASM build
 )
 
 // StoreKey is the app.Store() key under which the *Index singleton lives.

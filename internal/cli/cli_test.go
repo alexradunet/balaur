@@ -85,17 +85,6 @@ func executeList(t *testing.T, cmd *cobra.Command, args ...string) ([]any, error
 	return list, nil
 }
 
-// executeRaw is kept for the envelope family test: returns the parsed data
-// field (any) without asserting its type.
-func executeRaw(t *testing.T, cmd *cobra.Command, args ...string) (any, error) {
-	t.Helper()
-	env, err := executeEnvelope(t, cmd, args...)
-	if err != nil {
-		return nil, err
-	}
-	return env["data"], nil
-}
-
 func TestTaskLifecycle(t *testing.T) {
 	app := storetest.NewApp(t)
 

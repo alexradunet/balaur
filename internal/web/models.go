@@ -59,11 +59,6 @@ type AvatarOption struct {
 	Active bool
 }
 
-// modelsPageData carries the rendered Models panel for the settings focus body.
-type modelsPageData struct {
-	ModelsHTML template.HTML // the gomponents modelcards.Panel, injected into settings_body
-}
-
 func (h *handlers) homeData() (homeData, error) {
 	data := homeData{Title: "Balaur", ChatPlaceholder: "Choose a model before chatting", NowMillis: time.Now().UnixMilli()}
 	choices, active, err := turn.ModelChoices(h.app)
@@ -130,21 +125,6 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 		_ = sse.PatchElements(d.String(), datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
 	}
 	return nil
-}
-
-// renderModelsPanel renders the gomponents Models panel to HTML for injection
-// into settings_body on page load. Delegates view assembly to
-// settingscards.BuildModelsPanelView — the single source of truth.
-func (h *handlers) renderModelsPanel(errMsg string) (template.HTML, error) {
-	view, err := settingscards.BuildModelsPanelView(h.app, errMsg)
-	if err != nil {
-		return "", err
-	}
-	var b strings.Builder
-	if err := modelcards.Panel(view).Render(&b); err != nil {
-		return "", err
-	}
-	return template.HTML(b.String()), nil
 }
 
 func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
@@ -490,12 +470,6 @@ func buildAvatarOptions(app core.App) []AvatarOption {
 	return opts
 }
 
-// buildBalaurHeadOptions returns the roster with the owner's current
-// preference flagged active.
-func buildBalaurHeadOptions(app core.App) []AvatarOption {
-	return buildBalaurHeadOptionsFor(store.GetOwnerSetting(app, "balaur_avatar", "balaur-01"))
-}
-
 // runtimeInstallStoreKey is the app.Store() sidecar key for an in-flight runtime install cancel func.
 const runtimeInstallStoreKey = "runtimedownload.cancel"
 
@@ -566,21 +540,4 @@ func (h *handlers) installRuntime(e *core.RequestEvent) error {
 	store.Audit(h.app, "owner", "llm.runtime.install", processor, true,
 		map[string]any{"version": kronk.RuntimeVersion(), "installed": true})
 	return h.modelsPanel(e, "")
-}
-
-// buildBalaurHeadOptionsFor returns the roster with an explicit active key —
-// used by the /heads page where each head carries its own preference.
-// The roster is the single source from store.BalaurHeads.
-func buildBalaurHeadOptionsFor(activePref string) []AvatarOption {
-	roster := store.BalaurHeads()
-	opts := make([]AvatarOption, len(roster))
-	for i, r := range roster {
-		opts[i] = AvatarOption{
-			Key:    r.Key,
-			Label:  r.Label,
-			URL:    r.URL,
-			Active: r.Key == activePref,
-		}
-	}
-	return opts
 }

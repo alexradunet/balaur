@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -71,114 +70,6 @@ func questGroup(recur string, hasDue bool) string {
 		return "Dailies"
 	}
 	return "Rituals"
-}
-
-// ---- calendar ----
-
-type calItem struct {
-	Time, Title string
-	Recurring   bool
-}
-
-type calCell struct {
-	Day     int
-	Date    string // YYYY-MM-DD — links the cell to its day page
-	InMonth bool
-	IsToday bool
-	Items   []calItem
-}
-
-type calView struct {
-	Label, PrevM, NextM string
-	Weekdays            []string
-	Weeks               [][]calCell
-}
-
-func buildCalendar(recs []*core.Record, monthParam string, now time.Time) calView {
-	loc := now.Location()
-	base := now
-	if t, err := time.ParseInLocation("2006-01", monthParam, loc); err == nil {
-		base = t
-	}
-	mStart := time.Date(base.Year(), base.Month(), 1, 0, 0, 0, 0, loc)
-	mEnd := mStart.AddDate(0, 1, 0)
-	gridStart := mondayOf(mStart)
-	gridEnd := gridStart
-	for gridEnd.Before(mEnd) {
-		gridEnd = gridEnd.AddDate(0, 0, 7)
-	}
-
-	items := map[string][]calItem{}
-	for _, r := range recs {
-		rule, err := tasks.Parse(r.GetString("recur"))
-		if err != nil {
-			continue
-		}
-		due := r.GetDateTime("due").Time().In(loc)
-		for _, occ := range tasks.Occurrences(rule, due, gridStart, gridEnd) {
-			key := occ.Format("2006-01-02")
-			items[key] = append(items[key], calItem{
-				Time: occ.Format("15:04"), Title: r.GetString("title"), Recurring: !rule.IsZero(),
-			})
-		}
-	}
-	for k := range items {
-		sort.Slice(items[k], func(i, j int) bool { return items[k][i].Time < items[k][j].Time })
-	}
-
-	today := now.Format("2006-01-02")
-	var weeks [][]calCell
-	for ws := gridStart; ws.Before(gridEnd); ws = ws.AddDate(0, 0, 7) {
-		week := make([]calCell, 0, 7)
-		for i := 0; i < 7; i++ {
-			d := ws.AddDate(0, 0, i)
-			key := d.Format("2006-01-02")
-			week = append(week, calCell{
-				Day:     d.Day(),
-				Date:    key,
-				InMonth: d.Month() == mStart.Month(),
-				IsToday: key == today,
-				Items:   items[key],
-			})
-		}
-		weeks = append(weeks, week)
-	}
-	return calView{
-		Label:    mStart.Format("January 2006"),
-		PrevM:    mStart.AddDate(0, -1, 0).Format("2006-01"),
-		NextM:    mStart.AddDate(0, 1, 0).Format("2006-01"),
-		Weekdays: []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"},
-		Weeks:    weeks,
-	}
-}
-
-func mondayOf(t time.Time) time.Time {
-	d := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-	wd := int(d.Weekday())
-	if wd == 0 {
-		wd = 7
-	}
-	return d.AddDate(0, 0, -(wd - 1))
-}
-
-// ---- timeline ----
-
-const timelineDays = 14
-
-type tlItem struct {
-	Time, Title string
-	Recurring   bool
-}
-
-type tlDay struct {
-	Label   string
-	IsToday bool
-	Items   []tlItem
-}
-
-type tlView struct {
-	Overdue []taskView
-	Days    []tlDay
 }
 
 // ---- card + transitions ----
