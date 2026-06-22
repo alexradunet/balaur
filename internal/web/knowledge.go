@@ -127,23 +127,9 @@ func (h *handlers) knowledgeEdit(e *core.RequestEvent) error {
 	return nil
 }
 
-// cardTemplateName picks the per-record card partial for a kind, mirroring
-// renderCard's choice (the chat-embed path).
-func cardTemplateName(kind knowledge.Kind) string {
-	if kind == knowledge.Skill {
-		return "card-skill.html"
-	}
-	return "card-memory.html"
-}
-
-// renderCardHTML renders one knowledge card partial to a string for SSE
-// patching. Errors are returned so the caller can fail before opening a stream.
+// renderCardHTML renders one knowledge card to a string for SSE patching.
 func (h *handlers) renderCardHTML(kind knowledge.Kind, rec *core.Record) (string, error) {
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, cardTemplateName(kind), rec); err != nil {
-		return "", err
-	}
-	return b.String(), nil
+	return renderNodeHTML(knowledgeRecordNode(kind, rec)), nil
 }
 
 // knowledgeCard serves one card fragment — used by the chat stream to embed
@@ -162,14 +148,16 @@ func (h *handlers) knowledgeCard(e *core.RequestEvent) error {
 
 func (h *handlers) renderCard(e *core.RequestEvent, kind knowledge.Kind, rec *core.Record) error {
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	name := "card-memory.html"
+	return knowledgeRecordNode(kind, rec).Render(e.Response)
+}
+
+// knowledgeRecordNode renders one knowledge record as its gomponents card
+// (the port of card-memory.html / card-skill.html).
+func knowledgeRecordNode(kind knowledge.Kind, rec *core.Record) g.Node {
 	if kind == knowledge.Skill {
-		name = "card-skill.html"
+		return knowledgecards.SkillRecordCard(knowledgecards.SkillRecordOf(rec))
 	}
-	if err := h.tmpl.ExecuteTemplate(e.Response, name, rec); err != nil {
-		return e.InternalServerError("rendering card", err)
-	}
-	return nil
+	return knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecordOf(rec))
 }
 
 func (h *handlers) cardError(e *core.RequestEvent, err error) error {

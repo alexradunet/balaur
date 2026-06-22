@@ -78,19 +78,24 @@ func buildSkillsManage(app core.App) (proposed, active []SkillRecord) {
 	return
 }
 
+// SkillRecordOf maps one skill *core.Record to the SkillRecordCard view-model.
+func SkillRecordOf(r *core.Record) SkillRecord {
+	return SkillRecord{
+		ID:          r.Id,
+		Status:      r.GetString("status"),
+		Name:        r.GetString("name"),
+		Description: r.GetString("description"),
+		WhenToUse:   r.GetString("when_to_use"),
+		Content:     r.GetString("content"),
+		Enabled:     r.GetBool("enabled"),
+		UseCount:    r.GetInt("use_count"),
+	}
+}
+
 func mapRecords(recs []*core.Record) []SkillRecord {
 	out := make([]SkillRecord, 0, len(recs))
 	for _, r := range recs {
-		out = append(out, SkillRecord{
-			ID:          r.Id,
-			Status:      r.GetString("status"),
-			Name:        r.GetString("name"),
-			Description: r.GetString("description"),
-			WhenToUse:   r.GetString("when_to_use"),
-			Content:     r.GetString("content"),
-			Enabled:     r.GetBool("enabled"),
-			UseCount:    r.GetInt("use_count"),
-		})
+		out = append(out, SkillRecordOf(r))
 	}
 	return out
 }
