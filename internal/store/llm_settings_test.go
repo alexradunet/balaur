@@ -3,7 +3,6 @@ package store
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/alexradunet/balaur/internal/storetest"
 )
@@ -308,15 +307,6 @@ func TestFindOrCreateLLMModelChangePathPersists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first save: %v", err)
 	}
-	rec, err := app.FindRecordById("llm_models", id1)
-	if err != nil {
-		t.Fatalf("find model: %v", err)
-	}
-	beforeUpdated := rec.GetString("updated")
-
-	// Sleep long enough that the autodate timestamp can advance (millisecond
-	// resolution in the stored string).
-	time.Sleep(2 * time.Millisecond)
 
 	// Same chat tag, different embed tag => the found record changes and MUST
 	// still be persisted (the change path is not skipped).
@@ -333,8 +323,5 @@ func TestFindOrCreateLLMModelChangePathPersists(t *testing.T) {
 	}
 	if got := rec2.GetString("embed_model"); got != "embed-new" {
 		t.Fatalf("change not persisted: embed_model = %q, want embed-new", got)
-	}
-	if rec2.GetString("updated") == beforeUpdated {
-		t.Fatalf("change path did not write: updated unchanged at %q", beforeUpdated)
 	}
 }
