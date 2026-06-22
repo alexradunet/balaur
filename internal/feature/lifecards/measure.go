@@ -49,7 +49,7 @@ type MeasureView struct {
 // Mirrors renderCardMeasure (internal/web/cards.go ~451).
 func buildMeasure(app core.App, params map[string]string) MeasureView {
 	kind := params["kind"]
-	days := intParam(params, "days", lifeWindowDays)
+	days := ui.IntParam(params, "days", lifeWindowDays)
 	since := time.Now().AddDate(0, 0, -days)
 
 	v := MeasureView{Kind: kind}
@@ -155,18 +155,6 @@ func registerMeasure(app core.App) {
 // ---------------------------------------------------------------------------
 // Helpers (shared within the package)
 // ---------------------------------------------------------------------------
-
-// intParam reads an integer param with a fallback default.
-// Mirrors web/cards.go intParam and knowledgecards/skills.go intParam.
-func intParam(p map[string]string, key string, def int) int {
-	if v, ok := p[key]; ok && v != "" {
-		n := 0
-		if _, err := fmt.Sscanf(v, "%d", &n); err == nil && n > 0 {
-			return n
-		}
-	}
-	return def
-}
 
 // numericValues extracts non-zero value_num floats from a record slice.
 // Mirrors web/life.go numericValues.

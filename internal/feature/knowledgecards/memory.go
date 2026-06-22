@@ -227,7 +227,7 @@ func memoryManageBody(v MemoryManageView) g.Node {
 // buildMemorySummary fetches active memories and returns the MemoryView.
 // Mirrors renderCardMemory (internal/web/cards.go ~526).
 func buildMemorySummary(app core.App, params map[string]string) MemoryView {
-	limit := intParam(params, "limit", 6)
+	limit := ui.IntParam(params, "limit", 6)
 	query := params["query"]
 
 	recs, _ := knowledge.FilterActive(app, knowledge.Memory, query, "")

@@ -47,7 +47,7 @@ type SkillRecord struct {
 // buildSkillsSummary fetches active skills and returns the rows + param line.
 // Mirrors renderCardSkills (internal/web/cards.go ~561).
 func buildSkillsSummary(app core.App, params map[string]string) ([]SkillRow, string) {
-	limit := intParam(params, "limit", 6)
+	limit := ui.IntParam(params, "limit", 6)
 
 	recs, _ := knowledge.FilterActive(app, knowledge.Skill, "", "")
 	if len(recs) > limit {
@@ -98,17 +98,6 @@ func mapRecords(recs []*core.Record) []SkillRecord {
 		out = append(out, SkillRecordOf(r))
 	}
 	return out
-}
-
-// intParam reads an integer param with a fallback default.
-func intParam(p map[string]string, key string, def int) int {
-	if v, ok := p[key]; ok && v != "" {
-		n := 0
-		if _, err := fmt.Sscanf(v, "%d", &n); err == nil && n > 0 {
-			return n
-		}
-	}
-	return def
 }
 
 // ---------------------------------------------------------------------------
