@@ -67,6 +67,42 @@ func TestCaptureSucceeded(t *testing.T) {
 	}
 }
 
+func TestSplitSentences(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{
+			in:   "I set it. Done! Really? Yes.",
+			want: []string{"I set it", " Done", " Really", " Yes"},
+		},
+		{
+			in:   "Just one sentence",
+			want: []string{"Just one sentence"},
+		},
+		{
+			in:   "",
+			want: nil,
+		},
+		{
+			in:   "Line one\nLine two",
+			want: []string{"Line one", "Line two"},
+		},
+	}
+	for _, tc := range cases {
+		got := splitSentences(tc.in)
+		if len(got) != len(tc.want) {
+			t.Errorf("splitSentences(%q) = %q, want %q", tc.in, got, tc.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Errorf("splitSentences(%q)[%d] = %q, want %q", tc.in, i, got[i], tc.want[i])
+			}
+		}
+	}
+}
+
 func TestLastAssistantText(t *testing.T) {
 	turn := []llm.Message{
 		{Role: "assistant", Content: "first"},

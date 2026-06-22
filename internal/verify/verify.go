@@ -99,6 +99,6 @@ func ClaimsCapture(text string) bool {
 
 func splitSentences(text string) []string {
 	return strings.FieldsFunc(text, func(r rune) bool {
-		return r == '.' || r == '!' || r == '\n'
+		return r == '.' || r == '!' || r == '?' || r == '\n'
 	})
 }
