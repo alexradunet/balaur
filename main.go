@@ -193,7 +193,8 @@ func registerBriefing(app core.App) {
 		if err != nil {
 			client = nil // no model: the deterministic list still briefs
 		}
-		if err := tasks.Briefing(app, client, time.Now(), hour); err != nil {
+		now := time.Now().In(store.OwnerLocation(app))
+		if err := tasks.Briefing(app, client, now, hour); err != nil {
 			app.Logger().Warn("briefing: run stopped", "error", err)
 		}
 	}

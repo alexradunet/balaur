@@ -7,6 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
@@ -171,6 +172,65 @@ func TestBriefingUsesComposedText(t *testing.T) {
 	msgs := briefingMessages(t, app)
 	if len(msgs) != 1 || msgs[0].GetString("content") != composed {
 		t.Errorf("composed text not used: %q", msgs[0].GetString("content"))
+	}
+}
+
+// TestBriefedTodayZoneSensitivity asserts that BriefedToday computes "local
+// midnight" in the zone of the now it receives. A message seeded at
+// 2006-01-01 21:00 UTC is "today" when now is still Jan 1 in UTC (midnight =
+// Jan 1 00:00 UTC, message after midnight) but NOT "today" when now is Jan 2
+// in UTC+2 (midnight = Jan 2 00:00 UTC+2 = Jan 1 22:00 UTC, message at 21:00
+// UTC is before that midnight). The two calls must disagree, pinning the
+// invariant the Step 1 caller fix relies on.
+func TestBriefedTodayZoneSensitivity(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// Seed a briefing message with created = 2006-01-01 21:00:00 UTC.
+	// PocketBase's AutodateField skips the auto-set when a different value is
+	// already present via SetRaw (see field_autodate.go Intercept).
+	seedUTC := time.Date(2006, 1, 1, 21, 0, 0, 0, time.UTC)
+	col, err := app.FindCollectionByNameOrId("messages")
+	if err != nil {
+		t.Fatalf("messages collection: %v", err)
+	}
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master conversation: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.SetRaw("created", seedUTC.Format("2006-01-02 15:04:05.000Z"))
+	rec.Set("conversation", master.Id)
+	rec.Set("role", "assistant")
+	rec.Set("content", "Good morning.")
+	rec.Set("origin", "briefing")
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("save seeded message: %v", err)
+	}
+
+	// Confirm SetRaw actually overrode the autodate (fail-fast if PocketBase
+	// behaviour changes in a future upgrade).
+	reloaded, err := app.FindRecordById("messages", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if got := reloaded.GetDateTime("created").Time().UTC(); got != seedUTC {
+		t.Fatalf("SetRaw did not override autodate: got %v, want %v", got, seedUTC)
+	}
+
+	// UTC view: now = 2006-01-01 23:00 UTC (same date as message).
+	// Local midnight = Jan 1 00:00 UTC. Message at 21:00 > midnight → true.
+	nowUTC := time.Date(2006, 1, 1, 23, 0, 0, 0, time.UTC)
+	if !BriefedToday(app, nowUTC) {
+		t.Error("BriefedToday(UTC Jan 1 23:00) = false; want true")
+	}
+
+	// UTC+2 view: same UTC instant (Jan 1 23:00 UTC) is Jan 2 01:00 UTC+2.
+	// "Today" in UTC+2 is Jan 2; midnight = Jan 2 00:00 UTC+2 = Jan 1 22:00 UTC.
+	// Message at Jan 1 21:00 UTC is BEFORE that midnight → false.
+	utcPlus2 := time.FixedZone("UTC+2", 2*60*60)
+	nowPlus2 := nowUTC.In(utcPlus2) // same instant, different zone
+	if BriefedToday(app, nowPlus2) {
+		t.Error("BriefedToday(UTC+2 Jan 2 01:00) = true; want false — message is in UTC+2's yesterday")
 	}
 }
 
