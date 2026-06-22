@@ -11,7 +11,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -40,7 +40,7 @@ type KnowledgeFocusView struct {
 // markup from a single source.
 func KnowledgeGrid(active []g.Node, kind, query string) g.Node {
 	if len(active) > 0 {
-		return Div(Class("k-grid"), g.Group(active))
+		return h.Div(h.Class("k-grid"), g.Group(active))
 	}
 	if query != "" {
 		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: fmt.Sprintf("Nothing matches %q.", query)})
@@ -54,12 +54,12 @@ func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
 	// Awaiting queue: proposed records only. No search, no active/archived.
 	if v.Mode == "proposed" {
 		body := KnowledgeGrid(v.Proposed, v.Kind, "")
-		return Section(Class("k-section"),
-			H2(Class("k-heading k-heading-proposed"),
+		return h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading k-heading-proposed"),
 				g.Text("Awaiting your word "),
-				Span(Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Proposed)))),
+				h.Span(h.Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Proposed)))),
 			),
-			P(Class("k-sub"), g.Text("Balaur proposed these. Nothing becomes memory without your approval.")),
+			h.P(h.Class("k-sub"), g.Text("Balaur proposed these. Nothing becomes memory without your approval.")),
 			body,
 		)
 	}
@@ -70,50 +70,50 @@ func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
 	// cards leave this empty, sending proposals to the Awaiting card).
 	if len(v.Proposed) > 0 {
 		out = append(out,
-			Section(Class("k-section"),
-				H2(Class("k-heading k-heading-proposed"),
+			h.Section(h.Class("k-section"),
+				h.H2(h.Class("k-heading k-heading-proposed"),
 					g.Text("Awaiting your word "),
-					Span(Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Proposed)))),
+					h.Span(h.Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Proposed)))),
 				),
-				P(Class("k-sub"), g.Text("Balaur proposed these. Nothing becomes memory without your approval.")),
-				Div(Class("k-grid"), g.Group(v.Proposed)),
+				h.P(h.Class("k-sub"), g.Text("Balaur proposed these. Nothing becomes memory without your approval.")),
+				h.Div(h.Class("k-grid"), g.Group(v.Proposed)),
 			),
-			Div(Class("stitch")),
+			h.Div(h.Class("stitch")),
 		)
 	}
 
 	// Active section: search + grid. The category is fixed per-card — baked into the @get.
 	searchGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q)+'&category=" + v.Category + "')"
 	out = append(out,
-		Section(Class("k-section"),
-			H2(Class("k-heading"),
+		h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading"),
 				g.Text("Active "),
-				Span(Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Active)))),
+				h.Span(h.Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Active)))),
 			),
-			Div(Class("k-controls"),
+			h.Div(h.Class("k-controls"),
 				g.Attr("data-signals:q", "'"+v.Query+"'"),
-				Input(
-					Class("k-search"), Type("search"), Name("q"), Value(v.Query),
+				h.Input(
+					h.Class("k-search"), h.Type("search"), h.Name("q"), h.Value(v.Query),
 					g.Attr("placeholder", "Search "+v.Title+"…"),
 					g.Attr("autocomplete", "off"),
 					g.Attr("data-bind:q", ""),
 					g.Attr("data-on:input__debounce.250ms", searchGet),
 				),
 			),
-			Div(ID("k-active-grid"), KnowledgeGrid(v.Active, v.Kind, v.Query)),
+			h.Div(h.ID("k-active-grid"), KnowledgeGrid(v.Active, v.Kind, v.Query)),
 		),
 	)
 
 	// Archived (only when present).
 	if len(v.Archived) > 0 {
 		out = append(out,
-			Div(Class("stitch")),
-			Section(Class("k-section"),
-				H2(Class("k-heading k-heading-muted"),
+			h.Div(h.Class("stitch")),
+			h.Section(h.Class("k-section"),
+				h.H2(h.Class("k-heading k-heading-muted"),
 					g.Text("Archived "),
-					Span(Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Archived)))),
+					h.Span(h.Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Archived)))),
 				),
-				Div(Class("k-grid k-grid-muted"), g.Group(v.Archived)),
+				h.Div(h.Class("k-grid k-grid-muted"), g.Group(v.Archived)),
 			),
 		)
 	}

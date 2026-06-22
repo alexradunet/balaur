@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -53,7 +53,7 @@ func renderTasks(app core.App, params map[string]string) g.Node {
 		items = append(items, TaskCard(r))
 	}
 	// Bare stack — no card container/head/footer. CSS in basm.css.
-	return Div(Class("tasks-stack"), g.Group(items))
+	return h.Div(h.Class("tasks-stack"), g.Group(items))
 }
 
 // filterBucket narrows OPEN tasks to one due bucket via tasks.Bucket. An empty

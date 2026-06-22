@@ -5,7 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -62,13 +62,13 @@ func buildLines(app core.App, params map[string]string) LinesView {
 // LinesCard renders the lines tile. Port of ucard_lines in cards.html.
 // Root id "ucard-lines" matches the registry convention.
 func LinesCard(v LinesView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-lines"), ID("ucard-lines"),
+	return h.Article(
+		h.Class("kcard ucard ucard-lines"), h.ID("ucard-lines"),
 		ui.CardHead("/static/icons/orb.png", "Recent lines",
-			Span(Class("kcard-meta"), g.Text(v.Kind)),
+			h.Span(h.Class("kcard-meta"), g.Text(v.Kind)),
 		),
 		linesBody(v),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
 	)
 }
 
@@ -79,9 +79,9 @@ func linesBody(v LinesView) g.Node {
 	if len(v.Lines) > 0 {
 		items := make([]g.Node, 0, len(v.Lines))
 		for _, line := range v.Lines {
-			items = append(items, Li(g.Text(line)))
+			items = append(items, h.Li(g.Text(line)))
 		}
-		return Ul(Class("life-lines"), g.Group(items))
+		return h.Ul(h.Class("life-lines"), g.Group(items))
 	}
 	return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No " + v.Kind + " entries yet."})
 }

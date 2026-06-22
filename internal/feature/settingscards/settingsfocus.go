@@ -21,7 +21,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/ardanlabs/kronk/sdk/tools/libs"
 
@@ -285,28 +285,28 @@ func ProfileIdentityCard(v ProfileView) g.Node {
 	if nameVal == "You" {
 		nameVal = ""
 	}
-	return Article(
-		Class("profile-card"), ID("identity-card"),
-		H2(Class("profile-card-title"), g.Text("Identity")),
-		P(Class("profile-hint"), g.Text("The name Balaur uses in the chat label when you speak.")),
-		Form(
-			Class("profile-name-form"),
+	return h.Article(
+		h.Class("profile-card"), h.ID("identity-card"),
+		h.H2(h.Class("profile-card-title"), g.Text("Identity")),
+		h.P(h.Class("profile-hint"), g.Text("The name Balaur uses in the chat label when you speak.")),
+		h.Form(
+			h.Class("profile-name-form"),
 			data.On("submit", "@post('/ui/profile/name', {contentType:'form'})", data.ModifierPrevent),
-			Label(For("display_name"), g.Text("Your name")),
-			Div(Class("profile-name-row"),
-				Input(
-					ID("display_name"),
-					Name("display_name"),
-					Type("text"),
-					Value(nameVal),
-					Placeholder("How should Balaur call you?"),
+			h.Label(h.For("display_name"), g.Text("Your name")),
+			h.Div(h.Class("profile-name-row"),
+				h.Input(
+					h.ID("display_name"),
+					h.Name("display_name"),
+					h.Type("text"),
+					h.Value(nameVal),
+					h.Placeholder("How should Balaur call you?"),
 					g.Attr("autocomplete", "off"),
 					g.Attr("maxlength", "60"),
 				),
-				Button(Class("btn btn-primary"), Type("submit"), g.Text("Save")),
+				h.Button(h.Class("btn btn-primary"), h.Type("submit"), g.Text("Save")),
 			),
 			g.If(v.SavedName,
-				P(Class("profile-saved"), g.Text("◈ Saved.")),
+				h.P(h.Class("profile-saved"), g.Text("◈ Saved.")),
 			),
 		),
 	)
@@ -318,36 +318,36 @@ func ProfileIdentityCard(v ProfileView) g.Node {
 // The grid is a FORM-PER-BUTTON with a hidden input — preserved as specified.
 func ProfileSoulSection(v ProfileView) g.Node {
 	kids := []g.Node{
-		Class("profile-card"), ID("soul-section"),
-		H2(Class("profile-card-title"), g.Text("Your avatar")),
-		P(Class("profile-hint"), g.Text("Who appears in chat as you. 16 portraits from the Basm world.")),
+		h.Class("profile-card"), h.ID("soul-section"),
+		h.H2(h.Class("profile-card-title"), g.Text("Your avatar")),
+		h.P(h.Class("profile-hint"), g.Text("Who appears in chat as you. 16 portraits from the Basm world.")),
 	}
-	grid := []g.Node{Class("avatar-choice-list profile-avatar-grid")}
+	grid := []g.Node{h.Class("avatar-choice-list profile-avatar-grid")}
 	for _, opt := range v.AvatarOptions {
 		btnClass := "avatar-choice profile-avatar-btn"
 		if opt.Active {
 			btnClass += " avatar-choice-active"
 		}
 		btnAttrs := []g.Node{
-			Class(btnClass),
-			Type("submit"),
+			h.Class(btnClass),
+			h.Type("submit"),
 		}
 		if opt.Active {
-			btnAttrs = append(btnAttrs, g.Attr("aria-current", "true"), Disabled())
+			btnAttrs = append(btnAttrs, g.Attr("aria-current", "true"), h.Disabled())
 		}
 		grid = append(grid,
-			Form(
+			h.Form(
 				data.On("submit", "@post('/ui/profile/soul-avatar', {contentType:'form'})", data.ModifierPrevent),
-				Input(Type("hidden"), Name("soul_avatar"), Value(opt.Key)),
-				Button(append(btnAttrs,
-					Img(Class("px"), Src(opt.URL), Alt(""), g.Attr("decoding", "async")),
-					Span(g.Text(opt.Label)),
+				h.Input(h.Type("hidden"), h.Name("soul_avatar"), h.Value(opt.Key)),
+				h.Button(append(btnAttrs,
+					h.Img(h.Class("px"), h.Src(opt.URL), h.Alt(""), g.Attr("decoding", "async")),
+					h.Span(g.Text(opt.Label)),
 				)...),
 			),
 		)
 	}
-	kids = append(kids, Div(grid...))
-	return Article(kids...)
+	kids = append(kids, h.Div(grid...))
+	return h.Article(kids...)
 }
 
 // ProfileBalaurSection renders the Balaur head section fragment (#balaur-section).
@@ -355,36 +355,36 @@ func ProfileSoulSection(v ProfileView) g.Node {
 // Re-render target after POST /ui/profile/balaur-avatar (outer patch #balaur-section).
 func ProfileBalaurSection(v ProfileView) g.Node {
 	kids := []g.Node{
-		Class("profile-card"), ID("balaur-section"),
-		H2(Class("profile-card-title"), g.Text("Companion head")),
-		P(Class("profile-hint"), g.Text("Which Balaur personality you meet in chat. 16 heads, one companion.")),
+		h.Class("profile-card"), h.ID("balaur-section"),
+		h.H2(h.Class("profile-card-title"), g.Text("Companion head")),
+		h.P(h.Class("profile-hint"), g.Text("Which Balaur personality you meet in chat. 16 heads, one companion.")),
 	}
-	grid := []g.Node{Class("avatar-choice-list profile-avatar-grid")}
+	grid := []g.Node{h.Class("avatar-choice-list profile-avatar-grid")}
 	for _, opt := range v.BalaurOptions {
 		btnClass := "avatar-choice profile-avatar-btn"
 		if opt.Active {
 			btnClass += " avatar-choice-active"
 		}
 		btnAttrs := []g.Node{
-			Class(btnClass),
-			Type("submit"),
+			h.Class(btnClass),
+			h.Type("submit"),
 		}
 		if opt.Active {
-			btnAttrs = append(btnAttrs, g.Attr("aria-current", "true"), Disabled())
+			btnAttrs = append(btnAttrs, g.Attr("aria-current", "true"), h.Disabled())
 		}
 		grid = append(grid,
-			Form(
+			h.Form(
 				data.On("submit", "@post('/ui/profile/balaur-avatar', {contentType:'form'})", data.ModifierPrevent),
-				Input(Type("hidden"), Name("balaur_avatar"), Value(opt.Key)),
-				Button(append(btnAttrs,
-					Img(Class("px"), Src(opt.URL), Alt(""), g.Attr("decoding", "async")),
-					Span(g.Text(opt.Label)),
+				h.Input(h.Type("hidden"), h.Name("balaur_avatar"), h.Value(opt.Key)),
+				h.Button(append(btnAttrs,
+					h.Img(h.Class("px"), h.Src(opt.URL), h.Alt(""), g.Attr("decoding", "async")),
+					h.Span(g.Text(opt.Label)),
 				)...),
 			),
 		)
 	}
-	kids = append(kids, Div(grid...))
-	return Article(kids...)
+	kids = append(kids, h.Div(grid...))
+	return h.Article(kids...)
 }
 
 // SettingsFocus renders the settings focus body for one section (profile /
@@ -405,5 +405,5 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		})
 	}
 
-	return Div(Class("settings-section"), content)
+	return h.Div(h.Class("settings-section"), content)
 }

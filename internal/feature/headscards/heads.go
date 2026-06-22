@@ -9,7 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/store"
@@ -88,12 +88,12 @@ func BuildHeads(app core.App) HeadsView {
 // template (web/templates/cards.html) exactly: same classes, ids, conditional
 // tags/forms, and new-head form.
 func HeadsCard(v HeadsView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-heads ucard-manage"), ID("ucard-heads"),
+	return h.Article(
+		h.Class("kcard ucard ucard-heads ucard-manage"), h.ID("ucard-heads"),
 		ui.CardHead("/static/icons/tome.png", "Heads"),
-		Ul(Class("head-list"), g.Group(headRows(v.Heads))),
-		Details(Class("head-new"),
-			Summary(g.Text("+ New head")),
+		h.Ul(h.Class("head-list"), g.Group(headRows(v.Heads))),
+		h.Details(h.Class("head-new"),
+			h.Summary(g.Text("+ New head")),
 			newHeadForm(v.Groups, v.Avatars),
 		),
 	)
@@ -112,15 +112,15 @@ func headRow(row HeadRow) g.Node {
 	if row.Active {
 		cls += " head-row-active"
 	}
-	return Li(
-		Class(cls), ID("head-"+row.ID),
-		Img(Class("px head-row-avatar"), Src(row.AvatarURL), Alt(""), g.Attr("decoding", "async")),
-		Div(Class("head-row-main"),
+	return h.Li(
+		h.Class(cls), h.ID("head-"+row.ID),
+		h.Img(h.Class("px head-row-avatar"), h.Src(row.AvatarURL), h.Alt(""), g.Attr("decoding", "async")),
+		h.Div(h.Class("head-row-main"),
 			headRowName(row),
-			g.If(row.Purpose != "", Span(Class("kcard-meta"), g.Text(row.Purpose))),
-			Span(Class("head-row-groups"), g.Group(groupPips(row.Groups))),
+			g.If(row.Purpose != "", h.Span(h.Class("kcard-meta"), g.Text(row.Purpose))),
+			h.Span(h.Class("head-row-groups"), g.Group(groupPips(row.Groups))),
 		),
-		Div(Class("head-row-actions"),
+		h.Div(h.Class("head-row-actions"),
 			g.If(!row.Active, makeActiveForm(row.ID)),
 			g.If(!row.BuiltIn, deleteForm(row.ID)),
 		),
@@ -135,57 +135,57 @@ func headRowName(row HeadRow) g.Node {
 	if row.Active {
 		children = append(children, g.Text(" "), ui.Tag(g.Text("active")))
 	}
-	return Span(Class("head-row-name"), g.Group(children))
+	return h.Span(h.Class("head-row-name"), g.Group(children))
 }
 
 func groupPips(groups []GroupChoice) []g.Node {
 	nodes := make([]g.Node, 0, len(groups))
 	for _, gc := range groups {
 		if gc.On {
-			nodes = append(nodes, Span(Class("head-group-pip"), g.Text(gc.Key)))
+			nodes = append(nodes, h.Span(h.Class("head-group-pip"), g.Text(gc.Key)))
 		}
 	}
 	return nodes
 }
 
 func makeActiveForm(id string) g.Node {
-	return Form(
+	return h.Form(
 		data.On("submit", "@post('/ui/heads/active', {contentType:'form'})", data.ModifierPrevent),
-		Input(Type("hidden"), Name("head"), Value(id)),
-		Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Make active")),
+		h.Input(h.Type("hidden"), h.Name("head"), h.Value(id)),
+		h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Make active")),
 	)
 }
 
 func deleteForm(id string) g.Node {
-	return Form(
+	return h.Form(
 		data.On("submit", "@post('/ui/heads/"+id+"/delete', {contentType:'form'})", data.ModifierPrevent),
-		Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Delete")),
+		h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Delete")),
 	)
 }
 
 func newHeadForm(groups []string, avatars []store.AvatarEntry) g.Node {
-	return Form(
-		Class("head-new-form"),
+	return h.Form(
+		h.Class("head-new-form"),
 		data.On("submit", "@post('/ui/heads/new', {contentType:'form'})", data.ModifierPrevent),
-		Input(Type("text"), Name("name"), Placeholder("Name"), Required(), MaxLength("120")),
-		Input(Type("text"), Name("purpose"), Placeholder("Purpose (how this head should answer)"), MaxLength("2000")),
-		FieldSet(Class("head-new-groups"),
-			Legend(g.Text("Tools (none = all)")),
+		h.Input(h.Type("text"), h.Name("name"), h.Placeholder("Name"), h.Required(), h.MaxLength("120")),
+		h.Input(h.Type("text"), h.Name("purpose"), h.Placeholder("Purpose (how this head should answer)"), h.MaxLength("2000")),
+		h.FieldSet(h.Class("head-new-groups"),
+			h.Legend(g.Text("Tools (none = all)")),
 			g.Group(groupCheckboxes(groups)),
 		),
-		FieldSet(Class("head-new-avatars avatar-choice-list"),
-			Legend(g.Text("Avatar")),
+		h.FieldSet(h.Class("head-new-avatars avatar-choice-list"),
+			h.Legend(g.Text("Avatar")),
 			g.Group(avatarRadios(avatars)),
 		),
-		Button(Class("btn btn-primary btn-sm"), Type("submit"), g.Text("Create head")),
+		h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Create head")),
 	)
 }
 
 func groupCheckboxes(groups []string) []g.Node {
 	nodes := make([]g.Node, 0, len(groups))
 	for _, grp := range groups {
-		nodes = append(nodes, Label(
-			Input(Type("checkbox"), Name("tools"), Value(grp)),
+		nodes = append(nodes, h.Label(
+			h.Input(h.Type("checkbox"), h.Name("tools"), h.Value(grp)),
 			g.Text(" "+grp),
 		))
 	}
@@ -195,10 +195,10 @@ func groupCheckboxes(groups []string) []g.Node {
 func avatarRadios(avatars []store.AvatarEntry) []g.Node {
 	nodes := make([]g.Node, 0, len(avatars))
 	for _, av := range avatars {
-		nodes = append(nodes, Label(Class("avatar-choice"),
-			Input(Type("radio"), Name("balaur_avatar"), Value(av.Key)),
-			Img(Class("px"), Src(av.URL), Alt(av.Label), g.Attr("decoding", "async")),
-			Span(g.Text(av.Label)),
+		nodes = append(nodes, h.Label(h.Class("avatar-choice"),
+			h.Input(h.Type("radio"), h.Name("balaur_avatar"), h.Value(av.Key)),
+			h.Img(h.Class("px"), h.Src(av.URL), h.Alt(av.Label), g.Attr("decoding", "async")),
+			h.Span(g.Text(av.Label)),
 		))
 	}
 	return nodes

@@ -3,7 +3,7 @@ package taskcards
 import (
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -23,16 +23,16 @@ func transitionPost(id string) g.Node {
 // TaskCard renders one task as the rich card with inline Done/Snooze/Drop actions
 // (the gomponents port of card-task.html). Root id "tcard-{id}".
 func TaskCard(v TaskView) g.Node {
-	return Article(
-		Class("kcard tcard tcard-"+v.Status), ID("tcard-"+v.ID),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"), g.Text("▪ task")),
+	return h.Article(
+		h.Class("kcard tcard tcard-"+v.Status), h.ID("tcard-"+v.ID),
+		h.Header(h.Class("kcard-head"),
+			h.Span(h.Class("kcard-kind"), g.Text("▪ task")),
 			g.If(v.RecurLine != "", ui.Tag(g.Text(v.RecurLine))),
 		),
-		H3(Class("kcard-title"), g.Text(v.Title)),
+		h.H3(h.Class("kcard-title"), g.Text(v.Title)),
 		taskDue(v),
 		taskNotes(v),
-		Footer(Class("kcard-actions"), taskActions(v)),
+		h.Footer(h.Class("kcard-actions"), taskActions(v)),
 	)
 }
 
@@ -44,40 +44,40 @@ func taskDue(v TaskView) g.Node {
 	if v.Overdue {
 		cls = "tcard-due tcard-overdue"
 	}
-	return P(Class(cls), g.Text(v.DueLine))
+	return h.P(h.Class(cls), g.Text(v.DueLine))
 }
 
 func taskNotes(v TaskView) g.Node {
 	if v.Notes == "" {
 		return g.Text("")
 	}
-	return Details(Class("kcard-edit"),
-		Summary(g.Text("Notes")),
-		P(Class("kcard-body"), g.Text(v.Notes)),
+	return h.Details(h.Class("kcard-edit"),
+		h.Summary(g.Text("Notes")),
+		h.P(h.Class("kcard-body"), g.Text(v.Notes)),
 	)
 }
 
 func taskActions(v TaskView) g.Node {
 	if v.Status != "open" {
-		return Span(Class("kcard-meta"), g.Text(v.Status))
+		return h.Span(h.Class("kcard-meta"), g.Text(v.Status))
 	}
 	return g.Group([]g.Node{
-		Form(transitionPost(v.ID),
-			Input(Type("hidden"), Name("to"), Value("done")),
-			Button(Class("btn btn-primary btn-sm"), Type("submit"), g.Text("Done")),
+		h.Form(transitionPost(v.ID),
+			h.Input(h.Type("hidden"), h.Name("to"), h.Value("done")),
+			h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Done")),
 		),
-		Form(Class("tcard-snooze"), transitionPost(v.ID),
-			Input(Type("hidden"), Name("to"), Value("snooze")),
-			Select(Name("until"), g.Attr("aria-label", "Snooze until"),
-				Option(Value("1h"), g.Text("+1 hour")),
-				Option(Value("tonight"), g.Text("tonight")),
-				Option(Value("tomorrow"), g.Text("tomorrow")),
+		h.Form(h.Class("tcard-snooze"), transitionPost(v.ID),
+			h.Input(h.Type("hidden"), h.Name("to"), h.Value("snooze")),
+			h.Select(h.Name("until"), g.Attr("aria-label", "Snooze until"),
+				h.Option(h.Value("1h"), g.Text("+1 hour")),
+				h.Option(h.Value("tonight"), g.Text("tonight")),
+				h.Option(h.Value("tomorrow"), g.Text("tomorrow")),
 			),
-			Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Snooze")),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Snooze")),
 		),
-		Form(transitionPost(v.ID),
-			Input(Type("hidden"), Name("to"), Value("dropped")),
-			Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Drop")),
+		h.Form(transitionPost(v.ID),
+			h.Input(h.Type("hidden"), h.Name("to"), h.Value("dropped")),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Drop")),
 		),
 	})
 }

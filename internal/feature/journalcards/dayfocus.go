@@ -7,7 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
@@ -121,66 +121,66 @@ func clipDay(s string, n int) string {
 // Ports {{define "day_journal"}} from web/templates/day-focus.html.
 func DayJournal(v DayFocusView) g.Node {
 	kids := []g.Node{
-		Class("k-section"),
-		ID("day-journal"),
-		H2(Class("k-heading"), g.Text("Your thoughts")),
+		h.Class("k-section"),
+		h.ID("day-journal"),
+		h.H2(h.Class("k-heading"), g.Text("Your thoughts")),
 	}
 
 	if len(v.Journal) > 0 {
 		articles := make([]g.Node, 0, len(v.Journal))
 		for _, e := range v.Journal {
 			articles = append(articles,
-				Article(Class("journal-entry"),
-					Div(Class("journal-meta"),
-						Span(Class("tl-time"), g.Text(e.Time)),
-						Form(
+				h.Article(h.Class("journal-entry"),
+					h.Div(h.Class("journal-meta"),
+						h.Span(h.Class("tl-time"), g.Text(e.Time)),
+						h.Form(
 							g.Attr("data-on:submit__prevent",
 								"@post('/ui/day/journal/"+e.ID+"/drop?date="+v.Date+"')"),
-							Button(Class("btn btn-ghost btn-sm"), Type("submit"),
+							h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"),
 								g.Text("remove")),
 						),
 					),
-					P(Class("journal-text"), g.Text(e.Text)),
+					h.P(h.Class("journal-text"), g.Text(e.Text)),
 				),
 			)
 		}
-		kids = append(kids, Div(Class("journal-list"), g.Group(articles)))
+		kids = append(kids, h.Div(h.Class("journal-list"), g.Group(articles)))
 	}
 
 	kids = append(kids,
-		Form(
-			Class("journal-form"),
+		h.Form(
+			h.Class("journal-form"),
 			g.Attr("data-on:submit__prevent",
 				"@post('/ui/day/"+v.Date+"/journal', {contentType:'form'})"),
-			Textarea(Name("text"), Rows("3"),
-				Placeholder("What stays with you from this day?"),
-				Required()),
-			Button(Class("btn btn-primary btn-sm"), Type("submit"),
+			h.Textarea(h.Name("text"), h.Rows("3"),
+				h.Placeholder("What stays with you from this day?"),
+				h.Required()),
+			h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"),
 				g.Text("Keep it")),
 		),
 	)
 
-	return Section(kids...)
+	return h.Section(kids...)
 }
 
 // DayFocus renders the day card's full-canvas focus body: the journal section,
 // the recap summary, done tasks, and the day's log. Nav-free — plan 093.
 // Ports {{define "day_focus"}} from web/templates/day-focus.html.
 func DayFocus(v DayFocusView) g.Node {
-	titleKids := []g.Node{Class("day-title"), g.Text(v.Label)}
+	titleKids := []g.Node{h.Class("day-title"), g.Text(v.Label)}
 	if v.IsToday {
-		titleKids = append(titleKids, g.Text(" "), Span(Class("tag"), g.Text("today")))
+		titleKids = append(titleKids, g.Text(" "), h.Span(h.Class("tag"), g.Text("today")))
 	}
 
 	// Recap section content
 	var recapText g.Node
 	switch {
 	case v.Recap != "":
-		recapText = P(Class("recap-body"), g.Text(v.Recap))
+		recapText = h.P(h.Class("recap-body"), g.Text(v.Recap))
 	case v.IsToday:
-		recapText = P(Class("k-sub"), g.Text("Today is still being written."))
+		recapText = h.P(h.Class("k-sub"), g.Text("Today is still being written."))
 	default:
-		recapText = P(Class("k-sub"), g.Text("No summary kept for this day."))
+		recapText = h.P(h.Class("k-sub"), g.Text("No summary kept for this day."))
 	}
 
 	// Done section
@@ -189,15 +189,15 @@ func DayFocus(v DayFocusView) g.Node {
 		items := make([]g.Node, 0, len(v.Done))
 		for _, dl := range v.Done {
 			items = append(items,
-				Li(Class("tl-item"),
-					Span(Class("tl-time"), g.Text(dl.Time)),
+				h.Li(h.Class("tl-item"),
+					h.Span(h.Class("tl-time"), g.Text(dl.Time)),
 					g.Text(" "+dl.Text),
 				),
 			)
 		}
-		doneContent = Ul(Class("tl-items"), g.Group(items))
+		doneContent = h.Ul(h.Class("tl-items"), g.Group(items))
 	} else {
-		doneContent = P(Class("k-sub"), g.Text("Nothing marked done this day."))
+		doneContent = h.P(h.Class("k-sub"), g.Text("Nothing marked done this day."))
 	}
 
 	// Logs section
@@ -206,33 +206,33 @@ func DayFocus(v DayFocusView) g.Node {
 		items := make([]g.Node, 0, len(v.Logs))
 		for _, dl := range v.Logs {
 			items = append(items,
-				Li(Class("tl-item"),
-					Span(Class("tl-time"), g.Text(dl.Time)),
+				h.Li(h.Class("tl-item"),
+					h.Span(h.Class("tl-time"), g.Text(dl.Time)),
 					g.Text(" "+dl.Text),
 				),
 			)
 		}
-		logsContent = Ul(Class("tl-items"), g.Group(items))
+		logsContent = h.Ul(h.Class("tl-items"), g.Group(items))
 	} else {
-		logsContent = P(Class("k-sub"), g.Text("Nothing logged this day."))
+		logsContent = h.P(h.Class("k-sub"), g.Text("Nothing logged this day."))
 	}
 
-	return Div(Class("day-focus"),
-		H2(titleKids...),
+	return h.Div(h.Class("day-focus"),
+		h.H2(titleKids...),
 		DayJournal(v),
-		Div(Class("stitch")),
-		Section(Class("k-section"),
-			H2(Class("k-heading"), g.Text("The day in summary")),
+		h.Div(h.Class("stitch")),
+		h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading"), g.Text("The day in summary")),
 			recapText,
 		),
-		Div(Class("stitch")),
-		Section(Class("k-section"),
-			H2(Class("k-heading"), g.Text("What got done")),
+		h.Div(h.Class("stitch")),
+		h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading"), g.Text("What got done")),
 			doneContent,
 		),
-		Div(Class("stitch")),
-		Section(Class("k-section"),
-			H2(Class("k-heading"), g.Text("The day's log")),
+		h.Div(h.Class("stitch")),
+		h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading"), g.Text("The day's log")),
 			logsContent,
 		),
 	)

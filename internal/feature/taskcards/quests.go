@@ -7,7 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -22,13 +22,13 @@ type QuestsView struct {
 // QuestsCard is the summary quest log: a compact list with an inline ✓ done form
 // per open task (src=quests). Port of ucard_quests.
 func QuestsCard(v QuestsView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-quests"), ID("ucard-quests"),
+	return h.Article(
+		h.Class("kcard ucard ucard-quests"), h.ID("ucard-quests"),
 		ui.CardHead("/static/icons/scroll.png", "Quest log",
-			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
+			g.If(v.ParamLine != "", h.Span(h.Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		questsSummaryBody(v),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →"))),
 	)
 }
 
@@ -40,34 +40,34 @@ func questsSummaryBody(v QuestsView) g.Node {
 	for _, row := range v.Rows {
 		items = append(items, questsSummaryRow(row))
 	}
-	return Ul(Class("ucard-list"), g.Group(items))
+	return h.Ul(h.Class("ucard-list"), g.Group(items))
 }
 
 func questsSummaryRow(row TaskView) g.Node {
 	children := []g.Node{
-		Class("ucard-row"), ID("urow-quests-" + row.ID),
-		Span(Class("ucard-title"), g.Text(row.Title)),
+		h.Class("ucard-row"), h.ID("urow-quests-" + row.ID),
+		h.Span(h.Class("ucard-title"), g.Text(row.Title)),
 	}
 	if row.DueLine != "" {
-		children = append(children, Span(Class("kcard-meta tcard-due"), g.Text(row.DueLine)))
+		children = append(children, h.Span(h.Class("kcard-meta tcard-due"), g.Text(row.DueLine)))
 	}
 	if row.Status == "open" {
-		children = append(children, Form(transitionPost(row.ID),
-			Input(Type("hidden"), Name("to"), Value("done")),
-			Input(Type("hidden"), Name("src"), Value("quests")),
-			Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("✓")),
+		children = append(children, h.Form(transitionPost(row.ID),
+			h.Input(h.Type("hidden"), h.Name("to"), h.Value("done")),
+			h.Input(h.Type("hidden"), h.Name("src"), h.Value("quests")),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("✓")),
 		))
 	}
-	return Li(children...)
+	return h.Li(children...)
 }
 
 // QuestsManageCard is the interactive quest fold: each open task as a full
 // TaskCard (Done/Snooze/Drop inline). Port of ucard_quests_manage.
 func QuestsManageCard(v QuestsView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-manage ucard-quests-manage"), ID("ucard-quests-manage"),
+	return h.Article(
+		h.Class("kcard ucard ucard-manage ucard-quests-manage"), h.ID("ucard-quests-manage"),
 		ui.CardHead("/static/icons/scroll.png", "Quest log",
-			A(Class("kcard-meta"), Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →")),
+			h.A(h.Class("kcard-meta"), h.Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →")),
 		),
 		questsManageBody(v),
 	)
@@ -81,7 +81,7 @@ func questsManageBody(v QuestsView) g.Node {
 	for _, row := range v.Rows {
 		items = append(items, TaskCard(row))
 	}
-	return Div(Class("ucard-manage-list"), g.Group(items))
+	return h.Div(h.Class("ucard-manage-list"), g.Group(items))
 }
 
 // taskViewOf builds the full task view-model (mirrors web/tasks.go taskViewOf).

@@ -8,7 +8,7 @@ package settingscards
 import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -16,16 +16,16 @@ import (
 // SettingsCard renders the static settings tile (port of ucard_settings): two
 // links into the settings focus + a footer. No data fetch.
 func SettingsCard() g.Node {
-	return Article(
-		Class("kcard ucard ucard-settings"), ID("ucard-settings"),
+	return h.Article(
+		h.Class("kcard ucard ucard-settings"), h.ID("ucard-settings"),
 		ui.CardHead("/static/icons/key.png", "Settings"),
-		Ul(Class("ucard-stats"),
-			Li(A(Href("/ui/show/settings?section=profile"), g.Text("Profile"))),
-			Li(A(Href("/ui/show/settings?section=models"), g.Text("Models & APIs"))),
-			Li(A(Href("/ui/show/settings?section=heads"), g.Text("Heads"))),
-			Li(A(Href("/ui/show/settings?section=appearance"), g.Text("Appearance"))),
+		h.Ul(h.Class("ucard-stats"),
+			h.Li(h.A(h.Href("/ui/show/settings?section=profile"), g.Text("Profile"))),
+			h.Li(h.A(h.Href("/ui/show/settings?section=models"), g.Text("Models & APIs"))),
+			h.Li(h.A(h.Href("/ui/show/settings?section=heads"), g.Text("Heads"))),
+			h.Li(h.A(h.Href("/ui/show/settings?section=appearance"), g.Text("Appearance"))),
 		),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/settings"), g.Text("open settings →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/settings"), g.Text("open settings →"))),
 	)
 }
 

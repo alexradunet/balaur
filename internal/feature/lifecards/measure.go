@@ -12,7 +12,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -80,13 +80,13 @@ func buildMeasure(app core.App, params map[string]string) MeasureView {
 // MeasureCard renders the measure tile. Port of ucard_measure in cards.html.
 // Root id "ucard-measure" matches the registry convention.
 func MeasureCard(v MeasureView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-measure"), ID("ucard-measure"),
+	return h.Article(
+		h.Class("kcard ucard ucard-measure"), h.ID("ucard-measure"),
 		ui.CardHead("/static/icons/orb.png", "Measure",
-			Span(Class("kcard-meta"), g.Text(v.Kind)),
+			h.Span(h.Class("kcard-meta"), g.Text(v.Kind)),
 		),
 		measureBody(v),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
 	)
 }
 
@@ -106,24 +106,24 @@ func measureDataBody(v MeasureView) g.Node {
 		nodes = append(nodes, measureSparkline(v))
 	}
 	if v.Change != "" {
-		nodes = append(nodes, P(Class("life-change"), g.Text(v.Change)))
+		nodes = append(nodes, h.P(h.Class("life-change"), g.Text(v.Change)))
 	}
 	return g.Group(nodes)
 }
 
 func measureStat(v MeasureView) g.Node {
 	// Mirrors: {{.LastVal}}{{with .Unit}} <span class="life-unit">{{.}}</span>{{end}} <span class="life-lastat">· {{.LastAt}}</span>
-	children := []g.Node{Class("life-stat"), g.Text(v.LastVal)}
+	children := []g.Node{h.Class("life-stat"), g.Text(v.LastVal)}
 	if v.Unit != "" {
-		children = append(children, g.Text(" "), Span(Class("life-unit"), g.Text(v.Unit)))
+		children = append(children, g.Text(" "), h.Span(h.Class("life-unit"), g.Text(v.Unit)))
 	}
-	children = append(children, g.Text(" "), Span(Class("life-lastat"), g.Text("· "+v.LastAt)))
-	return P(children...)
+	children = append(children, g.Text(" "), h.Span(h.Class("life-lastat"), g.Text("· "+v.LastAt)))
+	return h.P(children...)
 }
 
 func measureSparkline(v MeasureView) g.Node {
 	return g.El("svg",
-		Class("spark"),
+		h.Class("spark"),
 		g.Attr("viewBox", "0 0 240 48"),
 		g.Attr("width", "240"),
 		g.Attr("height", "48"),

@@ -11,7 +11,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
@@ -81,19 +81,19 @@ func buildDay(app core.App, params map[string]string) DayView {
 // convention (cards.html) so the board grid, the Part-B live refresh, and
 // tests target it identically.
 func DayCard(v DayView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-day"), ID("ucard-day"),
+	return h.Article(
+		h.Class("kcard ucard ucard-day"), h.ID("ucard-day"),
 		ui.CardHead("/static/icons/scroll.png", "day",
 			ui.Tag(g.Text(v.Label)),
 		),
-		Ul(Class("ucard-stats"),
-			Li(g.Text(fmt.Sprintf("%d journal", v.JournalN))),
-			Li(g.Text(fmt.Sprintf("%d done", v.DoneN))),
-			Li(g.Text(fmt.Sprintf("%d logged", v.LogN))),
+		h.Ul(h.Class("ucard-stats"),
+			h.Li(g.Text(fmt.Sprintf("%d journal", v.JournalN))),
+			h.Li(g.Text(fmt.Sprintf("%d done", v.DoneN))),
+			h.Li(g.Text(fmt.Sprintf("%d logged", v.LogN))),
 			dayRecapLi(v),
 		),
-		Footer(Class("kcard-actions"),
-			A(Href("/ui/show/day?date="+v.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+v.Date+"')"),
+		h.Footer(h.Class("kcard-actions"),
+			h.A(h.Href("/ui/show/day?date="+v.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+v.Date+"')"),
 				g.Text("open the day →")),
 		),
 	)
@@ -103,11 +103,11 @@ func DayCard(v DayView) g.Node {
 func dayRecapLi(v DayView) g.Node {
 	switch {
 	case v.HasRecap:
-		return Li(g.Text("recap kept"))
+		return h.Li(g.Text("recap kept"))
 	case v.IsToday:
-		return Li(g.Text("still being written"))
+		return h.Li(g.Text("still being written"))
 	default:
-		return Li(g.Text("no recap"))
+		return h.Li(g.Text("no recap"))
 	}
 }
 

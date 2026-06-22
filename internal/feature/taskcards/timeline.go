@@ -7,7 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -80,13 +80,13 @@ func buildTimeline(app core.App, days int) TLView {
 // TimelineCard renders the timeline card as a gomponents node. It matches the
 // {{define "ucard_timeline"}} template in web/templates/cards.html.
 func TimelineCard(v TLView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-timeline"), ID("ucard-timeline"),
+	return h.Article(
+		h.Class("kcard ucard ucard-timeline"), h.ID("ucard-timeline"),
 		ui.CardHead("/static/icons/hourglass.png", "Timeline",
-			g.If(v.ParamLine != "", Span(Class("kcard-meta"), g.Text(v.ParamLine))),
+			g.If(v.ParamLine != "", h.Span(h.Class("kcard-meta"), g.Text(v.ParamLine))),
 		),
 		timelineBody(v),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/timeline"), g.Attr("data-on:click__prevent", "@get('/ui/show/timeline')"), g.Text("full timeline →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/timeline"), g.Attr("data-on:click__prevent", "@get('/ui/show/timeline')"), g.Text("full timeline →"))),
 	)
 }
 
@@ -105,7 +105,7 @@ func timelineBody(v TLView) g.Node {
 	if len(items) == 0 {
 		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "Nothing upcoming in the window."})
 	}
-	return Ul(Class("ucard-list tl-items"), g.Group(items))
+	return h.Ul(h.Class("ucard-list tl-items"), g.Group(items))
 }
 
 func timelineDay(day TLDay) g.Node {
@@ -115,12 +115,12 @@ func timelineDay(day TLDay) g.Node {
 	}
 	occNodes := make([]g.Node, 0, len(day.Items))
 	for _, item := range day.Items {
-		occNodes = append(occNodes, Li(Class("tl-item"), g.Text(item.Time+" "+item.Title)))
+		occNodes = append(occNodes, h.Li(h.Class("tl-item"), g.Text(item.Time+" "+item.Title)))
 	}
-	return Li(
-		Class(cls),
-		Span(Class("tl-label"), g.Text(day.Label)),
-		Ul(g.Group(occNodes)),
+	return h.Li(
+		h.Class(cls),
+		h.Span(h.Class("tl-label"), g.Text(day.Label)),
+		h.Ul(g.Group(occNodes)),
 	)
 }
 
