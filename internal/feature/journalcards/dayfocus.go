@@ -11,6 +11,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // DayJournalEntry is one journal entry shown in the day focus body.
@@ -90,7 +91,7 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 		if val := r.GetFloat("value_num"); val != 0 {
 			text = fmt.Sprintf("%s: %g %s", text, val, r.GetString("unit"))
 		} else if t := r.GetString("text"); t != "" {
-			text = text + ": " + clipDay(t, 120)
+			text = text + ": " + ui.Clip(t, 120)
 		}
 		v.Logs = append(v.Logs, DayLine{
 			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
@@ -103,16 +104,6 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 	}
 
 	return v
-}
-
-// clipDay truncates s to n runes with an ellipsis — a local copy of
-// internal/web's clipText (off-limits to feature packages by the layering law).
-func clipDay(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n]) + "…"
 }
 
 // DayJournal renders the day_journal section — id="day-journal". This fragment
