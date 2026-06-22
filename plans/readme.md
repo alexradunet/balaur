@@ -53,10 +53,28 @@ must be staticcheck-clean before CI gates on it); 126 is soft-on 124 (124 delete
 one modernize site); 134 soft-on 126 (same `Transition` function, different
 lines); 136 soft-on 125. Everything else is independent.
 
+Fourteenth pass (plans **137–142**), 2026-06-22, against commit `0c06da8`: the
+**actionable deferred items** from the thirteenth cycle, after owner decisions.
+The owner chose to **honor the owner's timezone for reminders** (140, the one
+product call), **redact bash secrets in the audit log** (141), and **do both
+test-quality items** (142) — alongside the three clear fixes: the `ListLLMModels`
+provider N+1 (138), the `kronk.Embed` nil-vector contract (137), and the
+non-transactional recurring `tasks.Done` (139). All independent. The remaining
+deferred items stay deferred by design (turn infra-error seam = a bigger
+production refactor; `migrations/*` `Pointer→new` = frozen files; the `renderCard`
+write hazard = lives in the legacy `html/template` path plans 111–117 retire) —
+see the rejected/deferred section.
+
 ## Execution order & status
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Issue | Status |
 |------|-------|----------|--------|------|------------|-------|--------|
+| 137 | Tighten `kronk.Embed` to error instead of returning silent nil vectors | P3 | S | LOW | — | — | TODO |
+| 138 | Batch the provider lookup in `ListLLMModels` (kill the N+1) | P3 | S | LOW | — | — | TODO |
+| 139 | Make the recurring `tasks.Done` completion+advance atomic (`RunInTransaction`) | P2 | M | MED | — | — | TODO |
+| 140 | Parse & format reminders in the owner's configured timezone (thread `loc` through `ParseDue`/`fmtDue` + turn/life/journal; CLI stays host-zone) | P1 | M | MED | — | — | TODO |
+| 141 | Redact secrets from bash commands before they hit `audit_log` | P2 | M | LOW | — | — | TODO |
+| 142 | De-flake the autodate test sleep + split sentences on `?` | P3 | S | LOW | — | — | TODO |
 | 124 | Delete staticcheck-confirmed dead code (web calendar/timeline cluster, models.go orphans, `cardURL`, `kronk.Official`, unused test helpers) + deprecated `go-sqlite3/embed` import + SA4006 test bug | P1 | S | LOW | — | — | DONE (APPROVED + **merged to main `ad947db`** via `--no-ff`, pushed). Dispatched sonnet executor → worktree `agent-ae4fb771702147064`, branch `worktree-agent-ae4fb771702147064`, one commit `bcb586e` off `b61e060` (−189/+4). Advisor re-ran ALL done criteria in the worktree: CGO-free build/`go vet`/full `go test ./...` (incl. `tours_test`) green, `gofmt -l internal/` empty, `git diff --check` clean, staticcheck reports **0** U1000/SA1019/SA4006 (only the 19 ST1001 dot-imports remain → plan 127's scope). Diff is surgical deletion-only — `models.go` removed exactly the 4 orphans (live `patchChatbar`/`buildAvatarOptions`/`installRuntime` intact); `tasks.go` removed the calendar/timeline block + orphaned `sort` import. Step 6 test assertion meaningful (checks real `"Task saved"`+`"Buy milk"` output, `strings` already imported, additive). **3 documented deviations, all approved on merit:** (1) `.tours/07-the-web-gateway.tour` anchor 305→179 — AGENTS.md mandates fixing broken tour anchors in the same commit; 179 is now `chatNudges` (verified), an improved anchor; (2) orphaned `sort` (tasks.go) + `errors` (fakeclient_test.go) imports removed as part of the deletions (necessary for build, not scope creep); (3) `kronk.Official()` deleted per the explicit symbol list though staticcheck skips exported symbols — grep + build confirm zero callers. **Plan-grep caveat:** the done-criterion grep is too broad — it matches the LIVE `buildBalaurHeadOptions`/`buildCalendar` duplicates in `settingscards`/`taskcards` (correctly KEPT), so a non-empty grep here is expected, not a failure. Pre-existing stale comments referencing the deleted symbols (`web/tasks.go:21`, `settingscards/settingsfocus.go:104`, `taskcards/calendar.go:39`) left untouched per surgical rules — minor follow-up candidate. Full suite re-gated green on merged main (gofmt/build/vet/`go test ./...`), pushed to origin; worktree/branch removed. |
 | 125 | Wire `staticcheck` + `govulncheck` into CI & `make lint` (+ `staticcheck.conf` excluding ST1001) | P1 | S–M | LOW | **124** | — | DONE (APPROVED + **merged to main `a40af05`** via `--no-ff`, pushed). Dispatched sonnet executor → worktree `agent-a9821d9ca0545f92a`, one commit `6b94241` off `origin/main` (3 files). Advisor re-ran ALL done criteria in the worktree: scope = exactly `ci.yml`/`Makefile`/`staticcheck.conf`; `staticcheck ./...` (with conf) exit 0 no output, and forcing `-checks ST1001` brings the 19 dot-import findings back — **proving the conf genuinely suppresses ST1001** (not ignored); `make lint` (now `fmt vet staticcheck test`) exit 0; `govulncheck` clean; CI gains `staticcheck` + `govulncheck` steps after `vet`. Re-gated on merged main: `go test ./...` / staticcheck / govulncheck all green. **Documented deviation, approved on merit:** the plan's `checks = ["all", "-ST1001"]` would enable non-default checks (ST1003/ST1020 surfaced); executor corrected to `checks = ["inherit", "-ST1001"]` (default set minus ST1001) — matches the plan's "everything else is on" intent. **Maintenance note:** CI uses `go run …@latest` (floating); pin a staticcheck tag if a future release reds CI. |
 | 126 | Modern-stdlib idiom sweep (`modernize -fix ./internal/...`) + `slices` sort/reverse + `time.After` watchdog leak + `Sscanf`→`Atoi` | P2 | S–M | LOW | 124 (soft) | — | DONE (APPROVED + **merged to main `88c5b6e`** via `--no-ff`, pushed). Dispatched sonnet executor → worktree `agent-adf94f471d03199f5`, 2 commits (`b556532` mechanical sweep 20 files, `a5fd2bf` 4 manual edits) off `origin/main`. Advisor re-ran ALL done criteria in the worktree: scope = 22 files all under `internal/` (no `migrations/`, no `plans/`); CGO-free build/`go vet`/`go test ./...`/`make lint` (staticcheck gate) all exit 0; `gofmt`+`git diff --check` clean; `modernize ./internal/...` now reports nothing. Read the risky diffs — the `strings.Builder` rewrites (`agent.go` reply accumulation, `tasks.go` `OpenTasks` filter) are behavior-preserving (filter assembled identically); `ext/vm.go` timer fix is `NewTimer`+`defer Stop` on `t.C`; `context.go` selection-sort→`slices.SortStableFunc`+`cmp.Compare`, `conversation.go` reverse→`slices.Reverse`, `knowledge.go` `Sscanf`→`strconv.Atoi`. Re-gated on merged main: test/staticcheck/govulncheck green. **Documented deviation, approved:** modernize -fix DID rewrite the two `string +=` sites (`agent.go:89`/`tasks.go:168`) the plan had deferred assuming it wouldn't — included as strictly-better, verified correct. (gopls flagged false "unused import"/"undefined" diagnostics — worktree-outside-workspace noise, disproven by the clean build.) |
@@ -1350,6 +1368,15 @@ Plans are largely independent and may run in any order; soft-overlaps:
   plan 122.
 
 ### Findings considered and rejected / deferred — thirteenth cycle (`b61e060`)
+
+> **Update (2026-06-22):** the owner chose to action the fixable deferred items —
+> they are now **plans 137–142** (TODO above), NOT deferred. The N+1 (138),
+> `tasks.Done` transaction (139), `kronk.Embed` contract (137), task-parse
+> timezone (140, owner chose "honor owner zone"), bash-audit redaction (141, owner
+> chose "redact"), and the two test items (142, owner chose "both") moved out of
+> this deferred list. What remains genuinely deferred: the turn infra-error seam,
+> the frozen-migration `Pointer→new`, and the `renderCard` legacy-template hazard.
+
 
 - **Cloud consent-gate web handlers "have zero tests"** (raised as TEST-01):
   REJECTED as overstated — the auditing agent checked only `models_test.go` and
