@@ -93,13 +93,8 @@ func taskViewOf(rec *core.Record, now time.Time) TaskView {
 		Status: rec.GetString("status"),
 	}
 	if d := rec.GetDateTime("due").Time(); !d.IsZero() {
-		local := d.In(now.Location())
-		if local.Before(now) && v.Status == "open" {
-			v.Overdue = true
-			v.DueLine = tasks.Lateness(d, now) + " — was " + local.Format("Mon, Jan 2 at 15:04")
-		} else {
-			v.DueLine = "due " + local.Format("Mon, Jan 2 at 15:04")
-		}
+		v.Overdue = d.In(now.Location()).Before(now) && v.Status == "open"
+		v.DueLine = tasks.DueLine(d, now, v.Status)
 	}
 	if rule, err := tasks.Parse(rec.GetString("recur")); err == nil && !rule.IsZero() {
 		v.RecurLine = tasks.Describe(rule)

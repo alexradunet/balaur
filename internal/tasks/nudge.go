@@ -74,6 +74,18 @@ func Nudge(app core.App, client llm.Client, now time.Time) error {
 	return nil
 }
 
+// DueLine renders a task's due time as one owner-facing line: an overdue
+// open task reads "<lateness> — was <when>", everything else "due <when>".
+// status is the task's status (only "open" tasks read as overdue).
+func DueLine(due, now time.Time, status string) string {
+	local := due.In(now.Location())
+	when := local.Format("Mon, Jan 2 at 15:04")
+	if local.Before(now) && status == "open" {
+		return Lateness(due, now) + " — was " + when
+	}
+	return "due " + when
+}
+
 // Lateness renders how a due time stands relative to now, in human terms.
 func Lateness(due, now time.Time) string {
 	due = due.In(now.Location())

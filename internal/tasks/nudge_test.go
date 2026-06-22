@@ -12,6 +12,46 @@ import (
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
+func TestDueLine(t *testing.T) {
+	now := time.Date(2026, 1, 5, 14, 0, 0, 0, time.UTC)
+	past := now.Add(-48 * time.Hour)  // Mon, Jan 3 at 14:00
+	future := now.Add(24 * time.Hour) // Tue, Jan 6 at 14:00
+
+	tests := []struct {
+		name   string
+		due    time.Time
+		status string
+		prefix string
+	}{
+		{
+			name:   "overdue open task",
+			due:    past,
+			status: "open",
+			prefix: "overdue",
+		},
+		{
+			name:   "future task",
+			due:    future,
+			status: "open",
+			prefix: "due ",
+		},
+		{
+			name:   "past done task",
+			due:    past,
+			status: "done",
+			prefix: "due ",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := DueLine(tc.due, now, tc.status)
+			if !strings.HasPrefix(got, tc.prefix) {
+				t.Errorf("DueLine(%v, %v, %q) = %q, want prefix %q", tc.due, now, tc.status, got, tc.prefix)
+			}
+		})
+	}
+}
+
 func nudgeMessages(t *testing.T, app core.App) []*core.Record {
 	t.Helper()
 	recs, err := app.FindRecordsByFilter("messages", "origin = 'nudge'", "@rowid", 0, 0)
