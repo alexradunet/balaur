@@ -19,6 +19,7 @@ import (
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/kronk"
+	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/store"
@@ -106,15 +107,13 @@ func resolveProcessor(app core.App) string {
 	return candidate
 }
 
-// registerRecap wires summary generation: an idempotent catch-up at serve
-// start plus hourly — self-hosted boxes sleep through midnights, so
-// catch-up beats fixed triggers. Disable with BALAUR_RECAP=0. Generation
-// uses a model call, so it quietly does nothing when no model is
-// configured yet.
-func registerRecap(app core.App) {
-	if os.Getenv("BALAUR_RECAP") == "0" {
-		return
-	}
+// scheduleJob registers a single-flight cron body and runs it once at serve
+// start (the catch-up, off the serve path). It owns the per-job mutex + TryLock
+// (so a slow run never overlaps the next tick), resolves the active llm client,
+// and hands it to body. When tolerateNoModel is true a missing model is not
+// fatal: body runs with a nil client (deterministic output still ships); when
+// false the tick is skipped until a model is configured.
+func scheduleJob(app core.App, name, spec string, tolerateNoModel bool, body func(client llm.Client)) {
 	var mu sync.Mutex
 	clients := turn.ClientSource{Engine: kronk.FromStore(app)}
 	run := func() {
@@ -124,8 +123,27 @@ func registerRecap(app core.App) {
 		defer mu.Unlock()
 		client, err := clients.Active(app)
 		if err != nil {
-			return // no model configured; recap waits
+			if !tolerateNoModel {
+				return // no model configured; this job waits for one
+			}
+			client = nil // deterministic output still ships without a model
 		}
+		body(client)
+	}
+	app.Cron().MustAdd(name, spec, run)
+	go run() // serve-start catch-up, off the serve path
+}
+
+// registerRecap wires summary generation: an idempotent catch-up at serve
+// start plus hourly — self-hosted boxes sleep through midnights, so
+// catch-up beats fixed triggers. Disable with BALAUR_RECAP=0. Generation
+// uses a model call, so it quietly does nothing when no model is
+// configured yet.
+func registerRecap(app core.App) {
+	if os.Getenv("BALAUR_RECAP") == "0" {
+		return
+	}
+	scheduleJob(app, "recap", "0 * * * *", false, func(client llm.Client) {
 		master, err := conversation.Master(app)
 		if err != nil {
 			return
@@ -135,9 +153,7 @@ func registerRecap(app core.App) {
 		if err := recap.EnsureSummaries(ctx, app, client, master.Id, time.Now().In(store.OwnerLocation(app))); err != nil {
 			app.Logger().Warn("recap: catch-up stopped", "error", err)
 		}
-	}
-	app.Cron().MustAdd("recap", "0 * * * *", run)
-	go run() // serve-start catch-up, off the serve path
+	})
 }
 
 // registerNudge wires the task nudger: a minute tick fires due reminders
@@ -150,23 +166,11 @@ func registerNudge(app core.App) {
 	if os.Getenv("BALAUR_NUDGE") == "0" {
 		return
 	}
-	var mu sync.Mutex
-	clients := turn.ClientSource{Engine: kronk.FromStore(app)}
-	run := func() {
-		if !mu.TryLock() {
-			return // a previous run is still in flight; this tick skips
-		}
-		defer mu.Unlock()
-		client, err := clients.Active(app)
-		if err != nil {
-			client = nil // no model configured: deterministic nudges still fire
-		}
+	scheduleJob(app, "nudge", "* * * * *", true, func(client llm.Client) {
 		if err := tasks.Nudge(app, client, time.Now()); err != nil {
 			app.Logger().Warn("nudge: run stopped", "error", err)
 		}
-	}
-	app.Cron().MustAdd("nudge", "* * * * *", run)
-	go run()
+	})
 }
 
 // registerBriefing wires the morning briefing: once per local day after the
@@ -182,24 +186,12 @@ func registerBriefing(app core.App) {
 	if h, err := strconv.Atoi(os.Getenv("BALAUR_BRIEFING_HOUR")); err == nil && h >= 0 && h <= 23 {
 		hour = h
 	}
-	var mu sync.Mutex
-	clients := turn.ClientSource{Engine: kronk.FromStore(app)}
-	run := func() {
-		if !mu.TryLock() {
-			return // a previous run is still in flight; this tick skips
-		}
-		defer mu.Unlock()
-		client, err := clients.Active(app)
-		if err != nil {
-			client = nil // no model: the deterministic list still briefs
-		}
+	scheduleJob(app, "briefing", "* * * * *", true, func(client llm.Client) {
 		now := time.Now().In(store.OwnerLocation(app))
 		if err := tasks.Briefing(app, client, now, hour); err != nil {
 			app.Logger().Warn("briefing: run stopped", "error", err)
 		}
-	}
-	app.Cron().MustAdd("briefing", "* * * * *", run)
-	go run()
+	})
 }
 
 // registerSearchIndex opens the FTS5 sidecar index at pb_data/search.db,
