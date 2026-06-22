@@ -90,8 +90,8 @@ func TestSaveCloudModelRoundTripRedactsKey(t *testing.T) {
 	if got.ModelID == "" {
 		t.Fatal("cloud model not in list")
 	}
-	if got.Kind != "openai" || got.Local {
-		t.Fatalf("kind/local = %q/%v, want openai/false", got.Kind, got.Local)
+	if got.Kind != "openai" {
+		t.Fatalf("kind = %q, want openai", got.Kind)
 	}
 	if got.BaseURL != "https://api.openai.com/v1" {
 		t.Fatalf("base URL = %q", got.BaseURL)
@@ -269,8 +269,8 @@ func TestListLLMModelsMultipleProviders(t *testing.T) {
 	if !ok {
 		t.Fatal("local model not in list")
 	}
-	if local.Kind != "local" || !local.Local {
-		t.Fatalf("local model: kind=%q local=%v, want local/true", local.Kind, local.Local)
+	if local.Kind != "local" {
+		t.Fatalf("local model: kind=%q, want local", local.Kind)
 	}
 	if local.ProviderName != localProviderName {
 		t.Fatalf("local model provider name = %q, want %q", local.ProviderName, localProviderName)
@@ -283,8 +283,8 @@ func TestListLLMModelsMultipleProviders(t *testing.T) {
 	if !ok {
 		t.Fatal("cloud model not in list")
 	}
-	if cloud.Kind != "openai" || cloud.Local {
-		t.Fatalf("cloud model: kind=%q local=%v, want openai/false", cloud.Kind, cloud.Local)
+	if cloud.Kind != "openai" {
+		t.Fatalf("cloud model: kind=%q, want openai", cloud.Kind)
 	}
 	if cloud.ProviderName != "MyCloud" {
 		t.Fatalf("cloud model provider name = %q, want MyCloud", cloud.ProviderName)

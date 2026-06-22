@@ -23,7 +23,6 @@ type LLMConfig struct {
 	Kind         string
 	BaseURL      string
 	APIKey       string
-	Local        bool
 	Label        string
 	ChatModel    string
 	EmbedModel   string
@@ -43,7 +42,7 @@ func (c LLMConfig) DisplayName() string {
 // GGUF file via the Models page, so a fresh box never reports a model as ready.
 // The dataDir param is retained for call-site compatibility.
 func EnsureDefaultLLMConfig(app core.App, dataDir string) error {
-	_, err := findOrCreateLLMProvider(app, localProviderName, "local", "", "", true, true)
+	_, err := findOrCreateLLMProvider(app, localProviderName, "local", "", "", true)
 	return err
 }
 
@@ -81,9 +80,6 @@ func ListLLMModels(app core.App) ([]LLMConfig, error) {
 		out = append(out, cfg)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Local != out[j].Local {
-			return out[i].Local
-		}
 		if out[i].Kind != out[j].Kind {
 			return out[i].Kind == "local"
 		}
@@ -140,7 +136,7 @@ func SaveLocalModel(app core.App, path, embedPath string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("model path is required")
 	}
-	provider, err := findOrCreateLLMProvider(app, localProviderName, "local", "", "", true, true)
+	provider, err := findOrCreateLLMProvider(app, localProviderName, "local", "", "", true)
 	if err != nil {
 		return "", err
 	}
@@ -149,7 +145,7 @@ func SaveLocalModel(app core.App, path, embedPath string) (string, error) {
 		return "", err
 	}
 	Audit(app, "owner", "llm.model.upsert", model.Id, true,
-		map[string]any{"provider": localProviderName, "kind": "local", "local": true, "path": path})
+		map[string]any{"provider": localProviderName, "kind": "local", "path": path})
 	return model.Id, nil
 }
 
@@ -185,7 +181,7 @@ func SaveCloudModel(app core.App, name, baseURL, apiKey, label, chatModel, embed
 	if strings.EqualFold(strings.TrimSpace(name), localProviderName) {
 		return "", fmt.Errorf("%q is reserved for the local model — choose another provider name", localProviderName)
 	}
-	provider, err := findOrCreateLLMProvider(app, name, "openai", baseURL, apiKey, false, true)
+	provider, err := findOrCreateLLMProvider(app, name, "openai", baseURL, apiKey, true)
 	if err != nil {
 		return "", err
 	}
@@ -197,7 +193,7 @@ func SaveCloudModel(app core.App, name, baseURL, apiKey, label, chatModel, embed
 		return "", err
 	}
 	Audit(app, "owner", "llm.model.upsert", model.Id, true,
-		map[string]any{"provider": name, "kind": "openai", "local": false})
+		map[string]any{"provider": name, "kind": "openai"})
 	return model.Id, nil
 }
 
@@ -272,12 +268,11 @@ func SetActiveLLMModel(app core.App, modelID, actor string) error {
 	Audit(app, actor, "llm.active_model", modelID, true, map[string]any{
 		"provider": cfg.ProviderName,
 		"kind":     cfg.Kind,
-		"local":    cfg.Local,
 	})
 	return nil
 }
 
-func findOrCreateLLMProvider(app core.App, name, kind, baseURL, apiKey string, local, enabled bool) (*core.Record, error) {
+func findOrCreateLLMProvider(app core.App, name, kind, baseURL, apiKey string, enabled bool) (*core.Record, error) {
 	recs, err := app.FindRecordsByFilter("llm_providers", "name = {:name}", "", 1, 0, dbx.Params{"name": name})
 	if err != nil {
 		return nil, err
@@ -299,7 +294,6 @@ func findOrCreateLLMProvider(app core.App, name, kind, baseURL, apiKey string, l
 	changed := rec.IsNew() ||
 		rec.GetString("kind") != kind ||
 		rec.GetString("base_url") != baseURL ||
-		rec.GetBool("local") != local ||
 		rec.GetBool("enabled") != enabled ||
 		(apiKey != "" && rec.GetString("api_key") != apiKey)
 	rec.Set("kind", kind)
@@ -307,7 +301,6 @@ func findOrCreateLLMProvider(app core.App, name, kind, baseURL, apiKey string, l
 	if apiKey != "" {
 		rec.Set("api_key", apiKey)
 	}
-	rec.Set("local", local)
 	rec.Set("enabled", enabled)
 	if changed {
 		if err := app.Save(rec); err != nil {
@@ -361,7 +354,6 @@ func configFrom(model, provider *core.Record) LLMConfig {
 		Kind:         provider.GetString("kind"),
 		BaseURL:      provider.GetString("base_url"),
 		APIKey:       apiKey,
-		Local:        provider.GetBool("local"),
 		Label:        model.GetString("label"),
 		ChatModel:    model.GetString("chat_model"),
 		EmbedModel:   model.GetString("embed_model"),
