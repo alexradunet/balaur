@@ -160,6 +160,92 @@ func TestHomePanelChrome(t *testing.T) {
 	})
 }
 
+// TestChatBarNode verifies chatBarNode renders the expected structure and
+// conditional attributes (plan 114).
+func TestChatBarNode(t *testing.T) {
+	t.Run("not ready: carries 2s poll interval", func(t *testing.T) {
+		var b strings.Builder
+		if err := chatBarNode(homeData{ChatReady: false}).Render(&b); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		out := b.String()
+		if !strings.Contains(out, `id="chatbar"`) {
+			t.Errorf("missing id=chatbar:\n%s", out)
+		}
+		// gomponents HTML-escapes attribute values: single quotes become &#39;
+		if !strings.Contains(out, `data-on:interval__duration.2s="@get(&#39;/ui/chatbar&#39;)"`) {
+			t.Errorf("missing 2s poll interval when not ready:\n%s", out)
+		}
+	})
+	t.Run("ready: no poll interval", func(t *testing.T) {
+		var b strings.Builder
+		if err := chatBarNode(homeData{ChatReady: true}).Render(&b); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		out := b.String()
+		if strings.Contains(out, `data-on:interval`) {
+			t.Errorf("poll interval must be absent when ready:\n%s", out)
+		}
+	})
+}
+
+// TestModelSwitcherNode verifies modelSwitcherNode handles the empty and
+// active-model states (plan 114).
+func TestModelSwitcherNode(t *testing.T) {
+	t.Run("no model + not ready: empty state shown", func(t *testing.T) {
+		var b strings.Builder
+		if err := modelSwitcherNode(homeData{ActiveModel: "", ChatReady: false}).Render(&b); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		out := b.String()
+		if !strings.Contains(out, "model-switcher-empty") {
+			t.Errorf("missing model-switcher-empty:\n%s", out)
+		}
+		if strings.Contains(out, "model-current") {
+			t.Errorf("model-current must be absent when no active model:\n%s", out)
+		}
+	})
+	t.Run("active model + ready: model-current shown, no empty block", func(t *testing.T) {
+		var b strings.Builder
+		if err := modelSwitcherNode(homeData{ActiveModel: "x", ChatReady: true}).Render(&b); err != nil {
+			t.Fatalf("render: %v", err)
+		}
+		out := b.String()
+		if !strings.Contains(out, "model-current") {
+			t.Errorf("missing model-current:\n%s", out)
+		}
+		if strings.Contains(out, "model-switcher-empty") {
+			t.Errorf("empty block must be absent when model ready:\n%s", out)
+		}
+	})
+}
+
+// TestHeadSwitcherNode verifies headSwitcherNode renders active states and
+// form bindings correctly (plan 114).
+func TestHeadSwitcherNode(t *testing.T) {
+	choices := []headChoice{
+		{ID: "main", Name: "Main", AvatarURL: "/a.png", Active: true},
+		{ID: "scholar", Name: "Scholar", AvatarURL: "/b.png", Active: false},
+	}
+	var b strings.Builder
+	if err := headSwitcherNode(homeData{HeadChoices: choices}).Render(&b); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := b.String()
+
+	// Exactly one active choice.
+	if strings.Count(out, "head-switcher-choice-active") != 1 {
+		t.Errorf("expected exactly 1 head-switcher-choice-active:\n%s", out)
+	}
+	if strings.Count(out, `aria-current="true"`) != 1 {
+		t.Errorf("expected exactly 1 aria-current=true:\n%s", out)
+	}
+	// Both forms post to /ui/heads/active (gomponents escapes single quotes to &#39;).
+	if strings.Count(out, "@post(&#39;/ui/heads/active&#39;,") != 2 {
+		t.Errorf("expected 2 form post bindings:\n%s", out)
+	}
+}
+
 // TestHomeDockSelectorIDs: the rendered HOME page must carry every selector id
 // the live SSE stream patches. This is the streaming contract test — if any id
 // is missing the stream patches #nowhere and silently does nothing.

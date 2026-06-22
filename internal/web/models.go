@@ -109,20 +109,13 @@ func (h *handlers) chatbar(e *core.RequestEvent) error {
 // not ready; the re-rendered (ready) chatbar drops the interval, so polling
 // stops. Shared by the 2s poll and the model-setup flows.
 func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data homeData) error {
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "chat_bar", data); err != nil {
-		return err
-	}
-	if err := sse.PatchElements(b.String(),
+	if err := sse.PatchElements(renderNodeHTML(chatBarNode(data)),
 		datastar.WithSelectorID("chatbar"), datastar.WithModeOuter()); err != nil {
 		return nil // client gone
 	}
 	if data.ChatReady {
-		var d strings.Builder
-		if err := composerNode(data).Render(&d); err != nil {
-			return err
-		}
-		_ = sse.PatchElements(d.String(), datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
+		_ = sse.PatchElements(renderNodeHTML(composerNode(data)),
+			datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
 	}
 	return nil
 }

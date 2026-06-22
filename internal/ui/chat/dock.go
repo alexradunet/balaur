@@ -42,7 +42,7 @@ type DockProps struct {
 //  7. <dialog id="model-modal"> — opened by basm.js after a model panel swap
 //
 // The Switchers slot is appended after the Composer when non-nil (pre-rendered
-// chatbar/head-switcher; still executed as templates — deferred from this plan).
+// chatbar/head-switcher gomponents node — may be nil; wiring into homePage is deferred).
 //
 // attrs are passed to a wrapper div that carries the variant class
 // (dock-v-rail / dock-v-overlay / dock-v-home). The variant class is the
