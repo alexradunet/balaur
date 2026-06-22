@@ -8,18 +8,26 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 4a8c8c9..HEAD -- migrations/ internal/cli/audit.go internal/store/llm_settings.go`
-> If any in-scope file changed since this plan was written, compare the
+> `git diff --stat 4a8c8c9..HEAD -- migrations/ internal/cli/audit.go`
+> If either in-scope path changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> mismatch, treat it as a STOP condition. (Plans 154/155 changed
+> `internal/store/llm_settings.go` and `internal/knowledge/knowledge.go` — that
+> is expected and out of this plan's scope; this plan does not edit those files.)
 >
 > **Read-this-first preconditions**: plans **154** (drop `llm_providers.local`)
 > and **155** (drop `skills.enabled`) MUST be landed before this plan — this
 > baseline does not declare those columns, and code that still reads/filters
 > them would fail (`status='active' && enabled=true` against a missing column is
-> a SQL error). Verify with:
-> `grep -rn 'GetBool("local")\|enabled = true' internal/store internal/knowledge` → **no matches**.
-> If either matches, STOP and land 154/155 first.
+> a SQL error). Verify BOTH of these return no matches:
+> - `grep -rn 'GetBool("local")\|Set("local")' internal/store` (proves 154 landed)
+> - `grep -rn 'Set("enabled")\|enabled = true' internal/knowledge` (proves 155 landed)
+>
+> Do NOT use a broad `enabled = true` grep over `internal/store` — that field name
+> legitimately survives there for the `llm_models`/`llm_providers.enabled` filter
+> (e.g. `llm_settings.go:50` `FindRecordsByFilter("llm_models", "enabled = true", …)`),
+> which is a DIFFERENT field from the removed `skills.enabled`. If either scoped
+> grep above matches, STOP and land 154/155 first.
 
 ## Status
 
