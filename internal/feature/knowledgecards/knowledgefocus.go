@@ -255,7 +255,7 @@ func mapToSkillNodes(recs []*core.Record) []g.Node {
 			Description: r.GetString("description"),
 			WhenToUse:   r.GetString("when_to_use"),
 			Content:     r.GetString("content"),
-			Enabled:     r.GetBool("enabled"),
+			Enabled:     r.GetString("status") == knowledge.StatusActive,
 			UseCount:    r.GetInt("use_count"),
 		}))
 	}

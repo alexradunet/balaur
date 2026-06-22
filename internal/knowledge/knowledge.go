@@ -107,7 +107,6 @@ func ProposeSkill(app core.App, p SkillProposal) (*core.Record, error) {
 	rec.Set("content", p.Content)
 	rec.Set("when_to_use", p.WhenToUse)
 	rec.Set("status", StatusProposed)
-	rec.Set("enabled", false) // enabled flips on approval
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("saving skill proposal: %w", err)
 	}
@@ -141,9 +140,6 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 	}
 
 	rec.Set("status", to)
-	if kind == Skill {
-		rec.Set("enabled", to == StatusActive)
-	}
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("updating %s status: %w", kind, err)
 	}
@@ -296,16 +292,16 @@ func UpfrontMemories(app core.App, limit int) ([]*core.Record, error) {
 		"-importance,-created", limit, 0, nil)
 }
 
-// ActiveSkills returns enabled, active skills for the context index.
+// ActiveSkills returns active skills for the context index.
 func ActiveSkills(app core.App) ([]*core.Record, error) {
 	return app.FindRecordsByFilter(string(Skill),
-		"status = 'active' && enabled = true", "name", 0, 0, nil)
+		"status = 'active'", "name", 0, 0, nil)
 }
 
 // LoadSkill fetches one active skill by exact name and records usage.
 func LoadSkill(app core.App, name string) (*core.Record, error) {
 	rec, err := app.FindFirstRecordByFilter(string(Skill),
-		"status = 'active' && enabled = true && name = {:name}",
+		"status = 'active' && name = {:name}",
 		dbx.Params{"name": name})
 	if err != nil {
 		return nil, fmt.Errorf("skill %q not found or not active", name)
