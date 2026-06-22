@@ -50,6 +50,7 @@ func TestSchemaBaseline(t *testing.T) {
 		absent  []string
 	}
 	for _, fc := range []fieldCheck{
+		{"heads", []string{"name", "purpose", "balaur_avatar", "capability_groups"}, []string{"tools"}},
 		{"conversations", []string{"kind", "status"}, []string{"summary", "head", "parent"}},
 		{"messages", []string{"origin"}, nil},
 		{"memories", []string{"status", "importance"}, []string{"tags"}},

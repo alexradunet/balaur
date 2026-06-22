@@ -104,7 +104,7 @@ func Create(app core.App, name, purpose, avatar string, groups []string) (string
 	rec.Set("name", name)
 	rec.Set("purpose", purpose)
 	rec.Set("balaur_avatar", avatar)
-	rec.Set("tools", marshalGroups(groups))
+	rec.Set("capability_groups", marshalGroups(groups))
 	if err := app.Save(rec); err != nil {
 		return "", err
 	}
@@ -123,7 +123,7 @@ func Delete(app core.App, id string) error {
 
 func headFromRecord(r *core.Record) Head {
 	var groups []string
-	if raw := r.GetString("tools"); raw != "" {
+	if raw := r.GetString("capability_groups"); raw != "" {
 		_ = json.Unmarshal([]byte(raw), &groups)
 	}
 	return Head{
