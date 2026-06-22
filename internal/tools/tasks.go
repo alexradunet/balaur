@@ -21,6 +21,7 @@ func TaskTools(app core.App) []agent.Tool {
 	return []agent.Tool{
 		taskAddTool(app),
 		taskListTool(app),
+		taskUpdateTool(app),
 		taskDoneTool(app),
 		taskSnoozeTool(app),
 		taskDropTool(app),
@@ -195,9 +196,88 @@ func taskListTool(app core.App) agent.Tool {
 				section("Someday (no date)", bk.Someday)
 			}
 			if b.Len() == 0 {
-				return "Nothing on the book for that scope.", nil
+				// recs holds every open task; a narrow scope (today/overdue)
+				// can hide upcoming/someday ones. Say so plainly so the caller
+				// never mistakes an empty view for an empty book.
+				if n := len(recs); n > 0 {
+					return fmt.Sprintf("Nothing in the %q view, but %d open task(s) exist — list with scope \"open\" or \"all\" to see them.", args.Scope, n), nil
+				}
+				return "No open tasks.", nil
 			}
 			return b.String(), nil
+		},
+	}
+}
+
+func taskUpdateTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("task_update",
+			"Change an existing task the owner wants adjusted: reschedule its due time, "+
+				"rename it, edit its notes, or change its recurrence. Only the fields you pass "+
+				"change — omit the rest. Get the id from task_list or a task_add confirmation first.",
+			obj(map[string]any{
+				"id":              str("Task id from task_list or a task_add confirmation."),
+				"title":           str("New title. Omit to keep the current one."),
+				"due":             str("New due time (" + DueFormats + "). Pass an empty string to clear the due (make it a someday item). Omit to keep the current due."),
+				"notes":           str("Replacement notes. Empty string clears them; omit to keep."),
+				"recur":           map[string]any{"type": "string", "description": "New recurrence (daily | every:<N>d | weekly:<days> | monthly:<1-31>), or empty string to make it a one-off. Omit to keep."},
+				"recur_from_done": map[string]any{"type": "boolean", "description": "Whether the next occurrence counts from completion. Omit to keep."},
+			}, "id")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			// Pointers distinguish "field omitted" (nil → leave it) from "field
+			// set to empty" (non-nil → clear it).
+			var args struct {
+				ID            string  `json:"id"`
+				Title         *string `json:"title"`
+				Due           *string `json:"due"`
+				Notes         *string `json:"notes"`
+				Recur         *string `json:"recur"`
+				RecurFromDone *bool   `json:"recur_from_done"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("task_update: bad arguments: %w", err)
+			}
+			rec, err := app.FindRecordById("tasks", strings.TrimSpace(args.ID))
+			if err != nil {
+				return "", fmt.Errorf("task_update: no task with id %q — check task_list", args.ID)
+			}
+			loc := store.OwnerLocation(app)
+			opts := tasks.UpdateOpts{
+				Title:         args.Title,
+				Notes:         args.Notes,
+				Recur:         args.Recur,
+				RecurFromDone: args.RecurFromDone,
+			}
+			dateOnly := false
+			if args.Due != nil {
+				opts.SetDue = true // empty string clears; a value reschedules
+				if strings.TrimSpace(*args.Due) != "" {
+					due, only, err := ParseDue(*args.Due, loc)
+					if err != nil {
+						return "", fmt.Errorf("task_update: %w", err)
+					}
+					opts.Due, dateOnly = due, only
+				}
+			}
+			if err := tasks.Update(app, rec, opts); err != nil {
+				return "", fmt.Errorf("task_update: %w", err)
+			}
+			var b strings.Builder
+			fmt.Fprintf(&b, "Task updated: %q", rec.GetString("title"))
+			if storedDue := rec.GetDateTime("due").Time(); !storedDue.IsZero() {
+				fmt.Fprintf(&b, " — due %s", fmtDue(storedDue, loc))
+			} else {
+				b.WriteString(" — no due (someday)")
+			}
+			if rule, _ := tasks.Parse(rec.GetString("recur")); !rule.IsZero() {
+				fmt.Fprintf(&b, ", %s", tasks.Describe(rule))
+			}
+			if dateOnly {
+				b.WriteString(". No hour was given, so it is set for 09:00 — adjust if another time suits the owner better")
+			}
+			fmt.Fprintf(&b, ". id: %s", rec.Id)
+			// Marked so the web layer re-renders the task card live in chat.
+			return MarkProposal("tasks", rec.Id, b.String()), nil
 		},
 	}
 }

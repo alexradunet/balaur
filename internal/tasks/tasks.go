@@ -32,25 +32,11 @@ func Create(app core.App, o CreateOpts) (*core.Record, error) {
 		return nil, fmt.Errorf("tasks: title is required")
 	}
 	recur := strings.ToLower(strings.TrimSpace(o.Recur))
-	rule, err := Parse(recur)
+	due, err := normalizeRecur(recur, o.RecurFromDone, o.Due)
 	if err != nil {
 		return nil, err
 	}
-	if !rule.IsZero() {
-		if o.Due.IsZero() {
-			return nil, fmt.Errorf("tasks: a recurring task needs a first due time to anchor the schedule")
-		}
-		// Calendar-pattern rules are model-proofed deterministically: the
-		// pattern is the truth, not whatever date the model picked.
-		if calendarRule(rule) {
-			if o.RecurFromDone {
-				return nil, fmt.Errorf("tasks: %s rules are calendar-anchored — recur_from_done applies to daily and every:<N>d habits", rule.Kind)
-			}
-			if !Matches(rule, o.Due) {
-				o.Due = Next(rule, o.Due, o.Due) // snap forward, wall clock kept
-			}
-		}
-	}
+	o.Due = due
 
 	col, err := app.FindCollectionByNameOrId("tasks")
 	if err != nil {
@@ -71,6 +57,101 @@ func Create(app core.App, o CreateOpts) (*core.Record, error) {
 	}
 	store.Audit(app, "tasks", "task.create", rec.Id, true, map[string]any{"title": title, "recur": recur})
 	return rec, nil
+}
+
+// normalizeRecur validates a recurrence string against its due time and returns
+// the due to store. A calendar-pattern rule (weekly/monthly) is the truth, not
+// whatever date was picked: a due that misses the pattern snaps forward to the
+// next matching slot, wall clock kept. A blank recur (one-off) passes the due
+// through untouched. Shared by Create and Update so both enforce one contract.
+func normalizeRecur(recur string, recurFromDone bool, due time.Time) (time.Time, error) {
+	rule, err := Parse(recur)
+	if err != nil {
+		return due, err
+	}
+	if rule.IsZero() {
+		return due, nil
+	}
+	if due.IsZero() {
+		return due, fmt.Errorf("tasks: a recurring task needs a due time to anchor the schedule")
+	}
+	if calendarRule(rule) {
+		if recurFromDone {
+			return due, fmt.Errorf("tasks: %s rules are calendar-anchored — recur_from_done applies to daily and every:<N>d habits", rule.Kind)
+		}
+		if !Matches(rule, due) {
+			due = Next(rule, due, due) // snap forward, wall clock kept
+		}
+	}
+	return due, nil
+}
+
+// UpdateOpts carries the editable fields of an existing task. A nil pointer
+// leaves that field unchanged; a non-nil pointer applies the new value. Due is
+// special: SetDue=false leaves it, SetDue=true with a zero Due clears it back to
+// someday, SetDue=true with a real Due reschedules.
+type UpdateOpts struct {
+	Title         *string
+	Notes         *string
+	Recur         *string
+	RecurFromDone *bool
+	SetDue        bool
+	Due           time.Time
+}
+
+// Update edits an open task in place: reschedule (or clear) its due, rename it,
+// rewrite notes, change recurrence. Recurrence is re-validated against the
+// resulting due — the same contract Create enforces — so an edit can never leave
+// a recurring task without an anchor or off its calendar pattern. Editing is
+// owner-consented like Create; a wrong edit is one more Update (or Drop) away.
+func Update(app core.App, rec *core.Record, o UpdateOpts) error {
+	if rec.GetString("status") != "open" {
+		return fmt.Errorf("tasks: %q is not open", rec.GetString("title"))
+	}
+
+	title := rec.GetString("title")
+	if o.Title != nil {
+		title = strings.TrimSpace(*o.Title)
+		if title == "" {
+			return fmt.Errorf("tasks: title cannot be blank")
+		}
+	}
+	notes := rec.GetString("notes")
+	if o.Notes != nil {
+		notes = strings.TrimSpace(*o.Notes)
+	}
+	recur := rec.GetString("recur")
+	if o.Recur != nil {
+		recur = strings.ToLower(strings.TrimSpace(*o.Recur))
+	}
+	recurFromDone := rec.GetBool("recur_from_done")
+	if o.RecurFromDone != nil {
+		recurFromDone = *o.RecurFromDone
+	}
+	due := rec.GetDateTime("due").Time()
+	if o.SetDue {
+		due = o.Due
+	}
+
+	due, err := normalizeRecur(recur, recurFromDone, due)
+	if err != nil {
+		return err
+	}
+
+	rec.Set("title", title)
+	rec.Set("notes", notes)
+	rec.Set("recur", recur)
+	rec.Set("recur_from_done", recurFromDone)
+	if due.IsZero() {
+		rec.Set("due", "") // clear to someday
+	} else {
+		rec.Set("due", due.UTC())
+	}
+	if err := app.Save(rec); err != nil {
+		return fmt.Errorf("saving task: %w", err)
+	}
+	store.Audit(app, "tasks", "task.update", rec.Id, true, map[string]any{"title": title, "recur": recur})
+	return nil
 }
 
 // DoneResult reports what completing a task did.

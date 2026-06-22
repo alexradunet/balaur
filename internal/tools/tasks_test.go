@@ -188,6 +188,90 @@ func TestTaskDropMarksRefresh(t *testing.T) {
 	}
 }
 
+func TestTaskUpdateReschedules(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := TaskTools(app)
+	ctx := context.Background()
+
+	out, err := findTool(t, ts, "task_add").Execute(ctx,
+		`{"title":"Ship parcel","due":"2026-06-24T17:00"}`)
+	if err != nil {
+		t.Fatalf("task_add: %v", err)
+	}
+	_, id, _, ok := ParseProposal(out)
+	if !ok {
+		t.Fatalf("task_add result not proposal-marked: %q", out)
+	}
+
+	res, err := findTool(t, ts, "task_update").Execute(ctx,
+		`{"id":"`+id+`","due":"2026-06-23T17:00","title":"Ship parcel today"}`)
+	if err != nil {
+		t.Fatalf("task_update: %v", err)
+	}
+	kind, gotID, rest, ok := ParseProposal(res)
+	if !ok || kind != "tasks" || gotID != id {
+		t.Fatalf("task_update marker = (%q,%q,ok=%v), want tasks/%s", kind, gotID, ok, id)
+	}
+	if !strings.Contains(rest, "Task updated") || !strings.Contains(rest, "Ship parcel today") {
+		t.Errorf("task_update reply: %q", rest)
+	}
+
+	// The reschedule actually persisted to Jun 23.
+	rec, err := app.FindRecordById("tasks", id)
+	if err != nil {
+		t.Fatalf("find: %v", err)
+	}
+	if d := rec.GetDateTime("due").Time(); d.Day() != 23 || d.Month() != time.June {
+		t.Errorf("due not rescheduled to Jun 23: %v", d)
+	}
+}
+
+func TestTaskUpdateClearsDue(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := TaskTools(app)
+	ctx := context.Background()
+
+	out, _ := findTool(t, ts, "task_add").Execute(ctx, `{"title":"Maybe later","due":"2026-06-24T17:00"}`)
+	_, id, _, _ := ParseProposal(out)
+
+	if _, err := findTool(t, ts, "task_update").Execute(ctx, `{"id":"`+id+`","due":""}`); err != nil {
+		t.Fatalf("task_update clear: %v", err)
+	}
+	rec, _ := app.FindRecordById("tasks", id)
+	if !rec.GetDateTime("due").IsZero() {
+		t.Errorf("empty due string did not clear the due: %v", rec.GetDateTime("due"))
+	}
+}
+
+func TestTaskListEmptyScopeReportsOtherTasks(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := TaskTools(app)
+	ctx := context.Background()
+
+	// One upcoming task (far future). A narrow "today" scope must not read as
+	// an empty book — that misread made the model duplicate the task.
+	if _, err := findTool(t, ts, "task_add").Execute(ctx, `{"title":"Ship parcel","due":"2099-01-01T17:00"}`); err != nil {
+		t.Fatalf("task_add: %v", err)
+	}
+	out, err := findTool(t, ts, "task_list").Execute(ctx, `{"scope":"today"}`)
+	if err != nil {
+		t.Fatalf("task_list: %v", err)
+	}
+	if !strings.Contains(out, "open task") {
+		t.Errorf("empty narrow scope should report other open tasks, got: %q", out)
+	}
+
+	// A truly empty book says so plainly.
+	app2 := storetest.NewApp(t)
+	out, err = findTool(t, TaskTools(app2), "task_list").Execute(ctx, `{"scope":"open"}`)
+	if err != nil {
+		t.Fatalf("task_list empty: %v", err)
+	}
+	if !strings.Contains(out, "No open tasks") {
+		t.Errorf("empty book reply: %q", out)
+	}
+}
+
 func TestParseDueHonorsLocation(t *testing.T) {
 	// A non-UTC zone two hours ahead of UTC.
 	tz := time.FixedZone("test+2", 2*3600)
