@@ -144,6 +144,22 @@ func SaveCloudModel(app core.App, name, baseURL, apiKey, label, chatModel, embed
 	if name == "" || baseURL == "" || label == "" || chatModel == "" {
 		return "", fmt.Errorf("name, base URL, label, and chat model are required")
 	}
+	for _, f := range []struct {
+		name string
+		val  string
+		max  int
+	}{
+		{"name", name, 80},
+		{"label", label, 80},
+		{"chat model", chatModel, 200},
+		{"embed model", embedModel, 200},
+		{"base URL", baseURL, 2048},
+		{"API key", apiKey, 4096},
+	} {
+		if len(f.val) > f.max {
+			return "", fmt.Errorf("%s is too long (max %d characters)", f.name, f.max)
+		}
+	}
 	// Providers are keyed by name; "Local model" is the reserved local provider
 	// (EnsureDefaultLLMConfig owns it). Reusing that name would hijack the local
 	// record and the two would fight over its kind on every render.
