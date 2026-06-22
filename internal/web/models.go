@@ -115,8 +115,7 @@ func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data hom
 		return nil // client gone
 	}
 	if data.ChatReady {
-		_ = sse.PatchElements(renderNodeHTML(composerNode(data)),
-			datastar.WithSelectorID("chat-draft"), datastar.WithModeOuter())
+		patchOuter(sse, "chat-draft", composerNode(data))
 	}
 	return nil
 }
@@ -131,7 +130,7 @@ func (h *handlers) modelsPanel(e *core.RequestEvent, msg string) error {
 		return e.InternalServerError("rendering models", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "models-panel", b.String())
 	return nil
 }
 
@@ -238,7 +237,7 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 		view.Models = append(view.Models, inFlight)
 		var b strings.Builder
 		_ = modelcards.Panel(view).Render(&b)
-		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+		patchOuterHTML(sse, "models-panel", b.String())
 	}
 
 	onProgress := func(p modelget.Progress) {
@@ -258,7 +257,7 @@ func (h *handlers) downloadOfficialModel(e *core.RequestEvent) error {
 		}
 		var b strings.Builder
 		_ = modelcards.ModelCard(card).Render(&b)
-		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("model-card-official-dl"), datastar.WithModeOuter())
+		patchOuterHTML(sse, "model-card-official-dl", b.String())
 	}
 
 	finalPath, dlErr := modelget.Fetch(
@@ -387,7 +386,7 @@ func (h *handlers) cloudConsentDialog(e *core.RequestEvent, v modelcards.CloudCo
 		return e.InternalServerError("rendering consent", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "models-panel", b.String())
 	return nil
 }
 
@@ -541,13 +540,13 @@ func (h *handlers) installRuntime(e *core.RequestEvent) error {
 		}
 		var b strings.Builder
 		_ = modelcards.Panel(view).Render(&b)
-		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("models-panel"), datastar.WithModeOuter())
+		patchOuterHTML(sse, "models-panel", b.String())
 	}
 
 	// sseLogger forwards SDK progress log lines as a status morph.
 	sseLogger := func(_ context.Context, msg string, _ ...any) {
 		node := hh.Div(hh.ID("runtime-dl-progress"), g.Text(msg))
-		_ = sse.PatchElements(renderNodeHTML(node), datastar.WithSelectorID("runtime-dl-progress"), datastar.WithModeOuter())
+		patchOuter(sse, "runtime-dl-progress", node)
 	}
 
 	installErr := kronkInstallRuntime(ctx, processor, sseLogger)

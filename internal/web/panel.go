@@ -103,6 +103,19 @@ func renderNodeHTML(n g.Node) string {
 	return b.String()
 }
 
+// patchOuter renders n and morphs the element with the given id in place
+// (datastar outer-mode patch by #id). It is the single tail for handlers that
+// end by replacing one element with a freshly rendered node.
+func patchOuter(sse *datastar.ServerSentEventGenerator, id string, n g.Node) {
+	_ = sse.PatchElements(renderNodeHTML(n), datastar.WithSelectorID(id), datastar.WithModeOuter())
+}
+
+// patchOuterHTML is patchOuter for callers that already hold a rendered HTML
+// string (component-builder renders with their own error handling).
+func patchOuterHTML(sse *datastar.ServerSentEventGenerator, id, html string) {
+	_ = sse.PatchElements(html, datastar.WithSelectorID(id), datastar.WithModeOuter())
+}
+
 // chipNode renders the transcript re-open chip for a single card.
 func (h *handlers) chipNode(typ, query string) g.Node {
 	title, icon := cardTitleIcon(typ)

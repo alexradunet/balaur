@@ -25,8 +25,7 @@ func (h *handlers) saveName(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering identity card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(),
-		datastar.WithSelectorID("identity-card"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "identity-card", b.String())
 	return nil
 }
 
@@ -47,8 +46,7 @@ func (h *handlers) setSoulAvatarFromProfile(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering soul section", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(),
-		datastar.WithSelectorID("soul-section"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "soul-section", b.String())
 	return nil
 }
 
@@ -68,7 +66,6 @@ func (h *handlers) setBalaurAvatarPref(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering balaur section", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(),
-		datastar.WithSelectorID("balaur-section"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "balaur-section", b.String())
 	return nil
 }

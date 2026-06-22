@@ -74,12 +74,7 @@ func (h *handlers) newChatStream(e *core.RequestEvent, balaURL, who, soulURL, ow
 // renderNode renders a gomponents node to a string; empty on error (the caller
 // owns a live stream and cannot un-send bytes).
 func (s *chatStream) renderNode(n g.Node) string {
-	var b strings.Builder
-	if err := n.Render(&b); err != nil {
-		s.h.app.Logger().Warn("chat node render failed", "err", err)
-		return ""
-	}
-	return b.String()
+	return renderNodeHTML(n)
 }
 
 // appendNode appends a rendered component as the last child of #chat.
