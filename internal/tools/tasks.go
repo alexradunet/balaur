@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
@@ -37,28 +38,28 @@ var taskRefreshCards = []string{"today"}
 const DueFormats = "RFC3339, YYYY-MM-DDTHH:MM (box-local), or YYYY-MM-DD"
 
 // ParseDue accepts the formats the spec promises the model. Date-only input
-// lands at 09:00 box-local; dateOnly reports it so the reply can say so.
-func ParseDue(s string) (t time.Time, dateOnly bool, err error) {
+// lands at 09:00 in loc; dateOnly reports it so the reply can say so.
+func ParseDue(s string, loc *time.Location) (t time.Time, dateOnly bool, err error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return time.Time{}, false, nil
 	}
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.In(time.Local), false, nil
+		return t.In(loc), false, nil
 	}
 	for _, layout := range []string{"2006-01-02T15:04:05", "2006-01-02T15:04"} {
-		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
+		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
 			return t, false, nil
 		}
 	}
-	if d, err := time.ParseInLocation("2006-01-02", s, time.Local); err == nil {
-		return time.Date(d.Year(), d.Month(), d.Day(), 9, 0, 0, 0, time.Local), true, nil
+	if d, err := time.ParseInLocation("2006-01-02", s, loc); err == nil {
+		return time.Date(d.Year(), d.Month(), d.Day(), 9, 0, 0, 0, loc), true, nil
 	}
 	return time.Time{}, false, fmt.Errorf("due: want %s, got %q", DueFormats, s)
 }
 
-func fmtDue(t time.Time) string {
-	return t.In(time.Local).Format("Mon, Jan 2 2006 at 15:04")
+func fmtDue(t time.Time, loc *time.Location) string {
+	return t.In(loc).Format("Mon, Jan 2 2006 at 15:04")
 }
 
 func taskAddTool(app core.App) agent.Tool {
@@ -85,7 +86,8 @@ func taskAddTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("task_add: bad arguments: %w", err)
 			}
-			due, dateOnly, err := ParseDue(args.Due)
+			loc := store.OwnerLocation(app)
+			due, dateOnly, err := ParseDue(args.Due, loc)
 			if err != nil {
 				return "", fmt.Errorf("task_add: %w", err)
 			}
@@ -104,7 +106,7 @@ func taskAddTool(app core.App) agent.Tool {
 			fmt.Fprintf(&b, "Task saved: %q", rec.GetString("title"))
 			storedDue := rec.GetDateTime("due").Time()
 			if !storedDue.IsZero() {
-				fmt.Fprintf(&b, " — due %s", fmtDue(storedDue))
+				fmt.Fprintf(&b, " — due %s", fmtDue(storedDue, loc))
 			}
 			if rule, _ := tasks.Parse(rec.GetString("recur")); !rule.IsZero() {
 				fmt.Fprintf(&b, ", %s", tasks.Describe(rule))
@@ -146,6 +148,7 @@ func taskListTool(app core.App) agent.Tool {
 				terms = []string{args.Term}
 			}
 
+			loc := store.OwnerLocation(app)
 			if args.Scope == "all" {
 				recs, err := app.FindRecordsByFilter("tasks", "id != ''", "-updated", 50, 0)
 				if err != nil {
@@ -155,8 +158,9 @@ func taskListTool(app core.App) agent.Tool {
 					return "No tasks at all yet.", nil
 				}
 				var b strings.Builder
+				now := time.Now().In(loc)
 				for _, r := range recs {
-					fmt.Fprintf(&b, "- [%s] (%s) %s%s\n", r.Id, r.GetString("status"), r.GetString("title"), dueSuffix(r, time.Now()))
+					fmt.Fprintf(&b, "- [%s] (%s) %s%s\n", r.Id, r.GetString("status"), r.GetString("title"), dueSuffix(r, now, loc))
 				}
 				return b.String(), nil
 			}
@@ -165,7 +169,7 @@ func taskListTool(app core.App) agent.Tool {
 			if err != nil {
 				return "", fmt.Errorf("task_list: %w", err)
 			}
-			now := time.Now()
+			now := time.Now().In(loc)
 			bk := tasks.Bucket(recs, now)
 
 			var b strings.Builder
@@ -175,7 +179,7 @@ func taskListTool(app core.App) agent.Tool {
 				}
 				fmt.Fprintf(&b, "%s:\n", name)
 				for _, r := range rs {
-					fmt.Fprintf(&b, "- [%s] %s%s\n", r.Id, r.GetString("title"), dueSuffix(r, now))
+					fmt.Fprintf(&b, "- [%s] %s%s\n", r.Id, r.GetString("title"), dueSuffix(r, now, loc))
 				}
 			}
 			switch args.Scope {
@@ -199,10 +203,10 @@ func taskListTool(app core.App) agent.Tool {
 }
 
 // dueSuffix renders the compact due/recur tail of a task line.
-func dueSuffix(r *core.Record, now time.Time) string {
+func dueSuffix(r *core.Record, now time.Time, loc *time.Location) string {
 	var parts []string
 	if due := r.GetDateTime("due").Time(); !due.IsZero() {
-		local := due.In(now.Location())
+		local := due.In(loc)
 		if local.Before(now) {
 			days := int(now.Sub(local).Hours() / 24)
 			if days >= 1 {
@@ -211,7 +215,7 @@ func dueSuffix(r *core.Record, now time.Time) string {
 				parts = append(parts, "overdue since "+local.Format("15:04"))
 			}
 		} else {
-			parts = append(parts, "due "+fmtDue(local))
+			parts = append(parts, "due "+fmtDue(local, loc))
 		}
 	}
 	if rule, err := tasks.Parse(r.GetString("recur")); err == nil && !rule.IsZero() {
@@ -242,8 +246,9 @@ func taskDoneTool(app core.App) agent.Tool {
 			if !res.Recurring {
 				return MarkRefresh(taskRefreshCards, fmt.Sprintf("Done: %q.", rec.GetString("title"))), nil
 			}
+			loc := store.OwnerLocation(app)
 			return MarkRefresh(taskRefreshCards, fmt.Sprintf("Done: %q (%d completions logged). Next due %s.",
-				rec.GetString("title"), res.Completions, fmtDue(res.NextDue))), nil
+				rec.GetString("title"), res.Completions, fmtDue(res.NextDue, loc))), nil
 		},
 	}
 }
@@ -264,12 +269,13 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("task_snooze: bad arguments: %w", err)
 			}
-			until, _, err := ParseDue(args.Until)
+			loc := store.OwnerLocation(app)
+			until, _, err := ParseDue(args.Until, loc)
 			if err != nil || until.IsZero() {
 				return "", fmt.Errorf("task_snooze: until is required (%s)", DueFormats)
 			}
 			if !until.After(time.Now()) {
-				return "", fmt.Errorf("task_snooze: %s is not in the future", fmtDue(until))
+				return "", fmt.Errorf("task_snooze: %s is not in the future", fmtDue(until, loc))
 			}
 			rec, err := app.FindRecordById("tasks", args.ID)
 			if err != nil {
@@ -278,7 +284,7 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			if err := tasks.Snooze(app, rec, until); err != nil {
 				return "", fmt.Errorf("task_snooze: %w", err)
 			}
-			return MarkRefresh(taskRefreshCards, fmt.Sprintf("Snoozed %q until %s.", rec.GetString("title"), fmtDue(until))), nil
+			return MarkRefresh(taskRefreshCards, fmt.Sprintf("Snoozed %q until %s.", rec.GetString("title"), fmtDue(until, loc))), nil
 		},
 	}
 }

@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/life"
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 // JournalTools gives the model the one journal verb: keeping the owner's
@@ -36,7 +36,8 @@ func journalWriteTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("journal_write: bad arguments: %w", err)
 			}
-			notedAt, _, err := ParseDue(args.NotedAt)
+			loc := store.OwnerLocation(app)
+			notedAt, _, err := ParseDue(args.NotedAt, loc)
 			if err != nil {
 				return "", fmt.Errorf("journal_write: %w", err)
 			}
@@ -44,7 +45,7 @@ func journalWriteTool(app core.App) agent.Tool {
 			if err != nil {
 				return "", fmt.Errorf("journal_write: %w", err)
 			}
-			day := rec.GetDateTime("noted_at").Time().In(time.Local).Format("Monday, January 2")
+			day := rec.GetDateTime("noted_at").Time().In(loc).Format("Monday, January 2")
 			return fmt.Sprintf("Kept in the journal under %s. The owner can see and tend it on the day page.", day), nil
 		},
 	}

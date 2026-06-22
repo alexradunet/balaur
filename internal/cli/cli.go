@@ -120,8 +120,9 @@ func failJSON(cmd *cobra.Command, err error) error {
 
 // when parses a CLI time flag with the same spec the model gets
 // (tools.ParseDue); empty input returns the zero time.
+// CLI uses the host zone; the web/turn path uses the owner's configured zone.
 func when(flag, value string) (time.Time, error) {
-	t, _, err := tools.ParseDue(value)
+	t, _, err := tools.ParseDue(value, time.Local)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("--%s: want %s, got %q", flag, tools.DueFormats, value)
 	}
