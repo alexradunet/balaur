@@ -80,6 +80,7 @@ var stories = []Story{
 	screentitleStory(),
 	chatmessageStory(),
 	chattoolrowStory(),
+	chatchoicesStory(),
 	composerStory(),
 	commandpaletteStory(),
 	chatdockStory(),

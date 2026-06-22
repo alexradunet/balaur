@@ -79,6 +79,56 @@ func chattoolrowStory() Story {
 	}
 }
 
+func chatchoicesStory() Story {
+	return Story{
+		ID: "chatchoices", Group: "Chat", Title: "Choices", Wide: true, OnDark: true,
+		Blurb: "The live dialogue-choice panel: a kicker prompt + numbered choice buttons beside the owner portrait. " +
+			"Each button writes its label into the $message signal and @posts the next turn. " +
+			"The stream removes the panel after a choice is made (choices-<nonce> id, .choices class). Port of the chat-choices template.",
+		Variants: []Variant{
+			{"with hints", h.Div(h.Class("chat"),
+				chat.Choices(chat.ChoicesProps{
+					Prompt:        "How shall I log this?",
+					Nonce:         "story1",
+					OwnerName:     "Alex",
+					SoulAvatarSrc: "/static/crest.png",
+					Choices: []chat.ChoiceItem{
+						{Label: "As a quick note", Hint: "1 line"},
+						{Label: "As a full journal entry"},
+						{Label: "Don't save it", Hint: "skip"},
+					},
+				}))},
+			{"without hints", h.Div(h.Class("chat"),
+				chat.Choices(chat.ChoicesProps{
+					Prompt:        "Which direction?",
+					Nonce:         "story2",
+					OwnerName:     "Alex",
+					SoulAvatarSrc: "/static/crest.png",
+					Choices: []chat.ChoiceItem{
+						{Label: "Continue"},
+						{Label: "Stop"},
+					},
+				}))},
+		},
+		Props: []Prop{
+			{"Prompt", "string", "—", "The kicker question shown above the choice buttons."},
+			{"Nonce", "string", "—", "Unique per render — the panel's root id is choices-<Nonce>; the stream removes it by .choices class."},
+			{"OwnerName", "string", "—", "Owner's display name shown in the portrait caption."},
+			{"SoulAvatarSrc", "string", "—", "Path to the soul/owner avatar PNG."},
+			{"Choices", "[]ChoiceItem", "—", "The selectable replies. Each ChoiceItem has Label (required) and Hint (optional — omitted when empty)."},
+		},
+		Dos: []string{
+			"Use a short, direct Prompt — one question, no preamble.",
+			"Keep Labels concise (a few words) so the 1-based key index is the quick path.",
+			"Set Hint to a mono annotation (duration, count, etc.) — it vanishes when empty.",
+		},
+		Donts: []string{
+			"Import internal/tools from internal/ui/chat — map tools.Choice → ChoiceItem in the web layer.",
+			"Reuse a Nonce across renders — the stream finds the panel by id choices-<Nonce>.",
+		},
+	}
+}
+
 func composerStory() Story {
 	return Story{
 		ID: "composer", Group: "Chat", Title: "Composer", Wide: true, OnDock: true,
