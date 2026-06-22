@@ -184,6 +184,88 @@ func TestChatStreamContextCancel(t *testing.T) {
 	}
 }
 
+func TestChatStreamSurfacesProviderError(t *testing.T) {
+	lines := []string{
+		`data: {"error":{"message":"rate limited"}}`,
+	}
+	srv := sseServer(t, lines, nil)
+	defer srv.Close()
+
+	c := &OpenAIClient{BaseURL: srv.URL, Model: "test"}
+	ch, err := c.ChatStream(context.Background(), []Message{{Role: "user", Content: "hi"}}, nil)
+	if err != nil {
+		t.Fatalf("ChatStream: %v", err)
+	}
+	var gotErr error
+	var gotDone bool
+	for chunk := range ch {
+		if chunk.Err != nil {
+			gotErr = chunk.Err
+		}
+		if chunk.Done {
+			gotDone = true
+		}
+	}
+	if gotErr == nil {
+		t.Fatal("expected a Chunk.Err from mid-stream provider error, got none")
+	}
+	if !strings.Contains(gotErr.Error(), "rate limited") {
+		t.Errorf("error should contain provider message, got %v", gotErr)
+	}
+	if gotDone {
+		t.Error("should not receive a Done chunk when provider error aborts the stream")
+	}
+}
+
+func TestToWireEmptyArgsBecomesObject(t *testing.T) {
+	var body map[string]any
+	srv := sseServer(t, []string{`data: [DONE]`}, &body)
+	defer srv.Close()
+
+	// Message with a tool call whose Args is empty (no-argument tool).
+	msgs := []Message{
+		{
+			Role: "assistant",
+			ToolCalls: []ToolCall{
+				{ID: "call_x", Name: "task_list", Args: ""},
+			},
+		},
+	}
+	c := &OpenAIClient{BaseURL: srv.URL, Model: "test"}
+	ch, err := c.ChatStream(context.Background(), msgs, nil)
+	if err != nil {
+		t.Fatalf("ChatStream: %v", err)
+	}
+	for range ch { //nolint:revive // drain
+	}
+
+	// Navigate the captured body to messages[0].tool_calls[0].function.arguments.
+	rawMsgs, ok := body["messages"].([]any)
+	if !ok || len(rawMsgs) == 0 {
+		t.Fatalf("captured body has no messages: %+v", body)
+	}
+	msg, ok := rawMsgs[0].(map[string]any)
+	if !ok {
+		t.Fatalf("message is not an object: %T", rawMsgs[0])
+	}
+	toolCalls, ok := msg["tool_calls"].([]any)
+	if !ok || len(toolCalls) == 0 {
+		t.Fatalf("message has no tool_calls: %+v", msg)
+	}
+	tc, ok := toolCalls[0].(map[string]any)
+	if !ok {
+		t.Fatalf("tool_call is not an object: %T", toolCalls[0])
+	}
+	fn, ok := tc["function"].(map[string]any)
+	if !ok {
+		t.Fatalf("tool_call has no function: %+v", tc)
+	}
+	args, _ := fn["arguments"].(string)
+	if args != "{}" {
+		t.Errorf("empty tool-call args should serialize as {}, got %q", args)
+	}
+}
+
 func TestEmbedIndexMapping(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return rows out of order to exercise index-based placement.

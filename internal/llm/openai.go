@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -61,7 +62,7 @@ func (c *OpenAIClient) post(ctx context.Context, path string, body any) (*http.R
 	if resp.StatusCode >= 300 {
 		defer resp.Body.Close()
 		var buf bytes.Buffer
-		_, _ = buf.ReadFrom(resp.Body)
+		_, _ = buf.ReadFrom(io.LimitReader(resp.Body, 8192))
 		return nil, fmt.Errorf("%s: %s: %s", path, resp.Status, strings.TrimSpace(buf.String()))
 	}
 	return resp, nil
@@ -95,6 +96,9 @@ func toWire(msgs []Message) []wireMessage {
 			w.Type = "function"
 			w.Function.Name = tc.Name
 			w.Function.Arguments = tc.Args
+			if w.Function.Arguments == "" {
+				w.Function.Arguments = "{}"
+			}
 			wm.ToolCalls = append(wm.ToolCalls, w)
 		}
 		out = append(out, wm)
@@ -147,6 +151,15 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []T
 		defer close(ch)
 		defer resp.Body.Close()
 
+		send := func(c Chunk) bool {
+			select {
+			case ch <- c:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
+
 		// Accumulate streamed tool-call fragments by index; OpenAI streams a
 		// call's id/name once and its arguments in pieces. order preserves
 		// first-seen index order so the assembled calls match the model's
@@ -165,6 +178,9 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []T
 				break
 			}
 			var ev struct {
+				Error struct {
+					Message string `json:"message"`
+				} `json:"error"`
 				Choices []struct {
 					Delta struct {
 						Content   string `json:"content"`
@@ -180,15 +196,19 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []T
 					} `json:"delta"`
 				} `json:"choices"`
 			}
-			if err := json.Unmarshal([]byte(data), &ev); err != nil || len(ev.Choices) == 0 {
+			if err := json.Unmarshal([]byte(data), &ev); err != nil {
+				continue // non-JSON keepalive/comment line — tolerate
+			}
+			if ev.Error.Message != "" {
+				send(Chunk{Err: fmt.Errorf("provider stream error: %s", ev.Error.Message)})
+				return
+			}
+			if len(ev.Choices) == 0 {
 				continue
 			}
 			d := ev.Choices[0].Delta
 			if d.Content != "" || d.Reasoning != "" {
-				select {
-				case ch <- Chunk{Content: d.Content, Reasoning: d.Reasoning}:
-				case <-ctx.Done():
-					ch <- Chunk{Err: ctx.Err()}
+				if !send(Chunk{Content: d.Content, Reasoning: d.Reasoning}) {
 					return
 				}
 			}
@@ -209,14 +229,14 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []T
 			}
 		}
 		if err := sc.Err(); err != nil {
-			ch <- Chunk{Err: fmt.Errorf("reading stream: %w", err)}
+			send(Chunk{Err: fmt.Errorf("reading stream: %w", err)})
 			return
 		}
 		final := Chunk{Done: true}
 		for _, idx := range order {
 			final.ToolCalls = append(final.ToolCalls, *calls[idx])
 		}
-		ch <- final
+		send(final)
 	}()
 	return ch, nil
 }
