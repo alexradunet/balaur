@@ -81,7 +81,7 @@ func (h *handlers) taskCard(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering task card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
+	patchOuterHTML(sse, "tcard-"+rec.Id, html)
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("rendering task card", err)
 	}
-	_ = sse.PatchElements(html, datastar.WithSelectorID("tcard-"+rec.Id), datastar.WithModeOuter())
+	patchOuterHTML(sse, "tcard-"+rec.Id, html)
 	return nil
 }
 

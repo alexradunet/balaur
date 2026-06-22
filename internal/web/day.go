@@ -56,7 +56,7 @@ func (h *handlers) renderDayJournal(e *core.RequestEvent, d, now time.Time) erro
 		return e.InternalServerError("rendering journal", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("day-journal"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "day-journal", b.String())
 	return nil
 }
 

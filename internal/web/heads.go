@@ -26,12 +26,12 @@ func (h *handlers) setActiveHead(e *core.RequestEvent) error {
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
 	// Refresh the dock switcher (always present).
-	_ = sse.PatchElements(renderNodeHTML(headSwitcherNode(data)), datastar.WithSelectorID("head-switcher"), datastar.WithModeOuter())
+	patchOuter(sse, "head-switcher", headSwitcherNode(data))
 	// Also refresh the manage card's active badges if it is on the page; the
 	// patch is a no-op when #ucard-heads is absent.
 	var card strings.Builder
 	if err := h.cardInto(&card, "heads", nil); err == nil {
-		_ = sse.PatchElements(card.String(), datastar.WithSelectorID("ucard-heads"), datastar.WithModeOuter())
+		patchOuterHTML(sse, "ucard-heads", card.String())
 	}
 	return nil
 }
@@ -43,7 +43,7 @@ func (h *handlers) renderHeadsCard(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering heads card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(b.String(), datastar.WithSelectorID("ucard-heads"), datastar.WithModeOuter())
+	patchOuterHTML(sse, "ucard-heads", b.String())
 	return nil
 }
 

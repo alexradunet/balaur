@@ -88,8 +88,7 @@ func (h *handlers) knowledgeTransition(e *core.RequestEvent) error {
 		if err != nil {
 			return e.InternalServerError("rendering card", err)
 		}
-		_ = sse.PatchElements(buf,
-			datastar.WithSelectorID("kcard-"+rec.Id), datastar.WithModeOuter())
+		patchOuterHTML(sse, "kcard-"+rec.Id, buf)
 		return nil
 	}
 	_ = sse.PatchElements("",
@@ -122,8 +121,7 @@ func (h *handlers) knowledgeEdit(e *core.RequestEvent) error {
 		return e.InternalServerError("rendering card", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(buf,
-		datastar.WithSelectorID("kcard-"+rec.Id), datastar.WithModeOuter())
+	patchOuterHTML(sse, "kcard-"+rec.Id, buf)
 	return nil
 }
 
