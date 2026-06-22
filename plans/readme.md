@@ -73,7 +73,14 @@ Reconcile (2026-06-22, at `494475e`) — processed the remaining non-DONE rows:
   surfaced:** `shell.Sidebar` is now dead code (storybook/tests only) — a small
   cleanup candidate.
 - **111–117 (gomponents migration) — REFRESHED 2026-06-22 (against `ea79dae`), now
-  executable in order.** A 9-agent workflow surveyed the drift and an adversarial
+  executable in order.** **UPDATE 2026-06-22: 111–116 EXECUTED + landed this
+  session (DONE rows above — dispatched sonnet executors, advisor-reviewed,
+  merged `--no-ff`, gated green, pushed). `ExecuteTemplate` sites = 0,
+  `template.HTML` (non-test) = 0; `html/template` now survives ONLY in `web.go`
+  (the engine). Only 117 (delete the engine + 11 `.html` + the `parseTemplates`
+  test plumbing) remains — its precondition gate is now GREEN, but it wants the
+  full tour-refresh first, so it is deliberately deferred.** A 9-agent workflow
+  surveyed the drift and an adversarial
   critic verified it (clean 1:1 coverage: 9 live `ExecuteTemplate` sites + 11
   templates, zero orphans/double-claims, all spot-checked excerpts verbatim-correct).
   Each plan now carries a "## Refresh" block with corrected anchors + the restamped
