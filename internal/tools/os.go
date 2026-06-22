@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,6 +18,29 @@ import (
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/store"
 )
+
+// secretPatterns masks common secret shapes by named key/scheme. Patterns are
+// compiled once. This is best-effort — named shapes only; a generic
+// "high-entropy token" rule is intentionally omitted to avoid over-redaction.
+var secretPatterns = []*regexp.Regexp{
+	// Authorization: Bearer <token>  and bare  Bearer <token>
+	regexp.MustCompile(`(?i)(bearer\s+)[A-Za-z0-9._~+/=-]{8,}`),
+	// key=value / key: value for common secret-bearing names (quoted or not)
+	regexp.MustCompile(`(?i)\b(api[_-]?key|access[_-]?key|secret[_-]?key|client[_-]?secret|token|secret|password|passwd|pwd)(\s*[=:]\s*)("?)[^\s"']{4,}`),
+	// AWS access key id
+	regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`),
+}
+
+// redactSecrets masks the values of common secret shapes in a command string so
+// it can be audited without leaking credentials, while keeping the rest legible.
+// The executed command and its output are unchanged — only the audit string is redacted.
+func redactSecrets(s string) string {
+	out := s
+	out = secretPatterns[0].ReplaceAllString(out, `${1}***`)
+	out = secretPatterns[1].ReplaceAllString(out, `${1}${2}${3}***`)
+	out = secretPatterns[2].ReplaceAllString(out, `AKIA****************`)
+	return out
+}
 
 // maxOutput bounds tool output fed back to the model.
 const maxOutput = 48 * 1024
@@ -147,7 +171,7 @@ func bashTool(app core.App) agent.Tool {
 			runCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
 			out, err := exec.CommandContext(runCtx, "sh", "-c", args.Command).CombinedOutput()
-			auditOS(app, "bash", args.Command, err == nil, map[string]any{"bytes": len(out)})
+			auditOS(app, "bash", redactSecrets(args.Command), err == nil, map[string]any{"bytes": len(out)})
 			if err != nil {
 				// Output often explains the failure; give the model both.
 				return "", fmt.Errorf("bash: %w\n%s", err, clip(string(out)))
