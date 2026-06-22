@@ -7,7 +7,7 @@
 > in `plans/readme.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/tasks.go internal/web/knowledge.go internal/feature/taskcards internal/feature/knowledgecards`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/tasks.go internal/web/knowledge.go internal/feature/taskcards internal/feature/knowledgecards`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -19,7 +19,29 @@
 - **Risk**: LOW
 - **Depends on**: none (independent of 112–115; all of 111–115 must land before 116/117)
 - **Category**: migration / tech-debt
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`)
+
+Still **valid and unstarted** — all three `ExecuteTemplate` card renderers are
+live and neither `MemoryRecordOf` nor `SkillRecordOf` exists yet. Only line
+anchors drifted (adjacent churn: plan 124 deleted a dead calendar block, 128
+extracted `tasks.DueLine`, 134 sanitized `cardError`, plus gofmt sweeps). **The
+quoted code excerpts below are still verbatim-accurate — only line numbers moved.**
+Corrected anchors at `ea79dae`:
+
+- `taskCardHTML` → `internal/web/tasks.go:90`; callers `taskTransition`
+  `tasks.go:142`, `proposalBody` `cards.go:173-194` (call at :179). `taskViewOf`
+  `tasks.go:33` (its DueLine now delegates to `tasks.DueLine` per 128, but the
+  output `taskView` fields are unchanged — the swap is unaffected).
+- `renderCardHTML` → `knowledge.go:141`; `renderCard` → `knowledge.go:163`;
+  `cardTemplateName` → `knowledge.go:132` (unchanged, single caller — safe to delete).
+- `renderNodeHTML` helper → `internal/web/panel.go:100`.
+- Replacement components unchanged: `taskcards.TaskCard` (taskcard.go:25),
+  `knowledgecards.MemoryRecordCard` (memory.go:84), `SkillRecordCard` (skills.go:150).
+- Test note: the direct card-task test is `TestTaskCardRenders` (templates_test.go);
+  `handlers_test.go` now asserts the sanitized `cardError` "could not load this
+  card" (plan 134) — unrelated, do not touch.
 
 ## Why this matters
 

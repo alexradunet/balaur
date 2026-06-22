@@ -72,13 +72,23 @@ Reconcile (2026-06-22, at `494475e`) — processed the remaining non-DONE rows:
   panel collapse/free-drag-resize persisted in `owner_settings` (103). **Follow-up
   surfaced:** `shell.Sidebar` is now dead code (storybook/tests only) — a small
   cleanup candidate.
-- **111–117 (gomponents migration) stay TODO — drifted, do NOT run as-is.** The
-  finding is still valid (the `html/template` engine survives: 6 non-test
-  importers, 11 `web/templates/*.html`, and the `ExecuteTemplate` sites 111–115/117
-  target all still exist). But the plans were written against `0dd2457` (~25 plans
-  ago) and need an excerpt + `Planned at` SHA refresh first; **116 is partially
-  superseded** — plan 124 already deleted its `modelsPageData`/`renderModelsPanel`
-  targets (only the `template.HTML` bridge + `ComposerHTML` removal remain).
+- **111–117 (gomponents migration) — REFRESHED 2026-06-22 (against `ea79dae`), now
+  executable in order.** A 9-agent workflow surveyed the drift and an adversarial
+  critic verified it (clean 1:1 coverage: 9 live `ExecuteTemplate` sites + 11
+  templates, zero orphans/double-claims, all spot-checked excerpts verbatim-correct).
+  Each plan now carries a "## Refresh" block with corrected anchors + the restamped
+  drift-check SHA. **111–115** are unstarted, behavior-preserving ports — runnable in
+  any order. **116** (remove the `template.HTML` bridge) is now **deps-relaxed**
+  (independent of 111–115 — the per-file `html/template` imports serve only
+  `template.HTML`/`HTMLEscapeString`, not the `ExecuteTemplate` *method*) and
+  **scope-trimmed** (124 already deleted `modelsPageData`/`renderModelsPanel`;
+  `ComposerHTML` removal + the bridge conversion remain; refreshCard `chatstream.go:251`
+  added to scope). **117** (delete the engine) is **⛔ BLOCKED — execute LAST**: 9
+  production `ExecuteTemplate` callers still live; its precondition gate is an empty
+  `grep -rn 'ExecuteTemplate' internal/web/*.go | grep -v _test`. **Recommended order:
+  111–115 (any order) → 116 → 117.** Surfaced for a future cycle: the code tours
+  (00/06/07) are far more stale than 117 assumed (boards/`/focus`/htmx/Ollama gone) —
+  a separate full tour-refresh should precede 117's doc step.
 - **091** remains correctly SUPERSEDED (by 100).
 
 ## Execution order & status
@@ -109,8 +119,8 @@ Reconcile (2026-06-22, at `494475e`) — processed the remaining non-DONE rows:
 | 113 | gomponents migration: recap telescope → `recapBandsNode`/`recapCardsNode` (port `recap-bands.html`/`recap-cards.html`, build new — `ui.RecapCard` is a different card) | P2 | M | MED | — | — | TODO |
 | 114 | gomponents migration: chatbar + model/head switchers → `chatBarNode`/`headSwitcherNode` (port `chat_bar`/`model_switcher`/`head_switcher`) | P2 | M | MED | — | — | TODO |
 | 115 | gomponents migration: live dialogue choices → new `chat.Choices` organism + storybook story (port `chat-choices`) | P2 | S–M | LOW | — | — | TODO |
-| 116 | gomponents migration: remove the `template.HTML` bridge type — helpers/view-models carry `g.Node`/`string`; drop `html/template` from 5 web files; delete dead `ComposerHTML`/`modelsPageData`/`renderModelsPanel` | P2 | M | MED | 111, 112, 113, 114, 115 | — | TODO (RECONCILE 2026-06-22: partially superseded — `modelsPageData`+`renderModelsPanel` already deleted by plan **124**; only the `template.HTML` bridge removal + `ComposerHTML` deletion remain. Drifted — needs excerpt/SHA refresh before execute.) |
-| 117 | gomponents migration: delete the `html/template` engine (`funcs`/`tmpl`/`ParseFS`), the `web/` template package (embed.go + 11 `.html`), `templates_test.go`, the `tmpl: parseTemplates(t)` plumbing in ~18 tests; sync AGENTS/README/DESIGN/knowledge.md + 3 tours | P2 | M | MED | 111, 112, 113, 114, 115, 116 | — | TODO |
+| 116 | gomponents migration: remove the `template.HTML` bridge type — helpers/view-models carry `g.Node`/`string`; drop `html/template` from 5 web files; delete dead `ComposerHTML`/`modelsPageData`/`renderModelsPanel` | P2 | M | MED | **none for the bridge conversion** (refreshed: independent of 111–115) | — | TODO — **REFRESHED 2026-06-22** (against `ea79dae`; see the plan's "## Refresh"). Deps RELAXED (independent of 111–115). Scope TRIMMED: 124 already deleted `modelsPageData`/`renderModelsPanel`; remaining = the `template.HTML`→`g.Node` bridge conversion + `ComposerHTML`/`composerHTML` deletion + the test conversions; `refreshCard` (`chatstream.go:251`) added to Step 7. Ready to execute. |
+| 117 | gomponents migration: delete the `html/template` engine (`funcs`/`tmpl`/`ParseFS`), the `web/` template package (embed.go + 11 `.html`), `templates_test.go`, the `tmpl: parseTemplates(t)` plumbing in ~18 tests; sync AGENTS/README/DESIGN/knowledge.md + 3 tours | P2 | M | MED | 111, 112, 113, 114, 115, 116 **+ empty `ExecuteTemplate` grep** | — | TODO — **REFRESHED 2026-06-22 ⛔ BLOCKED, execute LAST** (against `ea79dae`; see the plan's "## Refresh"). NOT runnable yet: 9 production `ExecuteTemplate` callers still live; gate = `grep -rn 'ExecuteTemplate' internal/web/*.go | grep -v _test` EMPTY. Premise/anchors/README/tours corrected in the refresh. |
 | 118 | Docs truth-sync (main.go HTMX→Datastar, README /focus→/ui/show + drop `boards`, restore 2 still-referenced docs) + delete 2 dead symbols (`focusMemoryCategories`, `isDatastarRequest`) | P1 | S | LOW | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a3a0ba2eb7d2aec54` @ `c27c19d`+`4892c2e`; advisor re-ran all gates in the worktree: build/vet/`go test ./...` 36 pkgs green, scope = exactly the 6 in-scope files, `git diff --check` clean, all done-criteria greps empty. Restored `docs/hyperagent-sandbox.md`+`docs/netbird.md` from `8c58aad`; README route swaps + boards removal faithful; README:430 "templates" correctly left for 117) |
 | 119 | Web dedup + turn simplify: `cardHTMLAt` helper, `cardTitleIcon` helper (3 sites), drop `modelBadge` unused param | P2 | S | LOW | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a1ac31eef37c4f132`; advisor re-ran all gates in the worktree: build/vet/full `go test ./...` green, gofmt + `git diff --check` clean, scope = exactly 4 in-scope files, output-preserving (all web tests pass unchanged). Two documented, in-scope, sound adaptations: (1) removed the now-orphaned `internal/cards` import from `recap.go` — its only package use was the replaced `cards.Get` block (the remaining "cards" tokens there are a comment + a local var in `"recap-cards.html"`); (2) the done-criterion grep for `if spec, ok := cards.Get(typ)` returns 1 not 0 because that line is now the `cardTitleIcon` helper body itself — the 3 original dup sites are gone, intent met) |
 | 120 | Fix `SetOwnerSetting` check-then-act upsert race (retry-on-conflict) + concurrency test | P1 | S | MED | — | — | DONE (APPROVED, awaiting owner merge; `worktree-agent-a70a0379f82fe4c90` @ `22bfe7c`; advisor re-ran all gates in the worktree: build/vet green, full `go test ./...` green, fresh `-race -count=3 TestSetOwnerSettingConcurrent` clean (15.4s, no data race), `git diff --check` clean, migration untouched, scope = exactly 3 files. Retry-closure fix as specified; `GetOwnerSetting` untouched; test asserts the single-row invariant (not gamed); executor also did optional Step 3 — panel handlers log instead of swallowing) |

@@ -6,7 +6,7 @@
 > update this plan's status row in `plans/readme.md` unless a reviewer told you
 > they maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/home.go internal/web/models.go internal/web/heads.go internal/ui/chat/dock.go web/templates/home.html internal/self/knowledge.md`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/home.go internal/web/models.go internal/web/heads.go internal/ui/chat/dock.go web/templates/home.html internal/self/knowledge.md`
 > If any in-scope file changed since this plan was written, compare the "Current
 > state" excerpts against the live code; on a mismatch, treat it as a STOP
 > condition.
@@ -18,7 +18,23 @@
 - **Risk**: MED
 - **Depends on**: none (independent of 111–113, 115; all of 111–115 must land before 116/117)
 - **Category**: migration / tech-debt
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`)
+
+Still **valid and unstarted**. Live: `chat_bar` → `models.go:113`, `head_switcher`
+→ `heads.go:30`. **`model_switcher` is DEAD** (only invoked via `{{template}}`
+inside `home.html`, never `ExecuteTemplate`'d) — drop it, do not port. Anchors:
+`patchChatbar` → `models.go:111-128` (excerpt byte-accurate); `homeData`/`headChoice`
+`models.go:25-46`/:49 intact; `setActiveHead` `heads.go:27-33` unchanged (preserve
+the `#ucard-heads` patch right after, at heads.go:34-39). **Resolve the open
+`h.FormEl` vs `h.Form` question: use `h.Form(...)`** — `knowledgecards/memory.go:121`
+uses `h.Form` in this repo's gomponents (change the Step-1 draft from `h.FormEl(`
+to `h.Form(`). Docs anchors for Step 5: knowledge.md `:161-163`, `dock.go:45`,
+`stories_chat.go:185`. Note: `models.go:534` `template.HTMLEscapeString` does NOT
+match the `ExecuteTemplate` grep, so the done-criterion stays clean. The
+homeData-fields / Switchers-slot STOP conditions are verified clear at HEAD
+(home.go still passes only Convo+Composer).
 
 ## Why this matters
 

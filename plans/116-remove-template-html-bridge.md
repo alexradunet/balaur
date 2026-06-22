@@ -6,7 +6,7 @@
 > update this plan's status row in `plans/readme.md` unless a reviewer told you
 > they maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/cards.go internal/web/recap.go internal/web/home.go internal/web/models.go internal/web/chatstream.go internal/web/panel.go internal/web/tasks.go internal/web/web.go`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/cards.go internal/web/recap.go internal/web/home.go internal/web/models.go internal/web/chatstream.go internal/web/panel.go internal/web/tasks.go internal/web/web.go`
 > If any in-scope file changed since this plan was written, compare the "Current
 > state" excerpts against the live code; on a mismatch, treat it as a STOP
 > condition.
@@ -16,11 +16,48 @@
 - **Priority**: P2
 - **Effort**: M
 - **Risk**: MED
-- **Depends on**: 111, 112, 113, 114, 115 (do this after all `ExecuteTemplate`
-  callers are gomponents — so the only remaining `html/template` use is the
-  `template.HTML` bridge type)
+- **Depends on**: **none for the bridge-type conversion itself** (refreshed
+  2026-06-22 — see "## Refresh": each web file's `html/template` import serves only
+  `template.HTML`/`HTMLEscapeString`, NOT the `ExecuteTemplate` method, so this is
+  INDEPENDENT of 111–115). 117 must run after this.
 - **Category**: migration / tech-debt
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`) — scope trimmed + deps relaxed
+
+**Deps relaxed:** this bridge-type removal is INDEPENDENT of 111–115. Each web
+file's `html/template` import serves only `template.HTML`/`HTMLEscapeString`; the
+`ExecuteTemplate` calls dereference the `h.tmpl` *method* (declared web.go:250),
+not a package-level `template.*` symbol. **Do NOT stop merely because
+`ExecuteTemplate` callers still exist** (delete that STOP clause).
+
+**Scope trim — already landed via plan 124:** `modelsPageData` and
+`renderModelsPanel` are GONE — **delete those two bullets from Step 6.** Still real
+scope: the `ComposerHTML` field (`models.go:44`) + `composerHTML` func
+(`home.go:56-61`) + its only (dead) caller `web.go:300`.
+
+**Corrected anchors:** `renderNodeHTML` `panel.go:100`; cards.go — `cardHTMLAt`
+**`:103`** (the shared validate+render helper; `cardHTML` `:123` + `cardFocusHTML`
+`:152` are thin pass-throughs — convert `cardHTMLAt` to return `g.Node` and they
+follow), `cardErrorStrip` `:129`, `uicardBody` `:143`, `artifactBody` `:160`,
+`proposalBody` `:173`; recap.go — `recapExpand` WriteString `:144`, `CardBody`
+field `:169` (+ branch `:214-215`, proposalBody assign `:285`), `renderMessages`
+`:192`, `chatBodyHTML` `:232`; tasks.go cardHTML caller `:192`; models.go
+`sseLogger` `:531-537` (HTMLEscapeString `:534`) — **add `g` + `h` gomponents
+imports (models.go has neither)**.
+
+**Missing site to ADD to Step 7:** `chatstream.go:251` `refreshCard` does
+`s.sse.PatchElements(string(s.h.cardHTML(typ, nil)))` — once `cardHTML` returns
+`g.Node` this must become `renderNodeHTML(s.h.cardHTML(typ, nil))`. (`endTool`
+`:219`; its `endTool(...,"")` callers `:194/:199/:203/:213`.)
+
+**Test conversions (the real Step):** every `string(h.cardHTML(...))` in the
+`*_gomponents_test.go` files → `renderNodeHTML(h.cardHTML(...))`
+(calendar_timeline / knowledge / life / habits / heads / today / quests / journal /
+settings); `string(h.renderMessages(...))` at `handlers_test.go:496` +
+`recap_refresh_test.go:41/79` → `renderNodeHTML(...)`; `recap_refresh_test.go:37`
+`if mv.CardBody != ""` → `!= nil`. Done-criterion grep: change
+`ComposerHTML\|modelsPageData\|renderModelsPanel` → just `ComposerHTML\|composerHTML`.
 
 ## Why this matters
 

@@ -6,7 +6,7 @@
 > update this plan's status row in `plans/readme.md` unless a reviewer told you
 > they maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/chatstream.go internal/web/chat.go internal/ui/chat internal/feature/storybook web/templates/chat-messages.html`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/chatstream.go internal/web/chat.go internal/ui/chat internal/feature/storybook web/templates/chat-messages.html`
 > If any in-scope file changed since this plan was written, compare the "Current
 > state" excerpts against the live code; on a mismatch, treat it as a STOP
 > condition.
@@ -18,7 +18,19 @@
 - **Risk**: LOW
 - **Depends on**: none (independent of 111–114; all of 111–115 must land before 116/117)
 - **Category**: migration / tech-debt
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`)
+
+Still **valid and unstarted — zero drift** in the in-scope code: `chat-choices`
+`ExecuteTemplate` → `chatstream.go:262`, `appendChoices` `chatstream.go:255-267`,
+`choicesView` `chat.go:18`, `tools.Choice` `choices.go:20`, `renderNode`
+`chatstream.go:77`, `RemoveElement(".choices")` `chatstream.go:120` — all exact.
+The `chat.Choices` organism + story are built NEW (no `choices.go` in
+`internal/ui/chat` yet — confirmed). Story registry: `chattoolrowStory()` still at
+`story.go:82` (insert the new story right after it). `chat.go` lost an unrelated
+`cardURL` helper (plan 124) — lines unaffected. Done-criteria greps hold
+(ExecuteTemplate in chatstream.go = 1, "chat-choices" = 2 today; both → 0 after).
 
 ## Why this matters
 

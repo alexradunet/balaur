@@ -6,7 +6,7 @@
 > update this plan's status row in `plans/readme.md` unless a reviewer told you
 > they maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/cards.go internal/cards web/templates/cards.html`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/cards.go internal/cards web/templates/cards.html`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -18,7 +18,22 @@
 - **Risk**: LOW
 - **Depends on**: none (independent of 111, 113–115; all of 111–115 must land before 116/117)
 - **Category**: migration / tech-debt
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`)
+
+Still **valid and unstarted**, near-zero drift. `ucard_palette` is live at
+`internal/web/cards.go:46`; the handler block (cards.go:42-50) and the `cards.html`
+excerpt are byte-identical at HEAD. Minor anchors: the `ui.Tag` precedent is now
+wrapped `g.If(v.RecurLine != "", ui.Tag(...))` at `taskcards/taskcard.go:30`;
+render-to-writer precedent → `knowledge.go:179`
+(`ui.ErrorStrip("could not load this card").Render(...)`, +1 from plan 134);
+`commandPaletteNode` precedent `home.go:24` unchanged. **Test-plan correction:**
+an end-to-end test already exists — `TestUiCardPalette` (`cards_test.go:60`,
+`GET /ui/cards` asserting `ucard-palette` + all card types) covers
+`cardPaletteNode` after the repoint with **no test edit** (just rerun it); replace
+the "add one if none exists" guidance accordingly. Done-criteria greps hold
+(`ucard_palette` in `internal/web/` = 1 today at cards.go:46, must be 0 after).
 
 ## Why this matters
 

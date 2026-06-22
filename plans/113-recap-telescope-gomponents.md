@@ -6,7 +6,7 @@
 > update this plan's status row in `plans/readme.md` unless a reviewer told you
 > they maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/recap.go web/templates/recap-bands.html web/templates/recap-cards.html`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/recap.go web/templates/recap-bands.html web/templates/recap-cards.html`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code; on a mismatch, treat it as a
 > STOP condition.
@@ -18,7 +18,20 @@
 - **Risk**: MED
 - **Depends on**: none (independent of 111, 112, 114, 115; all of 111–115 must land before 116/117)
 - **Category**: migration / tech-debt
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`)
+
+Still **valid and unstarted**. Both `ExecuteTemplate` sites live:
+`recap-bands.html` → `recap.go:89`, `recap-cards.html` → `recap.go:154`. Excerpts
+byte-accurate; only anchors drifted — `recapView` `recap.go:26-34`, bandView/exec
+block `recap.go:68-96`, expand block `recap.go:145-156`; `renderNodeHTML`
+`panel.go:100`; `commandPaletteNode` `home.go:24` unchanged. **Out-of-scope drift
+to ignore:** `recap.go` `messageViews` got a `cards.Get→cardTitleIcon` change +
+dropped `internal/cards` import (that's plan-116 territory) — not this plan's
+concern. `renderMessages` returns `template.HTML` (recap.go:192) — relevant to 116,
+not here. Done-criteria greps hold (the two recap-template greps match exactly
+recap.go:89 + :154 today, → 0 after).
 
 ## Why this matters
 

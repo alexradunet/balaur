@@ -6,7 +6,7 @@
 > update this plan's status row in `plans/readme.md` unless a reviewer told you
 > they maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 0dd2457..HEAD -- internal/web/web.go web/ internal/web/templates_test.go internal/web/handlers_test.go AGENTS.md README.md DESIGN.md internal/self/knowledge.md .tours`
+> **Drift check (run first)**: `git diff --stat ea79dae..HEAD -- internal/web/web.go web/ internal/web/templates_test.go internal/web/handlers_test.go AGENTS.md README.md DESIGN.md internal/self/knowledge.md .tours`
 > If any in-scope file changed since this plan was written, compare the "Current
 > state" excerpts against the live code; on a mismatch, treat it as a STOP
 > condition.
@@ -16,11 +16,47 @@
 - **Priority**: P2
 - **Effort**: M
 - **Risk**: MED
-- **Depends on**: 111, 112, 113, 114, 115, 116 (every `ExecuteTemplate` caller is
-  gomponents AND the `template.HTML` bridge is gone — so `html/template` survives
-  only in `web.go` + `templates_test.go`)
+- **Depends on**: 111, 112, 113, 114, 115, 116 **AND** an empty
+  `grep -rn 'ExecuteTemplate' internal/web/*.go | grep -v _test` (refreshed
+  2026-06-22 — ⛔ NOT satisfiable today: **9 production `ExecuteTemplate` callers
+  still live**; see "## Refresh"). Execute LAST, only after that gate is green.
 - **Category**: migration / tech-debt / docs
-- **Planned at**: commit `0dd2457`, 2026-06-19
+- **Planned at**: commit `0dd2457`, 2026-06-19 — **refreshed 2026-06-22 against `ea79dae`; see "## Refresh" below**
+
+## Refresh (2026-06-22, against `ea79dae`) — ⛔ BLOCKED, execute LAST
+
+**This plan is NOT executable yet.** Both STOP conditions fire today: **9 production
+`ExecuteTemplate` call sites still drive the engine** — `heads.go:30`, `tasks.go:92`,
+`knowledge.go:143`+`:169`, `cards.go:46`, `chatstream.go:262`, `models.go:113`,
+`recap.go:89`+`:154`. Deleting `funcs`/`tmpl`/`ParseFS` now breaks compilation of 7
+production files. **Run this LAST, only after 111–116 land and the precondition gate
+`grep -rn 'ExecuteTemplate' internal/web/*.go | grep -v _test` returns EMPTY.** Add
+that grep as Step 0.
+
+**The "Why this matters" premise is FALSE at HEAD** — `html/template` is NOT down
+to two places; it still serves the heads switcher, the task/knowledge/recap cards,
+the card palette, chat-choices, and the chat bar, and `template.HTML` is a live
+bridge in 5 files (home.go:9, recap.go:5, models.go:7, cards.go:14, chatstream.go:5)
+plus web.go + templates_test.go.
+
+**Corrected engine anchors:** `funcs` `web.go:57-96`, `template.Must(...ParseFS)`
+`web.go:164`, handlers `tmpl` field `web.go:250`. The `parseTemplates(t)` test seam
+is `templates_test.go:19`, and the `tmpl: parseTemplates(t)` plumbing appears at
+**28 sites across 15 test files** — every `*_gomponents_test.go` passes it
+vestigially (drop the `tmpl` field + the calls), while the pure-legacy
+`templates_test.go` cases and the `handlers_test.go` chat-msg-tool block get
+**DELETED, not migrated**.
+
+**Compile caveat (Step 4):** `renderMessages` (recap.go:192) returns `template.HTML`,
+NOT `g.Node` — `renderNodeHTML(h.renderMessages(...))` will NOT compile; either keep
+it returning `template.HTML` and assert its string, or migrate it to `g.Node` first.
+
+**Docs already partly done:** README:28 already says "gomponents" (drop that edit);
+knowledge.md repo-map is now "legacy html/template files (being retired…)" at
+`:254-256`; the AGENTS.md "being retired" line is currently TRUE — do not delete it
+until the engine is actually gone. **Tours are FAR more stale than this plan admits**
+(tours 00/06/07 describe boards, `/focus`, htmx, Ollama, gguf.Shared — all gone):
+make the separate full tour-refresh a HARD dependency, not an optional follow-up.
 
 ## Why this matters
 
