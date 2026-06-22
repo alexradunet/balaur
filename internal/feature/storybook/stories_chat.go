@@ -19,6 +19,7 @@ func chatmessageStory() Story {
 		Blurb: "A single RPG speech panel: a wood-framed portrait beside a parchment bubble, the nameplate riding the top border. Balaur speaks gold from the left; the owner answers from the right. Compose these into a Chat.",
 		Variants: []Variant{
 			{"balaur", chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Content: "Noted — I'll remind you at 6pm. Anything else for the book?"})},
+			{"markdown", chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Content: "Here's what I can do:\n\n- **Remember** facts you approve\n- **Track** tasks and reminders\n- Show `live cards` in the panel"})},
 			{"user", chat.Message(chat.MessageProps{Role: "user", Who: "You", AvatarSrc: "/static/crest.png", Content: "Add: water the tomatoes every 2 days."})},
 			{"thinking", chat.Message(chat.MessageProps{Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png", Pending: true})},
 		},
@@ -27,7 +28,7 @@ func chatmessageStory() Story {
 			{"Who", "string", "auto", "Nameplate tab label; defaults to You / Balaur."},
 			{"Origin", "string", "—", "Optional suffix after a balaur nameplate, e.g. a head name."},
 			{"AvatarSrc", "string", "—", "Path to the portrait PNG (balaur head or owner soul)."},
-			{"Content", "string", "—", "The spoken line."},
+			{"Content", "string", "—", "The spoken line. Rendered as Markdown for balaur turns (escaped plain text for the owner)."},
 			{"Pending", "bool", "false", "Marks an assistant turn mid-generation — thinking dots + a breathing teal glow."},
 			{"ID", "string", "—", "Optional root element id — the chat stream's morph/remove target for a turn."},
 			{"BodyID", "string", "—", "Optional body element id — the stream morphs it as tokens accumulate."},
