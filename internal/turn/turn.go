@@ -21,6 +21,7 @@ import (
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/verify"
 )
@@ -91,7 +92,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	// full record stays in SQLite. The moment line grounds relative dates;
 	// the today block is what lets the companion speak like someone who
 	// knows the owner's day, unprompted.
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	knowledgeBlock, usedMemories := knowledge.BuildContext(app, userText)
 	res.UsedMemories = usedMemories
 	todayBlock := tasks.TodayBlock(app, now)

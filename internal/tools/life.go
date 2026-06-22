@@ -11,6 +11,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/life"
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 // LifeTools gives the model the owner-defined tracking verbs. Nothing is
@@ -57,7 +58,8 @@ func logEntryTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("log_entry: bad arguments: %w", err)
 			}
-			notedAt, _, err := ParseDue(args.NotedAt)
+			loc := store.OwnerLocation(app)
+			notedAt, _, err := ParseDue(args.NotedAt, loc)
 			if err != nil {
 				return "", fmt.Errorf("log_entry: %w", err)
 			}
@@ -76,7 +78,7 @@ func logEntryTool(app core.App) agent.Tool {
 				fmt.Fprintf(&b, ": %s", clipN(t, 80))
 			}
 			fmt.Fprintf(&b, " (%s). id: %s",
-				rec.GetDateTime("noted_at").Time().In(time.Local).Format("Jan 2 15:04"), rec.Id)
+				rec.GetDateTime("noted_at").Time().In(loc).Format("Jan 2 15:04"), rec.Id)
 			return b.String(), nil
 		},
 	}
@@ -102,6 +104,7 @@ func entrySeriesTool(app core.App) agent.Tool {
 			if args.Days <= 0 {
 				args.Days = 30
 			}
+			loc := store.OwnerLocation(app)
 
 			if strings.TrimSpace(args.Kind) == "" {
 				kinds, err := life.Kinds(app)
@@ -122,14 +125,14 @@ func entrySeriesTool(app core.App) agent.Tool {
 						}
 					}
 					if !k.Last.IsZero() {
-						fmt.Fprintf(&b, ", last %s", k.Last.In(time.Local).Format("Jan 2"))
+						fmt.Fprintf(&b, ", last %s", k.Last.In(loc).Format("Jan 2"))
 					}
 					b.WriteString("\n")
 				}
 				return b.String(), nil
 			}
 
-			now := time.Now()
+			now := time.Now().In(loc)
 			recs, err := life.Series(app, args.Kind, now.AddDate(0, 0, -args.Days))
 			if err != nil {
 				return "", fmt.Errorf("entry_series: %w", err)
@@ -144,7 +147,7 @@ func entrySeriesTool(app core.App) agent.Tool {
 			}
 			from := max(len(recs)-5, 0)
 			for _, r := range recs[from:] {
-				fmt.Fprintf(&b, "- [%s] %s", r.Id, r.GetDateTime("noted_at").Time().In(time.Local).Format("Jan 2 15:04"))
+				fmt.Fprintf(&b, "- [%s] %s", r.Id, r.GetDateTime("noted_at").Time().In(loc).Format("Jan 2 15:04"))
 				if v := r.GetFloat("value_num"); v != 0 {
 					fmt.Fprintf(&b, " — %g %s", v, r.GetString("unit"))
 				}

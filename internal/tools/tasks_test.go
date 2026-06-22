@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/storetest"
@@ -184,6 +185,42 @@ func TestTaskDropMarksRefresh(t *testing.T) {
 	}
 	if !strings.Contains(rest, "Dropped") {
 		t.Fatalf("model text missing 'Dropped': %q", rest)
+	}
+}
+
+func TestParseDueHonorsLocation(t *testing.T) {
+	// A non-UTC zone two hours ahead of UTC.
+	tz := time.FixedZone("test+2", 2*3600)
+
+	// Date-only input → 09:00 in the given location, not in UTC.
+	got, dateOnly, err := ParseDue("2026-07-15", tz)
+	if err != nil {
+		t.Fatalf("ParseDue date-only: %v", err)
+	}
+	if !dateOnly {
+		t.Error("dateOnly should be true for date-only input")
+	}
+	want := time.Date(2026, 7, 15, 9, 0, 0, 0, tz)
+	if !got.Equal(want) {
+		t.Errorf("date-only: got %v, want %v", got, want)
+	}
+	// Same input in UTC gives a different wall-clock moment.
+	gotUTC, _, _ := ParseDue("2026-07-15", time.UTC)
+	if got.Equal(gotUTC) {
+		t.Error("location should change the parsed moment, but UTC and test+2 gave equal results")
+	}
+
+	// Datetime input (no zone) is interpreted in the given location.
+	got2, dateOnly2, err := ParseDue("2026-07-15T14:30", tz)
+	if err != nil {
+		t.Fatalf("ParseDue datetime: %v", err)
+	}
+	if dateOnly2 {
+		t.Error("dateOnly should be false for datetime input")
+	}
+	want2 := time.Date(2026, 7, 15, 14, 30, 0, 0, tz)
+	if !got2.Equal(want2) {
+		t.Errorf("datetime: got %v, want %v", got2, want2)
 	}
 }
 
