@@ -15,6 +15,17 @@ type AvatarEntry struct {
 	URL   string
 }
 
+// avatarMap builds a key→URL lookup from a roster slice. The slices returned
+// by SoulAvatars / BalaurHeads are the single source of truth; the package-level
+// lookup maps below are derived from them at init so an avatar is declared once.
+func avatarMap(entries []AvatarEntry) map[string]string {
+	m := make(map[string]string, len(entries))
+	for _, e := range entries {
+		m[e.Key] = e.URL
+	}
+	return m
+}
+
 // GetOwnerSetting returns the value of a key from the owner_settings
 // collection. Returns defaultVal if the key is not found or any error occurs.
 func GetOwnerSetting(app core.App, key, defaultVal string) string {
@@ -59,28 +70,16 @@ func SetOwnerSetting(app core.App, key, value string) error {
 
 // ── Soul avatar ────────────────────────────────────────────────────────
 
-// soulAvatarMap maps avatar keys to their static file paths.
-// Legacy values "male" and "female" are kept as aliases.
-var soulAvatarMap = map[string]string{
-	"soul-01": "/static/avatars/soul-01.png", // Him
-	"soul-02": "/static/avatars/soul-02.png", // Her
-	"soul-03": "/static/avatars/soul-03.png", // Elder
-	"soul-04": "/static/avatars/soul-04.png", // Youth
-	"soul-05": "/static/avatars/soul-05.png", // Maker
-	"soul-06": "/static/avatars/soul-06.png", // Cyclops
-	"soul-07": "/static/avatars/soul-07.png", // Gnome
-	"soul-08": "/static/avatars/soul-08.png", // Ogre
-	"soul-09": "/static/avatars/soul-09.png", // Strigoi
-	"soul-10": "/static/avatars/soul-10.png", // Zmeu
-	"soul-11": "/static/avatars/soul-11.png", // Iele
-	"soul-12": "/static/avatars/soul-12.png", // Muma Pădurii
-	"soul-13": "/static/avatars/soul-13.png", // Căpcăun
-	"soul-14": "/static/avatars/soul-14.png", // Solomonar
-	"soul-15": "/static/avatars/soul-15.png", // Vâlvă
-	"soul-16": "/static/avatars/soul-16.png", // Pricolici
-	"male":    "/static/avatars/soul-01.png", // legacy alias
-	"female":  "/static/avatars/soul-02.png", // legacy alias
-}
+// soulAvatarMap is the key→URL lookup for soul avatars, derived from the
+// SoulAvatars roster (the single source of truth). Legacy values "male" and
+// "female" are kept as aliases for owner_settings written before the soul-NN
+// keys existed.
+var soulAvatarMap = func() map[string]string {
+	m := avatarMap(SoulAvatars())
+	m["male"] = m["soul-01"]   // legacy alias
+	m["female"] = m["soul-02"] // legacy alias
+	return m
+}()
 
 // ValidSoulAvatarKey reports whether key is a recognised soul avatar.
 func ValidSoulAvatarKey(key string) bool {
@@ -123,24 +122,10 @@ func SoulAvatarURL(app core.App) string {
 
 // ── Balaur head avatar ─────────────────────────────────────────────────
 
-var balaurAvatarMap = map[string]string{
-	"balaur-01": "/static/avatars/balaur-01.png", // Wise (default)
-	"balaur-02": "/static/avatars/balaur-02.png", // Ancient
-	"balaur-03": "/static/avatars/balaur-03.png", // Guardian
-	"balaur-04": "/static/avatars/balaur-04.png", // Scholar
-	"balaur-05": "/static/avatars/balaur-05.png", // Wild
-	"balaur-06": "/static/avatars/balaur-06.png", // Storm
-	"balaur-07": "/static/avatars/balaur-07.png", // Night
-	"balaur-08": "/static/avatars/balaur-08.png", // Young
-	"balaur-09": "/static/avatars/balaur-09.png", // Ember
-	"balaur-10": "/static/avatars/balaur-10.png", // Frost
-	"balaur-11": "/static/avatars/balaur-11.png", // Healer
-	"balaur-12": "/static/avatars/balaur-12.png", // Trickster
-	"balaur-13": "/static/avatars/balaur-13.png", // Dreamer
-	"balaur-14": "/static/avatars/balaur-14.png", // Forest
-	"balaur-15": "/static/avatars/balaur-15.png", // Dawn
-	"balaur-16": "/static/avatars/balaur-16.png", // Sage
-}
+// balaurAvatarMap is the key→URL lookup for Balaur heads, derived from the
+// BalaurHeads roster (the single source of truth). No legacy aliases — the
+// 16 balaur-NN keys are 1:1 with the roster.
+var balaurAvatarMap = avatarMap(BalaurHeads())
 
 // BalaurHeads returns the roster of 16 Balaur personalities, the single source of truth.
 func BalaurHeads() []AvatarEntry {
