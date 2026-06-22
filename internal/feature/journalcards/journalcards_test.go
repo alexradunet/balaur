@@ -5,10 +5,11 @@ package journalcards_test
 // If `go test ./internal/feature/...` compiles without an import cycle, it holds.
 
 import (
-	"strings"
 	"testing"
 
 	g "maragu.dev/gomponents"
+
+	"github.com/alexradunet/balaur/internal/uitest"
 )
 
 func TestNoWebImports(t *testing.T) {
@@ -17,10 +18,5 @@ func TestNoWebImports(t *testing.T) {
 
 // renderNode renders a gomponents node to an HTML string for assertions.
 func renderNode(t *testing.T, n g.Node) string {
-	t.Helper()
-	var sb strings.Builder
-	if err := n.Render(&sb); err != nil {
-		t.Fatalf("render failed: %v", err)
-	}
-	return sb.String()
+	return uitest.Render(t, n)
 }

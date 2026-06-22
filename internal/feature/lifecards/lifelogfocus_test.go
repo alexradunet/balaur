@@ -7,15 +7,11 @@ import (
 	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/feature/lifecards"
+	"github.com/alexradunet/balaur/internal/uitest"
 )
 
 func renderNode(t *testing.T, n g.Node) string {
-	t.Helper()
-	var b strings.Builder
-	if err := n.Render(&b); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	return b.String()
+	return uitest.Render(t, n)
 }
 
 // TestLifelogFocusContract guards the class/markup contract the served CSS
