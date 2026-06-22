@@ -14,7 +14,7 @@ import (
 // served by their gomponents renderers via the cardInto shim.
 func TestCalendarTimelineRenderViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 	if _, err := tasks.Create(app, tasks.CreateOpts{
 		Title: "Ship it", Due: time.Now().Add(24 * time.Hour), Source: "test",
 	}); err != nil {

@@ -17,9 +17,8 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Use Go for all Balaur product runtime code. The user-facing UI is
   server-rendered typed **`gomponents`** patched over **Datastar** (SSE
   hypermedia + client signals); no SPA framework, no Node build step. gomponents
-  is the one way to build UI — the legacy top-level `web/templates/`
-  (`html/template`) path is being retired, so build new screens as components
-  (see the `ui-development` skill) and never extend `web/templates/`.
+  is the one way to build UI — there is no `html/template` path: build every
+  screen as a component (see the `ui-development` skill).
 - Use the standard Go command surface: `go build`, `go run .`, `go test ./...`,
   `go vet ./...`. Builds must work with `CGO_ENABLED=0`.
 - For local development, prefer `make run` (single run) and `make dev`

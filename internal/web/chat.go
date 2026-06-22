@@ -22,8 +22,8 @@ func newNonce() string {
 
 // chat handles one user turn in the master conversation. The web layer is a
 // gateway: it adapts the shared turn pipeline (internal/turn) into a Datastar
-// SSE stream of element patches. Fragment markup lives in chat-messages.html;
-// the streaming lifecycle lives in chatStream (chatstream.go).
+// SSE stream of element patches. The streaming lifecycle lives in chatStream
+// (chatstream.go).
 func (h *handlers) chat(e *core.RequestEvent) error {
 	msg := readChatMessage(e)
 	if msg == "" {

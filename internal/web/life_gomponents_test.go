@@ -12,7 +12,7 @@ import (
 // are served by their gomponents renderers via the cardInto shim.
 func TestLifeRenderViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	lifecards.Register(app)
 	defer func() {

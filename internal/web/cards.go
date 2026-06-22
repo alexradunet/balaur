@@ -40,7 +40,7 @@ func queryToMap(q url.Values) map[string]string {
 }
 
 // cardPaletteNode renders the GET /ui/cards palette: the human/agent index of
-// every registered card spec. Port of ucard_palette (web/templates/cards.html).
+// every registered card spec.
 func cardPaletteNode(specs []cards.Spec) g.Node {
 	rows := make([]g.Node, 0, len(specs))
 	for _, s := range specs {

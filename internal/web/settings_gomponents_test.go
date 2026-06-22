@@ -12,7 +12,7 @@ import (
 // its gomponents renderer via the cardInto shim.
 func TestSettingsRenderViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	settingscards.Register(app)
 	defer ui.UnregisterCard("settings")

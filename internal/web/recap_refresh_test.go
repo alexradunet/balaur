@@ -15,7 +15,7 @@ import (
 // is the durable transcript trace (plan 098).
 func TestMessageViewsUicardRendersChip(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	col, err := app.FindCollectionByNameOrId("messages")
 	if err != nil {
@@ -52,7 +52,7 @@ func TestMessageViewsUicardRendersChip(t *testing.T) {
 // deterministic re-open URL).
 func TestMessageViewsClusterRendersNonClickableChip(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	col, err := app.FindCollectionByNameOrId("messages")
 	if err != nil {
@@ -90,7 +90,7 @@ func TestMessageViewsClusterRendersNonClickableChip(t *testing.T) {
 // never leaks the raw NUL marker (the live refresh has no meaning on reload).
 func TestMessageViewsStripsRefreshMarker(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	col, err := app.FindCollectionByNameOrId("messages")
 	if err != nil {

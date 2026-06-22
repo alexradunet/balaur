@@ -14,7 +14,7 @@ import (
 // card via the gomponents component (not the legacy template), showing live data.
 func TestTodayRendersViaGomponentsAfterRegister(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	// Seed an open task due at NOON TODAY (local) so it deterministically lands
 	// in today's bucket (a task with no due date would bucket as "someday" and

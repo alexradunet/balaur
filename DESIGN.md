@@ -392,9 +392,7 @@ The Unicode glyph language is retired; tool rows render pixel icons via the `too
   a pixel icon (`<img class="tool-icon">`) from `web/static/icons/`, the
   `tool · {name}` indicator, the result, and any artifact chip it surfaced
   (running tools show a breathing glow + "running…"). The trail is part of the
-  UI language, visible, never hidden. (The legacy `.msg-tool` inset-slab styling
-  and the `chat-msg-tool` html/template remain only for the pre-gomponents
-  fallback path, unused by the live UI.)
+  UI language, visible, never hidden.
 - Respect `prefers-reduced-motion`; body text ≥ 16px; semantic HTML;
   visible focus states (`--focus-ring: 2px solid var(--teal)`).
 

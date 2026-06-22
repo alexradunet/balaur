@@ -14,7 +14,7 @@ import (
 // gomponents renderer via the cardInto shim.
 func TestHabitsRendersViaGomponents(t *testing.T) {
 	app := newWebApp(t)
-	h := &handlers{app: app, tmpl: parseTemplates(t)}
+	h := &handlers{app: app}
 
 	// Seed a recurring task (daily) with a due date — recurring tasks require
 	// a due anchor (see tasks.Create validation).
