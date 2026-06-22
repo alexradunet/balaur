@@ -60,7 +60,7 @@ func Message(p MessageProps) g.Node {
 
 	panel := h.Div(h.Class("cmsg-panel"),
 		h.Div(h.Class("cmsg-name"), g.Text(who)),
-		messageBody(p.BodyID, p.Content, p.Pending),
+		messageBody(p.BodyID, p.Content, p.Pending, !user),
 	)
 
 	// Balaur: portrait then panel; owner: panel then portrait (mirrored).
@@ -80,7 +80,7 @@ func Message(p MessageProps) g.Node {
 // stream's per-token morph target; a pending+empty turn shows thinking dots —
 // a bare span in the static (storybook) case, wrapped in the id'd body div when
 // streaming so the first token-morph lands by id.
-func messageBody(bodyID, content string, pending bool) g.Node {
+func messageBody(bodyID, content string, pending, markdown bool) g.Node {
 	if pending && content == "" {
 		thinking := h.Span(h.Class("thinking thinking-dots"), g.Text("thinking"))
 		if bodyID == "" {
@@ -88,16 +88,24 @@ func messageBody(bodyID, content string, pending bool) g.Node {
 		}
 		return h.Div(h.Class("cmsg-body"), h.ID(bodyID), thinking)
 	}
-	kids := []g.Node{h.Class("cmsg-body")}
+	cls := "cmsg-body"
+	if markdown {
+		cls = "cmsg-body cmsg-md"
+	}
+	kids := []g.Node{h.Class(cls)}
 	if bodyID != "" {
 		kids = append(kids, h.ID(bodyID))
 	}
-	kids = append(kids, g.Text(content))
+	if markdown {
+		kids = append(kids, renderMarkdown(content))
+	} else {
+		kids = append(kids, g.Text(content))
+	}
 	return h.Div(kids...)
 }
 
 // MessageBody renders just the parchment body element — the token-morph target
 // the chat stream replaces by id as Balaur's text accumulates.
 func MessageBody(bodyID, content string) g.Node {
-	return messageBody(bodyID, content, false)
+	return messageBody(bodyID, content, false, true)
 }

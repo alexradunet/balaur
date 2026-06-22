@@ -6,11 +6,13 @@ require (
 	github.com/ardanlabs/kronk v1.28.0
 	github.com/dop251/goja v0.0.0-20260311135729-065cd970411c
 	github.com/hybridgroup/yzma v1.17.1
+	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/ncruces/go-sqlite3 v0.34.4
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.39.3
 	github.com/spf13/cobra v1.10.2
 	github.com/starfederation/datastar-go v1.2.2
+	github.com/yuin/goldmark v1.8.2
 	maragu.dev/gomponents v1.3.0
 	maragu.dev/gomponents-datastar v0.3.3
 )
@@ -49,6 +51,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.43.3 // indirect
 	github.com/aws/smithy-go v1.27.2 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -77,6 +80,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.16 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.73 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect

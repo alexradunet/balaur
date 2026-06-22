@@ -17,7 +17,7 @@ func TestMessageBalaur(t *testing.T) {
 		// Balaur: portrait then panel.
 		`<div class="cmsg-portrait"><img src="/static/crest.png" alt="" decoding="async"></div><div class="cmsg-panel">`,
 		`<div class="cmsg-name">Balaur</div>`,
-		`<div class="cmsg-body">Hello there.</div>`,
+		`<div class="cmsg-body cmsg-md"><p>Hello there.</p>`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("balaur message missing %q in: %s", want, got)
@@ -43,6 +43,25 @@ func TestMessageUserDefaultName(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("user message missing %q in: %s", want, got)
 		}
+	}
+}
+
+func TestMessageBalaurMarkdown(t *testing.T) {
+	got := render(t, chat.Message(chat.MessageProps{
+		Role: "balaur", Who: "Balaur", AvatarSrc: "/static/crest.png",
+		Content: "**bold** and a list:\n\n- one\n- two",
+	}))
+	for _, want := range []string{
+		`<strong>bold</strong>`,
+		`<ul>`,
+		`<li>one</li>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("balaur markdown not rendered, missing %q in: %s", want, got)
+		}
+	}
+	if strings.Contains(got, "**bold**") {
+		t.Errorf("raw markdown leaked into output: %s", got)
 	}
 }
 

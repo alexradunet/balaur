@@ -3175,6 +3175,23 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cmsg-user .cmsg-name { right: 12px; color: var(--indigo-ink); }
 .cmsg-body { font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; width: 100%; max-width: var(--measure); }
 
+/* Rendered Markdown body (assistant turns). Plain-text bodies keep .cmsg-body's
+   pre-wrap; rendered prose uses normal flow so goldmark's inter-block newlines
+   don't open blank gaps. */
+.cmsg-md { white-space: normal; }
+.cmsg-md > :first-child { margin-top: 0; }
+.cmsg-md > :last-child { margin-bottom: 0; }
+.cmsg-md p { margin: 0 0 .6em; }
+.cmsg-md ul, .cmsg-md ol { margin: 0 0 .6em; padding-left: 1.4em; }
+.cmsg-md li { margin: .15em 0; }
+.cmsg-md li > p { margin: 0; }
+.cmsg-md h1, .cmsg-md h2, .cmsg-md h3 { margin: .6em 0 .3em; font-size: 1.05em; line-height: 1.3; }
+.cmsg-md code { font-family: var(--font-mono); font-size: .9em; background: var(--surface-2); border: 1px solid var(--parch-edge); border-radius: 3px; padding: 1px 4px; }
+.cmsg-md pre { background: var(--surface-2); border: 1px solid var(--parch-edge); border-radius: 4px; padding: var(--space-2); overflow-x: auto; }
+.cmsg-md pre code { background: none; border: 0; padding: 0; }
+.cmsg-md a { color: inherit; text-decoration: underline; }
+.cmsg-md blockquote { margin: 0 0 .6em; padding-left: .8em; border-left: 3px solid var(--parch-edge); color: var(--ink-muted); }
+
 /* Tool call — a Balaur turn in the speech-panel frame whose body is the audit
    trail: the tool indicator, its result, and any surfaced artifact chip. Reuses
    the .cmsg* frame (portrait, parchment panel, nameplate "Balaur · Tool"); only
