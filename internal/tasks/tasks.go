@@ -157,7 +157,8 @@ func Drop(app core.App, rec *core.Record) error {
 // title and notes (ANDed — each term must match), due-ascending with
 // someday items (empty due) first.
 func OpenTasks(app core.App, terms []string) ([]*core.Record, error) {
-	filter := "status = 'open'"
+	var filter strings.Builder
+	filter.WriteString("status = 'open'")
 	params := dbx.Params{}
 	for i, t := range terms {
 		t = strings.TrimSpace(t)
@@ -165,10 +166,10 @@ func OpenTasks(app core.App, terms []string) ([]*core.Record, error) {
 			continue
 		}
 		k := fmt.Sprintf("t%d", i)
-		filter += fmt.Sprintf(" && (title ~ {:%s} || notes ~ {:%s})", k, k)
+		filter.WriteString(fmt.Sprintf(" && (title ~ {:%s} || notes ~ {:%s})", k, k))
 		params[k] = t
 	}
-	return app.FindRecordsByFilter("tasks", filter, "due", 200, 0, params)
+	return app.FindRecordsByFilter("tasks", filter.String(), "due", 200, 0, params)
 }
 
 // Buckets groups open tasks the way humans plan: what slipped, what is

@@ -32,12 +32,9 @@ func CalendarCell(p CalendarCellProps, attrs ...g.Node) g.Node {
 	if p.Dim {
 		cls += " is-dim"
 	}
-	n := p.Pips
-	if n > 3 {
-		n = 3
-	}
+	n := min(p.Pips, 3)
 	pips := make([]g.Node, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		pips = append(pips, g.El("i", h.Class("cal-pip cal-pip-"+strconv.Itoa(i))))
 	}
 	root := []g.Node{

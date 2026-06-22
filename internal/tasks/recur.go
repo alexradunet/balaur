@@ -6,6 +6,7 @@ package tasks
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -53,7 +54,7 @@ func Parse(s string) (Rule, error) {
 	case "weekly":
 		var days []time.Weekday
 		seen := map[time.Weekday]bool{}
-		for _, name := range strings.Split(rest, ",") {
+		for name := range strings.SplitSeq(rest, ",") {
 			wd, ok := weekdayNames[strings.TrimSpace(name)]
 			if !ok {
 				return Rule{}, fmt.Errorf("recur: unknown weekday %q in %q (want mon..sun)", name, s)
@@ -95,12 +96,7 @@ func Next(r Rule, due, after time.Time) time.Time {
 		return c
 	case "weekly":
 		in := func(wd time.Weekday) bool {
-			for _, d := range r.Weekdays {
-				if d == wd {
-					return true
-				}
-			}
-			return false
+			return slices.Contains(r.Weekdays, wd)
 		}
 		c := due
 		for {
@@ -136,12 +132,7 @@ func calendarRule(r Rule) bool {
 func Matches(r Rule, t time.Time) bool {
 	switch r.Kind {
 	case "weekly":
-		for _, d := range r.Weekdays {
-			if t.Weekday() == d {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(r.Weekdays, t.Weekday())
 	case "monthly":
 		return monthlyOn(t, r.MonthDay).Day() == t.Day()
 	}

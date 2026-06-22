@@ -10,6 +10,7 @@ package knowledge
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -131,13 +132,7 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 	}
 	from := rec.GetString("status")
 
-	allowed := false
-	for _, t := range validTransitions[from] {
-		if t == to {
-			allowed = true
-			break
-		}
-	}
+	allowed := slices.Contains(validTransitions[from], to)
 	store.Audit(app, "owner", "knowledge."+to, string(kind)+"/"+rec.Id, allowed,
 		map[string]any{"from": from})
 	if !allowed {

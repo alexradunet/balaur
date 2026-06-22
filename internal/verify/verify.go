@@ -9,6 +9,7 @@ package verify
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/alexradunet/balaur/internal/llm"
@@ -58,9 +59,9 @@ func CaptureSucceeded(turn []llm.Message) bool {
 
 // LastAssistantText returns the turn's final visible reply.
 func LastAssistantText(turn []llm.Message) string {
-	for i := len(turn) - 1; i >= 0; i-- {
-		if turn[i].Role == "assistant" && strings.TrimSpace(turn[i].Content) != "" {
-			return turn[i].Content
+	for _, t := range slices.Backward(turn) {
+		if t.Role == "assistant" && strings.TrimSpace(t.Content) != "" {
+			return t.Content
 		}
 	}
 	return ""

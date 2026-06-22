@@ -7,6 +7,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/alexradunet/balaur/internal/llm"
 )
@@ -78,7 +79,7 @@ func (l *Loop) Run(ctx context.Context, history []llm.Message, emit func(Event))
 			return msgs, err
 		}
 
-		var text string
+		var text strings.Builder
 		var calls []llm.ToolCall
 		for chunk := range stream {
 			if chunk.Err != nil {
@@ -86,7 +87,7 @@ func (l *Loop) Run(ctx context.Context, history []llm.Message, emit func(Event))
 				return msgs, chunk.Err
 			}
 			if chunk.Content != "" {
-				text += chunk.Content
+				text.WriteString(chunk.Content)
 				emit(Event{Kind: "text", Text: chunk.Content})
 			}
 			if chunk.Reasoning != "" {
@@ -97,7 +98,7 @@ func (l *Loop) Run(ctx context.Context, history []llm.Message, emit func(Event))
 			}
 		}
 
-		msgs = append(msgs, llm.Message{Role: "assistant", Content: text, ToolCalls: calls})
+		msgs = append(msgs, llm.Message{Role: "assistant", Content: text.String(), ToolCalls: calls})
 
 		if len(calls) == 0 {
 			emit(Event{Kind: "done"})

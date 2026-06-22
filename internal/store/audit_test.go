@@ -68,7 +68,7 @@ func TestListAuditLimit(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	// Seed 5 rows
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		Audit(app, "test", "action", "target", true, nil)
 	}
 

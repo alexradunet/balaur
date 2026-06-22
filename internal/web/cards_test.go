@@ -160,7 +160,6 @@ func TestUiCardAllTypesRender(t *testing.T) {
 	}
 
 	for _, tc := range tests_ {
-		tc := tc
 		t.Run(tc.typ, func(t *testing.T) {
 			scenario := tests.ApiScenario{
 				Name:            "GET /ui/cards/" + tc.typ + " → 200 with ucard-" + tc.typ,

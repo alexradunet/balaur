@@ -14,7 +14,7 @@ func Pips(level, max int, title string) g.Node {
 		title = fmt.Sprintf("importance %d/%d", level, max)
 	}
 	pips := make([]g.Node, max)
-	for i := 0; i < max; i++ {
+	for i := range max {
 		cls := "pip"
 		if i < level {
 			cls = "pip pip-on"
