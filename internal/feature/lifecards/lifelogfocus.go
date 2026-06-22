@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -93,14 +93,14 @@ func LifelogFocus(v LifelogFocusView) g.Node {
 			if hb.Streak > 0 {
 				label = fmt.Sprintf("%s · streak %d", hb.Title, hb.Streak)
 			}
-			tags = append(tags, Span(Class("tag habit-tag"), g.Attr("title", hb.RecurLine), g.Text(label)))
+			tags = append(tags, h.Span(h.Class("tag habit-tag"), g.Attr("title", hb.RecurLine), g.Text(label)))
 		}
 		out = append(out,
-			Section(Class("k-section"),
-				H2(Class("k-heading"), g.Text("Habits")),
-				Div(Class("habit-strip"), g.Group(tags)),
+			h.Section(h.Class("k-section"),
+				h.H2(h.Class("k-heading"), g.Text("Habits")),
+				h.Div(h.Class("habit-strip"), g.Group(tags)),
 			),
-			Div(Class("stitch")),
+			h.Div(h.Class("stitch")),
 		)
 	}
 
@@ -114,10 +114,10 @@ func LifelogFocus(v LifelogFocusView) g.Node {
 		cards = append(cards, lifeKindCard(k))
 	}
 	out = append(out,
-		Section(Class("k-section"),
-			H2(Class("k-heading"), g.Text("Tracked")),
-			P(Class("k-sub"), g.Text("What appears here is what you log — the kinds are yours to invent.")),
-			Div(Class("k-grid life-grid"), g.Group(cards)),
+		h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading"), g.Text("Tracked")),
+			h.P(h.Class("k-sub"), g.Text("What appears here is what you log — the kinds are yours to invent.")),
+			h.Div(h.Class("k-grid life-grid"), g.Group(cards)),
 		),
 	)
 	return g.Group(out)
@@ -126,33 +126,33 @@ func LifelogFocus(v LifelogFocusView) g.Node {
 // lifeKindCard renders one tracked-kind card (article.kcard.life-card).
 func lifeKindCard(k LifeKindFocusView) g.Node {
 	body := []g.Node{
-		Class("kcard life-card"),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"), g.Text("▪ "+k.Kind)),
-			Span(Class("kcard-meta"), g.Text(fmt.Sprintf("%d entries", k.Count))),
+		h.Class("kcard life-card"),
+		h.Header(h.Class("kcard-head"),
+			h.Span(h.Class("kcard-kind"), g.Text("▪ "+k.Kind)),
+			h.Span(h.Class("kcard-meta"), g.Text(fmt.Sprintf("%d entries", k.Count))),
 		),
 	}
 	if k.Numeric {
-		stat := []g.Node{Class("life-stat"), g.Text(k.LastVal)}
+		stat := []g.Node{h.Class("life-stat"), g.Text(k.LastVal)}
 		if k.Unit != "" {
-			stat = append(stat, g.Text(" "), Span(Class("life-unit"), g.Text(k.Unit)))
+			stat = append(stat, g.Text(" "), h.Span(h.Class("life-unit"), g.Text(k.Unit)))
 		}
-		stat = append(stat, g.Text(" "), Span(Class("life-lastat"), g.Text("· "+k.LastAt)))
-		body = append(body, P(stat...))
+		stat = append(stat, g.Text(" "), h.Span(h.Class("life-lastat"), g.Text("· "+k.LastAt)))
+		body = append(body, h.P(stat...))
 		if k.Points != "" {
 			body = append(body, lifeSpark(k))
 		}
 		if k.Change != "" {
-			body = append(body, P(Class("life-change"), g.Text(k.Change)))
+			body = append(body, h.P(h.Class("life-change"), g.Text(k.Change)))
 		}
 	} else {
-		lines := []g.Node{Class("life-lines")}
+		lines := []g.Node{h.Class("life-lines")}
 		for _, r := range k.Recent {
-			lines = append(lines, Li(g.Text(r)))
+			lines = append(lines, h.Li(g.Text(r)))
 		}
-		body = append(body, Ul(lines...))
+		body = append(body, h.Ul(lines...))
 	}
-	return Article(body...)
+	return h.Article(body...)
 }
 
 // lifeSpark renders the trend sparkline SVG (class "spark"), matching the legacy

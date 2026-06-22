@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -53,11 +53,11 @@ func buildHabits(app core.App) []HabitView {
 // HabitsCard renders the habits tile. Root id "ucard-habits" matches the
 // registry convention (cards.html). Port of ucard_habits template.
 func HabitsCard(habits []HabitView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-habits"), ID("ucard-habits"),
+	return h.Article(
+		h.Class("kcard ucard ucard-habits"), h.ID("ucard-habits"),
 		ui.CardHead("/static/icons/flame.png", "Habits"),
 		habitsBody(habits),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("life →"))),
 	)
 }
 
@@ -66,24 +66,24 @@ func habitsBody(habits []HabitView) g.Node {
 		return ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No habits yet — add a recurring task in chat."})
 	}
 	items := make([]g.Node, 0, len(habits))
-	for _, h := range habits {
-		items = append(items, habitRow(h))
+	for _, hv := range habits {
+		items = append(items, habitRow(hv))
 	}
-	return Ul(Class("ucard-list"), g.Group(items))
+	return h.Ul(h.Class("ucard-list"), g.Group(items))
 }
 
-func habitRow(h HabitView) g.Node {
+func habitRow(hv HabitView) g.Node {
 	children := []g.Node{
-		Class("ucard-row"),
-		Span(Class("ucard-title"), g.Text(h.Title)),
+		h.Class("ucard-row"),
+		h.Span(h.Class("ucard-title"), g.Text(hv.Title)),
 	}
-	if h.RecurLine != "" {
-		children = append(children, Span(Class("kcard-meta"), g.Text(h.RecurLine)))
+	if hv.RecurLine != "" {
+		children = append(children, h.Span(h.Class("kcard-meta"), g.Text(hv.RecurLine)))
 	}
 	children = append(children,
-		Span(Class("habit-streak"), g.Attr("title", "current streak"), g.Text(fmt.Sprintf("%dd", h.Streak))),
+		h.Span(h.Class("habit-streak"), g.Attr("title", "current streak"), g.Text(fmt.Sprintf("%dd", hv.Streak))),
 	)
-	return Li(children...)
+	return h.Li(children...)
 }
 
 // registerHabits wires the habits card into the ui registry.

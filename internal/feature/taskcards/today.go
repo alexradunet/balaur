@@ -11,7 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -65,11 +65,11 @@ func rowOf(rec *core.Record, now time.Time) TodayRow {
 // convention (cards.html) so the board grid, the Part-B live refresh, and tests
 // target it identically.
 func TodayCard(v TodayView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-today"), ID("ucard-today"),
+	return h.Article(
+		h.Class("kcard ucard ucard-today"), h.ID("ucard-today"),
 		ui.CardHead("/static/icons/scroll.png", "Today"),
 		todayBody(v),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/quests"), g.Attr("data-on:click__prevent", "@get('/ui/show/quests')"), g.Text("all quests →"))),
 	)
 }
 
@@ -81,30 +81,30 @@ func todayBody(v TodayView) g.Node {
 	for _, row := range v.Rows {
 		items = append(items, todayRow(row))
 	}
-	return Ul(Class("ucard-list"), g.Group(items))
+	return h.Ul(h.Class("ucard-list"), g.Group(items))
 }
 
 func todayRow(row TodayRow) g.Node {
 	children := []g.Node{
-		Class("ucard-row"), ID("urow-today-" + row.ID),
-		Span(Class("ucard-title"), g.Text(row.Title)),
+		h.Class("ucard-row"), h.ID("urow-today-" + row.ID),
+		h.Span(h.Class("ucard-title"), g.Text(row.Title)),
 	}
 	if row.DueLine != "" {
-		children = append(children, Span(Class("tcard-due kcard-meta"), g.Text(row.DueLine)))
+		children = append(children, h.Span(h.Class("tcard-due kcard-meta"), g.Text(row.DueLine)))
 	}
 	if row.Status == "open" {
 		children = append(children, doneForm(row.ID))
 	}
-	return Li(children...)
+	return h.Li(children...)
 }
 
 // doneForm is the inline "mark done" action — a Datastar @post that the web
 // layer turns into a task transition + card refresh.
 func doneForm(id string) g.Node {
-	return Form(
+	return h.Form(
 		data.On("submit", "@post('/ui/tasks/"+id+"/transition', {contentType:'form'})", data.ModifierPrevent),
-		Input(Type("hidden"), Name("to"), Value("done")),
-		Input(Type("hidden"), Name("src"), Value("today")),
-		Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("✓")),
+		h.Input(h.Type("hidden"), h.Name("to"), h.Value("done")),
+		h.Input(h.Type("hidden"), h.Name("src"), h.Value("today")),
+		h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("✓")),
 	)
 }

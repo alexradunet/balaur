@@ -11,7 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
 	data "maragu.dev/gomponents-datastar"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -112,13 +112,13 @@ func intParam(p map[string]string, key string, def int) int {
 
 // SkillsCard renders the summary skills tile. Port of ucard_skills.
 func SkillsCard(rows []SkillRow, paramLine string) g.Node {
-	return Article(
-		Class("kcard ucard ucard-skills"), ID("ucard-skills"),
+	return h.Article(
+		h.Class("kcard ucard ucard-skills"), h.ID("ucard-skills"),
 		ui.CardHead("/static/icons/key.png", "Skills",
-			g.If(paramLine != "", Span(Class("kcard-meta"), g.Text(paramLine))),
+			g.If(paramLine != "", h.Span(h.Class("kcard-meta"), g.Text(paramLine))),
 		),
 		skillsSummaryBody(rows),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text("all skills →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text("all skills →"))),
 	)
 }
 
@@ -130,54 +130,54 @@ func skillsSummaryBody(rows []SkillRow) g.Node {
 	for _, row := range rows {
 		items = append(items, skillSummaryRow(row))
 	}
-	return Ul(Class("ucard-list"), g.Group(items))
+	return h.Ul(h.Class("ucard-list"), g.Group(items))
 }
 
 func skillSummaryRow(row SkillRow) g.Node {
 	children := []g.Node{
-		Class("ucard-row"),
-		Span(Class("ucard-title"), A(Href("/ui/show/skills"), g.Text(row.Name))),
-		g.If(row.Enabled, Span(Class("kcard-on"), g.Text("enabled"))),
+		h.Class("ucard-row"),
+		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/skills"), g.Text(row.Name))),
+		g.If(row.Enabled, h.Span(h.Class("kcard-on"), g.Text("enabled"))),
 	}
 	if row.Description != "" {
-		children = append(children, Span(Class("kcard-meta"), g.Text(row.Description)))
+		children = append(children, h.Span(h.Class("kcard-meta"), g.Text(row.Description)))
 	}
-	return Li(children...)
+	return h.Li(children...)
 }
 
 // SkillRecordCard renders one skill as a full record card. Port of card-skill.html.
 // Root id "kcard-{id}", class "kcard kcard-{status}".
 func SkillRecordCard(r SkillRecord) g.Node {
-	return Article(
-		Class("kcard kcard-"+r.Status), ID("kcard-"+r.ID),
-		Header(Class("kcard-head"),
-			Span(Class("kcard-kind"), g.Text("⌥ skill")),
-			g.If(r.Enabled, Span(Class("kcard-on"), g.Text("enabled"))),
+	return h.Article(
+		h.Class("kcard kcard-"+r.Status), h.ID("kcard-"+r.ID),
+		h.Header(h.Class("kcard-head"),
+			h.Span(h.Class("kcard-kind"), g.Text("⌥ skill")),
+			g.If(r.Enabled, h.Span(h.Class("kcard-on"), g.Text("enabled"))),
 		),
-		H3(Class("kcard-title"), g.Text(r.Name)),
-		g.If(r.Description != "", P(Class("kcard-body"), g.Text(r.Description))),
-		g.If(r.WhenToUse != "", P(Class("kcard-when"), g.Text("use: "+r.WhenToUse))),
-		Details(Class("kcard-edit"),
-			Summary(g.Text("Procedure")),
-			Pre(Class("kcard-pre"), g.Text(r.Content)),
+		h.H3(h.Class("kcard-title"), g.Text(r.Name)),
+		g.If(r.Description != "", h.P(h.Class("kcard-body"), g.Text(r.Description))),
+		g.If(r.WhenToUse != "", h.P(h.Class("kcard-when"), g.Text("use: "+r.WhenToUse))),
+		h.Details(h.Class("kcard-edit"),
+			h.Summary(g.Text("Procedure")),
+			h.Pre(h.Class("kcard-pre"), g.Text(r.Content)),
 		),
-		Details(Class("kcard-edit"),
-			Summary(g.Text("Edit")),
+		h.Details(h.Class("kcard-edit"),
+			h.Summary(g.Text("Edit")),
 			skillEditForm(r),
 		),
-		Footer(Class("kcard-actions"), skillFooterActions(r)),
+		h.Footer(h.Class("kcard-actions"), skillFooterActions(r)),
 	)
 }
 
 func skillEditForm(r SkillRecord) g.Node {
 	editURL := "@post('/ui/knowledge/skills/" + r.ID + "/edit', {contentType:'form'})"
-	return Form(
+	return h.Form(
 		data.On("submit", editURL, data.ModifierPrevent),
-		Label(g.Text("Name "), Input(Type("text"), Name("name"), Value(r.Name))),
-		Label(g.Text("Description "), Input(Type("text"), Name("description"), Value(r.Description))),
-		Label(g.Text("Procedure "), Textarea(Name("content"), Rows("6"), g.Text(r.Content))),
-		Label(g.Text("When to use "), Input(Type("text"), Name("when_to_use"), Value(r.WhenToUse))),
-		Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Save")),
+		h.Label(g.Text("Name "), h.Input(h.Type("text"), h.Name("name"), h.Value(r.Name))),
+		h.Label(g.Text("Description "), h.Input(h.Type("text"), h.Name("description"), h.Value(r.Description))),
+		h.Label(g.Text("Procedure "), h.Textarea(h.Name("content"), h.Rows("6"), g.Text(r.Content))),
+		h.Label(g.Text("When to use "), h.Input(h.Type("text"), h.Name("when_to_use"), h.Value(r.WhenToUse))),
+		h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Save")),
 	)
 }
 
@@ -186,31 +186,31 @@ func skillFooterActions(r SkillRecord) g.Node {
 	switch r.Status {
 	case "proposed":
 		return g.Group([]g.Node{
-			Form(
+			h.Form(
 				data.On("submit", transURL, data.ModifierPrevent),
-				Input(Type("hidden"), Name("to"), Value("active")),
-				Button(Class("btn btn-primary btn-sm"), Type("submit"), g.Text("Approve")),
+				h.Input(h.Type("hidden"), h.Name("to"), h.Value("active")),
+				h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Approve")),
 			),
-			Form(
+			h.Form(
 				data.On("submit", transURL, data.ModifierPrevent),
-				Input(Type("hidden"), Name("to"), Value("rejected")),
-				Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Dismiss")),
+				h.Input(h.Type("hidden"), h.Name("to"), h.Value("rejected")),
+				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Dismiss")),
 			),
 		})
 	case "active":
 		return g.Group([]g.Node{
-			Form(
+			h.Form(
 				data.On("submit", transURL, data.ModifierPrevent),
-				Input(Type("hidden"), Name("to"), Value("archived")),
-				Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Archive")),
+				h.Input(h.Type("hidden"), h.Name("to"), h.Value("archived")),
+				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Archive")),
 			),
-			g.If(r.UseCount > 0, Span(Class("kcard-meta"), g.Text(fmt.Sprintf("used ×%d", r.UseCount)))),
+			g.If(r.UseCount > 0, h.Span(h.Class("kcard-meta"), g.Text(fmt.Sprintf("used ×%d", r.UseCount)))),
 		})
 	case "archived":
-		return Form(
+		return h.Form(
 			data.On("submit", transURL, data.ModifierPrevent),
-			Input(Type("hidden"), Name("to"), Value("active")),
-			Button(Class("btn btn-ghost btn-sm"), Type("submit"), g.Text("Restore")),
+			h.Input(h.Type("hidden"), h.Name("to"), h.Value("active")),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Restore")),
 		)
 	default:
 		return g.Text("")
@@ -220,10 +220,10 @@ func skillFooterActions(r SkillRecord) g.Node {
 // SkillsManageCard renders the interactive skills manage card.
 // Port of ucard_knowledge_manage (skills-specific): proposed queue + active list.
 func SkillsManageCard(proposed, active []SkillRecord) g.Node {
-	return Article(
-		Class("kcard ucard ucard-manage ucard-skills-manage"), ID("ucard-skills-manage"),
+	return h.Article(
+		h.Class("kcard ucard ucard-manage ucard-skills-manage"), h.ID("ucard-skills-manage"),
 		ui.CardHead("/static/icons/key.png", "Skills",
-			A(Class("kcard-meta"), Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text("manage all →")),
+			h.A(h.Class("kcard-meta"), h.Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text("manage all →")),
 		),
 		skillsManageBody(proposed, active),
 	)
@@ -237,21 +237,21 @@ func skillsManageBody(proposed, active []SkillRecord) g.Node {
 	var nodes []g.Node
 
 	if len(proposed) > 0 {
-		nodes = append(nodes, H4(Class("k-heading k-heading-proposed"), g.Text("Awaiting your word")))
+		nodes = append(nodes, h.H4(h.Class("k-heading k-heading-proposed"), g.Text("Awaiting your word")))
 		items := make([]g.Node, 0, len(proposed))
 		for _, r := range proposed {
 			items = append(items, SkillRecordCard(r))
 		}
-		nodes = append(nodes, Div(Class("ucard-manage-list"), g.Group(items)))
+		nodes = append(nodes, h.Div(h.Class("ucard-manage-list"), g.Group(items)))
 	}
 
 	if len(active) > 0 {
-		nodes = append(nodes, H4(Class("k-heading k-heading-muted"), g.Text("Active")))
+		nodes = append(nodes, h.H4(h.Class("k-heading k-heading-muted"), g.Text("Active")))
 		items := make([]g.Node, 0, len(active))
 		for _, r := range active {
 			items = append(items, SkillRecordCard(r))
 		}
-		nodes = append(nodes, Div(Class("ucard-manage-list"), g.Group(items)))
+		nodes = append(nodes, h.Div(h.Class("ucard-manage-list"), g.Group(items)))
 	}
 
 	return g.Group(nodes)

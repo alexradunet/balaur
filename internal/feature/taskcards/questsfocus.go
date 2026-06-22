@@ -5,7 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -98,7 +98,7 @@ func questGroupName(recur string, hasDue bool) string {
 // flat stack of TaskCards. No rail, no detail pane (plan 093).
 func QuestsFocus(v QuestsFocusView) g.Node {
 	if len(v.Groups) == 0 {
-		return Div(Class("quest-stack"),
+		return h.Div(h.Class("quest-stack"),
 			ui.EmptyState(ui.EmptyProps{Compact: true, Line: "No quests yet. Speak one in the chat."}))
 	}
 	sections := make([]g.Node, 0, len(v.Groups)+1)
@@ -108,12 +108,12 @@ func QuestsFocus(v QuestsFocusView) g.Node {
 			cards = append(cards, TaskCard(t))
 		}
 		sections = append(sections,
-			Section(Class("k-section"),
-				H2(Class("k-heading"),
+			h.Section(h.Class("k-section"),
+				h.H2(h.Class("k-heading"),
 					g.Text(grp.Name+" "),
-					Span(Class("k-count"), g.Text(itoa(len(grp.Tasks)))),
+					h.Span(h.Class("k-count"), g.Text(itoa(len(grp.Tasks)))),
 				),
-				Div(Class("tasks-stack"), g.Group(cards)),
+				h.Div(h.Class("tasks-stack"), g.Group(cards)),
 			),
 		)
 	}
@@ -123,14 +123,14 @@ func QuestsFocus(v QuestsFocusView) g.Node {
 			cards = append(cards, TaskCard(t))
 		}
 		sections = append(sections,
-			Section(Class("k-section"),
-				H2(Class("k-heading"), g.Text("Done recently "),
-					Span(Class("k-count"), g.Text(itoa(len(v.DoneRecently))))),
-				Div(Class("tasks-stack"), g.Group(cards)),
+			h.Section(h.Class("k-section"),
+				h.H2(h.Class("k-heading"), g.Text("Done recently "),
+					h.Span(h.Class("k-count"), g.Text(itoa(len(v.DoneRecently))))),
+				h.Div(h.Class("tasks-stack"), g.Group(cards)),
 			),
 		)
 	}
-	return Div(Class("quest-stack"), g.Group(sections))
+	return h.Div(h.Class("quest-stack"), g.Group(sections))
 }
 
 // itoa converts an int to its decimal string — avoids importing fmt/strconv.

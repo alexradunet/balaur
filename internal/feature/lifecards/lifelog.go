@@ -11,7 +11,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/tasks"
@@ -117,12 +117,12 @@ func buildLifelogHabits(app core.App, now time.Time) []LifeHabitView {
 //	  <footer class="kcard-actions"><a href="/ui/show/lifelog">open life →</a></footer>
 //	</article>
 func LifelogCard(v LifelogView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-lifelog"), ID("ucard-lifelog"),
+	return h.Article(
+		h.Class("kcard ucard ucard-lifelog"), h.ID("ucard-lifelog"),
 		ui.CardHead("/static/icons/orb.png", "Life"),
 		lifelogHabitStrip(v.Habits),
 		lifelogKindsList(v.Kinds),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("open life →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/lifelog"), g.Attr("data-on:click__prevent", "@get('/ui/show/lifelog')"), g.Text("open life →"))),
 	)
 }
 
@@ -133,22 +133,22 @@ func lifelogHabitStrip(habits []LifeHabitView) g.Node {
 		return g.Text("")
 	}
 	tags := make([]g.Node, 0, len(habits))
-	for _, h := range habits {
-		tags = append(tags, lifelogHabitTag(h))
+	for _, hv := range habits {
+		tags = append(tags, lifelogHabitTag(hv))
 	}
-	return Div(Class("habit-strip"), g.Group(tags))
+	return h.Div(h.Class("habit-strip"), g.Group(tags))
 }
 
 // lifelogHabitTag renders one habit as a compact tag.
 // Template: <span class="tag habit-tag" title="{{.RecurLine}}">{{.Title}}{{if gt .Streak 0}} · {{.Streak}}{{end}}</span>
-func lifelogHabitTag(h LifeHabitView) g.Node {
-	text := h.Title
-	if h.Streak > 0 {
-		text = h.Title + " · " + fmt.Sprintf("%d", h.Streak)
+func lifelogHabitTag(hv LifeHabitView) g.Node {
+	text := hv.Title
+	if hv.Streak > 0 {
+		text = hv.Title + " · " + fmt.Sprintf("%d", hv.Streak)
 	}
-	return Span(
-		Class("tag habit-tag"),
-		g.Attr("title", h.RecurLine),
+	return h.Span(
+		h.Class("tag habit-tag"),
+		g.Attr("title", hv.RecurLine),
 		g.Text(text),
 	)
 }
@@ -157,16 +157,16 @@ func lifelogHabitTag(h LifeHabitView) g.Node {
 // Template: {{if .Kinds}}<ul class="ucard-stats">…{{else}}<p class="k-sub">Nothing tracked yet…
 func lifelogKindsList(kinds []LifeKindView) g.Node {
 	if len(kinds) == 0 {
-		return P(Class("k-sub"), g.Text("Nothing tracked yet — tell Balaur what matters."))
+		return h.P(h.Class("k-sub"), g.Text("Nothing tracked yet — tell Balaur what matters."))
 	}
 	items := make([]g.Node, 0, len(kinds))
 	for _, k := range kinds {
-		items = append(items, Li(
+		items = append(items, h.Li(
 			g.Text(k.Kind+" "),
-			Span(Class("kcard-meta"), g.Text(fmt.Sprintf("%d", k.Count))),
+			h.Span(h.Class("kcard-meta"), g.Text(fmt.Sprintf("%d", k.Count))),
 		))
 	}
-	return Ul(Class("ucard-stats"), g.Group(items))
+	return h.Ul(h.Class("ucard-stats"), g.Group(items))
 }
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -112,27 +112,27 @@ func calMondayOf(t time.Time) time.Time {
 
 // CalendarCard renders the calendar month-grid card, matching ucard_calendar.
 func CalendarCard(v CalView) g.Node {
-	return Article(
-		Class("kcard ucard ucard-calendar"), ID("ucard-calendar"),
+	return h.Article(
+		h.Class("kcard ucard ucard-calendar"), h.ID("ucard-calendar"),
 		ui.CardHead("/static/icons/hourglass.png", "Calendar",
-			Span(Class("kcard-meta"), g.Text(v.Label)),
+			h.Span(h.Class("kcard-meta"), g.Text(v.Label)),
 		),
-		Div(Class("cal-compact"),
-			Table(Class("cal-table"),
-				THead(calHeaderRow(v.Weekdays)),
-				TBody(calBodyRows(v.Weeks)),
+		h.Div(h.Class("cal-compact"),
+			h.Table(h.Class("cal-table"),
+				h.THead(calHeaderRow(v.Weekdays)),
+				h.TBody(calBodyRows(v.Weeks)),
 			),
 		),
-		Footer(Class("kcard-actions"), A(Href("/ui/show/calendar"), g.Attr("data-on:click__prevent", "@get('/ui/show/calendar')"), g.Text("full calendar →"))),
+		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/calendar"), g.Attr("data-on:click__prevent", "@get('/ui/show/calendar')"), g.Text("full calendar →"))),
 	)
 }
 
 func calHeaderRow(weekdays []string) g.Node {
 	cells := make([]g.Node, 0, len(weekdays))
 	for _, wd := range weekdays {
-		cells = append(cells, Th(Scope("col"), g.Text(wd)))
+		cells = append(cells, h.Th(h.Scope("col"), g.Text(wd)))
 	}
-	return Tr(g.Group(cells))
+	return h.Tr(g.Group(cells))
 }
 
 func calBodyRows(weeks [][]CalCell) g.Node {
@@ -148,7 +148,7 @@ func calWeekRow(week []CalCell) g.Node {
 	for _, cell := range week {
 		cells = append(cells, calCellNode(cell))
 	}
-	return Tr(g.Group(cells))
+	return h.Tr(g.Group(cells))
 }
 
 func calCellNode(cell CalCell) g.Node {
@@ -160,19 +160,19 @@ func calCellNode(cell CalCell) g.Node {
 		cls += " cal-today"
 	}
 	children := []g.Node{
-		Class(cls),
-		A(Class("cal-daylink"), Href("/ui/show/day?date="+cell.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+cell.Date+"')"),
-			Span(Class("cal-daynum"), g.Text(cell.Day)),
+		h.Class(cls),
+		h.A(h.Class("cal-daylink"), h.Href("/ui/show/day?date="+cell.Date), g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+cell.Date+"')"),
+			h.Span(h.Class("cal-daynum"), g.Text(cell.Day)),
 		),
 	}
 	for _, item := range cell.Items {
 		children = append(children, calItemSpan(item))
 	}
-	return Td(children...)
+	return h.Td(children...)
 }
 
 func calItemSpan(item CalItem) g.Node {
-	return Span(Class("cal-item"), Title(item.Time+" "+item.Title), g.Text(item.Time))
+	return h.Span(h.Class("cal-item"), h.Title(item.Time+" "+item.Title), g.Text(item.Time))
 }
 
 // registerCalendar wires the calendar card into the ui registry.
