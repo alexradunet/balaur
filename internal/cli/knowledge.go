@@ -33,7 +33,7 @@ func skillJSON(r *core.Record, withContent bool) map[string]any {
 		"description": r.GetString("description"),
 		"when_to_use": r.GetString("when_to_use"),
 		"status":      r.GetString("status"),
-		"enabled":     r.GetBool("enabled"),
+		"enabled":     r.GetString("status") == knowledge.StatusActive,
 		"use_count":   r.GetInt("use_count"),
 		"last_used":   jsonTime(r.GetDateTime("last_used").Time()),
 		"created":     jsonTime(r.GetDateTime("created").Time()),

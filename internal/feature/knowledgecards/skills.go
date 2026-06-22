@@ -59,7 +59,7 @@ func buildSkillsSummary(app core.App, params map[string]string) ([]SkillRow, str
 		rows = append(rows, SkillRow{
 			Name:        r.GetString("name"),
 			Description: r.GetString("description"),
-			Enabled:     r.GetBool("enabled"),
+			Enabled:     r.GetString("status") == knowledge.StatusActive,
 		})
 	}
 	return rows, fmt.Sprintf("limit: %d", limit)
@@ -87,7 +87,7 @@ func SkillRecordOf(r *core.Record) SkillRecord {
 		Description: r.GetString("description"),
 		WhenToUse:   r.GetString("when_to_use"),
 		Content:     r.GetString("content"),
-		Enabled:     r.GetBool("enabled"),
+		Enabled:     r.GetString("status") == knowledge.StatusActive,
 		UseCount:    r.GetInt("use_count"),
 	}
 }

@@ -160,7 +160,7 @@ func TestSkillLifecycleAndLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProposeSkill: %v", err)
 	}
-	if rec.GetBool("enabled") {
+	if rec.GetString("status") == StatusActive {
 		t.Fatal("proposed skill must not be enabled")
 	}
 
