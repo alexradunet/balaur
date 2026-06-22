@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -179,4 +181,35 @@ func TestModelsPanelOfficialCTAGate(t *testing.T) {
 			t.Error("a registered model on disk must NOT show its CTA")
 		}
 	})
+}
+
+// TestClaimInFlightSingleWinner verifies that claimInFlight is atomic: exactly
+// one of N concurrent callers wins the slot when all race on the same key.
+func TestClaimInFlightSingleWinner(t *testing.T) {
+	const goroutines = 20
+	app := newWebApp(t)
+
+	var winners atomic.Int32
+	var wg sync.WaitGroup
+	ready := make(chan struct{})
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-ready // burst all goroutines at once
+			cancel := func() {}
+			if claimInFlight(app, "test-key", cancel) {
+				winners.Add(1)
+			}
+		}()
+	}
+
+	close(ready) // release all goroutines simultaneously
+	wg.Wait()
+	app.Store().Remove("test-key")
+
+	if got := winners.Load(); got != 1 {
+		t.Errorf("claimInFlight: %d goroutines won the slot, want exactly 1", got)
+	}
 }
