@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html/template"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
+	g "maragu.dev/gomponents"
+	hh "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/feature/settingscards"
@@ -41,8 +42,7 @@ type homeData struct {
 	ActiveHeadID    string         // current head id/key
 	ActiveHeadName  string         // current head name (switcher label)
 	HeadChoices     []headChoice   // roster for the switcher
-	ComposerHTML    template.HTML  // the live chat input (ui.Composer), rendered in Go
-	ChatBodyHTML    template.HTML  // history (chat.Message panels) or the hearth greeting
+	ChatBodyHTML    g.Node         // history (chat.Message panels) or the hearth greeting
 }
 
 // headChoice is one entry in the dock head switcher.
@@ -522,11 +522,8 @@ func (h *handlers) installRuntime(e *core.RequestEvent) error {
 
 	// sseLogger forwards SDK progress log lines as a status morph.
 	sseLogger := func(_ context.Context, msg string, _ ...any) {
-		var b strings.Builder
-		b.WriteString(`<div id="runtime-dl-progress">`)
-		b.WriteString(template.HTMLEscapeString(msg))
-		b.WriteString(`</div>`)
-		_ = sse.PatchElements(b.String(), datastar.WithSelectorID("runtime-dl-progress"), datastar.WithModeOuter())
+		node := hh.Div(hh.ID("runtime-dl-progress"), g.Text(msg))
+		_ = sse.PatchElements(renderNodeHTML(node), datastar.WithSelectorID("runtime-dl-progress"), datastar.WithModeOuter())
 	}
 
 	installErr := kronkInstallRuntime(ctx, processor, sseLogger)

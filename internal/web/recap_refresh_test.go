@@ -34,11 +34,11 @@ func TestMessageViewsUicardRendersChip(t *testing.T) {
 	if mv.ArtifactType != "quests" {
 		t.Errorf("ArtifactType = %q, want %q", mv.ArtifactType, "quests")
 	}
-	if mv.CardBody != "" {
-		t.Errorf("CardBody must be empty for uicard (body in panel, not inline): %q", mv.CardBody)
+	if mv.CardBody != nil {
+		t.Errorf("CardBody must be nil for uicard (body in panel, not inline): %v", mv.CardBody)
 	}
 	// renderMessages must produce a chip, not a k-inline body.
-	out := string(h.renderMessages(views))
+	out := renderNodeHTML(h.renderMessages(views))
 	if !strings.Contains(out, "art-chip") {
 		t.Errorf("reload uicard: missing art-chip in output:\n%s", out)
 	}
@@ -76,7 +76,7 @@ func TestMessageViewsClusterRendersNonClickableChip(t *testing.T) {
 	if mv.ArtifactTitle == "" {
 		t.Errorf("cluster must have non-empty ArtifactTitle for chip label")
 	}
-	out := string(h.renderMessages(views))
+	out := renderNodeHTML(h.renderMessages(views))
 	if !strings.Contains(out, "art-chip") {
 		t.Errorf("reload cluster: missing art-chip:\n%s", out)
 	}

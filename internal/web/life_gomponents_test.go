@@ -28,13 +28,13 @@ func TestLifeRenderViaGomponents(t *testing.T) {
 	}
 
 	// measure + lines require a kind param (cards.Validate enforces it).
-	if s := string(h.cardHTML("measure", map[string]string{"kind": "weight"})); !strings.Contains(s, `id="ucard-measure"`) {
+	if s := renderNodeHTML(h.cardHTML("measure", map[string]string{"kind": "weight"})); !strings.Contains(s, `id="ucard-measure"`) {
 		t.Fatalf("measure not rendered:\n%s", s)
 	}
-	if s := string(h.cardHTML("lines", map[string]string{"kind": "mood"})); !strings.Contains(s, `id="ucard-lines"`) {
+	if s := renderNodeHTML(h.cardHTML("lines", map[string]string{"kind": "mood"})); !strings.Contains(s, `id="ucard-lines"`) {
 		t.Fatalf("lines not rendered:\n%s", s)
 	}
-	if s := string(h.cardHTML("lifelog", nil)); !strings.Contains(s, `id="ucard-lifelog"`) {
+	if s := renderNodeHTML(h.cardHTML("lifelog", nil)); !strings.Contains(s, `id="ucard-lifelog"`) {
 		t.Fatalf("lifelog not rendered:\n%s", s)
 	}
 }

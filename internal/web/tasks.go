@@ -194,7 +194,7 @@ func (h *handlers) chatNudges(e *core.RequestEvent) error {
 	// Append the new agent messages to the chat and advance the poller's cursor
 	// signal so the next poll only asks for what's newer.
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(string(h.renderMessages(h.messageViews(recs))), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
+	_ = sse.PatchElements(renderNodeHTML(h.renderMessages(h.messageViews(recs))), datastar.WithSelectorID("chat"), datastar.WithModeAppend())
 	_ = sse.MarshalAndPatchSignals(struct {
 		NudgeSince int64 `json:"nudgeSince"`
 	}{last})

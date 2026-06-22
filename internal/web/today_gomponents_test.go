@@ -33,7 +33,7 @@ func TestTodayRendersViaGomponentsAfterRegister(t *testing.T) {
 	taskcards.Register(app)
 	defer ui.UnregisterCard("today") // keep the global registry clean for other tests
 
-	out := string(h.cardHTML("today", nil))
+	out := renderNodeHTML(h.cardHTML("today", nil))
 	if !strings.Contains(out, `id="ucard-today"`) {
 		t.Fatalf("today card not rendered:\n%s", out)
 	}

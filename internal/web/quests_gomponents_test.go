@@ -25,13 +25,13 @@ func TestQuestsRendersViaGomponents(t *testing.T) {
 	}
 
 	// Summary mode (default).
-	summary := string(h.cardHTML("quests", nil))
+	summary := renderNodeHTML(h.cardHTML("quests", nil))
 	if !strings.Contains(summary, `id="ucard-quests"`) || !strings.Contains(summary, "Draft the letter") {
 		t.Fatalf("summary not rendered via gomponents:\n%s", summary)
 	}
 
 	// Manage mode renders the full task card.
-	manage := string(h.cardHTML("quests", map[string]string{"mode": "manage"}))
+	manage := renderNodeHTML(h.cardHTML("quests", map[string]string{"mode": "manage"}))
 	if !strings.Contains(manage, `id="ucard-quests-manage"`) || !strings.Contains(manage, "Snooze") {
 		t.Fatalf("manage not rendered via gomponents:\n%s", manage)
 	}

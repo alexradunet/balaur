@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"html/template"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -191,7 +190,7 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		return
 	}
 	if prompt, choices, _, ok := tools.ParseChoices(ev.Text); ok {
-		s.endTool("choices offered", "")
+		s.endTool("choices offered", nil)
 		s.appendChoices(prompt, choices)
 		return
 	}
@@ -200,7 +199,7 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		return
 	}
 	if types, rest, ok := tools.ParseRefresh(ev.Text); ok {
-		s.endTool(clipText(rest, 2000), "")
+		s.endTool(clipText(rest, 2000), nil)
 		for _, typ := range types {
 			s.refreshCard(typ)
 		}
@@ -210,19 +209,19 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		s.endArtifactCluster(rest, title, cs)
 		return
 	}
-	s.endTool(clipText(ev.Text, 2000), "")
+	s.endTool(clipText(ev.Text, 2000), nil)
 }
 
 // endTool morphs the open tool row with its result and, when a card is
 // attached, appends it inline (proposals stay in the transcript). Artifact
 // callers use endArtifactCard / endArtifactCluster instead.
-func (s *chatStream) endTool(content string, card template.HTML) {
+func (s *chatStream) endTool(content string, card g.Node) {
 	s.morphNode(s.toolCard(content, nil, false))
-	if card == "" {
+	if card == nil {
 		return
 	}
 	// Only proposals reach here with a card; they stay inline in the transcript.
-	s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), g.Raw(string(card))))
+	s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), card))
 }
 
 // endArtifactCard morphs the tool card (its body carrying the re-open chip),
@@ -249,7 +248,7 @@ func (s *chatStream) endArtifactCluster(content, title string, cs []cards.Card) 
 // otherwise (an off-board or focus-view owner is unaffected). nil params render
 // the card's default — safe for non-parameterized cards (today).
 func (s *chatStream) refreshCard(typ string) {
-	_ = s.sse.PatchElements(string(s.h.cardHTML(typ, nil)))
+	_ = s.sse.PatchElements(renderNodeHTML(s.h.cardHTML(typ, nil)))
 }
 
 // appendChoices appends a live dialogue-choice panel.
