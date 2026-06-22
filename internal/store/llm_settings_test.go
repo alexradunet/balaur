@@ -191,6 +191,22 @@ func TestDeleteCloudModelGuardsActiveAndCleansProvider(t *testing.T) {
 	}
 }
 
+func TestSaveCloudModelRejectsOverlongFields(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	longName := strings.Repeat("x", 81)
+	if _, err := SaveCloudModel(app, longName, "https://api.openai.com/v1", "", "Label", "gpt-4o", ""); err == nil {
+		t.Fatal("expected error for over-long name")
+	} else if !strings.Contains(err.Error(), "too long") {
+		t.Fatalf("error %q does not mention 'too long'", err.Error())
+	}
+
+	// A normal-length call must still succeed.
+	if _, err := SaveCloudModel(app, "OpenAI", "https://api.openai.com/v1", "", "GPT-4o", "gpt-4o", ""); err != nil {
+		t.Fatalf("valid cloud model rejected: %v", err)
+	}
+}
+
 func TestEnsureDefaultLLMConfigIsWriteIdempotent(t *testing.T) {
 	app := storetest.NewApp(t)
 
