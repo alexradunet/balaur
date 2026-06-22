@@ -167,6 +167,24 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Sanitize errors and tool output so they do not leak private paths,
   tokens, or vault content unnecessarily.
 
+## Go tooling & idioms
+
+- `staticcheck` and `govulncheck` gate CI and `make lint` alongside gofmt/vet —
+  keep both clean. Dead code (U1000), deprecated APIs (SA1019), and CVEs fail the
+  build, not just review.
+- Prefer the modern stdlib: `slices`/`maps`/`cmp`, the `min`/`max`/`clear`
+  builtins, `for range int`, `errors.Join`. Run the `modernize` analyzer
+  periodically as a sweep (not a hard gate). See the `go-standards` skill.
+- Structured logging only: `app.Logger()` (a `*slog.Logger`) with key/value
+  pairs. No `log.Printf`/`fmt.Print*` in service code; `log.Fatal` only in `main`.
+- gomponents: alias the html package as `h "maragu.dev/gomponents/html"` (not a
+  dot import). User/model text renders through escaping `g.Text`; `g.Raw` is for
+  already-trusted, already-rendered HTML only.
+- Audit strictly AFTER the successful write, never before — the audit log must
+  not record a mutation that did not persist.
+- Single-flight / check-then-act on `app.Store()` or records uses an atomic
+  primitive (`GetOrSet`, retry-on-conflict), never `GetOk`+`Set` or read-modify-write.
+
 ## KISS / YAGNI / SUCKLESS rules
 
 - **YAGNI:** do not generate write-only outputs, unused config knobs, or
