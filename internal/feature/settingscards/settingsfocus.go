@@ -54,7 +54,6 @@ func cloudPresetViews() []modelcards.CloudPresetView {
 // ---------------------------------------------------------------------------
 
 // ProfileAvatarOption is one entry in an avatar picker (soul or Balaur head).
-// Mirrors AvatarOption in internal/web/models.go.
 type ProfileAvatarOption struct {
 	Key    string
 	Label  string
@@ -95,7 +94,7 @@ func BuildProfile(app core.App, savedName bool) ProfileView {
 }
 
 // buildAvatarOptions returns the full roster of soul avatars with the active
-// one flagged. Mirrors buildAvatarOptions in internal/web/models.go.
+// one flagged.
 func buildAvatarOptions(app core.App) []ProfileAvatarOption {
 	pref := store.GetOwnerSetting(app, "soul_avatar", "soul-01")
 	switch pref {
@@ -118,7 +117,7 @@ func buildAvatarOptions(app core.App) []ProfileAvatarOption {
 }
 
 // buildBalaurHeadOptions returns the Balaur head roster with the active one
-// flagged. Mirrors buildBalaurHeadOptions in internal/web/models.go.
+// flagged.
 func buildBalaurHeadOptions(app core.App) []ProfileAvatarOption {
 	pref := store.GetOwnerSetting(app, "balaur_avatar", "balaur-01")
 	roster := store.BalaurHeads()
