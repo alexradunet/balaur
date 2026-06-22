@@ -4,7 +4,7 @@ BALAUR_CONFIG_DIR ?= $(HOME)/.config/balaur
 SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
 SERVICE_NAME ?= balaur
 
-.PHONY: help tools dev run seed build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet lint
+.PHONY: help tools dev run seed build install-user-service start-user-service stop-user-service restart-user-service status-user-service logs-user-service test race fmt vet staticcheck vulncheck lint
 
 help:
 	@echo "make tools  # install dlv + air, activate the pre-commit lint hook"
@@ -21,7 +21,9 @@ help:
 	@echo "make race   # go test -race ./... (requires CGO)"
 	@echo "make fmt    # gofmt -l ."
 	@echo "make vet    # go vet ./..."
-	@echo "make lint   # fmt + vet + test"
+	@echo "make staticcheck  # honnef.co staticcheck ./..."
+	@echo "make vulncheck    # govulncheck ./..."
+	@echo "make lint   # fmt + vet + staticcheck + test"
 
 # Hosts the dev server accepts beyond loopback (guardLocalUI in
 # internal/web/web.go 403s everything else). air's [build].env doesn't
@@ -98,4 +100,10 @@ fmt:
 vet:
 	go vet ./...
 
-lint: fmt vet test
+staticcheck:
+	go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+vulncheck:
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+lint: fmt vet staticcheck test

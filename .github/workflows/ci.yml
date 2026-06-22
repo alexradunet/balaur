@@ -23,6 +23,10 @@ jobs:
           fi
       - name: vet
         run: go vet ./...
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
       - name: test (race detector)
         env:
           CGO_ENABLED: "1"
