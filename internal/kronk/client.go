@@ -76,9 +76,10 @@ func (c *Client) Embed(ctx context.Context, texts []string) ([][]float32, error)
 		if err != nil {
 			return nil, fmt.Errorf("local embed: %w", err)
 		}
-		if len(resp.Data) > 0 {
-			out[i] = resp.Data[0].Embedding
+		if len(resp.Data) == 0 {
+			return nil, fmt.Errorf("local embed: model returned no vector for input %d", i)
 		}
+		out[i] = resp.Data[0].Embedding
 	}
 	return out, nil
 }
