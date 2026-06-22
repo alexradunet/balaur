@@ -8,15 +8,11 @@ import (
 
 	"github.com/alexradunet/balaur/internal/feature/headscards"
 	"github.com/alexradunet/balaur/internal/feature/settingscards"
+	"github.com/alexradunet/balaur/internal/uitest"
 )
 
 func renderNode(t *testing.T, n g.Node) string {
-	t.Helper()
-	var b strings.Builder
-	if err := n.Render(&b); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	return b.String()
+	return uitest.Render(t, n)
 }
 
 // TestProfileIdentityCardContract guards the id, classes, and Datastar

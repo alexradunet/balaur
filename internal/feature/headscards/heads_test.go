@@ -1,7 +1,6 @@
 package headscards_test
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -9,16 +8,12 @@ import (
 
 	"github.com/alexradunet/balaur/internal/feature/headscards"
 	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/uitest"
 )
 
 // render is a test helper that renders a Node to a string.
 func render(t *testing.T, n g.Node) string {
-	t.Helper()
-	var buf bytes.Buffer
-	if err := n.Render(&buf); err != nil {
-		t.Fatalf("render error: %v", err)
-	}
-	return buf.String()
+	return uitest.Render(t, n)
 }
 
 // syntheticView returns a predictable HeadsView for pure component tests.
