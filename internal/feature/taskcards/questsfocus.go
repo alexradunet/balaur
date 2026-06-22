@@ -1,6 +1,7 @@
 package taskcards
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -111,7 +112,7 @@ func QuestsFocus(v QuestsFocusView) g.Node {
 			h.Section(h.Class("k-section"),
 				h.H2(h.Class("k-heading"),
 					g.Text(grp.Name+" "),
-					h.Span(h.Class("k-count"), g.Text(itoa(len(grp.Tasks)))),
+					h.Span(h.Class("k-count"), g.Text(strconv.Itoa(len(grp.Tasks)))),
 				),
 				h.Div(h.Class("tasks-stack"), g.Group(cards)),
 			),
@@ -125,34 +126,10 @@ func QuestsFocus(v QuestsFocusView) g.Node {
 		sections = append(sections,
 			h.Section(h.Class("k-section"),
 				h.H2(h.Class("k-heading"), g.Text("Done recently "),
-					h.Span(h.Class("k-count"), g.Text(itoa(len(v.DoneRecently))))),
+					h.Span(h.Class("k-count"), g.Text(strconv.Itoa(len(v.DoneRecently))))),
 				h.Div(h.Class("tasks-stack"), g.Group(cards)),
 			),
 		)
 	}
 	return h.Div(h.Class("quest-stack"), g.Group(sections))
-}
-
-// itoa converts an int to its decimal string — avoids importing fmt/strconv.
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := false
-	if n < 0 {
-		neg = true
-		n = -n
-	}
-	buf := [20]byte{}
-	pos := len(buf)
-	for n > 0 {
-		pos--
-		buf[pos] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		pos--
-		buf[pos] = '-'
-	}
-	return string(buf[pos:])
 }

@@ -57,7 +57,7 @@ func buildLifelogFocus(app core.App) LifelogFocusView {
 				for i := len(recs) - 1; i >= 0 && len(v.Recent) < 5; i-- {
 					line := recs[i].GetDateTime("noted_at").Time().In(now.Location()).Format("Jan 2")
 					if t := recs[i].GetString("text"); t != "" {
-						line += " — " + clip(t, 120)
+						line += " — " + ui.Clip(t, 120)
 					}
 					v.Recent = append(v.Recent, line)
 				}
@@ -66,16 +66,6 @@ func buildLifelogFocus(app core.App) LifelogFocusView {
 		}
 	}
 	return LifelogFocusView{Kinds: kinds, Habits: buildLifelogHabits(app, now)}
-}
-
-// clip truncates s to n runes with an ellipsis — a local copy of internal/web's
-// clipText (off-limits to feature packages by the layering law).
-func clip(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n]) + "…"
 }
 
 // LifelogFocus renders the lifelog focus body — the full life overview: a habit

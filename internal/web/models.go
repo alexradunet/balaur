@@ -35,29 +35,20 @@ type homeData struct {
 	History         []messageView
 	HasRecap        bool
 	DevSeed         bool
-	NowMillis       int64          // nudge-poll cursor: only messages after page load
-	SoulAvatarURL   string         // resolved soul avatar URL
-	AvatarOptions   []AvatarOption // soul avatar picker roster
-	OwnerName       string         // display name for the "You" label in chat
-	BalaurAvatarURL string         // resolved Balaur head avatar URL
-	ActiveHeadID    string         // current head id/key
-	ActiveHeadName  string         // current head name (switcher label)
-	HeadChoices     []headChoice   // roster for the switcher
-	ChatBodyHTML    g.Node         // history (chat.Message panels) or the hearth greeting
+	NowMillis       int64        // nudge-poll cursor: only messages after page load
+	SoulAvatarURL   string       // resolved soul avatar URL
+	OwnerName       string       // display name for the "You" label in chat
+	BalaurAvatarURL string       // resolved Balaur head avatar URL
+	ActiveHeadID    string       // current head id/key
+	ActiveHeadName  string       // current head name (switcher label)
+	HeadChoices     []headChoice // roster for the switcher
+	ChatBodyHTML    g.Node       // history (chat.Message panels) or the hearth greeting
 }
 
 // headChoice is one entry in the dock head switcher.
 type headChoice struct {
 	ID, Name, AvatarURL string
 	Active              bool
-}
-
-// AvatarOption is one entry in an avatar picker (soul or Balaur head).
-type AvatarOption struct {
-	Key    string
-	Label  string
-	URL    string
-	Active bool
 }
 
 func (h *handlers) homeData() (homeData, error) {
@@ -69,7 +60,6 @@ func (h *handlers) homeData() (homeData, error) {
 	data.ModelChoices = choices
 	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
 	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
-	data.AvatarOptions = buildAvatarOptions(h.app)
 	data.OwnerName = store.OwnerName(h.app)
 	data.BalaurAvatarURL = store.BalaurAvatarURL(h.app)
 	activeHead := heads.Active(h.app)
@@ -472,31 +462,6 @@ func (h *handlers) deleteCloudModel(e *core.RequestEvent) error {
 		return h.modelsPanel(e, err.Error())
 	}
 	return h.modelsPanel(e, "")
-}
-
-// buildAvatarOptions returns the full roster of chooseable soul avatars with
-// the currently active one flagged. The order and labels are part of the UI
-// contract; the roster is the single source from store.SoulAvatars.
-func buildAvatarOptions(app core.App) []AvatarOption {
-	pref := store.GetOwnerSetting(app, "soul_avatar", "soul-01")
-	// Normalise legacy keys so the active state shows correctly for old installs.
-	switch pref {
-	case "male":
-		pref = "soul-01"
-	case "female":
-		pref = "soul-02"
-	}
-	roster := store.SoulAvatars()
-	opts := make([]AvatarOption, len(roster))
-	for i, r := range roster {
-		opts[i] = AvatarOption{
-			Key:    r.Key,
-			Label:  r.Label,
-			URL:    r.URL,
-			Active: r.Key == pref,
-		}
-	}
-	return opts
 }
 
 // runtimeInstallStoreKey is the app.Store() sidecar key for an in-flight runtime install cancel func.
