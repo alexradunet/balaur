@@ -269,19 +269,24 @@ func buildMemoryManage(app core.App) MemoryManageView {
 	}
 }
 
+// MemoryRecordOf maps one memory *core.Record to the MemoryRecordCard view-model.
+func MemoryRecordOf(r *core.Record) MemoryRecord {
+	return MemoryRecord{
+		ID:         r.Id,
+		Status:     r.GetString("status"),
+		Category:   r.GetString("category"),
+		Title:      r.GetString("title"),
+		Content:    r.GetString("content"),
+		WhenToUse:  r.GetString("when_to_use"),
+		Importance: r.GetInt("importance"),
+		UseCount:   r.GetInt("use_count"),
+	}
+}
+
 func mapMemoryRecords(recs []*core.Record) []MemoryRecord {
 	out := make([]MemoryRecord, 0, len(recs))
 	for _, r := range recs {
-		out = append(out, MemoryRecord{
-			ID:         r.Id,
-			Status:     r.GetString("status"),
-			Category:   r.GetString("category"),
-			Title:      r.GetString("title"),
-			Content:    r.GetString("content"),
-			WhenToUse:  r.GetString("when_to_use"),
-			Importance: r.GetInt("importance"),
-			UseCount:   r.GetInt("use_count"),
-		})
+		out = append(out, MemoryRecordOf(r))
 	}
 	return out
 }

@@ -3,13 +3,13 @@ package web
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
+	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
@@ -85,14 +85,19 @@ func (h *handlers) taskCard(e *core.RequestEvent) error {
 	return nil
 }
 
-// taskCardHTML renders the card-task.html partial for one record to a string,
-// for embedding in an SSE patch.
+// taskCardHTML renders one task as its gomponents card (port of card-task.html)
+// to a string, for embedding in an SSE patch.
 func (h *handlers) taskCardHTML(rec *core.Record) (string, error) {
-	var b strings.Builder
-	if err := h.tmpl.ExecuteTemplate(&b, "card-task.html", taskViewOf(rec, time.Now())); err != nil {
-		return "", err
+	return renderNodeHTML(taskcards.TaskCard(taskCardViewOf(rec))), nil
+}
+
+// taskCardViewOf maps the web taskView onto the taskcards.TaskView the component takes.
+func taskCardViewOf(rec *core.Record) taskcards.TaskView {
+	v := taskViewOf(rec, time.Now())
+	return taskcards.TaskView{
+		ID: v.ID, Title: v.Title, Status: v.Status,
+		DueLine: v.DueLine, RecurLine: v.RecurLine, Notes: v.Notes, Overdue: v.Overdue,
 	}
-	return b.String(), nil
 }
 
 func (h *handlers) taskTransition(e *core.RequestEvent) error {
