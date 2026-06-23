@@ -17,6 +17,12 @@ func TestClaimsCapture(t *testing.T) {
 		"Done — I've added it to your list.",
 		"The task is now set for tomorrow morning.",
 		"Just logged that for you.",
+		// Update/reschedule claims — the live "still no update" failure: the
+		// model narrates these without ever calling task_update.
+		"Task updated:  - Due: Friday, June 26 2026 at 23:59 (EEST)",
+		"I've rescheduled it to Friday.",
+		"The task is now updated for the 26th.",
+		"Reminder rescheduled for tonight.",
 	}
 	for _, s := range claims {
 		if !ClaimsCapture(s) {
@@ -32,6 +38,8 @@ func TestClaimsCapture(t *testing.T) {
 		"A reminder might help here — say the word.",
 		"What time should the reminder be set for?",
 		"The notary is waiting on you — a good moment to call.",
+		"Want me to update the due date?",
+		"Should I reschedule it to next week?",
 		"",
 	}
 	for _, s := range notClaims {
@@ -52,6 +60,9 @@ func TestCaptureSucceeded(t *testing.T) {
 
 	if !CaptureSucceeded(mk("task_add", "Task saved: ...")) {
 		t.Error("successful task_add must count")
+	}
+	if !CaptureSucceeded(mk("task_update", "Task updated: ...")) {
+		t.Error("successful task_update must count (else a real update triggers a spurious correction)")
 	}
 	if CaptureSucceeded(mk("task_add", "error: tasks: title is required")) {
 		t.Error("a failed capture tool must not count")

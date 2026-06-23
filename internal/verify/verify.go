@@ -18,7 +18,7 @@ import (
 // captureTools are the mutating verbs whose success makes a capture claim
 // legitimate.
 var captureTools = map[string]bool{
-	"task_add": true, "task_done": true, "task_snooze": true, "task_drop": true,
+	"task_add": true, "task_update": true, "task_done": true, "task_snooze": true, "task_drop": true,
 	"log_entry": true, "entry_drop": true, "journal_write": true,
 }
 
@@ -31,12 +31,12 @@ func IsCaptureTool(name string) bool { return captureTools[name] }
 // self-repair pass. It is scaffolding, not conversation — callers must not
 // persist it.
 const Correction = "[runtime check] Your reply claims a reminder, task, or log entry " +
-	"was saved, but no capture tool succeeded this turn. Either call the right tool " +
-	"NOW to actually save it, or plainly tell the owner nothing was saved. Do not " +
-	"repeat the claim without a tool result."
+	"was saved or changed, but no capture tool succeeded this turn. Either call the right " +
+	"tool NOW to actually do it (e.g. task_update to reschedule or rename), or plainly tell " +
+	"the owner nothing changed. Do not repeat the claim without a tool result."
 
 // Note is the owner-facing line when self-repair also failed.
-const Note = "Runtime check: the reply above claims something was saved, but no " +
+const Note = "Runtime check: the reply above claims something was saved or changed, but no " +
 	"capture tool ran this turn. Nothing is on the book from it — ask again, and " +
 	"trust the task card, not the words."
 
@@ -73,8 +73,12 @@ func LastAssistantText(turn []llm.Message) string {
 var claimPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bsetting (it|that|this|the (reminder|task|nudge)) now\b`),
 	regexp.MustCompile(`(?i)\bi('ll| will) remind you\b`),
-	regexp.MustCompile(`(?i)\b(i have|i've|i just|just) (set|saved|created|added|scheduled|logged)\b`),
-	regexp.MustCompile(`(?i)\b(reminder|task|nudge|it)( is| was|'s)( now| already)? (set|saved|created|added|scheduled|in place)\b`),
+	regexp.MustCompile(`(?i)\b(i have|i've|i just|just) (set|saved|created|added|scheduled|logged|updated|rescheduled|changed|moved)\b`),
+	regexp.MustCompile(`(?i)\b(reminder|task|nudge|it)( is| was|'s)( now| already)? (set|saved|created|added|scheduled|in place|updated|rescheduled|moved|changed)\b`),
+	// Heading-style confirmations the model emits without a copula
+	// ("Task updated:", "Reminder rescheduled") — the exact phrasing that
+	// slipped past the verbs above and let a fake "Task updated" through.
+	regexp.MustCompile(`(?i)\b(task|reminder|nudge|due date)\s+(updated|rescheduled|moved|changed|saved|created|added|scheduled|snoozed|dropped)\b`),
 	regexp.MustCompile(`(?i)\balready set\b`),
 	regexp.MustCompile(`(?i)\b(reminder|nudge) (due|at|set for|scheduled for) \d{1,2}[:.]\d{2}\b`),
 }
