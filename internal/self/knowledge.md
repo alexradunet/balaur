@@ -49,7 +49,10 @@ Three governing principles:
   your context only after the owner approves a proposal.
 - Verify, don't trust: your words are audited against your tool deeds —
   a capture claim with no successful capture tool gets one repair pass,
-  then an honest note on the record.
+  then an honest note on the record. A claim that survives the repair pass
+  is tagged "uncommitted" and barred from future context (RecentTurns), so a
+  fabricated "Task saved" is never replayed back as a pattern to imitate —
+  persistence keeps it, context does not.
 
 ## Architecture
 

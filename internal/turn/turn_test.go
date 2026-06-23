@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/ext"
 	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
@@ -96,6 +97,32 @@ func TestRunNotesUnbackedCaptureClaim(t *testing.T) {
 		"role = 'user' && content ~ 'runtime check'", "", 0, 0)
 	if err != nil || len(scaffold) != 0 {
 		t.Errorf("verify.Correction must never persist, found %d rows", len(scaffold))
+	}
+
+	// The fabricated claims are quarantined: persisted (owner still sees them)
+	// but tagged OriginUncommitted, so the next turn's context never replays
+	// the lie back as a pattern to imitate — the poisoned-thread failure.
+	uncommitted, err := app.FindRecordsByFilter("messages",
+		"role = 'assistant' && origin = 'uncommitted'", "", 0, 0)
+	if err != nil || len(uncommitted) == 0 {
+		t.Fatalf("fabricated claims must be tagged uncommitted, got %d (err %v)", len(uncommitted), err)
+	}
+	master, _ := conversation.Master(app)
+	ctxTurns, err := conversation.RecentTurns(app, master.Id, 50)
+	if err != nil {
+		t.Fatalf("RecentTurns: %v", err)
+	}
+	var sawUser bool
+	for _, m := range ctxTurns {
+		if strings.Contains(m.Content, "set the reminder") || strings.Contains(m.Content, "already set") {
+			t.Errorf("uncommitted claim leaked into context: %q", m.Content)
+		}
+		if m.Role == "user" && strings.Contains(m.Content, "remind me tomorrow") {
+			sawUser = true
+		}
+	}
+	if !sawUser {
+		t.Error("the owner's real message must stay in context")
 	}
 }
 

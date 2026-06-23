@@ -91,6 +91,49 @@ func TestAppendAndRecentTurnsRoundtrip(t *testing.T) {
 
 // TestAppendOriginRecReturnsRecord verifies AppendOriginRec returns a non-nil
 // record whose id and content round-trip through the DB.
+// TestRecentTurnsExcludesRuntimeOrigins: a caught fabrication and the runtime's
+// honesty note stay in the record but are barred from the context window, so a
+// lie is never replayed to the model as a pattern.
+func TestRecentTurnsExcludesRuntimeOrigins(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, _ := Master(app)
+
+	add := func(role, content, origin string) {
+		if err := AppendOrigin(app, master.Id, llm.Message{Role: role, Content: content}, "", origin); err != nil {
+			t.Fatalf("append: %v", err)
+		}
+	}
+	add("user", "add a task to clean the dishes", "")
+	add("assistant", "Task saved: clean the dishes", OriginUncommitted) // the lie
+	add("assistant", "Runtime check: nothing was saved.", OriginCheck)  // the honesty note
+	add("user", "thanks", "")
+	add("assistant", "Anytime.", "")
+
+	got, err := RecentTurns(app, master.Id, 10)
+	if err != nil {
+		t.Fatalf("RecentTurns: %v", err)
+	}
+	want := []llm.Message{
+		{Role: "user", Content: "add a task to clean the dishes"},
+		{Role: "user", Content: "thanks"},
+		{Role: "assistant", Content: "Anytime."},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d turns, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i].Role != want[i].Role || got[i].Content != want[i].Content {
+			t.Errorf("turn %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+
+	// History keeps the full record — the owner still sees what was said.
+	hist, _ := History(app, master.Id, 50)
+	if len(hist) != 5 {
+		t.Fatalf("history = %d records, want 5 (nothing dropped from the record)", len(hist))
+	}
+}
+
 func TestAppendOriginRecReturnsRecord(t *testing.T) {
 	app := storetest.NewApp(t)
 	master, _ := Master(app)

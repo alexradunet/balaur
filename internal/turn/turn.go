@@ -124,6 +124,13 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	// Persist every turn the loop appended (assistant and tool rounds).
 	// Tool turns carry the call id; map it back to the tool's name from
 	// the preceding assistant turn so the record reads human.
+	//
+	// When the honesty check failed (CheckNote set), the assistant's visible
+	// text claimed a capture no tool performed. Persist that text with
+	// OriginUncommitted: the record keeps it (the owner still sees what was
+	// said, corrected by the note below) but RecentTurns bars it from context,
+	// so the model never reads its own unbacked "Task saved" back as a pattern
+	// to imitate — the failure that snowballs a poisoned thread.
 	var persistErr error
 	toolNames := map[string]string{}
 	for _, m := range res.Turn {
@@ -134,7 +141,11 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 		for _, tc := range m.ToolCalls {
 			toolNames[tc.ID] = tc.Name
 		}
-		if err := conversation.Append(app, master.Id, m, name); err != nil {
+		origin := ""
+		if res.CheckNote != "" && m.Role == "assistant" && m.Content != "" {
+			origin = conversation.OriginUncommitted
+		}
+		if err := conversation.AppendOrigin(app, master.Id, m, name, origin); err != nil {
 			persistErr = fmt.Errorf("persisting turn: %w", err)
 			break // do not break the caller's stream mid-reply; the error travels in the return
 		}
@@ -147,7 +158,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 
 	if res.CheckNote != "" {
 		if err := conversation.AppendOrigin(app, master.Id,
-			llm.Message{Role: "assistant", Content: res.CheckNote}, "", "check"); err != nil {
+			llm.Message{Role: "assistant", Content: res.CheckNote}, "", conversation.OriginCheck); err != nil {
 			persistErr = errors.Join(persistErr, fmt.Errorf("persisting check note: %w", err))
 		}
 	}

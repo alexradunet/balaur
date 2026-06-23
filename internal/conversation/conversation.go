@@ -23,6 +23,18 @@ import (
 	"github.com/alexradunet/balaur/internal/llm"
 )
 
+// Origins for turns that are persisted but deliberately kept OUT of model
+// context (persistence is not context). OriginUncommitted tags an assistant
+// reply the honesty check caught claiming a capture no tool performed, with
+// self-repair also failed — kept in the record so the owner sees what was said,
+// barred from context so the model never learns to imitate the unbacked claim.
+// OriginCheck tags the runtime's own honesty note. Both are runtime artifacts,
+// not the conversational thread the model should continue.
+const (
+	OriginUncommitted = "uncommitted"
+	OriginCheck       = "check"
+)
+
 // Master returns the open master conversation, creating it on first use.
 // There is exactly one: the singleton is the product decision ("one
 // companion, one main head"), not a technical limit.
@@ -102,11 +114,15 @@ func AppendOriginRec(app core.App, conversationID string, msg llm.Message, toolN
 // OpenAI-style APIs reject tool messages that don't follow their exact
 // assistant tool_calls turn, and replaying stale tool output invites the
 // model to act on it. The conversational thread is what carries forward;
-// tool detail stays in the record.
+// tool detail stays in the record. Runtime artifacts — caught fabrications
+// (OriginUncommitted) and honesty notes (OriginCheck) — are also excluded so a
+// lie the model told once is never replayed back to it as a pattern to imitate.
 func RecentTurns(app core.App, conversationID string, limit int) ([]llm.Message, error) {
+	filter := fmt.Sprintf(
+		"conversation = {:conv} && (role = 'user' || role = 'assistant') && content != '' && origin != '%s' && origin != '%s'",
+		OriginUncommitted, OriginCheck)
 	recs, err := app.FindRecordsByFilter("messages",
-		"conversation = {:conv} && (role = 'user' || role = 'assistant') && content != ''",
-		"-@rowid", limit, 0,
+		filter, "-@rowid", limit, 0,
 		dbx.Params{"conv": conversationID})
 	if err != nil {
 		return nil, fmt.Errorf("loading recent turns: %w", err)
