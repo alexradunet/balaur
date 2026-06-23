@@ -158,11 +158,18 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 		Convo:     dock.ChatBodyHTML,
 		Composer:  composerNode(dock),
 	})
+	// No model yet: force the models panel open so the owner has a one-click
+	// path to set one up while the composer is disabled. ponytail: reuses the
+	// existing panel instead of a bespoke always-on sidebar.
+	panel, collapsed := h.restoredPanelNode(), h.panelCollapsed()
+	if !dock.ChatReady {
+		panel, collapsed = h.panelNode("settings", "section=models"), false
+	}
 	page := shell.ChatShell(shell.ChatShellProps{
 		Title:          "Home",
 		Dock:           dockNode,
-		Panel:          h.restoredPanelNode(),
-		PanelCollapsed: h.panelCollapsed(),
+		Panel:          panel,
+		PanelCollapsed: collapsed,
 		PanelStyle:     h.panelWidthCSS(),
 	})
 	e.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
