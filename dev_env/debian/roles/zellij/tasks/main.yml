@@ -6,11 +6,13 @@
   register: zellij_current
   failed_when: false
   changed_when: false
+  check_mode: false
 
 - name: Install zellij {{ zellij_version }}
   when: zellij_version not in (zellij_current.stdout | default(''))
   vars:
-    zellij_base: "https://github.com/zellij-org/zellij/releases/download/v{{ zellij_version }}/zellij-{{ zellij_arch }}-unknown-linux-musl.tar.gz"
+    zellij_stem: "zellij-{{ zellij_arch }}-unknown-linux-musl"
+    zellij_rel: "https://github.com/zellij-org/zellij/releases/download/v{{ zellij_version }}"
   block:
     - name: Ensure ~/.local/bin exists
       ansible.builtin.file:
@@ -18,25 +20,44 @@
         state: directory
         mode: "0755"
 
-    - name: Fetch the zellij checksum
+    # The published .sha256sum is the checksum of the BINARY inside the tarball
+    # (not the .tar.gz), so we verify the extracted binary below rather than
+    # passing it to get_url. The asset is "<stem>.sha256sum" (NOT ".tar.gz.sha256sum").
+    - name: Fetch the zellij checksum (sha256 of the binary)
       ansible.builtin.uri:
-        url: "{{ zellij_base }}.sha256sum"
+        url: "{{ zellij_rel }}/{{ zellij_stem }}.sha256sum"
         return_content: true
       register: zellij_sha
       retries: 3
       delay: 3
       until: zellij_sha.status == 200
 
-    - name: Download the zellij tarball (checksum-verified)
+    - name: Download the zellij tarball
       ansible.builtin.get_url:
-        url: "{{ zellij_base }}"
-        dest: "/tmp/zellij-{{ zellij_version }}-{{ zellij_arch }}.tar.gz"
-        checksum: "sha256:{{ zellij_sha.content.split()[0] }}"
+        url: "{{ zellij_rel }}/{{ zellij_stem }}.tar.gz"
+        dest: "/tmp/{{ zellij_stem }}-{{ zellij_version }}.tar.gz"
         mode: "0644"
 
     - name: Extract zellij into ~/.local/bin
       ansible.builtin.unarchive:
-        src: "/tmp/zellij-{{ zellij_version }}-{{ zellij_arch }}.tar.gz"
+        src: "/tmp/{{ zellij_stem }}-{{ zellij_version }}.tar.gz"
         dest: "{{ local_bin }}"
         remote_src: true
         mode: "0755"
+
+    - name: Verify the extracted zellij binary checksum
+      when: not ansible_check_mode
+      block:
+        - name: Stat the zellij binary (sha256)
+          ansible.builtin.stat:
+            path: "{{ local_bin }}/zellij"
+            checksum_algorithm: sha256
+          register: zellij_bin
+
+        - name: Assert the zellij checksum matches
+          ansible.builtin.assert:
+            that: zellij_bin.stat.checksum == zellij_sha.content.split()[0]
+            fail_msg: >-
+              zellij checksum mismatch: got {{ zellij_bin.stat.checksum }},
+              expected {{ zellij_sha.content.split()[0] }}
+            success_msg: "zellij {{ zellij_version }} verified"

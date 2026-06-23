@@ -3,10 +3,10 @@
 # the apt repo, installs `netbird`, and enables its systemd daemon. Default-deny
 # ufw does NOT block NetBird — it's outbound-initiated WireGuard.
 - name: Check whether NetBird is installed
-  ansible.builtin.command: command -v netbird
+  ansible.builtin.stat:
+    path: /usr/bin/netbird
   register: netbird_bin
-  failed_when: false
-  changed_when: false
+  check_mode: false
 
 - name: Install NetBird (official apt-repo script)
   become: true
@@ -14,7 +14,7 @@
   ansible.builtin.shell:
     cmd: "set -o pipefail; curl -fsSL https://pkgs.netbird.io/install.sh | sh"
     executable: /bin/bash
-  when: netbird_bin.rc != 0
+  when: not netbird_bin.stat.exists
   changed_when: true
 
 - name: Check the NetBird connection status
@@ -23,6 +23,8 @@
   register: nb_status
   failed_when: false
   changed_when: false
+  check_mode: false
+  when: netbird_bin.stat.exists
 
 - name: Join the NetBird network (setup key)
   become: true
@@ -36,7 +38,7 @@
 - name: NetBird reminder
   ansible.builtin.debug:
     msg: >-
-      {{ 'NetBird connected — see `netbird status` for the overlay IP/FQDN, then set'
-         + ' balaur_allowed_hosts and re-run -t balaur,netbird.'
+      {{ 'NetBird connected — read the overlay IP/FQDN from `netbird status`, set'
+         + ' balaur_allowed_hosts, and re-run -t balaur,netbird.'
          if ('Connected' in (nb_status.stdout | default('')) or netbird_setup_key | length > 0)
          else 'NetBird installed. Join with: sudo netbird up  (SSO) or pass -e netbird_setup_key=...' }}

@@ -25,6 +25,7 @@
   register: gh_status
   failed_when: false
   changed_when: false
+  check_mode: false
 
 - name: GitHub auth reminder (interactive — run yourself if not logged in)
   ansible.builtin.debug:

@@ -4,6 +4,7 @@
   register: go_current
   failed_when: false
   changed_when: false
+  check_mode: false
 
 - name: Install Go {{ go_target }}
   when: ("go" ~ go_target) not in (go_current.stdout | default(''))

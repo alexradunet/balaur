@@ -25,4 +25,5 @@ ClientAliveCountMax 2
 # Disable features we don't use
 X11Forwarding no
 AllowAgentForwarding no
-AllowTcpForwarding no
+# Wave Terminal wsh needs Unix-socket remote (-R) forwarding; "remote" keeps local (-L) forwarding off
+AllowTcpForwarding remote

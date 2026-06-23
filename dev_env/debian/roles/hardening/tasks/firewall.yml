@@ -32,6 +32,7 @@
     rule: limit
     port: "22"
     proto: tcp
+    comment: SSH rate-limited
 
 - name: Allow Balaur over the NetBird interface
   become: true
