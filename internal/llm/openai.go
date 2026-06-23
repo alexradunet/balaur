@@ -17,6 +17,12 @@ import (
 // mid-reply.
 const chatTimeout = 10 * time.Minute
 
+// agentTemperature is the fixed sampling temperature sent on every chat
+// request. Lower values (vs provider defaults of ~0.7) improve the
+// reliability of structured tool-calling; 0.3 keeps enough variation for
+// natural language turns. Mirror this constant in internal/kronk/client.go.
+const agentTemperature = 0.3
+
 // OpenAIClient is Balaur's opt-in remote llm.Client: it speaks the
 // OpenAI-compatible Chat Completions + embeddings HTTP API, which OpenAI,
 // OpenRouter, Groq, Together, Anthropic (via its compat shim), LM Studio and
@@ -72,7 +78,7 @@ func (c *OpenAIClient) post(ctx context.Context, path string, body any) (*http.R
 
 type wireMessage struct {
 	Role       string         `json:"role"`
-	Content    string         `json:"content"`
+	Content    *string        `json:"content"` // pointer: null on assistant tool-call turns, string otherwise
 	ToolCalls  []wireToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string         `json:"tool_call_id,omitempty"`
 }
@@ -89,7 +95,14 @@ type wireToolCall struct {
 func toWire(msgs []Message) []wireMessage {
 	out := make([]wireMessage, 0, len(msgs))
 	for _, m := range msgs {
-		wm := wireMessage{Role: m.Role, Content: m.Content, ToolCallID: m.ToolCallID}
+		content := m.Content
+		wm := wireMessage{Role: m.Role, Content: &content, ToolCallID: m.ToolCallID}
+		// Strict OpenAI-compatible providers (e.g. Mistral) expect content:null
+		// when tool_calls are present on an assistant turn; sending content:""
+		// causes them to reject or mishandle the message.
+		if m.Role == "assistant" && len(m.ToolCalls) > 0 && m.Content == "" {
+			wm.Content = nil
+		}
 		for _, tc := range m.ToolCalls {
 			var w wireToolCall
 			w.ID = tc.ID
@@ -130,9 +143,10 @@ func toWireTools(tools []ToolSpec) []map[string]any {
 // the same contract the agent loop relies on for the local path.
 func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []ToolSpec) (<-chan Chunk, error) {
 	body := map[string]any{
-		"model":    c.Model,
-		"messages": toWire(msgs),
-		"stream":   true,
+		"model":       c.Model,
+		"messages":    toWire(msgs),
+		"stream":      true,
+		"temperature": agentTemperature,
 	}
 	// Omit the tools key when empty — a null/empty tools field makes some
 	// OpenAI-compatible servers (llama.cpp) fail tool-call parser generation,
@@ -177,23 +191,26 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []T
 			if data == "[DONE]" {
 				break
 			}
+			// streamPayload is the inner shape shared by Delta and Message fields.
+			type streamPayload struct {
+				Content   string `json:"content"`
+				Reasoning string `json:"reasoning_content"`
+				ToolCalls []struct {
+					Index    int    `json:"index"`
+					ID       string `json:"id"`
+					Function struct {
+						Name      string `json:"name"`
+						Arguments string `json:"arguments"`
+					} `json:"function"`
+				} `json:"tool_calls"`
+			}
 			var ev struct {
 				Error struct {
 					Message string `json:"message"`
 				} `json:"error"`
 				Choices []struct {
-					Delta struct {
-						Content   string `json:"content"`
-						Reasoning string `json:"reasoning_content"`
-						ToolCalls []struct {
-							Index    int    `json:"index"`
-							ID       string `json:"id"`
-							Function struct {
-								Name      string `json:"name"`
-								Arguments string `json:"arguments"`
-							} `json:"function"`
-						} `json:"tool_calls"`
-					} `json:"delta"`
+					Delta   streamPayload `json:"delta"`
+					Message streamPayload `json:"message"`
 				} `json:"choices"`
 			}
 			if err := json.Unmarshal([]byte(data), &ev); err != nil {
@@ -206,7 +223,13 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, msgs []Message, tools []T
 			if len(ev.Choices) == 0 {
 				continue
 			}
+			// Use Delta when it carries content; fall back to Message for
+			// providers that emit an aggregated message chunk instead of deltas
+			// (mirrors the kronk bridge's delta/message fallback).
 			d := ev.Choices[0].Delta
+			if d.Content == "" && d.Reasoning == "" && len(d.ToolCalls) == 0 {
+				d = ev.Choices[0].Message
+			}
 			if d.Content != "" || d.Reasoning != "" {
 				if !send(Chunk{Content: d.Content, Reasoning: d.Reasoning}) {
 					return

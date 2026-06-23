@@ -7,6 +7,8 @@ package agent
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/alexradunet/balaur/internal/llm"
@@ -39,7 +41,17 @@ type Event struct {
 type Loop struct {
 	Client   llm.Client
 	Tools    []Tool
-	MaxSteps int // tool-call rounds before forcing a plain answer; 0 = 8
+	MaxSteps int          // tool-call rounds before forcing a plain answer; 0 = 8
+	Logger   *slog.Logger // optional; nil silently discards debug output
+}
+
+// log returns the loop's logger, falling back to a discard logger when none
+// was injected so callers never need to nil-check.
+func (l *Loop) log() *slog.Logger {
+	if l.Logger != nil {
+		return l.Logger
+	}
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 func (l *Loop) maxSteps() int {
@@ -99,6 +111,16 @@ func (l *Loop) Run(ctx context.Context, history []llm.Message, emit func(Event))
 		}
 
 		msgs = append(msgs, llm.Message{Role: "assistant", Content: text.String(), ToolCalls: calls})
+
+		names := make([]string, len(calls))
+		for i, c := range calls {
+			names[i] = c.Name
+		}
+		l.log().Debug("agent step",
+			"step", step,
+			"tools_offered", len(l.Tools),
+			"text_len", text.Len(),
+			"tool_calls", names)
 
 		if len(calls) == 0 {
 			emit(Event{Kind: "done"})

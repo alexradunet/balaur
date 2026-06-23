@@ -296,6 +296,102 @@ func TestChatStreamSendsBearerKey(t *testing.T) {
 	}
 }
 
+func TestChatStreamSendsTemperature(t *testing.T) {
+	var body map[string]any
+	srv := sseServer(t, []string{`data: [DONE]`}, &body)
+	defer srv.Close()
+
+	c := &OpenAIClient{BaseURL: srv.URL, Model: "test"}
+	ch, err := c.ChatStream(context.Background(), []Message{{Role: "user", Content: "hi"}}, nil)
+	if err != nil {
+		t.Fatalf("ChatStream: %v", err)
+	}
+	for range ch { //nolint:revive // drain
+	}
+	temp, ok := body["temperature"].(float64)
+	if !ok {
+		t.Fatalf("temperature missing or wrong type in request body: %+v", body)
+	}
+	if temp != agentTemperature {
+		t.Errorf("temperature = %v, want %v", temp, agentTemperature)
+	}
+}
+
+func TestToWireNullsToolCallContent(t *testing.T) {
+	var body map[string]any
+	srv := sseServer(t, []string{`data: [DONE]`}, &body)
+	defer srv.Close()
+
+	msgs := []Message{
+		// (a) normal assistant text turn — content must be a string
+		{Role: "assistant", Content: "Hello"},
+		// (b) assistant tool-call turn with empty content — content must be null
+		{Role: "assistant", Content: "", ToolCalls: []ToolCall{{ID: "c1", Name: "task_add", Args: "{}"}}},
+	}
+	c := &OpenAIClient{BaseURL: srv.URL, Model: "test"}
+	ch, err := c.ChatStream(context.Background(), msgs, nil)
+	if err != nil {
+		t.Fatalf("ChatStream: %v", err)
+	}
+	for range ch { //nolint:revive // drain
+	}
+
+	rawMsgs, ok := body["messages"].([]any)
+	if !ok || len(rawMsgs) < 2 {
+		t.Fatalf("captured body has fewer than 2 messages: %+v", body)
+	}
+
+	// (a) normal text turn: content must be a string
+	msg0, ok := rawMsgs[0].(map[string]any)
+	if !ok {
+		t.Fatalf("message[0] is not an object: %T", rawMsgs[0])
+	}
+	if _, isStr := msg0["content"].(string); !isStr {
+		t.Errorf("message[0].content should be a string, got %T (%v)", msg0["content"], msg0["content"])
+	}
+
+	// (b) tool-call turn: content must be null (absent from JSON decode = nil in map)
+	msg1, ok := rawMsgs[1].(map[string]any)
+	if !ok {
+		t.Fatalf("message[1] is not an object: %T", rawMsgs[1])
+	}
+	if v, exists := msg1["content"]; exists && v != nil {
+		t.Errorf("message[1].content should be null, got %T (%v)", v, v)
+	}
+}
+
+func TestChatStreamReadsMessageFallback(t *testing.T) {
+	// Some providers (e.g. non-streaming fallback) emit a single chunk with
+	// the tool call under "message" rather than "delta".
+	lines := []string{
+		`data: {"choices":[{"message":{"tool_calls":[{"index":0,"id":"call_m","function":{"name":"task_list","arguments":"{}"}}]}}]}`,
+		`data: [DONE]`,
+	}
+	srv := sseServer(t, lines, nil)
+	defer srv.Close()
+
+	c := &OpenAIClient{BaseURL: srv.URL, Model: "test"}
+	ch, err := c.ChatStream(context.Background(), []Message{{Role: "user", Content: "hi"}}, nil)
+	if err != nil {
+		t.Fatalf("ChatStream: %v", err)
+	}
+	var calls []ToolCall
+	for chunk := range ch {
+		if chunk.Err != nil {
+			t.Fatalf("chunk err: %v", chunk.Err)
+		}
+		if chunk.Done {
+			calls = chunk.ToolCalls
+		}
+	}
+	if len(calls) != 1 {
+		t.Fatalf("got %d tool calls from message fallback, want 1", len(calls))
+	}
+	if calls[0].ID != "call_m" || calls[0].Name != "task_list" {
+		t.Errorf("unexpected call: %+v", calls[0])
+	}
+}
+
 func TestEmbedIndexMapping(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return rows out of order to exercise index-based placement.

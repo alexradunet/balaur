@@ -96,7 +96,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	knowledgeBlock, usedMemories := knowledge.BuildContext(app, userText)
 	res.UsedMemories = usedMemories
 	todayBlock := tasks.TodayBlock(app, now)
-	loop := &agent.Loop{Client: client, Tools: ToolsForHead(app, head.Groups), MaxSteps: maxSteps()}
+	loop := &agent.Loop{Client: client, Tools: ToolsForHead(app, head.Groups), MaxSteps: maxSteps(), Logger: app.Logger()}
 	history := make([]llm.Message, 0, len(recent)+2)
 	history = append(history, llm.Message{Role: "system", Content: systemPrompt + headFlavor(head.Name, head.Purpose) + nowLine(now) + todayBlock + knowledgeBlock})
 	history = append(history, recent...)
