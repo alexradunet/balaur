@@ -38,6 +38,15 @@
     line: "BALAUR_ALLOWED_HOSTS={{ balaur_allowed_hosts }}"
   when: balaur_allowed_hosts | length > 0
 
+# Bind address override (e.g. the NetBird overlay IP — Option B in docs/netbird.md).
+# Empty default leaves the systemd unit's 127.0.0.1:8090 loopback bind in place.
+- name: Set BALAUR_HTTP bind address
+  ansible.builtin.lineinfile:
+    path: "{{ config_dir }}/env"
+    regexp: '^#?\s*BALAUR_HTTP='
+    line: "BALAUR_HTTP={{ balaur_http }}"
+  when: balaur_http | length > 0
+
 - name: Verify the CGO-free build (`make build`)
   ansible.builtin.command: make build
   args:

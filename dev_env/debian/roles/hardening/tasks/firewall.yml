@@ -42,6 +42,7 @@
     interface: "{{ netbird_iface }}"
     to_port: "{{ balaur_http_port | string }}"
     proto: tcp
+    comment: Balaur over NetBird
   when: ufw_allow_balaur_netbird | bool
 
 - name: Enable ufw
