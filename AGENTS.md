@@ -217,6 +217,10 @@ lean and high-signal — add a rule only when it changes a real decision.
   `go vet ./...`, `go test ./...`, and `CGO_ENABLED=0 go build ./...`.
   Also run `git diff --check`.
 - Run `make lint` for changes that touch project-wide developer workflow.
+- For UI changes (or anything visible in the running app), don't stop at
+  `go test` — verify in the browser with `/verify` (or `/run`), which launches
+  Balaur and drives the real UI at `http://127.0.0.1:8090/` per the
+  `run-balaur` skill.
 
 ## Known limitations & deferred work
 
