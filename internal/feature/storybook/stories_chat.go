@@ -79,6 +79,35 @@ func chattoolrowStory() Story {
 	}
 }
 
+func chatcardturnStory() Story {
+	task := taskcards.TaskCard(taskcards.TaskView{
+		ID: "t1", Title: "Put Xbox Ally X in SameDay box", Status: "open",
+		DueLine: "due today 17:00", RecurLine: "every 2 days",
+	})
+	return Story{
+		ID: "chatcardturn", Group: "Chat", Title: "CardTurn", Wide: true, OnDark: true,
+		Blurb: "An inline artifact card (a task/knowledge proposal) framed as a Balaur turn in the same speech-panel frame as chat.Message and chat.ToolRow: the framed portrait beside a parchment panel with a \"Balaur\" nameplate, the card flowing as the body. The inner card drops its own border so panel + card read as one surface — not a loose full-width slab. Produced by the proposal path (endTool / messageViews).",
+		Variants: []Variant{
+			{"task proposal", h.Div(h.Class("chat"),
+				chat.CardTurn(chat.CardTurnProps{AvatarSrc: "/static/crest.png", Card: task}))},
+		},
+		Props: []Prop{
+			{"Who", "string", `"Balaur"`, "Nameplate name (the head's spoken-turn label)."},
+			{"AvatarSrc", "string", "—", "Path to the Balaur portrait PNG — the same avatar as the head's message turns."},
+			{"Card", "g.Node", "nil", "Pre-rendered card node (TaskCard, memory card). Rendered by the web layer — the organism never renders cards itself."},
+			{"ID", "string", "—", "Optional root element id — lets the chat stream target the turn."},
+		},
+		Dos: []string{
+			"Pass a pre-rendered card g.Node from the web layer (h.proposalBody).",
+			"Keep the card turn in the same speech-panel frame as Balaur's words.",
+		},
+		Donts: []string{
+			"Import internal/feature or internal/cards from internal/ui/chat.",
+			"Render the card as a separate full-width slab divorced from Balaur's turns.",
+		},
+	}
+}
+
 func chatchoicesStory() Story {
 	return Story{
 		ID: "chatchoices", Group: "Chat", Title: "Choices", Wide: true, OnDark: true,

@@ -209,8 +209,10 @@ func (h *handlers) renderMessages(views []messageView) g.Node {
 				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Who: mv.WhoLabel,
 				AvatarSrc: mv.BalaurAvatarURL, Content: mv.Content, Chip: chip,
 			}))
-			if mv.CardBody != nil { // proposal etc. → inline k-inline below (unchanged)
-				nodes = append(nodes, g.El("div", g.Attr("class", "k-inline"), mv.CardBody))
+			if mv.CardBody != nil { // proposal → framed as a Balaur card turn below
+				nodes = append(nodes, chat.CardTurn(chat.CardTurnProps{
+					Who: mv.WhoLabel, AvatarSrc: mv.BalaurAvatarURL, Card: mv.CardBody,
+				}))
 			}
 		default: // assistant
 			nodes = append(nodes, chat.Message(chat.MessageProps{

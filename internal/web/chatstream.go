@@ -215,8 +215,11 @@ func (s *chatStream) endTool(content string, card g.Node) {
 	if card == nil {
 		return
 	}
-	// Only proposals reach here with a card; they stay inline in the transcript.
-	s.appendNode(g.El("div", g.Attr("class", "k-inline"), g.Attr("id", s.toolID+"-card"), card))
+	// Only proposals reach here with a card; they stay inline in the transcript,
+	// framed as a Balaur turn (portrait + nameplate) like every other message.
+	s.appendNode(chat.CardTurn(chat.CardTurnProps{
+		Who: s.who, AvatarSrc: s.balaURL, Card: card, ID: s.toolID + "-card",
+	}))
 }
 
 // endArtifactCard morphs the tool card (its body carrying the re-open chip),

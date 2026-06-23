@@ -1033,11 +1033,6 @@ dialog::backdrop {
   gap: var(--space-4);
 }
 .k-grid-muted { opacity: .72; }
-.k-inline { margin: 10px 0; max-width: 480px; }
-/* In chat, an embedded record rides the message column: same left edge
-   and full width as the speech panels — same UI, same space. */
-.chat .k-inline { margin: 0 0 0 var(--chat-gutter, 124px); max-width: none; }
-.chat .k-inline .kcard { padding: 15px 18px; }
 
 .k-controls {
   display: flex;
@@ -3220,6 +3215,14 @@ progress.pull-progress-bar::-moz-progress-bar {
 /* The artifact chip now lives inside the card — drop the transcript gutter indent,
    and keep it a content-sized pill (the column flex would otherwise stretch it full-width). */
 .cmsg-tool .art-chip { margin: 2px 0 0; align-self: flex-start; }
+
+/* Card turn — an inline artifact card (a task/knowledge proposal) framed as a
+   Balaur turn. Reuses the .cmsg* frame (portrait, parchment panel, nameplate);
+   the panel IS the card surface, so the inner .kcard drops its own border/bg and
+   flows as the body — one panel, not a slab-in-a-slab. */
+.cmsg-card .cmsg-panel { align-items: stretch; }
+.cmsg-card .cmsg-body { max-width: none; }
+.cmsg-card .kcard { border: 0; box-shadow: none; background: none; padding: 0; }
 
 /* ── Home: the full-screen companion chat ───────────────────────────────────
    Home is the chat. The chat lives in the persistent #dock as on every page;
