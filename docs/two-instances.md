@@ -29,6 +29,30 @@ cd <repo> && make dev             # air rebuilds on save, serves :8090
 
 Both can run at the same time — that is the whole point of the 8080/8090 split.
 
+## Upgrading prod from staging
+
+Staging runs your live working tree (air); prod runs a built binary snapshot at
+`~/.local/bin/balaur`, so prod only changes when you rebuild + reinstall it.
+"Promoting" bakes the code you validated on staging into prod's binary:
+
+1. Validate on staging (`make dev`, `:8090`).
+2. `go test ./...` green, then commit + push to `main`. The checkout is shared,
+   so prod builds whatever is in the tree — land it first.
+3. `make promote` — one guarded command that:
+   - refuses a dirty working tree,
+   - runs the suite,
+   - builds (a compile failure here leaves prod on the old binary),
+   - stops prod and snapshots `pb_data` to `pb_data.bak-<timestamp>` — a clean
+     pre-migration restore point, since pending `migrations/` apply on the next
+     start,
+   - reinstalls the binary + unit and restarts.
+4. Verify: `make status-user-service`; `curl http://100.124.113.87:8080/` → 200.
+
+Only code + migrations cross over — never staging's `./pb_data`; prod keeps its
+own data. Snapshots accumulate under `~/.local/share/balaur/`; prune old
+`pb_data.bak-*` yourself. Rollback: `git checkout <good-commit> && make promote`,
+restoring a snapshot if a migration touched data.
+
 ## Network
 
 Reachable over NetBird only (ufw is default-deny inbound; allows `8080/wt0` and
