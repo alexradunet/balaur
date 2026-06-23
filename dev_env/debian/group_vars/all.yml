@@ -35,8 +35,8 @@ netbird_setup_key: ""
 # ─── SSH hardening (captures the manual lockdown; idempotent) ────────────────
 # REQUIRED when ssh_disable_password is true — the play asserts a key is present
 # before disabling passwords, so you cannot lock yourself out.
-ssh_authorized_keys: []
-#   - "ssh-ed25519 AAAA... you@laptop"
+ssh_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPRO2zTHnR7FHp0Z/IToFy4YfBc8JLPOBTheh903n624 alex@balaur"
 ssh_allow_users: "{{ ansible_user_id }}"
 ssh_disable_password: true
 
