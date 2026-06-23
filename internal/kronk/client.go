@@ -18,6 +18,11 @@ import (
 // off mid-reply.
 const chatStreamTimeout = 10 * time.Minute
 
+// agentTemperature is the fixed sampling temperature for local inference.
+// Mirrors the constant in internal/llm/openai.go — kept separate to avoid a
+// cross-package dependency for a single float.
+const agentTemperature = 0.3
+
 // Client implements llm.Client against in-process Kronk models held by an Engine.
 // chatPath and embedPath are absolute GGUF file paths.
 type Client struct {
@@ -47,8 +52,9 @@ func (c *Client) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm
 		ctx, cancel = context.WithTimeout(ctx, chatStreamTimeout)
 	}
 	d := model.D{
-		"messages":   toKronkMessages(msgs),
-		"max_tokens": 2048,
+		"messages":    toKronkMessages(msgs),
+		"max_tokens":  2048,
+		"temperature": agentTemperature,
 	}
 	// Omit the tools key when empty — llama.cpp's template parser rejects a null
 	// tools field (same rule the OpenAI HTTP client follows).

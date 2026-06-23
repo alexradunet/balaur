@@ -67,7 +67,10 @@ One binary, layered as: gateway → turn pipeline → business logic.
   agent loop, the verify honesty check with one self-repair pass, and
   persistence. It also resolves the active model choice.
 - internal/agent is the hand-rolled loop: messages → model → tool calls
-  → tool results → model, until a plain answer (bounded rounds).
+  → tool results → model, until a plain answer (bounded rounds). Every
+  step logs tools-offered and tool-calls-returned at Debug level; all
+  requests run at a fixed moderate temperature (0.3) to improve
+  structured tool-calling reliability.
 - Business packages, one concern each: conversation (master thread +
   windows), tasks (commitments, recurrence DSL, nudges, briefing), life
   (owner-defined log + journal), knowledge (memory & skill lifecycle —

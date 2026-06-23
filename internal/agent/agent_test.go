@@ -1,8 +1,11 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/alexradunet/balaur/internal/llm"
@@ -122,6 +125,31 @@ func TestRunUnknownToolFeedsErrorBack(t *testing.T) {
 	}
 	if msgs[1].Role != "tool" || msgs[1].Content == "" {
 		t.Fatalf("expected error text in tool turn, got %+v", msgs[1])
+	}
+}
+
+func TestLoopLogsToolCalls(t *testing.T) {
+	client := &fakeClient{turns: []fakeTurn{
+		{tools: []llm.ToolCall{{ID: "c1", Name: "echo", Args: `{}`}}},
+		{text: "done"},
+	}}
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	loop := &Loop{
+		Client: client,
+		Logger: logger,
+		Tools: []Tool{{
+			Spec:    llm.ToolSpec{Name: "echo"},
+			Execute: func(ctx context.Context, args string) (string, error) { return "ok", nil },
+		}},
+	}
+	_, err := loop.Run(context.Background(), nil, func(Event) {})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	log := buf.String()
+	if !strings.Contains(log, "tool_calls") {
+		t.Errorf("expected log output to contain 'tool_calls', got: %s", log)
 	}
 }
 
