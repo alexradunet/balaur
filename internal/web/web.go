@@ -171,6 +171,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/ui/knowledge/{kind}/{id}/card", h.knowledgeCard)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/transition", h.knowledgeTransition)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/edit", h.knowledgeEdit)
+	se.Router.POST("/ui/node/{id}/edit", h.nodeEdit)
 	se.Router.GET("/ui/recap/bands", h.recapBands)
 	se.Router.GET("/ui/recap/expand", h.recapExpand)
 	if devSeedEnabled() {

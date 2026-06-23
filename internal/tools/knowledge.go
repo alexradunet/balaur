@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/nodes"
 )
 
 // KnowledgeTools gives the model its memory and skill verbs. None of them
@@ -22,8 +24,17 @@ func KnowledgeTools(app core.App) []agent.Tool {
 		recallTool(app),
 		skillTool(app),
 		proposeSkillTool(app),
+		nodeWriteTool(app),
+		nodeListTool(app),
+		nodeGetTool(app),
+		nodeDropTool(app),
 	}
 }
+
+// nodeTypes are the owner-authored node types node_write may create. memory and
+// skill are deliberately excluded — those are consent-gated proposals (remember
+// / propose_skill), born proposed, not owner-voiced active writes.
+var nodeTypes = []string{"note", "journal", "person", "book", "idea", "place"}
 
 // ProposalMarker prefixes tool results that carry a proposal id, so the web
 // layer can render an approval card instead of a plain tool row. Format:
@@ -99,7 +110,7 @@ func rememberTool(app core.App) agent.Tool {
 			if err != nil {
 				return "", err
 			}
-			return MarkProposal("memories", rec.Id,
+			return MarkProposal("nodes", rec.Id,
 				fmt.Sprintf("Memory proposal %q sent to the owner for approval. It is NOT yet part of your memory.", args.Title)), nil
 		},
 	}
@@ -191,8 +202,123 @@ func proposeSkillTool(app core.App) agent.Tool {
 			if err != nil {
 				return "", err
 			}
-			return MarkProposal("skills", rec.Id,
+			return MarkProposal("nodes", rec.Id,
 				fmt.Sprintf("Skill proposal %q sent to the owner for approval. You cannot use it until approved.", args.Name)), nil
+		},
+	}
+}
+
+// nodeWriteTool creates an owner-authored node (note or typed object). Unlike
+// remember/propose_skill these are born active — owner-voiced, trusted writes.
+func nodeWriteTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("node_write",
+			"Write an owner-authored knowledge node — a note or a typed object (person, book, idea, place). "+
+				"Born active (the owner's own, trusted). For things you want the owner to APPROVE as a memory, use remember instead.",
+			obj(map[string]any{
+				"type":  map[string]any{"type": "string", "enum": nodeTypes, "description": "Node type (default note)."},
+				"title": str("Short title for the node."),
+				"body":  str("The node's markdown body."),
+			}, "title")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				Type  string `json:"type"`
+				Title string `json:"title"`
+				Body  string `json:"body"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("node_write: bad arguments: %w", err)
+			}
+			if strings.TrimSpace(args.Title) == "" {
+				return "", fmt.Errorf("node_write: title is required")
+			}
+			typ := args.Type
+			if typ == "" {
+				typ = "note"
+			}
+			if !slices.Contains(nodeTypes, typ) {
+				return "", fmt.Errorf("node_write: type %q is not an owner-authored type", typ)
+			}
+			rec, err := nodes.Create(app, typ, args.Title, args.Body, nodes.StatusActive, nil)
+			if err != nil {
+				return "", fmt.Errorf("node_write: %w", err)
+			}
+			return fmt.Sprintf("Saved %s %q (id %s).", typ, args.Title, rec.Id), nil
+		},
+	}
+}
+
+func nodeListTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("node_list",
+			"List active knowledge nodes of a given type (newest first).",
+			obj(map[string]any{
+				"type": map[string]any{"type": "string", "enum": nodeTypes, "description": "Node type to list (default note)."},
+			}, "type")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				Type string `json:"type"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("node_list: bad arguments: %w", err)
+			}
+			typ := args.Type
+			if typ == "" {
+				typ = "note"
+			}
+			recs, err := nodes.ListByTypeStatus(app, typ, nodes.StatusActive)
+			if err != nil {
+				return "", fmt.Errorf("node_list: %w", err)
+			}
+			if len(recs) == 0 {
+				return fmt.Sprintf("No active %s nodes.", typ), nil
+			}
+			var b strings.Builder
+			for _, r := range recs {
+				fmt.Fprintf(&b, "- [%s] %s\n", r.Id, r.GetString("title"))
+			}
+			return b.String(), nil
+		},
+	}
+}
+
+func nodeGetTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("node_get",
+			"Read one knowledge node's full body by id.",
+			obj(map[string]any{"id": str("The node id.")}, "id")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				ID string `json:"id"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("node_get: bad arguments: %w", err)
+			}
+			rec, err := nodes.Get(app, strings.TrimSpace(args.ID))
+			if err != nil {
+				return "", fmt.Errorf("node_get: %w", err)
+			}
+			return fmt.Sprintf("# %s (%s)\n%s", rec.GetString("title"), rec.GetString("type"), rec.GetString("body")), nil
+		},
+	}
+}
+
+func nodeDropTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("node_drop",
+			"Delete one owner-authored knowledge node by id.",
+			obj(map[string]any{"id": str("The node id to delete.")}, "id")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				ID string `json:"id"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("node_drop: bad arguments: %w", err)
+			}
+			if err := nodes.Drop(app, strings.TrimSpace(args.ID)); err != nil {
+				return "", fmt.Errorf("node_drop: %w", err)
+			}
+			return fmt.Sprintf("Deleted node %s.", args.ID), nil
 		},
 	}
 }

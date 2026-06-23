@@ -13,7 +13,7 @@ import (
 
 // DayData is everything a day page or `balaur day` needs, queried once.
 type DayData struct {
-	Journal []*core.Record // entries kind=journal, noted_at in day
+	Journal []*core.Record // type=journal nodes for the day (props.date)
 	Logged  []*core.Record // entries other kinds, noted_at in day
 	Done    []*core.Record // tasks done_at in day
 	Recap   *core.Record   // day summary, nil when absent
@@ -25,10 +25,11 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 	ds, de := d, d.AddDate(0, 0, 1)
 	data := DayData{}
 
-	// Journal entries: kind='journal', noted_at in [ds, de)
-	recs, err := app.FindRecordsByFilter("entries",
-		"kind = 'journal' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	// Journal: the day's type=journal node(s), keyed by props.date.
+	dayKey := ds.Format(journalDayKey)
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'journal' && status = 'active' && props.date = {:d}", "-created", 200, 0,
+		dbx.Params{"d": dayKey})
 	if err != nil {
 		return data, fmt.Errorf("day journal query: %w", err)
 	}

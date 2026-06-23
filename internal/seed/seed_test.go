@@ -11,7 +11,7 @@ import (
 
 // total sums every collection count in a Result — the seed's footprint.
 func total(r *Result) int {
-	return r.Messages + r.Tasks + r.Memories + r.Skills +
+	return r.Messages + r.Tasks + r.Memories + r.Skills + r.Notes +
 		r.LifeEntries + r.Summaries + r.Heads
 }
 
@@ -26,7 +26,7 @@ func TestRunSeedsAllCollections(t *testing.T) {
 	// Every collection should gain at least one record.
 	checks := map[string]int{
 		"messages": res.Messages, "tasks": res.Tasks, "memories": res.Memories,
-		"skills": res.Skills, "life_entries": res.LifeEntries,
+		"skills": res.Skills, "notes": res.Notes, "life_entries": res.LifeEntries,
 		"summaries": res.Summaries, "heads": res.Heads,
 	}
 	for name, n := range checks {

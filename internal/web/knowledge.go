@@ -11,6 +11,8 @@ import (
 
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -130,6 +132,30 @@ func (h *handlers) renderCardHTML(kind knowledge.Kind, rec *core.Record) (string
 	return renderNodeHTML(knowledgeRecordNode(kind, rec)), nil
 }
 
+// nodeEdit applies the owner's edit to a note/typed-object node (title + body)
+// and re-renders the note card via the registered ui renderer. Owner-authored
+// nodes carry no status transition here — they are already active.
+func (h *handlers) nodeEdit(e *core.RequestEvent) error {
+	id := e.Request.PathValue("id")
+	rec, err := nodes.Get(h.app, id)
+	if err != nil {
+		return h.cardError(e, err)
+	}
+	if title := e.Request.FormValue("title"); title != "" {
+		rec.Set("title", title)
+	}
+	rec.Set("body", e.Request.FormValue("body"))
+	if err := h.app.Save(rec); err != nil {
+		return h.cardError(e, err)
+	}
+	store.Audit(h.app, "owner", "node.edit", "nodes/"+rec.Id, true, nil)
+
+	sse := datastar.NewSSE(e.Response, e.Request)
+	_ = sse.PatchElements(renderNodeHTML(h.panelNode("note", "id="+rec.Id)),
+		datastar.WithSelectorID("ucard-note"), datastar.WithModeOuter())
+	return nil
+}
+
 // knowledgeCard serves one card fragment — used by the chat stream to embed
 // live proposal cards, server-rendered into the stream.
 func (h *handlers) knowledgeCard(e *core.RequestEvent) error {
@@ -137,10 +163,11 @@ func (h *handlers) knowledgeCard(e *core.RequestEvent) error {
 	if err != nil {
 		return e.BadRequestError("unknown kind", err)
 	}
-	rec, err := h.app.FindRecordById(string(kind), e.Request.PathValue("id"))
+	rec, err := h.app.FindRecordById("nodes", e.Request.PathValue("id"))
 	if err != nil {
 		return h.cardError(e, err)
 	}
+	knowledge.Hydrate(kind, rec)
 	return h.renderCard(e, kind, rec)
 }
 

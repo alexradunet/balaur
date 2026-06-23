@@ -118,6 +118,17 @@ func init() {
 			},
 		},
 		{
+			Type:  "note",
+			Label: "Note",
+			Icon:  "tome",
+			W:     4,
+			H:     20,
+			Params: []ParamSpec{
+				{Name: "id", Required: true, Doc: "node id to show"},
+				{Name: "type", Doc: "node type for typed-object render"},
+			},
+		},
+		{
 			Type:  "memory",
 			Label: "Memory",
 			Icon:  "tome",

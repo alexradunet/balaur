@@ -2,13 +2,30 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
 
 	"github.com/alexradunet/balaur/internal/knowledge"
+	"github.com/alexradunet/balaur/internal/nodes"
 )
+
+// ownerNodeTypes are the owner-authored node types the `note` command may
+// create. memory/skill are excluded — those are consent-gated proposals.
+var ownerNodeTypes = []string{"note", "journal", "person", "book", "idea", "place"}
+
+func nodeJSON(r *core.Record) map[string]any {
+	return map[string]any{
+		"id":      r.Id,
+		"type":    r.GetString("type"),
+		"title":   r.GetString("title"),
+		"body":    r.GetString("body"),
+		"status":  r.GetString("status"),
+		"created": jsonTime(r.GetDateTime("created").Time()),
+	}
+}
 
 func memoryJSON(r *core.Record) map[string]any {
 	return map[string]any{
@@ -263,6 +280,94 @@ func skillShowCmd(app core.App) *cobra.Command {
 			return nil, err
 		}
 		return skillJSON(rec, true), nil
+	})
+	return cmd
+}
+
+// noteCmd is the owner-authored node verb group: notes and typed objects over
+// internal/nodes (born active, deterministic, no model).
+func noteCmd(app core.App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "note",
+		Short: "Write, list, show, and drop owner-authored knowledge nodes — deterministic, no model",
+	}
+	cmd.AddCommand(noteAddCmd(app), noteListCmd(app), noteShowCmd(app), noteDropCmd(app))
+	return cmd
+}
+
+func noteAddCmd(app core.App) *cobra.Command {
+	var typ, title, body string
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "Create an owner-authored node (note or typed object), born active",
+		Args:  cobra.NoArgs,
+	}
+	cmd.Flags().StringVar(&typ, "type", "note", "note | journal | person | book | idea | place")
+	cmd.Flags().StringVar(&title, "title", "", "node title (required)")
+	cmd.Flags().StringVar(&body, "body", "", "node markdown body")
+	_ = cmd.MarkFlagRequired("title")
+	cmd.RunE = run(app, "note.add", func(cmd *cobra.Command, args []string) (any, error) {
+		if !slices.Contains(ownerNodeTypes, typ) {
+			return nil, fmt.Errorf("type %q is not an owner-authored node type", typ)
+		}
+		rec, err := nodes.Create(app, typ, title, body, nodes.StatusActive, nil)
+		if err != nil {
+			return nil, err
+		}
+		return nodeJSON(rec), nil
+	})
+	return cmd
+}
+
+func noteListCmd(app core.App) *cobra.Command {
+	var typ string
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List active nodes of a type, newest first",
+		Args:  cobra.NoArgs,
+	}
+	cmd.Flags().StringVar(&typ, "type", "note", "node type to list")
+	cmd.RunE = run(app, "note.list", func(cmd *cobra.Command, args []string) (any, error) {
+		recs, err := nodes.ListByTypeStatus(app, typ, nodes.StatusActive)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]map[string]any, 0, len(recs))
+		for _, r := range recs {
+			out = append(out, nodeJSON(r))
+		}
+		return out, nil
+	})
+	return cmd
+}
+
+func noteShowCmd(app core.App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show <id>",
+		Short: "Show one node by id, body included",
+		Args:  cobra.ExactArgs(1),
+	}
+	cmd.RunE = run(app, "note.show", func(cmd *cobra.Command, args []string) (any, error) {
+		rec, err := nodes.Get(app, args[0])
+		if err != nil {
+			return nil, err
+		}
+		return nodeJSON(rec), nil
+	})
+	return cmd
+}
+
+func noteDropCmd(app core.App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "drop <id>",
+		Short: "Delete one owner-authored node by id",
+		Args:  cobra.ExactArgs(1),
+	}
+	cmd.RunE = run(app, "note.drop", func(cmd *cobra.Command, args []string) (any, error) {
+		if err := nodes.Drop(app, args[0]); err != nil {
+			return nil, err
+		}
+		return map[string]any{"dropped": args[0]}, nil
 	})
 	return cmd
 }

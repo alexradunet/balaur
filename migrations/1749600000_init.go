@@ -24,7 +24,7 @@ const ruleOwner = "@request.auth.collectionName = 'users'"
 
 // collectionNames in dependency order (relations point left); dropped in reverse.
 var collectionNames = []string{
-	"heads", "conversations", "messages", "memories", "skills", "audit_log",
+	"heads", "conversations", "messages", "nodes", "edges", "audit_log",
 	"summaries", "tasks", "entries", "extensions",
 	"llm_providers", "llm_models", "llm_settings", "owner_settings",
 }
@@ -83,43 +83,39 @@ func InitCollections(app core.App) error {
 		return err
 	}
 
-	memories := core.NewBaseCollection("memories")
-	setOwnerRules(memories, owner)
-	memories.Fields.Add(
+	// nodes: the unified knowledge spine. type decides the kind; props holds type-specific fields.
+	// Consent lives in status: note/journal/typed-objects born active; memory/skill born proposed.
+	nodes := core.NewBaseCollection("nodes")
+	setOwnerRules(nodes, owner)
+	nodes.Fields.Add(
+		&core.SelectField{Name: "type", Required: true, MaxSelect: 1, Values: []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place"}},
 		&core.TextField{Name: "title", Required: true, Max: 300},
-		&core.TextField{Name: "content", Max: 100000},
-		&core.TextField{Name: "source", Max: 300},
-		&core.SelectField{Name: "status", Required: true, Values: []string{"proposed", "active", "archived", "rejected"}},
-		&core.SelectField{Name: "category", Values: []string{"fact", "preference", "person", "project", "context"}},
-		&core.NumberField{Name: "importance", OnlyInt: true, Min: types.Pointer(1.0), Max: types.Pointer(5.0)},
-		&core.TextField{Name: "when_to_use", Max: 500},
-		&core.DateField{Name: "last_used"},
-		&core.NumberField{Name: "use_count", OnlyInt: true},
+		&core.TextField{Name: "body", Max: 100000},
+		&core.SelectField{Name: "status", Required: true, MaxSelect: 1, Values: []string{"proposed", "active", "archived", "rejected"}},
+		&core.JSONField{Name: "props"},
 		&core.AutodateField{Name: "created", OnCreate: true},
 		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)
-	memories.AddIndex("idx_memories_status", false, "status", "")
-	memories.AddIndex("idx_memories_status_importance", false, "status, importance", "")
-	if err := app.Save(memories); err != nil {
+	nodes.AddIndex("idx_nodes_type_status", false, "type, status", "")
+	nodes.AddIndex("idx_nodes_status", false, "status", "")
+	if err := app.Save(nodes); err != nil {
 		return err
 	}
 
-	skills := core.NewBaseCollection("skills")
-	setOwnerRules(skills, owner)
-	skills.Fields.Add(
-		&core.TextField{Name: "name", Required: true, Max: 120},
-		&core.TextField{Name: "description", Max: 2000},
-		&core.TextField{Name: "content", Max: 100000},
-		&core.SelectField{Name: "status", Required: true, Values: []string{"proposed", "active", "archived", "rejected"}},
-		&core.TextField{Name: "when_to_use", Max: 500},
-		&core.DateField{Name: "last_used"},
-		&core.NumberField{Name: "use_count", OnlyInt: true},
+	// edges: node↔node links. source/target cascade-delete with their nodes.
+	// Back-relation expand: ?expand=edges_via_target (inbound) / edges_via_source (outbound).
+	edges := core.NewBaseCollection("edges")
+	setOwnerRules(edges, owner)
+	edges.Fields.Add(
+		&core.RelationField{Name: "source", Required: true, CollectionId: nodes.Id, CascadeDelete: true, MaxSelect: 1},
+		&core.RelationField{Name: "target", Required: true, CollectionId: nodes.Id, CascadeDelete: true, MaxSelect: 1},
+		&core.TextField{Name: "type", Max: 60},
+		&core.TextField{Name: "context", Max: 2000},
 		&core.AutodateField{Name: "created", OnCreate: true},
-		&core.AutodateField{Name: "updated", OnCreate: true, OnUpdate: true},
 	)
-	skills.AddIndex("idx_skills_name", true, "name", "")
-	skills.AddIndex("idx_skills_status", false, "status", "")
-	if err := app.Save(skills); err != nil {
+	edges.AddIndex("idx_edges_unique", true, "source, target, type", "")
+	edges.AddIndex("idx_edges_target", false, "target", "")
+	if err := app.Save(edges); err != nil {
 		return err
 	}
 

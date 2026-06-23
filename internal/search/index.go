@@ -11,6 +11,8 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
+
 	_ "github.com/ncruces/go-sqlite3/driver" // registers driver "sqlite3"
 )
 
@@ -58,7 +60,7 @@ func (ix *Index) Rebuild(app core.App) error {
 		return fmt.Errorf("search: rebuild delete: %w", err)
 	}
 
-	recs, err := app.FindRecordsByFilter("memories", "status = 'active'", "", 0, 0, nil)
+	recs, err := app.FindRecordsByFilter("nodes", "type = 'memory' && status = 'active'", "", 0, 0, nil)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("search: rebuild fetch: %w", err)
@@ -75,9 +77,9 @@ func (ix *Index) Rebuild(app core.App) error {
 		if _, err := stmt.Exec(
 			r.Id,
 			r.GetString("title"),
-			r.GetString("content"),
-			r.GetString("when_to_use"),
-			r.GetString("category"),
+			r.GetString("body"),
+			nodes.PropString(r, "when_to_use"),
+			nodes.PropString(r, "category"),
 		); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("search: rebuild insert %s: %w", r.Id, err)
@@ -89,12 +91,18 @@ func (ix *Index) Rebuild(app core.App) error {
 	return nil
 }
 
-// Upsert inserts or replaces one record in the index. Non-active records
-// (archived, rejected, proposed) are removed rather than indexed.
+// Upsert inserts or replaces one record in the index. The hooks bind to the
+// whole `nodes` collection, so this fires for every node type; only active
+// memory nodes belong in memories_fts. A node that is not (or is no longer) an
+// active memory is deleted-then-skipped, keeping the index clean across type or
+// status changes. content/when_to_use/category come from the node body/props.
 func (ix *Index) Upsert(rec *core.Record) error {
 	// Always delete first so Upsert is truly idempotent.
 	if err := ix.Delete(rec.Id); err != nil {
 		return err
+	}
+	if rec.GetString("type") != "memory" {
+		return nil // non-memory node: deletion above is the right action
 	}
 	if rec.GetString("status") != "active" {
 		return nil // non-active: deletion above is the right action
@@ -103,9 +111,9 @@ func (ix *Index) Upsert(rec *core.Record) error {
 		`INSERT INTO memories_fts(id, title, content, when_to_use, category) VALUES (?, ?, ?, ?, ?)`,
 		rec.Id,
 		rec.GetString("title"),
-		rec.GetString("content"),
-		rec.GetString("when_to_use"),
-		rec.GetString("category"),
+		rec.GetString("body"),
+		nodes.PropString(rec, "when_to_use"),
+		nodes.PropString(rec, "category"),
 	)
 	if err != nil {
 		return fmt.Errorf("search: upsert %s: %w", rec.Id, err)
