@@ -4,6 +4,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/feature/graphcards"
 	"github.com/alexradunet/balaur/internal/feature/journalcards"
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/feature/lifecards"
@@ -155,6 +156,75 @@ func notecardStory() Story {
 		Donts: []string{
 			"Render an unescaped node body.",
 			"Add a status lifecycle here — owner-authored nodes are already active.",
+		},
+	}
+}
+
+// relatedStory documents the related-nodes card: for a focus node, its active
+// neighbors as Backlinks ∪ Outbound ∪ FTS-similar. Read-only; status=active
+// only. The view-model is hand-built (the live card calls buildRelated).
+func relatedStory() Story {
+	return Story{
+		ID: "relatedcard", Group: "Cards", Title: "RelatedCard",
+		Blurb: "The \"what connects to this?\" list for a focus node: active backlinks (linked from), outbound links (links to), and FTS-similar nodes (when the index is live). Read-only over the edges plan 161 maintains; status=active only — proposed/rejected nodes never appear. Each row morphs the panel to that node's show card (/ui/show/note?id=…, the generic node card); the footer cross-links to the graph card.",
+		Variants: []Variant{
+			{"with backlinks + outbound", graphcards.RelatedCard(graphcards.RelatedView{
+				FocusID: "n1", FocusTitle: "Greenhouse plan",
+				Rows: []graphcards.RelatedRow{
+					{ID: "n2", Title: "Garden journal", Type: "note", Rel: "backlink"},
+					{ID: "n3", Title: "Seed list", Type: "note", Rel: "links to"},
+					{ID: "n4", Title: "Dr. Mara", Type: "person", Rel: "similar"},
+				},
+			})},
+			{"empty", graphcards.RelatedCard(graphcards.RelatedView{FocusID: "n1", FocusTitle: "Lonely node"})},
+		},
+		Props: []Prop{
+			{"FocusID", "string", "—", "The focus node id; drives the row links and the graph cross-link."},
+			{"FocusTitle", "string", "—", "Shown in the head as the kcard-meta line."},
+			{"Rows", "[]RelatedRow", "nil", "Neighbors; each has ID, Title, Type (badge) and Rel (backlink / links to / similar)."},
+		},
+		Dos: []string{
+			"status=active only — proposals never appear (the consent spine).",
+			"Link every row to /ui/show/note?id=… — the generic node card serves any node type by id.",
+			"Label each row by direction (backlink / links to / similar); show the node type only as a badge.",
+		},
+		Donts: []string{
+			"Interpolate the neighbor's node type into the URL — the route segment is the card type (note), not the node type.",
+			"Surface a proposed or rejected node — they are out of consent.",
+		},
+	}
+}
+
+// graphStory documents the 1-hop SVG graph card: the focus node at center and
+// its direct neighbors on a single ring, server-rendered (no JS physics).
+func graphStory() Story {
+	return Story{
+		ID: "graphcard", Group: "Cards", Title: "GraphCard",
+		Blurb: "A static 1-hop snapshot of a node's neighborhood: the focus node (gold) at center, its direct neighbors (teal) on one ring, edges drawn center-to-neighbor. Server-rendered SVG, Datastar-only — no physics, no force-direction, no zoom (deferred). status=active only. Node titles render only inside escaped <text>/<title>, never in a coordinate or attribute. Neighbor dots morph the panel to that node's show card; an empty neighborhood still draws the focus dot + a \"No links yet\" caption.",
+		Variants: []Variant{
+			{"3 neighbors", graphcards.GraphCard(graphcards.GraphView{
+				FocusID: "n1", FocusTitle: "Greenhouse plan",
+				Neighbors: []graphcards.GraphNode{
+					{ID: "n2", Title: "Garden journal", Type: "note"},
+					{ID: "n3", Title: "Seed list", Type: "note"},
+					{ID: "n4", Title: "Spring tasks", Type: "note"},
+				},
+			})},
+			{"empty neighborhood", graphcards.GraphCard(graphcards.GraphView{FocusID: "n1", FocusTitle: "Lonely node"})},
+		},
+		Props: []Prop{
+			{"FocusID", "string", "—", "The focus node id; drives the related cross-link and the SVG aria-label."},
+			{"FocusTitle", "string", "—", "Center-node label (truncated in the SVG, full in the <title> hover)."},
+			{"Neighbors", "[]GraphNode", "nil", "1-hop neighbors; capped at 24 in the renderer. Each is a teal dot + escaped label."},
+		},
+		Dos: []string{
+			"Keep it a static 1-hop snapshot — Neighborhood gives the active, de-duped set.",
+			"Render titles only through g.Text in <text>/<title>; coordinates are computed floats.",
+			"Draw the focus node last so it sits on top.",
+		},
+		Donts: []string{
+			"Add physics or interactivity — the graph is a read-only 1-hop snapshot (deferred).",
+			"Interpolate a node title into an SVG coordinate, path, or attribute.",
 		},
 	}
 }

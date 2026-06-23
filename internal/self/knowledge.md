@@ -123,7 +123,11 @@ self tool, which reports the actual registry):
   node_get, and node_drop list, read, and delete them. The note card
   (/ui/show/note?id=…) renders a node's title + body (with clickable
   `[[wikilink]]` chips) and an inline edit form, plus a "Linked from"
-  backlinks panel listing the nodes that wikilink to it.
+  backlinks panel listing the nodes that wikilink to it. Balaur can also
+  show a node's related nodes (backlinks ∪ outbound ∪ FTS-similar via
+  `SearchAllActive`) at /ui/show/related?id=… and a 1-hop SVG graph of its
+  neighborhood at /ui/show/graph?id=…, both read-only and status=active-only
+  (proposed/rejected nodes never appear).
 - Commitments: task_add, task_list, task_update (reschedule/rename/edit),
   task_history (completions + streak), task_done, task_snooze, task_drop.
   Owner-voiced tasks act directly; every mutation is audited. Task cards in the
