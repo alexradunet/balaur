@@ -1,16 +1,16 @@
 # Graph Report - balaur  (2026-06-23)
 
 ## Corpus Check
-- 525 files · ~602,377 words
+- 525 files · ~607,287 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6166 nodes · 10315 edges · 343 communities (329 shown, 14 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2189 edges (avg confidence: 0.8)
+- 6184 nodes · 10392 edges · 349 communities (335 shown, 14 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2214 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9fefeea0`
+- Built from commit: `e9165248`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -309,9 +309,11 @@
 - [[_COMMUNITY_Community 291|Community 291]]
 - [[_COMMUNITY_Community 292|Community 292]]
 - [[_COMMUNITY_Community 293|Community 293]]
+- [[_COMMUNITY_Community 294|Community 294]]
 - [[_COMMUNITY_Community 295|Community 295]]
 - [[_COMMUNITY_Community 296|Community 296]]
 - [[_COMMUNITY_Community 297|Community 297]]
+- [[_COMMUNITY_Community 298|Community 298]]
 - [[_COMMUNITY_Community 299|Community 299]]
 - [[_COMMUNITY_Community 300|Community 300]]
 - [[_COMMUNITY_Community 301|Community 301]]
@@ -323,11 +325,14 @@
 - [[_COMMUNITY_Community 307|Community 307]]
 - [[_COMMUNITY_Community 308|Community 308]]
 - [[_COMMUNITY_Community 309|Community 309]]
+- [[_COMMUNITY_Community 310|Community 310]]
+- [[_COMMUNITY_Community 311|Community 311]]
 - [[_COMMUNITY_Community 312|Community 312]]
 - [[_COMMUNITY_Community 313|Community 313]]
 - [[_COMMUNITY_Community 314|Community 314]]
 - [[_COMMUNITY_Community 315|Community 315]]
 - [[_COMMUNITY_Community 316|Community 316]]
+- [[_COMMUNITY_Community 317|Community 317]]
 - [[_COMMUNITY_Community 318|Community 318]]
 - [[_COMMUNITY_Community 319|Community 319]]
 - [[_COMMUNITY_Community 320|Community 320]]
@@ -351,17 +356,18 @@
 - [[_COMMUNITY_Community 338|Community 338]]
 - [[_COMMUNITY_Community 339|Community 339]]
 - [[_COMMUNITY_Community 345|Community 345]]
+- [[_COMMUNITY_Community 348|Community 348]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Append()` - 214 edges
+1. `Append()` - 218 edges
 2. `Text()` - 187 edges
-3. `NewApp()` - 171 edges
+3. `NewApp()` - 175 edges
 4. `newWebApp()` - 62 edges
 5. `Button()` - 48 edges
 6. `Audit()` - 41 edges
 7. `Parse()` - 40 edges
-8. `renderNodeHTML()` - 32 edges
-9. `ToolSpecOf()` - 31 edges
+8. `ToolSpecOf()` - 32 edges
+9. `renderNodeHTML()` - 32 edges
 10. `Master()` - 29 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -371,83 +377,83 @@
   main.go → internal/conversation/conversation.go
 - `TestTours()` --calls--> `stat()`  [INFERRED]
   tours_test.go → internal/feature/storybook/overview.go
+- `registerKronkEngine()` --calls--> `NewEngine()`  [INFERRED]
+  main.go → internal/kronk/engine.go
 - `registerKronkEngine()` --calls--> `LibRoot()`  [INFERRED]
   main.go → internal/kronk/presets.go
-- `resolveProcessor()` --calls--> `RuntimeInstalledFor()`  [INFERRED]
-  main.go → internal/kronk/runtime.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (343 total, 14 thin omitted)
+## Communities (349 total, 14 thin omitted)
 
 ### Community 0 - "Knowledge CLI & Domain"
-Cohesion: 0.05
-Nodes (72): CalView, App, Node, T, App, Node, Record, T (+64 more)
+Cohesion: 0.09
+Nodes (51): HeadsCard(), render(), syntheticView(), TestHeadsCard_ActiveRow(), TestHeadsCard_Avatar(), TestHeadsCard_AvatarRadios(), TestHeadsCard_CreateButton(), TestHeadsCard_DeleteForm() (+43 more)
 
 ### Community 1 - "LLM Settings & Model Resolution"
 Cohesion: 0.07
 Nodes (68): Node, T, App, Node, Record, T, Node, T (+60 more)
 
 ### Community 2 - "Life & Heads Cards"
-Cohesion: 0.08
-Nodes (64): auditCmd(), day(), emit(), ExitCode(), failJSON(), jsonTime(), Register(), run() (+56 more)
+Cohesion: 0.07
+Nodes (70): auditCmd(), day(), emit(), ExitCode(), failJSON(), jsonTime(), Register(), run() (+62 more)
 
 ### Community 3 - "Balaur Extensions (goja)"
-Cohesion: 0.09
-Nodes (59): Callable, extApproveCmd(), extCmd(), extDisableCmd(), extJSON(), extListCmd(), extShowCmd(), Active (+51 more)
+Cohesion: 0.08
+Nodes (66): Callable, extApproveCmd(), extCmd(), extDisableCmd(), extJSON(), extListCmd(), extShowCmd(), Active (+58 more)
 
 ### Community 4 - "Knowledge Cards"
 Cohesion: 0.07
 Nodes (57): T, App, Node, Time, T, App, Node, Node (+49 more)
 
 ### Community 5 - "Life Domain & Cards"
-Cohesion: 0.06
-Nodes (62): Head, Active(), Builtins(), Create(), Delete(), Find(), headFromRecord(), List() (+54 more)
+Cohesion: 0.07
+Nodes (52): Head, Active(), Builtins(), Create(), Delete(), Find(), headFromRecord(), List() (+44 more)
 
 ### Community 6 - "Chat UI Organisms"
-Cohesion: 0.09
-Nodes (55): recapCmd(), recapEnsureCmd(), recapShowCmd(), App, Command, App, Record, Time (+47 more)
+Cohesion: 0.10
+Nodes (49): App, Record, Time, App, Client, Context, Message, Period (+41 more)
 
 ### Community 7 - "Storybook Gateway"
 Cohesion: 0.09
-Nodes (37): DayView, App, Node, Time, T, App, Node, T (+29 more)
+Nodes (38): DayView, App, Node, Time, T, App, Node, T (+30 more)
 
 ### Community 8 - "Storybook Components"
 Cohesion: 0.07
 Nodes (32): Story, Node, T, Node, T, Node, T, Node (+24 more)
 
 ### Community 9 - "Recap Generation"
-Cohesion: 0.08
-Nodes (27): Feature, Add(), Funcs(), RegisterAll(), TestRegistryRegistersAndUnregistersAll(), UnregisterAll(), funcAdapter, init() (+19 more)
+Cohesion: 0.06
+Nodes (33): Feature, Add(), Funcs(), RegisterAll(), TestRegistryRegistersAndUnregistersAll(), UnregisterAll(), funcAdapter, init() (+25 more)
 
 ### Community 10 - "Journal Cards"
-Cohesion: 0.14
-Nodes (36): chatCmd(), execute(), executeEnvelope(), executeList(), TestChatReportsToolsAndVerdict(), TestDoctorHealthyBox(), TestDoctorMissingCollectionFails(), TestDoctorModelReadyNonFatal() (+28 more)
+Cohesion: 0.16
+Nodes (30): chatCmd(), execute(), executeEnvelope(), executeList(), TestChatReportsToolsAndVerdict(), TestDoctorHealthyBox(), TestDoctorModelReadyNonFatal(), TestEnvelopeFamilies() (+22 more)
 
 ### Community 11 - "Page Shell & Heads"
 Cohesion: 0.05
 Nodes (33): Hard Rules, Improve, Invocation variants, Phase 1 — Recon (always), Phase 2 — Audit (parallel), Phase 3 — Vet, prioritize, confirm, Phase 4 — Write the plans, Tone of the output (+25 more)
 
 ### Community 12 - "Kronk Engine & Runtime"
-Cohesion: 0.15
-Nodes (35): App, Node, Record, T, SkillRecord, SkillRow, buildSkillsManage(), buildSkillsSummary() (+27 more)
+Cohesion: 0.08
+Nodes (56): App, Node, Record, App, Node, Record, T, Kind (+48 more)
 
 ### Community 13 - "Self-Knowledge Doc"
 Cohesion: 0.07
-Nodes (28): T, T, T, T, T, T, T, T (+20 more)
+Nodes (35): T, T, T, T, T, T, T, T (+27 more)
 
 ### Community 14 - "Chat Streaming (SSE)"
-Cohesion: 0.37
-Nodes (14): Index, App, T, openTestIndex(), seedActiveMemory(), seedMemoryNode(), seedProposedMemory(), TestDeleteRemovesRecord() (+6 more)
+Cohesion: 0.31
+Nodes (19): Index, App, T, openTestIndex(), seedActiveMemory(), seedActiveNode(), seedMemoryNode(), seedNode() (+11 more)
 
 ### Community 15 - "Database Migrations"
 Cohesion: 0.10
 Nodes (30): D, CancelFunc, ChatResponse, Chunk, Context, Engine, Engine, Message (+22 more)
 
 ### Community 16 - "Knowledge Cards (detail)"
-Cohesion: 0.12
-Nodes (19): RequestEvent, handlers, Card, Node, RequestEvent, handlers, T, SetOwnerSetting() (+11 more)
+Cohesion: 0.14
+Nodes (13): RequestEvent, handlers, Card, Node, RequestEvent, handlers, RequestEvent, handlers (+5 more)
 
 ### Community 17 - "UI Registry & Foundations"
 Cohesion: 0.06
@@ -471,15 +477,15 @@ Nodes (32): Commands you will need, Conventions to match (Balaur law — the exe
 
 ### Community 22 - "Tasks Domain"
 Cohesion: 0.06
-Nodes (30): Commands you will need, Conventions to honor (inlined — the executor has not read these docs), Current state, Done criteria, Excerpt: `SearchActive`'s memory-only id resolution + LIKE fallback (`internal/knowledge/knowledge.go:229-285`, at `72fd762`), Excerpt: the FTS table + Rebuild source, today (`internal/search/index.go:34-90`, at `72fd762`), Excerpt: the `recall` agent tool, today (`internal/tools/knowledge.go:108-138`, at `72fd762`), Excerpt: the record hooks in `main.go` (`main.go:232-256`, at `72fd762`) (+22 more)
+Nodes (32): Commands you will need, Conventions to honor (inlined — the executor has not read these docs), Current state, Design conflict resolutions (advisor — AUTHORITATIVE; override the in-body conflict blocks), Done criteria, Excerpt: `registerSearchIndex` registration + doc comment, LIVE at `0c85d0e` (`main.go:57-58`, `main.go:199-204`), Excerpt: `SearchActive`, LIVE at `0c85d0e` (`internal/knowledge/knowledge.go:302-360`), Excerpt: the FTS table + Rebuild source, LIVE at `0c85d0e` (`internal/search/index.go:36-92`) (+24 more)
 
 ### Community 23 - "Web Panel"
-Cohesion: 0.33
-Nodes (14): Buckets, App, Client, Record, Time, BriefedToday(), Briefing(), composeBriefing() (+6 more)
+Cohesion: 0.18
+Nodes (28): Buckets, App, Client, Record, Time, App, Record, T (+20 more)
 
 ### Community 24 - "Self-Capability Inventory"
-Cohesion: 0.16
-Nodes (25): historyCmd(), Append(), AppendOrigin(), AppendOriginRec(), History(), Master(), MessagesBetween(), OldestMessageTime() (+17 more)
+Cohesion: 0.20
+Nodes (19): AppendOrigin(), AppendOriginRec(), History(), Master(), MessagesBetween(), OldestMessageTime(), RecentTurns(), TestAppendAndRecentTurnsRoundtrip() (+11 more)
 
 ### Community 25 - "Community 25"
 Cohesion: 0.20
@@ -487,7 +493,7 @@ Nodes (27): App, Record, T, ActiveLLMConfig(), configForModel(), configFrom(), D
 
 ### Community 26 - "Community 26"
 Cohesion: 0.17
-Nodes (29): App, Record, Time, T, Audit(), Buckets, CreateOpts, DoneResult (+21 more)
+Nodes (28): App, Record, Time, T, Buckets, CreateOpts, DoneResult, addEntry() (+20 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.07
@@ -514,8 +520,8 @@ Cohesion: 0.07
 Nodes (29): Commands you will need, Conventions, Current state, Done criteria, Git workflow, Maintenance notes, Plan 145: Cloud-preset picker UI — pick a provider, add only a key, Scope (+21 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.15
-Nodes (24): Story, Node, T, Node, T, Text(), TestPage(), TestPageHTMLClass() (+16 more)
+Cohesion: 0.13
+Nodes (21): Story, T, T, Node, T, Text(), TestPage(), TestPageHTMLClass() (+13 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.07
@@ -526,8 +532,8 @@ Cohesion: 0.07
 Nodes (28): Commands you will need, Current state, Discrepancy vs. the original finding (read this), Done criteria, File 1: `internal/web/panel.go` — the keeper, `renderNodeHTML`, File 2: `internal/web/chatstream.go` — `renderNode` method to delegate, File 3: `internal/web/profile.go` — 3 inline render + outer-patch tails, File 4: `internal/web/day.go` — `renderDayJournal`, lines 52-61 (+20 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.21
-Nodes (25): T, T, Tool, ParseProposal(), MarkRefresh(), ParseRefresh(), TestParseRefreshDropsUnknownTypes(), TestParseRefreshPlainText() (+17 more)
+Cohesion: 0.33
+Nodes (19): T, Tool, ParseProposal(), TaskTools(), findTool(), TestParseDueHonorsLocation(), TestRecurringTaskDoneMarksRefresh(), TestTaskAddDateOnlyDefaultsMorning() (+11 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.07
@@ -554,12 +560,12 @@ Cohesion: 0.07
 Nodes (27): Commands you will need, Current state, Done criteria, Git workflow, LOCKED schema this plan must implement (verbatim from the design), Maintenance notes, Plan 160: Greenfield knowledge spine — `nodes` + `edges`, memories/skills/journal folded into typed nodes, Repo conventions to honor (the executor has not read AGENTS.md) (+19 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.12
-Nodes (20): CloudConsentView, headChoice, App, CancelFunc, Node, RequestEvent, ServerSentEventGenerator, handlers (+12 more)
+Cohesion: 0.18
+Nodes (11): CloudConsentView, RequestEvent, ServerSentEventGenerator, handlers, ServerSentEventGenerator, ModelsDir(), EstimateVRAM(), BuildModelsPanelView() (+3 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.18
-Nodes (26): Record, T, TB, TestApp, newWebApp(), seedHeadRec(), TestChatCardShow(), TestChatChoices() (+18 more)
+Cohesion: 0.15
+Nodes (30): App, TB, Record, T, TB, TestApp, activateLocalModel(), seedScriptedModel() (+22 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.07
@@ -590,8 +596,8 @@ Cohesion: 0.07
 Nodes (26): Cleanup cycle (2026-06-21, owner-requested deep clean): plans 118–122, Dependency notes, Direction findings — ALL RESOLVED (2026-06-12, sixth cycle), Eighteenth cycle (2026-06-18, owner-requested refinement): plans 101–103, Eighth cycle — Card-first: kill the pages (plans 050–057), Eleventh cycle (2026-06-17, UX/UI audit at `12a2ff5`): plans 075–085, Execution order & status, Execution record (2026-06-12, second cycle) (+18 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.19
-Nodes (16): Context, Logger, T, resolveLibDir(), InstallDirFor(), InstallRuntime(), RuntimeVersion(), sha256File() (+8 more)
+Cohesion: 0.13
+Nodes (20): Context, Logger, T, resolveLibDir(), InstallDirFor(), InstallRuntime(), RuntimeVersion(), sha256File() (+12 more)
 
 ### Community 53 - "Community 53"
 Cohesion: 0.20
@@ -630,8 +636,8 @@ Cohesion: 0.08
 Nodes (25): Commands you will need, Current state, Done criteria, Download meter markup (consumes the missing classes), Empty state (weak wayfinding), Git workflow, Maintenance notes, Plan 146: Models page UX/UI polish — style the unstyled, sharpen affordances (+17 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.20
-Nodes (9): Choice, handlers, Builder, Card, Event, Node, ServerSentEventGenerator, chatSignals (+1 more)
+Cohesion: 0.07
+Nodes (30): ChoiceItem, Choices(), TestChoices(), TestChoicesNoHint(), ChoicesProps, Choice, ClientSource, handlers (+22 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.13
@@ -674,12 +680,12 @@ Cohesion: 0.08
 Nodes (24): Commands you will need, Current state (live at `2b03f17`), Done criteria, Existing OpenAI tests — `internal/llm/openai_test.go`, Git workflow, Maintenance notes, OpenAI client request body — `internal/llm/openai.go` (~line 131), Plan 159: Make tool-calling reliable and observable (sampling + OpenAI wire correctness + debug trace) (+16 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.14
-Nodes (21): CloudFormView, CloudPresetView, Node, OfficialCTA, Node, T, OfficialCTA, officialCTACard() (+13 more)
+Cohesion: 0.23
+Nodes (15): CloudFormView, CloudPresetView, Node, OfficialCTA, OfficialCTA, officialCTACard(), Panel(), processorControl() (+7 more)
 
 ### Community 74 - "Community 74"
-Cohesion: 0.17
-Nodes (18): App, CloudPresetView, HeadsView, RequestEvent, handlers, EstimateVRAM(), PanelView, ProfileAvatarOption (+10 more)
+Cohesion: 0.20
+Nodes (20): App, CloudPresetView, HeadsView, Node, RequestEvent, handlers, PanelView, ProfileAvatarOption (+12 more)
 
 ### Community 75 - "Community 75"
 Cohesion: 0.21
@@ -714,8 +720,8 @@ Cohesion: 0.08
 Nodes (23): Commands you will need, Conventions that apply here (AGENTS.md / CLAUDE.md), Current state, Done criteria, Downstream helper-function signatures the bodies call (do not change them), Files, Git workflow, Maintenance notes (+15 more)
 
 ### Community 83 - "Community 83"
-Cohesion: 0.16
-Nodes (19): Node, Node, T, Node, T, actionForm(), cancelForm(), deleteForm() (+11 more)
+Cohesion: 0.18
+Nodes (19): Node, Node, Node, T, actionForm(), cancelForm(), deleteForm(), modelAction() (+11 more)
 
 ### Community 84 - "Community 84"
 Cohesion: 0.22
@@ -734,16 +740,16 @@ Cohesion: 0.09
 Nodes (22): Commands you will need, Critical legacy-alias detail (do NOT lose these), Current state, Done criteria, Exact current code (HEAD `ab2c0a9`), Git workflow, Maintenance notes, Plan 148: Make the avatar roster a single source of truth (+14 more)
 
 ### Community 88 - "Community 88"
-Cohesion: 0.18
-Nodes (11): CardSize, Card, Node, RequestEvent, handlers, Writer, Spec, Values (+3 more)
+Cohesion: 0.19
+Nodes (9): CardSize, Card, Node, RequestEvent, handlers, Writer, Values, cardErrorStrip() (+1 more)
 
 ### Community 89 - "Community 89"
 Cohesion: 0.25
-Nodes (20): App, Record, T, activeByIDs(), AddEdge(), Backlinks(), Create(), Drop() (+12 more)
+Nodes (19): App, Record, T, activeByIDs(), AddEdge(), Backlinks(), Create(), Drop() (+11 more)
 
 ### Community 90 - "Community 90"
-Cohesion: 0.24
-Nodes (20): Time, Weekday, Location, T, calendarRule(), Describe(), Matches(), monthlyOn() (+12 more)
+Cohesion: 0.25
+Nodes (19): Time, Weekday, Location, T, calendarRule(), Matches(), monthlyOn(), Next() (+11 more)
 
 ### Community 91 - "Community 91"
 Cohesion: 0.18
@@ -786,12 +792,12 @@ Cohesion: 0.22
 Nodes (20): All(), TestAll(), TestGetEachType(), TestGetUnknown(), TestLayoutJSONRoundTrip(), TestNoWebImports(), TestSpecHasDefaultH(), TestValidateBadEnum() (+12 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.15
-Nodes (21): Node, Story, Node, T, CloudConsent(), CloudForm(), CloudPresetPicker(), cloudWarning() (+13 more)
+Cohesion: 0.25
+Nodes (14): Node, Story, CloudConsent(), CloudForm(), CloudPresetPicker(), cloudWarning(), consentCheck(), CloudConsentView (+6 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.21
-Nodes (24): App, Location, T, App, Location, Record, Time, Tool (+16 more)
+Cohesion: 0.28
+Nodes (20): App, Location, App, Location, Record, Time, Tool, OwnerLocation() (+12 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.21
@@ -818,12 +824,12 @@ Cohesion: 0.10
 Nodes (19): 1. Brand essence, 2. Character and voice, 3. Honesty ledger, 4. Visual system — Hearthwood (Basm v2), 5. Quick checklist, Avatar rules, Balaur design system — Basm, Balaur head library — 16 personalities (+11 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.36
-Nodes (19): App, Record, Kind, ActiveSkills(), clampImportance(), FilterActive(), Hydrate(), hydrateAll() (+11 more)
+Cohesion: 0.34
+Nodes (20): App, Record, Kind, ActiveSkills(), clampImportance(), FilterActive(), Hydrate(), hydrateAll() (+12 more)
 
 ### Community 110 - "Community 110"
-Cohesion: 0.21
-Nodes (20): App, Tool, T, RequestEvent, handlers, cardShowTool(), MarkUICard(), ParseUICard() (+12 more)
+Cohesion: 0.25
+Nodes (18): App, Tool, T, cardShowTool(), MarkUICard(), ParseUICard(), TestCardShowBadParamsReturnsPlainText(), TestCardShowHappyPath() (+10 more)
 
 ### Community 111 - "Community 111"
 Cohesion: 0.10
@@ -862,8 +868,8 @@ Cohesion: 0.10
 Nodes (19): 158 — Render Markdown in chat message bubbles, Dependencies to add, Done criteria (machine-checkable), Escape hatches (STOP and report instead of improvising), Explicitly OUT of scope — do NOT touch, Implementation steps, In scope (the only files you may touch), Maintenance note (for the reviewer) (+11 more)
 
 ### Community 120 - "Community 120"
-Cohesion: 0.38
-Nodes (10): T, New(), TestApprovedExtensionJoinsEveryGateway(), TestMaxStepsEnvRaisesTheCap(), TestNowLineGroundsTheMoment(), TestRunNotesUnbackedCaptureClaim(), TestRunPersistsHonestCaptureTurn(), TestRunPlainReplyNoCaptureClaim() (+2 more)
+Cohesion: 0.30
+Nodes (13): App, T, T, New(), NewApp(), TestApprovedExtensionJoinsEveryGateway(), TestMaxStepsEnvRaisesTheCap(), TestNowLineGroundsTheMoment() (+5 more)
 
 ### Community 121 - "Community 121"
 Cohesion: 0.11
@@ -914,20 +920,20 @@ Cohesion: 0.11
 Nodes (18): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 155: Remove the redundant `skills.enabled` boolean (derive enablement from `status`), Scope, Status (+10 more)
 
 ### Community 133 - "Community 133"
-Cohesion: 0.28
-Nodes (17): AvatarEntry, GroupChoice, HeadRow, avatarRadios(), BuildHeads(), deleteForm(), groupCheckboxes(), groupPips() (+9 more)
+Cohesion: 0.24
+Nodes (19): AvatarEntry, GroupChoice, HeadRow, avatarRadios(), BuildHeads(), deleteForm(), groupCheckboxes(), groupPips() (+11 more)
 
 ### Community 134 - "Community 134"
 Cohesion: 0.25
 Nodes (17): T, decodeJSON(), sseServer(), TestChatStreamAssemblesFragmentedToolCalls(), TestChatStreamContentAndReasoning(), TestChatStreamContextCancel(), TestChatStreamErrorBodyWrapped(), TestChatStreamOmitsEmptyTools() (+9 more)
 
 ### Community 135 - "Community 135"
-Cohesion: 0.20
-Nodes (19): App, Client, Engine, T, LLMConfig, ClientSource, ModelChoice, ActiveModelChoice() (+11 more)
+Cohesion: 0.19
+Nodes (20): App, Client, Engine, T, NewEngine(), LLMConfig, ClientSource, ModelChoice (+12 more)
 
 ### Community 136 - "Community 136"
-Cohesion: 0.23
-Nodes (11): CardTurn(), CardTurnProps, Node, homeData, Node, bandView, messageView, bandHeading() (+3 more)
+Cohesion: 0.22
+Nodes (12): homeData, Node, Period, Record, RequestEvent, handlers, bandView, messageView (+4 more)
 
 ### Community 137 - "Community 137"
 Cohesion: 0.11
@@ -982,12 +988,12 @@ Cohesion: 0.12
 Nodes (16): 1. Think before coding, 2. Simplicity first, 3. Surgical changes, 4. Goal-driven execution, Architecture patterns, Balaur project instructions, Behavioral guidelines to reduce common LLM coding mistakes, Coding style (+8 more)
 
 ### Community 150 - "Community 150"
-Cohesion: 0.15
-Nodes (16): messageJSON(), verifyCmd(), Record, App, Command, Message, T, CaptureSucceeded() (+8 more)
+Cohesion: 0.18
+Nodes (14): verifyCmd(), App, Command, Message, T, CaptureSucceeded(), ClaimsCapture(), IsCaptureTool() (+6 more)
 
 ### Community 151 - "Community 151"
-Cohesion: 0.29
-Nodes (16): App, T, ProposeMemory(), countAudit(), TestBuildContext(), TestFilterActive(), TestLifecycleRejectsInvalidTransitions(), TestProposeAndApproveMemory() (+8 more)
+Cohesion: 0.26
+Nodes (19): App, T, ProposeMemory(), countAudit(), TestBuildContext(), TestFilterActive(), TestLifecycleRejectsInvalidTransitions(), TestProposeAndApproveMemory() (+11 more)
 
 ### Community 152 - "Community 152"
 Cohesion: 0.20
@@ -1002,12 +1008,12 @@ Cohesion: 0.16
 Nodes (15): App, Client, Context, Event, Message, Record, Time, T (+7 more)
 
 ### Community 155 - "Community 155"
-Cohesion: 0.25
-Nodes (15): homeData, Node, T, chatBarNode(), commandPaletteNode(), composerNode(), headSwitcherNode(), modelSwitcherNode() (+7 more)
+Cohesion: 0.39
+Nodes (8): T, TestChatBarNode(), TestHeadSwitcherNode(), TestHomeDockSelectorIDs(), TestHomeFullChat(), TestHomePanelChrome(), TestHomePanelRestore(), TestModelSwitcherNode()
 
 ### Community 156 - "Community 156"
-Cohesion: 0.20
-Nodes (13): T, T, T, renderNodeHTML(), TestMessageViewsClusterRendersNonClickableChip(), TestMessageViewsStripsRefreshMarker(), TestMessageViewsUicardRendersChip(), TestRecapBandsNodeEmpty() (+5 more)
+Cohesion: 0.60
+Nodes (4): T, TestMessageViewsClusterRendersNonClickableChip(), TestMessageViewsStripsRefreshMarker(), TestMessageViewsUicardRendersChip()
 
 ### Community 157 - "Community 157"
 Cohesion: 0.27
@@ -1134,16 +1140,16 @@ Cohesion: 0.23
 Nodes (9): Event, Loop, Tool, Client, Context, Logger, Message, ToolCall (+1 more)
 
 ### Community 188 - "Community 188"
-Cohesion: 0.33
-Nodes (15): App, Node, Record, BuildActiveMemoryNodes(), BuildActiveSkillNodes(), buildMemoryFocus(), buildSkillsFocus(), KnowledgeFocus() (+7 more)
+Cohesion: 0.20
+Nodes (23): CalView, App, Node, Time, T, CalCell, buildCalendar(), calBodyRows() (+15 more)
 
 ### Community 189 - "Community 189"
-Cohesion: 0.36
-Nodes (20): HeadsCard(), render(), syntheticView(), TestHeadsCard_ActiveRow(), TestHeadsCard_Avatar(), TestHeadsCard_AvatarRadios(), TestHeadsCard_CreateButton(), TestHeadsCard_DeleteForm() (+12 more)
+Cohesion: 0.23
+Nodes (13): Node, Node, T, colorsCanvas(), materialsCanvas(), matTile(), section(), typeRole() (+5 more)
 
 ### Community 190 - "Community 190"
-Cohesion: 0.37
-Nodes (13): Node, Record, TaskView, Time, QuestsCard(), questsManageBody(), QuestsManageCard(), questsSummaryBody() (+5 more)
+Cohesion: 0.22
+Nodes (20): App, Node, Record, TaskView, Time, T, QuestsCard(), questsManageBody() (+12 more)
 
 ### Community 191 - "Community 191"
 Cohesion: 0.22
@@ -1154,8 +1160,8 @@ Cohesion: 0.23
 Nodes (12): Period, RequestEvent, Time, handlers, ServeEvent, demoSummaries(), demoTurns(), devSeedEnabled() (+4 more)
 
 ### Community 193 - "Community 193"
-Cohesion: 0.33
-Nodes (7): Kind, Node, Record, RequestEvent, handlers, kindFromPath(), knowledgeRecordNode()
+Cohesion: 0.26
+Nodes (13): Story, dayfocusStory(), guardiancardStory(), knowledgecardStory(), knowledgefocusStory(), lifelogfocusStory(), nudgebannerStory(), questsfocusStory() (+5 more)
 
 ### Community 194 - "Community 194"
 Cohesion: 0.12
@@ -1214,20 +1220,20 @@ Cohesion: 0.12
 Nodes (15): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 144: Add a curated cloud-provider preset catalog (Go data + lookup), Scope, Status (+7 more)
 
 ### Community 208 - "Community 208"
-Cohesion: 0.22
-Nodes (26): ToolSpecOf(), App, Tool, T, App, Tool, KnowledgeTools(), MarkProposal() (+18 more)
+Cohesion: 0.46
+Nodes (16): ToolSpecOf(), App, Tool, KnowledgeTools(), MarkProposal(), nodeDropTool(), nodeGetTool(), nodeListTool() (+8 more)
 
 ### Community 209 - "Community 209"
-Cohesion: 0.10
-Nodes (36): renderMarkdown(), RenderMarkdownLinked(), renderMarkdownString(), resolveTo(), TestRenderMarkdownLinkedAlias(), TestRenderMarkdownLinkedConvertErrorEscapes(), TestRenderMarkdownLinkedNoInjection(), TestRenderMarkdownLinkedPlainUnchanged() (+28 more)
+Cohesion: 0.28
+Nodes (13): renderMarkdown(), RenderMarkdownLinked(), renderMarkdownString(), resolveTo(), TestRenderMarkdownLinkedAlias(), TestRenderMarkdownLinkedConvertErrorEscapes(), TestRenderMarkdownLinkedNoInjection(), TestRenderMarkdownLinkedPlainUnchanged() (+5 more)
 
 ### Community 210 - "Community 210"
 Cohesion: 0.27
-Nodes (14): App, App, Node, Record, Time, Register(), buildToday(), doneForm() (+6 more)
+Nodes (13): App, App, Node, Record, Time, Register(), buildToday(), rowOf() (+5 more)
 
 ### Community 211 - "Community 211"
-Cohesion: 0.64
-Nodes (8): Node, taskActions(), TaskCard(), taskDue(), taskEditForm(), taskNotes(), transitionPost(), TaskView
+Cohesion: 0.26
+Nodes (13): Node, Node, T, taskActions(), TaskCard(), taskDue(), taskEditForm(), taskNotes() (+5 more)
 
 ### Community 212 - "Community 212"
 Cohesion: 0.32
@@ -1266,8 +1272,8 @@ Cohesion: 0.13
 Nodes (14): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 139: Make the recurring `tasks.Done` completion+advance atomic, Scope, Status (+6 more)
 
 ### Community 221 - "Community 221"
-Cohesion: 0.30
-Nodes (14): App, FromStore(), NewEngine(), App, Client, main(), registerBriefing(), registerGraphLinks() (+6 more)
+Cohesion: 0.34
+Nodes (13): App, FromStore(), App, Client, main(), registerBriefing(), registerGraphLinks(), registerKronkEngine() (+5 more)
 
 ### Community 222 - "Community 222"
 Cohesion: 0.21
@@ -1290,8 +1296,8 @@ Cohesion: 0.28
 Nodes (13): App, Record, T, ParseLinks(), resolveOrCreateStub(), SyncLinks(), TestBacklinksAndOutbound(), TestParseLinks() (+5 more)
 
 ### Community 227 - "Community 227"
-Cohesion: 0.15
-Nodes (20): App, T, RequestEvent, handlers, T, AvatarEntry, avatarMap(), BalaurAvatarURL() (+12 more)
+Cohesion: 0.31
+Nodes (11): T, AvatarEntry, avatarMap(), BalaurHeads(), SoulAvatars(), TestAvatarRosters(), TestLegacySoulAvatarAliases(), TestSetOwnerSettingConcurrent() (+3 more)
 
 ### Community 228 - "Community 228"
 Cohesion: 0.33
@@ -1314,8 +1320,8 @@ Cohesion: 0.30
 Nodes (11): Story, chatartifactchipStory(), chatcardturnStory(), chatchoicesStory(), chatclusterStory(), chatdockStory(), chatmessageStory(), chatpanelStory() (+3 more)
 
 ### Community 233 - "Community 233"
-Cohesion: 0.13
-Nodes (16): Story, Node, T, Node, T, selectStory(), textfieldStory(), toggleStory() (+8 more)
+Cohesion: 0.22
+Nodes (11): Story, Node, T, selectStory(), textfieldStory(), toggleStory(), FieldProps, TestTextFieldBasic() (+3 more)
 
 ### Community 234 - "Community 234"
 Cohesion: 0.23
@@ -1330,12 +1336,12 @@ Cohesion: 0.23
 Nodes (9): Chunk, Context, Message, Mutex, ToolCall, ToolSpec, ToolCall(), Reply (+1 more)
 
 ### Community 237 - "Community 237"
-Cohesion: 0.34
-Nodes (14): App, Record, T, Time, at(), briefingMessages(), TestBriefedTodayZoneSensitivity(), TestBriefingContentAndStreak() (+6 more)
+Cohesion: 0.17
+Nodes (12): headChoice, App, CancelFunc, Node, messageView, ModelChoice, Progress, headChoice (+4 more)
 
 ### Community 238 - "Community 238"
-Cohesion: 0.16
-Nodes (16): collect(), TestLoopLogsToolCalls(), TestRunPlainAnswer(), TestRunStepLimit(), TestRunToolRound(), TestRunUnknownToolFeedsErrorBack(), fakeClient, fakeTurn (+8 more)
+Cohesion: 0.33
+Nodes (10): collect(), TestLoopLogsToolCalls(), TestRunPlainAnswer(), TestRunStepLimit(), TestRunToolRound(), TestRunUnknownToolFeedsErrorBack(), fakeTurn, Event (+2 more)
 
 ### Community 239 - "Community 239"
 Cohesion: 0.20
@@ -1346,8 +1352,8 @@ Cohesion: 0.38
 Nodes (9): TestToolRow(), TestToolRowChip(), TestToolRowPending(), TestToolRowWho(), toolBody(), ToolRow(), ToolRowProps, Node (+1 more)
 
 ### Community 241 - "Community 241"
-Cohesion: 0.54
-Nodes (7): checkCollections(), checkDataDir(), checkExtensions(), checkModelReady(), checkOSAccess(), doctorCheck, App
+Cohesion: 0.40
+Nodes (10): TestDoctorMissingCollectionFails(), checkCollections(), checkDataDir(), checkExtensions(), checkModelReady(), checkOSAccess(), doctorCmd(), doctorCheck (+2 more)
 
 ### Community 242 - "Community 242"
 Cohesion: 0.18
@@ -1358,8 +1364,8 @@ Cohesion: 0.31
 Nodes (10): Handler, T, TestApp, ResponseRecorder, buildMux(), servePost(), TestCreateAndDeleteCustomHead(), TestDeleteBuiltinRejected() (+2 more)
 
 ### Community 244 - "Community 244"
-Cohesion: 0.30
-Nodes (16): Node, Node, T, ProfileBalaurSection(), ProfileIdentityCard(), ProfileSoulSection(), SettingsFocus(), renderNode() (+8 more)
+Cohesion: 0.44
+Nodes (10): Node, T, renderNode(), TestProfileBalaurSectionContract(), TestProfileIdentityCardContract(), TestProfileIdentityCardNameYou(), TestProfileSoulSectionContract(), TestSettingsFocusHeadsSection() (+2 more)
 
 ### Community 245 - "Community 245"
 Cohesion: 0.42
@@ -1402,16 +1408,16 @@ Cohesion: 0.49
 Nodes (9): Dock(), dockConvo(), dockGrip(), dockHead(), nudgePoll(), recapZone(), DockProps, DockVariant (+1 more)
 
 ### Community 255 - "Community 255"
-Cohesion: 0.27
-Nodes (8): ClientSource, App, RequestEvent, handlers, guardLocalUI(), isAllowedHost(), sameHost(), toolIconFile()
+Cohesion: 0.40
+Nodes (10): App, Node, BacklinkView, buildNote(), LinkedBodyFixture(), LinkedFrom(), NoteCard(), registerNote() (+2 more)
 
 ### Community 256 - "Community 256"
 Cohesion: 0.36
 Nodes (9): Story, avatarStory(), buttonStory(), cardStory(), folkbandStory(), iconStory(), pipsStory(), stitchStory() (+1 more)
 
 ### Community 257 - "Community 257"
-Cohesion: 0.23
-Nodes (13): App, App, Node, Record, TaskView, Time, QuestGroupView, registerQuests() (+5 more)
+Cohesion: 0.19
+Nodes (16): App, Node, Record, TaskView, Time, Node, T, QuestGroupView (+8 more)
 
 ### Community 258 - "Community 258"
 Cohesion: 0.33
@@ -1422,8 +1428,8 @@ Cohesion: 0.33
 Nodes (8): Node, T, Avatar(), Icon(), TestAvatarDecorativeDefaults(), TestAvatarNamedNotHidden(), TestIcon(), AvatarProps
 
 ### Community 260 - "Community 260"
-Cohesion: 0.31
-Nodes (8): Node, T, Card(), FolkBand(), Stitch(), TestCard(), TestFolkBand(), TestStitch()
+Cohesion: 0.16
+Nodes (18): Append(), Node, Node, T, Record, Prop, Story, Page() (+10 more)
 
 ### Community 261 - "Community 261"
 Cohesion: 0.36
@@ -1450,12 +1456,12 @@ Cohesion: 0.20
 Nodes (9): Conflict map — the parallel Ollama→Kronk work, Considered and rejected, Conventions, Plans, Structural backlog (not yet written as plans — ask to flesh these out), The shared port recipe (read this once; every plan assumes it), UI redesign — focus-body ports (handoff plans), Verification gates (run all; paste output into the plan's done-check) (+1 more)
 
 ### Community 267 - "Community 267"
-Cohesion: 0.22
-Nodes (7): DB, T, App, Record, TestFTS5Available(), Index, Open()
+Cohesion: 0.31
+Nodes (8): DB, App, Record, PropString(), Index, matchExpr(), nodeExtra(), scanIDs()
 
 ### Community 268 - "Community 268"
-Cohesion: 0.33
-Nodes (7): ChoiceItem, Choices(), TestChoices(), TestChoicesNoHint(), ChoicesProps, Node, T
+Cohesion: 0.36
+Nodes (8): App, RequestEvent, handlers, BalaurAvatarURL(), BalaurAvatarURLForKey(), GetOwnerSetting(), OwnerName(), SoulAvatarURL()
 
 ### Community 269 - "Community 269"
 Cohesion: 0.22
@@ -1478,8 +1484,8 @@ Cohesion: 0.42
 Nodes (4): Context, Engine, Mutex, Kronk
 
 ### Community 274 - "Community 274"
-Cohesion: 0.32
-Nodes (5): LibPath(), LibRoot(), ModelsDir(), RuntimeInstalled(), RuntimeInstalledFor()
+Cohesion: 0.33
+Nodes (7): Node, T, Alert(), alertTone(), TestAlertInfoDefaultsNoTitle(), TestAlertWarn(), AlertProps
 
 ### Community 275 - "Community 275"
 Cohesion: 0.33
@@ -1510,16 +1516,16 @@ Cohesion: 0.29
 Nodes (6): App, Node, T, registerSettings(), SettingsCard(), TestSettingsCard()
 
 ### Community 282 - "Community 282"
-Cohesion: 0.60
-Nodes (5): Node, T, renderQuestNode(), TestQuestsFocusContract(), TestQuestsFocusEmpty()
+Cohesion: 0.29
+Nodes (6): fakeClient, fakeTurn, Chunk, Context, Message, ToolSpec
 
 ### Community 283 - "Community 283"
 Cohesion: 0.54
 Nodes (7): T, TaskView, renderTask(), TestTaskCardNonOpenShowsStatusNoActions(), TestTaskCardOpenHasAllActions(), TestTaskCardOpenHasEditForm(), TestTaskCardOverdueClass()
 
 ### Community 284 - "Community 284"
-Cohesion: 0.36
-Nodes (7): App, Node, Record, Time, filterBucket(), registerTasks(), renderTasks()
+Cohesion: 0.17
+Nodes (11): App, Node, Record, Time, T, filterBucket(), registerTasks(), renderTasks() (+3 more)
 
 ### Community 285 - "Community 285"
 Cohesion: 0.43
@@ -1530,8 +1536,8 @@ Cohesion: 0.36
 Nodes (7): App, T, Time, newEchoClient(), seedTurn(), TestEnsureSummariesHierarchy(), ScriptedClient
 
 ### Community 287 - "Community 287"
-Cohesion: 0.32
-Nodes (6): App, Record, T, ListAudit(), TestListAudit(), TestListAuditLimit()
+Cohesion: 0.54
+Nodes (7): App, Node, buildLines(), linesBody(), LinesCard(), registerLines(), LinesView
 
 ### Community 288 - "Community 288"
 Cohesion: 0.48
@@ -1557,6 +1563,10 @@ Nodes (3): RequestEvent, handlers, validGroups()
 Cohesion: 0.48
 Nodes (6): TestMessageBalaur(), TestMessageBalaurMarkdown(), TestMessageBalaurOrigin(), TestMessagePending(), TestMessageUserDefaultName(), T
 
+### Community 294 - "Community 294"
+Cohesion: 0.54
+Nodes (7): T, renderLines(), TestLinesCard_EachLineIsLi(), TestLinesCard_Empty(), TestLinesCard_Error(), TestLinesCard_WithLines(), LinesView
+
 ### Community 295 - "Community 295"
 Cohesion: 0.57
 Nodes (6): Node, T, render(), TestOfficialCTACards(), TestProcessorControlContract(), TestProcessorPillDisabledStates()
@@ -1569,6 +1579,10 @@ Nodes (6): T, render(), TestTodayCardEmptyState(), TestTodayCardNonOpenHasNoDone
 Cohesion: 0.33
 Nodes (6): ToolCall, Chunk, Client, Message, ToolCall, ToolSpec
 
+### Community 298 - "Community 298"
+Cohesion: 0.64
+Nodes (7): App, Tool, clipN(), entryDropTool(), entrySeriesTool(), LifeTools(), logEntryTool()
+
 ### Community 299 - "Community 299"
 Cohesion: 0.33
 Nodes (5): Node, T, CommandPalette(), TestCommandPalette(), CommandItem
@@ -1578,12 +1592,12 @@ Cohesion: 0.33
 Nodes (5): Node, T, GuardianCard(), TestGuardianCard(), GuardianProps
 
 ### Community 301 - "Community 301"
-Cohesion: 0.33
-Nodes (4): T, IntParam(), TestClip(), TestIntParam()
+Cohesion: 0.46
+Nodes (6): T, MarkRefresh(), ParseRefresh(), TestParseRefreshDropsUnknownTypes(), TestParseRefreshPlainText(), TestRefreshMarkerRoundTrip()
 
 ### Community 302 - "Community 302"
-Cohesion: 0.29
-Nodes (5): RequestEvent, handlers, clipText(), newNonce(), readChatMessage()
+Cohesion: 0.61
+Nodes (7): homeData, Node, chatBarNode(), commandPaletteNode(), composerNode(), headSwitcherNode(), modelSwitcherNode()
 
 ### Community 303 - "Community 303"
 Cohesion: 0.48
@@ -1610,8 +1624,16 @@ Cohesion: 0.38
 Nodes (3): apply(), get(), has()
 
 ### Community 309 - "Community 309"
+Cohesion: 0.43
+Nodes (7): T, TestPanelCollapsed(), TestPanelWidthCSS(), TestParseShowURL(), TestShowURL(), TestUIPanelCollapse(), TestUIPanelWidth()
+
+### Community 310 - "Community 310"
+Cohesion: 0.40
+Nodes (5): historyCmd(), messageJSON(), App, Command, Record
+
+### Community 311 - "Community 311"
 Cohesion: 0.53
-Nodes (5): T, TestQuestsCardSummary(), TestQuestsCardSummaryEmpty(), TestQuestsManageCardEmpty(), TestQuestsManageCardRendersTaskCards()
+Nodes (5): T, TestOwnerLocationDefaultsToLocal(), TestOwnerLocationInvalidFallsBack(), TestOwnerLocationPeriodStability(), TestOwnerLocationReadsSetting()
 
 ### Community 312 - "Community 312"
 Cohesion: 0.33
@@ -1626,8 +1648,12 @@ Cohesion: 0.60
 Nodes (4): T, TestList(), TestListAttrsPassThrough(), TestListNoTitleFirst()
 
 ### Community 316 - "Community 316"
-Cohesion: 0.70
-Nodes (4): App, TB, activateLocalModel(), seedScriptedModel()
+Cohesion: 0.53
+Nodes (5): T, TestNodeWriteToolCreatesActiveNode(), TestRememberToolAcceptsStringFallback(), TestRememberToolRejectsBadJSON(), TestRememberToolRejectsEmptyTitle()
+
+### Community 317 - "Community 317"
+Cohesion: 0.83
+Nodes (3): CardTurn(), CardTurnProps, Node
 
 ### Community 318 - "Community 318"
 Cohesion: 0.83
@@ -1648,6 +1674,10 @@ Nodes (3): Node, RecapCard(), RecapProps
 ### Community 323 - "Community 323"
 Cohesion: 0.67
 Nodes (3): T, TestRecapCard(), TestRecapCardEmpty()
+
+### Community 324 - "Community 324"
+Cohesion: 0.83
+Nodes (3): Node, ChatShell(), ChatShellProps
 
 ### Community 325 - "Community 325"
 Cohesion: 0.67
@@ -1670,24 +1700,24 @@ Cohesion: 0.67
 Nodes (3): T, TestKnowledgeArtifactRouting(), TestKnowledgeArtifacts()
 
 ## Knowledge Gaps
-- **3076 isolated node(s):** `$schema`, `allow`, `PostToolUse`, `PreToolUse`, `ponytail@ponytail` (+3071 more)
+- **3077 isolated node(s):** `$schema`, `allow`, `PostToolUse`, `PreToolUse`, `ponytail@ponytail` (+3072 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Append()` connect `Self-Capability Inventory` to `Knowledge CLI & Domain`, `LLM Settings & Model Resolution`, `Life & Heads Cards`, `Balaur Extensions (goja)`, `Knowledge Cards`, `Life Domain & Cards`, `Chat UI Organisms`, `Storybook Gateway`, `Storybook Components`, `Recap Generation`, `Journal Cards`, `Kronk Engine & Runtime`, `Database Migrations`, `Kronk LLM Client`, `Web Panel`, `Community 25`, `Community 26`, `Community 33`, `Community 36`, `Community 43`, `Community 54`, `Community 63`, `Community 73`, `Community 74`, `Community 83`, `Community 88`, `Community 89`, `Community 90`, `Community 101`, `Community 102`, `Community 103`, `Community 109`, `Community 110`, `Community 120`, `Community 122`, `Community 133`, `Community 135`, `Community 136`, `Community 150`, `Community 152`, `Community 154`, `Community 155`, `Community 187`, `Community 188`, `Community 190`, `Community 191`, `Community 192`, `Community 209`, `Community 210`, `Community 222`, `Community 224`, `Community 225`, `Community 226`, `Community 227`, `Community 231`, `Community 233`, `Community 234`, `Community 238`, `Community 240`, `Community 241`, `Community 244`, `Community 245`, `Community 246`, `Community 254`, `Community 257`, `Community 258`, `Community 259`, `Community 260`, `Community 261`, `Community 262`, `Community 263`, `Community 267`, `Community 268`, `Community 272`, `Community 275`, `Community 280`, `Community 284`, `Community 285`, `Community 286`, `Community 290`, `Community 291`, `Community 292`, `Community 299`, `Community 300`, `Community 318`, `Community 322`, `Community 324`?**
-  _High betweenness centrality (0.104) - this node is a cross-community bridge._
-- **Why does `Text()` connect `Community 33` to `Knowledge CLI & Domain`, `LLM Settings & Model Resolution`, `Community 256`, `Community 257`, `Knowledge Cards`, `Community 133`, `Life Domain & Cards`, `Storybook Gateway`, `Community 136`, `Storybook Components`, `Journal Cards`, `Community 260`, `Community 268`, `Kronk Engine & Runtime`, `Community 261`, `Self-Knowledge Doc`, `Community 263`, `Kronk LLM Client`, `Community 275`, `Community 280`, `Community 281`, `Community 155`, `Community 289`, `Community 290`, `Community 291`, `Community 299`, `Community 300`, `Community 43`, `Community 44`, `Community 188`, `Community 189`, `Community 318`, `Community 190`, `Community 322`, `Community 73`, `Community 209`, `Community 210`, `Community 83`, `Community 211`, `Community 84`, `Community 88`, `Community 222`, `Community 225`, `Community 101`, `Community 231`, `Community 233`, `Community 234`, `Community 236`, `Community 237`, `Community 240`, `Community 244`, `Community 245`, `Community 246`, `Community 120`, `Community 122`, `Community 254`?**
+- **Why does `Append()` connect `Community 260` to `Knowledge CLI & Domain`, `LLM Settings & Model Resolution`, `Life & Heads Cards`, `Balaur Extensions (goja)`, `Knowledge Cards`, `Life Domain & Cards`, `Chat UI Organisms`, `Storybook Gateway`, `Storybook Components`, `Recap Generation`, `Journal Cards`, `Kronk Engine & Runtime`, `Database Migrations`, `Kronk LLM Client`, `Web Panel`, `Self-Capability Inventory`, `Community 25`, `Community 26`, `Community 33`, `Community 43`, `Community 54`, `Community 62`, `Community 63`, `Community 73`, `Community 74`, `Community 83`, `Community 88`, `Community 89`, `Community 90`, `Community 101`, `Community 102`, `Community 103`, `Community 109`, `Community 110`, `Community 120`, `Community 122`, `Community 133`, `Community 135`, `Community 136`, `Community 150`, `Community 152`, `Community 154`, `Community 187`, `Community 188`, `Community 189`, `Community 190`, `Community 191`, `Community 192`, `Community 210`, `Community 211`, `Community 222`, `Community 224`, `Community 225`, `Community 226`, `Community 231`, `Community 233`, `Community 234`, `Community 238`, `Community 240`, `Community 241`, `Community 245`, `Community 246`, `Community 254`, `Community 255`, `Community 257`, `Community 258`, `Community 259`, `Community 261`, `Community 262`, `Community 263`, `Community 267`, `Community 268`, `Community 272`, `Community 274`, `Community 275`, `Community 280`, `Community 284`, `Community 285`, `Community 286`, `Community 287`, `Community 290`, `Community 291`, `Community 292`, `Community 299`, `Community 300`, `Community 301`, `Community 302`, `Community 310`, `Community 317`, `Community 318`, `Community 322`, `Community 324`, `Community 348`?**
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
+- **Why does `Text()` connect `Community 33` to `Knowledge CLI & Domain`, `LLM Settings & Model Resolution`, `Community 256`, `Community 257`, `Knowledge Cards`, `Community 133`, `Life Domain & Cards`, `Storybook Gateway`, `Community 260`, `Storybook Components`, `Journal Cards`, `Community 261`, `Kronk Engine & Runtime`, `Self-Knowledge Doc`, `Community 263`, `Community 136`, `Kronk LLM Client`, `Community 274`, `Community 275`, `Web Panel`, `Community 280`, `Community 281`, `Community 287`, `Community 289`, `Community 290`, `Community 291`, `Community 299`, `Community 300`, `Community 43`, `Community 44`, `Community 302`, `Community 188`, `Community 317`, `Community 62`, `Community 318`, `Community 189`, `Community 190`, `Community 322`, `Community 324`, `Community 73`, `Community 74`, `Community 209`, `Community 210`, `Community 83`, `Community 211`, `Community 84`, `Community 222`, `Community 225`, `Community 101`, `Community 231`, `Community 233`, `Community 234`, `Community 236`, `Community 240`, `Community 245`, `Community 246`, `Community 120`, `Community 122`, `Community 254`, `Community 255`?**
   _High betweenness centrality (0.056) - this node is a cross-community bridge._
-- **Why does `NewApp()` connect `Journal Cards` to `Balaur Extensions (goja)`, `Knowledge Cards`, `Life Domain & Cards`, `Community 135`, `Chat Streaming (SSE)`, `Community 151`, `Self-Capability Inventory`, `Community 25`, `Community 26`, `Community 153`, `Community 286`, `Community 287`, `Community 288`, `Community 36`, `Community 305`, `Community 53`, `Community 54`, `Community 63`, `Community 191`, `Community 208`, `Community 84`, `Community 89`, `Community 226`, `Community 227`, `Community 102`, `Community 103`, `Community 235`, `Community 237`, `Community 110`, `Community 120`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Are the 210 inferred relationships involving `Append()` (e.g. with `collect()` and `.Run()`) actually correct?**
-  _`Append()` has 210 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `NewApp()` connect `Community 120` to `Balaur Extensions (goja)`, `Knowledge Cards`, `Life Domain & Cards`, `Community 135`, `Journal Cards`, `Chat Streaming (SSE)`, `Community 151`, `Self-Capability Inventory`, `Community 25`, `Web Panel`, `Community 26`, `Community 153`, `Community 286`, `Community 288`, `Community 36`, `Community 305`, `Community 53`, `Community 54`, `Community 311`, `Community 316`, `Community 63`, `Community 191`, `Community 84`, `Community 89`, `Community 226`, `Community 227`, `Community 103`, `Community 235`, `Community 110`, `Community 241`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **Are the 214 inferred relationships involving `Append()` (e.g. with `collect()` and `.Run()`) actually correct?**
+  _`Append()` has 214 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 185 inferred relationships involving `Text()` (e.g. with `CardTurn()` and `Choices()`) actually correct?**
   _`Text()` has 185 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 168 inferred relationships involving `NewApp()` (e.g. with `TestChatReportsToolsAndVerdict()` and `TestDoctorHealthyBox()`) actually correct?**
-  _`NewApp()` has 168 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 172 inferred relationships involving `NewApp()` (e.g. with `TestChatReportsToolsAndVerdict()` and `TestDoctorHealthyBox()`) actually correct?**
+  _`NewApp()` has 172 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 46 inferred relationships involving `newWebApp()` (e.g. with `TestCalendarTimelineRenderViaGomponents()` and `TestUiCardHeads()`) actually correct?**
   _`newWebApp()` has 46 INFERRED edges - model-reasoned connections that need verification._
