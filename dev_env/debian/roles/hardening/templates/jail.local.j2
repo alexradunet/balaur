@@ -1,0 +1,16 @@
+[DEFAULT]
+# Read logs from systemd journal (Debian 13 default logging)
+backend = systemd
+# Don't ban ourselves / loopback
+ignoreip = 127.0.0.1/8 ::1
+# Ban policy: 5 failures within 10 min -> 1h ban, escalating for repeat offenders
+findtime = 10m
+maxretry = 5
+bantime = 1h
+bantime.increment = true
+bantime.factor = 2
+bantime.maxtime = 1w
+
+[sshd]
+enabled = true
+port = 22

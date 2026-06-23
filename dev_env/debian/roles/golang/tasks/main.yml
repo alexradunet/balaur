@@ -1,0 +1,60 @@
+---
+- name: Check the installed Go version
+  ansible.builtin.command: "{{ go_install_dir }}/bin/go version"
+  register: go_current
+  failed_when: false
+  changed_when: false
+
+- name: Install Go {{ go_target }}
+  when: ("go" ~ go_target) not in (go_current.stdout | default(''))
+  block:
+    - name: Ensure ~/.local exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.local"
+        state: directory
+        mode: "0755"
+
+    - name: Fetch the Go release manifest
+      ansible.builtin.uri:
+        url: "https://go.dev/dl/?mode=json&include=all"
+        return_content: true
+      register: go_releases
+      retries: 3
+      delay: 3
+      until: go_releases.status == 200
+
+    - name: Resolve the Go tarball checksum
+      ansible.builtin.set_fact:
+        go_sha256: >-
+          {{ go_releases.json
+             | selectattr('version', 'equalto', 'go' ~ go_target)
+             | map(attribute='files') | first
+             | selectattr('filename', 'equalto', 'go' ~ go_target ~ '.linux-' ~ go_arch ~ '.tar.gz')
+             | map(attribute='sha256') | first }}
+
+    - name: Download the Go tarball (checksum-verified)
+      ansible.builtin.get_url:
+        url: "https://go.dev/dl/go{{ go_target }}.linux-{{ go_arch }}.tar.gz"
+        dest: "/tmp/go{{ go_target }}.linux-{{ go_arch }}.tar.gz"
+        checksum: "sha256:{{ go_sha256 }}"
+        mode: "0644"
+
+    - name: Remove any previous Go install
+      ansible.builtin.file:
+        path: "{{ go_install_dir }}"
+        state: absent
+
+    - name: Extract Go into ~/.local
+      ansible.builtin.unarchive:
+        src: "/tmp/go{{ go_target }}.linux-{{ go_arch }}.tar.gz"
+        dest: "{{ ansible_env.HOME }}/.local"
+        remote_src: true
+
+- name: Report the Go version
+  ansible.builtin.command: "{{ go_install_dir }}/bin/go version"
+  register: go_done
+  changed_when: false
+
+- name: Show the Go version
+  ansible.builtin.debug:
+    msg: "{{ go_done.stdout }}"

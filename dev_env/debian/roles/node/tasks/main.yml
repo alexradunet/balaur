@@ -1,0 +1,13 @@
+---
+# Node + npm from trixie main — enough to run `npx playwright` and the
+# Playwright-MCP server the run-balaur skill drives.
+- name: Install Node.js + npm
+  become: true
+  tags: [privileged, playwright]
+  ansible.builtin.apt:
+    name:
+      - nodejs
+      - npm
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

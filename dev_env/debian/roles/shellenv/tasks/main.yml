@@ -1,0 +1,22 @@
+---
+- name: Ensure ~/.local/bin and GOPATH/bin exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ local_bin }}"
+    - "{{ gopath }}/bin"
+
+# Go PATH only — do NOT export BALAUR_* here; those live in ~/.config/balaur/env
+# (the systemd EnvironmentFile). Exporting them would shadow the service config.
+- name: Manage the Balaur dev-env block in ~/.bashrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    marker: "# {mark} BALAUR DEV ENV"
+    create: true
+    mode: "0644"
+    block: |
+      export GOROOT="{{ go_install_dir }}"
+      export GOPATH="{{ gopath }}"
+      export PATH="{{ go_install_dir }}/bin:{{ gopath }}/bin:{{ local_bin }}:$PATH"

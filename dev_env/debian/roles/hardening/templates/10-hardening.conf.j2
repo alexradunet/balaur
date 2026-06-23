@@ -1,0 +1,28 @@
+# SSH hardening — managed manually
+# Auth: public key only
+{% if ssh_disable_password | bool %}
+AuthenticationMethods publickey
+{% endif %}
+PubkeyAuthentication yes
+{% if ssh_disable_password | bool %}
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+{% endif %}
+PermitEmptyPasswords no
+PermitRootLogin no
+
+# Restrict who can log in
+AllowUsers {{ ssh_allow_users }}
+
+# Reduce brute-force window
+MaxAuthTries 3
+LoginGraceTime 20
+
+# Drop idle/broken sessions (300s * 2 = 10 min)
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Disable features we don't use
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no

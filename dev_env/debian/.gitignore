@@ -1,0 +1,3 @@
+*.retry
+*.log
+.vault_pass

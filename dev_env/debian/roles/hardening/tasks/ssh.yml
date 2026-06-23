@@ -1,0 +1,29 @@
+---
+# Lockout-proof order: install the key FIRST, assert it's present, then disable
+# passwords, validate with `sshd -t`, and RELOAD (keeps live sessions alive).
+- name: Refuse to disable passwords without an authorized key (anti-lockout)
+  ansible.builtin.assert:
+    that: ssh_authorized_keys | length > 0
+    fail_msg: >-
+      ssh_disable_password is true but ssh_authorized_keys is empty — refusing to
+      disable password auth (you would be locked out). Set ssh_authorized_keys in
+      group_vars/all.yml (or pass -e) and re-run.
+  when: ssh_disable_password | bool
+
+- name: Install authorized SSH key(s)
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user_id }}"
+    key: "{{ item }}"
+    state: present
+    exclusive: false
+  loop: "{{ ssh_authorized_keys }}"
+  when: ssh_authorized_keys | length > 0
+
+- name: Deploy the SSH hardening drop-in
+  become: true
+  ansible.builtin.template:
+    src: 10-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    mode: "0644"
+    validate: "sshd -t -f %s"
+  notify: Reload ssh

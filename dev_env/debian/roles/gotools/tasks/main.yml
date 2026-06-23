@@ -1,0 +1,21 @@
+---
+# gopls + dlv (editor/debugger), air (make dev), staticcheck + govulncheck
+# (warm the cache so `make lint` doesn't re-fetch them each run). Into ~/go/bin,
+# already on PATH via shellenv. `creates:` keeps re-runs idempotent.
+- name: Install Go developer tools
+  ansible.builtin.command: "{{ go_install_dir }}/bin/go install {{ item }}"
+  args:
+    creates: "{{ gopath }}/bin/{{ item | regex_replace('^.*/([^/@]+)@.*$', '\\1') }}"
+  loop: "{{ go_tools }}"
+  loop_control:
+    label: "{{ item }}"
+  environment: "{{ go_env }}"
+
+- name: List installed Go tools
+  ansible.builtin.command: "ls {{ gopath }}/bin"
+  register: gobin
+  changed_when: false
+
+- name: Show installed Go tools
+  ansible.builtin.debug:
+    msg: "{{ gobin.stdout_lines }}"

@@ -1,0 +1,74 @@
+---
+# ─── Edit these, then re-run the playbook ───────────────────────────────────
+
+# Go: pin to >= the repo's go.mod `go` line. An EXACT pin keeps GOTOOLCHAIN=auto
+# from silently downloading a toolchain (which fails behind a TLS proxy). Bump in
+# lockstep with go.mod.
+go_target: "1.26.4"
+go_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+# Git identity (leave empty to skip `git config --global`).
+git_user_name: ""
+git_user_email: ""
+
+# System timezone. NTP stays on, so the 04:00 auto-reboot resolves to this zone.
+timezone: "Europe/Bucharest"
+
+# Balaur app / service
+balaur_build: true               # `make build` to verify the CGO-free build
+balaur_install_service: true     # install + enable the systemd --user service
+balaur_allowed_hosts: ""         # e.g. "my-box.netbird.cloud,100.64.0.5" (no port)
+
+# Optional installers
+claude_install: true
+graphify_install_hooks: false    # `graphify --install-hooks` in the repo
+
+# zellij — static musl binary into ~/.local/bin (no apt/root)
+zellij_version: "0.44.3"
+zellij_arch: "{{ 'aarch64' if ansible_architecture == 'aarch64' else 'x86_64' }}"
+
+# NetBird — pass the setup key at RUNTIME, never commit it:
+#   ansible-playbook playbook.yml -K -e netbird_setup_key=XXXX
+# Empty ⇒ install NetBird only; join later with `netbird up` (SSO) or a key.
+netbird_setup_key: ""
+
+# ─── SSH hardening (captures the manual lockdown; idempotent) ────────────────
+# REQUIRED when ssh_disable_password is true — the play asserts a key is present
+# before disabling passwords, so you cannot lock yourself out.
+ssh_authorized_keys: []
+#   - "ssh-ed25519 AAAA... you@laptop"
+ssh_allow_users: "{{ ansible_user_id }}"
+ssh_disable_password: true
+
+# ─── Firewall ───────────────────────────────────────────────────────────────
+ufw_allow_balaur_netbird: false  # open balaur's port on the NetBird interface
+netbird_iface: "wt0"
+balaur_http_port: 8090
+
+# ─── Unattended upgrades ────────────────────────────────────────────────────
+autoreboot_time: "04:00"
+
+# ─── Derived paths (usually leave as-is) ────────────────────────────────────
+go_install_dir: "{{ ansible_env.HOME }}/.local/go"
+gopath: "{{ ansible_env.HOME }}/go"
+local_bin: "{{ ansible_env.HOME }}/.local/bin"
+balaur_repo: "{{ (playbook_dir + '/../..') | realpath }}"
+data_dir: "{{ ansible_env.HOME }}/.local/share/balaur"
+config_dir: "{{ ansible_env.HOME }}/.config/balaur"
+
+go_tools:
+  - golang.org/x/tools/gopls@latest
+  - github.com/go-delve/delve/cmd/dlv@latest
+  - github.com/air-verse/air@latest
+  - honnef.co/go/tools/cmd/staticcheck@latest
+  - golang.org/x/vuln/cmd/govulncheck@latest
+
+# Shared Go/make environment for tasks. ~/.bashrc is NOT sourced under Ansible,
+# so every go/make task sets this explicitly. GOTOOLCHAIN=local makes a too-old
+# Go fail loudly instead of silently fetching a toolchain over the network.
+go_env:
+  PATH: "{{ go_install_dir }}/bin:{{ gopath }}/bin:{{ local_bin }}:{{ ansible_env.PATH }}"
+  GOPATH: "{{ gopath }}"
+  GOBIN: "{{ gopath }}/bin"
+  GOTOOLCHAIN: "local"
+  CGO_ENABLED: "0"

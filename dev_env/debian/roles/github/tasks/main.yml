@@ -1,0 +1,34 @@
+---
+- name: Install the GitHub CLI (trixie native)
+  become: true
+  tags: [privileged]
+  ansible.builtin.apt:
+    name: gh
+    state: present
+
+- name: Set git user.name
+  community.general.git_config:
+    name: user.name
+    scope: global
+    value: "{{ git_user_name }}"
+  when: git_user_name | length > 0
+
+- name: Set git user.email
+  community.general.git_config:
+    name: user.email
+    scope: global
+    value: "{{ git_user_email }}"
+  when: git_user_email | length > 0
+
+- name: Check the GitHub CLI auth status
+  ansible.builtin.command: gh auth status
+  register: gh_status
+  failed_when: false
+  changed_when: false
+
+- name: GitHub auth reminder (interactive — run yourself if not logged in)
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'GitHub CLI is authenticated.'
+         if gh_status.rc == 0
+         else 'NOT logged in to GitHub. Run:  gh auth login  (HTTPS + browser).' }}

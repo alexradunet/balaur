@@ -1,0 +1,49 @@
+---
+- name: Install ufw
+  become: true
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Ensure ufw manages IPv6
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/default/ufw
+    regexp: '^IPV6='
+    line: 'IPV6=yes'
+
+- name: Default deny incoming
+  become: true
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Default allow outgoing
+  become: true
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+# Allow + rate-limit SSH BEFORE enabling, so enabling can't lock us out.
+# Port form (22/tcp) to match the live box's existing "22/tcp LIMIT" rule.
+- name: Allow and rate-limit SSH
+  become: true
+  community.general.ufw:
+    rule: limit
+    port: "22"
+    proto: tcp
+
+- name: Allow Balaur over the NetBird interface
+  become: true
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: "{{ netbird_iface }}"
+    to_port: "{{ balaur_http_port | string }}"
+    proto: tcp
+  when: ufw_allow_balaur_netbird | bool
+
+- name: Enable ufw
+  become: true
+  community.general.ufw:
+    state: enabled

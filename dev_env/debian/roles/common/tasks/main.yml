@@ -1,0 +1,26 @@
+---
+- name: Install base development packages
+  become: true
+  tags: [privileged]
+  ansible.builtin.apt:
+    name:
+      - git
+      - make
+      - build-essential   # gcc for `make race` (CGO_ENABLED=1)
+      - ca-certificates
+      - curl
+      - wget
+      - gnupg
+      - python3           # scripts/fake-model.py, scripts/goproxy-shim.py
+      - sqlite3           # inspect pb_data (the app uses pure-Go sqlite)
+      - pkg-config
+      - jq
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Set the system timezone
+  become: true
+  tags: [privileged]
+  community.general.timezone:
+    name: "{{ timezone }}"

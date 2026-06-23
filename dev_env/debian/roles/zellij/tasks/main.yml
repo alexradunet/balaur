@@ -1,0 +1,42 @@
+---
+# zellij ships a self-contained static musl binary — no apt/root, matching the
+# user-local idiom of Go/claude/graphify in ~/.local/bin.
+- name: Check the installed zellij version
+  ansible.builtin.command: "{{ local_bin }}/zellij --version"
+  register: zellij_current
+  failed_when: false
+  changed_when: false
+
+- name: Install zellij {{ zellij_version }}
+  when: zellij_version not in (zellij_current.stdout | default(''))
+  vars:
+    zellij_base: "https://github.com/zellij-org/zellij/releases/download/v{{ zellij_version }}/zellij-{{ zellij_arch }}-unknown-linux-musl.tar.gz"
+  block:
+    - name: Ensure ~/.local/bin exists
+      ansible.builtin.file:
+        path: "{{ local_bin }}"
+        state: directory
+        mode: "0755"
+
+    - name: Fetch the zellij checksum
+      ansible.builtin.uri:
+        url: "{{ zellij_base }}.sha256sum"
+        return_content: true
+      register: zellij_sha
+      retries: 3
+      delay: 3
+      until: zellij_sha.status == 200
+
+    - name: Download the zellij tarball (checksum-verified)
+      ansible.builtin.get_url:
+        url: "{{ zellij_base }}"
+        dest: "/tmp/zellij-{{ zellij_version }}-{{ zellij_arch }}.tar.gz"
+        checksum: "sha256:{{ zellij_sha.content.split()[0] }}"
+        mode: "0644"
+
+    - name: Extract zellij into ~/.local/bin
+      ansible.builtin.unarchive:
+        src: "/tmp/zellij-{{ zellij_version }}-{{ zellij_arch }}.tar.gz"
+        dest: "{{ local_bin }}"
+        remote_src: true
+        mode: "0755"

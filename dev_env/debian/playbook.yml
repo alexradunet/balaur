@@ -1,0 +1,25 @@
+---
+# Provision a Debian 13 (trixie) box into a ready-to-develop Balaur environment.
+# Everything runs in one pass (Debian uses classic sudo, so `become` works);
+# privileged tasks carry `become: true`. The `vulkan` role is opt-in only
+# (`never` tag) — run it with `-t vulkan` on a GPU box.
+- name: Balaur dev environment (Debian 13)
+  hosts: local
+  gather_facts: true
+  become: false
+
+  roles:
+    - { role: common, tags: [common, privileged] }
+    - { role: shellenv, tags: [shellenv] }
+    - { role: golang, tags: [golang] }
+    - { role: gotools, tags: [gotools] }
+    - { role: github, tags: [github] }
+    - { role: claude, tags: [claude] }
+    - { role: balaur, tags: [balaur] }
+    - { role: node, tags: [node, playwright] }
+    - { role: playwright, tags: [playwright] }
+    - { role: graphify, tags: [graphify] }
+    - { role: zellij, tags: [zellij] }
+    - { role: netbird, tags: [netbird, privileged] }
+    - { role: hardening, tags: [hardening, privileged] }
+    - { role: vulkan, tags: [never, vulkan] }

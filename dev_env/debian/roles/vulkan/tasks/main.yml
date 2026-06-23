@@ -1,0 +1,13 @@
+---
+# Opt-in (run with `-t vulkan` / `make vulkan`). NOT part of the default
+# CPU-only run. Enables BALAUR_PROCESSOR=vulkan once a GPU + driver are present.
+- name: Install the Vulkan runtime
+  become: true
+  ansible.builtin.apt:
+    name:
+      - libvulkan1
+      - mesa-vulkan-drivers
+      - vulkan-tools
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

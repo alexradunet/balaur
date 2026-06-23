@@ -1,0 +1,27 @@
+---
+- name: Install Claude Code (native, user-local)
+  when: claude_install | bool
+  block:
+    - name: Download the Claude Code installer
+      ansible.builtin.get_url:
+        url: https://claude.ai/install.sh
+        dest: /tmp/claude-install.sh
+        mode: "0755"
+        force: true
+      retries: 3
+      delay: 3
+
+    - name: Run the Claude Code installer
+      ansible.builtin.command:
+        cmd: /bin/bash /tmp/claude-install.sh
+        creates: "{{ local_bin }}/claude"
+
+    - name: Get the Claude Code version
+      ansible.builtin.command: "{{ local_bin }}/claude --version"
+      register: cc_ver
+      changed_when: false
+      failed_when: false
+
+    - name: Show the Claude Code version
+      ansible.builtin.debug:
+        msg: "Claude Code {{ cc_ver.stdout | default('(installed)') }} — run `claude` to start"

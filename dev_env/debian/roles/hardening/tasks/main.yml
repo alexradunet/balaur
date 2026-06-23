@@ -1,0 +1,18 @@
+---
+# Captures the lockdown applied manually to this VPS so a rebuild reproduces it.
+# Idempotent: re-running against the already-hardened box reports no changes.
+# Passwordless sudo is intentionally left untouched (owner's choice).
+- name: SSH key-only hardening
+  ansible.builtin.import_tasks: ssh.yml
+
+- name: Firewall (ufw)
+  ansible.builtin.import_tasks: firewall.yml
+
+- name: Brute-force protection (fail2ban)
+  ansible.builtin.import_tasks: fail2ban.yml
+
+- name: Automatic security updates
+  ansible.builtin.import_tasks: autoupdates.yml
+
+- name: Kernel/network sysctl hardening
+  ansible.builtin.import_tasks: sysctl.yml
