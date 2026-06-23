@@ -133,20 +133,24 @@ func notecardStory() Story {
 		ID: "notecard", Group: "Cards", Title: "NoteCard",
 		Blurb: "An owner-authored knowledge node (note or typed object) shown as title + body with an inline edit form. Born active — the owner's own, trusted. The route /ui/show/note?id=… opens it; the edit form @posts to /ui/node/{id}/edit.",
 		Variants: []Variant{
-			{"note", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n1", Type: "note", Title: "Greenhouse plan", Body: "A lean-to greenhouse on the south wall next spring; reuse the old window frames.", Found: true})},
-			{"typed object (person)", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n2", Type: "person", Title: "Dr. Mara", Body: "Vet at Willowbrook; closed Sundays.", Found: true})},
+			{"note", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n1", Type: "note", Title: "Greenhouse plan", Body: "A lean-to greenhouse on the south wall next spring; reuse the old window frames.", BodyNode: g.Text("A lean-to greenhouse on the south wall next spring; reuse the old window frames."), Found: true})},
+			{"typed object (person)", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n2", Type: "person", Title: "Dr. Mara", Body: "Vet at Willowbrook; closed Sundays.", BodyNode: g.Text("Vet at Willowbrook; closed Sundays."), Found: true})},
+			{"with backlinks", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n3", Type: "note", Title: "Greenhouse plan", Body: "Pairs with [[Seed list]] and the [[Spring tasks]] note.", BodyNode: knowledgecards.LinkedBodyFixture(), Backlinks: []knowledgecards.BacklinkView{{ID: "n1", Title: "Garden journal"}, {ID: "n2", Title: "Seed list"}, {ID: "n4", Title: "Spring tasks"}}, Found: true})},
 			{"not found", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "missing", Found: false})},
 		},
 		Props: []Prop{
 			{"ID", "string", "—", "Node id; drives the edit @post target."},
 			{"Type", "string", `"note"`, "Node type label shown in the head (note, person, book, idea, place)."},
 			{"Title", "string", "—", "The node title."},
-			{"Body", "string", "—", "The node body (escaped text)."},
+			{"Body", "string", "—", "The raw node body (drives the edit textarea)."},
+			{"BodyNode", "g.Node", "nil", "Pre-rendered linked-Markdown body; [[wikilinks]] become chips."},
+			{"Backlinks", "[]BacklinkView", "nil", `The "Linked from" panel: nodes that wikilink to this one.`},
 			{"Found", "bool", "false", "When false, renders an error strip instead of the card."},
 		},
 		Dos: []string{
 			"Keep note/typed-object nodes owner-authored and born active.",
 			"Reuse the parchment edit form rather than a rich editor.",
+			"Render [[wikilinks]] as chips and show backlinks (Linked from).",
 		},
 		Donts: []string{
 			"Render an unescaped node body.",

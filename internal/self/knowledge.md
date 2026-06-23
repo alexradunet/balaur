@@ -91,7 +91,10 @@ One binary, layered as: gateway → turn pipeline → business logic.
   Inspectable with any SQLite tool. The knowledge spine is unified:
   every memory, skill, journal day, note, and typed object (person,
   book, idea, place) is a typed row in `nodes` (distinguished by `type`),
-  linked to other nodes through `edges`. Consent lives in `nodes.status`:
+  linked to other nodes through `edges`. Node bodies support
+  `[[wikilinks]]`: on save, each link becomes a node→node `links` edge,
+  resolving by title to an existing active node or creating an active stub
+  node. Consent lives in `nodes.status`:
   notes/journal/typed objects are born active (owner-authored, trusted);
   memory/skill are born proposed and become active only on the owner's
   approval. Traversal and search filter to status=active — a proposed or
@@ -112,7 +115,9 @@ self tool, which reports the actual registry):
   skill node's procedure. node_write creates owner-authored nodes — a note
   or a typed object (person, book, idea, place), born active; node_list,
   node_get, and node_drop list, read, and delete them. The note card
-  (/ui/show/note?id=…) renders a node's title + body with an inline edit form.
+  (/ui/show/note?id=…) renders a node's title + body (with clickable
+  `[[wikilink]]` chips) and an inline edit form, plus a "Linked from"
+  backlinks panel listing the nodes that wikilink to it.
 - Commitments: task_add, task_list, task_update (reschedule/rename/edit),
   task_history (completions + streak), task_done, task_snooze, task_drop.
   Owner-voiced tasks act directly; every mutation is audited. Task cards in the

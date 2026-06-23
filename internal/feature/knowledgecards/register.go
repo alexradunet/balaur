@@ -2,9 +2,11 @@
 // summary + manage modes with inline approve/edit/archive forms — as typed
 // gomponents over internal/knowledge. It self-registers with the feature
 // registry; internal/web's cardInto shim serves it. Imports internal/ui,
-// internal/feature, internal/knowledge, gomponents, and pocketbase/core only —
-// never internal/web (spec §4.1). The manage layout is currently duplicated per
-// kind (memory/skills); a shared helper is a later DRY pass.
+// internal/ui/chat (the note card renders linked Markdown — plan 161),
+// internal/nodes (backlinks for the note card), internal/feature,
+// internal/knowledge, gomponents, and pocketbase/core only — never internal/web
+// (spec §4.1). The manage layout is currently duplicated per kind
+// (memory/skills); a shared helper is a later DRY pass.
 package knowledgecards
 
 import (
