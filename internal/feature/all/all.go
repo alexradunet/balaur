@@ -4,6 +4,7 @@
 package all
 
 import (
+	_ "github.com/alexradunet/balaur/internal/feature/graphcards"
 	_ "github.com/alexradunet/balaur/internal/feature/headscards"
 	_ "github.com/alexradunet/balaur/internal/feature/journalcards"
 	_ "github.com/alexradunet/balaur/internal/feature/knowledgecards"

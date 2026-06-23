@@ -154,6 +154,28 @@ func init() {
 			},
 		},
 		{
+			Type:  "related",
+			Label: "Related",
+			Icon:  "tome",
+			W:     4,
+			H:     20,
+			Params: []ParamSpec{
+				{Name: "id", Required: true, Doc: "the focus node id whose neighbors to list"},
+				{Name: "limit", Doc: "max related nodes to show (default 12, max 50)"},
+			},
+		},
+		{
+			Type:  "graph",
+			Label: "Graph",
+			Icon:  "tome",
+			W:     6,
+			H:     24,
+			Params: []ParamSpec{
+				{Name: "id", Required: true, Doc: "the focus node id whose 1-hop neighborhood to draw"},
+				{Name: "limit", Doc: "max neighbors to draw (default 12, max 24)"},
+			},
+		},
+		{
 			Type:  "heads",
 			Label: "Heads",
 			Icon:  "tome",

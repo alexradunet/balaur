@@ -1,0 +1,147 @@
+package graphcards
+
+// graph.go — the 1-hop SVG graph card: the focus node at center, its direct
+// neighbors on a single ring, server-rendered as a static concentric SVG
+// (Datastar only, no JS physics, no force-direction — that is deferred). Read
+// over nodes.Neighborhood (Backlinks ∪ Outbound, active, de-duped). Coordinates
+// are computed floats; node titles appear ONLY inside escaped <text>/<title>,
+// never interpolated into a coordinate, path, or attribute.
+
+import (
+	"math"
+	"strconv"
+
+	"github.com/pocketbase/pocketbase/core"
+	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
+
+	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/ui"
+)
+
+const (
+	graphW, graphH = 360, 360
+	graphR         = 150 // ring radius
+	nodeR          = 6   // neighbor dot radius
+	focusR         = 9   // focus dot radius
+	labelOffset    = 18  // px below a dot for its label
+	labelClip      = 18  // visible-label rune cap
+	maxNeighbors   = 24  // visual cap; a denser ring is unreadable
+)
+
+// GraphNode is one drawn node.
+type GraphNode struct {
+	ID    string
+	Title string
+	Type  string
+}
+
+// GraphView is the view-model for GraphCard.
+type GraphView struct {
+	FocusID    string
+	FocusTitle string
+	Neighbors  []GraphNode
+}
+
+// GraphCard renders the focus node + its 1-hop neighbors as a concentric SVG.
+// Edges run from center to each neighbor; nodes are <circle> + <text>. The focus
+// dot and label are emitted last so they sit on top. An empty neighborhood still
+// renders the focus dot plus a "No links yet" caption — one node, never blank.
+func GraphCard(v GraphView) g.Node {
+	return h.Article(
+		h.Class("kcard ucard ucard-graph"), h.ID("ucard-graph"),
+		ui.CardHead("/static/icons/tome.png", "Graph",
+			g.If(v.FocusTitle != "", h.Span(h.Class("kcard-meta"), g.Text(v.FocusTitle))),
+		),
+		graphSVG(v),
+		h.Footer(h.Class("kcard-actions"),
+			h.A(h.Href("/ui/show/related?id="+v.FocusID),
+				g.Attr("data-on:click__prevent", "@get('/ui/show/related?id="+v.FocusID+"')"),
+				g.Text("list related →"))),
+	)
+}
+
+// fc formats a coordinate float to one decimal place.
+func fc(x float64) string { return strconv.FormatFloat(x, 'f', 1, 64) }
+
+func graphSVG(v GraphView) g.Node {
+	cx, cy := float64(graphW)/2, float64(graphH)/2
+
+	neighbors := v.Neighbors
+	if len(neighbors) > maxNeighbors {
+		neighbors = neighbors[:maxNeighbors]
+	}
+
+	children := make([]g.Node, 0, len(neighbors)*2+3)
+	n := len(neighbors)
+	for i, nb := range neighbors {
+		angle := 2 * math.Pi * float64(i) / float64(n)
+		x := cx + graphR*math.Cos(angle)
+		y := cy + graphR*math.Sin(angle)
+		// Edge from center to this neighbor.
+		children = append(children, g.El("line",
+			g.Attr("x1", fc(cx)), g.Attr("y1", fc(cy)),
+			g.Attr("x2", fc(x)), g.Attr("y2", fc(y)),
+			g.Attr("stroke", "var(--line)"), g.Attr("stroke-width", "1")))
+		// Neighbor dot + escaped hover title + escaped label, wrapped in an <a>
+		// that morphs the panel to that node's show card (the generic note route).
+		children = append(children, g.El("a",
+			g.Attr("href", "/ui/show/note?id="+nb.ID),
+			g.Attr("data-on:click__prevent", "@get('/ui/show/note?id="+nb.ID+"')"),
+			g.El("circle", g.Attr("cx", fc(x)), g.Attr("cy", fc(y)), g.Attr("r", strconv.Itoa(nodeR)),
+				g.Attr("fill", "var(--teal-ink)"),
+				g.El("title", g.Text(nb.Title))),
+			g.El("text", g.Attr("x", fc(x)), g.Attr("y", fc(y+labelOffset)),
+				g.Attr("text-anchor", "middle"), g.Attr("font-size", "10"),
+				g.Attr("fill", "var(--ink)"), g.Text(ui.Clip(nb.Title, labelClip))),
+		))
+	}
+
+	// Focus node last so it sits on top.
+	children = append(children,
+		g.El("circle", g.Attr("cx", fc(cx)), g.Attr("cy", fc(cy)), g.Attr("r", strconv.Itoa(focusR)),
+			g.Attr("fill", "var(--gold)"),
+			g.El("title", g.Text(v.FocusTitle))),
+		g.El("text", g.Attr("x", fc(cx)), g.Attr("y", fc(cy+labelOffset)),
+			g.Attr("text-anchor", "middle"), g.Attr("font-size", "11"),
+			g.Attr("fill", "var(--ink)"), g.Text(ui.Clip(v.FocusTitle, labelClip))),
+	)
+	if n == 0 {
+		children = append(children,
+			g.El("text", g.Attr("x", fc(cx)), g.Attr("y", fc(cy-float64(focusR)-8)),
+				g.Attr("text-anchor", "middle"), g.Attr("font-size", "10"),
+				g.Attr("fill", "var(--ink-soft)"), g.Text("No links yet")))
+	}
+
+	attrs := []g.Node{
+		g.Attr("class", "node-graph"),
+		g.Attr("viewBox", "0 0 "+strconv.Itoa(graphW)+" "+strconv.Itoa(graphH)),
+		g.Attr("role", "img"),
+		g.Attr("aria-label", "1-hop graph of "+v.FocusTitle),
+	}
+	return g.El("svg", append(attrs, children...)...)
+}
+
+// buildGraph loads the focus node + its 1-hop neighborhood (Neighborhood already
+// returns Backlinks ∪ Outbound, active only, de-duped) and maps it to a
+// GraphView. Neighbors are capped at maxNeighbors in the renderer.
+func buildGraph(app core.App, params map[string]string) GraphView {
+	id := params["id"]
+	focus, err := app.FindRecordById("nodes", id)
+	if err != nil {
+		return GraphView{FocusID: id}
+	}
+	view := GraphView{FocusID: id, FocusTitle: focus.GetString("title")}
+	recs, err := nodes.Neighborhood(app, id)
+	if err != nil {
+		return view
+	}
+	for _, r := range recs {
+		view.Neighbors = append(view.Neighbors, GraphNode{
+			ID:    r.Id,
+			Title: r.GetString("title"),
+			Type:  r.GetString("type"),
+		})
+	}
+	return view
+}
