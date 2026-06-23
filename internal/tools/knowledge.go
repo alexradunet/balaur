@@ -32,11 +32,6 @@ func KnowledgeTools(app core.App) []agent.Tool {
 	}
 }
 
-// nodeTypes are the owner-authored node types node_write may create. memory and
-// skill are deliberately excluded — those are consent-gated proposals (remember
-// / propose_skill), born proposed, not owner-voiced active writes.
-var nodeTypes = []string{"note", "journal", "person", "book", "idea", "place"}
-
 // ProposalMarker prefixes tool results that carry a proposal id, so the web
 // layer can render an approval card instead of a plain tool row. Format:
 // marker + kind + "/" + record id, then a newline and the model-facing text.
@@ -253,12 +248,17 @@ func proposeSkillTool(app core.App) agent.Tool {
 // nodeWriteTool creates an owner-authored node (note or typed object). Unlike
 // remember/propose_skill these are born active — owner-voiced, trusted writes.
 func nodeWriteTool(app core.App) agent.Tool {
+	allowedTypes, err := nodes.OwnerAuthoredTypes(app)
+	if err != nil || len(allowedTypes) == 0 {
+		app.Logger().Warn("node_write: could not load owner-authored types from registry; falling back to [note]", "error", err)
+		allowedTypes = []string{"note"}
+	}
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("node_write",
 			"Write an owner-authored knowledge node — a note or a typed object (person, book, idea, place). "+
 				"Born active (the owner's own, trusted). For things you want the owner to APPROVE as a memory, use remember instead.",
 			obj(map[string]any{
-				"type":  map[string]any{"type": "string", "enum": nodeTypes, "description": "Node type (default note)."},
+				"type":  map[string]any{"type": "string", "enum": allowedTypes, "description": "Node type (default note)."},
 				"title": str("Short title for the node."),
 				"body":  str("The node's markdown body."),
 			}, "title")),
@@ -278,7 +278,7 @@ func nodeWriteTool(app core.App) agent.Tool {
 			if typ == "" {
 				typ = "note"
 			}
-			if !slices.Contains(nodeTypes, typ) {
+			if !slices.Contains(allowedTypes, typ) {
 				return "", fmt.Errorf("node_write: type %q is not an owner-authored type", typ)
 			}
 			rec, err := nodes.Create(app, typ, args.Title, args.Body, nodes.StatusActive, nil)
@@ -291,11 +291,16 @@ func nodeWriteTool(app core.App) agent.Tool {
 }
 
 func nodeListTool(app core.App) agent.Tool {
+	allTypes, err := nodes.TypeNames(app)
+	if err != nil || len(allTypes) == 0 {
+		app.Logger().Warn("node_list: could not load types from registry; falling back to [note]", "error", err)
+		allTypes = []string{"note"}
+	}
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("node_list",
 			"List active knowledge nodes of a given type (newest first).",
 			obj(map[string]any{
-				"type": map[string]any{"type": "string", "enum": nodeTypes, "description": "Node type to list (default note)."},
+				"type": map[string]any{"type": "string", "enum": allTypes, "description": "Node type to list (default note)."},
 			}, "type")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {

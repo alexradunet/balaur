@@ -86,6 +86,13 @@ func Create(app core.App, typ, title, body, status string, props map[string]any)
 	if strings.TrimSpace(title) == "" {
 		return nil, fmt.Errorf("nodes: title is required")
 	}
+	ok, err := TypeExists(app, typ)
+	if err != nil {
+		return nil, fmt.Errorf("nodes: checking type: %w", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("nodes: unknown type %q (not in node_types registry)", typ)
+	}
 	col, err := app.FindCollectionByNameOrId("nodes")
 	if err != nil {
 		return nil, fmt.Errorf("finding nodes collection: %w", err)
