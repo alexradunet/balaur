@@ -69,20 +69,28 @@
               var cur = G.graphData();
               var ids = new Set(cur.nodes.map(function (x) { return x.id; }));
               var keys = new Set(cur.links.map(linkKey));
-              d.nodes.forEach(function (x) {
+              (d.nodes || []).forEach(function (x) {
                 if (!ids.has(x.id)) { ids.add(x.id); cur.nodes.push(x); }
               });
-              d.links.forEach(function (x) {
+              (d.links || []).forEach(function (x) {
                 if (!keys.has(linkKey(x))) { keys.add(linkKey(x)); cur.links.push(x); }
               });
               G.graphData(cur);
             });
           });
+        // Keep the canvas sized to its container — the panel is narrow and
+        // resizable, and force-graph otherwise captures a wrong (full-window)
+        // size at init, scattering nodes off-screen. Fires immediately with the
+        // current size, then on every resize.
+        new ResizeObserver(function () {
+          if (box.clientWidth) G.width(box.clientWidth).height(box.clientHeight);
+        }).observe(box);
         fetchGraph(box.dataset.focus, 2)
           .then(function (d) {
             if (d && d.nodes && d.nodes.length) {
-              G.graphData(d);
+              G.graphData({ nodes: d.nodes, links: d.links || [] }); // links null → force-graph throws
               hideFallback(box); // live canvas has data → drop the SVG fallback
+              setTimeout(function () { G.zoomToFit(400, 24); }, 600); // frame the whole graph
             } else {
               box.style.display = "none"; // nothing to show → keep the SVG
             }
@@ -111,4 +119,9 @@
       }
     }
   }).observe(document.body, { childList: true, subtree: true });
+
+  // Belt-and-suspenders: on reload the panel can restore a graph card via an
+  // in-place morph the observer doesn't always see. init() is idempotent, so a
+  // few delayed re-scans safely catch it.
+  [150, 600, 1500].forEach(function (ms) { setTimeout(function () { scan(document); }, ms); });
 })();

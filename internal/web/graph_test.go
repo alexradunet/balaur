@@ -86,6 +86,34 @@ func TestBuildGraphData(t *testing.T) {
 	}
 }
 
+// TestBuildGraphDataNoEdges: a node with no edges must return a non-nil empty
+// Links slice. JSON `null` breaks force-graph (`null.some(...)`), which is the
+// common case while the graph has no links yet.
+func TestBuildGraphDataNoEdges(t *testing.T) {
+	app := newWebApp(t)
+	coll, err := app.FindCollectionByNameOrId("nodes")
+	if err != nil {
+		t.Fatalf("nodes collection: %v", err)
+	}
+	r := core.NewRecord(coll)
+	r.Set("type", "note")
+	r.Set("title", "Lonely")
+	r.Set("status", nodes.StatusActive)
+	if err := app.Save(r); err != nil {
+		t.Fatalf("save node: %v", err)
+	}
+	gd, err := buildGraphData(app, r.Id, 2)
+	if err != nil {
+		t.Fatalf("buildGraphData: %v", err)
+	}
+	if gd.Links == nil {
+		t.Error("Links must be non-nil ([] not null) for a node with no edges — force-graph throws on null")
+	}
+	if len(gd.Nodes) != 1 {
+		t.Errorf("node count = %d, want 1 (lone focus)", len(gd.Nodes))
+	}
+}
+
 // TestBuildGraphDataInactiveFocus: an inactive focus is an error (the handler
 // turns it into a sanitized 404).
 func TestBuildGraphDataInactiveFocus(t *testing.T) {

@@ -86,7 +86,9 @@ func buildGraphData(app core.App, focusID string, depth int) (graphData, error) 
 		frontier = next
 	}
 
-	gd := graphData{Nodes: make([]graphNode, 0, len(seen))}
+	// Both slices are non-nil so the JSON is [] not null — force-graph throws on a
+	// null links array (`null.some(...)`), which is the common no-edges case.
+	gd := graphData{Nodes: make([]graphNode, 0, len(seen)), Links: make([]graphLink, 0)}
 	for _, r := range seen {
 		gd.Nodes = append(gd.Nodes, graphNode{ID: r.Id, Title: r.GetString("title"), Type: r.GetString("type")})
 	}

@@ -72,6 +72,16 @@ func NoteCard(v NoteView) g.Node {
 				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Save")),
 			),
 		),
+		// Network entry points: open this node's interactive graph or its related
+		// list (the graph card had no inbound link from the node view before).
+		h.Footer(h.Class("kcard-actions"),
+			h.A(h.Href("/ui/show/graph?id="+v.ID),
+				data.On("click", "@get('/ui/show/graph?id="+v.ID+"')", data.ModifierPrevent),
+				g.Text("see graph →")),
+			h.A(h.Href("/ui/show/related?id="+v.ID),
+				data.On("click", "@get('/ui/show/related?id="+v.ID+"')", data.ModifierPrevent),
+				g.Text("related →")),
+		),
 	)
 }
 
