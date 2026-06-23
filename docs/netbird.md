@@ -94,3 +94,27 @@ If you later want defence in depth — requiring a logged-in session for
 non-loopback requests, so reachability no longer equals full trust — that is
 a separate piece of work (app-level auth on the `internal/web` gateway), not
 covered here.
+
+## Troubleshooting: "Connected" peer but the page won't load
+
+If `netbird status` shows this box as a **Connected** peer but a browser/curl to
+`http://<overlay-ip>:8080/` just hangs, the **NetBird ACL policy** is almost
+certainly dropping the port. NetBird enforces ACLs on the box in nftables
+(`table ip netbird`, chain `netbird-acl-input-filter`): it accepts only the
+source+port pairs your policies created, then `iifname "wt0" drop`s the rest.
+Binding the port and opening ufw on `wt0` is **not** enough — that gets the
+decrypted packet onto `wt0`, but the ACL drops it before the socket.
+
+Signature, on the box:
+
+- `sudo tcpdump -ni wt0 'tcp port 8080'` — the client's `Flags [S]` (SYN) keeps
+  arriving and retransmitting, but no `Flags [S.]` (SYN-ACK) goes back.
+- `ss -tan | grep :8080` shows only `LISTEN`, never `SYN-RECV`.
+- `ping <peer-overlay-ip>` from the box is 100% loss.
+- `sudo nft list table ip netbird` lists only the allowed dports (often just SSH
+  22 / 22022) — your app port is absent.
+
+Fix in the NetBird dashboard (**Access Control → Policies**): allow your devices
+→ this peer on TCP **8080** (prod) and **8090** (the `make dev` staging
+instance). It syncs in seconds; no service restart. Do **not** hand-edit
+`table ip netbird` — NetBird reconciles it and wipes manual `nft` rules.
