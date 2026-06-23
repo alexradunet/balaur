@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-Environment=BALAUR_HTTP=127.0.0.1:8090
+Environment=BALAUR_HTTP=127.0.0.1:8080
 Environment=BALAUR_DATA_DIR=%h/.local/share/balaur/pb_data
 EnvironmentFile=-%h/.config/balaur/env
 ExecStart=%h/.local/bin/balaur serve --http ${BALAUR_HTTP} --dir ${BALAUR_DATA_DIR}

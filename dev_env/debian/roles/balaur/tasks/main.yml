@@ -39,7 +39,7 @@
   when: balaur_allowed_hosts | length > 0
 
 # Bind address override (e.g. the NetBird overlay IP — Option B in docs/netbird.md).
-# Empty default leaves the systemd unit's 127.0.0.1:8090 loopback bind in place.
+# Empty default leaves the systemd unit's 127.0.0.1:8080 loopback bind in place.
 - name: Set BALAUR_HTTP bind address
   ansible.builtin.lineinfile:
     path: "{{ config_dir }}/env"

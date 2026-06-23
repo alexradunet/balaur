@@ -81,8 +81,9 @@ Edit `group_vars/all.yml`. Key knobs: `go_target` (pin to go.mod's `go` line),
 - **NetBird + Balaur**: after `netbird up`, read the overlay IP/FQDN from
   `netbird status`, set `balaur_allowed_hosts`, and re-run `-t balaur`. Per
   `docs/netbird.md`, **NetBird ACLs are the only gate** — Balaur's UI has no
-  login, so any peer that can reach `:8090` gets full owner access. ufw stays
-  default-deny inbound (NetBird is outbound WireGuard, so it still works).
+  login, so any peer that can reach the prod port (`:8080`) or the dev/staging
+  port (`:8090`) gets full owner access. ufw stays default-deny inbound (NetBird
+  is outbound WireGuard, so it still works). See `docs/two-instances.md`.
 - **wsh**: there is no standalone installer; Wave Terminal auto-deploys `wsh`
   into `~/.waveterm/bin` the first time you SSH to this box from Wave on your
   laptop. Nothing to provision.

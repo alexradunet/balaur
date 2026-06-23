@@ -29,7 +29,7 @@ help:
 # internal/web/web.go 403s everything else). air's [build].env doesn't
 # propagate to the child binary, so we export it here — the built process
 # inherits it. Override on the CLI: make dev BALAUR_ALLOWED_HOSTS=1.2.3.4
-BALAUR_ALLOWED_HOSTS ?= 192.168.50.12,100.124.242.131,balaur,balaur.local
+BALAUR_ALLOWED_HOSTS ?= 192.168.50.12,100.124.242.131,balaur,balaur.local,balaur-113-87.netbird.cloud,100.124.113.87
 export BALAUR_ALLOWED_HOSTS
 
 # Reproducible dev-tool setup. dlv powers the VS Code "Debug: balaur serve"

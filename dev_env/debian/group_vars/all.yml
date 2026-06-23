@@ -17,10 +17,12 @@ timezone: "Europe/Bucharest"
 # Balaur app / service
 balaur_build: true               # `make build` to verify the CGO-free build
 balaur_install_service: true     # install + enable the systemd --user service
-# Reachable over the NetBird mesh (Option B — bind the overlay IP). Empty
-# balaur_http leaves the loopback default. See docs/netbird.md.
-balaur_http: "100.124.113.87:8090"
-balaur_allowed_hosts: "balaur-113-87.netbird.cloud,100.124.113.87"  # no port
+# Prod (live personal) instance, reachable over the NetBird mesh (Option B —
+# bind the overlay IP) on 8080. The dev/staging hot-reload instance runs via
+# `make dev` on 8090. Empty balaur_http leaves the loopback default. See
+# docs/netbird.md and docs/two-instances.md.
+balaur_http: "100.124.113.87:8080"
+balaur_allowed_hosts: "balaur-113-87.netbird.cloud,100.124.113.87"  # no port; covers both ports
 
 # Optional installers
 claude_install: true
@@ -44,9 +46,9 @@ ssh_allow_users: "{{ ansible_user_id }}"
 ssh_disable_password: true
 
 # ─── Firewall ───────────────────────────────────────────────────────────────
-ufw_allow_balaur_netbird: true   # open balaur's port on the NetBird interface
+ufw_allow_balaur_netbird: true   # open balaur's ports on the NetBird interface
 netbird_iface: "wt0"
-balaur_http_port: 8090
+balaur_mesh_ports: [8080, 8090]  # prod (8080) + dev/staging hot-reload (8090)
 
 # ─── Unattended upgrades ────────────────────────────────────────────────────
 autoreboot_time: "04:00"

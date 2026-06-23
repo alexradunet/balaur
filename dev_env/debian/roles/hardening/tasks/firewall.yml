@@ -40,9 +40,10 @@
     rule: allow
     direction: in
     interface: "{{ netbird_iface }}"
-    to_port: "{{ balaur_http_port | string }}"
+    to_port: "{{ item | string }}"
     proto: tcp
-    comment: Balaur over NetBird
+    comment: Balaur (prod 8080 + dev/staging 8090) over NetBird
+  loop: "{{ balaur_mesh_ports }}"
   when: ufw_allow_balaur_netbird | bool
 
 - name: Enable ufw
