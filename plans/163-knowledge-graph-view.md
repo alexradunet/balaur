@@ -12,7 +12,7 @@
 > never weaken checksum verification.
 >
 > **Drift check (run first)**:
-> `git diff --stat 72fd762..HEAD -- internal/cards/cards.go internal/feature/graphcards internal/feature/all internal/feature/storybook internal/web/home.go internal/self/knowledge.md internal/nodes`
+> `git diff --stat b5b200a..HEAD -- internal/cards/cards.go internal/feature/graphcards internal/feature/all internal/feature/storybook internal/web/home.go internal/self/knowledge.md internal/nodes internal/knowledge`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -22,9 +22,9 @@
 - **Priority**: P2
 - **Effort**: M
 - **Risk**: LOW
-- **Depends on**: `plans/160-*.md` (nodes/edges schema + node cards + the `GET /ui/show/{type}` dispatcher), `plans/161-*.md` (the `edges` rows + the `internal/nodes` Backlinks/Outbound helpers). Soft-benefits from `plans/162-*.md` (FTS-similar; degrades gracefully when absent).
+- **Depends on**: `plans/160-*.md` (nodes/edges schema + node cards + the `GET /ui/show/{type}` dispatcher — ALL LANDED), `plans/161-*.md` (the `edges` rows + the `internal/nodes` Backlinks/Outbound/Neighborhood helpers — LANDED), `plans/162-*.md` (the cross-type FTS-similar helper `knowledge.SearchAllActive` — LANDED). All three dependencies are now on `main`; this plan calls their REAL signatures (see "Current state").
 - **Category**: direction
-- **Planned at**: commit `72fd762`, 2026-06-23
+- **Planned at**: commit `b5b200a`, 2026-06-23 (reconciled to post-160/161/162 main; originally written at `72fd762`)
 - **Issue**: —
 
 ## Why this matters
@@ -59,10 +59,14 @@ below are the exemplars to copy; do not invent new patterns.
   through the 161 helpers, which already filter to active — do not write a raw
   query that could leak proposed rows.
 - **Edges are node↔node only.** The `edges` collection's relation fields are
-  named **`source`** and **`target`** (declared by plan 160; back-relation
-  expand is `edges_via_target` for backlinks, `edges_via_source` for outbound).
-  Use these exact names via 161's helpers — never invent a `/ui/notes/{id}`
-  route or a differently-named relation.
+  named **`source`** and **`target`** (declared by plan 160). The LIVE 161
+  helpers do NOT expand via a back-relation — they run a raw filter on these
+  string fields: `Backlinks` is `app.FindRecordsByFilter("edges", "target = {:id}", …)`
+  then `activeByIDs` on each edge's `source`; `Outbound` is the mirror
+  (`"source = {:id}"`, then `activeByIDs` on `target`). You call the helpers and
+  never touch this layer — just don't assume `edges_via_target`/`edges_via_source`
+  back-relation expand; the live code does not use it. Never invent a
+  `/ui/notes/{id}` route or a differently-named relation.
 - **The node/show route is whatever plan 160 registered** — the generic
   `GET /ui/show/{type}?id=...` dispatcher (see `internal/web/show.go` below).
   161 and 163 use 160's real route; do not invent a new one.
@@ -73,24 +77,30 @@ below are the exemplars to copy; do not invent new patterns.
 
 ### The contract this plan consumes from plans 160 & 161
 
-Plan 161 introduces (or extends) package **`internal/nodes`** with helpers that
-return the active neighbors of a node. This plan calls them; it does not
-re-implement edge traversal. The expected signatures (confirm against the live
-161 code during the Drift check — if 161 named them differently, adapt the call
-sites and STOP-report the rename):
+Package **`internal/nodes`** (160/161 — LANDED) exposes the helpers that return
+the active neighbors of a node. This plan calls them; it does not re-implement
+edge traversal. These are the LIVE signatures (verified at HEAD `b5b200a`),
+copied verbatim from `internal/nodes/nodes.go`:
 
 ```go
-// internal/nodes (provided by plan 161)
-// Backlinks returns active nodes that link TO the node id (via edges_via_target).
+// internal/nodes/nodes.go:215 — active nodes that link TO id (inbound edges).
 func Backlinks(app core.App, id string) ([]*core.Record, error)
-// Outbound returns active nodes the node id links FROM (via edges_via_source).
+// internal/nodes/nodes.go:228 — active nodes that id links TO (outbound edges).
 func Outbound(app core.App, id string) ([]*core.Record, error)
+// internal/nodes/nodes.go:242 — the 1-hop set (Backlinks ∪ Outbound), active,
+// de-duplicated by id. Use THIS for the graph card's neighbor set.
+func Neighborhood(app core.App, id string) ([]*core.Record, error)
 ```
 
-If 161 exposes a single combined helper (e.g. `Neighbors`) instead of the pair,
-use it; the related-computation in Step 2 is written to need only "active
-backlinks" and "active outbound" sets. **If neither shape exists when you start,
-that is a STOP condition** (161 has not landed — this plan hard-depends on it).
+All three funnel id sets through `activeByIDs` (`internal/nodes/nodes.go:193`),
+which loads the nodes and keeps only `status == StatusActive` — the consent
+spine, so traversal can never surface a proposed/rejected node. `StatusActive`
+is the `"active"` constant in the same package. The graph card (Step 3) should
+call **`Neighborhood`** (the combined, de-duped set already exists — don't
+re-merge `Backlinks`+`Outbound` by hand); the related list (Step 2) calls
+`Backlinks` and `Outbound` separately because it labels each row by direction.
+All three helpers have LANDED, so the "161 has not landed" STOP condition is
+moot — but still confirm the funcs exist during the Drift check.
 
 A node record (collection `nodes`, declared by plan 160) has at least:
 `id`, `type` (text/select), `title` (text), `status` (select; filter to
@@ -113,32 +123,31 @@ type Spec struct {
 }
 ```
 
-`internal/cards/cards.go:120-133` (a spec WITH a required param — the shape to
-copy for the new `id`-required specs):
+The LIVE `note` spec (`internal/cards/cards.go:120-130`) is the cleanest
+copy-target — it already declares a **required `id`** param (this plan's specs
+copy that exact shape):
 
 ```go
 		{
-			Type:  "memory",
-			Label: "Memory",
+			Type:  "note",
+			Label: "Note",
 			Icon:  "tome",
 			W:     4,
 			H:     20,
 			Params: []ParamSpec{
-				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (approve/archive inline)"},
-				{Name: "category", Enum: []string{"fact", "preference", "person", "project", "context"}, Doc: "show one memory category (the Knowledge sidebar sub-items)"},
-				{Name: "view", Enum: []string{"active", "proposed"}, Doc: "active (default — the category listing) or proposed (the Awaiting approval queue)"},
-				{Name: "query", Doc: "optional search terms to filter active memories"},
-				{Name: "limit", Doc: "number of memories to show (default 6, max 50)"},
+				{Name: "id", Required: true, Doc: "node id to show"},
+				{Name: "type", Doc: "node type for typed-object render"},
 			},
 		},
 ```
 
-`ParamSpec` (`internal/cards/cards.go:17-23`): `{Name, Required bool, Enum []string, Doc string}`.
-`Validate` (`internal/cards/cards.go:296-353`) drops unknown keys, errors on a
-missing required param, errors on a bad enum value, and clamps `limit`/`days`
-to `[1,50]`/`[1,366]`. A free-string param like `id` is capped at
-`maxParamLen` (256). So a `required` `id` param + a `limit` param need no
-custom validation — the registry handles it.
+`ParamSpec` (`internal/cards/cards.go:18-23`): `{Name string, Required bool, Enum []string, Doc string}`.
+`Validate` (`internal/cards/cards.go:307-…`) drops unknown keys, errors on a
+missing required param (`"card %q requires param %q"`), errors on a bad enum
+value, and clamps `limit`/`days` to `[1,50]`/`[1,366]` (`clampInt`, the `switch
+ps.Name` at `cards.go:342`). A free-string param like `id` is capped at
+`maxParamLen` (256, `cards.go:38`). So a `required` `id` param + a `limit` param
+need no custom validation — the registry handles it.
 
 ### Exemplar 2 — the ui card registry (how a feature renders a card)
 
@@ -165,62 +174,73 @@ will ignore `size` (they have one surface).
 
 ### Exemplar 3 — a feature-card package's Register/Unregister + init
 
-`internal/feature/knowledgecards/register.go` (the whole file — copy this shape):
+`internal/feature/knowledgecards/register.go` (the whole file, verbatim at
+HEAD `b5b200a` — copy this shape; note it now registers THREE cards including
+`note`, added by 160/161):
 
 ```go
 package knowledgecards
 // ... package doc ...
 import (
 	"github.com/pocketbase/pocketbase/core"
+
 	"github.com/alexradunet/balaur/internal/feature"
 	"github.com/alexradunet/balaur/internal/ui"
 )
+// Register wires the knowledge-family cards into the ui registry.
 func Register(app core.App) {
 	registerMemory(app)
 	registerSkills(app)
+	registerNote(app)
 }
+// Unregister removes them. Called from web.Register's OnTerminate hook.
 func Unregister() {
 	ui.UnregisterCard("memory")
 	ui.UnregisterCard("skills")
+	ui.UnregisterCard("note")
 }
 func init() {
 	feature.Add(feature.Funcs(Register, Unregister))
 }
 ```
 
-And the per-card registration body (`internal/feature/knowledgecards/memory.go:300-310`
-— `func registerMemory` at line 300, `ui.RegisterCard("memory", …)` at line 301;
-the body below is **illustrative — confirm against the live `registerMemory`
-during the drift check**, not byte-exact):
+And the per-card registration body — the LIVE `registerNote`
+(`internal/feature/knowledgecards/note.go:154-158`, verbatim) is the EXACT
+shape this plan's `registerRelated`/`registerGraph` copy (a single node has one
+surface, so it ignores `size`):
 
 ```go
-func registerMemory(app core.App) {
-	ui.RegisterCard("memory", func(size ui.CardSize, params map[string]string) (g.Node, error) {
-		if size == ui.Focus {
-			return KnowledgeFocus(buildMemoryFocus(app, params)), nil
-		}
-		if params["mode"] == "manage" {
-			return MemoryManageCard(buildMemoryManage(app)), nil
-		}
-		return MemoryCard(buildMemorySummary(app, params)), nil
+// registerNote wires the note card into the ui registry. It renders identically
+// at tile and focus size (a single node has one surface).
+func registerNote(app core.App) {
+	ui.RegisterCard("note", func(size ui.CardSize, params map[string]string) (g.Node, error) {
+		return NoteCard(buildNote(app, params)), nil
 	})
 }
 ```
 
-The feature layering law (from `knowledgecards/register.go` doc comment, line
-1-8): a feature package imports `internal/ui`, `internal/feature`, its domain
+The feature layering law (from `knowledgecards/register.go` doc comment, lines
+1-9): a feature package imports `internal/ui`, `internal/feature`, its domain
 package (here `internal/nodes`), gomponents, and `pocketbase/core` only —
-**never `internal/web`** (spec §4.1). `internal/feature/knowledgecards/knowledgecards_test.go`
-is a compile-time `TestNoWebImports` marker; add the same marker test.
+**never `internal/web`** (spec §4.1). NOTE: `knowledgecards` ALSO imports
+`internal/ui/chat` (for the note card's linked-Markdown render) and
+`github.com/pocketbase/dbx` — graphcards does NOT need those; keep its import
+set to ui/feature/nodes/gomponents/core (+ `internal/knowledge` for the
+FTS-similar helper, see Exemplar 7). `internal/feature/knowledgecards/knowledgecards_test.go`
+is a compile-time `TestNoWebImports` marker (package `knowledgecards_test`, a
+one-line `t.Log`); add the same marker test verbatim.
 
 ### Exemplar 4 — the show route the cards are served by (do NOT modify)
 
-`internal/web/show.go:25-48` — `GET /ui/show/{type}` validates params via
-`cards.Validate`, then morphs `#panel-inner`. Because `related` and `graph` are
-just registered card types with a validated `id` param, the existing dispatcher
+`internal/web/show.go:25-48` — `func (h *handlers) uiShow` (`GET /ui/show/{type}`)
+reads `e.Request.PathValue("type")`, looks it up via `cards.Get(typ)`, validates
+params via `cards.Validate`, and morphs `#panel-inner` with the rendered card via
+`datastar.NewSSE(...).PatchElements`. Because `related` and `graph` are just
+registered card types with a validated `id` param, the existing dispatcher
 serves `/ui/show/related?id=...` and `/ui/show/graph?id=...` for free once the
-specs are registered. **You do not touch show.go.** (160's node-show route also
-flows through this same dispatcher.)
+specs are registered. **You do not touch show.go.** (160's node-show route
+`/ui/show/note?id=` — confirmed live in `note.go:91` — flows through this same
+dispatcher.)
 
 ### Exemplar 5 — the command palette ("/"-command navigation)
 
@@ -246,34 +266,48 @@ same idea: compute x/y for each neighbor in Go, emit `<line>` + `<circle>` +
 into a path/attribute; titles go in `<text>` via `g.Text` (escaped). Use
 `g.El("title", g.Text(label))` for hover tooltips, never an unescaped attribute.
 
-### Exemplar 7 — the FTS recall helper (162, optional, degrades gracefully)
+### Exemplar 7 — the cross-type FTS helper (162, LANDED — use the REAL one)
 
-`internal/knowledge/knowledge.go:229-285` — `SearchActive(app, terms, limit)`
-(signature `func SearchActive(app core.App, terms []string, limit int) ([]*core.Record, error)`
-at line 229) takes the FTS5 fast path when `app.Store().GetOk(search.StoreKey)`
-returns a live `*search.Index`, else falls through to a LIKE query, else returns
-`(nil, nil)`. This is the EXISTING recall helper, but **today it searches the
-`memories` collection, not `nodes`** — plan 162 re-points the node-search entry
-point at `nodes`. So call whatever node-search helper 162 exposes, NOT
-`SearchActive` directly. For "FTS-similar related
-nodes", call the equivalent **node** search helper that 162 exposes (a unified
-`knowledge_fts` over nodes; 162 owns it). **Do NOT import `internal/search`
-directly and do NOT widen the FTS table** — read similar nodes only through the
-helper 162 provides (or the existing `knowledge.SearchActive`-style entry point
-that 162 re-points at nodes). If that helper is absent (162 not landed), the
-related list MUST still render from Backlinks ∪ Outbound alone — skip the
-FTS-similar section entirely, no error. This is the "degrades gracefully"
-requirement; Step 2 makes it explicit.
+162 has LANDED. The cross-type "FTS-similar" surface this plan needs is the new
+exported helper, NOT the memory-scoped `SearchActive`. Use the LIVE signature
+(`internal/knowledge/knowledge.go:369`):
+
+```go
+// SearchAllActive returns active nodes of ANY type matching terms, bm25-ranked
+// when the FTS5 sidecar is live (app.Store().GetOk(search.StoreKey)), else a
+// deterministic substring scan over active nodes' title/body. Returns RAW node
+// records (caller renders each hit by its node `type`). A non-active node is
+// never returned (the consent filter).
+func SearchAllActive(app core.App, terms []string, limit int) ([]*core.Record, error)
+```
+
+This is exactly the "FTS-similar related nodes" surface: call
+`knowledge.SearchAllActive(app, terms, limit)` where `terms` is derived from the
+focus node's title (see Step 2 for how). It already filters to `status=active`
+internally and degrades gracefully on its own — when the FTS index is absent it
+falls back to a substring scan (no panic, no `(nil,nil)` cliff); it only errors
+on a genuine DB failure. So 163's guard is simply: call it, and on a non-nil
+`err` skip the FTS-similar section (log nothing — a missing index is not an
+error here, it self-falls-back; only a real DB error returns non-nil). **Do NOT
+import `internal/search` directly and do NOT widen the FTS table** — `internal/knowledge`
+owns the `search.StoreKey` lookup; read similar nodes only through
+`SearchAllActive`. (Note: do NOT call `knowledge.SearchActive` — that one stays
+memory-scoped and hydrates memory aliases; `SearchAllActive` is the cross-type
+node surface 163 wants. There is no separate "node-search entry point 162
+re-points" — 162 ADDED `SearchAllActive` alongside the unchanged `SearchActive`.)
 
 ### Conventions to match (Balaur law, inlined)
 
-- gomponents: alias `g "maragu.dev/gomponents"`, `h "maragu.dev/gomponents/html"`
-  (see `memory.go:12-14`). The click-morph links in this plan use the `g.Attr`
-  string form `g.Attr("data-on:click__prevent", "@get('...')")` (Major-2 note in
-  Step 2), so you do NOT need the `data "maragu.dev/gomponents-datastar"` alias —
-  importing it unused would fail the build. User/model text (node titles) renders
-  through escaping `g.Text` — **never** `g.Raw` for a node title. `g.Raw` is only
-  for already-rendered trusted HTML.
+- gomponents: alias `g "maragu.dev/gomponents"`, `h "maragu.dev/gomponents/html"`.
+  Confirmed live (HEAD): the click-morph LINKS in `memory.go` use the `g.Attr`
+  string form — `memory.go:59` (`h.A(h.Href("/ui/show/memory"), g.Attr("data-on:click__prevent", "@get('/ui/show/memory')"), …)`)
+  and `memory.go:185`. (The codebase ALSO uses `data.On(...)`/`data.ModifierPrevent`
+  from `data "maragu.dev/gomponents-datastar"` — but only for FORM `submit`
+  handlers, e.g. `note.go:69`, `memory.go:122`. This plan emits links only, so use
+  the `g.Attr` string form and do NOT import the `data` alias — importing it
+  unused would fail the build.) User/model text (node titles) renders through
+  escaping `g.Text` — **never** `g.Raw` for a node title. `g.Raw` is only for
+  already-rendered trusted HTML.
 - Errors are values: `fmt.Errorf("doing x: %w", err)`, return early, no panics
   in library code. Builders that hit the DB return `(View, error)` or swallow to
   an empty view the way `memory.go:229` does (`recs, _ := ...`) — match whichever
@@ -409,11 +443,21 @@ Create `internal/feature/graphcards/related.go`. The builder unions:
 
 1. **Backlinks** — `nodes.Backlinks(app, id)` (active nodes linking TO id).
 2. **Outbound** — `nodes.Outbound(app, id)` (active nodes id links FROM).
-3. **FTS-similar** (OPTIONAL) — top results from 162's node-search helper for the
-   focus node's `title`, EXCLUDING id itself and anything already in (1)/(2).
-   **If 162's helper is absent or returns an error, skip this section entirely —
-   no error, no log noise.** Guard the call so the related list always renders
-   from edges alone.
+3. **FTS-similar** (OPTIONAL) — `knowledge.SearchAllActive(app, terms, limit)`
+   (the LANDED cross-type helper, `internal/knowledge/knowledge.go:369`).
+   **Deriving `terms`**: split the focus node's `title` on whitespace into words,
+   drop empties (and optionally 1–2-char stopword-ish tokens) — `SearchAllActive`
+   already lowercases/trims each term internally, so a plain
+   `strings.Fields(focusTitle)` is enough. Pass `limit` (the card's limit) so the
+   helper bounds its own result set. Then EXCLUDE: the focus node id itself, and
+   any id already present from (1)/(2) — those rows already render with a stronger
+   `"backlink"`/`"links to"` label; FTS only fills the remainder up to `limit`.
+   **Guard**: `recs, err := knowledge.SearchAllActive(app, terms, limit); if err == nil { … } `
+   — on a non-nil err, skip this section entirely (no error surfaced, no log
+   noise). The helper self-falls-back to a substring scan when the FTS index is
+   absent, so the only non-nil err is a real DB failure; the related list always
+   renders from edges alone in that case. (Importing `internal/knowledge` is
+   allowed — it is a domain package, not `internal/web` and not `internal/search`.)
 
 De-duplicate by node id (a node that is both a backlink and outbound appears
 once), drop the focus node itself, and cap the merged list to `limit`
@@ -422,10 +466,17 @@ label: `"backlink"`, `"links to"`, or `"similar"` (first source wins on a tie).
 
 View-model + card shape (match `memory.go`'s row/list style — `ui.CardHead`,
 `h.Ul(h.Class("ucard-list"))`, `h.Li(h.Class("ucard-row"))`, an
-`ui.EmptyState` when empty). Each row links to the focus of that neighbor via
-the 160 node-show route — **use 160's real route**; during the drift check,
-read 160 to learn the exact path (it is `GET /ui/show/{type}?id=...`). The
-node's `type` is the `{type}` segment and its id is the `id` param:
+`ui.EmptyState` when empty). Each row links to that neighbor's node-show card.
+**IMPORTANT — the route segment is the CARD type, not the node type.** The LIVE
+node-show card is registered as card type `"note"` and serves EVERY node type
+(note, person, book, idea, place) — `buildNote` reads the node by id regardless
+of its `type` and renders it (`note.go:107-136`); the `notecardStory` even shows
+a `person` rendered through `/ui/show/note?id=`. So every related row links to
+**`/ui/show/note?id=<neighborID>`** (literal `note`, NOT the neighbor's node
+`type` interpolated into the path). The node's own `type` is shown only as a
+row badge/label (the `Rel`/`Type` text), never spliced into the URL. (The `note`
+card spec also accepts an optional `type` param for typed-object render, but the
+`id` alone is sufficient — `buildNote` derives type from the record.)
 
 ```go
 // RelatedRow is one neighbor in the RelatedCard.
@@ -463,16 +514,19 @@ func RelatedCard(v RelatedView) g.Node {
 > and the storybook escaping assertion in Step 6 (`&#39;` for the single quotes)
 > only matches this form.
 
-Each row's link uses the **node-show route from 160**. The card-footer
-"see graph →" / "manage all →" links morph the panel via the
-`h.A` + `h.Href` + `g.Attr("data-on:click__prevent", "@get(...)")` pattern —
-see the footer link at `memory.go:59` and the meta link at `memory.go:185`
-(both verified to use the `g.Attr` string form). Apply that same `h.A` pattern
-to each related row so a click morphs the panel (the `/ui/show` door) instead of
-a full navigation. Build the `@get` URL from the neighbor's type+id; HTML-escape
-via `g.Text` for the visible title. (The plain per-row title link at
-`memory.go:76` omits the Datastar attr; here we want the morph, so include the
-`data-on:click__prevent` `@get` on the row.)
+Each row's link uses the **node-show route `/ui/show/note?id=<neighborID>`**
+(literal `note`; see the IMPORTANT note above — the segment is the card type,
+which serves any node type). The card-footer "see graph →" links morph the panel
+via the `h.A` + `h.Href` + `g.Attr("data-on:click__prevent", "@get(...)")`
+pattern — see the footer link at `memory.go:59` and the meta link at
+`memory.go:185` (both verified live to use the `g.Attr` string form). Apply that
+same `h.A` pattern to each related row so a click morphs the panel (the
+`/ui/show` door) instead of a full navigation. Build the `@get` URL as
+`@get('/ui/show/note?id=<id>')`; HTML-escape via `g.Text` for the visible title.
+This is exactly what `LinkedFrom` (`note.go:83-99`) already does for backlink
+chips: `h.A(h.Class("wikilink"), h.Href("/ui/show/note?id="+b.ID), g.Text(b.Title))`
+— mirror it, adding the `g.Attr("data-on:click__prevent", "@get('/ui/show/note?id="+id+"')")`
+for the morph.
 
 The builder signature and guard pattern:
 
@@ -484,10 +538,15 @@ func buildRelated(app core.App, params map[string]string) RelatedView {
 	back, _ := nodes.Backlinks(app, id)
 	out, _ := nodes.Outbound(app, id)
 	// merge+dedupe back then out (first source wins), cap to limit ...
-	// 3: FTS-similar — OPTIONAL, guarded; skip entirely if the helper/index is absent.
-	//    e.g. recs, err := <162 node-search helper>(app, focusTitleTerms, limit)
-	//    if err == nil { append non-dupes, type/title from each rec } else { skip }
-	// load focus title (FindRecordById("nodes", id)); empty view if not found/active.
+	// 3: FTS-similar — OPTIONAL, guarded; skip on a real DB error (the helper
+	//    self-falls-back to substring scan when the FTS index is absent).
+	//    terms := strings.Fields(focusTitle)
+	//    recs, err := knowledge.SearchAllActive(app, terms, limit)
+	//    if err == nil { for each rec: skip id==focus && skip already-seen ids;
+	//        else append RelatedRow{ID, Title:rec.GetString("title"),
+	//        Type:rec.GetString("type"), Rel:"similar"} } // else: skip section
+	// load focus title via app.FindRecordById("nodes", id) (mirror buildNote,
+	// note.go:108-112); empty view if not found.
 }
 ```
 
@@ -502,10 +561,13 @@ once the file compiles alongside Steps 3–5.
 ### Step 3: Build the 1-hop SVG graph card (`graph.go`)
 
 Create `internal/feature/graphcards/graph.go`. The card draws the focus node at
-the center and its direct neighbors (Backlinks ∪ Outbound, active only) on a
-single ring — a dead-simple **concentric/radial** layout computed in Go (no
-physics, no force-direction). Cap neighbors at **24** (the visual cap; past that
-an SVG ring is unreadable — say so in a comment).
+the center and its direct neighbors on a single ring — a dead-simple
+**concentric/radial** layout computed in Go (no physics, no force-direction).
+Get the neighbor set from **`nodes.Neighborhood(app, id)`** (`nodes.go:242`) —
+the LANDED helper that already returns Backlinks ∪ Outbound, active only,
+de-duplicated by id. Do NOT call `Backlinks`+`Outbound` separately and re-merge;
+`Neighborhood` is exactly this. Cap neighbors at **24** in the builder (the
+visual cap; past that an SVG ring is unreadable — say so in a comment).
 
 Layout math (mirror `sparkline.go`'s "compute coords in Go, emit `g.El`"
 pattern):
@@ -564,9 +626,9 @@ Rules:
   (the Datastar `@get` morph, mirroring related.go's "see graph →").
 
 Make the neighbor dots clickable to re-focus: wrap each neighbor's
-`<circle>`/`<text>` in an `<a>` (`g.El("a", g.Attr("href", showURL), ...)`)
-with a `data-on:click__prevent` `@get` to that neighbor's node-show route — same
-pattern as the row links, just on the SVG node. (SVG `<a>` is valid; keep it
+`<circle>`/`<text>` in an `<a>` (`g.El("a", g.Attr("href", "/ui/show/note?id="+n.ID), ...)`)
+with a `data-on:click__prevent` `@get('/ui/show/note?id='+n.ID)` — the literal
+`note` card-type route (same as the row links). (SVG `<a>` is valid; keep it
 simple — if Datastar-on-SVG misbehaves in the browser check, fall back to a
 plain `href` and STOP-report, do not invent a workaround.)
 
@@ -631,7 +693,9 @@ picks up the new feature without panicking on a double registration).
 
 Create `internal/feature/graphcards/graphcards_test.go` with package
 `graphcards_test`. Three tests, modeled on
-`internal/knowledge/knowledge_test.go:379` (the integration pattern) and
+`internal/knowledge/knowledge_test.go:473` (`TestSearchAllActiveCrossType` — the
+LANDED cross-type seed+assert pattern: `storetest.NewApp(t)`, save `nodes` rows,
+call `SearchAllActive`, assert) and
 `internal/feature/knowledgecards/knowledgecards_test.go` (the no-web-imports
 marker):
 
@@ -645,9 +709,11 @@ marker):
    `internal/storetest/storetest.go:18`, signature `func NewApp(t *testing.T) core.App`).
    The Balaur-law phrase "test helpers in internal/store" refers to fakes/seams
    in that package; the temp-app constructor itself is `storetest.NewApp`. Exact
-   usage exemplar: `internal/knowledge/knowledge_test.go:380` (`app := storetest.NewApp(t)`
-   with the import at line 12). Seed via the
-   161 helpers / direct `app.Save` of `nodes` + `edges` records: a focus node A
+   usage exemplar (LIVE): `internal/knowledge/knowledge_test.go:473`
+   (`TestSearchAllActiveCrossType` — `app := storetest.NewApp(t)`, the import at
+   `:13`). Seed via direct `app.Save` of `nodes` + `edges` records (the
+   `nodes.AddEdge(app, src, tgt, type)` helper at `nodes.go:163` also creates an
+   edge if you prefer it over a raw `edges` save): a focus node A
    (active), a backlink node B→A (active), an outbound node A→C (active), and a
    **proposed** node D→A. Call `buildRelated(app, map[string]string{"id": A.Id})`
    and assert: B and C appear; D does **not** (status filter); the focus node A
@@ -684,20 +750,25 @@ Then `env -u BALAUR_OS_ACCESS -u BALAUR_SOURCE -u BALAUR_MAX_STEPS go test ./...
 ### Step 7: Storybook stories for `related` and `graph`
 
 In `internal/feature/storybook/stories_cards.go`, add `relatedStory()` and
-`graphStory()` following `knowledgecardStory()` / `lifelogfocusStory()` (pass
-hand-built view-models — stories never hit the DB). Add
+`graphStory()` following `notecardStory()` (`stories_cards.go:131-160` — the
+closest exemplar: it passes hand-built `NoteView`/`BacklinkView` view-models to
+`knowledgecards.NoteCard`, never hitting the DB). Build `graphcards.RelatedView`
+/ `graphcards.GraphView` fixtures the same way. Add
 `"github.com/alexradunet/balaur/internal/feature/graphcards"` to the file's
-import block. Each story sets `ID`, `Group: "Cards"`, `Title`, a `Blurb`, 2–3
+import block (the file already imports `knowledgecards`). Each story sets `ID`, `Group: "Cards"`, `Title`, a `Blurb`, 2–3
 `Variants` (e.g. related: "with backlinks + outbound", "empty"; graph:
 "3 neighbors", "empty neighborhood"), a `Props` table, and `Dos`/`Donts`
 (do: "status=active only — proposals never appear"; don't: "add physics or
 interactivity — the graph is a read-only 1-hop snapshot (deferred)").
 
 Then in `internal/feature/storybook/story.go`, register both in the `stories`
-slice (after `knowledgecardStory()`):
+slice (`var stories = []Story{` at `story.go:53`). The LIVE order has
+`notecardStory()` immediately after `knowledgecardStory()` (lines 93-94), so
+insert the two new stories AFTER `notecardStory()`:
 
 ```go
 	knowledgecardStory(),
+	notecardStory(),
 	relatedStory(),
 	graphStory(),
 ```
@@ -708,12 +779,18 @@ storybook `story_test.go` renders every story and asserts no nil/panic). Then
 
 ### Step 8: Update self-knowledge
 
-In `internal/self/knowledge.md`, add one line under the knowledge/graph section
-(read the file to find the right anchor) documenting that Balaur can now show a
-node's **related nodes** (backlinks ∪ outbound ∪ FTS-similar) and a **1-hop SVG
-graph** of its neighborhood, both read-only and `status=active`-only, served at
-`/ui/show/related?id=` and `/ui/show/graph?id=`. Keep it to 1–2 sentences in the
-existing voice.
+In `internal/self/knowledge.md`, extend the note-card sentence in the Knowledge
+section. The LIVE anchor is `knowledge.md:123-126` (verbatim): "… node_get, and
+node_drop list, read, and delete them. The note card (/ui/show/note?id=…)
+renders a node's title + body (with clickable `[[wikilink]]` chips) and an
+inline edit form, plus a \"Linked from\" backlinks panel listing the nodes that
+wikilink to it." Append, in the same voice, a sentence that Balaur can also show
+a node's **related nodes** (backlinks ∪ outbound ∪ FTS-similar via
+`SearchAllActive`) at `/ui/show/related?id=…` and a **1-hop SVG graph** of its
+neighborhood at `/ui/show/graph?id=…`, both read-only and `status=active`-only
+(proposed/rejected nodes never appear). Note the FTS-index sidecar line at
+`knowledge.md:80` and the edges/wikilink lines at `knowledge.md:96-99` are the
+nearby context — extend, don't duplicate them. Keep it to 1–2 sentences.
 
 **Verify**: `grep -n "related\|graph" internal/self/knowledge.md` → at least one
 new line mentioning the related/graph surface.
@@ -770,7 +847,7 @@ Machine-checkable. ALL must hold:
 - [ ] `grep -n 'relatedStory\|graphStory' internal/feature/storybook/story.go` returns matches (stories registered)
 - [ ] `grep -rn 'internal/web' internal/feature/graphcards/*.go` returns NOTHING (layering law; test files included)
 - [ ] `grep -rn 'internal/search' internal/feature/graphcards/*.go` returns NOTHING (162 owns search; read via the helper only)
-- [ ] `git diff --stat 72fd762..HEAD -- internal/web/show.go internal/web/cards.go internal/search migrations` lists NO files (read-only boundary respected)
+- [ ] `git diff --stat b5b200a..HEAD -- internal/web/show.go internal/web/cards.go internal/search internal/nodes internal/knowledge migrations` lists NO files (read-only boundary respected — 163 must NOT edit 160/161/162's code)
 - [ ] `internal/self/knowledge.md` mentions the related/graph surface
 - [ ] `plans/readme.md` status row for 163 updated
 
@@ -778,16 +855,18 @@ Machine-checkable. ALL must hold:
 
 Stop and report back (do not improvise) if:
 
-- **161 has not landed**: package `internal/nodes` has no `Backlinks`/`Outbound`
-  (or combined `Neighbors`) helper, OR the `edges` collection's relation fields
-  are not named `source`/`target`. This plan hard-depends on 161's edge layer;
-  building a parallel traversal here would duplicate it and risk leaking
-  proposed nodes.
-- **160's node-show route differs** from `GET /ui/show/{type}?id=...`: read
-  160's actual registered route and use it; if there is no generic node-show
-  route at all, STOP — the row/dot links have no destination.
+- **A claimed-landed helper is missing** (regression / mis-merge): `internal/nodes`
+  has no `Backlinks`/`Outbound`/`Neighborhood`, OR `internal/knowledge` has no
+  `SearchAllActive`, OR the `edges` fields are not `source`/`target`. As of HEAD
+  `b5b200a` all of these ARE present (verified); if the Drift check finds one
+  gone, STOP — something un-landed a dependency.
+- **The node-show card type is no longer `note`** or `/ui/show/note?id=` no
+  longer renders an arbitrary node by id: this plan's row/dot links target the
+  literal `note` card type (it serves any node type via `buildNote`). If that
+  changed, read the live `note.go`/`cards.go` and adapt the link path; if there
+  is no by-id node-show card at all, STOP — the links have no destination.
 - The code at the "Current state" excerpts does not match the live files (the
-  tree drifted since `72fd762`) — re-run the drift check and compare.
+  tree drifted since `b5b200a`) — re-run the drift check and compare.
 - A step's verification fails twice after a reasonable fix attempt.
 - The fix appears to require editing `internal/web/show.go`, `internal/web/cards.go`,
   `internal/search/*`, or a migration — all out of scope. If you think you need
