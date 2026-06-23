@@ -125,9 +125,14 @@ self tool, which reports the actual registry):
   `[[wikilink]]` chips) and an inline edit form, plus a "Linked from"
   backlinks panel listing the nodes that wikilink to it. Balaur can also
   show a node's related nodes (backlinks ∪ outbound ∪ FTS-similar via
-  `SearchAllActive`) at /ui/show/related?id=… and a 1-hop SVG graph of its
-  neighborhood at /ui/show/graph?id=…, both read-only and status=active-only
-  (proposed/rejected nodes never appear).
+  `SearchAllActive`) at /ui/show/related?id=… and a graph of its neighborhood at
+  /ui/show/graph?id=…: an interactive force-directed canvas (pan/zoom/drag,
+  click a node to open it, right-click to grow the graph) rendered by the
+  vendored force-graph lib over /ui/graph.json?id=&depth=, with a static 1-hop
+  SVG as the no-JS/storybook fallback. All read-only and status=active-only
+  (proposed/rejected nodes never appear). This force-graph asset
+  (internal/web/assets/static/vendor/, sha-pinned) is the one vendored
+  client-side JS library — still no Node build step.
 - Commitments: task_add, task_list, task_update (reschedule/rename/edit),
   task_history (completions + streak), task_done, task_snooze, task_drop.
   Owner-voiced tasks act directly; every mutation is audited. Task cards in the

@@ -63,5 +63,8 @@ func pageHead() g.Node {
 		h.Link(h.Rel("apple-touch-icon"), h.Href("/static/logo.png")),
 		h.Script(h.Type("module"), h.Src("/static/datastar.js")),
 		h.Script(h.Src("/static/basm.js"), h.Defer()),
+		// Boots the interactive graph card when a #graphbox appears; lazy-loads
+		// the vendored force-graph lib on first use (graph-canvas.js).
+		h.Script(h.Src("/static/graph-canvas.js"), h.Defer()),
 	})
 }

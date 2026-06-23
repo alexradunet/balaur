@@ -1,11 +1,12 @@
 package graphcards
 
-// graph.go — the 1-hop SVG graph card: the focus node at center, its direct
-// neighbors on a single ring, server-rendered as a static concentric SVG
-// (Datastar only, no JS physics, no force-direction — that is deferred). Read
-// over nodes.Neighborhood (Backlinks ∪ Outbound, active, de-duped). Coordinates
-// are computed floats; node titles appear ONLY inside escaped <text>/<title>,
-// never interpolated into a coordinate, path, or attribute.
+// graph.go — the graph card. Live: an interactive force-graph canvas (#graphbox,
+// driven by /static/graph-canvas.js over the vendored force-graph lib, fed by
+// /ui/graph.json). The server-rendered concentric SVG below it remains as the
+// <noscript>/storybook fallback — the focus node at center, its 1-hop neighbors
+// (nodes.Neighborhood = Backlinks ∪ Outbound, active, de-duped) on a single ring.
+// SVG coordinates are computed floats; node titles appear ONLY inside escaped
+// <text>/<title>, never interpolated into a coordinate, path, or attribute.
 
 import (
 	"math"
@@ -43,8 +44,10 @@ type GraphView struct {
 	Neighbors  []GraphNode
 }
 
-// GraphCard renders the focus node + its 1-hop neighbors as a concentric SVG.
-// Edges run from center to each neighbor; nodes are <circle> + <text>. The focus
+// GraphCard renders the interactive force-graph canvas plus a <noscript>
+// concentric-SVG fallback (graphSVG) of the focus node + its 1-hop neighbors.
+// In that fallback, edges run from center to each neighbor; nodes are
+// <circle> + <text>. The focus
 // dot and label are emitted last so they sit on top. An empty neighborhood still
 // renders the focus dot plus a "No links yet" caption — one node, never blank.
 func GraphCard(v GraphView) g.Node {
@@ -53,7 +56,19 @@ func GraphCard(v GraphView) g.Node {
 		ui.CardHead("/static/icons/tome.png", "Graph",
 			g.If(v.FocusTitle != "", h.Span(h.Class("kcard-meta"), g.Text(v.FocusTitle))),
 		),
-		graphSVG(v),
+		// Interactive force-graph canvas, hidden until /static/graph-canvas.js
+		// (loaded in the shell) detects this box, lazy-loads the vendored
+		// force-graph lib, fills it from /ui/graph.json, and hides the SVG fallback
+		// below. Node click → a `graphopen` window event the hidden listener turns
+		// into a panel morph (same open path the fallback uses); right-click grows
+		// the graph one hop.
+		h.Div(h.ID("graphbox"), g.Attr("data-focus", v.FocusID),
+			g.Attr("style", "display:none;height:60vh;min-height:360px")),
+		g.El("div", g.Attr("hidden", ""),
+			g.Attr("data-on:graphopen__window", "@get('/ui/show/note?id=' + evt.detail.id)")),
+		// Progressive-enhancement fallback (also the no-JS + storybook view): the
+		// static 1-hop SVG. graph-canvas.js hides it once the live canvas has data.
+		h.Div(h.Class("graph-fallback"), graphSVG(v)),
 		h.Footer(h.Class("kcard-actions"),
 			h.A(h.Href("/ui/show/related?id="+v.FocusID),
 				g.Attr("data-on:click__prevent", "@get('/ui/show/related?id="+v.FocusID+"')"),
