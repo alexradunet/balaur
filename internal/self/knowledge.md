@@ -76,9 +76,12 @@ One binary, layered as: gateway → turn pipeline → business logic.
   (owner-defined log + journal), knowledge (memory & skill lifecycle —
   the consent boundary), recap (hierarchical summaries), verify (words
   vs deeds), heads (switchable personas — built-ins, active head,
-  custom CRUD, tool-group filter), store (the one PocketBase seam), search (FTS5 sidecar index
-  — bm25-ranked recall rebuilt on boot, synced on write; pb_data/search.db
-  is disposable and safe to delete), tools (your tool implementations),
+  custom CRUD, tool-group filter), store (the one PocketBase seam), search (the
+  `knowledge_fts` FTS5 sidecar index over active nodes of all knowledge types —
+  note/memory/skill/journal/typed-objects — consent-filtered so proposed or
+  rejected nodes are never indexed; bm25-ranked, rebuilt on boot, synced on
+  write; pb_data/search.db is disposable and safe to delete), tools (your tool
+  implementations),
   ext (balaur-extensions: consent-gated runtime tools in JavaScript, run
   by goja — the engine PocketBase's jsvm uses), llm (the Client interface —
   ChatStream + Embed — the agent loop talks to), kronk (the embedded inference
@@ -111,7 +114,10 @@ self tool, which reports the actual registry):
 
 - Knowledge: everything is a typed node in the unified spine. remember and
   propose_skill create memory/skill nodes the owner must approve (born
-  proposed); recall searches approved memory nodes; skill loads an approved
+  proposed); recall searches approved memory nodes, and the cross-type search
+  tool (CLI: `balaur search <terms>`) queries approved nodes of all knowledge
+  types via the unified `knowledge_fts` index, with a deterministic substring
+  fallback when the sidecar is unavailable; skill loads an approved
   skill node's procedure. node_write creates owner-authored nodes — a note
   or a typed object (person, book, idea, place), born active; node_list,
   node_get, and node_drop list, read, and delete them. The note card

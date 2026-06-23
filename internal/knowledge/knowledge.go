@@ -303,7 +303,7 @@ func SearchActive(app core.App, terms []string, limit int) ([]*core.Record, erro
 	// --- FTS5 fast path ---
 	if raw, ok := app.Store().GetOk(search.StoreKey); ok {
 		if ix, ok := raw.(*search.Index); ok && ix != nil {
-			ids, err := ix.Query(terms, limit)
+			ids, err := ix.QueryKind(terms, string(Memory), limit)
 			if err == nil && len(ids) > 0 {
 				recs, err := app.FindRecordsByIds("nodes", ids)
 				if err == nil {
@@ -353,6 +353,71 @@ func SearchActive(app core.App, terms []string, limit int) ([]*core.Record, erro
 	sort.SliceStable(matched, func(i, j int) bool {
 		return matched[i].GetInt("importance") > matched[j].GetInt("importance")
 	})
+	if limit > 0 && len(matched) > limit {
+		matched = matched[:limit]
+	}
+	return matched, nil
+}
+
+// SearchAllActive is the cross-type search surface: it returns active nodes of
+// ANY type matching the terms, ranked by bm25 when the FTS5 sidecar is
+// available. Unlike SearchActive (which stays memory-scoped and hydrates memory
+// aliases for context/recall callers), this returns RAW node records — the
+// caller renders each hit by its node `type`. A node that is not active is never
+// returned (the consent filter). When the index is unavailable it falls back to
+// a deterministic substring scan over active nodes' title/body.
+func SearchAllActive(app core.App, terms []string, limit int) ([]*core.Record, error) {
+	// --- FTS5 fast path ---
+	if raw, ok := app.Store().GetOk(search.StoreKey); ok {
+		if ix, ok := raw.(*search.Index); ok && ix != nil {
+			ids, err := ix.Query(terms, limit)
+			if err == nil && len(ids) > 0 {
+				recs, err := app.FindRecordsByIds("nodes", ids)
+				if err == nil {
+					var active []*core.Record
+					for _, r := range recs {
+						if r.GetString("status") == StatusActive {
+							active = append(active, r)
+						}
+					}
+					if len(active) > 0 {
+						order := make(map[string]int, len(ids))
+						for i, id := range ids {
+							order[id] = i
+						}
+						sort.Slice(active, func(i, j int) bool {
+							return order[active[i].Id] < order[active[j].Id]
+						})
+						if limit > 0 && len(active) > limit {
+							active = active[:limit]
+						}
+						return active, nil
+					}
+				}
+			}
+		}
+	}
+
+	// --- substring fallback over all active nodes ---
+	recs, err := app.FindRecordsByFilter(
+		"nodes", "status = 'active'", "-updated,-created", 0, 0, nil)
+	if err != nil {
+		return nil, err
+	}
+	var matched []*core.Record
+	for _, r := range recs {
+		for _, t := range terms {
+			t = strings.ToLower(strings.TrimSpace(t))
+			if t == "" {
+				continue
+			}
+			if strings.Contains(strings.ToLower(r.GetString("title")), t) ||
+				strings.Contains(strings.ToLower(r.GetString("body")), t) {
+				matched = append(matched, r)
+				break
+			}
+		}
+	}
 	if limit > 0 && len(matched) > limit {
 		matched = matched[:limit]
 	}
