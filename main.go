@@ -20,6 +20,7 @@ import (
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/store"
@@ -54,6 +55,7 @@ func main() {
 		registerNudge(se.App)
 		registerBriefing(se.App)
 		registerSearchIndex(se.App)
+		registerGraphLinks(se.App)
 		return se.Next()
 	})
 
@@ -253,4 +255,21 @@ func registerSearchIndex(app core.App) {
 	app.OnRecordAfterCreateSuccess("nodes").BindFunc(upsertHook)
 	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(upsertHook)
 	app.OnRecordAfterDeleteSuccess("nodes").BindFunc(deleteHook)
+}
+
+// registerGraphLinks keeps node→node "links" edges in sync with [[wikilinks]]
+// in node bodies. On every node create/update it re-parses the body and rewrites
+// that node's link edges (creating stub nodes for unresolved titles). Cascade
+// delete on the edges relations (plan 160) cleans a deleted node's edges, so no
+// delete hook is needed here. A sync failure is logged, never fatal — a bad
+// parse must not block the owner's save.
+func registerGraphLinks(app core.App) {
+	syncHook := func(e *core.RecordEvent) error {
+		if err := nodes.SyncLinks(app, e.Record); err != nil {
+			app.Logger().Warn("graph: link sync failed", "id", e.Record.Id, "err", err)
+		}
+		return e.Next()
+	}
+	app.OnRecordAfterCreateSuccess("nodes").BindFunc(syncHook)
+	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(syncHook)
 }
