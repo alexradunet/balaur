@@ -11,7 +11,7 @@
 > need the GOPROXY shim — see `docs/hyperagent-sandbox.md`. GOSUMDB stays on;
 > never weaken checksum verification.
 >
-> **Drift check (run first)**: `git diff --stat 72fd762..HEAD -- internal/nodes internal/feature/knowledgecards internal/ui/chat/markdown.go internal/ui/chat/message.go main.go internal/feature/storybook/stories_cards.go internal/self/knowledge.md`
+> **Drift check (run first)**: `git diff --stat 6ab038a..HEAD -- internal/nodes internal/feature/knowledgecards internal/ui/chat/markdown.go internal/ui/chat/message.go main.go internal/feature/storybook/stories_cards.go internal/self/knowledge.md`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -23,10 +23,26 @@
 - **Risk**: MED
 - **Depends on**: plans/160-nodes-edges-spine.md (the `nodes` + `edges`
   collections, the `note` card type, and the `GET /ui/show/{type}` node route
-  it registers). **161 must NOT be executed before 160 is merged** — it reads
-  collections and a route that only 160 creates.
+  it registers). **160 has MERGED** (HEAD `6ab038a`, "merge: 160 — greenfield
+  nodes+edges knowledge spine") — its `internal/nodes` package, `note` card,
+  and the `GET /ui/show/note` route are live. This plan's "Current state"
+  excerpts below have been refreshed against that post-160 tree.
 - **Category**: direction
-- **Planned at**: commit `72fd762`, 2026-06-23
+- **Planned at**: commit `6ab038a`, 2026-06-23 (reconciled against post-160 main)
+
+## Design conflict resolutions (advisor — AUTHORITATIVE; override the in-body option menus)
+
+The reconcile pass flagged two design conflicts "for the advisor to choose." Both are now DECIDED. These OVERRIDE the option menus in **Step 5** ("DESIGN CONFLICT … the advisor must resolve") and **Step 8** (the backlinks-fixture "resolve this before coding" note) — follow these, do not re-deliberate:
+
+**1. The note-card body renders clickable `[[links]]` (Step 5 → option b).** The owner chose: links must be clickable where notes are read. So the note card renders its body through `chat.RenderMarkdownLinked` (reversing 160's "escaped `g.Text`, no goldmark in knowledgecards" deferral). Concretely:
+- `internal/feature/knowledgecards` imports `internal/ui/chat` (a leaf UI package — no import cycle) and calls `chat.RenderMarkdownLinked(body, resolver)`.
+- Build the resolver in `buildNote` (it has the app): `func(title string)(string,bool){ rec,err := app.FindFirstRecordByFilter("nodes","status='active' && title={:t}",dbx.Params{"t":title}); if err==nil {return rec.Id,true}; return "",false }`.
+- Keep `NoteCard(v NoteView)` app-free + storybook-renderable: **pre-render in `buildNote`** into a new `NoteView` field (e.g. `BodyNode g.Node = chat.RenderMarkdownLinked(rec.GetString("body"), resolver)`); `NoteCard` emits `v.BodyNode` in place of the `g.Text(v.Body)` div. **Update 160's existing `notecardStory()` variants** (and any other `NoteView{Body:…}` literal) to the new field — a plain `g.Text("…")` BodyNode is fine in stories (no app/resolver needed there).
+- **Revise `note.go`'s package doc** (the "keep goldmark out of knowledgecards / defer markdown" comment) to state the body now renders linked markdown via the shared chat renderer — a deliberate 161 decision superseding 160's deferral.
+- Keep `renderMarkdown` (plain chat) byte-identical; only ADD `RenderMarkdownLinked`.
+- **Add a Maintenance note**: `RenderMarkdownLinked` is now used by BOTH the chat bubble and the note card; a future cleanup may promote it from `internal/ui/chat` to a shared `internal/ui` atom (the reconcile's option c) so cards don't import the chat package — DEFERRED, not in 161.
+
+**2. The backlinks panel uses a view-model (Step 8 → option i).** `LinkedFrom` takes `[]BacklinkView` where `type BacklinkView struct { ID, Title string }` — NOT `[]*core.Record`. `buildNote` maps `nodes.Backlinks(app, rec.Id)` records → `[]BacklinkView` (`.Id`, `.GetString("title")`). Storybook passes plain `BacklinkView{ID:"n1",Title:"…"}` literals. Update Step 6's `LinkedFrom` signature + Step 8's fixture accordingly. This keeps the card/story layer free of a `*core.Record` dependency.
 
 ## Why this matters
 
@@ -47,74 +63,99 @@ the node card — no graph view, no search, no block refs (all deferred).
 The facts the executor needs, inlined. Re-read each file before editing — line
 numbers are leads, not facts.
 
-### What plan 160 provides (DO NOT redeclare — read 160's plan/diff to confirm names)
+### What plan 160 provides (SHIPPED — verified verbatim against `internal/nodes/nodes.go` at HEAD `6ab038a`)
 
-160 declares the `nodes` and `edges` collections and the `note` card. The shared
-contract every plan in this set agrees on:
+160 shipped the `nodes` and `edges` collections, `internal/nodes/nodes.go`, and
+the `note` card. The shared contract, confirmed against the live code:
 
 - **`nodes`** collection fields: `type` (select), `title` (text, required),
   `body` (text, markdown), `status` (select: `active|proposed|archived|rejected`),
-  `props` (json), `created`/`updated` (autodate).
-- **`edges`** collection fields: `source` (relation→nodes, single, cascade),
-  `target` (relation→nodes, single, cascade), `type` (text, default `"links"`),
-  `context` (text, optional). Unique index on `(source,target,type)`; index on
-  `target` for backlinks. **Back-relation expand names are `edges_via_source`
-  (outbound) and `edges_via_target` (backlinks).**
+  `props` (json), `created`/`updated` (autodate). Status constants are real
+  (`internal/nodes/nodes.go:26-31`): `StatusProposed = "proposed"`,
+  `StatusActive = "active"`, `StatusArchived = "archived"`, `StatusRejected =
+  "rejected"`.
+- **`edges`** collection fields: `source` (relation→nodes), `target`
+  (relation→nodes), `type` (text), `context` (text, optional). The relation
+  field names ARE `source`/`target` (confirmed — `AddEdge` sets
+  `rec.Set("source", …)`/`rec.Set("target", …)` at `nodes.go:172-173`, and
+  `Backlinks`/`Outbound` filter `target = {:id}`/`source = {:id}`). Unique index
+  on `(source,target,type)` (`idx_edges_unique`) and an index on `target`
+  (`idx_edges_target`) for backlinks (`migrations/1749600000_init.go:110-117`).
+  Both `source` and `target` have `CascadeDelete: true` (lines 110-111) — so a
+  deleted node's edges are removed automatically; **no delete hook is needed in
+  161** (confirmed — see the Step 4 cascade note). The PocketBase auto back-relation
+  expands `edges_via_target`/`edges_via_source` DO exist (migration comment, line
+  106), **but 160's `Backlinks`/`Outbound` do NOT use them — they query the `edges`
+  collection directly (`FindRecordsByFilter("edges", …)`, `nodes.go:216`/`229`)
+  then load the active nodes by id via the unexported `activeByIDs`
+  (`nodes.go:193-212`). Call the helpers; do not hand-roll an expand.**
+  The default edge type is the exported `nodes.DefaultEdgeType = "links"`
+  (`nodes.go:36`).
 - **The node route** is the generic `GET /ui/show/{type}?id=...` dispatcher (the
-  existing card system — see `internal/web/show.go` below). 160 registers a
-  `note` card type whose URL form is `GET /ui/show/note?id=<nodeId>`.
-- **`internal/nodes` is 160's domain package — REUSE it, do NOT redeclare.** 160
-  Step 3 (`plans/160-nodes-edges-spine.md:537-564`) creates `internal/nodes`,
-  which ALREADY owns, all `status=active`-filtered:
-  - `nodes.AddEdge(app core.App, sourceID, targetID, edgeType, context string) (*core.Record, error)`
-    — defaults `edgeType` to `"links"` when empty; **idempotent against the
-    `(source,target,type)` unique index** (on a unique-constraint hit it
-    find-and-returns the existing edge — see 160 line 554-557, 844).
-  - `nodes.Backlinks(app core.App, id string) ([]*core.Record, error)` — inbound
-    active nodes (via `edges_via_target`).
-  - `nodes.Outbound(app core.App, id string) ([]*core.Record, error)` — outbound
-    active nodes (via `edges_via_source`).
-  - `nodes.Neighborhood(app core.App, id string) ([]*core.Record, error)` — the
-    1-hop set.
+  existing card system — `internal/web/show.go`, `uiShow` at line 19, looks up
+  the spec via `cards.Get(typ)` at line 31). 160 registered a `note` card type
+  (`registerNote` in `internal/feature/knowledgecards/note.go:77-81`) so
+  `GET /ui/show/note?id=<nodeId>` works.
+- **`internal/nodes` is 160's domain package — REUSE it, do NOT redeclare.**
+  `internal/nodes/nodes.go` (260 lines) ALREADY owns these, with the exact live
+  signatures (copy them verbatim — they all filter to `status=active` where it
+  matters):
+  - `func AddEdge(app core.App, sourceID, targetID, edgeType, context string) (*core.Record, error)`
+    (`nodes.go:163`) — defaults `edgeType` to `DefaultEdgeType` ("links") when
+    empty (`nodes.go:164-166`); **idempotent against the `(source,target,type)`
+    unique index** — on a save error it find-and-returns the existing edge
+    (`nodes.go:176-184`).
+  - `func Backlinks(app core.App, id string) ([]*core.Record, error)`
+    (`nodes.go:215`) — inbound active nodes (queries `edges` on `target = {:id}`,
+    then `activeByIDs`).
+  - `func Outbound(app core.App, id string) ([]*core.Record, error)`
+    (`nodes.go:228`) — outbound active nodes (queries `edges` on
+    `source = {:id}`, then `activeByIDs`).
+  - `func Neighborhood(app core.App, id string) ([]*core.Record, error)`
+    (`nodes.go:242`) — the 1-hop set (backlinks ∪ outbound, active, deduped).
+  - `func Create(app core.App, typ, title, body, status string, props map[string]any) (*core.Record, error)`
+    (`nodes.go:85`) — requires a non-empty title, audits `node.create`.
+  - `func Get(app core.App, id string) (*core.Record, error)` (`nodes.go:110`).
   - Status constants `nodes.StatusActive`/`StatusProposed`/`StatusArchived`/
-    `StatusRejected` and `nodes.Create(app, type, title, body, status, props)`.
+    `StatusRejected` (`nodes.go:26-31`) and `nodes.DefaultEdgeType` (`nodes.go:36`).
 
   **161 MUST import `internal/nodes` and call these — it must NOT redeclare
   `Backlinks`/`Outbound`/`AddEdge` or the status constants** (two sources of
   truth violates SUCKLESS and the ownership boundary; raw `app.Save(edge)`
-  bypasses 160's unique-index idempotency). 161's *new* code (the `[[ ]]`
-  parser, the resolve-or-create-stub step, the `SyncLinks` body→edge sync, and
-  the save hook) lands **inside `internal/nodes`** alongside 160's helpers — same
-  package, one source of truth. See the "FTS index hook" mirror below for the
-  same "160 provides X, reuse it" posture. If 160's helper signatures differ from
-  the shapes above, **160 wins** — use 160's real signatures and treat a
-  mechanical-rename-impossible mismatch as a STOP condition.
-- **`/ui/show/note?id=<id>` is the generic node viewer.** Per 160's Step 8
-  (`plans/160-nodes-edges-spine.md:680-714`), the `note` card spec takes an `id`
-  param and its renderer derives the node kind from `rec.GetString("type")` (160
-  line 695-696: "the kind now derives from `rec.GetString("type")`"). So
+  bypasses 160's unique-index idempotency at `nodes.go:176-184`). 161's *new*
+  code (the `[[ ]]` parser, the resolve-or-create-stub step, the `SyncLinks`
+  body→edge sync, and the save hook) lands **inside `internal/nodes`** alongside
+  160's helpers — same package, one source of truth. The live signatures above
+  match this plan's assumptions exactly — no mechanical rename is needed.
+- **`/ui/show/note?id=<id>` is the generic node viewer.** The shipped `note`
+  card (`internal/feature/knowledgecards/note.go`) takes only an `id` param
+  (`buildNote` reads `params["id"]` at line 61, loads the node, and maps it to a
+  `NoteView`); the rendered kind derives from `rec.GetString("type")`
+  (`buildNote` sets `Type: rec.GetString("type")` at line 68, and `NoteCard`
+  falls back to `"note"` only when `Type == ""`, lines 37-39). So
   `/ui/show/note?id=<id>` renders a node of **any** type (note, memory, skill,
   person, book, journal, …) by id — the executor does NOT pass a `type` param.
+  **CONFIRMED: the route does not require a `type` param** (the STOP condition
+  below about a required `type` param does not fire).
   **Every wikilink chip and every backlink chip in this plan therefore uses the
   href `/ui/show/note?id=<id>` regardless of the target node's type.** Never emit
   `/ui/show/node?id=...` (there is no `node` card — it 404s) and never invent
   `/ui/notes/{id}`.
 
-> **If 160's actual field names differ** (e.g. it had to name the relation fields
-> something other than `source`/`target` for a PocketBase constraint), 160's plan
-> says so and **160 wins** — use 160's real names everywhere in this plan. Treat a
-> name mismatch as a STOP condition and report it; do not guess.
->
-> **If 160's `note` card actually REQUIRES a `type` param** (i.e.
-> `/ui/show/note?id=<id>` without `type` does not render a non-note node), STOP
-> and report: the chips must then pass `&type=<rec.type>` and the resolver/helper
-> must carry each node's type. Do not guess — confirm against 160's real route
-> registration before changing the href shape.
+> **VERIFIED at HEAD `6ab038a`**: 160's relation field names ARE `source`/`target`
+> (`internal/nodes/nodes.go:172-173`, `216`, `229`), and the `note` card does NOT
+> require a `type` param (`buildNote` reads only `params["id"]`,
+> `internal/feature/knowledgecards/note.go:60-72`). Both STOP-condition hedges
+> below are therefore satisfied — proceed with `source`/`target` and the
+> `/ui/show/note?id=<id>` href as written. (Kept as STOP conditions only in case a
+> later change drifts them.)
 
 ### The FTS index hook — the EXACT pattern to mirror for the link-sync hook
 
 `main.go:202-256` — `registerSearchIndex` opens the sidecar index and binds
-record hooks. The hook-registration tail (verbatim, `main.go:232-256`):
+record hooks. **Post-160, the FTS hooks bind `"nodes"` (NOT `"memories"` — 160
+repointed them when memories folded into the unified `nodes` collection).** The
+hook-registration tail (verbatim, `main.go:232-255`):
 
 ```go
 	upsertHook := func(e *core.RecordEvent) error {
@@ -138,10 +179,19 @@ record hooks. The hook-registration tail (verbatim, `main.go:232-256`):
 		return e.Next()
 	}
 
-	app.OnRecordAfterCreateSuccess("memories").BindFunc(upsertHook)
-	app.OnRecordAfterUpdateSuccess("memories").BindFunc(upsertHook)
-	app.OnRecordAfterDeleteSuccess("memories").BindFunc(deleteHook)
+	app.OnRecordAfterCreateSuccess("nodes").BindFunc(upsertHook)
+	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(upsertHook)
+	app.OnRecordAfterDeleteSuccess("nodes").BindFunc(deleteHook)
 ```
+
+**These FTS hooks already bind `"nodes"` — so `OnRecordAfterCreateSuccess("nodes")`
+and `OnRecordAfterUpdateSuccess("nodes")` ALREADY appear once each in `main.go`
+before this plan adds anything. Your `registerGraphLinks` hook adds a SECOND
+binding on those same events; PocketBase composes them (each `BindFunc` runs and
+calls `e.Next()`), so the link-sync hook does NOT replace the FTS hook. Do NOT
+edit `registerSearchIndex` — it is 162's territory; just add a sibling
+`registerGraphLinks` (Step 4).** (Out of scope: this `registerSearchIndex` body
+is plan 162's; leave the `internal/search` index alone.)
 
 It is wired into `OnServe` at `main.go:48-58` (verbatim):
 
@@ -231,19 +281,24 @@ helper is `render(t, node)` → `uitest.Render(t, node)`
 
 ### The consent rule (MANDATORY — graph + search filter to status=active)
 
-From `internal/knowledge/knowledge.go:34-40` (statuses) and the LOCKED
+From `internal/nodes/nodes.go:6-10` (the consent-boundary doc) and the LOCKED
 architecture: graph traversal and resolution **must filter to `status=active`**.
 Resolve-by-title and backlinks queries must only see and create active nodes;
 they must never surface `proposed`/`rejected` nodes. The resolve-by-title
-pattern to copy is `LoadSkill` (`internal/knowledge/knowledge.go:302-311`):
+pattern to copy is `LoadSkill` (`internal/knowledge/knowledge.go:398-405`) — note
+that post-160 it queries the `nodes` collection by `type`+`status`+`title`, not
+an old `skills` collection by `name`:
 
 ```go
-	rec, err := app.FindFirstRecordByFilter(string(Skill),
-		"status = 'active' && name = {:name}",
-		dbx.Params{"name": name})
+	rec, err := app.FindFirstRecordByFilter("nodes",
+		"type = {:t} && status = {:s} && title = {:name}",
+		dbx.Params{"t": string(Skill), "s": StatusActive, "name": name})
 ```
 
-Use `app.FindFirstRecordByFilter("nodes", "status = 'active' && title = {:title}", dbx.Params{"title": title})`.
+161's `resolveOrCreateStub` resolves a wikilink target by title across ALL node
+types (a `[[Title]]` may point at any kind of node), so drop the `type` clause and
+keep only `status` + `title`:
+`app.FindFirstRecordByFilter("nodes", "status = 'active' && title = {:title}", dbx.Params{"title": title})`.
 
 ### The card show route + dispatcher (160 extends this; 161 reads it)
 
@@ -259,10 +314,19 @@ this exact route form (`/ui/show/note?id=<id>`) for every chip href; there is no
 `internal/feature/storybook/story.go:27-51` — a `Story` has `ID/Group/Title/Blurb/
 Variants/Props/Dos/Donts`; each `Variant` is `{Label string, Node g.Node}`.
 `internal/feature/storybook/story_test.go:35-46` (`TestAllStoriesRender`) renders
-every registered story — your new/extended story must render non-empty. The node
-card story belongs to 160; **161 EXTENDS that story** (adds a "with backlinks"
-variant) if 160 created it, or adds the backlinks panel as a documented variant.
-Stories are registered in the `stories` slice in `story.go:53-111`.
+every registered story — your new/extended story must render non-empty. **160
+SHIPPED the node-card story: `notecardStory()` in
+`internal/feature/storybook/stories_cards.go:131-156`, registered in the `stories`
+slice at `story.go:94`** (the slice is `var stories = []Story{` at `story.go:53`).
+Its variants are `"note"`, `"typed object (person)"`, and `"not found"`, built
+directly from `knowledgecards.NoteCard(knowledgecards.NoteView{…})`. **161 EXTENDS
+this story** — add a backlinks variant. Because `NoteCard`/`NoteView` carries no
+backlinks slot yet (see the note-card section below), the cleanest extension is a
+variant that renders the `LinkedFrom` panel (Step 6) alongside a `NoteCard`, e.g.
+`g.Group([]g.Node{knowledgecards.NoteCard(...), knowledgecards.LinkedFrom(fixtureNodes)})`,
+where `fixtureNodes` is a non-empty `[]*core.Record` (see the fixture warning in
+Step 8). Stories are registered in the `stories` slice in `story.go:53` (and the
+node story is already there at `story.go:94`).
 
 ### Conventions to match (Balaur law — the executor has not read AGENTS.md)
 
@@ -330,9 +394,13 @@ Stories are registered in the `stories` slice in `story.go:53-111`.
   (success path byte-identical, error path still `g.Text(s)`).
 - `internal/ui/chat/markdown_test.go` (create) — wikilink render tests.
 - `internal/feature/knowledgecards/*` — add the `LinkedFrom` backlinks panel to
-  160's node (`note`) renderer (160's note card lives here — it's a feature card
-  package that already imports `pocketbase/core`; see Step 6). Fill 160's
-  backlinks slot if present, else add a minimal "Linked from" section.
+  160's node (`note`) renderer (160's note card lives in `note.go` — a feature
+  card package that already imports `pocketbase/core` and `internal/ui`; see
+  Step 6). 160 added NO backlinks slot to `NoteView`/`NoteCard`, so you ADD a
+  minimal "Linked from" section (thread the backlinks list in via a `NoteView`
+  field or render it in the `registerNote` closure — Step 6). Adds an
+  `internal/nodes` import for `nodes.Backlinks`. (See the Step 5 DESIGN CONFLICT
+  about whether to also markdown-render the note body — do not silently wire it.)
 - `internal/feature/storybook/stories_cards.go` — extend the node story (added by
   160) with a "with backlinks" variant, OR add a small wikilink/backlinks story.
 - `internal/self/knowledge.md` — add wikilinks/backlinks to the knowledge-layer
@@ -348,8 +416,12 @@ Stories are registered in the `stories` slice in `story.go:53-111`.
   changes.** Do not add nodes to the FTS index here; do not touch `index.go`.
 - `internal/feature/knowledgecards/*` node (`note`) card *renderer* internals
   beyond adding the `LinkedFrom` panel call (Step 6) — **160 owns the node card
-  component.** If 160 already added a backlinks slot, fill it; if not, add a
-  minimal "Linked from" section via the helper, but do not restructure the card.
+  component.** 160 added NO backlinks slot, so add a minimal "Linked from" section
+  via the helper (a `NoteView` field or the `registerNote` closure), but do not
+  restructure `NoteCard` or its edit form. Whether to ALSO markdown-render the
+  note body (so `[[links]]` in the body become chips) is a DESIGN CONFLICT the
+  advisor must resolve (Step 5) — 160 deliberately renders the body as escaped
+  `g.Text` and keeps goldmark out of `knowledgecards`; do not flip that silently.
 - The graph view / force-directed UI — **163 owns it.**
 - `internal/knowledge/*`, `internal/life/*` (journal) — the memory/skill/journal
   fold-in is 160's foundation change, not 161's.
@@ -543,12 +615,12 @@ context string)`.
 
 ### Step 3: Backlinks/Outbound are 160's — confirm, do NOT redeclare
 
-There is **no new traversal code in 161**. `nodes.Backlinks(app, id)` and
-`nodes.Outbound(app, id)` already exist in 160's `internal/nodes` package
-(`plans/160-nodes-edges-spine.md:558-562`), both filtered to `status=active`. The
-node card (Step 6) and the tests (Step 7) call those directly. **Do NOT add a
-second `Backlinks`/`Outbound` to `links.go`** — that is the duplication this plan
-was repaired to remove.
+There is **no new traversal code in 161**. `nodes.Backlinks(app, id)`
+(`internal/nodes/nodes.go:215`) and `nodes.Outbound(app, id)` (`nodes.go:228`)
+already exist in 160's `internal/nodes` package, both filtered to `status=active`
+via the unexported `activeByIDs` (`nodes.go:193-212`). The node card (Step 6) and
+the tests (Step 7) call those directly. **Do NOT add a second `Backlinks`/`Outbound`
+to `links.go`** — that is the duplication this plan was repaired to remove.
 
 Confirm they exist with the right shape before relying on them:
 
@@ -565,9 +637,10 @@ declaration across the package (160's), NOT two.
 ### Step 4: Wire the save hook in `main.go` (mirror `registerSearchIndex`)
 
 In `main.go`, add `registerGraphLinks(se.App)` to the `OnServe` block right after
-`registerSearchIndex(se.App)` (the block at `main.go:48-58`). Define
-`registerGraphLinks` as a sibling function (place it near `registerSearchIndex`,
-~`main.go:256`):
+`registerSearchIndex(se.App)` (the block at `main.go:48-58`; `registerSearchIndex`
+is the last call before `return se.Next()`). Define `registerGraphLinks` as a
+sibling function (place it after `registerSearchIndex`, which now ends at
+`main.go:256`):
 
 ```go
 // registerGraphLinks keeps node→node "links" edges in sync with [[wikilinks]]
@@ -588,16 +661,24 @@ func registerGraphLinks(app core.App) {
 }
 ```
 
-The `nodes` import (`"github.com/alexradunet/balaur/internal/nodes"`) is almost
-certainly already in `main.go` after 160 (160 wires `internal/nodes` tools/CLI).
-If `grep -n 'internal/nodes' main.go` shows it, do not re-add it; if not, add it.
+The `nodes` import (`"github.com/alexradunet/balaur/internal/nodes"`) is **NOT yet
+in `main.go` at HEAD `6ab038a`** — its current internal imports are `cli`,
+`conversation`, `kronk`, `llm`, `recap`, `search`, `store`, `tasks`, `turn`, `web`
+(`main.go:19-28`). Add `"github.com/alexradunet/balaur/internal/nodes"` to that
+import block (gofmt will sort it). Re-check with `grep -n 'internal/nodes' main.go`
+first in case a parallel change added it.
 
-> **Hook-collision note**: 160 may already bind hooks to `"nodes"` (and plan 162
-> binds the FTS upsert/delete to `"nodes"`). Multiple `BindFunc` on the same
-> `OnRecordAfter*Success("nodes")` event compose — each runs and calls `e.Next()`
-> — so adding the link-sync hook does NOT replace 160's/162's. Keep the
-> `e.Next()` tail. The done-criteria `grep` below expects exactly ONE
-> link-sync binding from THIS plan, not one binding total on `"nodes"`.
+> **Hook-collision note (CONFIRMED post-160)**: `registerSearchIndex` ALREADY
+> binds the FTS upsert/delete hooks to `"nodes"` (`main.go:253-255` — 160
+> repointed them from `"memories"`). So `OnRecordAfterCreateSuccess("nodes")` and
+> `OnRecordAfterUpdateSuccess("nodes")` each already appear ONCE in `main.go`
+> before this plan. Multiple `BindFunc` on the same `OnRecordAfter*Success("nodes")`
+> event compose — each runs and calls `e.Next()` — so adding the link-sync hook
+> does NOT replace the FTS hook (and `registerGraphLinks` runs AFTER
+> `registerSearchIndex` in `OnServe`, so the FTS upsert fires first, then the
+> link-sync). Keep the `e.Next()` tail. The done-criteria `grep` below expects
+> exactly ONE link-sync binding from THIS plan, not one binding total on `"nodes"`
+> (there will be two create-bindings and two update-bindings total: FTS + links).
 
 > **Re-entrancy note**: `SyncLinks` calls `app.Save` on stub nodes and edge
 > records. Saving a stub node re-fires `OnRecordAfterCreateSuccess("nodes")` →
@@ -737,32 +818,67 @@ Add imports `"regexp"` and `"strings"` to `markdown.go` (and `"html"`, used by
 > extension (out of this plan's Pareto slice). Do NOT STOP on `class` being
 > stripped by a direct sanitize call — that is expected and not on the real path.
 
-160's node card render must call `chat.RenderMarkdownLinked(body, resolver)`
-instead of plain `renderMarkdown`/`g.Text` for the node body, where `resolver`
-closes over the app and resolves a title to an active node id (the
-`resolveOrCreateStub` read half, without the create — just
-`FindFirstRecordByFilter("nodes", "status = 'active' && title = {:title}", …)`
-returning `(rec.Id, true)` on hit, `("", false)` on miss; the chip needs only the
-id because `/ui/show/note?id=<id>` derives the type from the record). If 160's card
-already renders the body through `chat.MessageBody`/`renderMarkdown`, switch that
-ONE call to `RenderMarkdownLinked`; otherwise add the call in the card body slot.
-Keep the change to a single render call — do not restructure the card.
+**DESIGN CONFLICT — read before wiring the body render (the advisor must resolve
+this).** The shipped note card does NOT render its body through markdown at all:
+`NoteCard` renders the body as escaped plain text — `g.If(v.Body != "",
+h.Div(h.Class("kcard-body"), g.Text(v.Body)))` (`internal/feature/knowledgecards/note.go:46`).
+Its package doc is explicit and deliberate (`note.go:3-9`): *"Body is rendered as
+escaped text … but knowledgecards must not import goldmark to stay within the
+layering law, so the markdown-render pass is deferred to the chat bubble path."*
+So there is **no existing `renderMarkdown`/`chat.MessageBody` call in the card to
+"switch"** — Step 5's "switch that ONE call to `RenderMarkdownLinked`" assumed a
+markdown render that 160 deliberately did NOT add. And making `knowledgecards`
+call `chat.RenderMarkdownLinked` means `knowledgecards` would import
+`internal/ui/chat` (it currently imports only `internal/ui`,
+`internal/feature`, `pocketbase/core`, and gomponents — `note.go:11-18`,
+`register.go:1-7`). That is not a compile cycle (`internal/ui/chat` imports no
+balaur package — it is a leaf UI package), but it DOES contradict the note card's
+stated layering choice to keep goldmark out of knowledgecards.
+
+**Do NOT silently wire `chat.RenderMarkdownLinked` into the note card.** Options
+for the advisor to pick from (do not choose unilaterally):
+  (a) **Scope-trim**: keep the note body as escaped `g.Text` (160's choice) and
+      ship wikilink chips ONLY where markdown already renders (the chat bubble
+      path via `RenderMarkdownLinked`), plus the "Linked from" backlinks panel on
+      the card (Step 6 — that panel is pure gomponents, no markdown, no new
+      import, so it is unaffected). Clickable `[[links]]` inside the note card
+      body then become a follow-up once the card has a markdown render seam.
+  (b) **Add the import deliberately**: have `knowledgecards` import
+      `internal/ui/chat` and render the body through `RenderMarkdownLinked`,
+      explicitly revising note.go's "no goldmark in knowledgecards" doc comment —
+      a real layering decision the advisor should bless, not the executor.
+  (c) **Move the renderer**: relocate `RenderMarkdownLinked` to `internal/ui`
+      (which knowledgecards already imports) — but that drags goldmark/bluemonday
+      into the `ui` atom package, a bigger layering change.
+
+If the advisor picks (a) or (b), the resolver shape is unchanged: it closes over
+the app and resolves a title to an active node id (the `resolveOrCreateStub` read
+half, without the create — just `FindFirstRecordByFilter("nodes", "status =
+'active' && title = {:title}", …)` returning `(rec.Id, true)` on hit, `("", false)`
+on miss; the chip needs only the id because `/ui/show/note?id=<id>` derives the
+type from the record). Keep any body-render change to a single call — do not
+restructure the card.
 
 **Verify**: `CGO_ENABLED=0 go build ./...` → exit 0;
 `gofmt -l internal/ui/chat` → no output.
 
 ### Step 6: Add the "Linked from" backlinks panel to the node card
 
-160 owns the node card, which lives in `internal/feature/knowledgecards/*` (the
-`note` renderer registered via `ui.RegisterCard("note", …)` — see
-`plans/160-nodes-edges-spine.md:728-737`). **Put `LinkedFrom` in that feature
-card package**, NOT in `internal/ui/chat` or `internal/ui`: `LinkedFrom` takes
-`[]*core.Record`, which means importing `pocketbase/core`; `internal/ui/chat`
-imports ONLY `internal/ui` and does NOT import `pocketbase/core` (verified), so
-putting a `[]*core.Record` helper there would introduce a forbidden new
-UI-atom→`core` dependency. The `knowledgecards` feature package already imports
-`pocketbase/core`, so it is the correct home (it's where 160's node card already
-reads records). Fill 160's backlinks slot if present.
+160 owns the node card, which lives in `internal/feature/knowledgecards/note.go`
+(the `note` renderer registered via `ui.RegisterCard("note", …)` in `registerNote`
+at `note.go:77-81`; `Register` calls it at `register.go:21`). The card is
+`NoteCard(v NoteView)` (`note.go:32-57`); the loader is `buildNote(app, params)`
+(`note.go:60-73`). **There is NO backlinks slot in `NoteView`/`NoteCard` yet** —
+160 did not add one (it noted only that this is "the first /ui/show/note surface
+the route plans 161/163 build on", `note.go:5`). So you ADD the panel, not fill a
+slot. **Put `LinkedFrom` in this `knowledgecards` package**, NOT in
+`internal/ui/chat` or `internal/ui`: `LinkedFrom` takes `[]*core.Record`, which
+means importing `pocketbase/core`; `internal/ui/chat` imports ONLY `internal/ui`
+and does NOT import `pocketbase/core` (verified — it imports no balaur package at
+all), so putting a `[]*core.Record` helper there would introduce a forbidden new
+UI-atom→`core` dependency. The `knowledgecards` package already imports
+`pocketbase/core` (`note.go:12`) and `internal/ui` (`note.go:17`), so it is the
+correct home (it's where 160's note card already reads records via `buildNote`).
 
 Each chip anchor is wrapped in its own `<li>` inline — there is no `wrapLis`
 helper anywhere in the repo; do NOT call one. The chip title renders through
@@ -796,9 +912,20 @@ func LinkedFrom(backlinks []*core.Record) g.Node {
 }
 ```
 
-The card handler fetches the list with `nodes.Backlinks(app, nodeId)` (160's
-status=active-filtered helper — import `internal/nodes`) and passes it to
-`LinkedFrom`. **Audit nothing here** — this is a read.
+**Wiring it in (note the real shapes):** the card is `NoteCard(v NoteView)` and the
+loader is `buildNote(app, params) NoteView` (`note.go:32,60`); `NoteView` has no
+record field and `NoteCard` takes no `core.App`, so the backlinks list has to be
+threaded in. Two minimal options (KISS — pick the smaller):
+  - add a `Backlinks []*core.Record` field to `NoteView`, have `buildNote` set it
+    via `nodes.Backlinks(app, rec.Id)` (160's status=active-filtered helper —
+    `knowledgecards` imports `internal/nodes`; no cycle), and have `NoteCard` emit
+    `LinkedFrom(v.Backlinks)` after the body `Div`; or
+  - keep `NoteView`/`NoteCard` untouched and render the panel in the
+    `registerNote` closure: `g.Group([]g.Node{NoteCard(buildNote(app, params)),
+    LinkedFrom(nodes.Backlinks-result)})` (the closure already has `app` and
+    `params`). Either way, **`knowledgecards` gains an `internal/nodes` import** —
+    that is allowed (nodes is a domain package; chat/ui stay out of it). **Audit
+    nothing here** — this is a read.
 
 **Verify**: `CGO_ENABLED=0 go build ./...` → exit 0.
 
@@ -811,29 +938,53 @@ See Test plan for the case list. Then extend the storybook node story (Step 8).
 
 ### Step 8: Extend the storybook node story with a backlinks variant
 
-In `internal/feature/storybook/stories_cards.go`, find the node story 160 added
-(grep for the node card story builder) and add a `Variant` showing the node card
-with a populated "Linked from" panel (a fixture of 2-3 backlink nodes), plus one
-`[[wikilink]]` rendered as a chip in the body. If 160 did NOT add a node story,
-add a small `wikilinkStory()` builder and register it in the `stories` slice
-(`story.go:53-111`) demonstrating: a resolved chip, an unresolved chip, and a
-"Linked from" list.
+160 SHIPPED the node story: `notecardStory()` at
+`internal/feature/storybook/stories_cards.go:131-156`, registered in the `stories`
+slice at `story.go:94`. **Extend `notecardStory()`** — add a `Variant` showing the
+node card with a populated "Linked from" panel (a fixture of 2-3 backlink nodes).
+Its current variants build directly from `knowledgecards.NoteCard(NoteView{…})`
+(lines 136-138), so the new variant wraps a `NoteCard` plus the `LinkedFrom` panel:
+`g.Group([]g.Node{knowledgecards.NoteCard(NoteView{…}), knowledgecards.LinkedFrom(fixtureBacklinks)})`.
+(`stories_cards.go` already imports `g "maragu.dev/gomponents"` and
+`knowledgecards`.)
 
-> **The backlinks fixture MUST be non-empty.** `LinkedFrom` returns `nil` on an
-> empty list (renders nothing), and `TestAllStoriesRender`
-> (`story_test.go:35-46`) asserts every variant renders **non-empty** — an empty
-> backlinks fixture would render nil and fail the suite. Use 2-3 fixture nodes.
+> **The backlinks fixture MUST be non-empty AND is a `[]*core.Record`.**
+> `LinkedFrom` returns `nil` on an empty list (renders nothing), and
+> `TestAllStoriesRender` (`story_test.go:35-46`) asserts every variant renders
+> **non-empty** — an empty fixture would render nil and fail the suite. But
+> `LinkedFrom` takes `[]*core.Record`, and a `*core.Record` cannot be built from a
+> plain struct literal — `core.NewRecord(collection)` needs a real collection (an
+> app). `stories_cards.go` is a pure render file (no app). **Resolve this before
+> coding** (advisor note): either (i) give `LinkedFrom` a tiny view-model input
+> (e.g. `LinkedFrom(items []BacklinkView)` where `BacklinkView{ID, Title string}`)
+> so the card layer never depends on `*core.Record` and the story can pass plain
+> structs — cleaner layering, and it drops the `pocketbase/core` import from the
+> panel signature; the `buildNote`/`registerNote` wiring maps
+> `nodes.Backlinks(...)` records to `[]BacklinkView`; or (ii) keep the
+> `[]*core.Record` signature and add the backlinks variant in a story file that
+> can mint records via `storetest` (heavier; storybook stories are normally
+> app-free). **Prefer (i)** — it keeps storybook fixtures plain and avoids a
+> `core.Record` dependency leaking into the story. If (i) is chosen, update the
+> `LinkedFrom` code in Step 6 to take `[]BacklinkView` and have the card handler do
+> the record→view mapping. Use 2-3 fixture nodes either way.
 
 **Verify**: `go test ./internal/feature/storybook/...` → all pass
 (`TestAllStoriesRender` renders the new variant non-empty).
 
 ### Step 9: Update `internal/self/knowledge.md`
 
-Add one or two sentences to the knowledge-layer description (around the existing
-search/knowledge lines, `knowledge.md:76-104`) stating that node bodies support
-`[[wikilinks]]`, which create node→node `links` edges on save (resolving by title
-or creating a stub node), and that the node card shows backlinks ("Linked from").
-Keep it terse and accurate — a stale self-description makes Balaur lie about
+160 already rewrote `internal/self/knowledge.md` onto the unified spine: the
+"Data lives in PocketBase collections" paragraph (`knowledge.md:88-98`) now
+describes `nodes`/`edges`, status-based consent, and active-only traversal; the
+Knowledge capabilities bullet (`knowledge.md:109-115`) ends with the note card
+line ("The note card (/ui/show/note?id=…) renders a node's title + body with an
+inline edit form."). Add one or two sentences to ONE of those spots stating that
+node bodies support `[[wikilinks]]`, which create node→node `links` edges on save
+(resolving by title or creating a stub node), and that the node card shows
+backlinks ("Linked from"). The cleanest seam: extend the existing `edges` sentence
+in the Data paragraph (~`knowledge.md:90-94`) or append to the note-card line at
+`knowledge.md:115`. Keep it terse and accurate — a stale self-description makes
+Balaur lie about
 itself.
 
 **Verify**: `grep -n "wikilink\|Linked from\|backlink" internal/self/knowledge.md`
@@ -958,13 +1109,15 @@ Machine-checkable. ALL must hold:
 
 Stop and report back (do not improvise) if:
 
-- 160 is not merged, or the `nodes`/`edges` collections do not exist (a temp-app
-  test fails with "missing collection"). 161 hard-depends on 160.
+- The `nodes`/`edges` collections do not exist (a temp-app test fails with
+  "missing collection"). 161 hard-depends on 160 — which IS merged at HEAD
+  `6ab038a`, so this should not fire; if it does, the checkout is stale.
 - 160's relation field names are NOT `source`/`target`, or the node route is NOT
   `GET /ui/show/note?id=...`, or 160's `note` card REQUIRES a `type` param to
-  render non-note nodes (so `/ui/show/note?id=<id>` alone does not render a memory/
-  skill/person node). Use 160's real names/route — but if they conflict with this
-  plan's helper code in a way you cannot mechanically rename, STOP and report.
+  render non-note nodes. **VERIFIED post-160: they ARE `source`/`target`
+  (`nodes.go:172-173`), the route IS `/ui/show/note?id=...`, and the `note` card
+  does NOT require a `type` param (`note.go:60-72`)** — so this condition is
+  already satisfied and should not fire. (Kept in case a later change drifts it.)
 - The empirical render check fails: `renderMarkdownString("[[Foo]]")` does NOT
   contain literal `[[Foo]]`, OR a relative `href="/ui/show/note?id=x"` anchor is
   stripped by `mdSane.Sanitize`. The post-pass substitution strategy is then
@@ -1019,6 +1172,6 @@ For the human/agent who owns this code after the change lands:
   owner's save); (4) the display text in chips is HTML-escaped (no XSS via a
   `[[<script>]]` title).
 - **Cascade delete** (160) cleans a deleted node's edges, which is why there is no
-  delete hook here. If 160 did NOT set cascade on the edge relations, add a
-  delete hook that removes edges where `source` OR `target` equals the deleted id
-  — and tell 160's owner the schema is missing cascade.
+  delete hook here. CONFIRMED: both `source` and `target` carry
+  `CascadeDelete: true` (`migrations/1749600000_init.go:110-111`), so a deleted
+  node's edges are removed by PocketBase automatically — no delete hook needed.
