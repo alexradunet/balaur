@@ -213,11 +213,15 @@ func (h *handlers) proposalBody(kind, id string) g.Node {
 		}
 		return g.Raw(s)
 	}
-	rec, err := h.app.FindRecordById(kind, id) // collection name == kind ("memories"/"skills")
+	// kind is the "nodes" collection; the record's type ("memory"/"skill")
+	// selects which knowledge card to render.
+	rec, err := h.app.FindRecordById(kind, id)
 	if err != nil {
 		return nil
 	}
-	s, err := h.renderCardHTML(knowledge.Kind(kind), rec)
+	k := knowledge.Kind(rec.GetString("type"))
+	knowledge.Hydrate(k, rec) // alias node fields → legacy names the card reads
+	s, err := h.renderCardHTML(k, rec)
 	if err != nil {
 		return nil
 	}

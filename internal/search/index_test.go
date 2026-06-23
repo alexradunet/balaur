@@ -20,48 +20,38 @@ func openTestIndex(t *testing.T) *Index {
 	return ix
 }
 
-// seedActiveMemory inserts an active memory directly via the PocketBase app
-// (bypassing the knowledge lifecycle layer to avoid an import cycle — after
-// Step 2, knowledge imports search, so search_test may not import knowledge).
-func seedActiveMemory(t *testing.T, app core.App, title, content, category string, importance int) string {
+// seedMemoryNode inserts a type=memory node directly via the PocketBase app
+// (bypassing the knowledge lifecycle layer to avoid an import cycle — knowledge
+// imports search, so search_test may not import knowledge). content lands in
+// body; category/when_to_use live in props, mirroring the unified spine.
+func seedMemoryNode(t *testing.T, app core.App, title, content, category string, importance int, status string) string {
 	t.Helper()
-	col, err := app.FindCollectionByNameOrId("memories")
+	col, err := app.FindCollectionByNameOrId("nodes")
 	if err != nil {
-		t.Fatalf("find memories collection: %v", err)
+		t.Fatalf("find nodes collection: %v", err)
 	}
 	rec := core.NewRecord(col)
+	rec.Set("type", "memory")
 	rec.Set("title", title)
-	rec.Set("content", content)
-	rec.Set("category", category)
-	rec.Set("importance", importance)
-	rec.Set("when_to_use", "")
-	rec.Set("source", "test")
-	rec.Set("status", "active")
+	rec.Set("body", content)
+	rec.Set("status", status)
+	rec.Set("props", map[string]any{
+		"category":   category,
+		"importance": importance,
+		"source":     "test",
+	})
 	if err := app.Save(rec); err != nil {
-		t.Fatalf("save memory: %v", err)
+		t.Fatalf("save memory node: %v", err)
 	}
 	return rec.Id
 }
 
-// seedProposedMemory inserts a proposed (non-active) memory.
+func seedActiveMemory(t *testing.T, app core.App, title, content, category string, importance int) string {
+	return seedMemoryNode(t, app, title, content, category, importance, "active")
+}
+
 func seedProposedMemory(t *testing.T, app core.App, title string) string {
-	t.Helper()
-	col, err := app.FindCollectionByNameOrId("memories")
-	if err != nil {
-		t.Fatalf("find memories collection: %v", err)
-	}
-	rec := core.NewRecord(col)
-	rec.Set("title", title)
-	rec.Set("content", "")
-	rec.Set("category", "fact")
-	rec.Set("importance", 1)
-	rec.Set("when_to_use", "")
-	rec.Set("source", "test")
-	rec.Set("status", "proposed")
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save proposed memory: %v", err)
-	}
-	return rec.Id
+	return seedMemoryNode(t, app, title, "", "fact", 1, "proposed")
 }
 
 func TestOpenCreatesSchema(t *testing.T) {
@@ -128,7 +118,7 @@ func TestUpsertNonActive(t *testing.T) {
 	// Seed as active, upsert into index, then upsert with archived status.
 	id := seedActiveMemory(t, app, "archivable memory", "some archivable content", "fact", 2)
 
-	activeRec, err := app.FindRecordById("memories", id)
+	activeRec, err := app.FindRecordById("nodes", id)
 	if err != nil {
 		t.Fatalf("find record: %v", err)
 	}
@@ -157,6 +147,42 @@ func TestUpsertNonActive(t *testing.T) {
 	}
 	if len(idsArchived) != 0 {
 		t.Fatalf("archived memory still in index: %v", idsArchived)
+	}
+}
+
+// TestUpsertGatesNonMemoryNodes proves the Step-6 gate: only type=memory nodes
+// feed memories_fts. An active note node must never land in the index, and its
+// body/props (not an empty content column) drive a memory node's searchability.
+func TestUpsertGatesNonMemoryNodes(t *testing.T) {
+	app := storetest.NewApp(t)
+	col, _ := app.FindCollectionByNameOrId("nodes")
+
+	// An active note node — must be excluded from memories_fts.
+	note := core.NewRecord(col)
+	note.Set("type", "note")
+	note.Set("title", "gardenia bloom")
+	note.Set("body", "the gardenia bloomed today")
+	note.Set("status", "active")
+	if err := app.Save(note); err != nil {
+		t.Fatalf("save note: %v", err)
+	}
+
+	ix := openTestIndex(t)
+	if err := ix.Upsert(note); err != nil {
+		t.Fatalf("Upsert note: %v", err)
+	}
+	if ids, _ := ix.Query([]string{"gardenia"}, 10); len(ids) != 0 {
+		t.Fatalf("note node leaked into the memory index: %v", ids)
+	}
+
+	// An active memory node — its body + props.when_to_use ARE searchable.
+	memID := seedMemoryNode(t, app, "title only", "rosemary thrives in dry soil", "fact", 3, "active")
+	memRec, _ := app.FindRecordById("nodes", memID)
+	if err := ix.Upsert(memRec); err != nil {
+		t.Fatalf("Upsert memory: %v", err)
+	}
+	if ids, _ := ix.Query([]string{"rosemary"}, 10); len(ids) != 1 || ids[0] != memID {
+		t.Fatalf("memory body not indexed; got %v", ids)
 	}
 }
 

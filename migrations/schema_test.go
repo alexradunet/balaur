@@ -21,7 +21,7 @@ func TestSchemaBaseline(t *testing.T) {
 
 	// 1. All 14 app collections exist (+ built-in users).
 	for _, name := range []string{
-		"users", "heads", "conversations", "messages", "memories", "skills",
+		"users", "heads", "conversations", "messages", "nodes", "edges",
 		"audit_log", "summaries", "tasks", "entries", "extensions",
 		"llm_providers", "llm_models", "llm_settings", "owner_settings",
 	} {
@@ -31,7 +31,7 @@ func TestSchemaBaseline(t *testing.T) {
 	}
 
 	// 2. Retired collections never created.
-	for _, name := range []string{"boards", "grants"} {
+	for _, name := range []string{"boards", "grants", "memories", "skills"} {
 		if _, err := app.FindCollectionByNameOrId(name); err == nil {
 			t.Errorf("collection %q should not exist", name)
 		}
@@ -53,8 +53,8 @@ func TestSchemaBaseline(t *testing.T) {
 		{"heads", []string{"name", "purpose", "balaur_avatar", "capability_groups"}, []string{"tools"}},
 		{"conversations", []string{"kind", "status"}, []string{"summary", "head", "parent"}},
 		{"messages", []string{"origin"}, nil},
-		{"memories", []string{"status", "importance"}, []string{"tags"}},
-		{"skills", []string{"status"}, []string{"enabled"}},
+		{"nodes", []string{"type", "title", "body", "status", "props"}, []string{"content", "category", "name"}},
+		{"edges", []string{"source", "target", "type", "context"}, nil},
 		{"audit_log", []string{"actor"}, []string{"head"}},
 		{"entries", []string{"value", "value_num"}, nil}, // value KEPT (seed marker)
 		{"llm_providers", []string{"kind", "api_key"}, []string{"local"}},
@@ -84,8 +84,8 @@ func TestSchemaBaseline(t *testing.T) {
 	// 6. Index set — kept exist, redundant/unused absent.
 	for _, idx := range []string{
 		"idx_conversations_open_master", "idx_messages_conv_created",
-		"idx_messages_origin_created", "idx_memories_status",
-		"idx_memories_status_importance", "idx_skills_name", "idx_skills_status",
+		"idx_messages_origin_created", "idx_nodes_type_status",
+		"idx_nodes_status", "idx_edges_unique", "idx_edges_target",
 		"idx_audit_actor", "idx_summaries_period", "idx_tasks_nudge",
 		"idx_tasks_done_at", "idx_entries_kind_noted", "idx_llm_providers_name",
 	} {

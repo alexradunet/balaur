@@ -250,7 +250,7 @@ func registerSearchIndex(app core.App) {
 		return e.Next()
 	}
 
-	app.OnRecordAfterCreateSuccess("memories").BindFunc(upsertHook)
-	app.OnRecordAfterUpdateSuccess("memories").BindFunc(upsertHook)
-	app.OnRecordAfterDeleteSuccess("memories").BindFunc(deleteHook)
+	app.OnRecordAfterCreateSuccess("nodes").BindFunc(upsertHook)
+	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(upsertHook)
+	app.OnRecordAfterDeleteSuccess("nodes").BindFunc(deleteHook)
 }

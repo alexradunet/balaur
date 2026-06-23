@@ -28,6 +28,7 @@ import (
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/life"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
@@ -51,6 +52,7 @@ type Result struct {
 	Tasks       int `json:"tasks"`
 	Memories    int `json:"memories"`
 	Skills      int `json:"skills"`
+	Notes       int `json:"notes"`
 	LifeEntries int `json:"life_entries"`
 	Summaries   int `json:"summaries"`
 	Heads       int `json:"heads"`
@@ -82,6 +84,11 @@ func Run(app core.App) (*Result, error) {
 		return nil, err
 	}
 	res.Skills = n
+
+	if n, err = seedNotes(app); err != nil {
+		return nil, err
+	}
+	res.Notes = n
 
 	if n, err = seedLife(app, now); err != nil {
 		return nil, err
@@ -127,13 +134,16 @@ func Reset(app core.App) (*Result, error) {
 	if res.Tasks, err = del("tasks", "source = {:m}", dbx.Params{"m": Marker}); err != nil {
 		return nil, err
 	}
-	if res.Memories, err = del("memories", "source = {:m}", dbx.Params{"m": Marker}); err != nil {
+	if res.Memories, err = del("nodes", "type = 'memory' && props.source = {:m}", dbx.Params{"m": Marker}); err != nil {
 		return nil, err
 	}
 	if res.LifeEntries, err = del("entries", "value ~ {:m}", dbx.Params{"m": `"seed":true`}); err != nil {
 		return nil, err
 	}
-	if res.Skills, err = del("skills", nameFilter(seedSkillNames), nameParams(seedSkillNames)); err != nil {
+	if res.Skills, err = del("nodes", "type = 'skill' && ("+nameTitleFilter(seedSkillNames)+")", nameParams(seedSkillNames)); err != nil {
+		return nil, err
+	}
+	if res.Notes, err = del("nodes", "props.source = {:m} && (type = 'note' || type = 'journal')", dbx.Params{"m": Marker}); err != nil {
 		return nil, err
 	}
 	if res.Heads, err = del("heads", nameFilter(seedHeadNames), nameParams(seedHeadNames)); err != nil {
@@ -243,8 +253,13 @@ func seedTasks(app core.App, now time.Time) (int, error) {
 }
 
 func seedMemories(app core.App) (int, error) {
-	if n, _ := app.CountRecords("memories", dbx.HashExp{"source": Marker}); n > 0 {
-		return 0, nil
+	// Idempotency: a seeded memory node carries Marker in props.source. Use the
+	// resolver-backed filter API (CountRecords takes a raw dbx.Expression and
+	// would emit props.source as a literal column, which errors).
+	if _, err := app.FindFirstRecordByFilter("nodes",
+		"type = {:t} && props.source = {:m}",
+		dbx.Params{"t": "memory", "m": Marker}); err == nil {
+		return 0, nil // already seeded
 	}
 	specs := []struct {
 		p     knowledge.MemoryProposal
@@ -288,8 +303,8 @@ func seedSkills(app core.App) (int, error) {
 	}
 	count := 0
 	for _, s := range specs {
-		// Idempotent by unique name.
-		if _, err := app.FindFirstRecordByFilter("skills", "name = {:n}", dbx.Params{"n": s.p.Name}); err == nil {
+		// Idempotent by node title (the skill name).
+		if _, err := app.FindFirstRecordByFilter("nodes", "type = {:t} && title = {:n}", dbx.Params{"t": "skill", "n": s.p.Name}); err == nil {
 			continue
 		}
 		rec, err := knowledge.ProposeSkill(app, s.p)
@@ -300,6 +315,34 @@ func seedSkills(app core.App) (int, error) {
 			if _, err := knowledge.Transition(app, knowledge.Skill, rec.Id, knowledge.StatusActive); err != nil {
 				return count, fmt.Errorf("activating seed skill: %w", err)
 			}
+		}
+		count++
+	}
+	return count, nil
+}
+
+// seedNotes creates a couple of owner-authored note nodes and one journal node
+// (all born active), tagged with Marker in props.source so Reset removes them.
+// Gives the note + day cards real data to render.
+func seedNotes(app core.App) (int, error) {
+	if _, err := app.FindFirstRecordByFilter("nodes",
+		"props.source = {:m} && (type = 'note' || type = 'journal')",
+		dbx.Params{"m": Marker}); err == nil {
+		return 0, nil // already seeded
+	}
+	now := time.Now()
+	specs := []struct {
+		typ, title, body string
+		props            map[string]any
+	}{
+		{"note", "Spring garden plan", "Soil prep first, then the fence, then the seedling tray. Tomatoes go on the south wall.", map[string]any{"source": Marker}},
+		{"note", "Greenhouse idea", "A small lean-to greenhouse next year — reuse the old window frames.", map[string]any{"source": Marker}},
+		{"journal", now.Format("Monday, January 2 2006"), "A steady day in the garden. The first seedlings are up.", map[string]any{"source": Marker, "date": now.Format("2006-01-02")}},
+	}
+	count := 0
+	for _, s := range specs {
+		if _, err := nodes.Create(app, s.typ, s.title, s.body, nodes.StatusActive, s.props); err != nil {
+			return count, fmt.Errorf("seeding %s %q: %w", s.typ, s.title, err)
 		}
 		count++
 	}
@@ -427,6 +470,16 @@ func nameFilter(names []string) string {
 	clauses := make([]string, len(names))
 	for i := range names {
 		clauses[i] = fmt.Sprintf("name = {:n%d}", i)
+	}
+	return strings.Join(clauses, " || ")
+}
+
+// nameTitleFilter is nameFilter against the node `title` field (skills are now
+// type=skill nodes whose title is the skill name).
+func nameTitleFilter(names []string) string {
+	clauses := make([]string, len(names))
+	for i := range names {
+		clauses[i] = fmt.Sprintf("title = {:n%d}", i)
 	}
 	return strings.Join(clauses, " || ")
 }

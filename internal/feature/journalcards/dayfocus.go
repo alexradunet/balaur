@@ -66,10 +66,11 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 	}
 
 	for _, r := range dd.Journal {
+		// Journal is now a type=journal node: title + body, keyed by created.
 		v.Journal = append(v.Journal, DayJournalEntry{
 			ID:   r.Id,
-			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-			Text: r.GetString("text"),
+			Time: r.GetDateTime("created").Time().In(loc).Format("15:04"),
+			Text: r.GetString("body"),
 		})
 	}
 

@@ -107,7 +107,7 @@ func TestTransitionAuditOrdering(t *testing.T) {
 		t.Fatal("denied transition: must not produce an allowed=true audit entry")
 	}
 	// status must not have changed
-	fresh, _ := app.FindRecordById(string(Memory), rec.Id)
+	fresh, _ := app.FindRecordById("nodes", rec.Id)
 	if fresh.GetString("status") != StatusProposed {
 		t.Fatalf("denied transition changed status to %q", fresh.GetString("status"))
 	}
@@ -121,7 +121,7 @@ func TestTransitionAuditOrdering(t *testing.T) {
 		t.Fatal("allowed transition: expected exactly one allowed=true audit entry")
 	}
 	// status must have changed to active
-	fresh, _ = app.FindRecordById(string(Memory), rec.Id)
+	fresh, _ = app.FindRecordById("nodes", rec.Id)
 	if fresh.GetString("status") != StatusActive {
 		t.Fatalf("status = %q, want active", fresh.GetString("status"))
 	}

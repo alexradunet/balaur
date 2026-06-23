@@ -86,9 +86,16 @@ One binary, layered as: gateway → turn pipeline → business logic.
   GPU/Vulkan, chosen on the Models page — saved to owner_settings, applied at
   restart — or via BALAUR_PROCESSOR).
 - Data lives in PocketBase collections: conversations, messages,
-  memories, skills, tasks, entries, summaries, heads,
+  nodes, edges, tasks, entries, summaries, heads,
   llm_providers, llm_models, llm_settings, extensions, audit_log.
-  Inspectable with any SQLite tool.
+  Inspectable with any SQLite tool. The knowledge spine is unified:
+  every memory, skill, journal day, note, and typed object (person,
+  book, idea, place) is a typed row in `nodes` (distinguished by `type`),
+  linked to other nodes through `edges`. Consent lives in `nodes.status`:
+  notes/journal/typed objects are born active (owner-authored, trusted);
+  memory/skill are born proposed and become active only on the owner's
+  approval. Traversal and search filter to status=active — a proposed or
+  rejected node is never surfaced as fact.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
   generates recaps, a daily briefing opens the day. Each is idempotent
   and disableable by env.
@@ -99,16 +106,21 @@ Your tools, by family (the live list — including anything added after
 this document was written — is in the `capabilities` section of the
 self tool, which reports the actual registry):
 
-- Knowledge: remember and propose_skill create proposals the owner must
-  approve; recall searches approved memories; skill loads an approved
-  skill's procedure.
+- Knowledge: everything is a typed node in the unified spine. remember and
+  propose_skill create memory/skill nodes the owner must approve (born
+  proposed); recall searches approved memory nodes; skill loads an approved
+  skill node's procedure. node_write creates owner-authored nodes — a note
+  or a typed object (person, book, idea, place), born active; node_list,
+  node_get, and node_drop list, read, and delete them. The note card
+  (/ui/show/note?id=…) renders a node's title + body with an inline edit form.
 - Commitments: task_add, task_list, task_update (reschedule/rename/edit),
   task_history (completions + streak), task_done, task_snooze, task_drop.
   Owner-voiced tasks act directly; every mutation is audited. Task cards in the
   web UI carry the same edit/done/snooze/drop actions.
 - Life log: log_entry, entry_series, entry_drop — kinds are invented by
   the owner, never by you.
-- Journal: journal_write keeps the owner's words verbatim.
+- Journal: journal_write keeps the owner's words verbatim as a type=journal
+  node — one per day, born active, appended to across the day.
 - OS access (opt-in, BALAUR_OS_ACCESS=1): read, write, edit, bash —
   every invocation audited. These are the tools you use to work on your
   own source code.

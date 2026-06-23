@@ -27,6 +27,19 @@ func entryJSON(r *core.Record) map[string]any {
 	return out
 }
 
+// journalNodeJSON shapes one journal node (type=journal in the nodes
+// collection) for the CLI. A journal node carries title + body, not
+// kind + text + noted_at, so it has its own shaper.
+func journalNodeJSON(r *core.Record) map[string]any {
+	return map[string]any{
+		"id":      r.Id,
+		"kind":    "journal",
+		"title":   r.GetString("title"),
+		"text":    r.GetString("body"),
+		"created": jsonTime(r.GetDateTime("created").Time()),
+	}
+}
+
 func lifeCmd(app core.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "life",
@@ -178,7 +191,7 @@ func journalCmd(app core.App) *cobra.Command {
 		if err != nil {
 			return nil, err
 		}
-		return entryJSON(rec), nil
+		return journalNodeJSON(rec), nil
 	})
 	cmd.AddCommand(write)
 	return cmd
@@ -206,10 +219,10 @@ func dayCmd(app core.App) *cobra.Command {
 			return nil, err
 		}
 
-		// Journal entries
+		// Journal entries (type=journal nodes)
 		journal := make([]map[string]any, 0, len(dayData.Journal))
 		for _, r := range dayData.Journal {
-			journal = append(journal, entryJSON(r))
+			journal = append(journal, journalNodeJSON(r))
 		}
 		out["journal"] = journal
 

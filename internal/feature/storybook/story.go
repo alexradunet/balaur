@@ -90,6 +90,7 @@ var stories = []Story{
 	taskcardStory(),
 	tasksbareStory(),
 	knowledgecardStory(),
+	notecardStory(),
 	calendarcellStory(),
 	sparklineStory(),
 	dayentryStory(),

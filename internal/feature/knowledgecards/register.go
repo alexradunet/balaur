@@ -18,12 +18,14 @@ import (
 func Register(app core.App) {
 	registerMemory(app)
 	registerSkills(app)
+	registerNote(app)
 }
 
 // Unregister removes them. Called from web.Register's OnTerminate hook.
 func Unregister() {
 	ui.UnregisterCard("memory")
 	ui.UnregisterCard("skills")
+	ui.UnregisterCard("note")
 }
 
 // init self-registers this feature via the internal/feature/all blank import.

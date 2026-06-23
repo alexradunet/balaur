@@ -124,6 +124,37 @@ func taskcardStory() Story {
 	}
 }
 
+// notecardStory documents the note (and typed-object) card: an owner-authored
+// node rendered as title + body with an inline edit composer that @posts the
+// body back. It is the /ui/show/note surface the wikilink/backlink plans build
+// on (plans 161/163).
+func notecardStory() Story {
+	return Story{
+		ID: "notecard", Group: "Cards", Title: "NoteCard",
+		Blurb: "An owner-authored knowledge node (note or typed object) shown as title + body with an inline edit form. Born active — the owner's own, trusted. The route /ui/show/note?id=… opens it; the edit form @posts to /ui/node/{id}/edit.",
+		Variants: []Variant{
+			{"note", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n1", Type: "note", Title: "Greenhouse plan", Body: "A lean-to greenhouse on the south wall next spring; reuse the old window frames.", Found: true})},
+			{"typed object (person)", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "n2", Type: "person", Title: "Dr. Mara", Body: "Vet at Willowbrook; closed Sundays.", Found: true})},
+			{"not found", knowledgecards.NoteCard(knowledgecards.NoteView{ID: "missing", Found: false})},
+		},
+		Props: []Prop{
+			{"ID", "string", "—", "Node id; drives the edit @post target."},
+			{"Type", "string", `"note"`, "Node type label shown in the head (note, person, book, idea, place)."},
+			{"Title", "string", "—", "The node title."},
+			{"Body", "string", "—", "The node body (escaped text)."},
+			{"Found", "bool", "false", "When false, renders an error strip instead of the card."},
+		},
+		Dos: []string{
+			"Keep note/typed-object nodes owner-authored and born active.",
+			"Reuse the parchment edit form rather than a rich editor.",
+		},
+		Donts: []string{
+			"Render an unescaped node body.",
+			"Add a status lifecycle here — owner-authored nodes are already active.",
+		},
+	}
+}
+
 func knowledgecardStory() Story {
 	return Story{
 		ID: "knowledgecard", Group: "Cards", Title: "KnowledgeCard",
