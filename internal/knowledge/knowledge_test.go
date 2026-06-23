@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/search"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
@@ -415,5 +416,106 @@ func TestSearchActiveIntegration(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("integration: seeded memory not returned; got %d records", len(results))
+	}
+}
+
+// TestSearchActiveStaysMemoryOnly is the no-regression guard for the
+// memory-scoped recall contract: even when an active note shares the search
+// term, SearchActive (which backs recall and BuildContext) returns ONLY memory
+// nodes. A non-memory hit feeding those memory-aliased callers would be a bug.
+func TestSearchActiveStaysMemoryOnly(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	mem, err := ProposeMemory(app, MemoryProposal{
+		Title: "owner fact", Content: "owner enjoys kombucha", Category: "preference", Importance: 3, Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("propose: %v", err)
+	}
+	if _, err := Transition(app, Memory, mem.Id, StatusActive); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	// An active note sharing the term "kombucha" — must NOT be recalled.
+	note, err := nodes.Create(app, "note", "drinks log", "tried a new kombucha brand", nodes.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("create note: %v", err)
+	}
+
+	ix, err := search.Open(filepath.Join(t.TempDir(), "search.db"))
+	if err != nil {
+		t.Fatalf("open index: %v", err)
+	}
+	defer ix.Close()
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	app.Store().Set(search.StoreKey, ix)
+
+	got, err := SearchActive(app, []string{"kombucha"}, 10)
+	if err != nil {
+		t.Fatalf("SearchActive: %v", err)
+	}
+	for _, r := range got {
+		if r.Id == note.Id {
+			t.Fatalf("SearchActive returned a non-memory note %s — recall must stay memory-only", note.Id)
+		}
+		if r.GetString("type") != string(Memory) {
+			t.Fatalf("SearchActive returned a %q node — recall must stay memory-only", r.GetString("type"))
+		}
+	}
+	if len(got) != 1 || got[0].Id != mem.Id {
+		t.Fatalf("expected only the memory %s; got %d records", mem.Id, len(got))
+	}
+}
+
+// TestSearchAllActiveCrossType proves the new cross-type surface returns mixed
+// node types and never a proposed node (the consent filter).
+func TestSearchAllActiveCrossType(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	mem, err := ProposeMemory(app, MemoryProposal{
+		Title: "owner fact", Content: "owner enjoys kombucha", Category: "preference", Importance: 3, Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("propose: %v", err)
+	}
+	if _, err := Transition(app, Memory, mem.Id, StatusActive); err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	note, err := nodes.Create(app, "note", "drinks log", "tried a new kombucha brand", nodes.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("create note: %v", err)
+	}
+	// A proposed memory with the same term — must never be returned.
+	proposed, err := ProposeMemory(app, MemoryProposal{
+		Title: "draft", Content: "secret kombucha plan", Category: "fact", Importance: 1, Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("propose draft: %v", err)
+	}
+
+	ix, err := search.Open(filepath.Join(t.TempDir(), "search.db"))
+	if err != nil {
+		t.Fatalf("open index: %v", err)
+	}
+	defer ix.Close()
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("rebuild: %v", err)
+	}
+	app.Store().Set(search.StoreKey, ix)
+
+	got, err := SearchAllActive(app, []string{"kombucha"}, 10)
+	if err != nil {
+		t.Fatalf("SearchAllActive: %v", err)
+	}
+	ids := map[string]bool{}
+	for _, r := range got {
+		ids[r.Id] = true
+		if r.Id == proposed.Id {
+			t.Fatalf("proposed node %s leaked into cross-type search", proposed.Id)
+		}
+	}
+	if !ids[mem.Id] || !ids[note.Id] {
+		t.Fatalf("cross-type search missed a type: memory=%v note=%v (got %d)", ids[mem.Id], ids[note.Id], len(got))
 	}
 }

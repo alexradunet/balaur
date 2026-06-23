@@ -371,3 +371,31 @@ func noteDropCmd(app core.App) *cobra.Command {
 	})
 	return cmd
 }
+
+// searchCmd is the flat cross-type search verb (mirrors the `search` agent
+// tool): full-text over ALL active knowledge nodes, deterministic, no model.
+func searchCmd(app core.App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "search <terms...>",
+		Short: "Full-text search across all active knowledge nodes of every type",
+		Args:  cobra.MinimumNArgs(1),
+	}
+	cmd.RunE = run(app, "search", func(cmd *cobra.Command, args []string) (any, error) {
+		recs, err := knowledge.SearchAllActive(app, args, 20)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]map[string]any, 0, len(recs))
+		for _, r := range recs {
+			out = append(out, map[string]any{
+				"id":     r.Id,
+				"type":   r.GetString("type"),
+				"title":  r.GetString("title"),
+				"body":   r.GetString("body"),
+				"status": r.GetString("status"),
+			})
+		}
+		return out, nil
+	})
+	return cmd
+}

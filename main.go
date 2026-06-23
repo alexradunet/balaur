@@ -197,7 +197,7 @@ func registerBriefing(app core.App) {
 }
 
 // registerSearchIndex opens the FTS5 sidecar index at pb_data/search.db,
-// puts it in app.Store(), and rebuilds it from active memories. On any
+// puts it in app.Store(), and rebuilds it from active nodes. On any
 // error Balaur boots without the index — LIKE fallback keeps recall live.
 // A corrupt file is deleted and one retry is attempted before giving up.
 // Record hooks keep the index eventually consistent between boots.

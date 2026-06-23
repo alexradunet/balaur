@@ -57,6 +57,7 @@ func Register(app core.App, root *cobra.Command) {
 		memoryCmd(app),
 		skillCmd(app),
 		noteCmd(app),
+		searchCmd(app),
 		lifeCmd(app),
 		journalCmd(app),
 		dayCmd(app),

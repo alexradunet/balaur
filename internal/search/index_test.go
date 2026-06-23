@@ -6,6 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -54,11 +55,38 @@ func seedProposedMemory(t *testing.T, app core.App, title string) string {
 	return seedMemoryNode(t, app, title, "", "fact", 1, "proposed")
 }
 
+// seedNode inserts a node of the given type/status directly via the PocketBase
+// app (no props), used by the multi-kind and consent tests.
+func seedNode(t *testing.T, app core.App, kind, title, body, status string) string {
+	t.Helper()
+	col, err := app.FindCollectionByNameOrId("nodes")
+	if err != nil {
+		t.Fatalf("find nodes collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("type", kind)
+	rec.Set("title", title)
+	rec.Set("body", body)
+	rec.Set("status", status)
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("save %s node: %v", kind, err)
+	}
+	return rec.Id
+}
+
+func seedActiveNode(t *testing.T, app core.App, kind, title, body string) string {
+	return seedNode(t, app, kind, title, body, "active")
+}
+
+func seedProposedNode(t *testing.T, app core.App, kind, title, body string) string {
+	return seedNode(t, app, kind, title, body, "proposed")
+}
+
 func TestOpenCreatesSchema(t *testing.T) {
 	ix := openTestIndex(t)
 	// Insert and query to prove the schema exists.
-	_, err := ix.db.Exec(`INSERT INTO memories_fts(id, title, content, when_to_use, category) VALUES (?, ?, ?, ?, ?)`,
-		"id1", "flour bread", "", "", "")
+	_, err := ix.db.Exec(`INSERT INTO knowledge_fts(id, kind, title, content, extra) VALUES (?, ?, ?, ?, ?)`,
+		"id1", "note", "flour bread", "", "")
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
@@ -150,39 +178,124 @@ func TestUpsertNonActive(t *testing.T) {
 	}
 }
 
-// TestUpsertGatesNonMemoryNodes proves the Step-6 gate: only type=memory nodes
-// feed memories_fts. An active note node must never land in the index, and its
-// body/props (not an empty content column) drive a memory node's searchability.
-func TestUpsertGatesNonMemoryNodes(t *testing.T) {
+// TestRebuildMultiKind proves the unified index is type-agnostic: active nodes
+// of any type index and are retrievable by a term unique to each, keyed by kind.
+func TestRebuildMultiKind(t *testing.T) {
 	app := storetest.NewApp(t)
-	col, _ := app.FindCollectionByNameOrId("nodes")
 
-	// An active note node — must be excluded from memories_fts.
-	note := core.NewRecord(col)
-	note.Set("type", "note")
-	note.Set("title", "gardenia bloom")
-	note.Set("body", "the gardenia bloomed today")
-	note.Set("status", "active")
-	if err := app.Save(note); err != nil {
-		t.Fatalf("save note: %v", err)
+	noteID := seedActiveNode(t, app, "note", "garden notes", "the gardenia bloomed today")
+	memID := seedActiveNode(t, app, "memory", "owner fact", "prefers rosemary in cooking")
+	skillID := seedActiveNode(t, app, "skill", "baking", "knead the dough thoroughly")
+	journalID := seedActiveNode(t, app, "journal", "2026-06-23", "walked the riverside trail")
+
+	ix := openTestIndex(t)
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+
+	cases := []struct {
+		term string
+		want string
+	}{
+		{"gardenia", noteID},
+		{"rosemary", memID},
+		{"dough", skillID},
+		{"riverside", journalID},
+	}
+	for _, c := range cases {
+		ids, err := ix.Query([]string{c.term}, 10)
+		if err != nil {
+			t.Fatalf("Query %q: %v", c.term, err)
+		}
+		if len(ids) != 1 || ids[0] != c.want {
+			t.Fatalf("Query %q: got %v, want [%s]", c.term, ids, c.want)
+		}
+	}
+
+	// QueryKind narrows to one kind: "rosemary" is a memory, so a note-kind
+	// query must not return it.
+	if ids, _ := ix.QueryKind([]string{"rosemary"}, "memory", 10); len(ids) != 1 || ids[0] != memID {
+		t.Fatalf("QueryKind(memory) rosemary: got %v, want [%s]", ids, memID)
+	}
+	if ids, _ := ix.QueryKind([]string{"rosemary"}, "note", 10); len(ids) != 0 {
+		t.Fatalf("QueryKind(note) must not return the memory hit: %v", ids)
+	}
+}
+
+// TestSearchConsentFilter is the spine test: a proposed node must NEVER be
+// returned by search, on both the rebuild path and the live-upsert path.
+func TestSearchConsentFilter(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	activeID := seedActiveNode(t, app, "note", "public note", "a quokka sighting downtown")
+	proposedID := seedProposedNode(t, app, "memory", "secret", "a quokka secret not yet approved")
+
+	ix := openTestIndex(t)
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+
+	// Rebuild path: only the active node matches "quokka".
+	ids, err := ix.Query([]string{"quokka"}, 10)
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != activeID {
+		t.Fatalf("consent filter (rebuild): got %v, want only [%s]", ids, activeID)
+	}
+
+	// Live-upsert path: upserting the proposed record directly must not index it
+	// (the status != "active" early return deletes-then-skips).
+	proposed, err := app.FindRecordById("nodes", proposedID)
+	if err != nil {
+		t.Fatalf("find proposed: %v", err)
+	}
+	if err := ix.Upsert(proposed); err != nil {
+		t.Fatalf("Upsert proposed: %v", err)
+	}
+	ids2, err := ix.Query([]string{"quokka"}, 10)
+	if err != nil {
+		t.Fatalf("Query after upsert: %v", err)
+	}
+	for _, id := range ids2 {
+		if id == proposedID {
+			t.Fatalf("proposed node leaked into the index: %v", ids2)
+		}
+	}
+}
+
+// TestExtraPreservesMemoryRecallHint proves the `extra` column keeps memory
+// recall hints (when_to_use + category, from props) searchable — parity with
+// the prior memory-only index, where both were searchable columns.
+func TestExtraPreservesMemoryRecallHint(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// Title/body have no overlap with the hint terms; only props carry them.
+	id := seedMemoryNode(t, app, "plain title", "plain body text", "groceries", 3, "active")
+	// Add a when_to_use prop term not present anywhere else.
+	rec, err := app.FindRecordById("nodes", id)
+	if err != nil {
+		t.Fatalf("find: %v", err)
+	}
+	props := nodes.Props(rec)
+	props["when_to_use"] = "remind me at the supermarket checkout"
+	rec.Set("props", props)
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("save props: %v", err)
 	}
 
 	ix := openTestIndex(t)
-	if err := ix.Upsert(note); err != nil {
-		t.Fatalf("Upsert note: %v", err)
-	}
-	if ids, _ := ix.Query([]string{"gardenia"}, 10); len(ids) != 0 {
-		t.Fatalf("note node leaked into the memory index: %v", ids)
+	if err := ix.Rebuild(app); err != nil {
+		t.Fatalf("Rebuild: %v", err)
 	}
 
-	// An active memory node — its body + props.when_to_use ARE searchable.
-	memID := seedMemoryNode(t, app, "title only", "rosemary thrives in dry soil", "fact", 3, "active")
-	memRec, _ := app.FindRecordById("nodes", memID)
-	if err := ix.Upsert(memRec); err != nil {
-		t.Fatalf("Upsert memory: %v", err)
+	// when_to_use term ("supermarket") matches via extra.
+	if ids, _ := ix.Query([]string{"supermarket"}, 10); len(ids) != 1 || ids[0] != id {
+		t.Fatalf("when_to_use not searchable via extra: got %v, want [%s]", ids, id)
 	}
-	if ids, _ := ix.Query([]string{"rosemary"}, 10); len(ids) != 1 || ids[0] != memID {
-		t.Fatalf("memory body not indexed; got %v", ids)
+	// category term ("groceries") also matches via extra (category parity).
+	if ids, _ := ix.Query([]string{"groceries"}, 10); len(ids) != 1 || ids[0] != id {
+		t.Fatalf("category not searchable via extra: got %v, want [%s]", ids, id)
 	}
 }
 
@@ -190,8 +303,8 @@ func TestQueryInjectionSafe(t *testing.T) {
 	ix := openTestIndex(t)
 
 	// Seed a benign record.
-	_, err := ix.db.Exec(`INSERT INTO memories_fts(id, title, content, when_to_use, category) VALUES (?, ?, ?, ?, ?)`,
-		"safe1", "target memory", "safe content", "", "")
+	_, err := ix.db.Exec(`INSERT INTO knowledge_fts(id, kind, title, content, extra) VALUES (?, ?, ?, ?, ?)`,
+		"safe1", "memory", "target memory", "safe content", "")
 	if err != nil {
 		t.Fatalf("seed: %v", err)
 	}
@@ -210,8 +323,8 @@ func TestQueryInjectionSafe(t *testing.T) {
 func TestDeleteRemovesRecord(t *testing.T) {
 	ix := openTestIndex(t)
 
-	_, err := ix.db.Exec(`INSERT INTO memories_fts(id, title, content, when_to_use, category) VALUES (?, ?, ?, ?, ?)`,
-		"del1", "delete me", "please remove", "", "")
+	_, err := ix.db.Exec(`INSERT INTO knowledge_fts(id, kind, title, content, extra) VALUES (?, ?, ?, ?, ?)`,
+		"del1", "note", "delete me", "please remove", "")
 	if err != nil {
 		t.Fatalf("seed: %v", err)
 	}

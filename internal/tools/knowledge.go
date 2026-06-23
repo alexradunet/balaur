@@ -22,6 +22,7 @@ func KnowledgeTools(app core.App) []agent.Tool {
 	return []agent.Tool{
 		rememberTool(app),
 		recallTool(app),
+		searchTool(app),
 		skillTool(app),
 		proposeSkillTool(app),
 		nodeWriteTool(app),
@@ -140,12 +141,53 @@ func recallTool(app core.App) agent.Tool {
 			var b strings.Builder
 			for _, m := range recs {
 				fmt.Fprintf(&b, "- [%s] %s: %s\n",
-					m.GetString("category"), m.GetString("title"), m.GetString("content"))
-				knowledge.Touch(app, knowledge.Memory, m)
+					m.GetString("type"), m.GetString("title"), m.GetString("body"))
 			}
 			return b.String(), nil
 		},
 	}
+}
+
+func searchTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("search",
+			"Full-text search across ALL your approved knowledge — notes, memories, "+
+				"skills, journal entries, and typed objects. Returns mixed-type hits "+
+				"ranked by relevance. Proposed/unapproved knowledge is never returned.",
+			obj(map[string]any{
+				"terms": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "1-4 search terms (OR semantics)."},
+			}, "terms")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				Terms []string `json:"terms"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("search: bad arguments: %w", err)
+			}
+			recs, err := knowledge.SearchAllActive(app, args.Terms, 10)
+			if err != nil {
+				return "", err
+			}
+			if len(recs) == 0 {
+				return "No approved knowledge matches.", nil
+			}
+			var b strings.Builder
+			for _, r := range recs {
+				fmt.Fprintf(&b, "- [%s] %s: %s\n",
+					r.GetString("type"), r.GetString("title"), snippet(r.GetString("body")))
+			}
+			return b.String(), nil
+		},
+	}
+}
+
+// snippet returns a short single-line preview of node body text for search hits.
+func snippet(s string) string {
+	s = strings.ReplaceAll(strings.TrimSpace(s), "\n", " ")
+	if len([]rune(s)) > 160 {
+		return string([]rune(s)[:160]) + "…"
+	}
+	return s
 }
 
 func skillTool(app core.App) agent.Tool {
