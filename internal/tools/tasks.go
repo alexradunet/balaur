@@ -22,6 +22,7 @@ func TaskTools(app core.App) []agent.Tool {
 		taskAddTool(app),
 		taskListTool(app),
 		taskUpdateTool(app),
+		taskHistoryTool(app),
 		taskDoneTool(app),
 		taskSnoozeTool(app),
 		taskDropTool(app),
@@ -259,7 +260,7 @@ func taskUpdateTool(app core.App) agent.Tool {
 					opts.Due, dateOnly = due, only
 				}
 			}
-			if err := tasks.Update(app, rec, opts); err != nil {
+			if err := tasks.Update(app, rec, time.Now(), opts); err != nil {
 				return "", fmt.Errorf("task_update: %w", err)
 			}
 			var b strings.Builder
@@ -284,6 +285,50 @@ func taskUpdateTool(app core.App) agent.Tool {
 			fmt.Fprintf(&b, ". id: %s", rec.Id)
 			// Marked so the web layer re-renders the task card live in chat.
 			return MarkProposal("tasks", rec.Id, b.String()), nil
+		},
+	}
+}
+
+func taskHistoryTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("task_history",
+			"Show a task's completion history — the days it was logged done and, for "+
+				"recurring habits, the current streak. Use when the owner asks how a habit "+
+				"or ritual has been going. Get the id from task_list.",
+			obj(map[string]any{
+				"id": str("Task id from task_list."),
+			}, "id")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			rec, err := findTask(app, argsJSON)
+			if err != nil {
+				return "", fmt.Errorf("task_history: %w", err)
+			}
+			loc := store.OwnerLocation(app)
+			days, err := tasks.CompletionDays(app, rec.Id, loc)
+			if err != nil {
+				return "", fmt.Errorf("task_history: %w", err)
+			}
+			var b strings.Builder
+			fmt.Fprintf(&b, "History for %q: %d completion(s) logged", rec.GetString("title"), len(days))
+			if rule, _ := tasks.Parse(rec.GetString("recur")); !rule.IsZero() {
+				fmt.Fprintf(&b, "; current streak %d", tasks.StreakFor(app, rec, time.Now()))
+			}
+			if len(days) == 0 {
+				b.WriteString(". Nothing logged yet")
+			} else {
+				// Most recent first, capped — a long habit shouldn't flood the reply.
+				b.WriteString(".\nRecent: ")
+				const cap = 12
+				var dates []string
+				for i := len(days) - 1; i >= 0 && len(dates) < cap; i-- {
+					dates = append(dates, days[i].Format("Mon Jan 2"))
+				}
+				b.WriteString(strings.Join(dates, ", "))
+				if len(days) > cap {
+					fmt.Fprintf(&b, " (+%d earlier)", len(days)-cap)
+				}
+			}
+			return b.String(), nil
 		},
 	}
 }

@@ -39,10 +39,29 @@ func TestTaskCardOpenHasAllActions(t *testing.T) {
 	}
 }
 
+func TestTaskCardOpenHasEditForm(t *testing.T) {
+	out := renderTask(t, taskcards.TaskView{
+		ID: "t1", Title: "Ship parcel", Status: "open",
+		DueLine: "due tomorrow 17:00", Recur: "weekly:mon,thu", DueInput: "2026-06-24T17:00",
+	})
+	for _, want := range []string{
+		`@post(&#39;/ui/tasks/t1/edit&#39;`, // the edit form posts to /edit
+		`name="title"`,
+		`type="datetime-local"`, `name="due"`, `value="2026-06-24T17:00"`,
+		`name="recur"`, `value="weekly:mon,thu"`,
+		`name="notes"`,
+		">Save<",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("edit form missing %q in:\n%s", want, out)
+		}
+	}
+}
+
 func TestTaskCardNonOpenShowsStatusNoActions(t *testing.T) {
 	out := renderTask(t, taskcards.TaskView{ID: "t2", Title: "Done thing", Status: "done"})
-	if strings.Contains(out, "/transition") {
-		t.Errorf("non-open task must not render action forms:\n%s", out)
+	if strings.Contains(out, "/transition") || strings.Contains(out, "/edit") {
+		t.Errorf("non-open task must not render action or edit forms:\n%s", out)
 	}
 	if !strings.Contains(out, "done") {
 		t.Errorf("expected status text:\n%s", out)

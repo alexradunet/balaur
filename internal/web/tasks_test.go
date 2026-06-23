@@ -226,6 +226,56 @@ func TestTaskTransitionRailRefresh(t *testing.T) {
 	})
 }
 
+// TestTaskEdit exercises the inline edit endpoint: the form's field set is
+// applied through tasks.Update and the card re-renders in place with the new
+// values (the same path the chat agent's task_update drives).
+func TestTaskEdit(t *testing.T) {
+	app := newWebApp(t)
+	rec := seedTaskWithRecur(t, app, "Ship parcel", "open", "", time.Date(2026, 6, 24, 17, 0, 0, 0, time.Local))
+
+	// The patched card carries the new title and notes — proof the handler
+	// parsed the form, ran tasks.Update, and re-rendered. Due-reschedule
+	// correctness is covered by the tasks/tools unit tests; the ApiScenario
+	// harness closes the app after the run, so we assert on the response.
+	scenario := tests.ApiScenario{
+		Name:   "edit reschedules and renames in place",
+		Method: "POST",
+		URL:    "/ui/tasks/" + rec.Id + "/edit",
+		Body:   strings.NewReader("title=Ship+parcel+today&due=2026-06-23T17:00&recur=&notes=SameDay+box"),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"datastar-patch-elements", "tcard-" + rec.Id, "Ship parcel today", "SameDay box"},
+	}
+	scenario.Test(t)
+}
+
+// TestQuestsFocusPrefillsEditForm guards a regression: the inline edit form
+// must pre-fill Due and Repeat on the quests surface (BuildQuestsFocus →
+// taskViewOf), not only on the standalone card route. A blank-but-present form
+// on the main task page defeats the feature.
+func TestQuestsFocusPrefillsEditForm(t *testing.T) {
+	app := newWebApp(t)
+	seedTaskWithRecur(t, app, "Water plants", "open", "daily", time.Date(2030, 3, 4, 14, 30, 0, 0, time.Local))
+
+	s := tests.ApiScenario{
+		Name:           "quests focus pre-fills the inline edit form",
+		Method:         "GET",
+		URL:            "/ui/show/quests",
+		TestAppFactory: func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus: 200,
+		ExpectedContent: []string{
+			`type="datetime-local"`,
+			`value="2030-03-04T14:30"`, // DueInput pre-fill
+			`name="recur"`,
+			`value="daily"`, // Recur pre-fill
+		},
+	}
+	s.Test(t)
+}
+
 // TestTasksRouteRetired guards against accidental re-registration of the
 // standalone /tasks page. The route is unregistered, so PocketBase's index
 // the catch-all handler redirects it home (302 → /) rather than serving

@@ -165,6 +165,7 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/day/journal/{id}/drop", h.dayJournalDrop)
 	se.Router.GET("/ui/tasks/{id}/card", h.taskCard)
 	se.Router.POST("/ui/tasks/{id}/transition", h.taskTransition)
+	se.Router.POST("/ui/tasks/{id}/edit", h.taskEdit)
 	se.Router.GET("/ui/chat/nudges", h.chatNudges)
 	se.Router.GET("/ui/knowledge/{kind}/grid", h.knowledgeGrid)
 	se.Router.GET("/ui/knowledge/{kind}/{id}/card", h.knowledgeCard)

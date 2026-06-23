@@ -241,6 +241,7 @@ func TestSnoozeAndDrop(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	app := storetest.NewApp(t)
+	now := time.Now()
 	ptr := func(s string) *string { return &s }
 
 	rec, err := Create(app, CreateOpts{Title: "Ship parcel", Due: time.Date(2026, 6, 24, 17, 0, 0, 0, time.Local)})
@@ -250,7 +251,7 @@ func TestUpdate(t *testing.T) {
 
 	// Reschedule (the live bug: Jun 24 → Jun 23) + rename + edit notes.
 	newDue := time.Date(2026, 6, 23, 17, 0, 0, 0, time.Local)
-	if err := Update(app, rec, UpdateOpts{
+	if err := Update(app, rec, now, UpdateOpts{
 		Title:  ptr("Ship parcel today"),
 		Notes:  ptr("SameDay box"),
 		SetDue: true, Due: newDue,
@@ -270,7 +271,7 @@ func TestUpdate(t *testing.T) {
 
 	// Omitted fields are untouched: only the due moves here.
 	moved := time.Date(2026, 6, 25, 9, 0, 0, 0, time.Local)
-	if err := Update(app, got, UpdateOpts{SetDue: true, Due: moved}); err != nil {
+	if err := Update(app, got, now, UpdateOpts{SetDue: true, Due: moved}); err != nil {
 		t.Fatalf("update due-only: %v", err)
 	}
 	got, _ = app.FindRecordById("tasks", rec.Id)
@@ -278,8 +279,8 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("title changed by a due-only update: %q", got.GetString("title"))
 	}
 
-	// Clearing the due (SetDue with zero Due) makes it a someday item.
-	if err := Update(app, got, UpdateOpts{SetDue: true}); err != nil {
+	// Clearing the due (SetDue with zero Due) makes a one-off a someday item.
+	if err := Update(app, got, now, UpdateOpts{SetDue: true}); err != nil {
 		t.Fatalf("clear due: %v", err)
 	}
 	got, _ = app.FindRecordById("tasks", rec.Id)
@@ -289,7 +290,7 @@ func TestUpdate(t *testing.T) {
 
 	// Turning it recurring re-validates: a calendar due snaps to the pattern.
 	tue := time.Date(2026, 6, 16, 18, 0, 0, 0, time.Local) // a Tuesday
-	if err := Update(app, got, UpdateOpts{Recur: ptr("weekly:mon,thu"), SetDue: true, Due: tue}); err != nil {
+	if err := Update(app, got, now, UpdateOpts{Recur: ptr("weekly:mon,thu"), SetDue: true, Due: tue}); err != nil {
 		t.Fatalf("make recurring: %v", err)
 	}
 	got, _ = app.FindRecordById("tasks", rec.Id)
@@ -297,9 +298,21 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("calendar due not snapped: %v", d)
 	}
 
-	// A recurring task cannot lose its anchor.
-	if err := Update(app, got, UpdateOpts{SetDue: true}); err == nil {
-		t.Error("clearing due on a recurring task: want error")
+	// Clearing the due on a recurring task re-anchors to the next occurrence
+	// (it stays live and recurring) instead of erroring.
+	if err := Update(app, got, now, UpdateOpts{SetDue: true}); err != nil {
+		t.Fatalf("clear due on recurring: %v", err)
+	}
+	got, _ = app.FindRecordById("tasks", rec.Id)
+	nd := got.GetDateTime("due").Time()
+	if nd.IsZero() {
+		t.Fatal("recurring clear should re-anchor, not empty the due")
+	}
+	if wd := nd.In(time.Local).Weekday(); wd != time.Monday && wd != time.Thursday {
+		t.Errorf("re-anchored due landed on %v, want a rule day", wd)
+	}
+	if !nd.After(now) {
+		t.Errorf("re-anchored due %v not after now %v", nd, now)
 	}
 }
 
@@ -315,7 +328,7 @@ func TestUpdateRejectsNonOpen(t *testing.T) {
 		t.Fatalf("done: %v", err)
 	}
 	got, _ := app.FindRecordById("tasks", rec.Id)
-	if err := Update(app, got, UpdateOpts{Title: ptr("nope")}); err == nil {
+	if err := Update(app, got, time.Now(), UpdateOpts{Title: ptr("nope")}); err == nil {
 		t.Error("updating a done task: want error")
 	}
 }

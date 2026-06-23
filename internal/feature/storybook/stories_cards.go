@@ -95,27 +95,30 @@ func lifelogfocusStory() Story {
 func taskcardStory() Story {
 	return Story{
 		ID: "taskcard", Group: "Cards", Title: "TaskCard", Wide: true,
-		Blurb: "Operational action card for chat embeds and the Tasks page. Open tasks get Done, Snooze, Drop; closed tasks show their status.",
+		Blurb: "Operational action card for chat embeds and the Tasks page. Open tasks get an Edit fold plus Done, Snooze, Drop; closed tasks show their status.",
 		Variants: []Variant{
-			{"open · recurring", taskcards.TaskCard(taskcards.TaskView{ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due today 18:00", RecurLine: "every 2 days"})},
+			{"open · recurring", taskcards.TaskCard(taskcards.TaskView{ID: "t1", Title: "Water the tomatoes", Status: "open", DueLine: "due today 18:00", RecurLine: "every 2 days", Recur: "every:2d", DueInput: "2026-06-23T18:00"})},
 			{"overdue", taskcards.TaskCard(taskcards.TaskView{ID: "t2", Title: "Call the vet about Luna", Status: "open", DueLine: "due yesterday", Overdue: true})},
 			{"done", taskcards.TaskCard(taskcards.TaskView{ID: "t3", Title: "Submit the quarterly report", Status: "done"})},
 		},
 		Props: []Prop{
-			{"ID", "string", "—", "Record id; drives the root element id and the transition form posts."},
+			{"ID", "string", "—", "Record id; drives the root element id and the transition/edit form posts."},
 			{"Title", "string", "—", "The action."},
-			{"Status", "string", `"open"`, "Open shows Done/Snooze/Drop; any closed status shows the status word."},
+			{"Status", "string", `"open"`, "Open shows the Edit fold + Done/Snooze/Drop; any closed status shows the status word."},
 			{"DueLine", "string", "—", "Human due text."},
 			{"RecurLine", "string", "—", `Recurrence tag, e.g. "every 2 days".`},
 			{"Notes", "string", "—", "Collapsible detail under a Notes fold."},
+			{"Recur", "string", "—", "Raw recurrence DSL pre-filling the Edit form's Repeat field."},
+			{"DueInput", "string", "—", "datetime-local value pre-filling the Edit form's Due field."},
 			{"Overdue", "bool", "false", "Reddens the due line."},
 		},
 		Dos: []string{
 			"Make Done the single primary on open tasks.",
 			"Embed the same card in chat and on the Tasks page.",
+			"Edit reschedules/renames in place — same tasks.Update the agent's task_update calls.",
 		},
 		Donts: []string{
-			"Show Done/Snooze/Drop on a closed task.",
+			"Show the Edit fold or Done/Snooze/Drop on a closed task.",
 			"Bury the due line — it is the point.",
 		},
 	}

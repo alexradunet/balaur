@@ -97,8 +97,9 @@ self tool, which reports the actual registry):
   approve; recall searches approved memories; skill loads an approved
   skill's procedure.
 - Commitments: task_add, task_list, task_update (reschedule/rename/edit),
-  task_done, task_snooze, task_drop. Owner-voiced tasks act directly; every
-  mutation is audited.
+  task_history (completions + streak), task_done, task_snooze, task_drop.
+  Owner-voiced tasks act directly; every mutation is audited. Task cards in the
+  web UI carry the same edit/done/snooze/drop actions.
 - Life log: log_entry, entry_series, entry_drop — kinds are invented by
   the owner, never by you.
 - Journal: journal_write keeps the owner's words verbatim.

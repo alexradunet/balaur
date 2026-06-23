@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -93,11 +94,18 @@ func (h *handlers) taskCardHTML(rec *core.Record) (string, error) {
 
 // taskCardViewOf maps the web taskView onto the taskcards.TaskView the component takes.
 func taskCardViewOf(rec *core.Record) taskcards.TaskView {
-	v := taskViewOf(rec, time.Now())
-	return taskcards.TaskView{
+	now := time.Now()
+	v := taskViewOf(rec, now)
+	tv := taskcards.TaskView{
 		ID: v.ID, Title: v.Title, Status: v.Status,
 		DueLine: v.DueLine, RecurLine: v.RecurLine, Notes: v.Notes, Overdue: v.Overdue,
+		Recur: rec.GetString("recur"), // raw DSL the Edit form pre-fills
 	}
+	// datetime-local value in the same (Local) zone the card displays in.
+	if due := rec.GetDateTime("due").Time(); !due.IsZero() {
+		tv.DueInput = due.In(now.Location()).Format("2006-01-02T15:04")
+	}
+	return tv
 }
 
 func (h *handlers) taskTransition(e *core.RequestEvent) error {
@@ -150,6 +158,51 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	}
 	patchOuterHTML(sse, "tcard-"+rec.Id, html)
 	return nil
+}
+
+// taskEdit applies the inline edit form (title, due, recurrence, notes) and
+// re-renders the card in place. Mirrors knowledgeEdit. The form always carries
+// the full visible field set, so each is a deliberate value: an empty due
+// clears it (re-anchoring a recurring task to its next occurrence in
+// tasks.Update); recur_from_done is not editable here and stays untouched.
+func (h *handlers) taskEdit(e *core.RequestEvent) error {
+	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
+	if err != nil {
+		return h.cardError(e, err)
+	}
+	title := e.Request.FormValue("title")
+	notes := e.Request.FormValue("notes")
+	recur := e.Request.FormValue("recur")
+	opts := tasks.UpdateOpts{Title: &title, Notes: &notes, Recur: &recur, SetDue: true}
+	if v := strings.TrimSpace(e.Request.FormValue("due")); v != "" {
+		due, err := parseLocalDue(v, time.Now().Location())
+		if err != nil {
+			return h.cardError(e, err)
+		}
+		opts.Due = due
+	}
+	if err := tasks.Update(h.app, rec, time.Now(), opts); err != nil {
+		return h.cardError(e, err)
+	}
+	html, err := h.taskCardHTML(rec)
+	if err != nil {
+		return e.InternalServerError("rendering task card", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	patchOuterHTML(sse, "tcard-"+rec.Id, html)
+	return nil
+}
+
+// parseLocalDue reads a datetime-local form value (minutes, optionally seconds)
+// in loc. The browser emits "2006-01-02T15:04"; the seconds layout is a
+// belt-and-suspenders for agents that include them.
+func parseLocalDue(s string, loc *time.Location) (time.Time, error) {
+	for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05"} {
+		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("bad due time %q", s)
 }
 
 // snoozeUntil maps the card's quick picks to concrete times.

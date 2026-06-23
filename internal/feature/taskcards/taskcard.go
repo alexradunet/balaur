@@ -10,8 +10,11 @@ import (
 
 // TaskView is the full task view-model behind the task-card partial (card-task.html):
 // the quests manage fold and (later) the quests focus detail. Mirrors web.taskView.
+// Recur and DueInput are the raw values the inline Edit form pre-fills (the DSL
+// string and a datetime-local value); DueLine/RecurLine stay the human display.
 type TaskView struct {
 	ID, Title, Status, DueLine, RecurLine, Notes string
+	Recur, DueInput                              string
 	Overdue                                      bool
 }
 
@@ -32,7 +35,30 @@ func TaskCard(v TaskView) g.Node {
 		h.H3(h.Class("kcard-title"), g.Text(v.Title)),
 		taskDue(v),
 		taskNotes(v),
+		taskEditForm(v),
 		h.Footer(h.Class("kcard-actions"), taskActions(v)),
+	)
+}
+
+// taskEditForm is the collapsible inline editor — reschedule, rename, retag,
+// rewrite notes — mirroring the memory card's edit fold. Open tasks only; a
+// closed task has nothing to edit. Posts the full visible field set to
+// /ui/tasks/{id}/edit, which re-renders the card in place.
+func taskEditForm(v TaskView) g.Node {
+	if v.Status != "open" {
+		return g.Text("")
+	}
+	return h.Details(h.Class("kcard-edit"),
+		h.Summary(g.Text("Edit")),
+		h.Form(
+			data.On("submit", "@post('/ui/tasks/"+v.ID+"/edit', {contentType:'form'})", data.ModifierPrevent),
+			h.Label(g.Text("Title "), h.Input(h.Type("text"), h.Name("title"), h.Value(v.Title), h.Required())),
+			h.Label(g.Text("Due "), h.Input(h.Type("datetime-local"), h.Name("due"), h.Value(v.DueInput))),
+			h.Label(g.Text("Repeat "), h.Input(h.Type("text"), h.Name("recur"), h.Value(v.Recur),
+				h.Placeholder("daily · every:3d · weekly:mon,thu · monthly:15"))),
+			h.Label(g.Text("Notes "), h.Textarea(h.Name("notes"), g.Attr("rows", "2"), g.Text(v.Notes))),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Save")),
+		),
 	)
 }
 

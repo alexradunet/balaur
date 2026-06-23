@@ -265,6 +265,63 @@ func TestTaskUpdateWarnsOnCalendarSnap(t *testing.T) {
 	}
 }
 
+func TestTaskUpdateReanchorsRecurringOnClear(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := TaskTools(app)
+	ctx := context.Background()
+
+	out, _ := findTool(t, ts, "task_add").Execute(ctx, `{"title":"Gym","due":"2099-01-07T18:00","recur":"weekly:mon,thu"}`)
+	_, id, _, _ := ParseProposal(out)
+
+	// Clearing the due on a recurring task re-anchors (stays recurring with a
+	// real next occurrence) rather than erroring or going dateless.
+	res, err := findTool(t, ts, "task_update").Execute(ctx, `{"id":"`+id+`","due":""}`)
+	if err != nil {
+		t.Fatalf("task_update clear on recurring: %v", err)
+	}
+	if strings.Contains(res, "no due") {
+		t.Errorf("recurring clear should re-anchor, not go someday: %q", res)
+	}
+	rec, _ := app.FindRecordById("tasks", id)
+	due := rec.GetDateTime("due").Time()
+	if due.IsZero() {
+		t.Fatal("re-anchor produced no due")
+	}
+	if wd := due.In(time.Local).Weekday(); wd != time.Monday && wd != time.Thursday {
+		t.Errorf("re-anchored due on %v, want a rule day", wd)
+	}
+}
+
+func TestTaskHistory(t *testing.T) {
+	app := storetest.NewApp(t)
+	ts := TaskTools(app)
+	ctx := context.Background()
+
+	out, _ := findTool(t, ts, "task_add").Execute(ctx, `{"title":"Stretch","due":"2026-06-12T09:00","recur":"daily"}`)
+	_, id, _, _ := ParseProposal(out)
+
+	// No completions yet.
+	res, err := findTool(t, ts, "task_history").Execute(ctx, `{"id":"`+id+`"}`)
+	if err != nil {
+		t.Fatalf("task_history: %v", err)
+	}
+	if !strings.Contains(res, "0 completion") || !strings.Contains(res, "Nothing logged") {
+		t.Errorf("fresh history: %q", res)
+	}
+
+	// One completion → logged and a streak reported.
+	if _, err := findTool(t, ts, "task_done").Execute(ctx, `{"id":"`+id+`"}`); err != nil {
+		t.Fatalf("task_done: %v", err)
+	}
+	res, err = findTool(t, ts, "task_history").Execute(ctx, `{"id":"`+id+`"}`)
+	if err != nil {
+		t.Fatalf("task_history 2: %v", err)
+	}
+	if !strings.Contains(res, "1 completion") || !strings.Contains(res, "streak") {
+		t.Errorf("history after one done: %q", res)
+	}
+}
+
 func TestTaskListEmptyScopeReportsOtherTasks(t *testing.T) {
 	app := storetest.NewApp(t)
 	ts := TaskTools(app)

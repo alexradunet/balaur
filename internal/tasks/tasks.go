@@ -102,9 +102,11 @@ type UpdateOpts struct {
 // Update edits an open task in place: reschedule (or clear) its due, rename it,
 // rewrite notes, change recurrence. Recurrence is re-validated against the
 // resulting due — the same contract Create enforces — so an edit can never leave
-// a recurring task without an anchor or off its calendar pattern. Editing is
-// owner-consented like Create; a wrong edit is one more Update (or Drop) away.
-func Update(app core.App, rec *core.Record, o UpdateOpts) error {
+// a recurring task off its calendar pattern. Clearing the due on a task that
+// stays recurring re-anchors to the next occurrence from `now` (a recurring
+// task's due IS its next run; it can't be empty). Editing is owner-consented
+// like Create; a wrong edit is one more Update (or Drop) away.
+func Update(app core.App, rec *core.Record, now time.Time, o UpdateOpts) error {
 	if rec.GetString("status") != "open" {
 		return fmt.Errorf("tasks: %q is not open", rec.GetString("title"))
 	}
@@ -128,9 +130,22 @@ func Update(app core.App, rec *core.Record, o UpdateOpts) error {
 	if o.RecurFromDone != nil {
 		recurFromDone = *o.RecurFromDone
 	}
-	due := rec.GetDateTime("due").Time()
+	oldDue := rec.GetDateTime("due").Time()
+	due := oldDue
 	if o.SetDue {
 		due = o.Due
+	}
+
+	// Cleared due but still recurring: re-anchor to the next occurrence rather
+	// than reject. The old due (or now, if it had none) supplies the wall clock.
+	if due.IsZero() {
+		if rule, err := Parse(recur); err == nil && !rule.IsZero() {
+			anchor := oldDue
+			if anchor.IsZero() {
+				anchor = now
+			}
+			due = Next(rule, anchor, now)
+		}
 	}
 
 	due, err := normalizeRecur(recur, recurFromDone, due)
