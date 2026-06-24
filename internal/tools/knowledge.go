@@ -19,7 +19,7 @@ import (
 // the owner approves in the UI (the consent boundary lives in
 // internal/knowledge, not in tool wording).
 func KnowledgeTools(app core.App) []agent.Tool {
-	return []agent.Tool{
+	ts := []agent.Tool{
 		rememberTool(app),
 		recallTool(app),
 		searchTool(app),
@@ -30,6 +30,7 @@ func KnowledgeTools(app core.App) []agent.Tool {
 		nodeGetTool(app),
 		nodeDropTool(app),
 	}
+	return append(ts, GraphTools(app)...)
 }
 
 // ProposalMarker prefixes tool results that carry a proposal id, so the web
@@ -332,7 +333,7 @@ func nodeListTool(app core.App) agent.Tool {
 func nodeGetTool(app core.App) agent.Tool {
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("node_get",
-			"Read one knowledge node's full body by id.",
+			"Read one knowledge node's full body, props, and link summary by id.",
 			obj(map[string]any{"id": str("The node id.")}, "id")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {
@@ -345,7 +346,24 @@ func nodeGetTool(app core.App) agent.Tool {
 			if err != nil {
 				return "", fmt.Errorf("node_get: %w", err)
 			}
-			return fmt.Sprintf("# %s (%s)\n%s", rec.GetString("title"), rec.GetString("type"), rec.GetString("body")), nil
+			var b strings.Builder
+			fmt.Fprintf(&b, "# %s (%s)\n", rec.GetString("title"), rec.GetString("type"))
+			// Props — skip empty values.
+			for k, v := range nodes.Props(rec) {
+				s := fmt.Sprintf("%v", v)
+				if s != "" && s != "<nil>" {
+					fmt.Fprintf(&b, "%s: %s\n", k, s)
+				}
+			}
+			body := rec.GetString("body")
+			if body != "" {
+				fmt.Fprintf(&b, "\n%s\n", body)
+			}
+			// Link summary.
+			out, _ := nodes.Outbound(app, rec.Id)
+			back, _ := nodes.Backlinks(app, rec.Id)
+			fmt.Fprintf(&b, "\nLinks: %d outbound, %d backlinks", len(out), len(back))
+			return b.String(), nil
 		},
 	}
 }

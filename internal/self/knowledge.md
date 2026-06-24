@@ -144,7 +144,16 @@ self tool, which reports the actual registry):
   fallback when the sidecar is unavailable; skill loads an approved
   skill node's procedure. node_write creates owner-authored nodes — a note
   or a typed object (person, book, idea, place), born active; node_list,
-  node_get, and node_drop list, read, and delete them. The note card
+  node_get, and node_drop list, read, and delete them. node_get now also
+  returns the node's props and a one-line link summary (N outbound, M backlinks).
+  Four graph verbs let you build and walk the object graph — all consent-filtered
+  to active nodes only (proposed/rejected never surface):
+  node_schema discovers registered types and their property schemas (read before
+  writing a typed node); node_link asserts a typed relation between two active
+  nodes (default relation "relates_to" — agent-asserted; "links" is reserved
+  for wikilink-origin edges; idempotent); node_related returns 1-hop neighbours
+  (direction=both/out/in); node_query searches active nodes by type and/or
+  property substrings (AND across keys, limit capped at 50). The note card
   (/ui/show/note?id=…) renders a node's title + body (with clickable
   `[[wikilink]]` chips) and an inline edit form, plus a "Linked from"
   backlinks panel listing the nodes that wikilink to it. Balaur can also
