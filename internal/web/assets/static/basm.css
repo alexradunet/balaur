@@ -41,7 +41,6 @@
   --ink-muted: #6f5e3c;
   --ink-deep:   #1c0d04;                       /* darkest ink on a bright gold/ember fill */
   --portrait-bg: #101314;                      /* near-black portrait backdrop (theme-constant) */
-  --candle-glow: #c88600;                      /* candle breathe glow (theme-constant warm gold) */
 
   /* Bevel edges */
   --bevel-light: rgba(255,196,118,.18);
@@ -709,11 +708,6 @@ img.tool-icon {
 .msg-tool .body { display: inline; font-size: 13px; }
 
 .thinking { color: var(--teal-ink); font-family: var(--font-mono); font-size: 13px; }
-.type-cursor {
-  display: inline-block;
-  color: var(--ember-deep);
-  animation: basm-blink .8s steps(1, end) infinite;
-}
 @keyframes basm-blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
@@ -973,11 +967,8 @@ dialog::backdrop {
   .balaur-avatar[data-state="working"] { animation: none; }
   .cmsg-pending .cmsg-portrait { animation: none; }
   .thinking-dots::after { animation: none; content: ""; }
-  .type-cursor { animation: none; opacity: 0; }
   .choice:hover::before,
   .choice:focus-visible::before { animation: none; opacity: 1; }
-  .capture-note { animation: none; }
-  .task-fresh { animation: none; }
 }
 
 /* ══ Section 6: Page patterns ═══════════════════════════════════════ */
@@ -1302,49 +1293,10 @@ dialog::backdrop {
 
 /* ── Tasks ───────────────────────────────────────────────────────── */
 
-.t-views { margin-bottom: 18px; }
-
-/* Capture confirmation — Balaur's voice on a parchment strip when a task
-   is kept through the page composer (mirrors the chat task_add). */
-.capture-note {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 2px 0 6px;
-  padding: 10px 14px;
-  background-color: var(--surface);
-  background-image: var(--grain-ink);
-  background-size: 4px 4px;
-  color: var(--ink);
-  border: 2px solid var(--gold-deep);
-  border-radius: var(--radius);
-  box-shadow: var(--parch-bevel);
-  font-size: 15px;
-  animation: capture-rise var(--duration-fast) var(--ease-crisp);
-}
-.capture-note b { color: var(--gold-ink); font-weight: 700; }
-.capture-note-icon {
-  width: 22px; height: 22px;
-  image-rendering: pixelated;
-  flex-shrink: 0;
-}
-@keyframes capture-rise {
-  from { transform: translateY(4px); opacity: 0; }
-  to   { transform: translateY(0);  opacity: 1; }
-}
-
-/* A newly captured card flares gold, then settles. */
-.task-fresh { animation: task-flare 1.6s var(--ease-crisp); }
-@keyframes task-flare {
-  0%   { filter: brightness(1.18); }
-  100% { filter: brightness(1); }
-}
 
 .tcard-due     { margin: 2px 0 var(--space-2); font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
 .tcard-overdue { color: var(--ember-deep); font-weight: 700; }
-.tcard-done .kcard-title,
-.tcard-dropped .kcard-title { color: var(--ink-muted); text-decoration: line-through; }
-.tcard-dropped { border-style: dashed; opacity: .8; box-shadow: none; }
+.tcard-done .kcard-title { color: var(--ink-muted); text-decoration: line-through; }
 .tcard-snooze  { display: inline-flex; gap: 6px; align-items: center; }
 .tcard-snooze select {
   background: var(--surface-2);
@@ -1357,8 +1309,6 @@ dialog::backdrop {
 }
 
 /* Calendar — parchment day cells on wood */
-.cal-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
-.cal-label { margin: 0; }
 .cal-table { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }
 .cal-table th {
   font-family: var(--font-mono);
@@ -1410,7 +1360,6 @@ dialog::backdrop {
   padding-left: 5px;
   margin: 2px 0;
 }
-.cal-recur { font-style: normal; color: var(--teal-ink); margin-right: 3px; }
 .cal-daylink { text-decoration: none; }
 .cal-daylink:hover .cal-daynum { color: var(--gold-ink); }
 
@@ -1422,7 +1371,6 @@ dialog::backdrop {
 .tl-items { list-style: none; margin: 0; padding: 0; }
 .tl-item  { padding: 3px 0; font-size: 15px; }
 .tl-time  { font-family: var(--font-mono); font-size: 12px; color: var(--teal); margin-right: var(--space-2); }
-.tl-quiet { margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; color: var(--smoke); }
 
 /* ── Life page ───────────────────────────────────────────────────── */
 
@@ -1541,23 +1489,6 @@ dialog::backdrop {
 }
 .avatar-choice-active span { color: var(--gold); }
 
-/* ── Profile page ────────────────────────────────────────────────── */
-
-.profile-page {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: var(--space-7) var(--pad) 120px;
-}
-.profile-page h1 {
-  font-family: var(--font-display);
-  font-size: 30px;
-  margin: 0 0 6px;
-}
-.profile-lede {
-  color: var(--muted);
-  font-size: 15px;
-  margin: 0 0 20px;
-}
 .profile-card {
   position: relative;
   background-color: var(--surface);
@@ -1655,52 +1586,11 @@ dialog::backdrop {
   font-size: 12px;
   color: var(--chrome-fg);
 }
-.model-choice-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: var(--space-2);
-}
-.model-choice-form { margin: 0; }
-.model-choice {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 1px var(--space-2);
-  min-width: 170px;
-  padding: var(--space-2) 10px;
-  color: var(--chrome-fg);
-  background-color: var(--chrome-2);
-  background-image: var(--grain-warm);
-  background-size: 4px 4px;
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  box-shadow: var(--bevel-in);
-  cursor: pointer;
-  text-align: left;
-}
-.model-choice:hover { border-color: var(--gold-deep); }
-.model-choice-active {
-  color: var(--gold);
-  border-color: var(--gold-deep);
-  box-shadow: inset 0 2px 0 var(--bevel-light), inset 0 -2px 0 var(--bevel-dark);
-  background-color: var(--chrome);
-  cursor: default;
-}
-.model-choice-disabled { border-style: dashed; cursor: help; }
-.model-choice-disabled .model-name,
-.model-choice-disabled .model-detail { color: var(--smoke); }
-.model-name {
-  grid-column: 1;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-}
 .model-detail {
   grid-column: 1 / -1;
   font-size: 12px;
   color: var(--smoke);
 }
-.model-choice .tag { grid-column: 2; grid-row: 1; align-self: start; }
 
 /* ══ Section 7: Carried forward (not in the Hearthwood export) ══════
    Rules whose selectors are absent from Sections 1–6 above.
@@ -1747,54 +1637,7 @@ dialog::backdrop {
 .head-new-form{display:flex;flex-direction:column;gap:.4rem;margin-top:.4rem}
 .head-new-groups label,.head-new-avatars label{display:inline-flex;align-items:center;gap:.2rem;margin-right:.5rem;font-size:.85em}
 
-.head-meta {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-}
-.head-avatar-preview img {
-  width: 64px;
-  height: 64px;
-  image-rendering: pixelated;
-  display: block;
-}
-.head-info { flex: 1; min-width: 0; }
-.head-status-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-}
-.head-expires {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--chrome-fg);
-}
-.head-avatar-picker { margin-top: 14px; }
 
-/* ── Head-chat context bar ───────────────────────────────────────── */
-
-.chatbar-head-context {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--chrome-fg);
-  max-width: var(--maxw);
-  margin: 0 auto 10px;
-}
-.head-name-label {
-  font-weight: 700;
-  color: var(--gold);
-}
-.chatbar-back-link {
-  font-size: 11px;
-  color: var(--chrome-fg);
-  text-decoration: none;
-  opacity: .75;
-}
-.chatbar-back-link:hover { color: var(--gold); opacity: 1; }
 
 /* ── Chatbar profile link ─────────────────────────────────────────── */
 
@@ -1819,29 +1662,7 @@ dialog::backdrop {
 }
 .chatbar-profile-href:hover { color: var(--gold); }
 
-/* ── Chatbar download progress ───────────────────────────────────── */
 
-.chatbar-download {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 200px;
-}
-.chatbar-download-label {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--chrome-fg);
-}
-.chatbar-download .pull-progress-bar { width: 100%; }
-
-/* ── Model error ─────────────────────────────────────────────────── */
-
-.model-error {
-  color: var(--ember-red);
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
 
 /* ── Model switcher extras (not in DS pages) ─────────────────────── */
 
@@ -1862,9 +1683,6 @@ dialog::backdrop {
   font-size: 13px;
 }
 
-/* ── Settings page ───────────────────────────────────────────────── */
-
-.settings-page > h1 { margin-bottom: 20px; }
 
 .settings-section {
   display: flex;
@@ -1982,9 +1800,6 @@ progress.pull-progress-bar::-moz-progress-bar {
   .balaur-avatar { --avatar-size: 42px; }
   .msg-with-avatar { gap: 10px; }
   .model-switcher { align-items: stretch; flex-direction: column; }
-  .model-choice-list { justify-content: flex-start; }
-  .model-choice-form { flex: 1 1 180px; }
-  .model-choice { width: 100%; }
 }
 
 @media (max-width: 480px) {
@@ -1993,7 +1808,6 @@ progress.pull-progress-bar::-moz-progress-bar {
   .chatbar input[type="text"],
   .chatbar textarea[name="message"] { flex-basis: 100%; }
   .chatbar .btn { justify-content: center; width: 100%; }
-  .model-choice { min-width: 0; }
   .model-detail { display: none; }
   .topbar nav { gap: var(--space-3); }
   .topbar nav a { font-size: 11px; }
@@ -2163,12 +1977,6 @@ progress.pull-progress-bar::-moz-progress-bar {
   .model-dl-bar { transition: none; }
 }
 
-.model-form-checks {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: var(--space-2) 0;
-}
 
 /* ── Muted utility ───────────────────────────────────────────────── */
 .muted { color: var(--ink-muted); }
@@ -2176,36 +1984,10 @@ progress.pull-progress-bar::-moz-progress-bar {
 /* ── Recap-day modifier ──────────────────────────────────────────── */
 .recap-day { border-left-color: var(--gold); }
 
-/* ── Candle ──────────────────────────────────────────────────────── */
-/* The /journal writing page: centered column, breathing crest glow,
-   mode toggle. Glow disabled under prefers-reduced-motion. */
 
-.candle-page {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 0 var(--space-4) var(--space-7);
-}
 
-@keyframes candle-breathe {
-  0%, 100% { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--candle-glow) 53%, transparent)); }
-  50%       { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--candle-glow) 80%, transparent)); }
-}
 
-.candle-crest {
-  animation: candle-breathe 3s ease-in-out infinite;
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .candle-crest { animation: none; }
-}
-
-.candle-prompt {
-  margin: var(--space-3) 0 var(--space-2);
-  font-size: 15px;
-  font-style: italic;
-  color: var(--ink-muted);
-  text-align: center;
-}
 
 /* ── Quest stack ────────────────────────────────────────────────────── */
 .quest-stack { display: flex; flex-direction: column; gap: var(--space-4); }
@@ -2763,7 +2545,6 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dayentry-rail::before { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--parch-edge); }
 .dayentry-node { position: relative; z-index: 1; width: 12px; height: 12px; margin-top: 1px; background: var(--gold-ink); border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--gold-ink); }
 .dayentry-teal .dayentry-node { background: var(--teal-ink); box-shadow: 0 0 0 2px var(--teal-ink); }
-.dayentry-ember .dayentry-node { background: var(--ember-deep); box-shadow: 0 0 0 2px var(--ember-deep); }
 .dayentry-last .dayentry-rail::before { bottom: auto; height: 14px; }
 .dayentry-content { padding-bottom: 18px; }
 .dayentry-last .dayentry-content { padding-bottom: 0; }
