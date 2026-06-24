@@ -81,10 +81,14 @@ func (s *chatStream) renderNode(n g.Node) string {
 	return renderNodeHTML(n)
 }
 
-// appendNode appends a rendered component as the last child of #chat.
+// appendNode appends a rendered component as the last child of #chat. The
+// append is opted into the View Transitions API (plan 174 S6) so a new message
+// or tool card stamps in via the pixel-snappy ::view-transition override in
+// basm.css; morphNode stays un-transitioned (it fires per streaming token).
 func (s *chatStream) appendNode(n g.Node) {
 	_ = s.sse.PatchElements(s.renderNode(n),
-		datastar.WithSelectorID("chat"), datastar.WithModeAppend())
+		datastar.WithSelectorID("chat"), datastar.WithModeAppend(),
+		datastar.WithViewTransitions())
 }
 
 // morphNode replaces an element in place by the id on the node's root.

@@ -3154,3 +3154,29 @@ html.app .composer { position: relative; }
    the popover anchors to it. */
 html.app .navrail { position: relative; z-index: var(--z-drawer); height: 100%; overflow: visible; }
 html.app.panel-collapsed .navrail-chevron { transform: rotate(180deg); }
+
+/* ══ Motion (plan 174 S6) ════════════════════════════════════════════════════
+   Datastar wraps opted-in SSE patches (chat appendNode) in
+   document.startViewTransition. Override the UA cross-fade to a low-frame
+   stepped settle so a new message/card stamps in 16-bit, never a smooth blur.
+   The reduced-motion block is the app-wide kill-switch (non-negotiable a11y
+   bar): it neutralizes view transitions AND every transition/animation — incl.
+   the panel slide, toggle knob, grip and avatar-choice transitions that older
+   targeted blocks missed. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 90ms;
+  animation-timing-function: steps(3, end);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
