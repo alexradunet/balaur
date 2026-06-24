@@ -59,7 +59,7 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 | 171 | Unify journal node into the day node (one `type=day` page/date) | P2 | L | 160, 168, 169 | DONE (merged to main; clean first pass) |
 | 172 | Multi-year telescope demo seed (every recap band populates) | P2 | L | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/172-multiyear-telescope-demo-seed` @ `27ea219` — merge pending owner) |
 | 173 | Chronicle history page in the side panel (replace flaky dock auto-load) | P2 | M | 172 | DONE (executed + reviewed APPROVE; worktree branch `worktree-agent-a0283d90b6ae7a654` @ `da6c225` — merge pending owner; combined walk with 172 verified populated) |
-| 174 | UI cleanup sweep, rail-collapse fix, pixel-snappy motion quick-wins | P1 | L | — | MOSTLY DONE (S1–S3, S5, S6, S7-Toast + follow-up landed; S4=keep-primitives; only S7 panel-motion deferred for browser tuning) |
+| 174 | UI cleanup sweep, rail-collapse fix, pixel-snappy motion quick-wins | P1 | L | — | DONE (S1–S3, S5, S6, S7-Toast + follow-up landed; S4=keep-primitives; S7 panel-entrance motion carried forward as polish — see note) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
@@ -98,8 +98,11 @@ atom (S7). Touches no migrations/data. Do S1–S2 first (user-facing bugs).
 forces every registered card to have a story (no gaps remain); S6 = Datastar
 view-transitions on chat append + the global reduced-motion kill-switch; S7 =
 the `Toast` atom wired to owner actions (SSE-unit-tested). **S4 decided:** keep
-all reusable primitives — no deletions. **Deferred:** S7's panel/popover
-entrance *motion* (pure visual tuning, needs a live browser to finish). Process
+all reusable primitives — no deletions. **Plan closed 2026-06-24.** One
+carry-forward (not a blocker): S7's panel/popover entrance *motion* — pure visual
+polish, best finished in a session with a live browser; the motion pattern it
+would use (`steps()` keyframes + the global reduced-motion kill) already shipped
+live via the Toast. Process
 notes: re-verifying every class before deleting caught audit false-positives
 (`recap-day`, `model-detail` are live; the coverage test surfaced 3 more
 undocumented cards the audit missed). All commits used explicit-pathspec to stay
