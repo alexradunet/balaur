@@ -29,6 +29,7 @@ func KnowledgeTools(app core.App) []agent.Tool {
 		proposeSkillTool(app),
 		proposeEditTool(app),
 		nodeWriteTool(app),
+		nodeEditTool(app),
 		nodeListTool(app),
 		nodeGetTool(app),
 		nodeDropTool(app),
@@ -332,12 +333,14 @@ func nodeWriteTool(app core.App) agent.Tool {
 				"type":  map[string]any{"type": "string", "enum": allowedTypes, "description": "Node type (default note)."},
 				"title": str("Short title for the node."),
 				"body":  str("The node's markdown body."),
+				"props": map[string]any{"type": "object", "description": "Optional typed properties for the node, keyed by the type's schema (call node_schema first to learn the keys and value-types)."},
 			}, "title")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {
-				Type  string `json:"type"`
-				Title string `json:"title"`
-				Body  string `json:"body"`
+				Type  string         `json:"type"`
+				Title string         `json:"title"`
+				Body  string         `json:"body"`
+				Props map[string]any `json:"props"`
 			}
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("node_write: bad arguments: %w", err)
@@ -352,11 +355,53 @@ func nodeWriteTool(app core.App) agent.Tool {
 			if !slices.Contains(allowedTypes, typ) {
 				return "", fmt.Errorf("node_write: type %q is not an owner-authored type", typ)
 			}
-			rec, err := nodes.Create(app, typ, args.Title, args.Body, nodes.StatusActive, nil)
+			rec, err := nodes.Create(app, typ, args.Title, args.Body, nodes.StatusActive, args.Props)
 			if err != nil {
-				return "", fmt.Errorf("node_write: %w", err)
+				return "", fmt.Errorf("node_write: %w — call node_schema %q to see the required props and value-types", err, typ)
 			}
 			return fmt.Sprintf("Saved %s %q (id %s).", typ, args.Title, rec.Id), nil
+		},
+	}
+}
+
+// nodeEditTool updates an owner-authored node's title, body, and/or props in
+// place. Owner types are born active and trusted, so there is no consent gate
+// (unlike propose_edit, which parks memory/skill changes for approval). To
+// revise a memory or skill, use propose_edit instead.
+func nodeEditTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("node_edit",
+			"Edit an existing owner-authored node (note or typed object) in place by id — "+
+				"set its title, body, or typed props. Takes effect immediately (owner-authored, trusted). "+
+				"Call node_schema first to learn a typed node's prop keys. To change a memory or skill, use propose_edit instead.",
+			obj(map[string]any{
+				"id":    str("Id of the active node to edit."),
+				"title": str("Optional: new title."),
+				"body":  str("Optional: new markdown body."),
+				"props": map[string]any{"type": "object", "description": "Optional: replacement typed properties, keyed by the type's schema (call node_schema first)."},
+			}, "id")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				ID    string         `json:"id"`
+				Title *string        `json:"title"`
+				Body  *string        `json:"body"`
+				Props map[string]any `json:"props"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("node_edit: bad arguments: %w", err)
+			}
+			id := strings.TrimSpace(args.ID)
+			if id == "" {
+				return "", fmt.Errorf("node_edit: id is required")
+			}
+			if args.Title == nil && args.Body == nil && args.Props == nil {
+				return "", fmt.Errorf("node_edit: nothing to edit — pass title, body, or props")
+			}
+			rec, err := nodes.Update(app, id, args.Title, args.Body, args.Props)
+			if err != nil {
+				return "", fmt.Errorf("node_edit: %w", err)
+			}
+			return fmt.Sprintf("Updated %s %q (id %s).", rec.GetString("type"), rec.GetString("title"), rec.Id), nil
 		},
 	}
 }

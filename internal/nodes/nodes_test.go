@@ -1,9 +1,11 @@
 package nodes_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -127,5 +129,86 @@ func TestDropCascadesEdges(t *testing.T) {
 	}
 	if n, _ := app.CountRecords("edges"); n != 0 {
 		t.Errorf("edges after cascade delete = %d, want 0", n)
+	}
+}
+
+func strptr(s string) *string { return &s }
+
+func TestUpdateValidatesAndAudits(t *testing.T) {
+	app := storetest.NewApp(t)
+	rec, err := nodes.Create(app, "book", "Old title", "", nodes.StatusActive,
+		map[string]any{"author": "A", "year": 1969.0})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := nodes.Update(app, rec.Id, strptr("New title"), nil,
+		map[string]any{"author": "B", "year": 1970.0})
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if got.GetString("title") != "New title" {
+		t.Errorf("title = %q, want New title", got.GetString("title"))
+	}
+	if a := nodes.PropString(got, "author"); a != "B" {
+		t.Errorf("PropString(author) = %q, want B", a)
+	}
+
+	audits, _ := store.ListAudit(app, "node.update", "owner", 10)
+	if len(audits) == 0 {
+		t.Fatal("expected a node.update audit row")
+	}
+}
+
+func TestUpdateRejectsNonActive(t *testing.T) {
+	app := storetest.NewApp(t)
+	rec, err := nodes.Create(app, "note", "Draft", "", nodes.StatusProposed, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	_, err = nodes.Update(app, rec.Id, strptr("New"), nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "not active") {
+		t.Fatalf("Update on a proposed node: err = %v, want a 'not active' error", err)
+	}
+}
+
+func TestUpdateRejectsInvalidProps(t *testing.T) {
+	app := storetest.NewApp(t)
+	rec, err := nodes.Create(app, "book", "X", "", nodes.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	_, err = nodes.Update(app, rec.Id, nil, nil, map[string]any{"year": "not-a-number"})
+	if err == nil || !strings.Contains(err.Error(), "invalid props") {
+		t.Fatalf("Update with a bad prop type: err = %v, want an 'invalid props' error", err)
+	}
+}
+
+// TestUpdateRejectsConsentGatedTypes is the consent backstop: memory and skill
+// are NOT owner-authored, so they must never be editable in place via Update —
+// those changes go through propose_edit. (A memory/skill node is born proposed,
+// but even an active one must be refused by the type guard.)
+func TestUpdateRejectsConsentGatedTypes(t *testing.T) {
+	app := storetest.NewApp(t)
+	// memory's importance prop is Required, so supply valid props at create time;
+	// skill has no required props. Both are consent-gated (born proposed), so
+	// create them ACTIVE here to prove the type guard refuses them even when the
+	// status backstop would not.
+	cases := []struct {
+		typ   string
+		props map[string]any
+	}{
+		{"memory", map[string]any{"importance": 3.0}},
+		{"skill", nil},
+	}
+	for _, tc := range cases {
+		rec, err := nodes.Create(app, tc.typ, "Gated "+tc.typ, "body", nodes.StatusActive, tc.props)
+		if err != nil {
+			t.Fatalf("Create %s: %v", tc.typ, err)
+		}
+		_, err = nodes.Update(app, rec.Id, strptr("Hacked"), nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "not owner-authored") {
+			t.Fatalf("Update on a %s node: err = %v, want a 'not owner-authored' rejection", tc.typ, err)
+		}
 	}
 }
