@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -252,6 +253,115 @@ balaur.registerTool({
 	out, err := ts[0].Execute(context.Background(), `{}`)
 	if err != nil || !strings.Contains(out, `status 200: {"temp": 21}`) {
 		t.Errorf("http handler result wrong: %q %v", out, err)
+	}
+}
+
+// metadataJS fetches the canonical cloud instance-metadata endpoint — the
+// exfiltration channel the egress guard exists to close.
+const metadataJS = `// balaur-extension: fetches cloud metadata
+balaur.registerTool({
+	name: "meta",
+	description: "Reads cloud instance metadata.",
+	parameters: {type: "object", properties: {}},
+	handler: function(args) {
+		var res = balaur.http({url: "http://169.254.169.254/latest/meta-data/"})
+		return "status " + res.status
+	}
+})
+`
+
+func TestMetadataEgressDeniedByDefault(t *testing.T) {
+	setupDir(t)
+	app := storetest.NewApp(t)
+	write(t, app, "meta", metadataJS)
+	Sync(app)
+	if _, err := Approve(app, "meta"); err != nil {
+		t.Fatal(err)
+	}
+	ts := Tools(app, map[string]bool{})
+	if len(ts) != 1 {
+		t.Fatalf("want the meta tool, got %v", toolNames(ts))
+	}
+
+	// The dial must be refused at the Control hook (before any network I/O),
+	// so this returns fast and without a real metadata endpoint.
+	out, err := ts[0].Execute(context.Background(), `{}`)
+	if err == nil {
+		t.Fatalf("metadata egress must be refused by default, got out=%q", out)
+	}
+	if !strings.Contains(err.Error(), "blocked") || !strings.Contains(err.Error(), "egress") {
+		t.Errorf("error should name the blocked egress, got: %v", err)
+	}
+
+	// The refused invocation is audited as disallowed.
+	audits, err := app.FindRecordsByFilter("audit_log", "action = 'ext.invoke'", "", 0, 0)
+	if err != nil || len(audits) != 1 {
+		t.Fatalf("the invocation must be audited, got %d rows (err %v)", len(audits), err)
+	}
+	if audits[0].GetBool("allowed") {
+		t.Errorf("a blocked invoke must audit allowed=false, got allowed=true")
+	}
+}
+
+func TestMetadataEgressAllowedWithOptOut(t *testing.T) {
+	setupDir(t)
+	app := storetest.NewApp(t)
+	write(t, app, "meta", metadataJS)
+	Sync(app)
+	if _, err := Approve(app, "meta"); err != nil {
+		t.Fatal(err)
+	}
+	// Owner opts in to local egress: the guard must no longer refuse the dial.
+	if err := store.SetOwnerSetting(app, "ext_local_egress", "1"); err != nil {
+		t.Fatal(err)
+	}
+	ts := Tools(app, map[string]bool{})
+	if len(ts) != 1 {
+		t.Fatalf("want the meta tool, got %v", toolNames(ts))
+	}
+
+	// 169.254.169.254 is not reachable here, so the dial fails with an ordinary
+	// connection/timeout error — what matters is that it is NOT the blocked-egress
+	// sentinel, proving the guard was bypassed.
+	_, err := ts[0].Execute(context.Background(), `{}`)
+	if err != nil && strings.Contains(err.Error(), "blocked by default") {
+		t.Errorf("with ext_local_egress=1 the guard must not block the dial, got: %v", err)
+	}
+}
+
+func TestExternalFetchStillWorks(t *testing.T) {
+	// httptest binds 127.0.0.1 (loopback), which is NOT in the default-deny
+	// set, so a normal fetch still succeeds at the default guard setting.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"ok": true}`))
+	}))
+	defer srv.Close()
+
+	setupDir(t)
+	app := storetest.NewApp(t)
+	write(t, app, "fetcher", `// balaur-extension: fetches a loopback server
+balaur.registerTool({
+	name: "fetch_now",
+	description: "Fetches a URL.",
+	parameters: {type: "object", properties: {}},
+	handler: function(args) {
+		var res = balaur.http({url: "`+srv.URL+`"})
+		return "status " + res.status + ": " + res.body
+	}
+})
+`)
+	Sync(app)
+	if _, err := Approve(app, "fetcher"); err != nil {
+		t.Fatal(err)
+	}
+	ts := Tools(app, map[string]bool{})
+	if len(ts) != 1 {
+		t.Fatalf("want the fetch_now tool, got %v", toolNames(ts))
+	}
+	out, err := ts[0].Execute(context.Background(), `{}`)
+	if err != nil || !strings.Contains(out, `status 200: {"ok": true}`) {
+		t.Errorf("default-deny must not regress loopback fetches: %q %v", out, err)
 	}
 }
 

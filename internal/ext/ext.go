@@ -136,7 +136,8 @@ func extTool(app core.App, ext Active, def ToolDef) agent.Tool {
 	return agent.Tool{
 		Spec: agent.ToolSpecOf(toolName, def.Description+" (balaur-extension: "+extName+")", params),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
-			res, err := invoke(ctx, src, extName, toolName, argsJSON)
+			localEgress := store.GetOwnerSetting(app, "ext_local_egress", "") == "1"
+			res, err := invoke(ctx, src, extName, toolName, argsJSON, localEgress)
 			store.Audit(app, "extensions", "ext.invoke", extName+"/"+toolName, err == nil, nil)
 			return res, err
 		},
