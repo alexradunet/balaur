@@ -437,3 +437,114 @@ func TestBucket(t *testing.T) {
 func nodes_Props(rec *core.Record) map[string]any {
 	return nodes.Props(rec)
 }
+
+// TestDoneEarlyCompletion covers the four completion regimes that the
+// early-completion fix affects:
+//
+//  1. Daily, completed before the same-day due → next day, same wall clock.
+//  2. Weekly, completed before the weekday due → following week, same wall clock.
+//  3. Overdue daily completion → still skips forward past now (regression guard).
+//  4. recur_from_done interval → next = completion + interval (unchanged).
+func TestDoneEarlyCompletion(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// --- Case 1: daily, early same-day completion ---
+	// Due today at 09:00; completed at 08:00. Expect tomorrow at 09:00.
+	today0900 := time.Date(2026, 7, 8, 9, 0, 0, 0, time.Local)
+	now1 := time.Date(2026, 7, 8, 8, 0, 0, 0, time.Local) // 1 hour before due
+
+	rec1, err := Create(app, CreateOpts{Title: "Morning stretch", Recur: "daily", Due: today0900})
+	if err != nil {
+		t.Fatalf("case1 create: %v", err)
+	}
+	res1, err := Done(app, rec1, now1)
+	if err != nil {
+		t.Fatalf("case1 done: %v", err)
+	}
+	local1 := res1.NextDue.In(time.Local)
+	want1 := time.Date(2026, 7, 9, 9, 0, 0, 0, time.Local) // tomorrow 09:00
+	if !local1.Equal(want1) {
+		t.Errorf("case1 daily early: NextDue = %v, want %v", local1, want1)
+	}
+	if !res1.NextDue.After(now1) {
+		t.Errorf("case1: NextDue %v not after now %v", res1.NextDue, now1)
+	}
+
+	// --- Case 2: weekly, early completion before the weekday due ---
+	// 2026-07-01 is a Wednesday. Due Wednesday 18:00; completed at 15:00.
+	// Expect the following Wednesday 18:00 (7 days later).
+	wed0 := time.Date(2026, 7, 1, 18, 0, 0, 0, time.Local) // Wednesday
+	if wed0.Weekday() != time.Wednesday {
+		t.Fatalf("test setup: 2026-07-01 is not a Wednesday, it is %v", wed0.Weekday())
+	}
+	now2 := time.Date(2026, 7, 1, 15, 0, 0, 0, time.Local) // same day, 3h earlier
+
+	rec2, err := Create(app, CreateOpts{Title: "Evening walk", Recur: "weekly:wed", Due: wed0})
+	if err != nil {
+		t.Fatalf("case2 create: %v", err)
+	}
+	res2, err := Done(app, rec2, now2)
+	if err != nil {
+		t.Fatalf("case2 done: %v", err)
+	}
+	local2 := res2.NextDue.In(time.Local)
+	want2 := time.Date(2026, 7, 8, 18, 0, 0, 0, time.Local) // next Wednesday
+	if !local2.Equal(want2) {
+		t.Errorf("case2 weekly early: NextDue = %v, want %v", local2, want2)
+	}
+	if local2.Weekday() != time.Wednesday {
+		t.Errorf("case2: NextDue weekday = %v, want Wednesday", local2.Weekday())
+	}
+	if !res2.NextDue.After(now2) {
+		t.Errorf("case2: NextDue %v not after now %v", res2.NextDue, now2)
+	}
+
+	// --- Case 3: overdue daily completion still skips forward past now ---
+	// Due yesterday at 09:00; completed today at 10:00.
+	// Expect tomorrow at 09:00 (Next skips past now).
+	yesterday0900 := time.Date(2026, 7, 8, 9, 0, 0, 0, time.Local).AddDate(0, 0, -1)
+	now3 := time.Date(2026, 7, 8, 10, 0, 0, 0, time.Local)
+
+	rec3, err := Create(app, CreateOpts{Title: "Daily walk", Recur: "daily", Due: yesterday0900})
+	if err != nil {
+		t.Fatalf("case3 create: %v", err)
+	}
+	res3, err := Done(app, rec3, now3)
+	if err != nil {
+		t.Fatalf("case3 done: %v", err)
+	}
+	local3 := res3.NextDue.In(time.Local)
+	// Next day at 09:00 (the first 09:00 strictly after now3 = 10:00 today).
+	want3 := time.Date(2026, 7, 9, 9, 0, 0, 0, time.Local)
+	if !local3.Equal(want3) {
+		t.Errorf("case3 overdue: NextDue = %v, want %v", local3, want3)
+	}
+	if !res3.NextDue.After(now3) {
+		t.Errorf("case3: NextDue %v not after now %v", res3.NextDue, now3)
+	}
+
+	// --- Case 4: recur_from_done interval unchanged ---
+	// every:3d with RecurFromDone; next = completion + 3 days.
+	now4 := time.Date(2026, 7, 8, 12, 0, 0, 0, time.Local)
+
+	rec4, err := Create(app, CreateOpts{
+		Title:         "Mobility",
+		Recur:         "every:3d",
+		RecurFromDone: true,
+		Due:           now4.Add(-48 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("case4 create: %v", err)
+	}
+	res4, err := Done(app, rec4, now4)
+	if err != nil {
+		t.Fatalf("case4 done: %v", err)
+	}
+	want4 := now4.AddDate(0, 0, 3)
+	if !res4.NextDue.Equal(want4) {
+		t.Errorf("case4 from-done: NextDue = %v, want %v", res4.NextDue, want4)
+	}
+	if !res4.NextDue.After(now4) {
+		t.Errorf("case4: NextDue %v not after now %v", res4.NextDue, now4)
+	}
+}
