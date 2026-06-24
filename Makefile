@@ -7,11 +7,13 @@ SERVICE_NAME ?= balaur
 # points BALAUR_DATA_DIR elsewhere: make promote BALAUR_DATA_DIR=/path/to/pb_data
 BALAUR_DATA_DIR ?= $(HOME)/.local/share/balaur/pb_data
 
-.PHONY: help tools dev run seed build install-user-service start-user-service stop-user-service restart-user-service promote status-user-service logs-user-service test race fmt vet staticcheck vulncheck lint
+.PHONY: help tools dev dev-port-open dev-port-close run seed build install-user-service start-user-service stop-user-service restart-user-service promote status-user-service logs-user-service test race fmt vet staticcheck vulncheck lint
 
 help:
 	@echo "make tools  # install dlv + air, activate the pre-commit lint hook"
-	@echo "make dev    # start Balaur with hot reload via air"
+	@echo "make dev    # hot-reload staging via air; opens dev :$(DEV_PORT) on $(NETBIRD_IFACE) while running, closes on exit"
+	@echo "make dev-port-open   # open dev :$(DEV_PORT) over NetBird by hand (sudo ufw)"
+	@echo "make dev-port-close  # close dev :$(DEV_PORT) again (sudo ufw)"
 	@echo "make run    # start Balaur once (go run . serve)"
 	@echo "make build  # build a CGO-free binary"
 	@echo "make install-user-service   # install binary + systemd user service"
@@ -36,6 +38,14 @@ help:
 BALAUR_ALLOWED_HOSTS ?= 192.168.50.12,100.124.242.131,balaur,balaur.local,balaur-113-87.netbird.cloud,100.124.113.87
 export BALAUR_ALLOWED_HOSTS
 
+# The dev/staging instance binds 0.0.0.0:$(DEV_PORT), but unlike prod (8080) its
+# mesh port is NOT left permanently open (see dev_env/debian). `make dev` opens it
+# on the NetBird interface while it runs and closes it on exit; both steps are
+# best-effort so `make dev` still works off the mesh box (e.g. local-only). Open
+# or close it by hand with `make dev-port-open` / `make dev-port-close`.
+NETBIRD_IFACE ?= wt0
+DEV_PORT ?= 8090
+
 # Reproducible dev-tool setup. dlv powers the VS Code "Debug: balaur serve"
 # launch config; air drives `make dev`. Both land in $(go env GOPATH)/bin —
 # ensure that's on your PATH. Re-run any time to update to the latest.
@@ -48,11 +58,22 @@ tools:
 	@echo "dev tools installed; pre-commit hook active (.githooks/pre-commit)"
 
 dev:
-	@if command -v air >/dev/null 2>&1; then \
+	@$(MAKE) --no-print-directory dev-port-open || echo "dev: :$(DEV_PORT) not opened automatically — run 'make dev-port-open' (sudo) or open it manually"
+	@trap '$(MAKE) --no-print-directory dev-port-close || true' EXIT; \
+	if command -v air >/dev/null 2>&1; then \
 		air; \
 	else \
 		go run github.com/air-verse/air@latest; \
 	fi
+
+# Open/close the dev/staging port on the NetBird interface on demand. Opening a
+# firewall port needs root, hence sudo. Closing ignores "no such rule" so it is
+# safe to run when the port is already closed.
+dev-port-open:
+	sudo ufw allow in on $(NETBIRD_IFACE) to any port $(DEV_PORT) proto tcp comment 'Balaur dev/staging (temporary; opened by make dev)'
+
+dev-port-close:
+	-sudo ufw delete allow in on $(NETBIRD_IFACE) to any port $(DEV_PORT) proto tcp
 
 run:
 	go run . serve

@@ -8,7 +8,7 @@ the host firewall differ.
 |---|---|---|
 | Port | `8080` | `8090` |
 | How it runs | systemd `--user` service (`balaur.service`) | `make dev` (air, on demand) |
-| Bind | overlay IP `100.124.113.87:8080` (Option B) | `0.0.0.0:8090`, gated by ufw on `wt0` (Option A) |
+| Bind | overlay IP `100.124.113.87:8080` (Option B) | `0.0.0.0:8090`; mesh port opened on demand by `make dev` (ufw on `wt0`), not always-on |
 | Data dir | `~/.local/share/balaur/pb_data` (real data) | `<repo>/pb_data` (throwaway) |
 | Extensions | `~/.local/share/balaur/pb_extensions` | `<repo>/pb_extensions` |
 
@@ -55,13 +55,20 @@ restoring a snapshot if a migration touched data.
 
 ## Network
 
-Reachable over NetBird only (ufw is default-deny inbound; allows `8080/wt0` and
-`8090/wt0`). From a mesh device:
+Reachable over NetBird only (ufw is default-deny inbound). Only prod is always
+allowed (`8080/wt0`); the staging port (`8090/wt0`) is opened on demand by
+`make dev` (or `make dev-port-open`) and closed again when `make dev` exits (or
+`make dev-port-close`). So `:8090` is only reachable while you are developing.
+From a mesh device:
 
 ```
-http://100.124.113.87:8080/    # or http://balaur-113-87.netbird.cloud:8080/   (prod)
-http://100.124.113.87:8090/    # or http://balaur-113-87.netbird.cloud:8090/   (staging)
+http://100.124.113.87:8080/    # or http://balaur-113-87.netbird.cloud:8080/   (prod, always on)
+http://100.124.113.87:8090/    # or http://balaur-113-87.netbird.cloud:8090/   (staging, only while `make dev` runs)
 ```
+
+> NetBird ACLs are a *separate* gate from ufw (dashboard-managed; see
+> `docs/netbird.md`). ufw is the on-box switch this repo controls; if your ACL
+> policy is per-port, also allow `8090` there when you need mesh access to staging.
 
 `make dev`'s `BALAUR_ALLOWED_HOSTS` default (in the `Makefile`) already lists the
 mesh FQDN + IP so the host guard does not 403 staging requests. Prod gets the
@@ -85,5 +92,8 @@ concurrent instances do not double a multi-GB model in RAM.
 ## Provisioning
 
 Ports/firewall/bind are Ansible-managed in `dev_env/debian`:
-`balaur_http` (prod bind), `balaur_mesh_ports: [8080, 8090]` (the ufw allows on
-`wt0`), and `balaur_allowed_hosts`. Re-run the playbook to reconcile the box.
+`balaur_http` (prod bind), `balaur_mesh_ports: [8080]` (the prod ports ufw allows
+on `wt0`, always-on), `balaur_dev_port: 8090` (opened on demand, never
+provisioned open — the firewall role also deletes any lingering rule so a re-run
+converges to "dev port closed"), and `balaur_allowed_hosts`. Re-run the playbook
+to reconcile the box.

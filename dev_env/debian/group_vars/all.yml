@@ -48,7 +48,13 @@ ssh_disable_password: true
 # ─── Firewall ───────────────────────────────────────────────────────────────
 ufw_allow_balaur_netbird: true   # open balaur's ports on the NetBird interface
 netbird_iface: "wt0"
-balaur_mesh_ports: [8080, 8090]  # prod (8080) + dev/staging hot-reload (8090)
+# Only the prod port is permanently open over the mesh. The dev/staging
+# hot-reload port (balaur_dev_port) is NOT provisioned open — `make dev` opens it
+# on wt0 while it runs and closes it on exit (or open it manually with
+# `make dev-port-open`). The firewall role also explicitly DELETES any lingering
+# dev-port rule so a re-run converges to "dev port closed".
+balaur_mesh_ports: [8080]        # prod (8080) — always allowed over NetBird
+balaur_dev_port: 8090            # dev/staging hot-reload — opened on demand, not always-on
 
 # ─── Unattended upgrades ────────────────────────────────────────────────────
 autoreboot_time: "04:00"

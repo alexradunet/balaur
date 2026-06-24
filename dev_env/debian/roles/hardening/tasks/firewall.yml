@@ -42,8 +42,23 @@
     interface: "{{ netbird_iface }}"
     to_port: "{{ item | string }}"
     proto: tcp
-    comment: Balaur (prod 8080 + dev/staging 8090) over NetBird
+    comment: "Balaur prod ({{ item }}) over NetBird"
   loop: "{{ balaur_mesh_ports }}"
+  when: ufw_allow_balaur_netbird | bool
+
+# The dev/staging hot-reload port is opened on demand by `make dev`, never left
+# permanently open. Delete any lingering rule so re-running the playbook converges
+# to "dev port closed" — the allow loop above only ever ADDS rules, so dropping
+# the port from balaur_mesh_ports would otherwise leave an already-open rule.
+- name: Ensure the dev/staging port is NOT permanently open
+  become: true
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: "{{ netbird_iface }}"
+    to_port: "{{ balaur_dev_port | string }}"
+    proto: tcp
+    delete: true
   when: ufw_allow_balaur_netbird | bool
 
 - name: Enable ufw
