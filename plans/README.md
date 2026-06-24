@@ -59,7 +59,7 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 | 171 | Unify journal node into the day node (one `type=day` page/date) | P2 | L | 160, 168, 169 | DONE (merged to main; clean first pass) |
 | 172 | Multi-year telescope demo seed (every recap band populates) | P2 | L | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/172-multiyear-telescope-demo-seed` @ `27ea219` — merge pending owner) |
 | 173 | Chronicle history page in the side panel (replace flaky dock auto-load) | P2 | M | 172 | DONE (executed + reviewed APPROVE; worktree branch `worktree-agent-a0283d90b6ae7a654` @ `da6c225` — merge pending owner; combined walk with 172 verified populated) |
-| 174 | UI cleanup sweep, rail-collapse fix, pixel-snappy motion quick-wins | P1 | L | — | IN PROGRESS (S1–S3 done & pushed; S4–S7 pending) |
+| 174 | UI cleanup sweep, rail-collapse fix, pixel-snappy motion quick-wins | P1 | L | — | MOSTLY DONE (S1–S3, S5, S6, S7-Toast + follow-up landed; S4=keep-primitives; only S7 panel-motion deferred for browser tuning) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
@@ -91,10 +91,19 @@ catalog-only `internal/ui` atoms + add a coverage test (S4), fix storybook drift
 (S5), and land the two lowest-risk motion wins — Datastar view-transitions + one
 reduced-motion layer (S6) and pure-CSS entry/exit panels + wiring the `Toast`
 atom (S7). Touches no migrations/data. Do S1–S2 first (user-facing bugs).
-**Status (2026-06-24):** S1–S3 landed on `main` and browser-verified (both bug
-fixes + the full cleanup sweep — ~520 dead CSS lines + `board.js` removed,
-`basm.css` 3679→3156); S4–S7 pending. Re-verifying every class before deleting
-caught audit false-positives (`recap-day`, `model-detail` are live).
+**Status (2026-06-24):** S1, S2, S3, S5, S6, and S7's Toast wiring are landed on
+`main` and verified. S1/S2 = the two bug fixes; S3 = the full cleanup sweep
+(~520 dead CSS lines + `board.js`, `basm.css` 3679→3156); S5 = the 2 drift fixes
++ stories for all 10 previously-undocumented domain cards + a coverage test that
+forces every registered card to have a story (no gaps remain); S6 = Datastar
+view-transitions on chat append + the global reduced-motion kill-switch; S7 =
+the `Toast` atom wired to owner actions (SSE-unit-tested). **S4 decided:** keep
+all reusable primitives — no deletions. **Deferred:** S7's panel/popover
+entrance *motion* (pure visual tuning, needs a live browser to finish). Process
+notes: re-verifying every class before deleting caught audit false-positives
+(`recap-day`, `model-detail` are live; the coverage test surfaced 3 more
+undocumented cards the audit missed). All commits used explicit-pathspec to stay
+clean on the shared checkout.
 
 ## Dependency notes
 
