@@ -1,11 +1,15 @@
 package seed
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/dbx"
 
+	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/storetest"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
@@ -183,5 +187,78 @@ func TestResetRemovesOnlySeededData(t *testing.T) {
 	}
 	if again.Journal != first.Journal {
 		t.Errorf("reseed journal = %d, want %d", again.Journal, first.Journal)
+	}
+}
+
+// TestSeedPeriodsCoversAllBands verifies that seedPeriods produces at least one
+// period of every telescope type when the history anchor is 38 months back.
+func TestSeedPeriodsCoversAllBands(t *testing.T) {
+	now := time.Date(2026, 6, 24, 12, 0, 0, 0, time.UTC)
+	periods := seedPeriods(now)
+	// Bands caps at 2 days + 4 weeks + 6 months + 8 quarters + years; with a
+	// 38-month anchor the minimum expected is ≥20 periods covering all 5 types.
+	if len(periods) < 20 {
+		t.Fatalf("seedPeriods returned %d periods, want ≥20", len(periods))
+	}
+	counts := map[string]int{}
+	for _, p := range periods {
+		counts[p.Type]++
+	}
+	for _, typ := range []string{"day", "week", "month", "quarter", "year"} {
+		if counts[typ] == 0 {
+			t.Errorf("seedPeriods: no %s period found (counts=%v)", typ, counts)
+		}
+	}
+}
+
+// TestSeedSummariesPopulatesAllBandLevels verifies that after seeding, the
+// summaries collection has ≥1 row per period_type (day/week/month/quarter/year)
+// and that quarter/year rows do not use the generic month text.
+func TestSeedSummariesPopulatesAllBandLevels(t *testing.T) {
+	app := storetest.NewApp(t)
+	if _, err := Run(app); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	wantTypes := []string{"day", "week", "month", "quarter", "year"}
+	for _, typ := range wantTypes {
+		recs, err := app.FindRecordsByFilter("summaries",
+			"period_type = {:t}", "", 0, 0, dbx.Params{"t": typ})
+		if err != nil || len(recs) == 0 {
+			t.Errorf("summaries: no %s row found (err=%v)", typ, err)
+			continue
+		}
+		// Guard Step 4: quarter/year must not contain the generic month phrase.
+		if typ == "quarter" || typ == "year" {
+			for _, r := range recs {
+				content := r.GetString("content")
+				if strings.Contains(content, "several small conversations grouped into a monthly card") {
+					t.Errorf("summaries %s row uses generic month text: %q", typ, content)
+				}
+			}
+		}
+	}
+}
+
+// TestSeedRangeContent verifies that after seeding, a month ≈8 months ago
+// contains ≥1 Done task/completion and ≥1 Logged measure — ensuring older
+// period nodes are not empty.
+func TestSeedRangeContent(t *testing.T) {
+	app := storetest.NewApp(t)
+	if _, err := Run(app); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	now := time.Now()
+	month := recap.Month(now.AddDate(0, -8, 0))
+	data, err := life.Range(app, month.Start, month.End)
+	if err != nil {
+		t.Fatalf("life.Range: %v", err)
+	}
+	if len(data.Done) == 0 {
+		t.Errorf("life.Range for month %s: Done = 0, want ≥1", month.Start.Format("January 2006"))
+	}
+	if len(data.Logged) == 0 {
+		t.Errorf("life.Range for month %s: Logged = 0, want ≥1", month.Start.Format("January 2006"))
 	}
 }

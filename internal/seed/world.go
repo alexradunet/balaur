@@ -451,6 +451,80 @@ func seedTaskHistory(app core.App, now time.Time, out map[string]*core.Record) (
 		}
 	}
 
+	// Sparse long-tail: one completed one-off task per month back to seedHistoryStart.
+	// Ensures older period nodes (quarter/year) have ≥1 Done entry.
+	longTailTasks := []struct {
+		title      string
+		monthsBack int
+	}{
+		{"Organise the home office", 3},
+		{"Plant the spring bulbs", 4},
+		{"Service the lawnmower", 5},
+		{"Repair the cold frame", 6},
+		{"Order seed catalogue", 7},
+		{"Clean the gutters", 8},
+		{"Repot the herb bed", 9},
+		{"Prune the apple tree", 10},
+		{"Seal the garden path", 11},
+		{"Clear the shed", 12},
+		{"Plant garlic for winter", 13},
+		{"Write the annual review", 14},
+		{"Fix the water butt tap", 15},
+		{"Replace the compost bin lid", 16},
+		{"Set up the rain gauge", 17},
+		{"Reseed the lawn bare patches", 18},
+		{"Trim the hedge", 19},
+		{"Build the new raised bed", 20},
+		{"Paint the fence panels", 21},
+		{"Order the winter veg plug plants", 22},
+		{"Sharpen the garden tools", 23},
+		{"Install the new outdoor tap", 24},
+		{"Clear the allotment plot", 25},
+		{"Fix the greenhouse latch", 26},
+		{"Plant the summer wildflower strip", 27},
+		{"Compost the leaf pile", 28},
+		{"Stake the tall perennials", 29},
+		{"Deep-clean the potting shed", 30},
+		{"Replace the old hose", 31},
+		{"Harvest and dry the herbs", 32},
+		{"Mark out the new bed borders", 33},
+		{"Dig over the vegetable patch", 34},
+		{"Order compost for the season", 35},
+		{"Check and repair the cold frame glass", 36},
+		{"Plant the sweet pea seeds", 37},
+		{"Take stock of the seed packets", 38},
+	}
+	for _, lt := range longTailTasks {
+		createdDaysAgo := lt.monthsBack*30 + 12
+		doneDaysAgo := lt.monthsBack*30 + 5
+		opts := tasks.CreateOpts{
+			Title:  lt.title,
+			Source: Marker,
+			Due:    now.AddDate(0, -lt.monthsBack, 0),
+		}
+		rec, err := tasks.Create(app, opts)
+		if err != nil {
+			return count, fmt.Errorf("long-tail task %q: %w", lt.title, err)
+		}
+		createdAt := dayAt(now, createdDaysAgo, 9, 0)
+		if err := backdate(app, "nodes", rec.Id, createdAt); err != nil {
+			return count, err
+		}
+		rec, err = app.FindRecordById("nodes", rec.Id)
+		if err != nil {
+			return count, err
+		}
+		tasks.Hydrate(rec)
+		if err := linkOnDayAndMark(app, rec); err != nil {
+			return count, fmt.Errorf("LinkOnDay long-tail task %q: %w", lt.title, err)
+		}
+		doneAt := dayAt(now, doneDaysAgo, 15, 0)
+		if _, err := tasks.Done(app, rec, doneAt); err != nil {
+			return count, fmt.Errorf("completing long-tail task %q: %w", lt.title, err)
+		}
+		count++
+	}
+
 	return count, nil
 }
 
@@ -682,6 +756,64 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		}
 		if err := linkOnDayAndMark(app, rec); err != nil {
 			return count, fmt.Errorf("LinkOnDay water: %w", err)
+		}
+		count++
+	}
+
+	// Sparse long-tail: one weight + one mood per month back to seedHistoryStart.
+	// Ensures older period nodes (quarter/year) have ≥1 Done/Logged entries.
+	// Dense daily series above covers the 60-day window; this extends to ~38 months.
+	for monthsBack := 3; monthsBack <= 38; monthsBack++ {
+		// Weight: one measurement per month.
+		weightDaysAgo := monthsBack*30 + 10 // mid-month offset
+		weightVal := math.Round((80.0+float64(monthsBack)*0.05)*10) / 10
+		wo := life.LogOpts{
+			Kind: "weight", ValueNum: weightVal, Unit: "kg",
+			NotedAt: dayAt(now, weightDaysAgo, 7, 15),
+			Details: flag,
+		}
+		wrec, werr := life.Log(app, wo)
+		if werr != nil {
+			return count, fmt.Errorf("long-tail weight month-%d: %w", monthsBack, werr)
+		}
+		if err := backdate(app, "nodes", wrec.Id, wo.NotedAt); err != nil {
+			return count, err
+		}
+		wrec, werr = app.FindRecordById("nodes", wrec.Id)
+		if werr != nil {
+			return count, werr
+		}
+		if err := linkOnDayAndMark(app, wrec); err != nil {
+			return count, fmt.Errorf("LinkOnDay long-tail weight: %w", err)
+		}
+		count++
+
+		// Mood: one entry per month.
+		moodDaysAgo := monthsBack*30 + 5
+		moodVal := float64(3 + (monthsBack % 3))
+		if moodVal > 5 {
+			moodVal = 5
+		}
+		moodTextsLong := []string{"Settled and focused.", "Good energy.", "Steady pace."}
+		mo := life.LogOpts{
+			Kind: "mood", ValueNum: moodVal, Unit: "of 5",
+			Text:    moodTextsLong[monthsBack%len(moodTextsLong)],
+			NotedAt: dayAt(now, moodDaysAgo, 22, 0),
+			Details: flag,
+		}
+		mrec, merr := life.Log(app, mo)
+		if merr != nil {
+			return count, fmt.Errorf("long-tail mood month-%d: %w", monthsBack, merr)
+		}
+		if err := backdate(app, "nodes", mrec.Id, mo.NotedAt); err != nil {
+			return count, err
+		}
+		mrec, merr = app.FindRecordById("nodes", mrec.Id)
+		if merr != nil {
+			return count, merr
+		}
+		if err := linkOnDayAndMark(app, mrec); err != nil {
+			return count, fmt.Errorf("LinkOnDay long-tail mood: %w", err)
 		}
 		count++
 	}
