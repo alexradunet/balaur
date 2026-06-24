@@ -48,7 +48,7 @@ point.** That is exactly what the LOCKED model delivers.
 |---|---|
 | Typed first-class objects (Capacities) | `nodes.type` (note/memory/skill/journal/person/book/idea/place/… — **extensible**, like Capacities' "define your own type") |
 | Everything linkable | every row in `nodes` is a link target; `[[title]]` resolves to a node (ghost link → stub node) |
-| Bidirectional backlinks (both tools) | `edges` (source→target relation); PocketBase **back-relation expand** `?expand=edges_via_target` gives backlinks for **free** — no second query, no denormalization |
+| Bidirectional backlinks (both tools) | `edges` (source→target relation). NOTE (corrected 2026-06 — the shipped code does NOT use expand): `nodes.Backlinks`/`Outbound`/`Neighborhood` (internal/nodes/nodes.go:215-260) query the `edges` collection by hand and then load + filter nodes to `status=active`. The two-step is deliberate — it is what enforces the consent filter, which a raw `?expand=edges_via_target` would bypass. Do not "optimize" backlinks into an expand. |
 | Backlinks **with context** (Capacities) | `edges.context` (text) carries the surrounding snippet |
 | Daily journal as entry point (both) | `type=journal` nodes (the journal split out of `entries`) |
 | Properties per object (both) | `nodes.props` (json) — type-specific fields without a column-per-type schema |
