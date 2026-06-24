@@ -26,8 +26,7 @@ type KnowledgeFocusView struct {
 	Title    string   // heading / search-placeholder label, e.g. "People", "Skills"
 	Category string   // fixed memory category baked into the search @get; "" = all / skills
 	Query    string   // current search query
-	Mode     string   // "active" (listing + search) or "proposed" (the Awaiting queue)
-	Proposed []g.Node // pre-rendered proposed record cards
+	Proposed []g.Node // pre-rendered proposed record cards (skills only; proposed memories live in Review)
 	Active   []g.Node // pre-rendered active record cards
 	Archived []g.Node // pre-rendered archived record cards
 }
@@ -51,23 +50,10 @@ func KnowledgeGrid(active []g.Node, kind, query string) g.Node {
 // knowledgeFocusBody renders the sections and search grid for a knowledge slice
 // (the main body without the tab strip).
 func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
-	// Awaiting queue: proposed records only. No search, no active/archived.
-	if v.Mode == "proposed" {
-		body := KnowledgeGrid(v.Proposed, v.Kind, "")
-		return h.Section(h.Class("k-section"),
-			h.H2(h.Class("k-heading k-heading-proposed"),
-				g.Text("Awaiting your word "),
-				h.Span(h.Class("k-count"), g.Text(fmt.Sprintf("%d", len(v.Proposed)))),
-			),
-			h.P(h.Class("k-sub"), g.Text("Balaur proposed these. Nothing becomes memory without your approval.")),
-			body,
-		)
-	}
-
 	var out []g.Node
 
-	// Proposed (only when present — e.g. skills proposals; memory category
-	// cards leave this empty, sending proposals to the Awaiting card).
+	// Proposed (only when present — e.g. skills proposals). Proposed memories are
+	// surfaced solely in the Review queue, so memory slices leave this empty.
 	if len(v.Proposed) > 0 {
 		out = append(out,
 			h.Section(h.Class("k-section"),
@@ -122,11 +108,11 @@ func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
 }
 
 // KnowledgeFocus renders the knowledge panel body — memories or skills. Memory
-// sub-views (categories + the Awaiting queue) are reached via /-command palette
-// entries (plan 110), not an in-panel tab strip.
+// category sub-views are reached via /-command palette entries (plan 110), not
+// an in-panel tab strip. Proposed memories live in the Review queue, never here;
+// the Proposed section renders only for skills proposals.
 //
-// mode="proposed" → the Awaiting queue (proposed records only, no search).
-// mode="active" (default) → Proposed-if-present + Active (search + grid) + Archived-if-present.
+// Layout: Proposed-if-present + Active (search + grid) + Archived-if-present.
 func KnowledgeFocus(v KnowledgeFocusView) g.Node {
 	return knowledgeFocusBody(v)
 }
@@ -168,19 +154,10 @@ func recordsInCategory(recs []*core.Record, cat string) []*core.Record {
 	return out
 }
 
-// buildMemoryFocus assembles a nav-free memory slice. view=proposed → the
-// Awaiting queue (all proposed). Otherwise → one category's active + archived
-// (category="" = all active), with search.
+// buildMemoryFocus assembles a nav-free memory slice for one category: its
+// active + archived records (category="" = all active), with search. Proposed
+// memories are surfaced in the Review queue, not here.
 func buildMemoryFocus(app core.App, params map[string]string) KnowledgeFocusView {
-	if params["view"] == "proposed" {
-		precs, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusProposed)
-		return KnowledgeFocusView{
-			Kind:     "memories",
-			Title:    "Awaiting",
-			Mode:     "proposed",
-			Proposed: mapToMemoryNodes(precs),
-		}
-	}
 	q := params["query"]
 	cat := params["category"]
 	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, q, cat)
@@ -190,7 +167,6 @@ func buildMemoryFocus(app core.App, params map[string]string) KnowledgeFocusView
 		Title:    memoryCategoryTitle(cat),
 		Category: cat,
 		Query:    q,
-		Mode:     "active",
 		Active:   mapToMemoryNodes(arecs),
 		Archived: mapToMemoryNodes(recordsInCategory(archived, cat)),
 	}
@@ -207,7 +183,6 @@ func buildSkillsFocus(app core.App, params map[string]string) KnowledgeFocusView
 		Kind:     "skills",
 		Title:    "Skills",
 		Query:    q,
-		Mode:     "active",
 		Proposed: mapToSkillNodes(precs),
 		Active:   mapToSkillNodes(arecs),
 		Archived: mapToSkillNodes(archived),

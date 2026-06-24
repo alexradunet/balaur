@@ -227,12 +227,9 @@ func TestNoWebImports(t *testing.T) {
 	t.Log("compile-time verified: internal/cards has no internal/web imports")
 }
 
-func TestValidateMemoryCategoryAndView(t *testing.T) {
+func TestValidateMemoryCategory(t *testing.T) {
 	if _, err := cards.Validate("memory", map[string]string{"category": "person"}); err != nil {
 		t.Errorf("category=person should validate: %v", err)
-	}
-	if _, err := cards.Validate("memory", map[string]string{"view": "proposed"}); err != nil {
-		t.Errorf("view=proposed should validate: %v", err)
 	}
 	if _, err := cards.Validate("memory", map[string]string{"category": "bogus"}); err == nil {
 		t.Error("category=bogus should error (bad enum)")

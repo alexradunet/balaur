@@ -1,8 +1,9 @@
 package web
 
 // knowledge_artifact_test.go — HTTP tests for the Knowledge sidebar summons
-// introduced in plan 095: category slices + the Awaiting queue, accessed via
-// GET /ui/show/memory?{category|view}=... and GET /ui/show/skills.
+// introduced in plan 095: memory category slices accessed via
+// GET /ui/show/memory?category=... and GET /ui/show/skills. (Proposed memories
+// live in the Review queue, not a standalone Awaiting view.)
 
 import (
 	"net/http"
@@ -33,21 +34,6 @@ func TestKnowledgeArtifacts(t *testing.T) {
 				// but the unit test TestKnowledgeFocusMemoryContract covers this
 				// at the component level. HTTP test confirms routing + params.
 				_ = res
-			},
-		}
-		s.Test(t)
-	})
-
-	t.Run("GET /ui/show/memory?view=proposed → 200, Awaiting your word", func(t *testing.T) {
-		s := tests.ApiScenario{
-			Name:           "memory view=proposed → 200 Awaiting queue",
-			Method:         "GET",
-			URL:            "/ui/show/memory?view=proposed",
-			TestAppFactory: newWebApp,
-			ExpectedStatus: 200,
-			ExpectedContent: []string{
-				"datastar-patch-elements",
-				"Awaiting your word",
 			},
 		}
 		s.Test(t)

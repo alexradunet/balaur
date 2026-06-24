@@ -46,7 +46,6 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 		Kind:     "memories",
 		Title:    "Facts",
 		Category: "fact",
-		Mode:     "active",
 		Active:   active,
 		Archived: archived,
 	})
@@ -84,46 +83,6 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 	}
 }
 
-// TestKnowledgeFocusAwaiting: mode=proposed renders only the Awaiting queue.
-func TestKnowledgeFocusAwaiting(t *testing.T) {
-	proposed := []g.Node{
-		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
-			ID: "p1", Status: "proposed", Title: "Proposed memory",
-		}),
-	}
-	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
-		Kind:     "memories",
-		Title:    "Awaiting",
-		Mode:     "proposed",
-		Proposed: proposed,
-	})
-
-	for _, want := range []string{
-		`class="k-heading k-heading-proposed"`,
-		`Awaiting your word`,
-		`id="kcard-p1"`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("KnowledgeFocus (awaiting) missing %q in:\n%s", want, got)
-		}
-	}
-
-	// No in-panel tab strip (plan 110).
-	if strings.Contains(got, `class="k-tabs"`) {
-		t.Errorf("KnowledgeFocus (awaiting) must not contain tab strip:\n%s", got)
-	}
-
-	// Must NOT have the active grid or search input.
-	for _, absent := range []string{
-		`id="k-active-grid"`,
-		`class="k-search"`,
-	} {
-		if strings.Contains(got, absent) {
-			t.Errorf("KnowledgeFocus (awaiting) must not contain %q:\n%s", absent, got)
-		}
-	}
-}
-
 // TestKnowledgeFocusSkillsNoCategories: skills focus has no category tabs.
 func TestKnowledgeFocusSkillsNoCategories(t *testing.T) {
 	active := []g.Node{
@@ -134,7 +93,6 @@ func TestKnowledgeFocusSkillsNoCategories(t *testing.T) {
 	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
 		Kind:   "skills",
 		Title:  "Skills",
-		Mode:   "active",
 		Active: active,
 	})
 
@@ -165,7 +123,6 @@ func TestKnowledgeFocusNoProposedNoSection(t *testing.T) {
 		Kind:     "memories",
 		Title:    "Facts",
 		Category: "fact",
-		Mode:     "active",
 	})
 	if strings.Contains(got, "k-heading-proposed") {
 		t.Errorf("empty proposed must not render proposed section:\n%s", got)
