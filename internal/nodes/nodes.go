@@ -137,6 +137,72 @@ func Create(app core.App, typ, title, body, status string, props map[string]any)
 	return rec, nil
 }
 
+// Update edits an existing ACTIVE node's title, body, and/or props in place and
+// audits node.update after the write. Only non-nil arguments change a field:
+// title/body are pointers (nil = leave unchanged, "" = clear body); props, when
+// non-nil, REPLACES the node's props (after template-apply + schema validation).
+//
+// The CONSENT BOUNDARY is enforced here: Update refuses any node whose type is
+// not owner-authored (born active) — specifically memory and skill, which must
+// change only through the consent-gated propose_edit path. A non-active node is
+// likewise refused: owner-authored typed nodes are born active, so a proposed or
+// rejected node is not an editable owner object.
+func Update(app core.App, id string, title, body *string, props map[string]any) (*core.Record, error) {
+	rec, err := app.FindRecordById("nodes", strings.TrimSpace(id))
+	if err != nil {
+		return nil, fmt.Errorf("nodes: no node %q", id)
+	}
+	typ := rec.GetString("type")
+
+	// Owner-authored types only: memory/skill are consent-gated and must go
+	// through propose_edit, never an in-place edit. Refuse any type whose
+	// born_status is not active.
+	ownerTypes, err := OwnerAuthoredTypes(app)
+	if err != nil {
+		return nil, fmt.Errorf("nodes: loading owner-authored types: %w", err)
+	}
+	if !slices.Contains(ownerTypes, typ) {
+		return nil, fmt.Errorf("nodes: type %q is not owner-authored — use remember/propose_edit for memory and skill", typ)
+	}
+	if rec.GetString("status") != StatusActive {
+		return nil, fmt.Errorf("nodes: node %q is not active (status=%s)", id, rec.GetString("status"))
+	}
+
+	if title != nil {
+		if strings.TrimSpace(*title) == "" {
+			return nil, fmt.Errorf("nodes: title cannot be cleared")
+		}
+		rec.Set("title", *title)
+	}
+	if body != nil {
+		rec.Set("body", *body)
+	}
+	if props != nil {
+		// Validate the replacement props against the type's schema, mirroring
+		// Create (template-apply first so required-with-default fields pass).
+		tmpl, err := TypeTemplate(app, typ)
+		if err != nil {
+			return nil, fmt.Errorf("nodes: loading template for %q: %w", typ, err)
+		}
+		_, merged := ApplyTemplate(tmpl, rec.GetString("body"), props)
+		defs, err := TypeSchema(app, typ)
+		if err != nil {
+			return nil, fmt.Errorf("nodes: loading schema for %q: %w", typ, err)
+		}
+		if err := ValidateProps(defs, merged); err != nil {
+			return nil, fmt.Errorf("nodes: invalid props for type %q: %w", typ, err)
+		}
+		rec.Set("props", merged)
+	}
+
+	if err := app.Save(rec); err != nil {
+		return nil, fmt.Errorf("saving node: %w", err)
+	}
+	store.Audit(app, "owner", "node.update", "nodes/"+rec.Id, true,
+		map[string]any{"type": typ})
+	return rec, nil
+}
+
 // Get fetches one node by id.
 func Get(app core.App, id string) (*core.Record, error) {
 	rec, err := app.FindRecordById("nodes", id)

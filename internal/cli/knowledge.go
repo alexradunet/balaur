@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
@@ -16,6 +18,19 @@ import (
 // create. memory/skill are excluded — those are consent-gated proposals.
 // journal is excluded — journal_write owns day-node creation (plan 171).
 var ownerNodeTypes = []string{"note", "person", "book", "idea", "place"}
+
+// decodeProps parses a --props JSON object flag. An empty string yields nil
+// (no props); anything else must be a JSON object.
+func decodeProps(s string) (map[string]any, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal([]byte(s), &m); err != nil {
+		return nil, fmt.Errorf("--props must be a JSON object: %w", err)
+	}
+	return m, nil
+}
 
 func nodeJSON(r *core.Record) map[string]any {
 	return map[string]any{
@@ -287,12 +302,12 @@ func noteCmd(app core.App) *cobra.Command {
 		Use:   "note",
 		Short: "Write, list, show, and drop owner-authored knowledge nodes — deterministic, no model",
 	}
-	cmd.AddCommand(noteAddCmd(app), noteListCmd(app), noteShowCmd(app), noteDropCmd(app))
+	cmd.AddCommand(noteAddCmd(app), noteListCmd(app), noteShowCmd(app), noteEditCmd(app), noteDropCmd(app))
 	return cmd
 }
 
 func noteAddCmd(app core.App) *cobra.Command {
-	var typ, title, body string
+	var typ, title, body, propsJSON string
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Create an owner-authored node (note or typed object), born active",
@@ -301,12 +316,55 @@ func noteAddCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&typ, "type", "note", "note | person | book | idea | place")
 	cmd.Flags().StringVar(&title, "title", "", "node title (required)")
 	cmd.Flags().StringVar(&body, "body", "", "node markdown body")
+	cmd.Flags().StringVar(&propsJSON, "props", "", `typed properties as a JSON object, e.g. '{"author":"Le Guin","year":1969}'`)
 	_ = cmd.MarkFlagRequired("title")
 	cmd.RunE = run(app, "note.add", func(cmd *cobra.Command, args []string) (any, error) {
 		if !slices.Contains(ownerNodeTypes, typ) {
 			return nil, fmt.Errorf("type %q is not an owner-authored node type", typ)
 		}
-		rec, err := nodes.Create(app, typ, title, body, nodes.StatusActive, nil)
+		props, err := decodeProps(propsJSON)
+		if err != nil {
+			return nil, err
+		}
+		rec, err := nodes.Create(app, typ, title, body, nodes.StatusActive, props)
+		if err != nil {
+			return nil, err
+		}
+		return nodeJSON(rec), nil
+	})
+	return cmd
+}
+
+func noteEditCmd(app core.App) *cobra.Command {
+	var title, body, propsJSON string
+	cmd := &cobra.Command{
+		Use:   "edit <id>",
+		Short: "Edit an owner-authored node's title, body, or props in place",
+		Args:  cobra.ExactArgs(1),
+	}
+	cmd.Flags().StringVar(&title, "title", "", "new title")
+	cmd.Flags().StringVar(&body, "body", "", "new markdown body")
+	cmd.Flags().StringVar(&propsJSON, "props", "", `replacement typed properties as a JSON object`)
+	cmd.RunE = run(app, "note.edit", func(cmd *cobra.Command, args []string) (any, error) {
+		var titlePtr, bodyPtr *string
+		if cmd.Flags().Changed("title") {
+			titlePtr = &title
+		}
+		if cmd.Flags().Changed("body") {
+			bodyPtr = &body
+		}
+		var props map[string]any
+		if cmd.Flags().Changed("props") {
+			p, err := decodeProps(propsJSON)
+			if err != nil {
+				return nil, err
+			}
+			props = p
+		}
+		if titlePtr == nil && bodyPtr == nil && props == nil {
+			return nil, fmt.Errorf("nothing to edit: pass --title, --body, or --props")
+		}
+		rec, err := nodes.Update(app, args[0], titlePtr, bodyPtr, props)
 		if err != nil {
 			return nil, err
 		}

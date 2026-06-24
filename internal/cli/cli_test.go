@@ -14,6 +14,7 @@ import (
 	"github.com/alexradunet/balaur/internal/ext"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/llmtest"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/storetest"
 	itasks "github.com/alexradunet/balaur/internal/tasks"
 )
@@ -622,5 +623,48 @@ func TestEnvelopePanicRecovered(t *testing.T) {
 	}
 	if ExitCode() == 0 {
 		t.Errorf("panic must set a non-zero exit code, got %d", ExitCode())
+	}
+}
+
+// TestNoteAddAndEditWithProps proves the CLI mirror: `note add --props` persists
+// typed props and `note edit --props/--title` updates them in place.
+func TestNoteAddAndEditWithProps(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	added, err := execute(t, noteCmd(app),
+		"add", "--type", "book", "--title", "LHoD",
+		"--props", `{"author":"Le Guin","year":1969}`)
+	if err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	id, _ := added["id"].(string)
+	if id == "" {
+		t.Fatalf("unexpected add output: %v", added)
+	}
+
+	edited, err := execute(t, noteCmd(app),
+		"edit", id, "--title", "The Left Hand of Darkness",
+		"--props", `{"author":"Le Guin","year":1969}`)
+	if err != nil {
+		t.Fatalf("edit: %v", err)
+	}
+	if edited["title"] != "The Left Hand of Darkness" {
+		t.Errorf("edited title = %v, want updated", edited["title"])
+	}
+
+	rec, err := app.FindRecordById("nodes", id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if a := nodes.PropString(rec, "author"); a != "Le Guin" {
+		t.Errorf("PropString(author) = %q, want Le Guin", a)
+	}
+
+	audits, err := executeList(t, auditCmd(app), "--action", "node.update")
+	if err != nil {
+		t.Fatalf("audit: %v", err)
+	}
+	if len(audits) < 1 {
+		t.Errorf("want a node.update audit row from the edit, got %d", len(audits))
 	}
 }
