@@ -4,6 +4,8 @@ package storybook
 
 import (
 	"github.com/alexradunet/balaur/internal/feature/headscards"
+	"github.com/alexradunet/balaur/internal/feature/journalcards"
+	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/feature/lifecards"
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/store"
@@ -361,6 +363,132 @@ func headsStory() Story {
 		Donts: []string{
 			"Render the head name or purpose with g.Raw — owner text goes through g.Text.",
 			"Offer Make active on the already-active head or Delete on a built-in.",
+		},
+	}
+}
+
+// dayStory documents the day tile (ucard-day): one day's three counts
+// (journal / done / logged) plus a recap-status line, and an "open the day"
+// footer link. Live, buildDay assembles the counts from life.Day for the date
+// param; the DayView here is hand-built. Three mutually exclusive recap states:
+// "recap kept" (HasRecap), "still being written" (IsToday), else "no recap".
+func dayStory() Story {
+	return Story{
+		ID: "day", Group: "Cards", Title: "DayCard",
+		Blurb: "The day tile on the board: one day's three counts — N journal, N done, N logged — plus a recap-status line, with an \"open the day →\" footer that morphs the panel to the full day-of-life view. A compact card (id \"ucard-day\") the board grid and the Part-B live refresh target identically. The recap line is one of three states: \"recap kept\" when a recap exists, \"still being written\" for today, otherwise \"no recap\".",
+		Variants: []Variant{
+			{"today, recap pending", journalcards.DayCard(journalcards.DayView{
+				Date: "2026-06-24", Label: "Wednesday, June 24 2026", IsToday: true,
+				JournalN: 2, DoneN: 5, LogN: 8,
+			})},
+			{"past day, recap kept", journalcards.DayCard(journalcards.DayView{
+				Date: "2026-06-21", Label: "Sunday, June 21 2026",
+				JournalN: 1, DoneN: 3, LogN: 4, HasRecap: true,
+			})},
+			{"quiet day, no recap", journalcards.DayCard(journalcards.DayView{
+				Date: "2026-06-18", Label: "Thursday, June 18 2026",
+			})},
+		},
+		Props: []Prop{
+			{"Date", "string", `""`, "The day's date, YYYY-MM-DD; drives the \"open the day\" link and its Datastar @get target."},
+			{"Label", "string", `""`, `Human day heading shown as a Tag in the head, e.g. "Wednesday, June 24 2026".`},
+			{"IsToday", "bool", "false", `When true (and no recap yet), the recap line reads "still being written" instead of "no recap".`},
+			{"JournalN", "int", "0", `Journal-entry count for the day; rendered "Nd journal".`},
+			{"DoneN", "int", "0", "Tasks completed on the day."},
+			{"LogN", "int", "0", "Life-log entries on the day."},
+			{"HasRecap", "bool", "false", `When true the recap line reads "recap kept" — it wins over IsToday.`},
+		},
+		Dos: []string{
+			"Drive every field from a built DayView — the card is pure render.",
+			"Set IsToday only for the current day so its pending recap reads \"still being written\".",
+			"Link the footer to the day view (/ui/show/day?date=…) with the card's own Date.",
+		},
+		Donts: []string{
+			"Set HasRecap and expect IsToday to show — \"recap kept\" takes precedence.",
+			"Hand-format the count lines; the card appends \"journal\"/\"done\"/\"logged\".",
+			"Interpolate the date into anything but the YYYY-MM-DD day-view URL.",
+		},
+	}
+}
+
+// memoryStory documents the compact memory summary tile (ucard-memory): the
+// active memories as title + importance pips. Live, buildMemorySummary fetches
+// active memories (capped at limit) and a param line; the MemoryView is hand-built
+// here. Empty rows render "No active memories yet."; the footer morphs the panel
+// to /ui/show/memory.
+func memoryStory() Story {
+	return Story{
+		ID: "memory", Group: "Cards", Title: "MemoryCard",
+		Blurb: "The memory summary tile on the board: active memories listed as title + a 5-pip importance gauge, under a param line (e.g. \"limit: 6\"). Each title and the footer link to the memory focus view (/ui/show/memory); an empty list reads \"No active memories yet.\"",
+		Variants: []Variant{
+			{"active memories", knowledgecards.MemoryCard(knowledgecards.MemoryView{
+				ParamLine: "limit: 6",
+				Rows: []knowledgecards.MemoryRow{
+					{Title: "Prefers tea over coffee", Importance: 3},
+					{Title: "Vet: Dr. Mara at Willowbrook", Importance: 4},
+					{Title: "Allergic to penicillin", Importance: 5},
+					{Title: "Daughter's birthday is March 2", Importance: 2},
+				},
+			})},
+			{"filtered query", knowledgecards.MemoryCard(knowledgecards.MemoryView{
+				ParamLine: "limit: 6 · q: vet",
+				Rows: []knowledgecards.MemoryRow{
+					{Title: "Vet: Dr. Mara at Willowbrook", Importance: 4},
+				},
+			})},
+			{"empty", knowledgecards.MemoryCard(knowledgecards.MemoryView{ParamLine: "limit: 6"})},
+		},
+		Props: []Prop{
+			{"ParamLine", "string", `""`, `The query summary shown in the head meta (e.g. "limit: 6" or "limit: 6 · q: vet"); omitted when blank.`},
+			{"Rows", "[]MemoryRow", "nil", `Active memories, newest/most-important first; an empty slice renders the compact "No active memories yet." state.`},
+			{"Rows[].Title", "string", "—", "The memory's title; links to the memory focus view (escaped)."},
+			{"Rows[].Importance", "int", "0", "Importance 1–5, rendered as the 5-pip gauge (ui.Pips, max 5)."},
+		},
+		Dos: []string{
+			"Pass only active memories — the tile is the at-a-glance set, not proposed or archived.",
+			"Render importance as the 5-pip gauge so weight reads at a glance.",
+			"Carry the query summary in ParamLine so the tile is self-describing.",
+		},
+		Donts: []string{
+			"Render a memory title with g.Raw — owner content goes through g.Text.",
+			"Pass an importance above 5; the gauge caps at 5 pips.",
+		},
+	}
+}
+
+// skillsStory documents the skills summary tile (ucard-skills): the compact
+// dashboard card listing active skills as name + description, with an "enabled"
+// tag on each. SkillsCard takes a []SkillRow slice and a paramLine string (the
+// head meta, e.g. "limit: 6"); the live card builds rows from active skill
+// records via buildSkillsSummary. An empty slice renders the compact empty
+// state; the footer cross-links to the full skills surface (/ui/show/skills).
+func skillsStory() Story {
+	return Story{
+		ID: "skills", Group: "Cards", Title: "SkillsCard",
+		Blurb: "The skills summary tile on the board: active skills listed as name + description, each marked \"enabled\", with the limit param shown in the head meta. A compact card (id \"ucard-skills\") built from the active skill records; an empty slice shows the compact \"No active skills yet.\" state, and the footer morphs the panel to all skills.",
+		Variants: []Variant{
+			{"active skills", knowledgecards.SkillsCard([]knowledgecards.SkillRow{
+				{Name: "Garden log", Description: "Record what was planted, watered, or harvested.", Enabled: true},
+				{Name: "Weekly recap", Description: "Summarise the week from the lifelog every Sunday.", Enabled: true},
+				{Name: "Vet reminders", Description: "Track Luna's appointments and flag what's overdue.", Enabled: true},
+			}, "limit: 6")},
+			{"empty", knowledgecards.SkillsCard(nil, "limit: 6")},
+		},
+		Props: []Prop{
+			{"rows", "[]SkillRow", "nil", "Active skills shown in the tile; an empty/nil slice renders the \"No active skills yet.\" empty state."},
+			{"paramLine", "string", `""`, "Head meta line (e.g. \"limit: 6\"); omitted from the head when blank."},
+			{"SkillRow.Name", "string", "—", "The skill's name; the row title, linked to /ui/show/skills."},
+			{"SkillRow.Description", "string", "—", "One-line description shown under the name; omitted when blank."},
+			{"SkillRow.Enabled", "bool", "false", "True renders the \"enabled\" tag on the row (status == active)."},
+		},
+		Dos: []string{
+			"Keep it to the top few active skills — it is a summary tile, not the full roster.",
+			"Show the limit param in the head meta so the tile is self-describing.",
+			"Render the skill name and description through g.Text — they are owner content.",
+		},
+		Donts: []string{
+			"Render an unescaped skill name or description — both flow through g.Text.",
+			"List proposed or archived skills here — the summary is active skills only.",
 		},
 	}
 }

@@ -34,12 +34,9 @@ var cardStoryID = map[string]string{
 	"tasks":    "taskcard",
 	"timeline": "timeline",
 	"today":    "today",
-
-	// Known gaps — registered card surfaces that still lack a dedicated story.
-	// Wire a story and move the entry up when one is added (plan 174 follow-up).
-	"day":    "", // DayCard (journalcards) — DayFocus is storied, the tile is not.
-	"memory": "", // MemoryCard (knowledgecards).
-	"skills": "", // SkillsCard (knowledgecards).
+	"day":      "day",
+	"memory":   "memory",
+	"skills":   "skills",
 }
 
 // TestEveryRegisteredCardHasAStory keeps the storybook honest as the declared
