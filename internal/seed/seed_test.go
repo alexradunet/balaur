@@ -10,10 +10,15 @@ import (
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
-// total sums every collection count in a Result — the seed's footprint.
+// total sums the fields that are strictly symmetric between Run and Reset.
+// Journal entries seeded by world.go are deleted by Reset's combined
+// note+journal delete (counted in Notes), so Journal is intentionally excluded
+// from total() and verified separately. Edges cascade-delete with nodes and
+// are also excluded.
 func total(r *Result) int {
 	return r.Messages + r.Tasks + r.Memories + r.Skills + r.Notes +
-		r.LifeEntries + r.Summaries + r.Heads
+		r.LifeEntries + r.Summaries + r.Heads +
+		r.People + r.Places + r.Books + r.Ideas
 }
 
 func TestRunSeedsAllCollections(t *testing.T) {
@@ -24,7 +29,7 @@ func TestRunSeedsAllCollections(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	// Every collection should gain at least one record.
+	// Every base collection should gain at least one record.
 	checks := map[string]int{
 		"messages": res.Messages, "tasks": res.Tasks, "memories": res.Memories,
 		"skills": res.Skills, "notes": res.Notes, "life_entries": res.LifeEntries,
@@ -36,6 +41,18 @@ func TestRunSeedsAllCollections(t *testing.T) {
 		}
 	}
 
+	// World catalog nodes must all be present.
+	worldChecks := map[string]int{
+		"people": res.People, "places": res.Places,
+		"books": res.Books, "ideas": res.Ideas,
+		"journal": res.Journal,
+	}
+	for name, n := range worldChecks {
+		if n <= 0 {
+			t.Errorf("world %s: seeded %d, want > 0", name, n)
+		}
+	}
+
 	// Spot-check that records actually landed and carry the marker.
 	if n, _ := app.CountRecords("messages", dbx.HashExp{"origin": Marker}); int(n) != res.Messages {
 		t.Errorf("marked messages = %d, reported %d", n, res.Messages)
@@ -43,6 +60,23 @@ func TestRunSeedsAllCollections(t *testing.T) {
 	// Tasks are now type=task nodes; count matching nodes.
 	if n, _ := app.CountRecords("nodes", dbx.HashExp{"type": "task", "status": nodes.StatusActive}); int(n) < res.Tasks {
 		t.Errorf("marked tasks = %d, reported %d", n, res.Tasks)
+	}
+
+	// Connectivity: edges must exist and day nodes must be created.
+	edgeCount, err2 := app.CountRecords("edges", nil)
+	if err2 != nil {
+		t.Fatalf("counting edges: %v", err2)
+	}
+	if int(edgeCount) < 100 {
+		t.Errorf("edges = %d, want > 100 (graph not connected enough)", edgeCount)
+	}
+
+	dayNodes, err3 := app.FindRecordsByFilter("nodes", "type = 'day' && status = 'active'", "", 0, 0, nil)
+	if err3 != nil {
+		t.Fatalf("counting day nodes: %v", err3)
+	}
+	if len(dayNodes) == 0 {
+		t.Errorf("day nodes = 0, want > 0")
 	}
 }
 
@@ -58,6 +92,13 @@ func TestRunIsIdempotent(t *testing.T) {
 	}
 	if got := total(second); got != 0 {
 		t.Fatalf("second Run created %d records, want 0 (idempotent)", got)
+	}
+	// Journal and Edges from second run must also be zero.
+	if second.Journal != 0 {
+		t.Errorf("second Run journal = %d, want 0", second.Journal)
+	}
+	if second.Edges != 0 {
+		t.Errorf("second Run edges = %d, want 0", second.Edges)
 	}
 }
 
@@ -79,8 +120,22 @@ func TestResetRemovesOnlySeededData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reset: %v", err)
 	}
-	if total(removed) != total(first) {
-		t.Fatalf("Reset removed %d records, seeded %d", total(removed), total(first))
+	// total() excludes Journal (folded into Notes in Reset) and Edges (cascade).
+	// The Reset Notes field includes both notes AND journal nodes that had source=Marker.
+	// So first.Notes + first.Journal should equal removed.Notes.
+	wantNotesAndJournal := first.Notes + first.Journal
+	if removed.Notes != wantNotesAndJournal {
+		t.Errorf("Reset notes+journal = %d, want %d (first.Notes=%d + first.Journal=%d)",
+			removed.Notes, wantNotesAndJournal, first.Notes, first.Journal)
+	}
+	// The rest of total() fields must match exactly.
+	firstWithoutJournal := *first
+	firstWithoutJournal.Notes = wantNotesAndJournal
+	firstWithoutJournal.Journal = 0
+	removedAdj := *removed
+	removedAdj.Journal = 0
+	if total(&removedAdj) != total(&firstWithoutJournal) {
+		t.Fatalf("Reset removed %d records (total), seeded %d", total(&removedAdj), total(&firstWithoutJournal))
 	}
 
 	// The real task node is untouched; seeded task nodes are gone.
@@ -95,12 +150,41 @@ func TestResetRemovesOnlySeededData(t *testing.T) {
 		t.Errorf("seeded tasks remain after Reset: %d", len(remaining))
 	}
 
+	// No world catalog nodes remain.
+	for _, typ := range []string{"person", "place", "book", "idea"} {
+		recs, _ := app.FindRecordsByFilter("nodes",
+			"type = {:t} && props.source = {:m}", "", 0, 0,
+			dbx.Params{"t": typ, "m": Marker})
+		if len(recs) != 0 {
+			t.Errorf("seeded %s nodes remain after Reset: %d", typ, len(recs))
+		}
+	}
+
+	// No seed day nodes remain.
+	allDayNodes, _ := app.FindRecordsByFilter("nodes", "type = 'day' && status = 'active'", "", 0, 0, nil)
+	for _, r := range allDayNodes {
+		if v, ok := nodes.Props(r)["seed"]; ok {
+			if b, ok2 := v.(bool); ok2 && b {
+				t.Errorf("seed day node %s remains after Reset", r.Id)
+			}
+		}
+	}
+
+	// No edges remain (all seeded nodes are gone; edges cascade-delete).
+	edgeCount, _ := app.CountRecords("edges", nil)
+	if int(edgeCount) != 0 {
+		t.Errorf("edges remain after Reset: %d", edgeCount)
+	}
+
 	// Reseeding after a reset works and restores the full footprint.
 	again, err := Run(app)
 	if err != nil {
 		t.Fatalf("reseed: %v", err)
 	}
 	if total(again) != total(first) {
-		t.Errorf("reseed created %d records, want %d", total(again), total(first))
+		t.Errorf("reseed total = %d, want %d", total(again), total(first))
+	}
+	if again.Journal != first.Journal {
+		t.Errorf("reseed journal = %d, want %d", again.Journal, first.Journal)
 	}
 }

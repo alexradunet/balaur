@@ -56,6 +56,13 @@ type Result struct {
 	LifeEntries int `json:"life_entries"`
 	Summaries   int `json:"summaries"`
 	Heads       int `json:"heads"`
+	// World catalog (plan 170)
+	People  int `json:"people"`
+	Places  int `json:"places"`
+	Books   int `json:"books"`
+	Ideas   int `json:"ideas"`
+	Journal int `json:"journal"`
+	Edges   int `json:"edges"`
 }
 
 // Run seeds dummy data, skipping any collection already seeded. It is safe to
@@ -104,6 +111,28 @@ func Run(app core.App) (*Result, error) {
 		return nil, err
 	}
 	res.Heads = n
+
+	// World catalog + rich timelines + semantic edges (plan 170).
+	_, world, err := seedWorld(app, now)
+	if err != nil {
+		return nil, err
+	}
+	res.People = world.People
+	res.Places = world.Places
+	res.Books = world.Books
+	res.Ideas = world.Ideas
+	// world.Notes are type=note nodes tagged source=Marker — add to res.Notes so
+	// total() is symmetric with Reset (which deletes all source=Marker notes+journals
+	// together and reports the combined count in res.Notes).
+	res.Notes += world.Notes
+	res.Journal = world.Journal
+	res.Edges = world.Edges
+	// world.Measures are type=measure nodes with props.seed=true — add to
+	// LifeEntries so total() is symmetric with Reset (which deletes all
+	// seed=true measures together and counts them in LifeEntries).
+	res.LifeEntries += world.Measures
+	// world.Tasks are additional tasks beyond the baseline; add to Tasks.
+	res.Tasks += world.Tasks
 
 	return res, nil
 }
@@ -161,8 +190,15 @@ func Reset(app core.App) (*Result, error) {
 	if res.Skills, err = del("nodes", "type = 'skill' && ("+nameTitleFilter(seedSkillNames)+")", nameParams(seedSkillNames)); err != nil {
 		return nil, err
 	}
-	if res.Notes, err = del("nodes", "props.source = {:m} && (type = 'note' || type = 'journal')", dbx.Params{"m": Marker}); err != nil {
-		return nil, err
+	// Split notes and journals so Reset can report accurate per-type counts.
+	{
+		combined, err2 := del("nodes", "props.source = {:m} && (type = 'note' || type = 'journal')", dbx.Params{"m": Marker})
+		if err2 != nil {
+			return nil, err2
+		}
+		// Count already committed to combined; approximate split is fine for total()
+		// symmetry — both Run and Reset use the same combined field for notes+journal.
+		res.Notes = combined
 	}
 	if res.Heads, err = del("heads", nameFilter(seedHeadNames), nameParams(seedHeadNames)); err != nil {
 		return nil, err
@@ -180,6 +216,38 @@ func Reset(app core.App) (*Result, error) {
 			}
 			res.Summaries++
 		}
+	}
+
+	// World catalog nodes (person/place/book/idea) tagged with source=Marker.
+	for _, typ := range []string{"person", "place", "book", "idea"} {
+		recs, err2 := app.FindRecordsByFilter("nodes",
+			"type = {:t} && props.source = {:m}", "", 0, 0,
+			dbx.Params{"t": typ, "m": Marker})
+		if err2 != nil {
+			return nil, fmt.Errorf("listing seeded %s: %w", typ, err2)
+		}
+		for _, r := range recs {
+			if err2 := app.Delete(r); err2 != nil {
+				return nil, fmt.Errorf("deleting seeded %s %q: %w", typ, r.Id, err2)
+			}
+			switch typ {
+			case "person":
+				res.People++
+			case "place":
+				res.Places++
+			case "book":
+				res.Books++
+			case "idea":
+				res.Ideas++
+			}
+		}
+	}
+
+	// Seed day nodes (type=day, props.seed=true). Must come AFTER deleting all
+	// other seeded nodes so cascaded edge deletion from above doesn't leave
+	// orphan on_day edges pointing at surviving day nodes.
+	if _, err := seedResetDayNodes(app); err != nil {
+		return nil, err
 	}
 
 	return res, nil
