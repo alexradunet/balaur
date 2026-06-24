@@ -15,6 +15,16 @@ import (
 	"github.com/alexradunet/balaur/internal/tasks"
 )
 
+// loadTaskNode fetches a task node by id from the nodes collection and hydrates it.
+func (h *handlers) loadTaskNode(id string) (*core.Record, error) {
+	rec, err := h.app.FindRecordById("nodes", id)
+	if err != nil {
+		return nil, err
+	}
+	tasks.Hydrate(rec)
+	return rec, nil
+}
+
 // tasks.go is the life-organization surface, now expressed as cards. The
 // operational list lives in the quests card's focus (taskcards.QuestsFocus —
 // a flat, rhythm-grouped task-card stack, was /tasks?view=list). The month
@@ -73,7 +83,7 @@ func questGroup(recur string, hasDue bool) string {
 // taskCard loads one task card as a standalone SSE fragment (plan 093: the
 // quests artifact is a flat stack; no rail/detail pane).
 func (h *handlers) taskCard(e *core.RequestEvent) error {
-	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
+	rec, err := h.loadTaskNode(e.Request.PathValue("id"))
 	if err != nil {
 		return h.cardError(e, err)
 	}
@@ -109,7 +119,7 @@ func taskCardViewOf(rec *core.Record) taskcards.TaskView {
 }
 
 func (h *handlers) taskTransition(e *core.RequestEvent) error {
-	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
+	rec, err := h.loadTaskNode(e.Request.PathValue("id"))
 	if err != nil {
 		return h.cardError(e, err)
 	}
@@ -134,7 +144,7 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	default:
 		return e.BadRequestError("unknown transition", nil)
 	}
-	rec, err = h.app.FindRecordById("tasks", rec.Id)
+	rec, err = h.loadTaskNode(rec.Id)
 	if err != nil {
 		return h.cardError(e, err)
 	}
@@ -166,7 +176,7 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 // clears it (re-anchoring a recurring task to its next occurrence in
 // tasks.Update); recur_from_done is not editable here and stays untouched.
 func (h *handlers) taskEdit(e *core.RequestEvent) error {
-	rec, err := h.app.FindRecordById("tasks", e.Request.PathValue("id"))
+	rec, err := h.loadTaskNode(e.Request.PathValue("id"))
 	if err != nil {
 		return h.cardError(e, err)
 	}

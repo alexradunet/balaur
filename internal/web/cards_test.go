@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
+	itasks "github.com/alexradunet/balaur/internal/tasks"
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
@@ -20,18 +21,19 @@ import (
 
 func seedTask(t testing.TB, app *tests.TestApp, title string, status string, due time.Time) *core.Record {
 	t.Helper()
-	coll, err := app.FindCollectionByNameOrId("tasks")
+	rec, err := itasks.Create(app, itasks.CreateOpts{Title: title, Due: due})
 	if err != nil {
-		t.Fatalf("find tasks collection: %v", err)
+		t.Fatalf("create task %q: %v", title, err)
 	}
-	rec := core.NewRecord(coll)
-	rec.Set("title", title)
-	rec.Set("status", status)
-	if !due.IsZero() {
-		rec.Set("due", due.UTC())
-	}
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save task: %v", err)
+	if status == "done" {
+		if _, err = itasks.Done(app, rec, time.Now()); err != nil {
+			t.Fatalf("done task %q: %v", title, err)
+		}
+		rec, err = app.FindRecordById("nodes", rec.Id)
+		if err != nil {
+			t.Fatalf("reload done task %q: %v", title, err)
+		}
+		itasks.Hydrate(rec)
 	}
 	return rec
 }

@@ -27,7 +27,7 @@ type doctorCheck struct {
 // coreCollections is the fixed list of collections doctor probes.
 // A package var so tests can inject a deliberate bad name.
 var coreCollections = []string{
-	"messages", "nodes", "edges", "tasks",
+	"messages", "nodes", "edges", "node_types",
 	"conversations", "entries", "summaries",
 	"heads", "llm_providers", "llm_models",
 	"llm_settings", "extensions", "audit_log",

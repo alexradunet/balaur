@@ -8,26 +8,38 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pocketbase/pocketbase/core"
-
 	"github.com/alexradunet/balaur/internal/storetest"
+	"github.com/alexradunet/balaur/internal/tasks"
+	"github.com/pocketbase/pocketbase/core"
 )
 
-// seedTask writes one task record and returns it.
+// seedTask creates a task node and returns it (hydrated).
 func seedTask(t *testing.T, app core.App, title, status string, due time.Time) *core.Record {
 	t.Helper()
-	col, err := app.FindCollectionByNameOrId("tasks")
+	rec, err := tasks.Create(app, tasks.CreateOpts{Title: title, Due: due})
 	if err != nil {
-		t.Fatalf("find tasks collection: %v", err)
+		t.Fatalf("create task %q: %v", title, err)
 	}
-	rec := core.NewRecord(col)
-	rec.Set("title", title)
-	rec.Set("status", status)
-	if !due.IsZero() {
-		rec.Set("due", due.UTC().Format("2006-01-02 15:04:05.000Z"))
-	}
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save task %q: %v", title, err)
+	// For done/dropped tasks, drive through the domain layer then reload.
+	switch status {
+	case "done":
+		if _, err = tasks.Done(app, rec, time.Now()); err != nil {
+			t.Fatalf("done task %q: %v", title, err)
+		}
+		rec, err = app.FindRecordById("nodes", rec.Id)
+		if err != nil {
+			t.Fatalf("reload done task %q: %v", title, err)
+		}
+		tasks.Hydrate(rec)
+	case "dropped":
+		if err := tasks.Drop(app, rec); err != nil {
+			t.Fatalf("drop task %q: %v", title, err)
+		}
+		rec, err = app.FindRecordById("nodes", rec.Id)
+		if err != nil {
+			t.Fatalf("reload dropped task %q: %v", title, err)
+		}
+		tasks.Hydrate(rec)
 	}
 	return rec
 }

@@ -8,6 +8,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -35,9 +36,18 @@ func BuildQuestsFocus(app core.App) QuestsFocusView {
 	now := time.Now()
 
 	openRecs, _ := tasks.OpenTasks(app, nil)
+	// Done tasks: load active task nodes and filter in Go for state=done.
 	var doneRecs []*core.Record
-	if dr, err := app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", doneRecentlyFocusCap, 0); err == nil {
-		doneRecs = dr
+	if all, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive); err == nil {
+		for _, r := range all {
+			tasks.Hydrate(r)
+			if r.GetString("status") == "done" {
+				doneRecs = append(doneRecs, r)
+				if len(doneRecs) >= doneRecentlyFocusCap {
+					break
+				}
+			}
+		}
 	}
 
 	return buildQuestsFocusFrom(openRecs, doneRecs, now)

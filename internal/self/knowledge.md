@@ -72,7 +72,8 @@ One binary, layered as: gateway → turn pipeline → business logic.
   requests run at a fixed moderate temperature (0.3) to improve
   structured tool-calling reliability.
 - Business packages, one concern each: conversation (master thread +
-  windows), tasks (commitments, recurrence DSL, nudges, briefing), life
+  windows), tasks (commitments, recurrence DSL, nudges, briefing — backed
+  by `type=task` nodes; the old `tasks` collection is retired), life
   (owner-defined log + journal), knowledge (memory & skill lifecycle —
   the consent boundary), recap (hierarchical summaries), verify (words
   vs deeds), heads (switchable personas — built-ins, active head,
@@ -89,9 +90,12 @@ One binary, layered as: gateway → turn pipeline → business logic.
   GPU/Vulkan, chosen on the Models page — saved to owner_settings, applied at
   restart — or via BALAUR_PROCESSOR).
 - Data lives in PocketBase collections: conversations, messages,
-  nodes, edges, tasks, entries, summaries, heads,
+  nodes, edges, entries, summaries, heads,
   llm_providers, llm_models, llm_settings, extensions, audit_log,
   node_types.
+  The `tasks` collection was retired in plan 167; tasks are now
+  `type=task` nodes in the `nodes` collection, with workflow state
+  (`open`/`done`/`dropped`) stored in `props.state`.
   Inspectable with any SQLite tool. The knowledge spine is unified:
   every memory, skill, journal day, note, and typed object (person,
   book, idea, place) is a typed row in `nodes` (distinguished by `type`),

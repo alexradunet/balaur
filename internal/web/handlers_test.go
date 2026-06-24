@@ -20,6 +20,7 @@ import (
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/store"
+	itasks "github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/tools"
 	"github.com/alexradunet/balaur/internal/turn"
 	_ "github.com/alexradunet/balaur/migrations"
@@ -261,11 +262,10 @@ func TestChatHandler(t *testing.T) {
 
 func TestTaskTransition(t *testing.T) {
 	app := newWebApp(t)
-	coll, _ := app.FindCollectionByNameOrId("tasks")
-	rec := core.NewRecord(coll)
-	rec.Set("title", "Test")
-	rec.Set("status", "open")
-	app.Save(rec)
+	rec, err := itasks.Create(app, itasks.CreateOpts{Title: "Test"})
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
 
 	scenario := tests.ApiScenario{
 		Name:            "transition task to done",

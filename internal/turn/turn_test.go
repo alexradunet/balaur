@@ -37,7 +37,7 @@ func TestRunPersistsHonestCaptureTurn(t *testing.T) {
 	}
 
 	// The deed happened: the task row exists.
-	tasks, err := app.FindRecordsByFilter("tasks", "title = 'Call the notary'", "", 2, 0)
+	tasks, err := app.FindRecordsByFilter("nodes", "type = 'task' && title = 'Call the notary'", "", 2, 0)
 	if err != nil || len(tasks) != 1 {
 		t.Fatalf("want exactly one task, got %d (err %v)", len(tasks), err)
 	}
@@ -149,7 +149,7 @@ func TestRunRepairPassSucceeds(t *testing.T) {
 	}
 
 	// The deed happened: the task row exists.
-	tasks, err := app.FindRecordsByFilter("tasks", "title = 'Call the notary'", "", 2, 0)
+	tasks, err := app.FindRecordsByFilter("nodes", "type = 'task' && title = 'Call the notary'", "", 2, 0)
 	if err != nil || len(tasks) != 1 {
 		t.Fatalf("want exactly one task, got %d (err %v)", len(tasks), err)
 	}

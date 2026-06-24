@@ -131,7 +131,7 @@ func Reset(app core.App) (*Result, error) {
 	if res.Messages, err = del("messages", "origin = {:m}", dbx.Params{"m": Marker}); err != nil {
 		return nil, err
 	}
-	if res.Tasks, err = del("tasks", "source = {:m}", dbx.Params{"m": Marker}); err != nil {
+	if res.Tasks, err = del("nodes", "type = 'task' && props.source = {:m}", dbx.Params{"m": Marker}); err != nil {
 		return nil, err
 	}
 	if res.Memories, err = del("nodes", "type = 'memory' && props.source = {:m}", dbx.Params{"m": Marker}); err != nil {
@@ -222,7 +222,11 @@ func seedMessages(app core.App, now time.Time) (int, error) {
 }
 
 func seedTasks(app core.App, now time.Time) (int, error) {
-	if n, _ := app.CountRecords("tasks", dbx.HashExp{"source": Marker}); n > 0 {
+	// Idempotency: look for a task node with props.source=Marker.
+	// tasks is gone (plan 167); tasks are now type=task nodes in the nodes collection.
+	if _, err := app.FindFirstRecordByFilter("nodes",
+		"type = {:t} && props.source = {:m}",
+		dbx.Params{"t": "task", "m": Marker}); err == nil {
 		return 0, nil
 	}
 	specs := []tasks.CreateOpts{

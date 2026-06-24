@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
 )
 
@@ -23,9 +24,9 @@ type CreateOpts struct {
 	Source        string
 }
 
-// Create validates and stores a new open task. Creating is owner-consented
-// by nature (the owner just asked for it) — unlike memories there is no
-// proposal step; a wrong task is one Drop away.
+// Create validates and stores a new open task as a type=task node. Creating is
+// owner-consented by nature (the owner just asked for it) — unlike memories
+// there is no proposal step; a wrong task is one Drop away.
 func Create(app core.App, o CreateOpts) (*core.Record, error) {
 	title := strings.TrimSpace(o.Title)
 	if title == "" {
@@ -38,23 +39,22 @@ func Create(app core.App, o CreateOpts) (*core.Record, error) {
 	}
 	o.Due = due
 
-	col, err := app.FindCollectionByNameOrId("tasks")
-	if err != nil {
-		return nil, fmt.Errorf("finding tasks collection: %w", err)
+	props := map[string]any{
+		"state":           "open",
+		"recur":           recur,
+		"recur_from_done": o.RecurFromDone,
+		"source":          strings.TrimSpace(o.Source),
 	}
-	rec := core.NewRecord(col)
-	rec.Set("title", title)
-	rec.Set("notes", strings.TrimSpace(o.Notes))
-	rec.Set("status", "open")
 	if !o.Due.IsZero() {
-		rec.Set("due", o.Due.UTC())
+		props["due"] = fmtTime(o.Due.UTC())
 	}
-	rec.Set("recur", recur)
-	rec.Set("recur_from_done", o.RecurFromDone)
-	rec.Set("source", o.Source)
-	if err := app.Save(rec); err != nil {
-		return nil, fmt.Errorf("saving task: %w", err)
+
+	rec, err := nodes.Create(app, "task", title, strings.TrimSpace(o.Notes), nodes.StatusActive, props)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: creating task node: %w", err)
 	}
+	hydrate(rec)
+	// nodes.Create already saved; hydrate is post-save.
 	store.Audit(app, "tasks", "task.create", rec.Id, true, map[string]any{"title": title, "recur": recur})
 	return rec, nil
 }
@@ -118,9 +118,9 @@ func Update(app core.App, rec *core.Record, now time.Time, o UpdateOpts) error {
 			return fmt.Errorf("tasks: title cannot be blank")
 		}
 	}
-	notes := rec.GetString("notes")
+	body := rec.GetString("body")
 	if o.Notes != nil {
-		notes = strings.TrimSpace(*o.Notes)
+		body = strings.TrimSpace(*o.Notes)
 	}
 	recur := rec.GetString("recur")
 	if o.Recur != nil {
@@ -154,17 +154,23 @@ func Update(app core.App, rec *core.Record, now time.Time, o UpdateOpts) error {
 	}
 
 	rec.Set("title", title)
-	rec.Set("notes", notes)
-	rec.Set("recur", recur)
-	rec.Set("recur_from_done", recurFromDone)
+	rec.Set("body", body)
+
+	props := nodes.Props(rec)
+	props["recur"] = recur
+	props["recur_from_done"] = recurFromDone
 	if due.IsZero() {
-		rec.Set("due", "") // clear to someday
+		delete(props, "due")
 	} else {
-		rec.Set("due", due.UTC())
+		props["due"] = fmtTime(due.UTC())
 	}
+	rec.Set("props", props)
+
+	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
 		return fmt.Errorf("saving task: %w", err)
 	}
+	hydrate(rec)
 	store.Audit(app, "tasks", "task.update", rec.Id, true, map[string]any{"title": title, "recur": recur})
 	return nil
 }
@@ -176,7 +182,7 @@ type DoneResult struct {
 	Completions int       // completions logged so far, including this one
 }
 
-// Done completes a task. One-offs close (status done). Recurring tasks log a
+// Done completes a task. One-offs close (state done). Recurring tasks log a
 // completion entry, bump due to the next occurrence — anchored on the old
 // due, or on now when recur_from_done — and stay open with a cleared
 // fired-state, so the nudger treats the new due freshly.
@@ -189,12 +195,17 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		return DoneResult{}, err
 	}
 
+	props := nodes.Props(rec)
+
 	if rule.IsZero() {
-		rec.Set("status", "done")
-		rec.Set("done_at", now.UTC())
+		props["state"] = "done"
+		props["done_at"] = fmtTime(now.UTC())
+		rec.Set("props", props)
+		dehydrate(rec)
 		if err := app.Save(rec); err != nil {
 			return DoneResult{}, fmt.Errorf("saving task: %w", err)
 		}
+		hydrate(rec)
 		store.Audit(app, "tasks", "task.done", rec.Id, true, nil)
 		return DoneResult{}, nil
 	}
@@ -207,9 +218,11 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		anchor = now
 	}
 	next := Next(rule, anchor, now)
-	rec.Set("due", next.UTC())
-	rec.Set("nudged_at", "")
-	rec.Set("snoozed_until", "")
+	props["due"] = fmtTime(next.UTC())
+	delete(props, "nudged_at")
+	delete(props, "snoozed_until")
+	rec.Set("props", props)
+	dehydrate(rec)
 	// addEntry + Save are one logical operation: if the process dies between
 	// them, the task still reads as due and the nudger re-fires. RunInTransaction
 	// makes them all-or-nothing. Audit and the post-commit count stay outside so
@@ -225,6 +238,7 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 	}); err != nil {
 		return DoneResult{}, err
 	}
+	hydrate(rec)
 	n, _ := app.CountRecords("entries", dbx.HashExp{"kind": "completion", "task": rec.Id})
 	store.Audit(app, "tasks", "task.done", rec.Id, true, map[string]any{"next_due": next.UTC().Format(time.RFC3339)})
 	return DoneResult{Recurring: true, NextDue: next, Completions: int(n)}, nil
@@ -236,11 +250,15 @@ func Snooze(app core.App, rec *core.Record, until time.Time) error {
 	if rec.GetString("status") != "open" {
 		return fmt.Errorf("tasks: %q is not open", rec.GetString("title"))
 	}
-	rec.Set("snoozed_until", until.UTC())
-	rec.Set("nudged_at", "")
+	props := nodes.Props(rec)
+	props["snoozed_until"] = fmtTime(until.UTC())
+	delete(props, "nudged_at")
+	rec.Set("props", props)
+	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
 		return fmt.Errorf("saving task: %w", err)
 	}
+	hydrate(rec)
 	store.Audit(app, "tasks", "task.snooze", rec.Id, true, map[string]any{"until": until.UTC().Format(time.RFC3339)})
 	return nil
 }
@@ -250,10 +268,14 @@ func Drop(app core.App, rec *core.Record) error {
 	if rec.GetString("status") != "open" {
 		return fmt.Errorf("tasks: %q is not open", rec.GetString("title"))
 	}
-	rec.Set("status", "dropped")
+	props := nodes.Props(rec)
+	props["state"] = "dropped"
+	rec.Set("props", props)
+	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
 		return fmt.Errorf("saving task: %w", err)
 	}
+	hydrate(rec)
 	store.Audit(app, "tasks", "task.drop", rec.Id, true, nil)
 	return nil
 }
@@ -262,19 +284,24 @@ func Drop(app core.App, rec *core.Record) error {
 // title and notes (ANDed — each term must match), due-ascending with
 // someday items (empty due) first.
 func OpenTasks(app core.App, terms []string) ([]*core.Record, error) {
-	var filter strings.Builder
-	filter.WriteString("status = 'open'")
-	params := dbx.Params{}
-	for i, t := range terms {
-		t = strings.TrimSpace(t)
-		if t == "" {
+	recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: loading task nodes: %w", err)
+	}
+	var out []*core.Record
+	for _, r := range recs {
+		hydrate(r)
+		if nodes.PropString(r, "state") != "open" {
 			continue
 		}
-		k := fmt.Sprintf("t%d", i)
-		filter.WriteString(fmt.Sprintf(" && (title ~ {:%s} || notes ~ {:%s})", k, k))
-		params[k] = t
+		if !matchTerms(r, terms) {
+			continue
+		}
+		out = append(out, r)
 	}
-	return app.FindRecordsByFilter("tasks", filter.String(), "due", 200, 0, params)
+	// Sort: someday (empty due) first, then ascending due.
+	sortByDue(out)
+	return out, nil
 }
 
 // Buckets groups open tasks the way humans plan: what slipped, what is
@@ -325,4 +352,104 @@ func addEntry(app core.App, kind, taskID string, value map[string]any, text stri
 		return fmt.Errorf("saving %s entry: %w", kind, err)
 	}
 	return nil
+}
+
+// dehydrate resets the `status` alias back to the node's real consent-axis
+// value ("active") before app.Save, so the SelectField validation does not
+// reject the task workflow values (open/done/dropped). Call it immediately
+// before every app.Save on a task node; call hydrate immediately after.
+func dehydrate(rec *core.Record) {
+	rec.SetRaw("status", nodes.StatusActive)
+}
+
+// Hydrate is the exported form of hydrate for use by other packages
+// (cli, web, tools) that load task nodes directly and need the legacy field aliases.
+func Hydrate(rec *core.Record) { hydrate(rec) }
+
+// hydrate sets legacy field aliases on a task node so callers can use
+// rec.GetString("status"), rec.GetString("notes"), rec.GetDateTime("due"), etc.
+// without knowing the node storage shape. We use SetRaw to bypass the node
+// schema validation — these are ephemeral read-only aliases; app.Save writes
+// only the real schema columns (type, title, body, status, props).
+func hydrate(rec *core.Record) {
+	props := nodes.Props(rec)
+	getString := func(key string) string {
+		if v, ok := props[key]; ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+		return ""
+	}
+
+	// Workflow state alias: props.state → "status" (open/done/dropped).
+	// SetRaw bypasses the SelectField validation on node.status (consent axis).
+	rec.SetRaw("status", getString("state"))
+	// notes alias: body → "notes".
+	rec.SetRaw("notes", rec.GetString("body"))
+	// Date fields: stored as PB-formatted strings in props; expose under legacy names.
+	rec.SetRaw("due", getString("due"))
+	rec.SetRaw("snoozed_until", getString("snoozed_until"))
+	rec.SetRaw("nudged_at", getString("nudged_at"))
+	rec.SetRaw("done_at", getString("done_at"))
+	// Text fields.
+	rec.SetRaw("recur", getString("recur"))
+	// Bool field.
+	rfd := false
+	if v, ok := props["recur_from_done"]; ok {
+		if b, ok := v.(bool); ok {
+			rfd = b
+		}
+	}
+	rec.SetRaw("recur_from_done", rfd)
+	rec.SetRaw("source", getString("source"))
+}
+
+// fmtTime formats a time as the PocketBase date string used for DateFields:
+// "2006-01-02 15:04:05.000Z". Using this format in props means hydrated
+// rec.GetDateTime("due") works exactly as before.
+func fmtTime(t time.Time) string {
+	return t.UTC().Format("2006-01-02 15:04:05.000Z")
+}
+
+// matchTerms reports whether rec's title or notes contain all the given terms
+// (case-insensitive substring match, ANDed).
+func matchTerms(rec *core.Record, terms []string) bool {
+	for _, t := range terms {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		tl := strings.ToLower(t)
+		title := strings.ToLower(rec.GetString("title"))
+		notes := strings.ToLower(rec.GetString("notes"))
+		if !strings.Contains(title, tl) && !strings.Contains(notes, tl) {
+			return false
+		}
+	}
+	return true
+}
+
+// sortByDue sorts records so someday (zero due) come first, then ascending.
+func sortByDue(recs []*core.Record) {
+	for i := 1; i < len(recs); i++ {
+		r := recs[i]
+		due := r.GetDateTime("due").Time()
+		j := i
+		for j > 0 {
+			prev := recs[j-1]
+			prevDue := prev.GetDateTime("due").Time()
+			// someday (zero) sorts before any real due
+			if due.IsZero() && !prevDue.IsZero() {
+				recs[j] = recs[j-1]
+				j--
+			} else if !due.IsZero() && !prevDue.IsZero() && due.Before(prevDue) {
+				recs[j] = recs[j-1]
+				j--
+			} else {
+				break
+			}
+		}
+		recs[j] = r
+	}
 }

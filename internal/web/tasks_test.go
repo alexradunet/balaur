@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
+	itasks "github.com/alexradunet/balaur/internal/tasks"
 	_ "github.com/alexradunet/balaur/migrations"
 )
 
@@ -40,24 +41,26 @@ func TestQuestGroup(t *testing.T) {
 	}
 }
 
-// seedTaskWithRecur seeds a task with a given title, status, recur rule, and optional due.
+// seedTaskWithRecur seeds a task node with a given title, status, recur rule, and optional due.
 func seedTaskWithRecur(t testing.TB, app *tests.TestApp, title, status, recur string, due time.Time) *core.Record {
 	t.Helper()
-	coll, err := app.FindCollectionByNameOrId("tasks")
+	// Recurring tasks require a due anchor; supply one when the caller passes zero.
+	if recur != "" && due.IsZero() {
+		due = time.Now().Add(time.Hour)
+	}
+	rec, err := itasks.Create(app, itasks.CreateOpts{Title: title, Recur: recur, Due: due})
 	if err != nil {
-		t.Fatalf("find tasks collection: %v", err)
+		t.Fatalf("create task %q: %v", title, err)
 	}
-	rec := core.NewRecord(coll)
-	rec.Set("title", title)
-	rec.Set("status", status)
-	if recur != "" {
-		rec.Set("recur", recur)
-	}
-	if !due.IsZero() {
-		rec.Set("due", due.UTC())
-	}
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save task: %v", err)
+	if status == "done" {
+		if _, err = itasks.Done(app, rec, time.Now()); err != nil {
+			t.Fatalf("done task %q: %v", title, err)
+		}
+		rec, err = app.FindRecordById("nodes", rec.Id)
+		if err != nil {
+			t.Fatalf("reload done task %q: %v", title, err)
+		}
+		itasks.Hydrate(rec)
 	}
 	return rec
 }
