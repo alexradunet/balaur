@@ -99,6 +99,9 @@ func LinkedFrom(backlinks []BacklinkView) g.Node {
 		items = append(items, h.Li(h.A(
 			h.Class("wikilink"),
 			h.Href("/ui/show/note?id="+b.ID),
+			// @get morphs #panel-inner; a plain href would full-navigate to the
+			// SSE-only /ui/show route and render raw patch text (see markdown.go).
+			data.On("click", "@get('/ui/show/note?id="+b.ID+"'); basmOpenPanel()", data.ModifierPrevent),
 			g.Text(b.Title), // escaping path — no XSS
 		)))
 	}

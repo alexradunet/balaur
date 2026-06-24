@@ -61,7 +61,9 @@ func TestMemoryCardStructure(t *testing.T) {
 		"limit: 6",
 		`class="ucard-list"`,
 		`class="ucard-row"`,
-		`<a href="/ui/show/memory">`,
+		// Row title is a Datastar @get (not a bare href) so the click morphs the
+		// panel instead of full-navigating to the SSE-only /ui/show route.
+		`<a href="/ui/show/memory" data-on:click__prevent="@get(&#39;/ui/show/memory&#39;)">`,
 		"Prefers dark mode",
 		"preference",
 		`class="kcard-pips"`,

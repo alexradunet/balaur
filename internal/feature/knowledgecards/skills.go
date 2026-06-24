@@ -130,7 +130,7 @@ func skillsSummaryBody(rows []SkillRow) g.Node {
 func skillSummaryRow(row SkillRow) g.Node {
 	children := []g.Node{
 		h.Class("ucard-row"),
-		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/skills"), g.Text(row.Name))),
+		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/skills"), g.Attr("data-on:click__prevent", "@get('/ui/show/skills')"), g.Text(row.Name))),
 		g.If(row.Enabled, h.Span(h.Class("kcard-on"), g.Text("enabled"))),
 	}
 	if row.Description != "" {

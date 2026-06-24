@@ -87,7 +87,13 @@ func RenderMarkdownLinked(s string, resolve func(title string) (id string, ok bo
 			return `<span class="wikilink wikilink-unresolved">` + display + `</span>`
 		}
 		href := "/ui/show/note?id=" + html.EscapeString(id)
-		return `<a class="wikilink" href="` + href + `">` + display + `</a>`
+		// Datastar @get so the click morphs #panel-inner instead of doing a full
+		// browser navigation — /ui/show is SSE-only, so a plain href would render
+		// raw "event: datastar-patch-elements" text. basmOpenPanel() reveals the
+		// panel when the chip is clicked from a chat bubble (no-op when already in
+		// the panel). Injected after the bluemonday pass, so the attribute survives.
+		action := "@get('" + href + "'); basmOpenPanel()"
+		return `<a class="wikilink" href="` + href + `" data-on:click__prevent="` + action + `">` + display + `</a>`
 	})
 	return g.Raw(out)
 }

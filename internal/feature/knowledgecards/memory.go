@@ -73,7 +73,7 @@ func memoryBody(v MemoryView) g.Node {
 
 func memoryRow(row MemoryRow) g.Node {
 	return h.Li(h.Class("ucard-row"),
-		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/memory"), g.Text(row.Title))),
+		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/memory"), g.Attr("data-on:click__prevent", "@get('/ui/show/memory')"), g.Text(row.Title))),
 		h.Span(h.Class("kcard-meta"), g.Text(row.Category)),
 		ui.Pips(row.Importance, 5, ""),
 	)

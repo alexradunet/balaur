@@ -135,7 +135,12 @@ func modelSwitcherNode(d homeData) g.Node {
 		head = append(head, h.Span(h.Class("model-current"), g.Text(d.ActiveModel)))
 	}
 	head = append(head, h.A(h.Class("model-switcher-manage"),
-		h.Href("/ui/show/settings?section=models"), g.Text("Manage models →")))
+		h.Href("/ui/show/settings?section=models"),
+		// @get morphs the panel; a plain href would full-navigate to the SSE-only
+		// /ui/show route and render raw patch text. basmOpenPanel() reveals the
+		// panel since this link lives in the always-visible chatbar.
+		g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=models'); basmOpenPanel()"),
+		g.Text("Manage models →")))
 
 	kids := []g.Node{
 		g.Attr("aria-label", "Model"),
@@ -148,13 +153,16 @@ func modelSwitcherNode(d homeData) g.Node {
 		}
 		kids = append(kids, h.Div(h.Class("model-switcher-empty"),
 			h.Span(g.Text(msg)),
-			h.A(h.Href("/ui/show/settings?section=models"), g.Text("Set up a model →")),
+			h.A(h.Href("/ui/show/settings?section=models"),
+				g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=models'); basmOpenPanel()"),
+				g.Text("Set up a model →")),
 		))
 	}
 	kids = append(kids, h.Div(h.Class("chatbar-profile-link"),
 		h.Span(h.Class("balaur-avatar balaur-avatar-soul"), g.Attr("aria-hidden", "true"),
 			h.Img(h.Class("px"), h.Src(d.SoulAvatarURL), h.Alt(""), g.Attr("decoding", "async"))),
 		h.A(h.Href("/ui/show/settings?section=profile"), h.Class("chatbar-profile-href"),
+			g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=profile'); basmOpenPanel()"),
 			g.Text("Your avatar & profile →")),
 	))
 	return h.Section(append([]g.Node{h.Class("model-switcher")}, kids...)...)

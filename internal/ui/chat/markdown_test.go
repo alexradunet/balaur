@@ -33,9 +33,17 @@ func TestRenderMarkdownStringPassesWikilink(t *testing.T) {
 
 func TestRenderMarkdownLinkedResolved(t *testing.T) {
 	got := render(t, chat.RenderMarkdownLinked("[[Foo]]", resolveTo("abc123")))
-	want := `<a class="wikilink" href="/ui/show/note?id=abc123">Foo</a>`
-	if !strings.Contains(got, want) {
-		t.Errorf("missing resolved chip %q in: %s", want, got)
+	// The chip is an anchor with the resolved href AND a Datastar @get so the
+	// click morphs the panel instead of full-navigating to the SSE-only route.
+	for _, want := range []string{
+		`class="wikilink"`,
+		`href="/ui/show/note?id=abc123"`,
+		`data-on:click__prevent="@get('/ui/show/note?id=abc123'); basmOpenPanel()"`,
+		`>Foo</a>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in resolved chip: %s", want, got)
+		}
 	}
 	if strings.Contains(got, "[[Foo]]") {
 		t.Errorf("raw wikilink leaked into output: %s", got)

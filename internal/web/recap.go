@@ -329,7 +329,11 @@ func recapCardsNode(cards []recapView) g.Node {
 		} else {
 			if c.Date != "" {
 				controls = append(controls, h.A(h.Class("recap-daylink"),
-					h.Href("/ui/show/day?date="+c.Date), g.Text("visit")))
+					h.Href("/ui/show/day?date="+c.Date),
+					// @get morphs the panel; a plain href would full-navigate to the
+					// SSE-only /ui/show route and render raw patch text.
+					g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+c.Date+"'); basmOpenPanel()"),
+					g.Text("visit")))
 			}
 			expr := "el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start=" + c.Start + "')"
 			controls = append(controls, h.Button(h.Class("recap-expand"), h.Type("button"),
