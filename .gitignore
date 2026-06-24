@@ -4,6 +4,10 @@ pb_data/
 *.db-shm
 *.db-wal
 
+# Local dev env (API keys for make dev) — never commit. See dev.env.example.
+dev.env
+pb_data.bak-*
+
 # Models and inference libraries (downloaded data, not source)
 *.gguf
 models/

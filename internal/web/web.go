@@ -144,6 +144,10 @@ func Register(se *core.ServeEvent) error {
 	// switch. UnregisterAll on terminate keeps the global registry clean between
 	// test apps.
 	feature.RegisterAll(se.App)
+	// Dev convenience: if BALAUR_MISTRAL_KEY is set (make dev sources dev.env),
+	// register + activate the Mistral cloud model so chat works during testing.
+	// No-op without the key — never auto-enables the cloud path in prod.
+	bootstrapDevCloudModel(se.App)
 	se.App.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
 		feature.UnregisterAll()
 		return e.Next()

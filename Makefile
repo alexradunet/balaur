@@ -60,6 +60,7 @@ tools:
 dev:
 	@$(MAKE) --no-print-directory dev-port-open || echo "dev: :$(DEV_PORT) not opened automatically — run 'make dev-port-open' (sudo) or open it manually"
 	@trap '$(MAKE) --no-print-directory dev-port-close || true' EXIT; \
+	if [ -f dev.env ]; then set -a; . ./dev.env; set +a; echo "dev: sourced dev.env (BALAUR_MISTRAL_KEY set: $${BALAUR_MISTRAL_KEY:+yes})"; fi; \
 	if command -v air >/dev/null 2>&1; then \
 		air; \
 	else \
