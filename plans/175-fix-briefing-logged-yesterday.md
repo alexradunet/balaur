@@ -1,16 +1,25 @@
-# Plan 175: Fix the morning briefing's "logged yesterday" line (silently empty in production)
+# Plan 175: Fix the morning briefing's "logged yesterday" line (always silently empty in production)
 
 > **Executor instructions**: Follow this plan step by step. Run every
 > verification command and confirm the expected result before moving to the
 > next step. If anything in the "STOP conditions" section occurs, stop and
-> report — do not improvise. When done, update the status row for this plan
-> in `plans/README.md` — unless a reviewer dispatched you and told you they
+> report — do not improvise. When done, update the status row for this plan in
+> `plans/README.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 5dfb285..HEAD -- internal/life/life.go internal/life/day.go internal/life/life_test.go internal/tasks/briefing.go internal/tasks/briefing_test.go`
-> If any in-scope file changed since this plan was written, compare the
+> **Drift check (run first)**: `git diff --stat 4b93d9c..HEAD -- internal/tasks/briefing.go internal/tasks/briefing_test.go`
+> If either in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
+
+> **Note — this version supersedes an earlier draft.** A first version routed the
+> fix through a new `internal/life` export. That is **infeasible**: a Go import
+> cycle exists because `internal/life/day.go` already imports `internal/tasks`
+> (`tasks.Hydrate` at `day.go:90`), so `internal/tasks` cannot import
+> `internal/life`. This version reads `type=measure` nodes **directly** from
+> `internal/tasks` (which already imports `internal/nodes`), which is
+> self-contained and avoids the cycle entirely. **Do NOT add an
+> `internal/life` import to `internal/tasks` — it will not compile.**
 
 ## Status
 
@@ -19,46 +28,35 @@
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: bug
-- **Planned at**: commit `5dfb285`, 2026-06-24 (brief cited `12a48bf`; the live tree at planning time was `5dfb285`, same date — line numbers below are confirmed against `5dfb285`)
+- **Planned at**: commit `4b93d9c`, 2026-06-25
+- **Supersedes**: the original 175 (BLOCKED on an import cycle)
 
 ## Why this matters
 
-The morning briefing is supposed to close with a reflective line such as
-`logged yesterday: weight 82.5 kg`, mirroring what the owner tracked the day
-before. In production that line is **always empty**: `loggedYesterday` in
-`internal/tasks/briefing.go` queries the old `entries` collection with flat
-`value_num`/`unit` columns, but owner measurements no longer live there —
-`internal/life.Log` now stores each measurement as a `type=measure` **node**
-(value/unit/kind/noted_at inside the node's `props` JSON). The query returns
-nothing, so the feature is silently dead. Worse, its test
+The morning briefing has a reflective line — e.g. `logged yesterday: weight
+82.5 kg` — meant to mirror back what the owner tracked the day before. In
+production it is **always empty**: `internal/tasks/briefing.go`'s
+`loggedYesterday` queries the `entries` collection for rows with flat
+`value_num`/`unit` columns, but owner measurements no longer live there. The
+measures-to-nodes migration (`migrations/1750000030_measures_to_nodes.go`)
+moved every measurement into the `nodes` collection as a `type=measure` node
+with `kind`/`value_num`/`unit`/`noted_at` inside the `props` JSON, and
+`internal/life/life.go` `Log` (the only writer) now calls
+`nodes.Create(app, "measure", …)`. So the `entries` query returns nothing and
+the companion never reflects yesterday's numbers. A test
 (`TestBriefingMentionsYesterdayLog`) seeds a row straight into `entries`, so it
-stays GREEN while the real path is broken — false confidence. This plan routes
-`loggedYesterday` through the `life` package (which owns measure nodes) and
-rewrites the test to seed through the real write path (`life.Log`), so the test
-fails when the feature is broken.
+stays green while production is broken — false confidence. This plan points the
+briefing at the real measure nodes and fixes the test to seed via the real node
+shape.
 
 ## Current state
 
-Files in play:
-
-- `internal/tasks/briefing.go` — the briefing; `loggedYesterday` (lines 136–163)
-  holds the broken `entries` query. `Briefing()` (line 45) consumes it at lines
-  62–64.
-- `internal/life/life.go` — owns measure nodes. `Log` (line 67) is the real
-  write path. **`listMeasuresInRange` (lines 300–321) already does exactly the
-  windowed read this fix needs** — it just isn't exported. `Series` (line 230),
-  `Kinds` (line 171), and the helpers `measureNotedAt` (line 53), `hydrate`
-  (line 133), `sortByNotedAt` (line 256) are the exemplars to match.
-- `internal/life/day.go` — `Range()` (line 77) is the **only** caller of
-  `listMeasuresInRange` today (line 81).
-- `internal/life/life_test.go` — exemplar for exercising `life.Log` with a
-  backdated `NotedAt`.
-- `internal/tasks/briefing_test.go` — `TestBriefingMentionsYesterdayLog`
-  (lines 131–161) is the false-confidence test to rewrite.
-
-### The broken read — `internal/tasks/briefing.go:140-163` (VERBATIM)
+- `internal/tasks/briefing.go` — `package tasks`; imports `context, fmt,
+  strings, time, dbx, core, conversation, llm, store` (it does **not** yet
+  import `internal/nodes`). Contains `loggedYesterday` (lines ~136–163), broken:
 
 ```go
+// internal/tasks/briefing.go (current — the bug)
 func loggedYesterday(app core.App, now time.Time) string {
 	ys := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -1)
 	recs, err := app.FindRecordsByFilter("entries",
@@ -85,287 +83,129 @@ func loggedYesterday(app core.App, now time.Time) string {
 }
 ```
 
-`compressLine` (a helper in the same file, `briefing.go:165`) is reused below —
-keep using it.
+  `compressLine(s string, n int) string` lives in the same file (just below) and
+  is reused as-is.
 
-### Where it is consumed — `internal/tasks/briefing.go:61-64` (VERBATIM)
+- The measure node shape (the real production source). From
+  `internal/life/life.go`:
+  - `Log` (line ~67) writes `nodes.Create(app, "measure", title, body,
+    nodes.StatusActive, props)` where `props` carries `kind`, `value_num`
+    (only when non-zero), `unit` (only when non-empty), and `noted_at`.
+  - `noted_at` is stored as the PocketBase datetime string with this exact
+    layout (do not guess it — copy it):
 
 ```go
-	lines := dayLines(app, bk, now)
-	if y := loggedYesterday(app, now); y != "" {
-		lines = append(lines, y)
-	}
+// internal/life/life.go:45 — the noted_at format
+return t.UTC().Format("2006-01-02 15:04:05.000Z")
 ```
 
-### The real write path — `internal/life/life.go:65-107` (VERBATIM, abbreviated to the load-bearing part)
+  - The canonical parse + skip pattern (mirror it; you cannot call this — it is
+    in `package life` — so replicate it):
 
 ```go
-// Log stores one entry as a type=measure node. The owner's statement is the
-// consent; corrections go through Drop.
-func Log(app core.App, o LogOpts) (*core.Record, error) {
-	kind := NormalizeKind(o.Kind)
-	if kind == "" {
-		return nil, fmt.Errorf("life: kind is required")
+// internal/life/life.go:53-63 — measureNotedAt
+func measureNotedAt(r *core.Record) (time.Time, bool) {
+	s := nodes.PropString(r, "noted_at")
+	if s == "" {
+		return time.Time{}, false
 	}
-	...
-	props := map[string]any{
-		"kind":     kind,
-		"noted_at": fmtTime(o.NotedAt.UTC()),
-	}
-	if o.ValueNum != 0 {
-		props["value_num"] = o.ValueNum
-	}
-	if u := strings.ToLower(strings.TrimSpace(o.Unit)); u != "" {
-		props["unit"] = u
-	}
-	...
-	rec, err := nodes.Create(app, "measure", title, body, nodes.StatusActive, props)
-	...
-}
-```
-
-**Premise confirmed**: `Log` writes a `type=measure` node, NOT an `entries`
-row. (If the live code says otherwise, see STOP conditions.)
-
-### The helper to export — `internal/life/life.go:300-321` (VERBATIM)
-
-```go
-// listMeasuresInRange loads active type=measure nodes whose noted_at falls in
-// [start, end), hydrated and ordered oldest-first by noted_at. Used by Day.
-func listMeasuresInRange(app core.App, start, end time.Time) ([]*core.Record, error) {
-	recs, err := app.FindRecordsByFilter("nodes",
-		"type = 'measure' && status = 'active'", "", 0, 0, nil)
+	t, err := time.Parse("2006-01-02 15:04:05.000Z", s)
 	if err != nil {
-		return nil, fmt.Errorf("loading measures for range: %w", err)
+		return time.Time{}, false
 	}
-	// Filter by noted_at in Go since noted_at is stored in props (JSON), not a
-	// top-level DateField — PocketBase filter cannot reach inside JSON easily.
-	out := make([]*core.Record, 0)
-	for _, r := range recs {
-		notedAt, ok := measureNotedAt(r)
-		if !ok || notedAt.Before(start) || !notedAt.Before(end) {
-			continue
-		}
-		hydrate(r)
-		out = append(out, r)
-	}
-	sortByNotedAt(out)
-	return out, nil
+	return t, true
 }
 ```
 
-This already returns exactly what the brief described as `LoggedInRange`:
-active `type=measure` nodes whose `props.noted_at` is in `[start, end)`, across
-ALL kinds, hydrated and sorted oldest-first. **Reuse it by exporting it — do
-NOT author a second helper** (suckless: one source of truth; see AGENTS.md
-"SUCKLESS … one source of truth per concern").
+  - `internal/life/life.go:300-321` `listMeasuresInRange` is the exemplar read:
+    it loads `FindRecordsByFilter("nodes", "type = 'measure' && status =
+    'active'", …)` and filters `noted_at` **in Go** (PocketBase filters cannot
+    reach inside the `props` JSON). Your new `loggedYesterday` mirrors this
+    read, but stays in `internal/tasks` and reads `props` directly.
 
-### The hydrate aliases the formatter relies on — `internal/life/life.go:133-158` (VERBATIM)
+- `internal/nodes/nodes.go:62` provides `func PropString(rec *core.Record, key
+  string) string` (reads a string out of the `props` JSON). There is **no**
+  `PropFloat` — read the numeric `value_num` by unmarshalling `props` yourself
+  (see Step 1).
 
-```go
-func hydrate(rec *core.Record) {
-	...
-	rec.SetRaw("kind", getString("kind"))
-	rec.SetRaw("value_num", getFloat("value_num"))
-	rec.SetRaw("unit", getString("unit"))
-	rec.SetRaw("noted_at", getString("noted_at"))
-	rec.SetRaw("text", rec.GetString("body"))
-}
-```
+- `internal/tasks/tasks.go:11` already imports `github.com/alexradunet/balaur/internal/nodes`,
+  so the package depends on `nodes` (no new module dependency; you only add the
+  import line to `briefing.go`).
 
-So after the helper hydrates each record, the formatter can read
-`r.GetString("kind")`, `r.GetFloat("value_num")`, `r.GetString("unit")`, and
-`r.GetString("text")` — the same fields the old `entries` code read. **The
-field names match**, so the formatter loop barely changes.
+- `internal/tasks/briefing_test.go` — `package tasks` (white-box, line 1).
+  `TestBriefingMentionsYesterdayLog` (line ~15) seeds straight into the dead
+  path: `app.FindCollectionByNameOrId("entries")` then `rec.Set("value_num",
+  82.5)`, `rec.Set("noted_at", now.AddDate(0,0,-1).UTC())`. Because the test is
+  `package tasks` and `internal/life` imports `internal/tasks`, the test
+  **cannot** import `internal/life` either — so seed a `measure` node directly
+  with `nodes.Create` (Step 2), not via `life.Log`.
 
-### The day.go caller — `internal/life/day.go:80-85` (VERBATIM)
+### Repo conventions that apply
 
-```go
-	// Logged measures: type=measure nodes whose noted_at falls in [start, end).
-	logged, err := listMeasuresInRange(app, start, end)
-	if err != nil {
-		return data, fmt.Errorf("range logged query: %w", err)
-	}
-	data.Logged = logged
-```
-
-### The false-confidence test — `internal/tasks/briefing_test.go:131-161` (VERBATIM)
-
-```go
-func TestBriefingMentionsYesterdayLog(t *testing.T) {
-	app := storetest.NewApp(t)
-	now := at(10)
-	if _, err := Create(app, CreateOpts{Title: "Pay rent", Due: at(15)}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	// An owner-defined tracker entry from yesterday (kind is free text).
-	col, err := app.FindCollectionByNameOrId("entries")
-	if err != nil {
-		t.Fatalf("entries collection: %v", err)
-	}
-	rec := core.NewRecord(col)
-	rec.Set("kind", "weight")
-	rec.Set("value_num", 82.5)
-	rec.Set("unit", "kg")
-	rec.Set("noted_at", now.AddDate(0, 0, -1).UTC())
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save entry: %v", err)
-	}
-
-	if err := Briefing(app, nil, now, 9); err != nil {
-		t.Fatalf("briefing: %v", err)
-	}
-	msgs := briefingMessages(t, app)
-	if len(msgs) != 1 {
-		t.Fatalf("messages = %d, want 1", len(msgs))
-	}
-	if c := msgs[0].GetString("content"); !strings.Contains(c, "logged yesterday: weight 82.5 kg") {
-		t.Errorf("yesterday line missing in:\n%s", c)
-	}
-}
-```
-
-### The real write path exemplar — `internal/life/life_test.go` (VERBATIM excerpts)
-
-A backdated log is written with `NotedAt` set on `LogOpts`:
-
-```go
-	rec, err := Log(app, LogOpts{Kind: "mood", ValueNum: 7, NotedAt: past})
-```
-
-```go
-	if _, err := Log(app, LogOpts{Kind: "weight", ValueNum: v, Unit: "kg", NotedAt: now.AddDate(0, 0, i-3)}); err != nil {
-```
-
-`life_test.go`'s package is `package life`, and it imports
-`"github.com/alexradunet/balaur/internal/storetest"` and uses
-`storetest.NewApp(t)`. Match this for any new `life` test.
-
-### Conventions that apply here (with exemplars)
-
-- **gofmt is law** — a PostToolUse hook and CI gofmt gate enforce it. Run
-  `gofmt -l .` (must print nothing) before declaring done.
-- **Errors are values**: wrap with `fmt.Errorf("doing x: %w", err)`, return
-  early. The existing `listMeasuresInRange` already follows this; keep its
-  wrapping intact when you export it.
-- **Tests**: standard `testing`, table-driven where it helps, NO assertion
-  frameworks, NO `time.Sleep`, `storetest.NewApp(t)` for a PocketBase-backed
-  app (boots the full migration chain). Exemplar: the existing tests in
-  `briefing_test.go` and `life_test.go`.
-- **`life` owns measure nodes**; `tasks` reads them through `life`'s exported
-  API (AGENTS.md: "Domain packages own their own PocketBase reads/writes").
-  `tasks.loggedYesterday` must NOT query `nodes` directly — it calls the
-  exported `life` function.
-- **Self-knowledge**: this is a pure bug fix that does not change architecture
-  or capability (the briefing line was always *intended* to exist). Do **not**
-  edit `internal/self/knowledge.md`.
+- Errors: wrap with `fmt.Errorf("…: %w", err)`, return early. The existing
+  `loggedYesterday` logs nothing — keep it that way (an empty result is normal,
+  not an error).
+- Tests: standard `testing`, no assertion frameworks, no `time.Sleep`; use
+  `storetest.NewApp(t)` (the existing test already does). Model the new seeding
+  on how `internal/life/life_test.go` builds a `measure` node, but seed via
+  `nodes.Create` (do NOT import `life`).
+- gofmt is law; `go vet ./...` must be clean.
 
 ## Commands you will need
 
-| Purpose            | Command                                                  | Expected on success            |
-|--------------------|----------------------------------------------------------|--------------------------------|
-| Build (CGO-free)   | `CGO_ENABLED=0 go build ./...`                           | exit 0, no output              |
-| Test (tasks pkg)   | `go test ./internal/tasks/`                              | `ok`, all pass                 |
-| Test (life pkg)    | `go test ./internal/life/`                               | `ok`, all pass                 |
-| Test (both)        | `go test ./internal/tasks/ ./internal/life/`            | `ok` for both                  |
-| Full suite         | `go test ./...`                                         | all `ok` / `no test files`     |
-| Vet                | `go vet ./...`                                          | exit 0, no diagnostics         |
-| Format check       | `gofmt -l .`                                            | prints nothing (empty output)  |
-| Diff hygiene       | `git diff --check`                                     | prints nothing                 |
-| Grep for old query | `grep -n '"entries"' internal/tasks/briefing.go`        | no match after Step 3          |
-
-If `go test ./...` fails to **link** with "No space left on device" on a tmpfs
-`/tmp`, set `TMPDIR=/home/alex/.cache/go-tmp` and retry — this is a known box
-quirk, not a code failure. Scope your green-gate to the in-scope packages if
-the full suite cannot link.
+| Purpose            | Command                                   | Expected on success |
+|--------------------|-------------------------------------------|---------------------|
+| Set TMPDIR (once)  | `export TMPDIR=/home/alex/.cache/go-tmp; mkdir -p "$TMPDIR"` | — (go linking fails on tmpfs without this) |
+| Build (CGO-free)   | `CGO_ENABLED=0 go build ./...`            | exit 0              |
+| Package tests      | `go test ./internal/tasks/`               | ok                  |
+| Full suite         | `go test ./...`                           | all pass            |
+| Vet                | `go vet ./...`                            | exit 0              |
+| Format check       | `gofmt -l internal/tasks/`                | empty               |
+| Confirm fix        | `grep -n '"entries"' internal/tasks/briefing.go` | no match in loggedYesterday |
 
 ## Scope
 
-**In scope** (the only files you should modify):
-- `internal/life/life.go` — export `listMeasuresInRange` as `LoggedInRange`.
-- `internal/life/day.go` — update the one caller to the new name.
-- `internal/life/life_test.go` — add a small test for the exported helper
-  (window inclusion/exclusion + cross-kind), if you wish (optional but
-  recommended; see Test plan).
-- `internal/tasks/briefing.go` — rewrite `loggedYesterday`'s body to call
-  `life.LoggedInRange`.
+**In scope** (the only files you modify):
+- `internal/tasks/briefing.go` — rewrite `loggedYesterday`; add the
+  `internal/nodes` import.
 - `internal/tasks/briefing_test.go` — rewrite `TestBriefingMentionsYesterdayLog`
-  to seed via `life.Log`.
+  to seed a `type=measure` node.
 
-**Out of scope** (do NOT touch, even though they look related):
-- The `entries` collection schema, any migration, `addEntry`, completions.
-- The briefing's other lines (`dayLines`, `dayLine`, streaks, composed text).
-- Anything in `internal/web`, `internal/feature/*cards`, or `internal/cli`.
-- `internal/self/knowledge.md` — no architecture/capability change.
-- `plans/README.md` content beyond your own status row.
+**Out of scope** (do NOT touch):
+- `internal/life/*` — do not add a `life` export and do not make `internal/tasks`
+  import `internal/life` (import cycle: `life/day.go` imports `tasks`). The whole
+  point of this version is to avoid that edge.
+- Any new package (e.g. `internal/measure`) — deferred (see Maintenance notes).
+- The `entries` collection schema, `addEntry`/completions, the briefing's other
+  lines, anything in `internal/web`.
 
 ## Git workflow
 
-- This is a land-on-main repo (no PR gate). Executors typically run in a
-  worktree off `origin/main`.
-- One commit is fine for this small fix. Conventional-commit subject, e.g.:
-  `fix(briefing): read "logged yesterday" from life measure nodes, not entries`
-- Stage only the in-scope files. Do NOT revert or stage changes you did not
-  make (the checkout may be shared). Do NOT push or open a PR unless the
-  operator instructed it.
+- Branch off `origin/main` (your worktree already is).
+- One commit; subject e.g. `fix(tasks): read yesterday's measures from nodes in the briefing`.
+- Do NOT push or open a PR.
 
 ## Steps
 
-### Step 1: Export the windowed measure reader in `internal/life/life.go`
+### Step 1: Rewrite `loggedYesterday` to read measure nodes
 
-Rename `listMeasuresInRange` to `LoggedInRange` and make it the package's
-public windowed reader. Update its doc comment to say it is used by the
-briefing and by `Range`. The body is otherwise unchanged. Target shape:
+In `internal/tasks/briefing.go`:
 
-```go
-// LoggedInRange returns active type=measure nodes whose noted_at falls in
-// [start, end), hydrated and ordered oldest-first by noted_at. Used by the
-// morning briefing's "logged yesterday" line and by Range (day/period rollups).
-func LoggedInRange(app core.App, start, end time.Time) ([]*core.Record, error) {
-	recs, err := app.FindRecordsByFilter("nodes",
-		"type = 'measure' && status = 'active'", "", 0, 0, nil)
-	if err != nil {
-		return nil, fmt.Errorf("loading measures for range: %w", err)
-	}
-	out := make([]*core.Record, 0)
-	for _, r := range recs {
-		notedAt, ok := measureNotedAt(r)
-		if !ok || notedAt.Before(start) || !notedAt.Before(end) {
-			continue
-		}
-		hydrate(r)
-		out = append(out, r)
-	}
-	sortByNotedAt(out)
-	return out, nil
-}
-```
-
-Keep the in-Go filtering comment (`// Filter by noted_at in Go since …`) — it
-explains why the filter is not in the PB query.
-
-**Verify**: `grep -n "func LoggedInRange" internal/life/life.go` → one match.
-`grep -rn "listMeasuresInRange" internal/` → **no matches** (the old name is
-fully gone after Step 2).
-
-### Step 2: Update the one caller in `internal/life/day.go`
-
-Change line 81 from `listMeasuresInRange(app, start, end)` to
-`LoggedInRange(app, start, end)`. Nothing else changes.
-
-**Verify**: `CGO_ENABLED=0 go build ./internal/life/` → exit 0.
-`go test ./internal/life/` → `ok` (existing `life` tests still pass — `Range`
-still works through the renamed helper).
-
-### Step 3: Rewrite `loggedYesterday` in `internal/tasks/briefing.go`
-
-Replace the broken `entries` query with a call to `life.LoggedInRange`,
-keeping the exact same one-line output format. Target shape:
+1. Add `"github.com/alexradunet/balaur/internal/nodes"` to the import block.
+   (After the rewrite, the old `dbx.Params`/`store.PBTime` use inside
+   `loggedYesterday` is gone — if `dbx` or `store` are now unused *in this file*,
+   `go build` will say so; remove only a genuinely-unused import. Confirm with
+   `go build` before removing anything — they may be used elsewhere in the file.)
+2. Replace the `loggedYesterday` body so it loads active `type=measure` nodes and
+   filters `noted_at` into yesterday's local day window in Go, reading `props`
+   directly. Target shape:
 
 ```go
 func loggedYesterday(app core.App, now time.Time) string {
 	ys := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -1)
-	recs, err := life.LoggedInRange(app, ys, ys.AddDate(0, 0, 1))
+	ye := ys.AddDate(0, 0, 1)
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'measure' && status = 'active'", "", 0, 0, nil)
 	if err != nil || len(recs) == 0 {
 		return ""
 	}
@@ -374,196 +214,139 @@ func loggedYesterday(app core.App, now time.Time) string {
 		if len(parts) >= 4 {
 			break
 		}
-		p := r.GetString("kind")
-		if v := r.GetFloat("value_num"); v != 0 {
-			p = fmt.Sprintf("%s %g %s", p, v, r.GetString("unit"))
-		} else if t := compressLine(r.GetString("text"), 40); t != "" {
-			p = p + ": " + t
+		// noted_at lives in props (JSON); PB filters can't reach it, so filter in Go.
+		notedAt, perr := time.Parse("2006-01-02 15:04:05.000Z", nodes.PropString(r, "noted_at"))
+		if perr != nil || notedAt.Before(ys) || !notedAt.Before(ye) {
+			continue
+		}
+		kind := nodes.PropString(r, "kind")
+		p := kind
+		if v := measureValueNum(r); v != 0 {
+			p = fmt.Sprintf("%s %g %s", kind, v, nodes.PropString(r, "unit"))
+		} else if t := compressLine(r.GetString("body"), 40); t != "" {
+			p = kind + ": " + t
 		}
 		parts = append(parts, strings.TrimSpace(p))
 	}
+	if len(parts) == 0 {
+		return ""
+	}
 	return "logged yesterday: " + strings.Join(parts, " · ")
+}
+
+// measureValueNum reads a measure node's numeric value_num out of props (0 when
+// absent/non-numeric). nodes.PropString covers strings; there is no PropFloat.
+func measureValueNum(r *core.Record) float64 {
+	var p map[string]any
+	if err := r.UnmarshalJSONField("props", &p); err != nil {
+		return 0
+	}
+	if v, ok := p["value_num"].(float64); ok {
+		return v
+	}
+	return 0
 }
 ```
 
 Notes:
-- The hydrated record exposes `kind`, `value_num`, `unit`, and `text` (the
-  `hydrate` aliases — see Current state), so the formatting loop is unchanged
-  from the old code except its source.
-- `LoggedInRange` returns rows oldest-first by `noted_at`. The old `entries`
-  query also sorted by `noted_at` ascending (`"noted_at"`), so ordering is
-  preserved; the `>= 4` cap behaves the same way.
-- `LoggedInRange` already excludes reserved kinds **structurally**: only
-  `type=measure` nodes are returned, and `completion`/`journal`/`day` are never
-  written as measures (`life.Log` refuses them — see `reserved` in `life.go:21`
-  and the validation in `Log`). So the old `kind != 'completion' && kind != 'journal'`
-  filter is no longer needed and must NOT be reintroduced.
+- The text fallback now reads `r.GetString("body")` (the node body holds the
+  measure's free text), not the old `entries.text` column.
+- `type=measure` already excludes completions (`type=task`) and journal
+  (`type=day`), so the old `kind != 'completion' && kind != 'journal'` filter is
+  no longer needed.
 
-**Imports**: add `"github.com/alexradunet/balaur/internal/life"` to the import
-block. Then **remove now-unused imports**: the `dbx` import
-(`"github.com/pocketbase/dbx"`) and the `store` import
-(`"github.com/alexradunet/balaur/internal/store"`) were used by `loggedYesterday`
-and possibly elsewhere in the file — check before deleting. Run
-`grep -n "dbx\." internal/tasks/briefing.go` and
-`grep -n "store\." internal/tasks/briefing.go`: `dbx` is also used by
-`BriefedToday` (line 37) and `store.PBTime`/`store.Audit` are used by
-`BriefedToday` (line 37) and `Briefing` (line 80), so **both imports stay**.
-Do NOT remove an import that another function still uses — let `go build` and
-`go vet` confirm.
+**Verify**: `export TMPDIR=/home/alex/.cache/go-tmp; mkdir -p "$TMPDIR"; CGO_ENABLED=0 go build ./...` → exit 0; `grep -n '"entries"' internal/tasks/briefing.go` → no match inside `loggedYesterday`.
 
-**Verify**: `grep -n '"entries"' internal/tasks/briefing.go` → **no match**.
-`grep -n "life.LoggedInRange" internal/tasks/briefing.go` → one match.
-`CGO_ENABLED=0 go build ./internal/tasks/` → exit 0.
+### Step 2: Rewrite the test to seed a real measure node
 
-### Step 4: Rewrite `TestBriefingMentionsYesterdayLog` to seed via `life.Log`
-
-Replace the body of `TestBriefingMentionsYesterdayLog` (lines 131–161) so it
-writes the yesterday measurement through the **real** path, `life.Log`, with a
-backdated `NotedAt`. Target shape:
+In `internal/tasks/briefing_test.go`, rewrite `TestBriefingMentionsYesterdayLog`
+so it seeds a `type=measure` node (the real production shape) instead of an
+`entries` row, then asserts the briefing's deterministic output contains the
+logged-yesterday line. Seed with `nodes.Create` (the package already has access;
+do NOT import `internal/life`):
 
 ```go
-func TestBriefingMentionsYesterdayLog(t *testing.T) {
-	app := storetest.NewApp(t)
-	now := at(10)
-	if _, err := Create(app, CreateOpts{Title: "Pay rent", Due: at(15)}); err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	// A real owner measurement from yesterday, written through life.Log — the
-	// same path the agent's life-log tool uses. NotedAt is backdated so it lands
-	// in the briefing's "yesterday" window.
-	if _, err := life.Log(app, life.LogOpts{
-		Kind:     "weight",
-		ValueNum: 82.5,
-		Unit:     "kg",
-		NotedAt:  now.AddDate(0, 0, -1),
-	}); err != nil {
-		t.Fatalf("life.Log: %v", err)
-	}
-
-	if err := Briefing(app, nil, now, 9); err != nil {
-		t.Fatalf("briefing: %v", err)
-	}
-	msgs := briefingMessages(t, app)
-	if len(msgs) != 1 {
-		t.Fatalf("messages = %d, want 1", len(msgs))
-	}
-	if c := msgs[0].GetString("content"); !strings.Contains(c, "logged yesterday: weight 82.5 kg") {
-		t.Errorf("yesterday line missing in:\n%s", c)
-	}
+// yesterday relative to the same "now" the test feeds the briefing;
+// format noted_at exactly as life.Log does.
+yest := /* the test's now */ .AddDate(0, 0, -1)
+props := map[string]any{
+	"kind":      "weight",
+	"value_num": 82.5,
+	"unit":      "kg",
+	"noted_at":  yest.UTC().Format("2006-01-02 15:04:05.000Z"),
+}
+if _, err := nodes.Create(app, "measure", "weight "+yest.UTC().Format("2006-01-02"), "", nodes.StatusActive, props); err != nil {
+	t.Fatalf("seeding measure node: %v", err)
 }
 ```
 
-**Imports**: add `"github.com/alexradunet/balaur/internal/life"` to
-`briefing_test.go`'s import block. The `core` import is still used by
-`briefingMessages` and `TestBriefedTodayZoneSensitivity`, so keep it. After
-removing the manual `entries` seeding, confirm `core` is still referenced
-(it is — line 192 `app.FindCollectionByNameOrId("messages")` returns a `*core...`,
-and `core.NewRecord` is used in `TestBriefedTodayZoneSensitivity`).
+Then drive the deterministic briefing path the existing test already uses and
+assert the rendered text contains `logged yesterday: weight 82.5 kg`. Read the
+rest of `TestBriefingMentionsYesterdayLog` and the briefing entry point it calls,
+and keep the same harness — only the seeding (and, if needed, the expected
+substring) changes.
 
-**Why backdate to `now.AddDate(0,0,-1)`**: `loggedYesterday` computes the
-yesterday window as `[localMidnight(now)-1day, localMidnight(now))`. `now` is
-`at(10)` = today 10:00 local; yesterday 10:00 local falls inside that window.
-`life.Log` stores `noted_at` as UTC (`fmtTime(o.NotedAt.UTC())`), and
-`measureNotedAt` parses it back as a UTC instant, while the window bounds are
-local-midnight times — Go's `time.Time.Before`/`Compare` are instant-based, so
-the comparison is zone-correct. (This is the same mechanism `life_test.go`
-relies on for backdated logs.)
+**Verify**: `go test ./internal/tasks/ -run TestBriefingMentionsYesterdayLog -v` → PASS. Then confirm the test is meaningful: in a scratch copy, temporarily revert Step 1's `loggedYesterday` to the old `entries` query and confirm this test FAILS; restore. Report that you did this.
 
-**Verify**: `go test ./internal/tasks/ -run TestBriefingMentionsYesterdayLog -v`
-→ `PASS`. Then sanity-check the test actually guards the fix: it MUST fail if
-the production code is broken. (Optional manual check: temporarily revert
-Step 3 — the test should now FAIL with "yesterday line missing". Re-apply
-Step 3.)
+### Step 3: Full verification
 
-### Step 5: Full green gate
-
-**Verify** (all must hold):
-- `gofmt -l .` → prints nothing.
-- `go vet ./...` → exit 0, no diagnostics.
-- `go test ./internal/tasks/ ./internal/life/` → both `ok`.
-- `CGO_ENABLED=0 go build ./...` → exit 0.
-- `git diff --check` → prints nothing.
-- `go test ./...` → all pass (if the link fails for the tmpfs reason in
-  "Commands you will need", set `TMPDIR` and retry).
+**Verify**:
+- `go test ./internal/tasks/` → ok (all existing briefing/task tests still pass).
+- `go test ./...` → all pass.
+- `go vet ./...` → exit 0; `gofmt -l internal/tasks/` → empty.
 
 ## Test plan
 
-- **Rewrite** `TestBriefingMentionsYesterdayLog` in
-  `internal/tasks/briefing_test.go` to seed via `life.Log` with a backdated
-  `NotedAt` (Step 4). This is the regression test: it now fails when
-  `loggedYesterday` reads the wrong source. Cases covered: a numeric yesterday
-  measurement renders as `logged yesterday: weight 82.5 kg`.
-- **Optional, recommended** — add `TestLoggedInRange` in
-  `internal/life/life_test.go` (model it on the existing `life_test.go` tests
-  that use `storetest.NewApp(t)` and `Log(..., LogOpts{NotedAt: ...})`):
-  - a measure with `NotedAt` inside `[start, end)` is returned;
-  - one with `NotedAt == end` is excluded (half-open upper bound);
-  - one with `NotedAt` before `start` is excluded;
-  - two different kinds in-window are both returned (cross-kind), oldest-first.
-  This locks the windowing contract that the briefing now depends on.
-- Existing `life` tests (`TestLogValidationAndRoundtrip`, the Series/Range
-  tests, `day.go`'s `Range` path) must stay green after the rename.
-- Verification: `go test ./internal/tasks/ ./internal/life/` → all pass,
-  including the rewritten test (and the new `TestLoggedInRange` if added).
+- Rewrite `TestBriefingMentionsYesterdayLog` to seed a `type=measure` node via
+  `nodes.Create` (real write shape) and assert the briefing renders `logged
+  yesterday: weight 82.5 kg`.
+- Recommended second case: a measure with no `value_num` but a non-empty body
+  renders `kind: <text>`; and a measure noted **two** days ago is NOT in the line
+  (window correctness).
+- Structural pattern: the existing `TestBriefingMentionsYesterdayLog` harness;
+  `internal/life/life_test.go` for a valid `measure` node's props.
+- Verification: `go test ./internal/tasks/` → all pass including the rewritten test.
 
 ## Done criteria
 
 Machine-checkable. ALL must hold:
 
-- [ ] `gofmt -l .` prints nothing.
-- [ ] `go vet ./...` exits 0.
-- [ ] `CGO_ENABLED=0 go build ./...` exits 0.
-- [ ] `go test ./internal/tasks/ ./internal/life/` both `ok`.
-- [ ] `grep -n '"entries"' internal/tasks/briefing.go` returns no match
-      (`loggedYesterday` no longer queries the `entries` collection).
-- [ ] `grep -rn "listMeasuresInRange" internal/` returns no match
-      (old private name fully replaced).
-- [ ] `grep -n "life.LoggedInRange" internal/tasks/briefing.go` returns one
-      match.
-- [ ] `TestBriefingMentionsYesterdayLog` seeds via `life.Log` (not via a manual
-      `entries` record) and passes.
-- [ ] `git diff --check` prints nothing.
-- [ ] No files outside the in-scope list are modified (`git status`).
-- [ ] `plans/README.md` status row for plan 175 updated (unless a reviewer
-      maintains the index).
+- [ ] `CGO_ENABLED=0 go build ./...` exits 0 (and reports NO import cycle).
+- [ ] `go test ./internal/tasks/` passes, including the rewritten
+      `TestBriefingMentionsYesterdayLog` (seeds a `measure` node, asserts the line).
+- [ ] `go test ./...` passes.
+- [ ] `go vet ./...` exits 0; `gofmt -l internal/tasks/` is empty.
+- [ ] `grep -n '"entries"' internal/tasks/briefing.go` shows no match inside
+      `loggedYesterday`.
+- [ ] Only `internal/tasks/briefing.go` and `internal/tasks/briefing_test.go`
+      are modified (`git status`). No `internal/life` import was added to
+      `internal/tasks`.
+- [ ] `plans/README.md` status row updated.
 
 ## STOP conditions
 
 Stop and report back (do not improvise) if:
 
-- **The premise is wrong**: `internal/life/life.go`'s `Log` does NOT write a
-  `type=measure` node via `nodes.Create(app, "measure", …)` (e.g. it still
-  writes to the `entries` collection). The whole fix assumes measurements are
-  measure nodes — if they are not, report and stop.
-- **The helper drifted**: `listMeasuresInRange` is gone, already exported, or
-  no longer filters by `measureNotedAt` in `[start, end)` (lines 300–321 in the
-  excerpt above don't match the live file). Re-read and report what changed.
-- **More than one caller of `listMeasuresInRange`** exists
-  (`grep -rn "listMeasuresInRange" internal/` shows callers beyond
-  `day.go:81`). Rename all of them, but if any is outside `internal/life`,
-  treat it as drift and report — the helper was meant to be package-private.
-- The rewritten `TestBriefingMentionsYesterdayLog` passes even when Step 3 is
-  reverted (the test does not actually guard the fix) — investigate before
-  declaring done.
-- A step's verification fails twice after a reasonable fix attempt.
-- The fix appears to require touching an out-of-scope file (the `entries`
-  schema, a migration, `internal/web`, or `internal/self/knowledge.md`).
+- The "Current state" excerpts don't match the live code (drift).
+- `go build` reports an import cycle — an `internal/life` import crept in; remove
+  it (this plan must not import `life`).
+- `nodes.Create` rejects the seeded `measure` props (e.g. a required prop changed
+  in the type schema) — read `migrations/1750000030_measures_to_nodes.go`'s
+  `measureProps` and adjust the seeded props to satisfy it, and note it.
+- Removing the `dbx`/`store` import breaks an unrelated function in `briefing.go`
+  (they are still used elsewhere) — keep the import; remove only genuinely unused
+  ones.
 
 ## Maintenance notes
 
-For the owner of this code after the change lands:
-
-- `LoggedInRange` is now the single windowed measure reader, shared by the
-  briefing and `life.Range`. If measure-node storage changes (e.g. `noted_at`
-  moves out of `props`), `measureNotedAt`/`hydrate` change once and both
-  callers follow.
-- The `entries` collection is now unused by the briefing. Whether `entries`
-  is dead overall is OUT OF SCOPE here — do not remove the collection or its
-  migration as part of this plan; that is a separate cleanup with its own
-  blast radius (other readers may remain).
-- A reviewer should scrutinize: (1) that no `kind != 'completion'` filter was
-  reintroduced (it's structurally unnecessary now), and (2) that the test seeds
-  through `life.Log` so it stays honest if the read path regresses again.
-- Deferred: the optional `TestLoggedInRange` in `life_test.go` is recommended
-  but not strictly required for the bug fix; if skipped, the briefing test is
-  the only guard on the windowing behavior.
+- **Accepted small coupling**: `internal/tasks` now knows the `measure` node's
+  prop keys and `noted_at` format. This duplicates a little of `internal/life`'s
+  knowledge, justified because the `life → tasks` package edge forbids
+  `tasks → life`. If a future refactor wants one source of truth, extract the
+  measure read + `measureNotedAt` into a **leaf** package `internal/measure`
+  (imports only `nodes`/`store`/`core`) that both `life` and `tasks` import —
+  that breaks the cycle cleanly. Deferred: a broader change touching every `life`
+  measure call site, out of scope for this bug fix.
+- A reviewer should confirm the test fails when the production fix is reverted
+  (the guard against this regression returning), and that the `noted_at` window
+  is owner-local (yesterday's local day), matching `life.Range`.
