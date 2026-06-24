@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // on any click that lands outside #panel and .sb-side while the drawer is open.
   document.addEventListener('click', function (e) {
     if (document.documentElement.classList.contains('panel-open') &&
-        !e.target.closest('#panel') && !e.target.closest('.sb-side')) {
+        !e.target.closest('#panel') && !e.target.closest('.sb-side') && !e.target.closest('.navrail')) {
       document.documentElement.classList.remove('panel-open');
     }
   });
@@ -186,10 +186,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // CSS custom property cascade resolves through one owner; .app-shell inherits it.
 window.basmTogglePanel = function () {
   var on = document.documentElement.classList.toggle('panel-collapsed');
+  var t = document.querySelector('.navrail-toggle');
+  if (t) t.setAttribute('aria-expanded', on ? 'false' : 'true');
   fetch('/ui/panel/collapse', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: 'on=' + (on ? '1' : '0'),
   });
+};
+
+// Reveal the panel live when a nav-rail destination is summoned. The /ui/show
+// door already persisted collapsed=0 server-side; this drops the class so the
+// card shows on desktop without a reload. On ≤720px the #panel-inner observer
+// adds panel-open for the overlay, so this is a desktop-reveal no-op there.
+window.basmOpenPanel = function () {
+  document.documentElement.classList.remove('panel-collapsed');
+  var t = document.querySelector('.navrail-toggle');
+  if (t) t.setAttribute('aria-expanded', 'true');
 };
 
 // Drag the panel divider to resize. Commits the width to the server on release.

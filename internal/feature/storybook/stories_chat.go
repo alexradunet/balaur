@@ -295,7 +295,7 @@ func chatpanelStory() Story {
 			"#panel-inner by root id to swap. Body is pre-rendered by the web layer; the organism imports no " +
 			"feature/cards. The collapse (›) and close (✕) controls are inert in the storybook — they call " +
 			"basmTogglePanel() and @get /ui/show/close respectively. The .panel-resizer drag handle and " +
-			".panel-reveal re-open tab are shell chrome (chatshell.go), not part of this organism.",
+			"the right nav rail (which re-opens a collapsed panel) are shell chrome (chatshell.go), not part of this organism.",
 		Variants: []Variant{
 			{"with artifact", chat.Panel(chat.PanelProps{Title: "Quest Log", Icon: "scroll", Body: sample})},
 			{"empty", chat.Panel(chat.PanelProps{})},

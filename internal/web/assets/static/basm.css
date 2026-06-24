@@ -160,6 +160,7 @@
   --w-chat-home: 1800px;
   --w-chat-overlay: 940px;
   --w-panel: 480px;
+  --w-rail: 56px;           /* always-on right nav rail (icon column) */
   --measure: 68ch;          /* prose reading-width cap (~66–75ch legibility) */
 
   /* Spacing scale — 4px base. Dominant literals (8/12/16/24/32) map to these;
@@ -3400,10 +3401,10 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
    rules below generalise the existing html.home #dock block so they fire for
    the app-shell layout (html.app) too. */
 
-/* Two-column grid: [chat | panel]. */
+/* Three-column grid: [chat | panel | always-on nav rail]. */
 html.app .app-shell {
   display: grid;
-  grid-template-columns: 1fr var(--w-panel);
+  grid-template-columns: 1fr var(--w-panel) var(--w-rail);
   height: 100dvh;
   overflow: hidden;
 }
@@ -3493,7 +3494,8 @@ html.app #dock.app-dock .composer { width: 100%; max-width: var(--w-chat-home); 
    fresh-app default is collapsed (collapse-when-empty), so an unscoped
    display:none would make the mobile overlay un-openable. */
 @media (min-width: 721px) {
-  html.app.panel-collapsed .app-shell { grid-template-columns: 1fr; }
+  /* Collapsed: panel column drops out, the nav rail stays. */
+  html.app.panel-collapsed .app-shell { grid-template-columns: 1fr var(--w-rail); }
   html.app.panel-collapsed #panel.app-panel { display: none; }
 }
 
@@ -3506,24 +3508,20 @@ html.app .panel-resizer {
 html.app .panel-resizer:hover,
 html.app .panel-resizer.dragging { background: var(--gold-deep); opacity: .5; }
 
-/* Reveal handle: hidden unless collapsed; sits on the right viewport edge. */
-html.app .panel-reveal {
-  position: fixed; right: 0; top: 50%; transform: translateY(-50%);
-  display: none;
-  z-index: var(--z-sticky);
-}
-html.app.panel-collapsed .panel-reveal { display: block; }
+/* Re-opening a collapsed panel lives on the always-on nav rail's toggle now
+   (the old fixed .panel-reveal handle was removed — it collided with the rail). */
 
 /* Collapse control in the panel head bar — same look as .panel-close. */
 html.app .panel-collapse { background: none; border: 0; cursor: pointer; color: var(--ink-muted); font-size: 13px; line-height: 1; padding: 2px 4px; }
 html.app .panel-collapse:hover { color: var(--ink); }
 
-/* Collapse to single column on narrow viewports (≤720px); panel becomes a fixed overlay. */
+/* Narrow viewports (≤720px): chat + the always-on rail stay in flow; the panel
+   becomes a fixed overlay that slides in to the LEFT of the rail. */
 @media (max-width: 720px) {
-  html.app .app-shell { grid-template-columns: 1fr; }
+  html.app .app-shell { grid-template-columns: 1fr var(--w-rail); }
 
   html.app #panel.app-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: min(92vw, var(--w-panel));
+    position: fixed; top: 0; right: var(--w-rail); bottom: 0; width: min(92vw, var(--w-panel));
     z-index: var(--z-drawer); transform: translateX(100%); transition: transform .15s steps(3, end);
   }
   html.app.panel-open #panel.app-panel { transform: translateX(0); }
@@ -3566,3 +3564,51 @@ html.app .composer { position: relative; }
 
 /* Bare task stack (plan 090: tasks cluster card) */
 .tasks-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* ── Right nav rail (always-on icon rail) ─────────────────────────────────────
+   A wood-chrome utility rail pinned to the far-right grid column: a panel
+   expand/collapse toggle, one icon per primary destination, and a chooser (lens)
+   that opens a parchment popover listing the rest of the index. Core visuals are
+   UNSCOPED (so the storybook story renders); only grid integration and the
+   collapsed-chevron flip are scoped to html.app. */
+.navrail {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-2); padding: var(--space-2) 0;
+  background-color: var(--chrome); border-left: 2px solid var(--chrome-2);
+  color: var(--chrome-fg);
+}
+.navrail-toggle, .navrail-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; flex-shrink: 0; /* ≥44px touch target */
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+  color: var(--chrome-fg); text-decoration: none;
+}
+.navrail-toggle:hover, .navrail-btn:hover { background: var(--chrome-2); color: var(--gold); }
+.navrail-toggle:focus-visible, .navrail-btn:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.navrail-chevron { font-size: 22px; line-height: 1; }
+.navrail-list { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); flex: 1 1 auto; }
+.navrail-icon { width: 22px; height: 22px; image-rendering: pixelated; }
+.navrail-btn-active { background: var(--chrome-2); box-shadow: inset 3px 0 0 var(--gold); }
+.navrail-more { margin-top: auto; }
+
+/* Chooser popover — parchment index opening to the left of the rail. */
+.navrail-menu {
+  position: absolute; right: 100%; bottom: var(--space-2);
+  z-index: var(--z-overlay); min-width: 208px; max-height: 70vh; overflow-y: auto;
+  display: flex; flex-direction: column;
+  background-color: var(--surface-2); border: 2px solid var(--parch-edge);
+  box-shadow: var(--drop-hard);
+}
+.navrail-menu-item {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3); text-decoration: none;
+  color: var(--ink); font-family: var(--font-mono); font-size: 13px;
+}
+.navrail-menu-item:hover { background: var(--surface-3, var(--surface)); color: var(--gold); }
+.navrail-menu-icon { width: 18px; height: 18px; image-rendering: pixelated; }
+
+/* App-shell integration: fill the grid column, sit above the mobile overlay/scrim,
+   and let the chooser popover overflow leftward. The rail is position:relative so
+   the popover anchors to it. */
+html.app .navrail { position: relative; z-index: var(--z-drawer); height: 100%; overflow: visible; }
+html.app.panel-collapsed .navrail-chevron { transform: rotate(180deg); }

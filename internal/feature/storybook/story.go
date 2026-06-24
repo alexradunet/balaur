@@ -71,6 +71,7 @@ var stories = []Story{
 	toggleStory(),
 	tabsStory(),
 	breadcrumbStory(),
+	navrailStory(),
 	paginationStory(),
 	listStory(),
 	emptyStateStory(),

@@ -87,13 +87,15 @@ func TestHomePanelRestore(t *testing.T) {
 //   - With panel_active set + panel_collapsed="0" + panel_width="600": <html> has no
 //     panel-collapsed class, and carries style="--w-panel:600px" on <html> (not .app-shell).
 func TestHomePanelChrome(t *testing.T) {
-	t.Run("fresh app: panel-collapsed class + resizer + reveal handle", func(t *testing.T) {
+	t.Run("fresh app: panel-collapsed class + resizer + nav rail", func(t *testing.T) {
 		app := newWebApp(t)
 		h := &handlers{app: app}
+		collapsed := h.panelCollapsed()
 		page := shell.ChatShell(shell.ChatShellProps{
 			Title:          "Home",
 			Panel:          h.restoredPanelNode(),
-			PanelCollapsed: h.panelCollapsed(),
+			Rail:           h.navRailNode(collapsed),
+			PanelCollapsed: collapsed,
 			PanelStyle:     h.panelWidthCSS(),
 		})
 		var b strings.Builder
@@ -107,8 +109,12 @@ func TestHomePanelChrome(t *testing.T) {
 		if !strings.Contains(out, `class="panel-resizer"`) {
 			t.Errorf("fresh app: missing panel-resizer")
 		}
-		if !strings.Contains(out, `class="panel-reveal"`) {
-			t.Errorf("fresh app: missing panel-reveal")
+		// The nav-rail toggle is the reveal control now (panel-reveal was removed).
+		if !strings.Contains(out, `class="navrail-toggle"`) {
+			t.Errorf("fresh app: missing nav-rail toggle")
+		}
+		if !strings.Contains(out, `aria-expanded="false"`) {
+			t.Errorf("fresh app: collapsed nav-rail toggle should be aria-expanded=false")
 		}
 	})
 

@@ -17,11 +17,13 @@ import (
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
 
-// commandPaletteNode is the composer /-command menu: the navigation launcher
-// that replaced the domain rail (plan 102). Each item opens its artifact in the
-// panel via the non-polluting /ui/show door (plan 101).
-func commandPaletteNode() g.Node {
-	return ui.CommandPalette([]ui.CommandItem{
+// navDestinations is the canonical list of owner-navigable panel destinations.
+// It is the single source feeding BOTH the composer /-command palette and the
+// right nav rail (its chooser popover and, curated down, its primary icons) —
+// so the two navigation surfaces never drift. Each item opens its artifact in
+// the panel via the non-polluting /ui/show door (plan 101).
+func navDestinations() []ui.CommandItem {
+	return []ui.CommandItem{
 		{Label: "Quests", Key: "quests", Icon: "scroll", URL: "/ui/show/quests"},
 		{Label: "Life", Key: "life", Icon: "orb", URL: "/ui/show/lifelog"},
 		{Label: "Facts", Key: "facts", Icon: "tome", URL: "/ui/show/memory?category=fact"},
@@ -34,6 +36,53 @@ func commandPaletteNode() g.Node {
 		{Label: "Profile", Key: "profile", URL: "/ui/show/settings?section=profile"},
 		{Label: "Models", Key: "models", URL: "/ui/show/settings?section=models"},
 		{Label: "Heads", Key: "heads", URL: "/ui/show/settings?section=heads"},
+	}
+}
+
+// commandPaletteNode is the composer /-command menu: the navigation launcher
+// that replaced the domain rail (plan 102). It renders the full destination list.
+func commandPaletteNode() g.Node {
+	return ui.CommandPalette(navDestinations())
+}
+
+// navRailPrimary is the curated quick-access subset shown as dedicated icons on
+// the nav rail. Memory and Settings open their first sub-view (Facts / Profile);
+// every other destination lives in the rail's chooser (navRailMore).
+func navRailPrimary() []ui.CommandItem {
+	return []ui.CommandItem{
+		{Label: "Quests", Icon: "scroll", URL: "/ui/show/quests"},
+		{Label: "Life", Icon: "orb", URL: "/ui/show/lifelog"},
+		{Label: "Memory", Icon: "tome", URL: "/ui/show/memory?category=fact"},
+		{Label: "Skills", Icon: "key", URL: "/ui/show/skills"},
+		{Label: "Settings", Icon: "shield", URL: "/ui/show/settings?section=profile"},
+	}
+}
+
+// navRailMore is "the rest": every canonical destination not already a primary
+// rail icon. Derived from navDestinations minus navRailPrimary (matched by URL)
+// so the chooser stays exhaustive and can't drift from the source list.
+func navRailMore() []ui.CommandItem {
+	primary := make(map[string]bool)
+	for _, it := range navRailPrimary() {
+		primary[it.URL] = true
+	}
+	var more []ui.CommandItem
+	for _, it := range navDestinations() {
+		if !primary[it.URL] {
+			more = append(more, it)
+		}
+	}
+	return more
+}
+
+// navRailNode builds the always-on right nav rail. collapsed must match the
+// panel's rendered collapsed state so the toggle's aria-expanded is correct.
+func (h *handlers) navRailNode(collapsed bool) g.Node {
+	return ui.NavRail(ui.NavRailProps{
+		Primary:   navRailPrimary(),
+		More:      navRailMore(),
+		ActiveURL: h.panelActiveURL(),
+		Collapsed: collapsed,
 	})
 }
 
@@ -169,6 +218,7 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 		Title:          "Home",
 		Dock:           dockNode,
 		Panel:          panel,
+		Rail:           h.navRailNode(collapsed),
 		PanelCollapsed: collapsed,
 		PanelStyle:     h.panelWidthCSS(),
 	})

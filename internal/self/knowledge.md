@@ -209,23 +209,30 @@ self tool, which reports the actual registry):
 
 Surfaces: the web UI — / is Home, the single-page chat shell.
 Home renders as shell.ChatShell (internal/ui/shell/chatshell.go) with class
-"app" (optionally "app panel-collapsed") on <html>, a two-column .app-shell
-grid: the full-canvas companion dock on the left (#dock.app-dock) and the
-single-active right panel on the right (#panel.app-panel, #panel-inner). The
-domain sidebar rail was retired in plan 102 — navigation is via a composer
-/-command palette (ui.CommandPalette) that appears when the draft starts with
-"/". There is no topbar, no burger, and no off-canvas rail drawer. On narrow
-viewports (≤720px) the layout collapses to one column (chat full-width); the
-panel slides in as a fixed overlay (plan 098). Navigation: Quests, Life, the
+"app" (optionally "app panel-collapsed") on <html>, a three-column .app-shell
+grid: the full-canvas companion dock on the left (#dock.app-dock), the
+single-active right panel in the middle (#panel.app-panel, #panel-inner), and an
+always-on icon nav rail pinned to the far right (#navrail, ui.NavRail). The
+domain sidebar rail was retired in plan 102; navigation now has two surfaces
+that share one destination source (web.navDestinations → []ui.CommandItem):
+(1) the composer /-command palette (ui.CommandPalette) that appears when the
+draft starts with "/", and (2) the right nav rail — a panel expand/collapse
+toggle, one icon per primary destination (Quests, Life, Memory, Skills,
+Settings), and a chooser (lens) popover listing the rest. There is no topbar and
+no burger. On narrow viewports (≤720px) the layout is chat + the always-on rail;
+the panel slides in as a fixed overlay to the rail's left (plan 098). Both nav
+surfaces fire GET /ui/show/{type}; the full destination set is Quests, Life, the
 five memory categories (Facts, Preferences, People, Projects, Context) +
-Awaiting, Skills, and the three settings sections (Profile, Models, Heads) —
-each `/`-command item fires GET /ui/show/{type} from the palette (plan 110).
+Awaiting, Skills, and the three settings sections (Profile, Models, Heads).
 
 The panel is collapsible and owner-resizable (plan 103). Collapse state is
 persisted as owner_settings["panel_collapsed"] ("1"/"0"/unset — unset derives
 from emptiness: collapsed when nothing is open). Opening an artifact via
 /ui/show expands the panel (sets "0"); closing sets "1". The owner can also
-toggle via the ‹/› button (basmTogglePanel() in basm.js, POST /ui/panel/collapse).
+toggle via the nav rail's expand button (basmTogglePanel() in basm.js, POST
+/ui/panel/collapse); a rail destination click also expands the panel live
+(basmOpenPanel()). The old fixed panel-reveal handle was removed — the rail
+supersedes it.
 Panel width is persisted as owner_settings["panel_width"] (integer px string,
 clamped to 320–1100); the owner drags the .panel-resizer divider and the width
 is committed on release via POST /ui/panel/width. Both the SSR width override

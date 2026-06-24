@@ -43,6 +43,12 @@ func (h *handlers) panelCollapsed() bool {
 	}
 }
 
+// panelActiveURL returns the persisted open-panel door (/ui/show/...), or "" when
+// nothing is open. The nav rail uses it to highlight the matching primary icon.
+func (h *handlers) panelActiveURL() string {
+	return store.GetOwnerSetting(h.app, panelActiveKey, "")
+}
+
 // panelWidthCSS returns the inline "--w-panel: <px>px" override, or "" to use the
 // CSS default. The value is clamped on write (Step 5) so render trusts it but
 // re-clamps defensively.

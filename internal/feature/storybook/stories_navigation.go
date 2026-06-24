@@ -171,3 +171,47 @@ func sidebarStory() Story {
 		},
 	}
 }
+
+func navrailStory() Story {
+	// The always-on right icon rail (the live home shell, not retired). Primary
+	// destinations are curated quick-access icons; the chooser (lens) opens a
+	// popover with the rest. Both reuse ui.CommandItem so the rail and the
+	// composer /-palette share one destination source.
+	primary := []ui.CommandItem{
+		{Label: "Quests", Icon: "scroll", URL: "/ui/show/quests"},
+		{Label: "Life", Icon: "orb", URL: "/ui/show/lifelog"},
+		{Label: "Memory", Icon: "tome", URL: "/ui/show/memory?category=fact"},
+		{Label: "Skills", Icon: "key", URL: "/ui/show/skills"},
+		{Label: "Settings", Icon: "shield", URL: "/ui/show/settings?section=profile"},
+	}
+	more := []ui.CommandItem{
+		{Label: "Preferences", Icon: "tome", URL: "/ui/show/memory?category=preference"},
+		{Label: "People", Icon: "tome", URL: "/ui/show/memory?category=person"},
+		{Label: "Models", URL: "/ui/show/settings?section=models"},
+		{Label: "Heads", URL: "/ui/show/settings?section=heads"},
+	}
+	return Story{
+		ID: "navrail", Group: "Navigation", Title: "Nav rail (right icon rail)", OnDock: true,
+		Blurb: "The always-on, far-right icon rail for the single-page chat shell. The top toggle expands/collapses the right panel (the chevron flips while collapsed); each Primary destination is a dedicated icon that opens its card in the panel via a Datastar @get to the non-polluting /ui/show door (and expands the panel via basmOpenPanel); the chooser (lens) opens a parchment popover listing the rest. ActiveURL highlights the matching icon (gold inset + aria-current). Items reuse ui.CommandItem, the same source as the composer /-palette.",
+		Variants: []Variant{
+			{"expanded · Quests active", ui.NavRail(ui.NavRailProps{Primary: primary, More: more, ActiveURL: "/ui/show/quests"})},
+			{"collapsed", ui.NavRail(ui.NavRailProps{Primary: primary, More: more, Collapsed: true})},
+		},
+		Props: []Prop{
+			{"Primary", "[]ui.CommandItem", "—", "Curated quick-access destinations, each a dedicated always-visible icon button. Label drives the aria-label + hover title; Icon is a /static/icons stem; URL is the /ui/show door."},
+			{"More", "[]ui.CommandItem", "nil", "The rest of the index, listed in the chooser (lens) popover. Omit to drop the chooser."},
+			{"ActiveURL", "string", `""`, "The open panel door (/ui/show/...). The Primary icon whose URL matches is highlighted and gets aria-current=\"page\"."},
+			{"Collapsed", "bool", "false", "Panel collapsed at SSR — seeds the toggle's aria-expanded so the markup matches the panel state."},
+		},
+		Dos: []string{
+			"Keep Primary to a handful of top destinations; push everything else into More.",
+			"Reuse the shared destination source (navDestinations) so the rail and the /-palette never drift.",
+			"Use icon stems that exist under /static/icons/ (scroll, orb, tome, key, shield, lens, …).",
+		},
+		Donts: []string{
+			"Navigate the page on click — open the card in the panel via @get('/ui/show/{type}').",
+			"Duplicate the destination list — derive More from the canonical source minus Primary.",
+			"Drop the hover title / aria-label — the rail icons carry no visible text.",
+		},
+	}
+}

@@ -13,6 +13,7 @@ type ChatShellProps struct {
 	Title          string
 	Dock           g.Node
 	Panel          g.Node // the single-active right panel (chat.Panel)
+	Rail           g.Node // the always-on right nav rail (ui.NavRail) — far-right column
 	PanelCollapsed bool   // render with the panel hidden, chat full-width (plan 103)
 	PanelStyle     string // inline "--w-panel:<px>px" override on <html>, or "" (plan 103)
 }
@@ -56,10 +57,10 @@ func ChatShell(p ChatShellProps) g.Node {
 							h.Aria("label", "Resize panel"), h.TabIndex("-1")),
 						p.Panel,
 					),
-					// Reveal handle: visible only when collapsed (CSS), re-opens the panel.
-					h.Button(h.Class("panel-reveal"), h.Type("button"),
-						g.Attr("onclick", "basmTogglePanel()"),
-						h.Aria("label", "Show panel"), g.Text("‹")),
+					// Always-on far-right nav rail: expand/collapse toggle + destination
+					// icons + chooser. Re-opening a collapsed panel lives here now (it
+					// supersedes the old fixed panel-reveal handle).
+					p.Rail,
 				),
 			),
 		),
