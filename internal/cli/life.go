@@ -221,7 +221,7 @@ func dayCmd(app core.App) *cobra.Command {
 			return nil, err
 		}
 
-		// Journal entries (type=journal nodes)
+		// Journal entries (the type=day node's body, plan 171)
 		journal := make([]map[string]any, 0, len(dayData.Journal))
 		for _, r := range dayData.Journal {
 			journal = append(journal, journalNodeJSON(r))

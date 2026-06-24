@@ -190,15 +190,14 @@ func Reset(app core.App) (*Result, error) {
 	if res.Skills, err = del("nodes", "type = 'skill' && ("+nameTitleFilter(seedSkillNames)+")", nameParams(seedSkillNames)); err != nil {
 		return nil, err
 	}
-	// Split notes and journals so Reset can report accurate per-type counts.
+	// Delete seeded note nodes (source=Marker). Journal entries are now type=day
+	// nodes cleaned up by seedResetDayNodes below (plan 171).
 	{
-		combined, err2 := del("nodes", "props.source = {:m} && (type = 'note' || type = 'journal')", dbx.Params{"m": Marker})
+		n, err2 := del("nodes", "props.source = {:m} && type = 'note'", dbx.Params{"m": Marker})
 		if err2 != nil {
 			return nil, err2
 		}
-		// Count already committed to combined; approximate split is fine for total()
-		// symmetry — both Run and Reset use the same combined field for notes+journal.
-		res.Notes = combined
+		res.Notes = n
 	}
 	if res.Heads, err = del("heads", nameFilter(seedHeadNames), nameParams(seedHeadNames)); err != nil {
 		return nil, err
@@ -243,12 +242,15 @@ func Reset(app core.App) (*Result, error) {
 		}
 	}
 
-	// Seed day nodes (type=day, props.seed=true). Must come AFTER deleting all
-	// other seeded nodes so cascaded edge deletion from above doesn't leave
-	// orphan on_day edges pointing at surviving day nodes.
-	if _, err := seedResetDayNodes(app); err != nil {
+	// Seed day nodes (type=day). Must come AFTER deleting all other seeded nodes
+	// so cascaded edge deletions from above don't leave orphan on_day edges.
+	journalDel, _, err := seedResetDayNodes(app)
+	if err != nil {
 		return nil, err
 	}
+	// Journal-originated day nodes are reported in res.Journal so Reset↔Run
+	// symmetry holds: Run.Journal == Reset.Journal (plan 171).
+	res.Journal = journalDel
 
 	return res, nil
 }
@@ -411,28 +413,26 @@ func seedSkills(app core.App) (int, error) {
 	return count, nil
 }
 
-// seedNotes creates a couple of owner-authored note nodes and one journal node
-// (all born active), tagged with Marker in props.source so Reset removes them.
-// Gives the note + day cards real data to render.
+// seedNotes creates a couple of owner-authored note nodes (born active), tagged
+// with Marker in props.source so Reset removes them. Gives the note card real
+// data to render. The journal entry for today is seeded via seedJournal
+// (world.go) which writes to the unified type=day node (plan 171).
 func seedNotes(app core.App) (int, error) {
 	if _, err := app.FindFirstRecordByFilter("nodes",
-		"props.source = {:m} && (type = 'note' || type = 'journal')",
+		"props.source = {:m} && type = 'note'",
 		dbx.Params{"m": Marker}); err == nil {
 		return 0, nil // already seeded
 	}
-	now := time.Now()
 	specs := []struct {
-		typ, title, body string
-		props            map[string]any
+		title, body string
 	}{
-		{"note", "Spring garden plan", "Soil prep first, then the fence, then the seedling tray. Tomatoes go on the south wall.", map[string]any{"source": Marker}},
-		{"note", "Greenhouse idea", "A small lean-to greenhouse next year — reuse the old window frames.", map[string]any{"source": Marker}},
-		{"journal", now.Format("Monday, January 2 2006"), "A steady day in the garden. The first seedlings are up.", map[string]any{"source": Marker, "date": now.Format("2006-01-02")}},
+		{"Spring garden plan", "Soil prep first, then the fence, then the seedling tray. Tomatoes go on the south wall."},
+		{"Greenhouse idea", "A small lean-to greenhouse next year — reuse the old window frames."},
 	}
 	count := 0
 	for _, s := range specs {
-		if _, err := nodes.Create(app, s.typ, s.title, s.body, nodes.StatusActive, s.props); err != nil {
-			return count, fmt.Errorf("seeding %s %q: %w", s.typ, s.title, err)
+		if _, err := nodes.Create(app, "note", s.title, s.body, nodes.StatusActive, map[string]any{"source": Marker}); err != nil {
+			return count, fmt.Errorf("seeding note %q: %w", s.title, err)
 		}
 		count++
 	}

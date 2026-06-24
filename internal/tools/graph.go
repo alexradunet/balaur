@@ -138,7 +138,7 @@ func nodeRelatedTool(app core.App) agent.Tool {
 func nodeQueryTool(app core.App) agent.Tool {
 	allTypes, err := nodes.TypeNames(app)
 	if err != nil || len(allTypes) == 0 {
-		allTypes = []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place"}
+		allTypes = []string{"note", "memory", "skill", "day", "person", "book", "idea", "place"}
 	}
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("node_query",

@@ -115,22 +115,26 @@ func TestSchemaBaseline(t *testing.T) {
 		t.Error("index idx_node_types_name missing")
 	}
 
-	// 9. node_types has eleven seeded types: the eight built-ins plus task (plan 167), measure (plan 168), day (plan 169).
+	// 9. node_types has ten seeded types: the eight built-ins minus journal (retired plan 171)
+	// plus task (plan 167), measure (plan 168), day (plan 169/171).
 	ntRecs, err := app.FindRecordsByFilter("node_types", "", "", 0, 0, nil)
 	if err != nil {
 		t.Fatalf("node_types seed check: %v", err)
 	}
-	if len(ntRecs) < 11 {
-		t.Errorf("node_types seed: got %d rows, want >= 11", len(ntRecs))
+	if len(ntRecs) < 10 {
+		t.Errorf("node_types seed: got %d rows, want >= 10", len(ntRecs))
 	}
 	ntNames := make(map[string]bool, len(ntRecs))
 	for _, r := range ntRecs {
 		ntNames[r.GetString("name")] = true
 	}
-	for _, name := range []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place", "task", "measure", "day"} {
+	for _, name := range []string{"note", "memory", "skill", "person", "book", "idea", "place", "task", "measure", "day"} {
 		if !ntNames[name] {
 			t.Errorf("node_types seed: %q missing", name)
 		}
+	}
+	if ntNames["journal"] {
+		t.Errorf("node_types seed: journal must be absent (retired plan 171)")
 	}
 
 	// 14. measure type has a kind property schema (plan 168).

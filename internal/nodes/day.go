@@ -1,9 +1,10 @@
-// day.go (plan 169): day-page nodes + on_day edges.
+// day.go (plan 171): day-page nodes + on_day edges.
 //
 // Each calendar day is represented by exactly one type=day node (one per
-// owner-local date, title = "YYYY-MM-DD"). Every new non-day node gets an
-// on_day edge pointing to its creation-day node. This makes "everything
-// created on a day" a simple inbound-neighbourhood query on the day node.
+// owner-local date). The node is both the journal page (body = owner's prose)
+// and the on_day hub (every node created that day links here). Resolution key
+// is props.date = "YYYY-MM-DD"; title is the human-readable date
+// ("Monday, January 2 2006"). type=journal is retired (plan 171).
 package nodes
 
 import (
@@ -26,16 +27,17 @@ func DayKey(t time.Time, loc *time.Location) string {
 }
 
 // DayNode resolves or creates the type=day node for t's owner-local date.
-// The node is uniquely identified by its title (YYYY-MM-DD); idempotent: two
-// calls for times on the same owner-local day return the same node.
+// Resolution is keyed on props.date (ISO "YYYY-MM-DD"); the title is the
+// human-readable date ("Monday, January 2 2006"). Idempotent: two calls for
+// times on the same owner-local day return the same node.
 func DayNode(app core.App, t time.Time) (*core.Record, error) {
 	loc := store.OwnerLocation(app)
 	key := DayKey(t, loc)
 
-	// Resolve existing active day node by title.
+	// Resolve existing active day node by props.date (the canonical key).
 	rec, err := app.FindFirstRecordByFilter("nodes",
-		"type = 'day' && status = 'active' && title = {:k}",
-		dbx.Params{"k": key})
+		"type = 'day' && status = 'active' && props.date = {:d}",
+		dbx.Params{"d": key})
 	if err == nil {
 		return rec, nil
 	}
@@ -43,8 +45,9 @@ func DayNode(app core.App, t time.Time) (*core.Record, error) {
 		return nil, fmt.Errorf("nodes: day: querying day node %q: %w", key, err)
 	}
 
-	// None found — create it.
-	return Create(app, "day", key, "", StatusActive, map[string]any{"date": key})
+	// None found — create it with a human-readable title.
+	label := t.In(loc).Format("Monday, January 2 2006")
+	return Create(app, "day", label, "", StatusActive, map[string]any{"date": key})
 }
 
 // LinkOnDay adds an on_day edge from rec to its creation-day node.

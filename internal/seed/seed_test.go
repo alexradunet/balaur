@@ -120,22 +120,17 @@ func TestResetRemovesOnlySeededData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reset: %v", err)
 	}
-	// total() excludes Journal (folded into Notes in Reset) and Edges (cascade).
-	// The Reset Notes field includes both notes AND journal nodes that had source=Marker.
-	// So first.Notes + first.Journal should equal removed.Notes.
-	wantNotesAndJournal := first.Notes + first.Journal
-	if removed.Notes != wantNotesAndJournal {
-		t.Errorf("Reset notes+journal = %d, want %d (first.Notes=%d + first.Journal=%d)",
-			removed.Notes, wantNotesAndJournal, first.Notes, first.Journal)
+	// plan 171: journal entries are type=day nodes (source=Marker); Reset counts
+	// them in removed.Journal (not Notes). Verify symmetry directly.
+	if removed.Notes != first.Notes {
+		t.Errorf("Reset notes = %d, want %d", removed.Notes, first.Notes)
 	}
-	// The rest of total() fields must match exactly.
-	firstWithoutJournal := *first
-	firstWithoutJournal.Notes = wantNotesAndJournal
-	firstWithoutJournal.Journal = 0
-	removedAdj := *removed
-	removedAdj.Journal = 0
-	if total(&removedAdj) != total(&firstWithoutJournal) {
-		t.Fatalf("Reset removed %d records (total), seeded %d", total(&removedAdj), total(&firstWithoutJournal))
+	if removed.Journal != first.Journal {
+		t.Errorf("Reset journal = %d, want %d (first.Journal=%d)", removed.Journal, first.Journal, first.Journal)
+	}
+	// total() excludes Journal and Edges (cascade-delete); verify the rest matches.
+	if total(removed) != total(first) {
+		t.Fatalf("Reset removed %d records (total), seeded %d", total(removed), total(first))
 	}
 
 	// The real task node is untouched; seeded task nodes are gone.
@@ -160,13 +155,15 @@ func TestResetRemovesOnlySeededData(t *testing.T) {
 		}
 	}
 
-	// No seed day nodes remain.
+	// No seed day nodes remain (either props.seed=true or props.source=Marker).
 	allDayNodes, _ := app.FindRecordsByFilter("nodes", "type = 'day' && status = 'active'", "", 0, 0, nil)
 	for _, r := range allDayNodes {
-		if v, ok := nodes.Props(r)["seed"]; ok {
-			if b, ok2 := v.(bool); ok2 && b {
-				t.Errorf("seed day node %s remains after Reset", r.Id)
-			}
+		p := nodes.Props(r)
+		if b, ok := p["seed"].(bool); ok && b {
+			t.Errorf("hub seed day node %s remains after Reset", r.Id)
+		}
+		if s, ok := p["source"].(string); ok && s == Marker {
+			t.Errorf("journal seed day node %s remains after Reset", r.Id)
 		}
 	}
 

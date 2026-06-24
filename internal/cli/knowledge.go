@@ -14,7 +14,8 @@ import (
 
 // ownerNodeTypes are the owner-authored node types the `note` command may
 // create. memory/skill are excluded — those are consent-gated proposals.
-var ownerNodeTypes = []string{"note", "journal", "person", "book", "idea", "place"}
+// journal is excluded — journal_write owns day-node creation (plan 171).
+var ownerNodeTypes = []string{"note", "person", "book", "idea", "place"}
 
 func nodeJSON(r *core.Record) map[string]any {
 	return map[string]any{
@@ -302,7 +303,7 @@ func noteAddCmd(app core.App) *cobra.Command {
 		Short: "Create an owner-authored node (note or typed object), born active",
 		Args:  cobra.NoArgs,
 	}
-	cmd.Flags().StringVar(&typ, "type", "note", "note | journal | person | book | idea | place")
+	cmd.Flags().StringVar(&typ, "type", "note", "note | person | book | idea | place")
 	cmd.Flags().StringVar(&title, "title", "", "node title (required)")
 	cmd.Flags().StringVar(&body, "body", "", "node markdown body")
 	_ = cmd.MarkFlagRequired("title")
