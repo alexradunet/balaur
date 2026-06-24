@@ -51,7 +51,7 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 |------|-------|----------|--------|------------|--------|
 | 164 | Object-type registry (types-as-data) | P1 | M | — | DONE (merged to main) |
 | 165 | Per-type property schemas + templates + validation | P1 | M | 164 | DONE (merged to main) |
-| 166 | First-class relations + AI link/traverse/query tools | P1 | M | 164 (165 helps) | TODO |
+| 166 | First-class relations + AI link/traverse/query tools | P1 | M | 164 (165 helps) | DONE (merged to main; clean first pass) |
 | 167 | Fold tasks into the spine (type=task nodes) | P2 | L | 164, 165 | DONE (merged to main; 1 revision round) |
 | 168 | Fold life-log into the spine (type=measure nodes) | P2 | L | 164, 165 | DONE (merged to main; 1 revision round) |
 
