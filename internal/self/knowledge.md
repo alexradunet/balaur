@@ -103,8 +103,16 @@ One binary, layered as: gateway → turn pipeline → business logic.
   to `llm_models`). Each registry row carries the type's name, label, icon,
   and `born_status` — the consent default for agent-created nodes of that
   type ("active" for owner-authored types, "proposed" for consent-gated
-  types like memory and skill). Adding a new type is one registry row; no
-  code change needed. Consent lives in `nodes.status`:
+  types like memory and skill). Each registered type may also declare a typed
+  property schema (`properties` column: a JSON array of PropDef — each with
+  key, type (text/number/date/bool/select), required flag, and optional select
+  options) and an optional template (`template` column: a JSON object of
+  default prop values, plus the reserved key `"_body"` for a default node
+  body). Node writes via `nodes.Create` apply the template first, then
+  validate `props` against the type's property schema; types with an empty
+  schema accept any props, keeping note/journal and user-defined types fully
+  open. Adding a new type is one registry row; no code change needed.
+  Consent lives in `nodes.status`:
   notes/journal/typed objects are born active (owner-authored, trusted);
   memory/skill are born proposed and become active only on the owner's
   approval. Traversal and search filter to status=active — a proposed or

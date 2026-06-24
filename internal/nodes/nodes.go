@@ -82,6 +82,10 @@ func PropInt(rec *core.Record, key string) int {
 
 // Create writes a node of the given type/status with the supplied props and
 // audits node.create after the write. props may be nil.
+//
+// The template for the type is applied first (filling missing prop keys and an
+// empty body), then props are validated against the type's property schema.
+// Types with an empty schema accept any props.
 func Create(app core.App, typ, title, body, status string, props map[string]any) (*core.Record, error) {
 	if strings.TrimSpace(title) == "" {
 		return nil, fmt.Errorf("nodes: title is required")
@@ -93,6 +97,26 @@ func Create(app core.App, typ, title, body, status string, props map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("nodes: unknown type %q (not in node_types registry)", typ)
 	}
+
+	// Apply template defaults before validation so required-with-default fields pass.
+	tmpl, err := TypeTemplate(app, typ)
+	if err != nil {
+		return nil, fmt.Errorf("nodes: loading template for %q: %w", typ, err)
+	}
+	if props == nil {
+		props = map[string]any{}
+	}
+	body, props = ApplyTemplate(tmpl, body, props)
+
+	// Validate props against the type's schema (empty schema = any props ok).
+	defs, err := TypeSchema(app, typ)
+	if err != nil {
+		return nil, fmt.Errorf("nodes: loading schema for %q: %w", typ, err)
+	}
+	if err := ValidateProps(defs, props); err != nil {
+		return nil, fmt.Errorf("nodes: invalid props for type %q: %w", typ, err)
+	}
+
 	col, err := app.FindCollectionByNameOrId("nodes")
 	if err != nil {
 		return nil, fmt.Errorf("finding nodes collection: %w", err)
@@ -102,7 +126,7 @@ func Create(app core.App, typ, title, body, status string, props map[string]any)
 	rec.Set("title", title)
 	rec.Set("body", body)
 	rec.Set("status", status)
-	if props != nil {
+	if len(props) > 0 {
 		rec.Set("props", props)
 	}
 	if err := app.Save(rec); err != nil {

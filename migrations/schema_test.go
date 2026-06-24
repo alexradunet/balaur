@@ -139,6 +139,23 @@ func TestSchemaBaseline(t *testing.T) {
 	} else if _, ok := f.(*core.TextField); !ok {
 		t.Errorf("nodes.type should be TextField, got %T", f)
 	}
+
+	// 11. node_types has properties and template fields (plan 165).
+	ntCol := mustCol(t, app, "node_types")
+	for _, fname := range []string{"properties", "template"} {
+		if ntCol.Fields.GetByName(fname) == nil {
+			t.Errorf("node_types.%s field missing (plan 165)", fname)
+		}
+	}
+
+	// 12. memory type has a non-empty properties schema (plan 165 backfill).
+	memRec, err := app.FindFirstRecordByData("node_types", "name", "memory")
+	if err != nil {
+		t.Fatalf("node_types memory row missing: %v", err)
+	}
+	if memRec.GetString("properties") == "" {
+		t.Error("node_types memory.properties should be non-empty after plan 165 backfill")
+	}
 }
 
 func mustCol(t *testing.T, app core.App, name string) *core.Collection {

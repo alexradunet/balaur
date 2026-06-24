@@ -166,7 +166,8 @@ func TestBacklinksAndOutbound(t *testing.T) {
 
 func TestProposedNodesNeverResolve(t *testing.T) {
 	app := storetest.NewApp(t)
-	hidden, _ := nodes.Create(app, "memory", "Hidden", "", nodes.StatusProposed, nil)
+	// Use type=note (empty schema) — this test is about link resolution, not memory props.
+	hidden, _ := nodes.Create(app, "note", "Hidden", "", nodes.StatusProposed, nil)
 	source, _ := nodes.Create(app, "note", "Source", "[[Hidden]]", nodes.StatusActive, nil)
 	if err := nodes.SyncLinks(app, source); err != nil {
 		t.Fatal(err)

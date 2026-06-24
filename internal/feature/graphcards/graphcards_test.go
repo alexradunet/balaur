@@ -34,7 +34,8 @@ func TestRelatedComputation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create C: %v", err)
 	}
-	d, err := nodes.Create(app, "memory", "Draft idea", "", nodes.StatusProposed, nil)
+	// Use note (empty schema) — this test is about consent graph filtering, not memory props.
+	d, err := nodes.Create(app, "note", "Draft idea", "", nodes.StatusProposed, nil)
 	if err != nil {
 		t.Fatalf("create D: %v", err)
 	}
@@ -82,7 +83,8 @@ func TestGraphCardRendersSVG(t *testing.T) {
 		t.Fatalf("create B: %v", err)
 	}
 	// A proposed neighbor that must never reach the SVG.
-	d, err := nodes.Create(app, "memory", "Secret draft", "", nodes.StatusProposed, nil)
+	// Use note (empty schema) — this test is about consent graph filtering, not memory props.
+	d, err := nodes.Create(app, "note", "Secret draft", "", nodes.StatusProposed, nil)
 	if err != nil {
 		t.Fatalf("create D: %v", err)
 	}

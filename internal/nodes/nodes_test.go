@@ -33,7 +33,8 @@ func TestCreateAndProps(t *testing.T) {
 
 func TestTransitionLifecycle(t *testing.T) {
 	app := storetest.NewApp(t)
-	rec, err := nodes.Create(app, "memory", "x", "", nodes.StatusProposed, nil)
+	// Use note (empty schema) — this test is about lifecycle transitions, not memory props.
+	rec, err := nodes.Create(app, "note", "x", "", nodes.StatusProposed, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,8 @@ func TestTraversalExcludesNonActive(t *testing.T) {
 	app := storetest.NewApp(t)
 	hub, _ := nodes.Create(app, "note", "Hub", "", nodes.StatusActive, nil)
 	activeN, _ := nodes.Create(app, "note", "Active", "", nodes.StatusActive, nil)
-	proposed, _ := nodes.Create(app, "memory", "Proposed", "", nodes.StatusProposed, nil)
+	// Use note (empty schema) — this test is about graph traversal, not memory props.
+	proposed, _ := nodes.Create(app, "note", "Proposed", "", nodes.StatusProposed, nil)
 
 	// hub → active, hub → proposed (outbound); proposed → hub (inbound).
 	if _, err := nodes.AddEdge(app, hub.Id, activeN.Id, "", ""); err != nil {
