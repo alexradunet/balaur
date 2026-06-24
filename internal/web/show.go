@@ -44,5 +44,10 @@ func (h *handlers) uiShow(e *core.RequestEvent) error {
 	_ = store.SetOwnerSetting(h.app, panelCollapsedKey, "0") // expand on open
 	sse := datastar.NewSSE(e.Response, e.Request)
 	_ = sse.PatchElements(renderNodeHTML(h.panelNode(typ, queryStr))) // morph #panel-inner; NO chip, NO persisted row
+	// Refresh the nav rail so its active-destination highlight tracks live — it
+	// re-reads the freshly-persisted panel_active/collapsed. Every owner door
+	// (rail, palette, chooser, card links, chip re-open) lands here, so one patch
+	// keeps the highlight correct everywhere.
+	patchOuter(sse, "navrail", h.navRailNode(h.panelCollapsed()))
 	return nil
 }

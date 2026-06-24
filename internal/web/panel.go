@@ -179,7 +179,8 @@ func (h *handlers) panelClose(e *core.RequestEvent) error {
 		h.app.Logger().Warn("persisting panel state failed", "key", panelActiveKey, "err", err)
 	}
 	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(renderNodeHTML(emptyPanelNode())) // morph #panel-inner → empty
+	_ = sse.PatchElements(renderNodeHTML(emptyPanelNode()))       // morph #panel-inner → empty
+	patchOuter(sse, "navrail", h.navRailNode(h.panelCollapsed())) // clear the rail highlight; nothing open now
 	return nil
 }
 

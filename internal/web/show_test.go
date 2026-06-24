@@ -62,6 +62,22 @@ func TestUIShow(t *testing.T) {
 		s.Test(t)
 	})
 
+	t.Run("GET /ui/show/quests → also re-patches #navrail with the active highlight", func(t *testing.T) {
+		s := tests.ApiScenario{
+			Name:           "quests show → nav rail re-patched, Quests active",
+			Method:         "GET",
+			URL:            "/ui/show/quests",
+			TestAppFactory: newWebApp,
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				`id="navrail"`,        // the rail is re-patched in the same SSE response
+				"navrail-btn-active",  // a primary icon is highlighted
+				`aria-current="page"`, // ...the active one carries aria-current
+			},
+		}
+		s.Test(t)
+	})
+
 	t.Run("GET /ui/show/quests: no tool row persisted (headline regression guard)", func(t *testing.T) {
 		// This is the owner directive test: opening a card must NOT persist a
 		// role=tool row. Count tool rows before and after; expect unchanged.
@@ -128,7 +144,10 @@ func TestUIShow(t *testing.T) {
 				"datastar-patch-elements",
 				`id="panel-inner"`,
 				"panel-empty",
+				`id="navrail"`, // the rail is re-patched too
 			},
+			// Nothing is open after close → no primary icon highlighted.
+			NotExpectedContent: []string{"navrail-btn-active"},
 			BeforeTestFunc: func(tb testing.TB, app *tests.TestApp, _ *core.ServeEvent) {
 				// Pre-seed panel_active so we can verify it is cleared.
 				if err := store.SetOwnerSetting(app, panelActiveKey, "/ui/show/quests"); err != nil {
