@@ -57,8 +57,26 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 | 169 | Day pages (`type=day` nodes + `on_day` edges) | P2 | M | 164, 165, 166 | DONE (merged to main; clean first pass) |
 | 170 | Rich interconnected 2-month demo seed | P2 | L | 164–169 | DONE (merged to main; clean first pass) |
 | 171 | Unify journal node into the day node (one `type=day` page/date) | P2 | L | 160, 168, 169 | DONE (merged to main; clean first pass) |
+| 172 | Multi-year telescope demo seed (every recap band populates) | P2 | L | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/172-multiyear-telescope-demo-seed` @ `27ea219` — merge pending owner) |
+| 173 | Chronicle history page in the side panel (replace flaky dock auto-load) | P2 | M | 172 | DONE (executed + reviewed APPROVE; worktree branch `worktree-agent-a0283d90b6ae7a654` @ `da6c225` — merge pending owner; combined walk with 172 verified populated) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+### Recap telescope & history (172–173)
+
+A follow-on to the day/period-node work (the period node — `/ui/show/period` —
+landed in commit `3c5e988`). The telescope (day→week→month→quarter→year recap
+cards, each opening a period/day node) exists but is invisible in practice:
+the dev seed is too shallow to populate the quarter/year bands, and the dock's
+`intersect`-based auto-load is unreliable so the recaps often never render.
+These two plans, written by the `improve` skill on 2026-06-24 against commit
+`22f1b83`, fix both: **172** makes the dev history multi-year and dense enough
+that every band has summaries + content; **173** moves the telescope out of the
+flaky dock sentinel into a reliable, navigable **Chronicle** page in the side
+panel (a nav button + a dock button open it; cards open period/day nodes).
+**Run 172 before 173** so the page has data to show in dev (not a hard code
+dependency — 173 builds and tests independently — but the browser verification
+in 173 Step 8 assumes 172's seed).
 
 ## Dependency notes
 
