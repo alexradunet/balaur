@@ -56,9 +56,11 @@ func toolIconFile(name string) string {
 //   - Host must be a loopback address (DNS-rebinding defence). Owners who
 //     deliberately serve on a LAN name can allow it via BALAUR_ALLOWED_HOSTS
 //     (comma-separated host[:port] values).
-//   - On state-changing methods, an Origin header, when present, must match
-//     the request Host (cross-site form/fetch POST defence). Absent Origin
-//     (curl, CLI, same-origin GET) passes.
+//   - On state-changing methods: the browser-set, unspoofable Sec-Fetch-Site
+//     header is authoritative when present (only same-origin/none pass);
+//     otherwise an Origin header, when present, must match the request Host,
+//     and the attacker-influenced value "null" (opaque/sandboxed origins) is a
+//     rejection. Absent both headers (curl, CLI, same-origin GET) passes.
 func guardLocalUI(e *core.RequestEvent) error {
 	p := e.Request.URL.Path
 	if strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/_") {
@@ -72,7 +74,25 @@ func guardLocalUI(e *core.RequestEvent) error {
 		return e.ForbiddenError("host not allowed", nil)
 	}
 	if e.Request.Method != http.MethodGet && e.Request.Method != http.MethodHead {
-		if origin := e.Request.Header.Get("Origin"); origin != "" && origin != "null" {
+		// Sec-Fetch-Site is browser-set and unspoofable: a cross-site page
+		// cannot forge it. When present it is authoritative — only same-origin
+		// and none (top-level user navigation) are trusted.
+		switch e.Request.Header.Get("Sec-Fetch-Site") {
+		case "same-origin", "none":
+			return e.Next()
+		case "":
+			// No fetch-metadata (curl, CLI, older clients): fall through to the
+			// Origin check below.
+		default:
+			return e.ForbiddenError("cross-site request rejected", nil)
+		}
+		// Origin: null is attacker-influenced (opaque/sandboxed origins emit it),
+		// so it is a rejection, not a trusted-absent. A truly absent Origin
+		// (curl, CLI) still passes.
+		if origin := e.Request.Header.Get("Origin"); origin != "" {
+			if origin == "null" {
+				return e.ForbiddenError("cross-origin request rejected", nil)
+			}
 			u, err := url.Parse(origin)
 			if err != nil || !sameHost(u.Host, e.Request.Host) {
 				return e.ForbiddenError("cross-origin request rejected", nil)
