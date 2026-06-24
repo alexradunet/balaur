@@ -227,15 +227,6 @@ func TestNoWebImports(t *testing.T) {
 	t.Log("compile-time verified: internal/cards has no internal/web imports")
 }
 
-func TestValidateMemoryCategory(t *testing.T) {
-	if _, err := cards.Validate("memory", map[string]string{"category": "person"}); err != nil {
-		t.Errorf("category=person should validate: %v", err)
-	}
-	if _, err := cards.Validate("memory", map[string]string{"category": "bogus"}); err == nil {
-		t.Error("category=bogus should error (bad enum)")
-	}
-}
-
 // TestSpecHasDefaultH verifies that every registered spec has a non-zero H.
 func TestSpecHasDefaultH(t *testing.T) {
 	for _, spec := range cards.All() {

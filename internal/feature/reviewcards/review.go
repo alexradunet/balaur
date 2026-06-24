@@ -182,13 +182,13 @@ func editProposalOf(r *core.Record) EditProposalView {
 			return r.GetString("body")
 		case "importance":
 			return strconv.Itoa(nodes.PropInt(r, "importance"))
-		default: // category, when_to_use, description live in props
+		default: // when_to_use, description live in props
 			return nodes.PropString(r, field)
 		}
 	}
 	// Stable order; title/name both map to the node title, so show only the one
 	// that matches the kind (avoids a duplicate row).
-	for _, f := range []string{"title", "name", "content", "category", "importance", "when_to_use", "description"} {
+	for _, f := range []string{"title", "name", "content", "importance", "when_to_use", "description"} {
 		if f == "name" && kind == "memory" {
 			continue
 		}

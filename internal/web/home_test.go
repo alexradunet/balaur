@@ -35,7 +35,7 @@ func TestHomeFullChat(t *testing.T) {
 			`data-on:click__prevent="@get(&#39;/ui/show/quests&#39;)`,
 			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=profile&#39;)`,
 			// flat palette expansion (plan 110): former memory/settings tabs are now items
-			`data-on:click__prevent="@get(&#39;/ui/show/memory?category=preference&#39;)`,
+			`data-on:click__prevent="@get(&#39;/ui/show/memory&#39;)`,
 			`data-on:click__prevent="@get(&#39;/ui/show/settings?section=models&#39;)`,
 			// composer two-way signal binding (palette depends on this)
 			`data-bind:message`,

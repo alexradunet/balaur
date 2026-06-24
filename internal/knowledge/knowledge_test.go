@@ -30,7 +30,6 @@ func TestProposeAndApproveMemory(t *testing.T) {
 	rec, err := ProposeMemory(app, MemoryProposal{
 		Title:      "Owner lives in Brașov",
 		Content:    "Home base is Brașov, Romania.",
-		Category:   "fact",
 		Importance: 9, // clamped to 5
 		Source:     "chat",
 	})
@@ -68,7 +67,7 @@ func TestProposeAndApproveMemory(t *testing.T) {
 func TestProposeEditLifecycle(t *testing.T) {
 	app := storetest.NewApp(t)
 
-	rec, err := ProposeMemory(app, MemoryProposal{Title: "Prefers tea", Content: "Black, no sugar.", Category: "preference", Importance: 3})
+	rec, err := ProposeMemory(app, MemoryProposal{Title: "Prefers tea", Content: "Black, no sugar.", Importance: 3})
 	if err != nil {
 		t.Fatalf("ProposeMemory: %v", err)
 	}
@@ -220,7 +219,7 @@ func TestTransitionAuditOrdering(t *testing.T) {
 func TestSearchActiveOnlyFindsActive(t *testing.T) {
 	app := storetest.NewApp(t)
 
-	approved, _ := ProposeMemory(app, MemoryProposal{Title: "Prefers espresso", Category: "preference", Importance: 2})
+	approved, _ := ProposeMemory(app, MemoryProposal{Title: "Prefers espresso", Importance: 2})
 	if _, err := Transition(app, Memory, approved.Id, StatusActive); err != nil {
 		t.Fatalf("approve: %v", err)
 	}
@@ -283,11 +282,11 @@ func TestBuildContext(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	important, _ := ProposeMemory(app, MemoryProposal{
-		Title: "Allergic to peanuts", Category: "fact", Importance: 5})
+		Title: "Allergic to peanuts", Importance: 5})
 	Transition(app, Memory, important.Id, StatusActive)
 
 	niche, _ := ProposeMemory(app, MemoryProposal{
-		Title: "Favourite hiking trail is Piatra Mare", Category: "preference", Importance: 2})
+		Title: "Favourite hiking trail is Piatra Mare", Importance: 2})
 	Transition(app, Memory, niche.Id, StatusActive)
 
 	skill, _ := ProposeSkill(app, SkillProposal{
@@ -326,9 +325,9 @@ func TestFilterActive(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	seed := []MemoryProposal{
-		{Title: "Prefers espresso", Category: "preference", Importance: 3},
-		{Title: "Sister Ana lives in Cluj", Category: "person", Importance: 4},
-		{Title: "Espresso machine repair guide", Category: "project", Importance: 2},
+		{Title: "Prefers espresso", Importance: 3},
+		{Title: "Sister Ana lives in Cluj", Importance: 4},
+		{Title: "Espresso machine repair guide", Importance: 2},
 	}
 	for _, p := range seed {
 		rec, err := ProposeMemory(app, p)
@@ -345,20 +344,18 @@ func TestFilterActive(t *testing.T) {
 	}
 
 	cases := []struct {
-		name     string
-		query    string
-		category string
-		want     int
+		name  string
+		query string
+		want  int
 	}{
-		{"no filters lists all active", "", "", 3},
-		{"query matches title substring", "espresso", "", 2},
-		{"category narrows", "", "person", 1},
-		{"query and category combine", "espresso", "project", 1},
-		{"no match", "espresso", "person", 0},
+		{"no filters lists all active", "", 3},
+		{"query matches title substring", "espresso", 2},
+		{"query matches one title", "cluj", 1},
+		{"no match", "zzqq", 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := FilterActive(app, Memory, tc.query, tc.category)
+			got, err := FilterActive(app, Memory, tc.query)
 			if err != nil {
 				t.Fatalf("FilterActive: %v", err)
 			}
@@ -404,7 +401,6 @@ func TestSearchActiveFTSPath(t *testing.T) {
 	rec, err := ProposeMemory(app, MemoryProposal{
 		Title:      "baking notes",
 		Content:    "sift flour, then fold in the eggs",
-		Category:   "fact",
 		Importance: 2,
 		Source:     "test",
 	})
@@ -447,7 +443,7 @@ func TestSearchActiveFTSPath(t *testing.T) {
 func TestSearchActiveFallbackNoIndex(t *testing.T) {
 	app := storetest.NewApp(t)
 
-	approved, _ := ProposeMemory(app, MemoryProposal{Title: "Prefers espresso", Category: "preference", Importance: 2})
+	approved, _ := ProposeMemory(app, MemoryProposal{Title: "Prefers espresso", Importance: 2})
 	if _, err := Transition(app, Memory, approved.Id, StatusActive); err != nil {
 		t.Fatalf("approve: %v", err)
 	}
@@ -472,7 +468,6 @@ func TestSearchActiveIntegration(t *testing.T) {
 	rec, err := ProposeMemory(app, MemoryProposal{
 		Title:      "hiking trail",
 		Content:    "Piatra Mare trail starts near Brasov city",
-		Category:   "preference",
 		Importance: 3,
 		Source:     "test",
 	})
@@ -516,7 +511,7 @@ func TestSearchActiveStaysMemoryOnly(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	mem, err := ProposeMemory(app, MemoryProposal{
-		Title: "owner fact", Content: "owner enjoys kombucha", Category: "preference", Importance: 3, Source: "test",
+		Title: "owner fact", Content: "owner enjoys kombucha", Importance: 3, Source: "test",
 	})
 	if err != nil {
 		t.Fatalf("propose: %v", err)
@@ -563,7 +558,7 @@ func TestSearchAllActiveCrossType(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	mem, err := ProposeMemory(app, MemoryProposal{
-		Title: "owner fact", Content: "owner enjoys kombucha", Category: "preference", Importance: 3, Source: "test",
+		Title: "owner fact", Content: "owner enjoys kombucha", Importance: 3, Source: "test",
 	})
 	if err != nil {
 		t.Fatalf("propose: %v", err)
@@ -577,7 +572,7 @@ func TestSearchAllActiveCrossType(t *testing.T) {
 	}
 	// A proposed memory with the same term — must never be returned.
 	proposed, err := ProposeMemory(app, MemoryProposal{
-		Title: "draft", Content: "secret kombucha plan", Category: "fact", Importance: 1, Source: "test",
+		Title: "draft", Content: "secret kombucha plan", Importance: 1, Source: "test",
 	})
 	if err != nil {
 		t.Fatalf("propose draft: %v", err)

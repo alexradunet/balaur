@@ -78,11 +78,7 @@ func writeMemoryLine(b *strings.Builder, m *core.Record) {
 	if c := strings.TrimSpace(m.GetString("content")); c != "" && c != line {
 		line += ": " + c
 	}
-	cat := m.GetString("category")
-	if cat == "" {
-		cat = "memory"
-	}
-	fmt.Fprintf(b, "- [%s] %s\n", cat, compress(line, 400))
+	fmt.Fprintf(b, "- %s\n", compress(line, 400))
 }
 
 // recallTerms reduces a chat message to its few longest distinct words — a

@@ -65,20 +65,18 @@ func ParseProposal(s string) (kind, id, rest string, ok bool) {
 func rememberTool(app core.App) agent.Tool {
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("remember",
-			"Propose saving a durable memory about the owner (fact, preference, person, project, context). "+
+			"Propose saving a durable memory about the owner. "+
 				"The owner must approve it before it becomes part of your memory — never assume it is saved.",
 			obj(map[string]any{
 				"title":       str("Short one-line summary of the memory."),
 				"content":     str("The full detail worth remembering."),
-				"category":    map[string]any{"type": "string", "enum": []string{"fact", "preference", "person", "project", "context"}, "description": "Kind of memory."},
 				"importance":  map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "5 = core identity/constraints, 1 = nice to know."},
 				"when_to_use": str("Optional: when should this memory be recalled?"),
-			}, "title", "content", "category", "importance")),
+			}, "title", "content", "importance")),
 		Execute: func(ctx context.Context, argsJSON string) (string, error) {
 			var args struct {
 				Title      string `json:"title"`
 				Content    string `json:"content"`
-				Category   string `json:"category"`
 				Importance int    `json:"importance"`
 				WhenToUse  string `json:"when_to_use"`
 			}
@@ -93,7 +91,6 @@ func rememberTool(app core.App) agent.Tool {
 				}
 				args.Title = fallback
 				args.Content = fallback
-				args.Category = "fact"
 				args.Importance = 3
 			}
 			if strings.TrimSpace(args.Title) == "" {
@@ -102,7 +99,6 @@ func rememberTool(app core.App) agent.Tool {
 			rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
 				Title:      args.Title,
 				Content:    args.Content,
-				Category:   args.Category,
 				Importance: args.Importance,
 				WhenToUse:  args.WhenToUse,
 				Source:     "chat",
@@ -257,14 +253,13 @@ func proposeEditTool(app core.App) agent.Tool {
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("propose_edit",
 			"Propose a change to an existing ACTIVE memory or skill — revised wording, importance, "+
-				"category, when-to-use, or archival. The owner approves it in the review queue before it "+
+				"when-to-use, or archival. The owner approves it in the review queue before it "+
 				"takes effect; the current version is untouched until then. To save something NEW, use "+
 				"remember or propose_skill instead.",
 			obj(map[string]any{
 				"id":          str("Id of the active memory or skill node to revise."),
 				"title":       str("Optional: new title (memory) or name (skill)."),
 				"content":     str("Optional: new full detail (memory) or procedure body (skill)."),
-				"category":    map[string]any{"type": "string", "enum": []string{"fact", "preference", "person", "project", "context"}, "description": "Optional: new category (memories only)."},
 				"importance":  map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Optional: new importance 1-5 (memories only)."},
 				"description": str("Optional: new one-line description (skills only)."),
 				"when_to_use": str("Optional: new recall/use hint."),
@@ -275,7 +270,6 @@ func proposeEditTool(app core.App) agent.Tool {
 				ID          string `json:"id"`
 				Title       string `json:"title"`
 				Content     string `json:"content"`
-				Category    string `json:"category"`
 				Importance  *int   `json:"importance"`
 				Description string `json:"description"`
 				WhenToUse   string `json:"when_to_use"`
@@ -295,9 +289,6 @@ func proposeEditTool(app core.App) agent.Tool {
 			}
 			if args.Content != "" {
 				fields["content"] = args.Content
-			}
-			if args.Category != "" {
-				fields["category"] = args.Category
 			}
 			if args.Importance != nil {
 				fields["importance"] = fmt.Sprintf("%d", *args.Importance)

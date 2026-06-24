@@ -146,7 +146,7 @@ func TestMemoryConsentLifecycle(t *testing.T) {
 	app := storetest.NewApp(t)
 
 	prop, err := execute(t, memoryCmd(app), "propose",
-		"--title", "Prefers tea", "--content", "The owner drinks tea, not coffee.", "--category", "preference", "--importance", "4")
+		"--title", "Prefers tea", "--content", "The owner drinks tea, not coffee.", "--importance", "4")
 	if err != nil {
 		t.Fatalf("propose: %v", err)
 	}

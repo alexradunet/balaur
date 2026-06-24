@@ -28,13 +28,13 @@ func renderKnowledgeGrid(t *testing.T, active []g.Node, kind, query string) stri
 }
 
 // TestKnowledgeFocusMemoryContract guards the class/id/Datastar contract the
-// served CSS and SSE handlers depend on for a category card (mode=active).
+// served CSS and SSE handlers depend on for a memory card.
 // Asserts the escaped form for Datastar attributes (gomponents HTML-escapes
 // ' → &#39; and & → &amp;).
 func TestKnowledgeFocusMemoryContract(t *testing.T) {
 	active := []g.Node{
 		knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
-			ID: "a1", Status: "active", Category: "fact", Title: "Active memory", Importance: 3,
+			ID: "a1", Status: "active", Title: "Active memory", Importance: 3,
 		}),
 	}
 	archived := []g.Node{
@@ -44,8 +44,7 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 	}
 	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
 		Kind:     "memories",
-		Title:    "Facts",
-		Category: "fact",
+		Title:    "Memory",
 		Active:   active,
 		Archived: archived,
 	})
@@ -56,8 +55,8 @@ func TestKnowledgeFocusMemoryContract(t *testing.T) {
 		`id="k-active-grid"`,
 		// Controls — q signal only (no category signal)
 		`data-signals:q="&#39;&#39;"`,
-		// Search input with fixed category baked into @get — & → &amp; and ' → &#39;
-		`data-on:input__debounce.250ms="@get(&#39;/ui/knowledge/memories/grid?q=&#39;+encodeURIComponent($q)+&#39;&amp;category=fact&#39;)"`,
+		// Search input @get carries only the query — ' → &#39;
+		`data-on:input__debounce.250ms="@get(&#39;/ui/knowledge/memories/grid?q=&#39;+encodeURIComponent($q))"`,
 		// Archived section
 		`class="k-heading k-heading-muted"`,
 		`class="k-grid k-grid-muted"`,
@@ -120,9 +119,8 @@ func TestKnowledgeFocusSkillsNoCategories(t *testing.T) {
 // TestKnowledgeFocusNoProposedNoSection: proposed section is omitted when empty.
 func TestKnowledgeFocusNoProposedNoSection(t *testing.T) {
 	got := renderKnowledgeFocus(t, knowledgecards.KnowledgeFocusView{
-		Kind:     "memories",
-		Title:    "Facts",
-		Category: "fact",
+		Kind:  "memories",
+		Title: "Memory",
 	})
 	if strings.Contains(got, "k-heading-proposed") {
 		t.Errorf("empty proposed must not render proposed section:\n%s", got)

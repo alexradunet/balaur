@@ -133,7 +133,7 @@ func sidebarStory() Story {
 	})
 	return Story{
 		ID: "sidebar-domain", Group: "Navigation", Title: "Sidebar (domain rail)", Wide: true,
-		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the right panel via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. Knowledge opens the memory panel with in-panel category tabs (plan 099); Settings opens the settings panel with in-panel section tabs (plan 099). The active item carries aria-current and the sb-nav-item-active class.",
+		Blurb: "The left domain rail for the single-page chat shell. Each item injects its card into the right panel via a Datastar @get — no page navigation. Href stays as the no-JS fallback. Icon is a pixel-art sprite from /static/icons/. Memory opens the memory panel; Settings opens the settings panel with in-panel section tabs (plan 099). The active item carries aria-current and the sb-nav-item-active class.",
 		Variants: []Variant{
 			{"quests active", shell.Sidebar(shell.SidebarProps{
 				Brand: brand,
@@ -141,7 +141,7 @@ func sidebarStory() Story {
 					{Label: "Domains", Items: []shell.SidebarItem{
 						item("Quests", "quests", "scroll", true),
 						item("Life", "lifelog", "orb", false),
-						{Label: "Knowledge", Href: "/ui/show/memory?category=fact", Icon: "tome", Action: "@get('/ui/show/memory?category=fact')"},
+						{Label: "Memory", Href: "/ui/show/memory", Icon: "tome", Action: "@get('/ui/show/memory')"},
 						item("Skills", "skills", "key", false),
 					}},
 					{Label: "Settings", Items: []shell.SidebarItem{
@@ -180,13 +180,11 @@ func navrailStory() Story {
 	primary := []ui.CommandItem{
 		{Label: "Quests", Icon: "scroll", URL: "/ui/show/quests"},
 		{Label: "Life", Icon: "orb", URL: "/ui/show/lifelog"},
-		{Label: "Memory", Icon: "tome", URL: "/ui/show/memory?category=fact"},
+		{Label: "Memory", Icon: "tome", URL: "/ui/show/memory"},
 		{Label: "Skills", Icon: "key", URL: "/ui/show/skills"},
 		{Label: "Settings", Icon: "shield", URL: "/ui/show/settings?section=profile"},
 	}
 	more := []ui.CommandItem{
-		{Label: "Preferences", Icon: "tome", URL: "/ui/show/memory?category=preference"},
-		{Label: "People", Icon: "tome", URL: "/ui/show/memory?category=person"},
 		{Label: "Models", URL: "/ui/show/settings?section=models"},
 		{Label: "Heads", URL: "/ui/show/settings?section=heads"},
 	}

@@ -344,11 +344,7 @@ func commandpaletteStory() Story {
 				ui.CommandPalette([]ui.CommandItem{
 					{Label: "Quests", Key: "quests", Icon: "scroll", URL: "/ui/show/quests"},
 					{Label: "Life", Key: "life", Icon: "orb", URL: "/ui/show/lifelog"},
-					{Label: "Facts", Key: "facts", Icon: "tome", URL: "/ui/show/memory?category=fact"},
-					{Label: "Preferences", Key: "preferences", Icon: "tome", URL: "/ui/show/memory?category=preference"},
-					{Label: "People", Key: "people", Icon: "tome", URL: "/ui/show/memory?category=person"},
-					{Label: "Projects", Key: "projects", Icon: "tome", URL: "/ui/show/memory?category=project"},
-					{Label: "Context", Key: "context", Icon: "tome", URL: "/ui/show/memory?category=context"},
+					{Label: "Memory", Key: "memory", Icon: "tome", URL: "/ui/show/memory"},
 					{Label: "Skills", Key: "skills", Icon: "key", URL: "/ui/show/skills"},
 					{Label: "Profile", Key: "profile", URL: "/ui/show/settings?section=profile"},
 					{Label: "Models", Key: "models", URL: "/ui/show/settings?section=models"},

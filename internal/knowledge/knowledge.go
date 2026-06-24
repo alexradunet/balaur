@@ -12,8 +12,8 @@
 // in the prompt.
 //
 // Read paths return *core.Record node rows with the legacy memory/skill field
-// names (content, category, name, description, importance, when_to_use) hydrated
-// as read-only aliases over title/body/props, so the card and CLI layers read
+// names (content, name, description, importance, when_to_use) hydrated as
+// read-only aliases over title/body/props, so the card and CLI layers read
 // records the same way they always have.
 package knowledge
 
@@ -83,7 +83,6 @@ func hydrate(kind Kind, rec *core.Record) *core.Record {
 	switch kind {
 	case Memory:
 		rec.Set("content", rec.GetString("body"))
-		rec.Set("category", getStr("category"))
 		rec.Set("when_to_use", getStr("when_to_use"))
 		rec.Set("source", getStr("source"))
 		rec.Set("importance", nodes.PropInt(rec, "importance"))
@@ -109,8 +108,7 @@ func hydrateAll(kind Kind, recs []*core.Record) []*core.Record {
 type MemoryProposal struct {
 	Title      string
 	Content    string
-	Category   string // fact | preference | person | project | context
-	Importance int    // 1..5
+	Importance int // 1..5
 	WhenToUse  string
 	Source     string // e.g. "chat", a conversation id, "import"
 }
@@ -121,7 +119,6 @@ func ProposeMemory(app core.App, p MemoryProposal) (*core.Record, error) {
 		return nil, fmt.Errorf("knowledge: memory title is required")
 	}
 	props := map[string]any{
-		"category":    p.Category,
 		"importance":  clampImportance(p.Importance),
 		"when_to_use": p.WhenToUse,
 		"source":      p.Source,
@@ -199,7 +196,7 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 	}
 	props := nodes.Props(rec)
 	writable := map[Kind][]string{
-		Memory: {"title", "content", "category", "importance", "when_to_use"},
+		Memory: {"title", "content", "importance", "when_to_use"},
 		Skill:  {"name", "description", "content", "when_to_use"},
 	}
 	for _, f := range writable[kind] {
@@ -218,7 +215,7 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 				continue // ignore a malformed importance rather than coercing to 0
 			}
 			props["importance"] = clampImportance(n)
-		default: // category, description, when_to_use → props
+		default: // description, when_to_use → props
 			props[f] = v
 		}
 	}
@@ -401,10 +398,9 @@ func ListByStatus(app core.App, kind Kind, status string) ([]*core.Record, error
 	return hydrateAll(kind, recs), nil
 }
 
-// FilterActive narrows active records for the management pages: optional
-// substring query, optional category (memories only). category lives in props,
-// so it is filtered in Go after the active fetch (the listing is small).
-func FilterActive(app core.App, kind Kind, query, category string) ([]*core.Record, error) {
+// FilterActive narrows active records for the management pages by an optional
+// substring query.
+func FilterActive(app core.App, kind Kind, query string) ([]*core.Record, error) {
 	recs, err := nodes.ListByTypeStatus(app, string(kind), StatusActive)
 	if err != nil {
 		return nil, err
@@ -412,12 +408,8 @@ func FilterActive(app core.App, kind Kind, query, category string) ([]*core.Reco
 	hydrateAll(kind, recs)
 
 	q := strings.ToLower(strings.TrimSpace(query))
-	cat := strings.TrimSpace(category)
 	out := make([]*core.Record, 0, len(recs))
 	for _, r := range recs {
-		if cat != "" && kind == Memory && r.GetString("category") != cat {
-			continue
-		}
 		if q != "" && !matchesQuery(kind, r, q) {
 			continue
 		}
@@ -493,7 +485,7 @@ func SearchActive(app core.App, terms []string, limit int) ([]*core.Record, erro
 			if t == "" {
 				continue
 			}
-			if matchesQuery(Memory, r, t) || strings.Contains(strings.ToLower(r.GetString("category")), t) {
+			if matchesQuery(Memory, r, t) {
 				matched = append(matched, r)
 				break
 			}

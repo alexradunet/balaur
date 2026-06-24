@@ -43,7 +43,7 @@ func textfieldStory() Story {
 func selectStory() Story {
 	return Story{
 		ID: "select", Group: "Forms", Title: "Select",
-		Blurb: "A parchment dropdown with a gold ▾. The native select, dressed for Hearthwood — for choosing a model, a category, a recurrence.",
+		Blurb: "A parchment dropdown with a gold ▾. The native select, dressed for Hearthwood — for choosing a model or a recurrence.",
 		Variants: []Variant{
 			{"model", ui.Select(ui.SelectProps{Label: "Model", Options: []string{"local", "openai", "anthropic"}, Value: "local", Name: "model"})},
 		},

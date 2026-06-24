@@ -20,7 +20,6 @@ import (
 // MemoryRow is one row in the MemoryCard summary view.
 type MemoryRow struct {
 	Title      string
-	Category   string
 	Importance int
 }
 
@@ -34,7 +33,6 @@ type MemoryView struct {
 type MemoryRecord struct {
 	ID         string
 	Status     string
-	Category   string
 	Title      string
 	Content    string
 	WhenToUse  string
@@ -74,7 +72,6 @@ func memoryBody(v MemoryView) g.Node {
 func memoryRow(row MemoryRow) g.Node {
 	return h.Li(h.Class("ucard-row"),
 		h.Span(h.Class("ucard-title"), h.A(h.Href("/ui/show/memory"), g.Attr("data-on:click__prevent", "@get('/ui/show/memory')"), g.Text(row.Title))),
-		h.Span(h.Class("kcard-meta"), g.Text(row.Category)),
 		ui.Pips(row.Importance, 5, ""),
 	)
 }
@@ -85,7 +82,7 @@ func MemoryRecordCard(r MemoryRecord) g.Node {
 	return h.Article(
 		h.Class("kcard kcard-"+r.Status), h.ID("kcard-"+r.ID),
 		h.Header(h.Class("kcard-head"),
-			h.Span(h.Class("kcard-kind"), g.Text("▪ "+memoryCategory(r.Category))),
+			h.Span(h.Class("kcard-kind"), g.Text("▪ memory")),
 			ui.Pips(r.Importance, 5, ""),
 		),
 		h.H3(h.Class("kcard-title"), g.Text(r.Title)),
@@ -96,35 +93,14 @@ func MemoryRecordCard(r MemoryRecord) g.Node {
 	)
 }
 
-// memoryCategory returns the category label or "memory" if empty.
-func memoryCategory(cat string) string {
-	if cat == "" {
-		return "memory"
-	}
-	return cat
-}
-
 // memoryEditForm renders the collapsible edit form inside a record card.
 func memoryEditForm(r MemoryRecord) g.Node {
-	categories := []string{"fact", "preference", "person", "project", "context"}
-	opts := make([]g.Node, len(categories))
-	for i, c := range categories {
-		if c == r.Category {
-			opts[i] = h.Option(h.Value(c), g.Attr("selected", ""), g.Text(c))
-		} else {
-			opts[i] = h.Option(h.Value(c), g.Text(c))
-		}
-	}
-
 	return h.Details(h.Class("kcard-edit"),
 		h.Summary(g.Text("Edit")),
 		h.Form(
 			data.On("submit", "@post('/ui/knowledge/memories/"+r.ID+"/edit', {contentType:'form'})", data.ModifierPrevent),
 			h.Label(g.Text("Title "), h.Input(h.Type("text"), h.Name("title"), h.Value(r.Title))),
 			h.Label(g.Text("Detail "), h.Textarea(h.Name("content"), g.Attr("rows", "3"), g.Text(r.Content))),
-			h.Label(g.Text("Category"),
-				h.Select(h.Name("category"), g.Group(opts)),
-			),
 			h.Label(g.Text("Importance (1–5) "), h.Input(h.Type("number"), h.Name("importance"), g.Attr("min", "1"), g.Attr("max", "5"), h.Value(fmt.Sprintf("%d", r.Importance)))),
 			h.Label(g.Text("When to recall "), h.Input(h.Type("text"), h.Name("when_to_use"), h.Value(r.WhenToUse))),
 			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Save")),
@@ -231,7 +207,7 @@ func buildMemorySummary(app core.App, params map[string]string) MemoryView {
 	limit := ui.IntParam(params, "limit", 6)
 	query := params["query"]
 
-	recs, _ := knowledge.FilterActive(app, knowledge.Memory, query, "")
+	recs, _ := knowledge.FilterActive(app, knowledge.Memory, query)
 	if len(recs) > limit {
 		recs = recs[:limit]
 	}
@@ -240,7 +216,6 @@ func buildMemorySummary(app core.App, params map[string]string) MemoryView {
 	for _, r := range recs {
 		rows = append(rows, MemoryRow{
 			Title:      r.GetString("title"),
-			Category:   r.GetString("category"),
 			Importance: r.GetInt("importance"),
 		})
 	}
@@ -260,7 +235,7 @@ func buildMemorySummary(app core.App, params map[string]string) MemoryView {
 // Mirrors renderKnowledgeManage (internal/web/cards.go ~517) for memory kind.
 func buildMemoryManage(app core.App) MemoryManageView {
 	precs, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusProposed)
-	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, "", "")
+	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, "")
 	if len(arecs) > 8 {
 		arecs = arecs[:8]
 	}
@@ -275,7 +250,6 @@ func MemoryRecordOf(r *core.Record) MemoryRecord {
 	return MemoryRecord{
 		ID:         r.Id,
 		Status:     r.GetString("status"),
-		Category:   r.GetString("category"),
 		Title:      r.GetString("title"),
 		Content:    r.GetString("content"),
 		WhenToUse:  r.GetString("when_to_use"),

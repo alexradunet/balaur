@@ -258,9 +258,8 @@ controls now — just the artifact icon + title, sized to the rail toggle's heig
 There is no topbar and
 no burger. On narrow viewports (≤720px) the layout is chat + the always-on rail;
 the panel slides in as a fixed overlay to the rail's left (plan 098). Both nav
-surfaces fire GET /ui/show/{type}; the full destination set is Quests, Life, the
-five memory categories (Facts, Preferences, People, Projects, Context) +
-Awaiting, Skills, and the three settings sections (Profile, Models, Heads).
+surfaces fire GET /ui/show/{type}; the full destination set is Quests, Life,
+Memory, Review, Skills, and the three settings sections (Profile, Models, Heads).
 
 The panel is collapsible and owner-resizable (plan 103). Collapse state is
 persisted as owner_settings["panel_collapsed"] ("1"/"0"/unset — unset derives
@@ -275,7 +274,7 @@ clamped to 320–1100); the owner drags the .panel-resizer divider and the width
 is committed on release via POST /ui/panel/width. Both the SSR width override
 and the live drag set --w-panel on the <html> element so the CSS custom property
 cascade resolves through one owner (the .app-shell grid track inherits it).
-Memory categories and settings sections are each their own `/`-command; the
+Memory and settings sections are each their own `/`-command; the
 panels render without in-panel tab strips (plan 110).
 
   GET /ui/show/{type}  — the owner-facing panel door (palette items, card
@@ -330,7 +329,7 @@ tile + full focus, date param), period (a synthesised week/month/quarter/year
 node — recap + range aggregates + drill-down + breadcrumb; type+start params),
 measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
-kind, kind required + limit param), memory (a memory slice — category or the Awaiting proposed queue; category + view + query + limit params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
+kind, kind required + limit param), memory (the memory slice — active + archived; query + limit params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
 habits (recurring tasks with their streak, no params), tasks (bare stack of
 individual TaskCards filtered by status/bucket/terms/limit — the "draw the
 cards for THOSE quests" surface; contrast quests which is a rolled-up summary).

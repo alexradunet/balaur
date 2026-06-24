@@ -23,8 +23,7 @@ import (
 // SkillRecordCard before populating these slices.
 type KnowledgeFocusView struct {
 	Kind     string   // "memories" or "skills" — used in URLs
-	Title    string   // heading / search-placeholder label, e.g. "People", "Skills"
-	Category string   // fixed memory category baked into the search @get; "" = all / skills
+	Title    string   // heading / search-placeholder label, e.g. "Memory", "Skills"
 	Query    string   // current search query
 	Proposed []g.Node // pre-rendered proposed record cards (skills only; proposed memories live in Review)
 	Active   []g.Node // pre-rendered active record cards
@@ -68,8 +67,8 @@ func knowledgeFocusBody(v KnowledgeFocusView) g.Node {
 		)
 	}
 
-	// Active section: search + grid. The category is fixed per-card — baked into the @get.
-	searchGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q)+'&category=" + v.Category + "')"
+	// Active section: search + grid. The live-search @get carries only the query.
+	searchGet := "@get('/ui/knowledge/" + v.Kind + "/grid?q='+encodeURIComponent($q))"
 	out = append(out,
 		h.Section(h.Class("k-section"),
 			h.H2(h.Class("k-heading"),
@@ -121,54 +120,19 @@ func KnowledgeFocus(v KnowledgeFocusView) g.Node {
 // Builders
 // ---------------------------------------------------------------------------
 
-// memoryCategoryTitle maps a category key to its sidebar/heading label. The
-// labels MUST match the Knowledge sidebar items in internal/web/home.go.
-func memoryCategoryTitle(cat string) string {
-	switch cat {
-	case "fact":
-		return "Facts"
-	case "preference":
-		return "Preferences"
-	case "person":
-		return "People"
-	case "project":
-		return "Projects"
-	case "context":
-		return "Context"
-	default:
-		return "Memory"
-	}
-}
-
-// recordsInCategory filters records to one category; "" returns all.
-func recordsInCategory(recs []*core.Record, cat string) []*core.Record {
-	if cat == "" {
-		return recs
-	}
-	out := make([]*core.Record, 0, len(recs))
-	for _, r := range recs {
-		if r.GetString("category") == cat {
-			out = append(out, r)
-		}
-	}
-	return out
-}
-
-// buildMemoryFocus assembles a nav-free memory slice for one category: its
-// active + archived records (category="" = all active), with search. Proposed
-// memories are surfaced in the Review queue, not here.
+// buildMemoryFocus assembles the nav-free memory slice: active + archived
+// records, with search. Proposed memories are surfaced in the Review queue,
+// not here.
 func buildMemoryFocus(app core.App, params map[string]string) KnowledgeFocusView {
 	q := params["query"]
-	cat := params["category"]
-	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, q, cat)
+	arecs, _ := knowledge.FilterActive(app, knowledge.Memory, q)
 	archived, _ := knowledge.ListByStatus(app, knowledge.Memory, knowledge.StatusArchived)
 	return KnowledgeFocusView{
 		Kind:     "memories",
-		Title:    memoryCategoryTitle(cat),
-		Category: cat,
+		Title:    "Memory",
 		Query:    q,
 		Active:   mapToMemoryNodes(arecs),
-		Archived: mapToMemoryNodes(recordsInCategory(archived, cat)),
+		Archived: mapToMemoryNodes(archived),
 	}
 }
 
@@ -177,7 +141,7 @@ func buildMemoryFocus(app core.App, params map[string]string) KnowledgeFocusView
 func buildSkillsFocus(app core.App, params map[string]string) KnowledgeFocusView {
 	q := params["query"]
 	precs, _ := knowledge.ListByStatus(app, knowledge.Skill, knowledge.StatusProposed)
-	arecs, _ := knowledge.FilterActive(app, knowledge.Skill, q, "")
+	arecs, _ := knowledge.FilterActive(app, knowledge.Skill, q)
 	archived, _ := knowledge.ListByStatus(app, knowledge.Skill, knowledge.StatusArchived)
 	return KnowledgeFocusView{
 		Kind:     "skills",
@@ -189,17 +153,17 @@ func buildSkillsFocus(app core.App, params map[string]string) KnowledgeFocusView
 	}
 }
 
-// BuildActiveMemoryNodes returns pre-rendered active memory card nodes for
-// q/cat. Used by the knowledgeGrid handler to keep the live-search grid in sync
-// with the initial grid (one shared path, no forked markup).
-func BuildActiveMemoryNodes(app core.App, q, cat string) []g.Node {
-	recs, _ := knowledge.FilterActive(app, knowledge.Memory, q, cat)
+// BuildActiveMemoryNodes returns pre-rendered active memory card nodes for q.
+// Used by the knowledgeGrid handler to keep the live-search grid in sync with
+// the initial grid (one shared path, no forked markup).
+func BuildActiveMemoryNodes(app core.App, q string) []g.Node {
+	recs, _ := knowledge.FilterActive(app, knowledge.Memory, q)
 	return mapToMemoryNodes(recs)
 }
 
 // BuildActiveSkillNodes returns pre-rendered active skill card nodes for q.
 func BuildActiveSkillNodes(app core.App, q string) []g.Node {
-	recs, _ := knowledge.FilterActive(app, knowledge.Skill, q, "")
+	recs, _ := knowledge.FilterActive(app, knowledge.Skill, q)
 	return mapToSkillNodes(recs)
 }
 
@@ -209,7 +173,6 @@ func mapToMemoryNodes(recs []*core.Record) []g.Node {
 		out = append(out, MemoryRecordCard(MemoryRecord{
 			ID:         r.Id,
 			Status:     r.GetString("status"),
-			Category:   r.GetString("category"),
 			Title:      r.GetString("title"),
 			Content:    r.GetString("content"),
 			WhenToUse:  r.GetString("when_to_use"),

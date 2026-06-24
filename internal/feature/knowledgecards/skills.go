@@ -49,7 +49,7 @@ type SkillRecord struct {
 func buildSkillsSummary(app core.App, params map[string]string) ([]SkillRow, string) {
 	limit := ui.IntParam(params, "limit", 6)
 
-	recs, _ := knowledge.FilterActive(app, knowledge.Skill, "", "")
+	recs, _ := knowledge.FilterActive(app, knowledge.Skill, "")
 	if len(recs) > limit {
 		recs = recs[:limit]
 	}
@@ -69,7 +69,7 @@ func buildSkillsSummary(app core.App, params map[string]string) ([]SkillRow, str
 // Mirrors renderKnowledgeManage (internal/web/cards.go ~517).
 func buildSkillsManage(app core.App) (proposed, active []SkillRecord) {
 	precs, _ := knowledge.ListByStatus(app, knowledge.Skill, knowledge.StatusProposed)
-	arecs, _ := knowledge.FilterActive(app, knowledge.Skill, "", "")
+	arecs, _ := knowledge.FilterActive(app, knowledge.Skill, "")
 	if len(arecs) > 8 {
 		arecs = arecs[:8]
 	}

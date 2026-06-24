@@ -19,7 +19,7 @@ func TestReviewEditApproveApplies(t *testing.T) {
 	defer app.Cleanup()
 
 	rec, err := iknowledge.ProposeMemory(app, iknowledge.MemoryProposal{
-		Title: "Prefers tea", Content: "Black, no sugar.", Category: "preference", Importance: 3,
+		Title: "Prefers tea", Content: "Black, no sugar.", Importance: 3,
 	})
 	if err != nil {
 		t.Fatalf("propose memory: %v", err)

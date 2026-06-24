@@ -93,13 +93,12 @@ func (ix *Index) Rebuild(app core.App) error {
 }
 
 // nodeExtra returns type-specific searchable text for a node's `extra` FTS
-// column. v1 preserves the old memory recall hints (when_to_use + category,
-// both stored in props by plan 160) so search parity with the prior
-// memory-only index is not lost; other types contribute nothing extra yet.
+// column. v1 preserves the memory recall hint (when_to_use, stored in props by
+// plan 160) so search parity with the prior memory-only index is not lost;
+// other types contribute nothing extra yet.
 func nodeExtra(r *core.Record) string {
 	if r.GetString("type") == "memory" {
-		return strings.TrimSpace(
-			nodes.PropString(r, "when_to_use") + " " + nodes.PropString(r, "category"))
+		return strings.TrimSpace(nodes.PropString(r, "when_to_use"))
 	}
 	return ""
 }

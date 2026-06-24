@@ -22,8 +22,8 @@ func TestRememberToolAcceptsStringFallback(t *testing.T) {
 		t.Fatal("expected non-empty tool response")
 	}
 
-	// remember proposes a type=memory node: content lands in body, category and
-	// importance in props.
+	// remember proposes a type=memory node: content lands in body, importance
+	// in props.
 	rec, err := app.FindFirstRecordByFilter("nodes",
 		"type = {:t} && title = {:title}",
 		dbx.Params{"t": "memory", "title": "My name is Alex"})
@@ -35,9 +35,6 @@ func TestRememberToolAcceptsStringFallback(t *testing.T) {
 	}
 	if got := rec.GetString("status"); got != "proposed" {
 		t.Fatalf("status = %q, want proposed", got)
-	}
-	if got := nodes.PropString(rec, "category"); got != "fact" {
-		t.Fatalf("category = %q, want fact", got)
 	}
 	if got := nodes.PropInt(rec, "importance"); got != 3 {
 		t.Fatalf("importance = %d, want 3", got)

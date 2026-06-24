@@ -1,12 +1,11 @@
 package web
 
-// knowledge_artifact_test.go — HTTP tests for the Knowledge sidebar summons
-// introduced in plan 095: memory category slices accessed via
-// GET /ui/show/memory?category=... and GET /ui/show/skills. (Proposed memories
-// live in the Review queue, not a standalone Awaiting view.)
+// knowledge_artifact_test.go — HTTP tests for the Knowledge panel summons:
+// the single Memory slice (GET /ui/show/memory) and Skills (GET /ui/show/skills).
+// Memory has no category axis (collapsed) and no standalone Awaiting view
+// (proposed memories live in the Review queue).
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -15,35 +14,26 @@ import (
 )
 
 func TestKnowledgeArtifacts(t *testing.T) {
-	t.Run("GET /ui/show/memory?category=person → 200, k-active-grid, fixed category in @get", func(t *testing.T) {
+	t.Run("GET /ui/show/memory → 200, k-active-grid", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:           "memory category=person → 200 nav-free slice",
+			Name:           "memory → 200 nav-free slice",
 			Method:         "GET",
-			URL:            "/ui/show/memory?category=person",
+			URL:            "/ui/show/memory",
 			TestAppFactory: newWebApp,
 			ExpectedStatus: 200,
 			ExpectedContent: []string{
 				"datastar-patch-elements",
 				"k-active-grid",
-				// fixed category baked into @get (& → &amp; in HTML)
-				"&amp;category=person",
-			},
-			AfterTestFunc: func(tb testing.TB, _ *tests.TestApp, res *http.Response) {
-				// Confirm k-tabs is absent in the SSE body.
-				// The response body is already consumed by ExpectedContent checks,
-				// but the unit test TestKnowledgeFocusMemoryContract covers this
-				// at the component level. HTTP test confirms routing + params.
-				_ = res
 			},
 		}
 		s.Test(t)
 	})
 
-	t.Run("GET /ui/show/memory?category=bogus → 400 Invalid card params", func(t *testing.T) {
+	t.Run("GET /ui/show/memory?mode=bogus → 400 Invalid card params", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:            "memory category=bogus → 400",
+			Name:            "memory mode=bogus → 400 (bad enum still rejected)",
 			Method:          "GET",
-			URL:             "/ui/show/memory?category=bogus",
+			URL:             "/ui/show/memory?mode=bogus",
 			TestAppFactory:  newWebApp,
 			ExpectedStatus:  400,
 			ExpectedContent: []string{"Invalid card params"},
@@ -67,30 +57,17 @@ func TestKnowledgeArtifacts(t *testing.T) {
 	})
 }
 
-// TestKnowledgeArtifactRouting verifies routing + content for category and skills
-// artifacts. Memory and skills artifacts render without an in-panel tab strip
-// (plan 110); sub-views are reached via the /-command palette. The unit tests
+// TestKnowledgeArtifactRouting verifies routing + content for the memory and
+// skills artifacts. Both render without an in-panel tab strip (plan 110);
+// sub-views are reached via the /-command palette. The unit tests
 // (TestKnowledgeFocusMemoryContract, TestKnowledgeFocusSkillsNoCategories) cover
 // the component-level detail.
 func TestKnowledgeArtifactRouting(t *testing.T) {
-	t.Run("memory category=fact has no k-tabs", func(t *testing.T) {
+	t.Run("memory has no k-tabs", func(t *testing.T) {
 		s := tests.ApiScenario{
-			Name:               "memory category=fact routing",
+			Name:               "memory routing",
 			Method:             "GET",
-			URL:                "/ui/show/memory?category=fact",
-			TestAppFactory:     newWebApp,
-			ExpectedStatus:     200,
-			ExpectedContent:    []string{"k-active-grid"},
-			NotExpectedContent: []string{`class="k-tabs"`},
-		}
-		s.Test(t)
-	})
-
-	t.Run("memory category=person has no k-tabs", func(t *testing.T) {
-		s := tests.ApiScenario{
-			Name:               "memory category=person routing",
-			Method:             "GET",
-			URL:                "/ui/show/memory?category=person",
+			URL:                "/ui/show/memory",
 			TestAppFactory:     newWebApp,
 			ExpectedStatus:     200,
 			ExpectedContent:    []string{"k-active-grid"},

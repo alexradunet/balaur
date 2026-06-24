@@ -15,7 +15,6 @@ func seedProposedMemory(t testing.TB, app *tests.TestApp, title string) string {
 	rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
 		Title:      title,
 		Content:    "seed body",
-		Category:   "fact",
 		Importance: 3,
 	})
 	if err != nil {
@@ -26,12 +25,11 @@ func seedProposedMemory(t testing.TB, app *tests.TestApp, title string) string {
 
 // seedActiveMemory creates an approved (active) memory record so the grid
 // endpoint has something to filter over.
-func seedActiveMemory(t testing.TB, app *tests.TestApp, title, category string) string {
+func seedActiveMemory(t testing.TB, app *tests.TestApp, title string) string {
 	t.Helper()
 	rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
 		Title:      title,
 		Content:    "seed body",
-		Category:   category,
 		Importance: 3,
 	})
 	if err != nil {
@@ -60,8 +58,8 @@ var sseGetHeaders = map[string]string{
 // inner-mode patch into #k-active-grid carrying the matching cards.
 func TestKnowledgeGridDatastar(t *testing.T) {
 	app := newWebApp(t)
-	seedActiveMemory(t, app, "Prefers espresso", "preference")
-	seedActiveMemory(t, app, "Loves tea", "preference")
+	seedActiveMemory(t, app, "Prefers espresso")
+	seedActiveMemory(t, app, "Loves tea")
 
 	scenario := tests.ApiScenario{
 		Name:           "grid search emits an inner patch into #k-active-grid",
@@ -86,7 +84,7 @@ func TestKnowledgeGridDatastar(t *testing.T) {
 // grid, this time with the empty-state copy.
 func TestKnowledgeGridNoMatchDatastar(t *testing.T) {
 	app := newWebApp(t)
-	seedActiveMemory(t, app, "Prefers espresso", "preference")
+	seedActiveMemory(t, app, "Prefers espresso")
 
 	scenario := tests.ApiScenario{
 		Name:           "grid no-match patches the empty state",

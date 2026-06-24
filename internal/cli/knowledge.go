@@ -33,7 +33,6 @@ func memoryJSON(r *core.Record) map[string]any {
 		"id":          r.Id,
 		"title":       r.GetString("title"),
 		"content":     r.GetString("content"),
-		"category":    r.GetString("category"),
 		"importance":  r.GetInt("importance"),
 		"when_to_use": r.GetString("when_to_use"),
 		"status":      r.GetString("status"),
@@ -128,7 +127,7 @@ func memoryCmd(app core.App) *cobra.Command {
 }
 
 func memoryProposeCmd(app core.App) *cobra.Command {
-	var title, content, category, whenToUse string
+	var title, content, whenToUse string
 	var importance int
 	cmd := &cobra.Command{
 		Use:   "propose",
@@ -137,7 +136,6 @@ func memoryProposeCmd(app core.App) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&title, "title", "", "one-line summary (required)")
 	cmd.Flags().StringVar(&content, "content", "", "the full detail worth remembering (required)")
-	cmd.Flags().StringVar(&category, "category", "fact", "fact | preference | person | project | context")
 	cmd.Flags().IntVar(&importance, "importance", 3, "1 (nice to know) … 5 (core identity)")
 	cmd.Flags().StringVar(&whenToUse, "when-to-use", "", "when should this memory be recalled?")
 	_ = cmd.MarkFlagRequired("title")
@@ -146,7 +144,6 @@ func memoryProposeCmd(app core.App) *cobra.Command {
 		rec, err := knowledge.ProposeMemory(app, knowledge.MemoryProposal{
 			Title:      title,
 			Content:    content,
-			Category:   category,
 			Importance: importance,
 			WhenToUse:  whenToUse,
 			Source:     "cli",
@@ -185,7 +182,7 @@ func memoryRecallCmd(app core.App) *cobra.Command {
 }
 
 func memoryEditCmd(app core.App) *cobra.Command {
-	var title, content, category, whenToUse string
+	var title, content, whenToUse string
 	var importance int
 	cmd := &cobra.Command{
 		Use:   "edit <id>",
@@ -194,7 +191,6 @@ func memoryEditCmd(app core.App) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&title, "title", "", "new title")
 	cmd.Flags().StringVar(&content, "content", "", "new content")
-	cmd.Flags().StringVar(&category, "category", "", "new category")
 	cmd.Flags().IntVar(&importance, "importance", 0, "new importance (1-5)")
 	cmd.Flags().StringVar(&whenToUse, "when-to-use", "", "new recall hint")
 	cmd.RunE = run(app, "memory.edit", func(cmd *cobra.Command, args []string) (any, error) {
@@ -206,7 +202,6 @@ func memoryEditCmd(app core.App) *cobra.Command {
 		}
 		set("title", "title", title)
 		set("content", "content", content)
-		set("category", "category", category)
 		set("when-to-use", "when_to_use", whenToUse)
 		if cmd.Flags().Changed("importance") {
 			fields["importance"] = strconv.Itoa(importance)

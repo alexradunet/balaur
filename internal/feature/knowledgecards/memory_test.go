@@ -45,7 +45,7 @@ func TestMemoryCardStructure(t *testing.T) {
 	v := knowledgecards.MemoryView{
 		ParamLine: "limit: 6",
 		Rows: []knowledgecards.MemoryRow{
-			{Title: "Prefers dark mode", Category: "preference", Importance: 3},
+			{Title: "Prefers dark mode", Importance: 3},
 		},
 	}
 	out := renderMemory(t, v)
@@ -65,7 +65,6 @@ func TestMemoryCardStructure(t *testing.T) {
 		// panel instead of full-navigating to the SSE-only /ui/show route.
 		`<a href="/ui/show/memory" data-on:click__prevent="@get(&#39;/ui/show/memory&#39;)">`,
 		"Prefers dark mode",
-		"preference",
 		`class="kcard-pips"`,
 		`title="importance 3/5"`,
 		`class="pip pip-on"`,
@@ -93,7 +92,7 @@ func TestMemoryCardNoParamLineOmitted(t *testing.T) {
 	v := knowledgecards.MemoryView{
 		// No ParamLine set — the kcard-head must not contain a kcard-meta span.
 		Rows: []knowledgecards.MemoryRow{
-			{Title: "Test memory", Category: "fact", Importance: 1},
+			{Title: "Test memory", Importance: 1},
 		},
 	}
 	out := renderMemory(t, v)
@@ -118,7 +117,7 @@ func TestMemoryCardPipCount(t *testing.T) {
 	// Importance 2 → 2 pip-on, 3 plain pip (5 total)
 	v := knowledgecards.MemoryView{
 		Rows: []knowledgecards.MemoryRow{
-			{Title: "Low importance", Category: "fact", Importance: 2},
+			{Title: "Low importance", Importance: 2},
 		},
 	}
 	out := renderMemory(t, v)
@@ -137,8 +136,8 @@ func TestMemoryCardMultipleRows(t *testing.T) {
 	v := knowledgecards.MemoryView{
 		ParamLine: "limit: 6 · q: dark",
 		Rows: []knowledgecards.MemoryRow{
-			{Title: "Dark mode", Category: "preference", Importance: 5},
-			{Title: "Alex lives in London", Category: "fact", Importance: 4},
+			{Title: "Dark mode", Importance: 5},
+			{Title: "Alex lives in London", Importance: 4},
 		},
 	}
 	out := renderMemory(t, v)
@@ -174,7 +173,6 @@ func TestMemoryRecordCardIDs(t *testing.T) {
 	r := knowledgecards.MemoryRecord{
 		ID:         "abc123",
 		Status:     "active",
-		Category:   "fact",
 		Title:      "Alex is left-handed",
 		Importance: 3,
 	}
@@ -194,7 +192,6 @@ func TestMemoryRecordCardHeader(t *testing.T) {
 	r := knowledgecards.MemoryRecord{
 		ID:         "r1",
 		Status:     "proposed",
-		Category:   "preference",
 		Title:      "Prefers tea",
 		Importance: 4,
 	}
@@ -202,7 +199,7 @@ func TestMemoryRecordCardHeader(t *testing.T) {
 
 	for _, want := range []string{
 		`class="kcard-kind"`,
-		"▪ preference",
+		"▪ memory",
 		`class="kcard-pips"`,
 		`title="importance 4/5"`,
 		`class="kcard-title"`,
@@ -230,7 +227,6 @@ func TestMemoryRecordCardBody(t *testing.T) {
 	r := knowledgecards.MemoryRecord{
 		ID:         "r3",
 		Status:     "active",
-		Category:   "fact",
 		Title:      "Some fact",
 		Content:    "The content here",
 		WhenToUse:  "When discussing history",
@@ -269,7 +265,6 @@ func TestMemoryRecordCardEditForm(t *testing.T) {
 	r := knowledgecards.MemoryRecord{
 		ID:         "edit1",
 		Status:     "active",
-		Category:   "context",
 		Title:      "Edit me",
 		Content:    "Old content",
 		WhenToUse:  "anytime",
@@ -285,14 +280,6 @@ func TestMemoryRecordCardEditForm(t *testing.T) {
 		`value="Edit me"`,
 		`name="content"`,
 		"Old content",
-		`name="category"`,
-		`<select name="category">`,
-		`value="fact"`,
-		`value="preference"`,
-		`value="person"`,
-		`value="project"`,
-		`value="context"`,
-		`selected`,
 		`name="importance"`,
 		`value="3"`,
 		`name="when_to_use"`,

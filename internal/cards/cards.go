@@ -150,7 +150,6 @@ func init() {
 			H:     20,
 			Params: []ParamSpec{
 				{Name: "mode", Enum: []string{"summary", "manage"}, Doc: "summary (read-only) or manage (approve/archive inline)"},
-				{Name: "category", Enum: []string{"fact", "preference", "person", "project", "context"}, Doc: "show one memory category (the Knowledge sidebar sub-items)"},
 				{Name: "query", Doc: "optional search terms to filter active memories"},
 				{Name: "limit", Doc: "number of memories to show (default 6, max 50)"},
 			},

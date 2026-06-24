@@ -264,9 +264,9 @@ func TestSearchConsentFilter(t *testing.T) {
 	}
 }
 
-// TestExtraPreservesMemoryRecallHint proves the `extra` column keeps memory
-// recall hints (when_to_use + category, from props) searchable — parity with
-// the prior memory-only index, where both were searchable columns.
+// TestExtraPreservesMemoryRecallHint proves the `extra` column keeps the memory
+// recall hint (when_to_use, from props) searchable — parity with the prior
+// memory-only index, where it was a searchable column.
 func TestExtraPreservesMemoryRecallHint(t *testing.T) {
 	app := storetest.NewApp(t)
 
@@ -292,10 +292,6 @@ func TestExtraPreservesMemoryRecallHint(t *testing.T) {
 	// when_to_use term ("supermarket") matches via extra.
 	if ids, _ := ix.Query([]string{"supermarket"}, 10); len(ids) != 1 || ids[0] != id {
 		t.Fatalf("when_to_use not searchable via extra: got %v, want [%s]", ids, id)
-	}
-	// category term ("groceries") also matches via extra (category parity).
-	if ids, _ := ix.Query([]string{"groceries"}, 10); len(ids) != 1 || ids[0] != id {
-		t.Fatalf("category not searchable via extra: got %v, want [%s]", ids, id)
 	}
 }
 

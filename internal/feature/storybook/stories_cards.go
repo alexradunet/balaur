@@ -59,7 +59,7 @@ func reviewqueueStory() Story {
 	populated := reviewcards.ReviewCard(reviewcards.ReviewView{
 		Memories: []g.Node{
 			knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
-				ID: "m1", Status: "proposed", Category: "preference",
+				ID: "m1", Status: "proposed",
 				Title: "Prefers tea", Content: "Black, no sugar.", Importance: 3,
 			}),
 		},
@@ -370,14 +370,13 @@ func knowledgecardStory() Story {
 		ID: "knowledgecard", Group: "Cards", Title: "KnowledgeCard",
 		Blurb: "The growth surface: Balaur proposes, the owner decides. Proposed pops with gold brackets; active is calm; archived is dashed and dimmed.",
 		Variants: []Variant{
-			{"proposed", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m1", Status: "proposed", Category: "preference", Title: "Prefers tea over coffee", Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3})},
-			{"active", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m2", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", WhenToUse: "pet care", Importance: 4, UseCount: 7})},
-			{"archived", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m3", Status: "archived", Category: "fact", Title: "Old gym hours (closed)", Content: "Was open 6am–10pm; the gym shut down in May.", Importance: 1})},
+			{"proposed", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m1", Status: "proposed", Title: "Prefers tea over coffee", Content: "Always offers tea first when someone visits.", WhenToUse: "morning routines, hosting", Importance: 3})},
+			{"active", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m2", Status: "active", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", WhenToUse: "pet care", Importance: 4, UseCount: 7})},
+			{"archived", knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{ID: "m3", Status: "archived", Title: "Old gym hours (closed)", Content: "Was open 6am–10pm; the gym shut down in May.", Importance: 1})},
 		},
 		Props: []Prop{
 			{"ID", "string", "—", "Record id; drives the root element id and the edit/transition posts."},
 			{"Status", "string", `"active"`, "Drives the whole lifecycle look + actions: proposed, active, archived."},
-			{"Category", "string", `"memory"`, "fact · preference · person · project · context."},
 			{"Title", "string", "—", "What is remembered."},
 			{"Content", "string", "—", "The body detail."},
 			{"WhenToUse", "string", "—", "Recall hint — when Balaur should surface it."},
@@ -523,11 +522,11 @@ func statcardStory() Story {
 // sections and live search.
 func knowledgefocusStory() Story {
 	active := []knowledgecards.MemoryRecord{
-		{ID: "act1", Status: "active", Category: "person", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups.", WhenToUse: "pet care", Importance: 4, UseCount: 7},
-		{ID: "act2", Status: "active", Category: "person", Title: "Designer: Yuki at Studio Mura", Importance: 3},
+		{ID: "act1", Status: "active", Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups.", WhenToUse: "pet care", Importance: 4, UseCount: 7},
+		{ID: "act2", Status: "active", Title: "Designer: Yuki at Studio Mura", Importance: 3},
 	}
 	archived := []knowledgecards.MemoryRecord{
-		{ID: "arc1", Status: "archived", Category: "person", Title: "Old contact: Jean at Birch Co", Importance: 1},
+		{ID: "arc1", Status: "archived", Title: "Old contact: Jean at Birch Co", Importance: 1},
 	}
 	activeNodes := make([]g.Node, len(active))
 	for i, r := range active {
@@ -548,12 +547,11 @@ func knowledgefocusStory() Story {
 
 	return Story{
 		ID: "knowledgefocus", Group: "Cards", Title: "KnowledgeFocus", Wide: true, OnDark: true,
-		Blurb: "The knowledge panel body: memory categories navigated via /ui/show/memory — the panel door, no chip (plan 101). Skills render the same way — Skills is a top-level rail entry, not a memory category. Active/archived sections (proposed skills get a Proposed section; proposed memories live in the Review queue); live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
+		Blurb: "The knowledge panel body: memories navigated via /ui/show/memory — the panel door, no chip (plan 101). Skills render the same way — a sibling knowledge type and top-level rail entry. Active/archived sections (proposed skills get a Proposed section; proposed memories live in the Review queue); live Datastar search. Reuses MemoryRecordCard / SkillRecordCard.",
 		Variants: []Variant{
-			{"memory · people", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
+			{"memory", knowledgecards.KnowledgeFocus(knowledgecards.KnowledgeFocusView{
 				Kind:     "memories",
-				Title:    "People",
-				Category: "person",
+				Title:    "Memory",
 				Active:   activeNodes,
 				Archived: archivedNodes,
 			})},
@@ -568,7 +566,6 @@ func knowledgefocusStory() Story {
 		Props: []Prop{
 			{"Kind", "string", `"memories"`, `URL segment for Datastar @get calls: "memories" or "skills".`},
 			{"Title", "string", "—", `Heading and search placeholder label, e.g. "People", "Skills".`},
-			{"Category", "string", "—", "Fixed memory category baked into the search @get; empty string = all memories."},
 			{"Query", "string", "—", "Current search query; pre-populates the search input signal."},
 			{"Proposed", "[]g.Node", "nil", "Pre-rendered proposed record cards (skills only; proposed memories live in Review)."},
 			{"Active", "[]g.Node", "nil", "Pre-rendered active record cards — also feeds KnowledgeGrid."},
@@ -581,7 +578,6 @@ func knowledgefocusStory() Story {
 		},
 		Donts: []string{
 			"Re-implement the record card forms here — MemoryRecordCard/SkillRecordCard own them.",
-			"Add category tabs to the Skills variant — Skills has no category axis; tabs are for Kind==\"memories\" only.",
 		},
 	}
 }

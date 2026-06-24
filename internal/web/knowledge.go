@@ -35,11 +35,10 @@ func (h *handlers) knowledgeGrid(e *core.RequestEvent) error {
 		return e.BadRequestError("unknown kind", err)
 	}
 	q := e.Request.URL.Query().Get("q")
-	cat := e.Request.URL.Query().Get("category")
 
 	var active []g.Node
 	if kind == knowledge.Memory {
-		active = knowledgecards.BuildActiveMemoryNodes(h.app, q, cat)
+		active = knowledgecards.BuildActiveMemoryNodes(h.app, q)
 	} else {
 		active = knowledgecards.BuildActiveSkillNodes(h.app, q)
 	}
@@ -108,7 +107,7 @@ func (h *handlers) knowledgeEdit(e *core.RequestEvent) error {
 	id := e.Request.PathValue("id")
 
 	fields := map[string]string{}
-	for _, f := range []string{"title", "content", "category", "importance", "when_to_use", "name", "description"} {
+	for _, f := range []string{"title", "content", "importance", "when_to_use", "name", "description"} {
 		if v := e.Request.FormValue(f); v != "" {
 			fields[f] = v
 		}

@@ -255,6 +255,10 @@ lean and high-signal — add a rule only when it changes a real decision.
   undo (some cards only) is intentionally avoided. Tool-call *arguments* now
   re-render on reload (read from the persisted `tool_payload`); reasoning is not
   persisted, so it stays live-only.
+- The memory category axis (fact/preference/context/person/project) was
+  collapsed into one undifferentiated `memory` kind — nothing branched on it.
+  Project→Campaign is roadmap, not built: a future `campaign` entity linking
+  quests/tasks. Existing project-flavoured memories are now plain memories.
 
 ## Safety
 

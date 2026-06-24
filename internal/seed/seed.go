@@ -370,10 +370,10 @@ func seedMemories(app core.App) (int, error) {
 		p     knowledge.MemoryProposal
 		final string // "" leaves it proposed
 	}{
-		{knowledge.MemoryProposal{Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", Category: "person", Importance: 4, WhenToUse: "scheduling Luna's care"}, knowledge.StatusActive},
-		{knowledge.MemoryProposal{Title: "Prefers concise replies", Content: "Wants short, direct answers with options spelled out.", Category: "preference", Importance: 5, WhenToUse: "every reply"}, knowledge.StatusActive},
-		{knowledge.MemoryProposal{Title: "Old apartment address", Content: "Moved out in 2024; kept for history.", Category: "fact", Importance: 2, WhenToUse: "rarely"}, knowledge.StatusArchived},
-		{knowledge.MemoryProposal{Title: "Considering a greenhouse", Content: "Mentioned wanting a small lean-to greenhouse next year.", Category: "project", Importance: 3, WhenToUse: "garden planning"}, ""},
+		{knowledge.MemoryProposal{Title: "Vet: Dr. Mara at Willowbrook", Content: "Handles Luna's checkups; closed Sundays.", Importance: 4, WhenToUse: "scheduling Luna's care"}, knowledge.StatusActive},
+		{knowledge.MemoryProposal{Title: "Prefers concise replies", Content: "Wants short, direct answers with options spelled out.", Importance: 5, WhenToUse: "every reply"}, knowledge.StatusActive},
+		{knowledge.MemoryProposal{Title: "Old apartment address", Content: "Moved out in 2024; kept for history.", Importance: 2, WhenToUse: "rarely"}, knowledge.StatusArchived},
+		{knowledge.MemoryProposal{Title: "Considering a greenhouse", Content: "Mentioned wanting a small lean-to greenhouse next year.", Importance: 3, WhenToUse: "garden planning"}, ""},
 	}
 	count := 0
 	for _, s := range specs {
