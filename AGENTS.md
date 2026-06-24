@@ -87,6 +87,16 @@ lean and high-signal — add a rule only when it changes a real decision.
   load-time side effects are refused, and every invocation is audited.
   Capability that needs more than this belongs in Go, through the
   devloop.
+- **Bumping goja is a gated, deliberate act.** goja
+  (`github.com/dop251/goja`) is pinned to a *reviewed master commit* (no
+  upstream semver tags exist) because it runs untrusted-author extension
+  JS in the sandbox (`internal/ext/vm.go`). `govulncheck` catches known
+  CVEs but NOT behavioral sandbox-escape changes between arbitrary master
+  commits. Therefore: any change to the goja version in `go.mod` MUST pass
+  `go test ./internal/ext/...` (the sandbox-boundary regression suite —
+  load-time-side-effect refusal, sha256 pinning, redirect-not-followed,
+  builtin-shadow skip, ctx-cancel interrupt) before landing, and the new
+  commit must be reviewed, not blindly chased to `master`.
 - **No sub-agent frameworks, no bespoke plan/todo engines.** Assemble from
   primitives only when a concrete need exists.
 - Local inference runs in-process via the embedded Kronk SDK (`internal/kronk`):
