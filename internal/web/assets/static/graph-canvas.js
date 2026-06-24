@@ -60,6 +60,36 @@
           .ForceGraph()(box)
           .nodeLabel("title")
           .nodeAutoColorBy("type")
+          // Draw each node as its per-type glyph (emoji from /ui/graph.json) over a
+          // faint type-colored disc, with a short title beneath. Replaces the
+          // default circle so node types are distinguishable at a glance.
+          .nodeCanvasObject(function (n, ctx, scale) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 6, 0, 2 * Math.PI);
+            ctx.fillStyle = n.color || "#888";
+            ctx.globalAlpha = 0.25;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            var size = 12 / scale;
+            ctx.font = size + "px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(n.icon || "•", n.x, n.y);
+            var label = n.title || "";
+            if (label.length > 18) label = label.slice(0, 17) + "…";
+            var lsize = 4 / scale;
+            ctx.font = lsize + "px sans-serif";
+            ctx.fillStyle = "#666";
+            ctx.fillText(label, n.x, n.y + size * 0.8 + lsize);
+          })
+          // Keep clicks hittable over the glyph (nodeCanvasObject overrides the
+          // default pointer region).
+          .nodePointerAreaPaint(function (n, color, ctx) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 9, 0, 2 * Math.PI);
+            ctx.fill();
+          })
           .onNodeClick(function (n) {
             window.dispatchEvent(new CustomEvent("graphopen", { detail: { id: n.id } }));
           })
@@ -85,7 +115,9 @@
         new ResizeObserver(function () {
           if (box.clientWidth) G.width(box.clientWidth).height(box.clientHeight);
         }).observe(box);
-        fetchGraph(box.dataset.focus, 2)
+        // An empty/absent data-focus means "the whole graph" — fetchGraph then
+        // omits the id and /ui/graph.json returns every active node.
+        fetchGraph(box.dataset.focus || "", 2)
           .then(function (d) {
             if (d && d.nodes && d.nodes.length) {
               G.graphData({ nodes: d.nodes, links: d.links || [] }); // links null → force-graph throws

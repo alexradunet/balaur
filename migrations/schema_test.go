@@ -137,6 +137,14 @@ func TestSchemaBaseline(t *testing.T) {
 		t.Errorf("node_types seed: journal must be absent (retired plan 171)")
 	}
 
+	// 9b. Every built-in type carries a graph glyph after the icon backfill
+	// (1750000060): the graph draws a per-type icon from node_types.icon.
+	for _, r := range ntRecs {
+		if r.GetBool("system") && r.GetString("icon") == "" {
+			t.Errorf("node_types %q: icon must be backfilled (1750000060)", r.GetString("name"))
+		}
+	}
+
 	// 14. measure type has a kind property schema (plan 168).
 	measureTypeRec, err := app.FindFirstRecordByData("node_types", "name", "measure")
 	if err != nil {

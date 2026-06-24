@@ -108,6 +108,10 @@ func TestGraphCardRendersSVG(t *testing.T) {
 	if !strings.Contains(out, "Greenhouse plan") {
 		t.Errorf("focus title absent from graph SVG\n%s", out)
 	}
+	// The note glyph (backfilled by 1750000060) is drawn over each dot.
+	if !strings.Contains(out, "📝") {
+		t.Errorf("per-type glyph absent from graph SVG\n%s", out)
+	}
 	if strings.Contains(out, "Secret draft") {
 		t.Errorf("proposed node title leaked into graph SVG (consent filter broken)\n%s", out)
 	}
@@ -127,5 +131,50 @@ func TestGraphCardRendersSVG(t *testing.T) {
 	}
 	if strings.Contains(empty, "<line") {
 		t.Errorf("empty-neighborhood graph drew an edge line\n%s", empty)
+	}
+}
+
+func TestNetworkCardRendersWholeGraph(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	if _, err := nodes.Create(app, "note", "Greenhouse plan", "", nodes.StatusActive, nil); err != nil {
+		t.Fatalf("create note: %v", err)
+	}
+	if _, err := nodes.Create(app, "person", "Ada Green", "", nodes.StatusActive, nil); err != nil {
+		t.Fatalf("create person: %v", err)
+	}
+	// A proposed node must never reach the fallback list (consent spine).
+	if _, err := nodes.Create(app, "note", "Secret draft", "", nodes.StatusProposed, nil); err != nil {
+		t.Fatalf("create proposed: %v", err)
+	}
+
+	var sb strings.Builder
+	if err := NetworkCard(buildNetwork(app)).Render(&sb); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := sb.String()
+
+	// The unanchored interactive canvas: #graphbox with an empty data-focus.
+	if !strings.Contains(out, `id="graphbox"`) || !strings.Contains(out, `data-focus=""`) {
+		t.Errorf("network card missing unanchored #graphbox\n%s", out)
+	}
+	// Fallback list shows active nodes with their per-type glyphs.
+	for _, want := range []string{"Greenhouse plan", "📝", "Ada Green", "👤"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("network fallback missing %q\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "Secret draft") {
+		t.Errorf("proposed node leaked into network card (consent filter broken)\n%s", out)
+	}
+
+	// Empty graph still renders a non-blank card (the empty-state line).
+	app2 := storetest.NewApp(t)
+	var eb strings.Builder
+	if err := NetworkCard(buildNetwork(app2)).Render(&eb); err != nil {
+		t.Fatalf("render empty: %v", err)
+	}
+	if !strings.Contains(eb.String(), "No nodes yet") {
+		t.Errorf("empty network card missing empty-state line\n%s", eb.String())
 	}
 }

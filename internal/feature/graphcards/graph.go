@@ -35,12 +35,14 @@ type GraphNode struct {
 	ID    string
 	Title string
 	Type  string
+	Icon  string // per-type glyph (emoji); empty falls back to a plain dot
 }
 
 // GraphView is the view-model for GraphCard.
 type GraphView struct {
 	FocusID    string
 	FocusTitle string
+	FocusIcon  string // focus node's per-type glyph
 	Neighbors  []GraphNode
 }
 
@@ -79,6 +81,20 @@ func GraphCard(v GraphView) g.Node {
 // fc formats a coordinate float to one decimal place.
 func fc(x float64) string { return strconv.FormatFloat(x, 'f', 1, 64) }
 
+// glyph draws a node's per-type emoji centered on (x,y). icon is already a
+// trusted registry value (an emoji), but it still renders through escaping
+// g.Text — never interpolated into a coordinate or attribute. title rides along
+// as the hover <title> so the glyph is identifiable without a visible label.
+func glyph(x, y float64, icon, title string) g.Node {
+	if icon == "" {
+		icon = nodes.DefaultTypeIcon
+	}
+	return g.El("text", g.Attr("x", fc(x)), g.Attr("y", fc(y)),
+		g.Attr("text-anchor", "middle"), g.Attr("dominant-baseline", "central"),
+		g.Attr("font-size", "13"), g.Attr("pointer-events", "none"),
+		g.El("title", g.Text(title)), g.Text(icon))
+}
+
 func graphSVG(v GraphView) g.Node {
 	cx, cy := float64(graphW)/2, float64(graphH)/2
 
@@ -98,14 +114,16 @@ func graphSVG(v GraphView) g.Node {
 			g.Attr("x1", fc(cx)), g.Attr("y1", fc(cy)),
 			g.Attr("x2", fc(x)), g.Attr("y2", fc(y)),
 			g.Attr("stroke", "var(--line)"), g.Attr("stroke-width", "1")))
-		// Neighbor dot + escaped hover title + escaped label, wrapped in an <a>
-		// that morphs the panel to that node's show card (the generic note route).
+		// Neighbor glyph (per-type emoji over a faint dot) + escaped hover title +
+		// escaped label, wrapped in an <a> that morphs the panel to that node's show
+		// card (the generic note route).
 		children = append(children, g.El("a",
 			g.Attr("href", "/ui/show/note?id="+nb.ID),
 			g.Attr("data-on:click__prevent", "@get('/ui/show/note?id="+nb.ID+"')"),
 			g.El("circle", g.Attr("cx", fc(x)), g.Attr("cy", fc(y)), g.Attr("r", strconv.Itoa(nodeR)),
 				g.Attr("fill", "var(--teal-ink)"),
 				g.El("title", g.Text(nb.Title))),
+			glyph(x, y, nb.Icon, nb.Title),
 			g.El("text", g.Attr("x", fc(x)), g.Attr("y", fc(y+labelOffset)),
 				g.Attr("text-anchor", "middle"), g.Attr("font-size", "10"),
 				g.Attr("fill", "var(--ink)"), g.Text(ui.Clip(nb.Title, labelClip))),
@@ -117,6 +135,7 @@ func graphSVG(v GraphView) g.Node {
 		g.El("circle", g.Attr("cx", fc(cx)), g.Attr("cy", fc(cy)), g.Attr("r", strconv.Itoa(focusR)),
 			g.Attr("fill", "var(--gold)"),
 			g.El("title", g.Text(v.FocusTitle))),
+		glyph(cx, cy, v.FocusIcon, v.FocusTitle),
 		g.El("text", g.Attr("x", fc(cx)), g.Attr("y", fc(cy+labelOffset)),
 			g.Attr("text-anchor", "middle"), g.Attr("font-size", "11"),
 			g.Attr("fill", "var(--ink)"), g.Text(ui.Clip(v.FocusTitle, labelClip))),
@@ -146,7 +165,12 @@ func buildGraph(app core.App, params map[string]string) GraphView {
 	if err != nil {
 		return GraphView{FocusID: id}
 	}
-	view := GraphView{FocusID: id, FocusTitle: focus.GetString("title")}
+	icons, _ := nodes.TypeIcons(app) // best-effort; glyph() falls back to a dot
+	view := GraphView{
+		FocusID:    id,
+		FocusTitle: focus.GetString("title"),
+		FocusIcon:  icons[focus.GetString("type")],
+	}
 	recs, err := nodes.Neighborhood(app, id)
 	if err != nil {
 		return view
@@ -156,6 +180,7 @@ func buildGraph(app core.App, params map[string]string) GraphView {
 			ID:    r.Id,
 			Title: r.GetString("title"),
 			Type:  r.GetString("type"),
+			Icon:  icons[r.GetString("type")],
 		})
 	}
 	return view

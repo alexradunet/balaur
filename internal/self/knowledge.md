@@ -188,7 +188,12 @@ self tool, which reports the actual registry):
   /ui/show/graph?id=…: an interactive force-directed canvas (pan/zoom/drag,
   click a node to open it, right-click to grow the graph) rendered by the
   vendored force-graph lib over /ui/graph.json?id=&depth=, with a static 1-hop
-  SVG as the no-JS/storybook fallback. All read-only and status=active-only
+  SVG as the no-JS/storybook fallback. The whole active graph (unanchored to any
+  focus) is at /ui/show/network — the same canvas fed by /ui/graph.json with no
+  id, with a flat node-list fallback. Every node is drawn as its per-type glyph:
+  an emoji stored in node_types.icon (📝 note, 🧠 memory, 🔑 skill, 👤 person,
+  📖 book, 💡 idea, 📍 place, ✅ task, 📅 day, 📊 measure), the single source of
+  truth read via nodes.TypeIcons. All read-only and status=active-only
   (proposed/rejected nodes never appear). This force-graph asset
   (internal/web/assets/static/vendor/, sha-pinned) is the one vendored
   client-side JS library — still no Node build step.

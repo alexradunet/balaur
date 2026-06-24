@@ -86,6 +86,76 @@ func TestBuildGraphData(t *testing.T) {
 	}
 }
 
+// TestBuildWholeGraphData: the unanchored whole-graph builder returns every
+// active node and the edges among them, with per-type icons, and excludes
+// proposed nodes (the consent spine).
+func TestBuildWholeGraphData(t *testing.T) {
+	app := newWebApp(t)
+
+	mk := func(typ, title, status string) *core.Record {
+		t.Helper()
+		coll, err := app.FindCollectionByNameOrId("nodes")
+		if err != nil {
+			t.Fatalf("nodes collection: %v", err)
+		}
+		r := core.NewRecord(coll)
+		r.Set("type", typ)
+		r.Set("title", title)
+		r.Set("status", status)
+		if err := app.Save(r); err != nil {
+			t.Fatalf("save node %q: %v", title, err)
+		}
+		return r
+	}
+
+	a := mk("note", "Alpha", nodes.StatusActive)
+	b := mk("person", "Beta", nodes.StatusActive)
+	proposed := mk("note", "Pending", nodes.StatusProposed)
+	if _, err := nodes.AddEdge(app, a.Id, b.Id, "links", ""); err != nil {
+		t.Fatalf("edge a→b: %v", err)
+	}
+	if _, err := nodes.AddEdge(app, a.Id, proposed.Id, "links", ""); err != nil {
+		t.Fatalf("edge a→proposed: %v", err)
+	}
+
+	gd, err := buildWholeGraphData(app)
+	if err != nil {
+		t.Fatalf("buildWholeGraphData: %v", err)
+	}
+
+	byID := map[string]graphNode{}
+	for _, n := range gd.Nodes {
+		byID[n.ID] = n
+	}
+	if _, ok := byID[a.Id]; !ok {
+		t.Error("active node Alpha missing from whole graph")
+	}
+	if _, ok := byID[proposed.Id]; ok {
+		t.Error("consent breach: proposed node leaked into the whole graph")
+	}
+	if got := byID[a.Id].Icon; got != "📝" {
+		t.Errorf("note icon = %q, want 📝", got)
+	}
+	if got := byID[b.Id].Icon; got != "👤" {
+		t.Errorf("person icon = %q, want 👤", got)
+	}
+	hasLink := false
+	for _, l := range gd.Links {
+		if l.Source == a.Id && l.Target == b.Id {
+			hasLink = true
+		}
+		if l.Target == proposed.Id {
+			t.Error("consent breach: link to proposed node present in whole graph")
+		}
+	}
+	if !hasLink {
+		t.Error("a→b link missing from whole graph")
+	}
+	if gd.Links == nil {
+		t.Error("Links must be non-nil ([] not null) — force-graph throws on null")
+	}
+}
+
 // TestBuildGraphDataNoEdges: a node with no edges must return a non-nil empty
 // Links slice. JSON `null` breaks force-graph (`null.some(...)`), which is the
 // common case while the graph has no links yet.

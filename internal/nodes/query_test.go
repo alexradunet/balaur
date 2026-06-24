@@ -117,3 +117,46 @@ func TestInverseLabel(t *testing.T) {
 		}
 	}
 }
+
+func TestActiveSubgraph(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	a, _ := nodes.Create(app, "note", "Alpha", "", nodes.StatusActive, nil)
+	b, _ := nodes.Create(app, "note", "Beta", "", nodes.StatusActive, nil)
+	p, _ := nodes.Create(app, "note", "Pending", "", nodes.StatusProposed, nil)
+	if _, err := nodes.AddEdge(app, a.Id, b.Id, "links", ""); err != nil {
+		t.Fatalf("edge a→b: %v", err)
+	}
+	if _, err := nodes.AddEdge(app, a.Id, p.Id, "links", ""); err != nil {
+		t.Fatalf("edge a→p: %v", err)
+	}
+
+	recs, edges, err := nodes.ActiveSubgraph(app, 50)
+	if err != nil {
+		t.Fatalf("ActiveSubgraph: %v", err)
+	}
+	ids := map[string]bool{}
+	for _, r := range recs {
+		ids[r.Id] = true
+	}
+	if !ids[a.Id] || !ids[b.Id] {
+		t.Errorf("active nodes missing: %v", ids)
+	}
+	if ids[p.Id] {
+		t.Error("consent breach: proposed node returned by ActiveSubgraph")
+	}
+	if len(edges) != 1 || edges[0].Source != a.Id || edges[0].Target != b.Id {
+		t.Errorf("edges = %+v, want only a→b (edge to proposed node dropped)", edges)
+	}
+}
+
+func TestTypeIcons(t *testing.T) {
+	app := storetest.NewApp(t)
+	icons, err := nodes.TypeIcons(app)
+	if err != nil {
+		t.Fatalf("TypeIcons: %v", err)
+	}
+	if icons["note"] == "" || icons["person"] == "" {
+		t.Errorf("built-in types should carry icons after backfill: %v", icons)
+	}
+}

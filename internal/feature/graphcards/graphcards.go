@@ -23,12 +23,16 @@ func Register(app core.App) {
 	ui.RegisterCard("graph", func(_ ui.CardSize, params map[string]string) (g.Node, error) {
 		return GraphCard(buildGraph(app, params)), nil
 	})
+	ui.RegisterCard("network", func(_ ui.CardSize, _ map[string]string) (g.Node, error) {
+		return NetworkCard(buildNetwork(app)), nil
+	})
 }
 
 // Unregister removes them. Called from web.Register's OnTerminate hook.
 func Unregister() {
 	ui.UnregisterCard("related")
 	ui.UnregisterCard("graph")
+	ui.UnregisterCard("network")
 }
 
 // init self-registers this feature via the internal/feature/all blank import.

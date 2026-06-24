@@ -26,6 +26,7 @@ type graphNode struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Type  string `json:"type"`
+	Icon  string `json:"icon"` // per-type glyph drawn on the canvas (DefaultTypeIcon when unset)
 }
 
 type graphLink struct {
@@ -86,11 +87,16 @@ func buildGraphData(app core.App, focusID string, depth int) (graphData, error) 
 		frontier = next
 	}
 
+	icons, err := nodes.TypeIcons(app)
+	if err != nil {
+		return graphData{}, err
+	}
+
 	// Both slices are non-nil so the JSON is [] not null — force-graph throws on a
 	// null links array (`null.some(...)`), which is the common no-edges case.
 	gd := graphData{Nodes: make([]graphNode, 0, len(seen)), Links: make([]graphLink, 0)}
 	for _, r := range seen {
-		gd.Nodes = append(gd.Nodes, graphNode{ID: r.Id, Title: r.GetString("title"), Type: r.GetString("type")})
+		gd.Nodes = append(gd.Nodes, newGraphNode(r, icons))
 	}
 	for k := range links {
 		if _, ok := seen[k[0]]; !ok {
@@ -104,13 +110,54 @@ func buildGraphData(app core.App, focusID string, depth int) (graphData, error) 
 	return gd, nil
 }
 
-// graphJSON serves GET /ui/graph.json?id=&depth=. depth defaults to 2 and is
-// clamped to [1,2]. A missing/inactive focus is a sanitized 404 (the underlying
-// reason is never leaked to the client).
+// newGraphNode maps a node record to its wire form, resolving the per-type glyph
+// from the icons map (DefaultTypeIcon when the type carries none).
+func newGraphNode(r *core.Record, icons map[string]string) graphNode {
+	typ := r.GetString("type")
+	icon := icons[typ]
+	if icon == "" {
+		icon = nodes.DefaultTypeIcon
+	}
+	return graphNode{ID: r.Id, Title: r.GetString("title"), Type: typ, Icon: icon}
+}
+
+// buildWholeGraphData returns the entire active graph (capped at maxGraphNodes),
+// unanchored to any focus node — the data behind the whole-graph "network" card.
+// It reuses nodes.ActiveSubgraph, so the consent spine holds exactly as in the
+// focused builder: only status=active nodes, and only edges between them.
+func buildWholeGraphData(app core.App) (graphData, error) {
+	recs, edges, err := nodes.ActiveSubgraph(app, maxGraphNodes)
+	if err != nil {
+		return graphData{}, err
+	}
+	icons, err := nodes.TypeIcons(app)
+	if err != nil {
+		return graphData{}, err
+	}
+	gd := graphData{Nodes: make([]graphNode, 0, len(recs)), Links: make([]graphLink, 0, len(edges))}
+	for _, r := range recs {
+		gd.Nodes = append(gd.Nodes, newGraphNode(r, icons))
+	}
+	for _, e := range edges {
+		gd.Links = append(gd.Links, graphLink{Source: e.Source, Target: e.Target})
+	}
+	return gd, nil
+}
+
+// graphJSON serves GET /ui/graph.json?id=&depth=. With no id it returns the
+// whole active graph (the network card); with an id it returns the neighborhood
+// around that focus, depth defaulting to 2 and clamped to [1,2]. A missing or
+// inactive focus is a sanitized 404 (the underlying reason is never leaked).
 func (h *handlers) graphJSON(e *core.RequestEvent) error {
 	id := e.Request.URL.Query().Get("id")
+	// No id → the whole active graph (the network card). With an id → the
+	// depth-limited neighborhood around that focus node.
 	if id == "" {
-		return e.BadRequestError("missing node id", nil)
+		gd, err := buildWholeGraphData(h.app)
+		if err != nil {
+			return e.InternalServerError("building graph", err)
+		}
+		return e.JSON(http.StatusOK, gd)
 	}
 	depth := 2
 	if n, err := strconv.Atoi(e.Request.URL.Query().Get("depth")); err == nil && n >= 1 && n <= 2 {

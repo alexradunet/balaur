@@ -306,19 +306,20 @@ func graphStory() Story {
 		Blurb: "A static 1-hop snapshot of a node's neighborhood: the focus node (gold) at center, its direct neighbors (teal) on one ring, edges drawn center-to-neighbor. Server-rendered SVG, Datastar-only — no physics, no force-direction, no zoom (deferred). status=active only. Node titles render only inside escaped <text>/<title>, never in a coordinate or attribute. Neighbor dots morph the panel to that node's show card; an empty neighborhood still draws the focus dot + a \"No links yet\" caption.",
 		Variants: []Variant{
 			{"3 neighbors", graphcards.GraphCard(graphcards.GraphView{
-				FocusID: "n1", FocusTitle: "Greenhouse plan",
+				FocusID: "n1", FocusTitle: "Greenhouse plan", FocusIcon: "💡",
 				Neighbors: []graphcards.GraphNode{
-					{ID: "n2", Title: "Garden journal", Type: "note"},
-					{ID: "n3", Title: "Seed list", Type: "note"},
-					{ID: "n4", Title: "Spring tasks", Type: "note"},
+					{ID: "n2", Title: "Garden journal", Type: "note", Icon: "📝"},
+					{ID: "n3", Title: "Seed list", Type: "note", Icon: "📝"},
+					{ID: "n4", Title: "Ada Green", Type: "person", Icon: "👤"},
 				},
 			})},
-			{"empty neighborhood", graphcards.GraphCard(graphcards.GraphView{FocusID: "n1", FocusTitle: "Lonely node"})},
+			{"empty neighborhood", graphcards.GraphCard(graphcards.GraphView{FocusID: "n1", FocusTitle: "Lonely node", FocusIcon: "📝"})},
 		},
 		Props: []Prop{
 			{"FocusID", "string", "—", "The focus node id; drives the related cross-link and the SVG aria-label."},
 			{"FocusTitle", "string", "—", "Center-node label (truncated in the SVG, full in the <title> hover)."},
-			{"Neighbors", "[]GraphNode", "nil", "1-hop neighbors; capped at 24 in the renderer. Each is a teal dot + escaped label."},
+			{"FocusIcon", "string", "—", "Focus node's per-type glyph (emoji), drawn over the center dot."},
+			{"Neighbors", "[]GraphNode", "nil", "1-hop neighbors; capped at 24 in the renderer. Each is a per-type glyph + escaped label."},
 		},
 		Dos: []string{
 			"Keep it a static 1-hop snapshot — Neighborhood gives the active, de-duped set.",
@@ -328,6 +329,38 @@ func graphStory() Story {
 		Donts: []string{
 			"Add physics or interactivity — the graph is a read-only 1-hop snapshot (deferred).",
 			"Interpolate a node title into an SVG coordinate, path, or attribute.",
+		},
+	}
+}
+
+// networkStory documents the whole-graph card: the entire active graph drawn in
+// the interactive force-graph canvas, with a flat node-list fallback for no-JS /
+// storybook. Unlike GraphCard it is not anchored to a focus node.
+func networkStory() Story {
+	return Story{
+		ID: "networkcard", Group: "Cards", Title: "NetworkCard",
+		Blurb: "The whole-graph view: every active node drawn in the interactive force-graph canvas (#graphbox with an empty data-focus → /ui/graph.json with no id). Each node shows its per-type emoji glyph. The no-JS / storybook fallback is a flat, escaped list of the active nodes (glyph + title + type); graph-canvas.js hides it once the live canvas has data. status=active only.",
+		Variants: []Variant{
+			{"populated", graphcards.NetworkCard(graphcards.NetworkView{
+				Nodes: []graphcards.GraphNode{
+					{ID: "n1", Title: "Greenhouse plan", Type: "idea", Icon: "💡"},
+					{ID: "n2", Title: "Garden journal", Type: "note", Icon: "📝"},
+					{ID: "n3", Title: "Ada Green", Type: "person", Icon: "👤"},
+					{ID: "n4", Title: "Spring tasks", Type: "task", Icon: "✅"},
+				},
+			})},
+			{"empty", graphcards.NetworkCard(graphcards.NetworkView{})},
+		},
+		Props: []Prop{
+			{"Nodes", "[]GraphNode", "nil", "Active nodes for the no-JS fallback list (glyph + title + type). The live canvas pulls its own data from /ui/graph.json."},
+		},
+		Dos: []string{
+			"Keep it status=active only — the canvas and the fallback both honor the consent spine.",
+			"Render titles only through g.Text; the per-type glyph rides in front of the title.",
+		},
+		Donts: []string{
+			"Anchor it to a focus node — that is GraphCard's job; the network card is the whole graph.",
+			"Depend on JavaScript to show contents — the fallback list always renders the nodes.",
 		},
 	}
 }

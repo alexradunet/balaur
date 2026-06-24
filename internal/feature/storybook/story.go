@@ -96,6 +96,7 @@ var stories = []Story{
 	notecardStory(),
 	relatedStory(),
 	graphStory(),
+	networkStory(),
 	calendarcellStory(),
 	sparklineStory(),
 	dayentryStory(),

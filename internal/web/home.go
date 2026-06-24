@@ -34,6 +34,7 @@ func navDestinations() []ui.CommandItem {
 		{Label: "Awaiting", Key: "awaiting", Icon: "tome", URL: "/ui/show/memory?view=proposed"},
 		{Label: "Review", Key: "review", Icon: "key", URL: "/ui/show/review"},
 		{Label: "Skills", Key: "skills", Icon: "key", URL: "/ui/show/skills"},
+		{Label: "Graph", Key: "graph", Icon: "lens", URL: "/ui/show/network"},
 		{Label: "Profile", Key: "profile", URL: "/ui/show/settings?section=profile"},
 		{Label: "Models", Key: "models", URL: "/ui/show/settings?section=models"},
 		{Label: "Heads", Key: "heads", URL: "/ui/show/settings?section=heads"},

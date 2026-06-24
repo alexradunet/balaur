@@ -190,6 +190,14 @@ func init() {
 			},
 		},
 		{
+			Type:  "network",
+			Label: "Graph",
+			Icon:  "lens",
+			W:     6,
+			H:     24,
+			// no params — the network card draws the whole active graph
+		},
+		{
 			Type:  "heads",
 			Label: "Heads",
 			Icon:  "tome",

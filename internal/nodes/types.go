@@ -7,6 +7,27 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// DefaultTypeIcon is drawn for a node whose type has no icon registered (a
+// custom type the owner added without one). A neutral dot, never blank.
+const DefaultTypeIcon = "•"
+
+// TypeIcons returns a name→icon map from the node_types registry — the single
+// source of truth for the per-type glyph drawn in the graph. Types with an empty
+// icon are omitted; callers fall back to DefaultTypeIcon.
+func TypeIcons(app core.App) (map[string]string, error) {
+	recs, err := app.FindRecordsByFilter("node_types", "", "name", 0, 0, nil)
+	if err != nil {
+		return nil, fmt.Errorf("node_types: listing icons: %w", err)
+	}
+	icons := make(map[string]string, len(recs))
+	for _, r := range recs {
+		if icon := r.GetString("icon"); icon != "" {
+			icons[r.GetString("name")] = icon
+		}
+	}
+	return icons, nil
+}
+
 // TypeNames returns all registered type names from the node_types registry.
 func TypeNames(app core.App) ([]string, error) {
 	recs, err := app.FindRecordsByFilter("node_types", "", "name", 0, 0, nil)
