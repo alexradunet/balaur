@@ -7,8 +7,10 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/tasks"
 )
 
 // DayData is everything a day page or `balaur day` needs, queried once.
@@ -45,15 +47,21 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 	}
 	data.Logged = recs
 
-	// Done tasks: status='done', done_at in [ds, de)
-	// Also include completions (kind='completion') from entries
-	recs, err = app.FindRecordsByFilter("tasks",
-		"status = 'done' && done_at >= {:s} && done_at < {:e}", "done_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
-	if err != nil {
-		return data, fmt.Errorf("day done-tasks query: %w", err)
+	// Done tasks: type=task nodes with props.state='done' and done_at in [ds, de).
+	// done_at lives in props so we filter in Go after loading active task nodes.
+	if all, err2 := nodes.ListByTypeStatus(app, "task", nodes.StatusActive); err2 == nil {
+		for _, r := range all {
+			tasks.Hydrate(r)
+			if r.GetString("status") != "done" {
+				continue
+			}
+			doneAt := r.GetDateTime("done_at").Time()
+			if doneAt.IsZero() || doneAt.Before(ds) || !doneAt.Before(de) {
+				continue
+			}
+			data.Done = append(data.Done, r)
+		}
 	}
-	data.Done = recs
 
 	recs, err = app.FindRecordsByFilter("entries",
 		"kind = 'completion' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 200, 0,

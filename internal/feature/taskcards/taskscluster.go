@@ -8,6 +8,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -27,10 +28,22 @@ func renderTasks(app core.App, params map[string]string) g.Node {
 
 	var recs []*core.Record
 	switch status {
-	case "done":
-		recs, _ = app.FindRecordsByFilter("tasks", "status = 'done'", "-updated", limit, 0, nil)
-	case "all":
-		recs, _ = app.FindRecordsByFilter("tasks", "status != 'dropped'", "-updated", limit, 0, nil)
+	case "done", "all":
+		all, _ := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+		for _, r := range all {
+			tasks.Hydrate(r)
+			st := r.GetString("status")
+			if status == "done" && st != "done" {
+				continue
+			}
+			if status == "all" && st == "dropped" {
+				continue
+			}
+			recs = append(recs, r)
+			if len(recs) >= limit {
+				break
+			}
+		}
 	default: // open
 		var terms []string
 		if t := strings.TrimSpace(params["terms"]); t != "" {

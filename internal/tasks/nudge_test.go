@@ -61,6 +61,17 @@ func nudgeMessages(t *testing.T, app core.App) []*core.Record {
 	return recs
 }
 
+// loadTask reloads a task node from the nodes collection and hydrates it.
+func loadTask(t *testing.T, app core.App, id string) *core.Record {
+	t.Helper()
+	rec, err := app.FindRecordById("nodes", id)
+	if err != nil {
+		t.Fatalf("loadTask %q: %v", id, err)
+	}
+	hydrate(rec)
+	return rec
+}
+
 func TestNudgeFiresOnceAndMarks(t *testing.T) {
 	app := storetest.NewApp(t)
 	now := time.Now()
@@ -80,7 +91,7 @@ func TestNudgeFiresOnceAndMarks(t *testing.T) {
 	if c := msgs[0].GetString("content"); !strings.Contains(c, "Reminder") || !strings.Contains(c, "Call notary") {
 		t.Errorf("nudge content: %q", c)
 	}
-	got, _ := app.FindRecordById("tasks", rec.Id)
+	got := loadTask(t, app, rec.Id)
 	if got.GetDateTime("nudged_at").IsZero() {
 		t.Error("nudged_at not set after firing")
 	}

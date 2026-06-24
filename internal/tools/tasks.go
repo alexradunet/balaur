@@ -10,6 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 )
@@ -152,7 +153,7 @@ func taskListTool(app core.App) agent.Tool {
 
 			loc := store.OwnerLocation(app)
 			if args.Scope == "all" {
-				recs, err := app.FindRecordsByFilter("tasks", "id != ''", "-updated", 50, 0)
+				recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
 				if err != nil {
 					return "", fmt.Errorf("task_list: %w", err)
 				}
@@ -162,6 +163,7 @@ func taskListTool(app core.App) agent.Tool {
 				var b strings.Builder
 				now := time.Now().In(loc)
 				for _, r := range recs {
+					tasks.Hydrate(r)
 					fmt.Fprintf(&b, "- [%s] (%s) %s%s\n", r.Id, r.GetString("status"), r.GetString("title"), dueSuffix(r, now, loc))
 				}
 				return b.String(), nil
@@ -238,10 +240,11 @@ func taskUpdateTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("task_update: bad arguments: %w", err)
 			}
-			rec, err := app.FindRecordById("tasks", strings.TrimSpace(args.ID))
+			rec, err := app.FindRecordById("nodes", strings.TrimSpace(args.ID))
 			if err != nil {
 				return "", fmt.Errorf("task_update: no task with id %q — check task_list", args.ID)
 			}
+			tasks.Hydrate(rec)
 			loc := store.OwnerLocation(app)
 			opts := tasks.UpdateOpts{
 				Title:         args.Title,
@@ -408,10 +411,11 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			if !until.After(time.Now()) {
 				return "", fmt.Errorf("task_snooze: %s is not in the future", fmtDue(until, loc))
 			}
-			rec, err := app.FindRecordById("tasks", args.ID)
+			rec, err := app.FindRecordById("nodes", args.ID)
 			if err != nil {
 				return "", fmt.Errorf("task_snooze: no task with id %q — check task_list", args.ID)
 			}
+			tasks.Hydrate(rec)
 			if err := tasks.Snooze(app, rec, until); err != nil {
 				return "", fmt.Errorf("task_snooze: %w", err)
 			}
@@ -440,7 +444,7 @@ func taskDropTool(app core.App) agent.Tool {
 	}
 }
 
-// findTask decodes an {id} argument and loads the record.
+// findTask decodes an {id} argument and loads the task node, hydrating it.
 func findTask(app core.App, argsJSON string) (*core.Record, error) {
 	var args struct {
 		ID string `json:"id"`
@@ -448,9 +452,10 @@ func findTask(app core.App, argsJSON string) (*core.Record, error) {
 	if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 		return nil, fmt.Errorf("bad arguments: %w", err)
 	}
-	rec, err := app.FindRecordById("tasks", strings.TrimSpace(args.ID))
+	rec, err := app.FindRecordById("nodes", strings.TrimSpace(args.ID))
 	if err != nil {
 		return nil, fmt.Errorf("no task with id %q — check task_list", args.ID)
 	}
+	tasks.Hydrate(rec)
 	return rec, nil
 }

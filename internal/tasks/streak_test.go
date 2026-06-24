@@ -168,10 +168,11 @@ func TestStreaksForMatchesStreakFor(t *testing.T) {
 
 	// Reload the records as StreakFor and StreaksFor would see them.
 	for i, r := range all {
-		reloaded, err := app.FindRecordById("tasks", r.Id)
+		reloaded, err := app.FindRecordById("nodes", r.Id)
 		if err != nil {
 			t.Fatalf("reload %d: %v", i, err)
 		}
+		hydrate(reloaded)
 		all[i] = reloaded
 	}
 	daily, weekly, oneoff = all[0], all[1], all[2]

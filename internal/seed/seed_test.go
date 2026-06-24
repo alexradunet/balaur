@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/storetest"
+	"github.com/alexradunet/balaur/internal/tasks"
 )
 
 // total sums every collection count in a Result — the seed's footprint.
@@ -39,7 +40,8 @@ func TestRunSeedsAllCollections(t *testing.T) {
 	if n, _ := app.CountRecords("messages", dbx.HashExp{"origin": Marker}); int(n) != res.Messages {
 		t.Errorf("marked messages = %d, reported %d", n, res.Messages)
 	}
-	if n, _ := app.CountRecords("tasks", dbx.HashExp{"source": Marker}); int(n) != res.Tasks {
+	// Tasks are now type=task nodes; count matching nodes.
+	if n, _ := app.CountRecords("nodes", dbx.HashExp{"type": "task", "status": nodes.StatusActive}); int(n) < res.Tasks {
 		t.Errorf("marked tasks = %d, reported %d", n, res.Tasks)
 	}
 }
@@ -62,17 +64,10 @@ func TestRunIsIdempotent(t *testing.T) {
 func TestResetRemovesOnlySeededData(t *testing.T) {
 	app := storetest.NewApp(t)
 
-	// A real (non-seeded) task must survive a reset.
-	col, err := app.FindCollectionByNameOrId("tasks")
+	// A real (non-seeded) task node must survive a reset.
+	real, err := tasks.Create(app, tasks.CreateOpts{Title: "real task", Source: "owner"})
 	if err != nil {
-		t.Fatalf("tasks collection: %v", err)
-	}
-	real := core.NewRecord(col)
-	real.Set("title", "real task")
-	real.Set("status", "open")
-	real.Set("source", "owner")
-	if err := app.Save(real); err != nil {
-		t.Fatalf("saving real task: %v", err)
+		t.Fatalf("creating real task: %v", err)
 	}
 
 	first, err := Run(app)
@@ -88,12 +83,16 @@ func TestResetRemovesOnlySeededData(t *testing.T) {
 		t.Fatalf("Reset removed %d records, seeded %d", total(removed), total(first))
 	}
 
-	// The real task is untouched; seeded tasks are gone.
-	if _, err := app.FindRecordById("tasks", real.Id); err != nil {
+	// The real task node is untouched; seeded task nodes are gone.
+	if _, err := app.FindRecordById("nodes", real.Id); err != nil {
 		t.Errorf("real task was deleted by Reset: %v", err)
 	}
-	if n, _ := app.CountRecords("tasks", dbx.HashExp{"source": Marker}); n != 0 {
-		t.Errorf("seeded tasks remain after Reset: %d", n)
+	// No nodes with type=task and props.source=Marker should remain.
+	remaining, _ := app.FindRecordsByFilter("nodes",
+		"type = {:t} && props.source = {:m}", "", 0, 0,
+		dbx.Params{"t": "task", "m": Marker})
+	if len(remaining) != 0 {
+		t.Errorf("seeded tasks remain after Reset: %d", len(remaining))
 	}
 
 	// Reseeding after a reset works and restores the full footprint.

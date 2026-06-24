@@ -203,7 +203,7 @@ func (h *handlers) artifactBody(title string, cs []cards.Card) g.Node {
 // the tool row degrades to plain text rather than a broken card.
 func (h *handlers) proposalBody(kind, id string) g.Node {
 	if kind == "tasks" {
-		rec, err := h.app.FindRecordById("tasks", id)
+		rec, err := h.loadTaskNode(id)
 		if err != nil {
 			return nil
 		}

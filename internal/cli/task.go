@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/tools"
 )
@@ -39,10 +40,11 @@ func taskList(rs []*core.Record) []map[string]any {
 }
 
 func findTask(app core.App, id string) (*core.Record, error) {
-	rec, err := app.FindRecordById("tasks", strings.TrimSpace(id))
+	rec, err := app.FindRecordById("nodes", strings.TrimSpace(id))
 	if err != nil {
 		return nil, fmt.Errorf("no task with id %q — check `task list`", id)
 	}
+	tasks.Hydrate(rec)
 	return rec, nil
 }
 
@@ -101,9 +103,12 @@ func taskListCmd(app core.App) *cobra.Command {
 	cmd.Flags().StringVar(&term, "term", "", "search term matched against title and notes")
 	cmd.RunE = run(app, "task.list", func(cmd *cobra.Command, args []string) (any, error) {
 		if scope == "all" {
-			recs, err := app.FindRecordsByFilter("tasks", "id != ''", "-updated", 200, 0)
+			recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
 			if err != nil {
 				return nil, err
+			}
+			for _, r := range recs {
+				tasks.Hydrate(r)
 			}
 			return map[string]any{"all": taskList(recs)}, nil
 		}

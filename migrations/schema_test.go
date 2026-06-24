@@ -19,10 +19,10 @@ func hasIndex(t *testing.T, app core.App, name string) bool {
 func TestSchemaBaseline(t *testing.T) {
 	app := storetest.NewApp(t)
 
-	// 1. All 15 app collections exist (+ built-in users).
+	// 1. All 14 app collections exist (+ built-in users). tasks is gone (plan 167).
 	for _, name := range []string{
 		"users", "heads", "conversations", "messages", "nodes", "edges",
-		"audit_log", "summaries", "tasks", "entries", "extensions",
+		"audit_log", "summaries", "entries", "extensions",
 		"llm_providers", "llm_models", "llm_settings", "owner_settings",
 		"node_types",
 	} {
@@ -31,8 +31,8 @@ func TestSchemaBaseline(t *testing.T) {
 		}
 	}
 
-	// 2. Retired collections never created.
-	for _, name := range []string{"boards", "grants", "memories", "skills"} {
+	// 2. Retired collections never created (tasks folded into nodes as type=task in plan 167).
+	for _, name := range []string{"boards", "grants", "memories", "skills", "tasks"} {
 		if _, err := app.FindCollectionByNameOrId(name); err == nil {
 			t.Errorf("collection %q should not exist", name)
 		}
@@ -87,8 +87,8 @@ func TestSchemaBaseline(t *testing.T) {
 		"idx_conversations_open_master", "idx_messages_conv_created",
 		"idx_messages_origin_created", "idx_nodes_type_status",
 		"idx_nodes_status", "idx_edges_unique", "idx_edges_target",
-		"idx_audit_actor", "idx_summaries_period", "idx_tasks_nudge",
-		"idx_tasks_done_at", "idx_entries_kind_noted", "idx_llm_providers_name",
+		"idx_audit_actor", "idx_summaries_period",
+		"idx_entries_kind_noted", "idx_llm_providers_name",
 	} {
 		if !hasIndex(t, app, idx) {
 			t.Errorf("index %s missing", idx)
@@ -96,6 +96,7 @@ func TestSchemaBaseline(t *testing.T) {
 	}
 	for _, idx := range []string{
 		"idx_messages_conversation", "idx_tasks_status", "idx_audit_created",
+		"idx_tasks_due", "idx_tasks_nudge", "idx_tasks_done_at",
 	} {
 		if hasIndex(t, app, idx) {
 			t.Errorf("index %s should be dropped", idx)
@@ -114,22 +115,34 @@ func TestSchemaBaseline(t *testing.T) {
 		t.Error("index idx_node_types_name missing")
 	}
 
-	// 9. node_types has the eight seeded types including note and memory.
+	// 9. node_types has nine seeded types: the eight built-ins plus task (plan 167).
 	ntRecs, err := app.FindRecordsByFilter("node_types", "", "", 0, 0, nil)
 	if err != nil {
 		t.Fatalf("node_types seed check: %v", err)
 	}
-	if len(ntRecs) < 8 {
-		t.Errorf("node_types seed: got %d rows, want >= 8", len(ntRecs))
+	if len(ntRecs) < 9 {
+		t.Errorf("node_types seed: got %d rows, want >= 9", len(ntRecs))
 	}
 	ntNames := make(map[string]bool, len(ntRecs))
 	for _, r := range ntRecs {
 		ntNames[r.GetString("name")] = true
 	}
-	for _, name := range []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place"} {
+	for _, name := range []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place", "task"} {
 		if !ntNames[name] {
 			t.Errorf("node_types seed: %q missing", name)
 		}
+	}
+
+	// 13. task type has a state property schema (plan 167).
+	taskTypeRec, err := app.FindFirstRecordByData("node_types", "name", "task")
+	if err != nil {
+		t.Fatalf("node_types task row missing: %v", err)
+	}
+	if taskTypeRec.GetString("properties") == "" {
+		t.Error("node_types task.properties should be non-empty (plan 167)")
+	}
+	if taskTypeRec.GetString("born_status") != "active" {
+		t.Errorf("task born_status = %q, want active", taskTypeRec.GetString("born_status"))
 	}
 
 	// 10. nodes.type is now a TextField (no longer a SelectField).

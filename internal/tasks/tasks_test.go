@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -103,10 +105,15 @@ func TestDoneCalendarRuleKeepsPattern(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	rec.Set("recur_from_done", true) // simulate the pre-fix record
+	// Simulate the pre-fix record by patching recur_from_done directly in props.
+	props := nodes_Props(rec)
+	props["recur_from_done"] = true
+	rec.Set("props", props)
+	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
 		t.Fatalf("save: %v", err)
 	}
+	hydrate(rec)
 	res, err := Done(app, rec, now)
 	if err != nil {
 		t.Fatalf("done: %v", err)
@@ -135,7 +142,11 @@ func TestDoneOneOff(t *testing.T) {
 	if res.Recurring {
 		t.Error("one-off reported recurring")
 	}
-	got, _ := app.FindRecordById("tasks", rec.Id)
+	got, err := app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if got.GetString("status") != "done" || got.GetDateTime("done_at").IsZero() {
 		t.Errorf("status=%q done_at=%v", got.GetString("status"), got.GetDateTime("done_at"))
 	}
@@ -155,10 +166,14 @@ func TestDoneRecurringFixedSchedule(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 	// Simulate a fired nudge that must be cleared by the bump.
-	rec.Set("nudged_at", now.UTC())
+	props := nodes_Props(rec)
+	props["nudged_at"] = fmtTime(now.UTC())
+	rec.Set("props", props)
+	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
 		t.Fatalf("save: %v", err)
 	}
+	hydrate(rec)
 
 	res, err := Done(app, rec, now)
 	if err != nil {
@@ -174,7 +189,11 @@ func TestDoneRecurringFixedSchedule(t *testing.T) {
 		t.Errorf("wall clock drifted: next due %v, want 09:00", res.NextDue.In(time.Local))
 	}
 
-	got, _ := app.FindRecordById("tasks", rec.Id)
+	got, err := app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if got.GetString("status") != "open" {
 		t.Errorf("recurring task closed: status %q", got.GetString("status"))
 	}
@@ -213,16 +232,25 @@ func TestSnoozeAndDrop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	rec.Set("nudged_at", now.UTC())
+	// Simulate a fired nudge.
+	props := nodes_Props(rec)
+	props["nudged_at"] = fmtTime(now.UTC())
+	rec.Set("props", props)
+	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
 		t.Fatalf("save: %v", err)
 	}
+	hydrate(rec)
 
 	until := now.Add(3 * time.Hour)
 	if err := Snooze(app, rec, until); err != nil {
 		t.Fatalf("snooze: %v", err)
 	}
-	got, _ := app.FindRecordById("tasks", rec.Id)
+	got, err := app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if got.GetDateTime("snoozed_until").IsZero() {
 		t.Error("snoozed_until not set")
 	}
@@ -233,7 +261,11 @@ func TestSnoozeAndDrop(t *testing.T) {
 	if err := Drop(app, got); err != nil {
 		t.Fatalf("drop: %v", err)
 	}
-	got, _ = app.FindRecordById("tasks", rec.Id)
+	got, err = app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if got.GetString("status") != "dropped" {
 		t.Errorf("status = %q, want dropped", got.GetString("status"))
 	}
@@ -258,7 +290,11 @@ func TestUpdate(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	got, _ := app.FindRecordById("tasks", rec.Id)
+	got, err := app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if got.GetString("title") != "Ship parcel today" {
 		t.Errorf("title = %q, want renamed", got.GetString("title"))
 	}
@@ -274,7 +310,11 @@ func TestUpdate(t *testing.T) {
 	if err := Update(app, got, now, UpdateOpts{SetDue: true, Due: moved}); err != nil {
 		t.Fatalf("update due-only: %v", err)
 	}
-	got, _ = app.FindRecordById("tasks", rec.Id)
+	got, err = app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if got.GetString("title") != "Ship parcel today" {
 		t.Errorf("title changed by a due-only update: %q", got.GetString("title"))
 	}
@@ -283,7 +323,11 @@ func TestUpdate(t *testing.T) {
 	if err := Update(app, got, now, UpdateOpts{SetDue: true}); err != nil {
 		t.Fatalf("clear due: %v", err)
 	}
-	got, _ = app.FindRecordById("tasks", rec.Id)
+	got, err = app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if !got.GetDateTime("due").IsZero() {
 		t.Errorf("due not cleared: %v", got.GetDateTime("due"))
 	}
@@ -293,7 +337,11 @@ func TestUpdate(t *testing.T) {
 	if err := Update(app, got, now, UpdateOpts{Recur: ptr("weekly:mon,thu"), SetDue: true, Due: tue}); err != nil {
 		t.Fatalf("make recurring: %v", err)
 	}
-	got, _ = app.FindRecordById("tasks", rec.Id)
+	got, err = app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if d := got.GetDateTime("due").Time().In(time.Local); d.Weekday() != time.Thursday {
 		t.Errorf("calendar due not snapped: %v", d)
 	}
@@ -303,7 +351,11 @@ func TestUpdate(t *testing.T) {
 	if err := Update(app, got, now, UpdateOpts{SetDue: true}); err != nil {
 		t.Fatalf("clear due on recurring: %v", err)
 	}
-	got, _ = app.FindRecordById("tasks", rec.Id)
+	got, err = app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	nd := got.GetDateTime("due").Time()
 	if nd.IsZero() {
 		t.Fatal("recurring clear should re-anchor, not empty the due")
@@ -327,7 +379,11 @@ func TestUpdateRejectsNonOpen(t *testing.T) {
 	if _, err := Done(app, rec, time.Now()); err != nil {
 		t.Fatalf("done: %v", err)
 	}
-	got, _ := app.FindRecordById("tasks", rec.Id)
+	got, err := app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	hydrate(got)
 	if err := Update(app, got, time.Now(), UpdateOpts{Title: ptr("nope")}); err == nil {
 		t.Error("updating a done task: want error")
 	}
@@ -374,4 +430,10 @@ func TestBucket(t *testing.T) {
 	if len(recs) != 1 || recs[0].GetString("title") != "someday" {
 		t.Errorf("term filter: got %d records", len(recs))
 	}
+}
+
+// nodes_Props is a test-local alias to access props for raw test setup.
+// Uses the real nodes.Props which handles the types.JSONRaw round-trip.
+func nodes_Props(rec *core.Record) map[string]any {
+	return nodes.Props(rec)
 }

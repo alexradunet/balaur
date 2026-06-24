@@ -15,6 +15,7 @@ import (
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/llmtest"
 	"github.com/alexradunet/balaur/internal/storetest"
+	itasks "github.com/alexradunet/balaur/internal/tasks"
 )
 
 // executeEnvelope runs a command and returns the raw v1 envelope from stdout.
@@ -113,9 +114,14 @@ func TestTaskLifecycle(t *testing.T) {
 	if done["recurring"] != false {
 		t.Errorf("one-off must not report recurring: %v", done)
 	}
-	rec, err := app.FindRecordById("tasks", id)
-	if err != nil || rec.GetString("status") != "done" {
-		t.Errorf("task not done in the database: %v %v", rec, err)
+	rec, err := app.FindRecordById("nodes", id)
+	if err != nil {
+		t.Errorf("task not found in nodes: %v", err)
+	} else {
+		itasks.Hydrate(rec)
+		if rec.GetString("status") != "done" {
+			t.Errorf("task not done in the database: status=%q", rec.GetString("status"))
+		}
 	}
 
 	// The deed left its audit trail — the CLI inherits the domain layer's

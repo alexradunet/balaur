@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
 )
 
@@ -29,11 +29,37 @@ const composeTimeout = 60 * time.Second
 
 // DueForNudge returns open tasks whose nudge should fire at now: due has
 // passed, never fired (or re-armed by snooze/recurrence), snooze elapsed.
+// Tasks are now type=task nodes; we load all active task nodes and filter in Go.
 func DueForNudge(app core.App, now time.Time) ([]*core.Record, error) {
-	return app.FindRecordsByFilter("tasks",
-		"status = 'open' && due != '' && due <= {:now} && nudged_at = ''"+
-			" && (snoozed_until = '' || snoozed_until <= {:now})",
-		"due", nudgeBatchLimit, 0, dbx.Params{"now": store.PBTime(now)})
+	recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: loading task nodes for nudge: %w", err)
+	}
+	var out []*core.Record
+	for _, r := range recs {
+		hydrate(r)
+		if r.GetString("status") != "open" {
+			continue
+		}
+		due := r.GetDateTime("due").Time()
+		if due.IsZero() || !due.Before(now) {
+			continue
+		}
+		if r.GetString("nudged_at") != "" {
+			continue
+		}
+		if su := r.GetString("snoozed_until"); su != "" {
+			suTime := r.GetDateTime("snoozed_until").Time()
+			if !suTime.IsZero() && suTime.After(now) {
+				continue
+			}
+		}
+		out = append(out, r)
+		if len(out) >= nudgeBatchLimit {
+			break
+		}
+	}
+	return out, nil
 }
 
 // Nudge fires every due reminder as ONE assistant message (origin=nudge) in
@@ -64,10 +90,14 @@ func Nudge(app core.App, client llm.Client, now time.Time) error {
 		return err
 	}
 	for _, rec := range recs {
-		rec.Set("nudged_at", now.UTC())
+		props := nodes.Props(rec)
+		props["nudged_at"] = fmtTime(now.UTC())
+		rec.Set("props", props)
+		dehydrate(rec)
 		if err := app.Save(rec); err != nil {
 			return fmt.Errorf("marking nudge on %q: %w", rec.GetString("title"), err)
 		}
+		hydrate(rec)
 		store.Audit(app, "nudge", "task.nudge", rec.Id, true,
 			map[string]any{"title": rec.GetString("title")})
 	}

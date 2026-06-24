@@ -8,6 +8,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/storetest"
+	"github.com/alexradunet/balaur/internal/tasks"
 )
 
 func findTool(t *testing.T, ts []agent.Tool, name string) agent.Tool {
@@ -217,10 +218,11 @@ func TestTaskUpdateReschedules(t *testing.T) {
 	}
 
 	// The reschedule actually persisted to Jun 23.
-	rec, err := app.FindRecordById("tasks", id)
+	rec, err := app.FindRecordById("nodes", id)
 	if err != nil {
 		t.Fatalf("find: %v", err)
 	}
+	tasks.Hydrate(rec)
 	if d := rec.GetDateTime("due").Time(); d.Day() != 23 || d.Month() != time.June {
 		t.Errorf("due not rescheduled to Jun 23: %v", d)
 	}
@@ -237,7 +239,11 @@ func TestTaskUpdateClearsDue(t *testing.T) {
 	if _, err := findTool(t, ts, "task_update").Execute(ctx, `{"id":"`+id+`","due":""}`); err != nil {
 		t.Fatalf("task_update clear: %v", err)
 	}
-	rec, _ := app.FindRecordById("tasks", id)
+	rec, _ := app.FindRecordById("nodes", id)
+	if rec == nil {
+		t.Fatalf("node not found: %s", id)
+	}
+	tasks.Hydrate(rec)
 	if !rec.GetDateTime("due").IsZero() {
 		t.Errorf("empty due string did not clear the due: %v", rec.GetDateTime("due"))
 	}
@@ -282,7 +288,11 @@ func TestTaskUpdateReanchorsRecurringOnClear(t *testing.T) {
 	if strings.Contains(res, "no due") {
 		t.Errorf("recurring clear should re-anchor, not go someday: %q", res)
 	}
-	rec, _ := app.FindRecordById("tasks", id)
+	rec, _ := app.FindRecordById("nodes", id)
+	if rec == nil {
+		t.Fatal("task node not found")
+	}
+	tasks.Hydrate(rec)
 	due := rec.GetDateTime("due").Time()
 	if due.IsZero() {
 		t.Fatal("re-anchor produced no due")

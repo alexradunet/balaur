@@ -4,9 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pocketbase/pocketbase/core"
-
 	"github.com/alexradunet/balaur/internal/storetest"
+	"github.com/alexradunet/balaur/internal/tasks"
 )
 
 func TestDayDataBoundary(t *testing.T) {
@@ -34,15 +33,20 @@ func TestDayDataBoundary(t *testing.T) {
 		t.Fatalf("log inside: %v", err)
 	}
 
-	// Seed one done task inside the day
-	taskColl, _ := app.FindCollectionByNameOrId("tasks")
-	taskInside := core.NewRecord(taskColl)
-	taskInside.Set("title", "Test task")
-	taskInside.Set("status", "done")
-	taskInside.Set("done_at", evening)
-	if err := app.Save(taskInside); err != nil {
-		t.Fatalf("task save: %v", err)
+	// Seed one done task inside the day (done_at will be set to now by tasks.Done,
+	// but we need it in the evening window — use tasks.Done with the evening time).
+	taskRec, err := tasks.Create(app, tasks.CreateOpts{Title: "Test task"})
+	if err != nil {
+		t.Fatalf("task create: %v", err)
 	}
+	if _, err = tasks.Done(app, taskRec, evening); err != nil {
+		t.Fatalf("task done: %v", err)
+	}
+	taskInside, err := app.FindRecordById("nodes", taskRec.Id)
+	if err != nil {
+		t.Fatalf("reload task: %v", err)
+	}
+	tasks.Hydrate(taskInside)
 
 	// Seed one journal entry on next day (should not appear)
 	journalOutside, err := JournalWrite(app, "next day note", nextDay)
