@@ -120,6 +120,52 @@ func TestSeriesAndSummarize(t *testing.T) {
 	}
 }
 
+// TestSeriesBackfillOrdering guards against the chronology coming from the DB
+// `created` column instead of noted_at. We log a measure at `now` first, then
+// backfill an OLDER one — insertion order is the reverse of chronological order.
+// Series must still return oldest-first by noted_at, and Summarize.First/Last/
+// LastAt must reflect that chronology (older value first, newer value last),
+// never insertion order.
+func TestSeriesBackfillOrdering(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := time.Now()
+	older := now.AddDate(0, 0, -7)
+
+	// Insert NEWER first, then the OLDER backfill — out of chronological order.
+	if _, err := Log(app, LogOpts{Kind: "weight", ValueNum: 80.0, Unit: "kg", NotedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Log(app, LogOpts{Kind: "weight", ValueNum: 83.0, Unit: "kg", NotedAt: older}); err != nil {
+		t.Fatal(err)
+	}
+
+	recs, err := Series(app, "weight", now.AddDate(0, 0, -30))
+	if err != nil {
+		t.Fatalf("series: %v", err)
+	}
+	if len(recs) != 2 {
+		t.Fatalf("series rows = %d, want 2", len(recs))
+	}
+	// Oldest-first by noted_at: the backfilled 83.0 comes before the 80.0.
+	if v := recs[0].GetFloat("value_num"); v != 83.0 {
+		t.Errorf("series[0] value_num = %v, want 83.0 (oldest noted_at first)", v)
+	}
+	if v := recs[1].GetFloat("value_num"); v != 80.0 {
+		t.Errorf("series[1] value_num = %v, want 80.0 (newest noted_at last)", v)
+	}
+
+	s := Summarize(recs)
+	if s.First != 83.0 {
+		t.Errorf("summary.First = %v, want 83.0 (chronologically oldest)", s.First)
+	}
+	if s.Last != 80.0 {
+		t.Errorf("summary.Last = %v, want 80.0 (chronologically newest)", s.Last)
+	}
+	if d := s.LastAt.Sub(now); d > time.Second || d < -time.Second {
+		t.Errorf("summary.LastAt = %v, want ~%v (the newest noted_at)", s.LastAt, now)
+	}
+}
+
 func TestDrop(t *testing.T) {
 	app := storetest.NewApp(t)
 	rec, err := Log(app, LogOpts{Kind: "mood", ValueNum: 7})

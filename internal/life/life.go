@@ -8,6 +8,7 @@ package life
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -42,6 +43,23 @@ type LogOpts struct {
 // Stored in props.noted_at so hydrated rec.GetDateTime("noted_at") works.
 func fmtTime(t time.Time) string {
 	return t.UTC().Format("2006-01-02 15:04:05.000Z")
+}
+
+// measureNotedAt parses a measure node's props.noted_at (the PB datetime string)
+// into a time. The bool is false when the value is absent or unparseable — the
+// caller skips such rows. Chronology comes from noted_at, never the DB `created`
+// column: a backdated or migrated measure has a created that does not match its
+// noted_at.
+func measureNotedAt(r *core.Record) (time.Time, bool) {
+	s := nodes.PropString(r, "noted_at")
+	if s == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse("2006-01-02 15:04:05.000Z", s)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }
 
 // Log stores one entry as a type=measure node. The owner's statement is the
@@ -208,11 +226,11 @@ func Kinds(app core.App) ([]KindInfo, error) {
 	return out, nil
 }
 
-// Series returns a kind's entries since a time, oldest first.
+// Series returns a kind's entries since a time, oldest first by noted_at.
 func Series(app core.App, kind string, since time.Time) ([]*core.Record, error) {
 	k := NormalizeKind(kind)
 	recs, err := app.FindRecordsByFilter("nodes",
-		"type = 'measure' && status = 'active'", "created", 0, 0, nil)
+		"type = 'measure' && status = 'active'", "", 0, 0, nil)
 	if err != nil {
 		return nil, fmt.Errorf("loading measure series: %w", err)
 	}
@@ -221,21 +239,26 @@ func Series(app core.App, kind string, since time.Time) ([]*core.Record, error) 
 		if nodes.PropString(r, "kind") != k {
 			continue
 		}
-		notedAtStr := nodes.PropString(r, "noted_at")
-		if notedAtStr == "" {
-			continue
-		}
-		notedAt, err := time.Parse("2006-01-02 15:04:05.000Z", notedAtStr)
-		if err != nil {
-			continue
-		}
-		if notedAt.Before(since) {
+		notedAt, ok := measureNotedAt(r)
+		if !ok || notedAt.Before(since) {
 			continue
 		}
 		hydrate(r)
 		out = append(out, r)
 	}
+	sortByNotedAt(out)
 	return out, nil
+}
+
+// sortByNotedAt orders measure nodes oldest-first by their props.noted_at, so
+// chronology follows noted_at (backdated/migrated rows included), not the DB
+// `created` column. Summarize relies on this order for First/Last/LastAt.
+func sortByNotedAt(recs []*core.Record) {
+	slices.SortFunc(recs, func(a, b *core.Record) int {
+		ta, _ := measureNotedAt(a)
+		tb, _ := measureNotedAt(b)
+		return ta.Compare(tb)
+	})
 }
 
 // Summary reduces a series' numeric points.
@@ -275,10 +298,10 @@ func Summarize(recs []*core.Record) Summary {
 }
 
 // listMeasuresInRange loads active type=measure nodes whose noted_at falls in
-// [start, end), hydrated. Used by Day.
+// [start, end), hydrated and ordered oldest-first by noted_at. Used by Day.
 func listMeasuresInRange(app core.App, start, end time.Time) ([]*core.Record, error) {
 	recs, err := app.FindRecordsByFilter("nodes",
-		"type = 'measure' && status = 'active'", "created", 0, 0, nil)
+		"type = 'measure' && status = 'active'", "", 0, 0, nil)
 	if err != nil {
 		return nil, fmt.Errorf("loading measures for range: %w", err)
 	}
@@ -286,19 +309,13 @@ func listMeasuresInRange(app core.App, start, end time.Time) ([]*core.Record, er
 	// top-level DateField — PocketBase filter cannot reach inside JSON easily.
 	out := make([]*core.Record, 0)
 	for _, r := range recs {
-		notedAtStr := nodes.PropString(r, "noted_at")
-		if notedAtStr == "" {
-			continue
-		}
-		notedAt, err := time.Parse("2006-01-02 15:04:05.000Z", notedAtStr)
-		if err != nil {
-			continue
-		}
-		if notedAt.Before(start) || !notedAt.Before(end) {
+		notedAt, ok := measureNotedAt(r)
+		if !ok || notedAt.Before(start) || !notedAt.Before(end) {
 			continue
 		}
 		hydrate(r)
 		out = append(out, r)
 	}
+	sortByNotedAt(out)
 	return out, nil
 }
