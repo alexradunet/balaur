@@ -523,23 +523,6 @@ textarea:focus-visible,
   scrollbar-gutter: stable both-edges;
 }
 
-/* A spoken line: framed portrait beside a parchment speech panel.
-   Balaur speaks from the left; the owner answers from the right,
-   portrait mirrored (CSS only, per the avatar rules) to face the words. */
-.msg {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  border: 0;
-  background: none;
-  padding: 0;
-}
-.msg-user { grid-template-columns: minmax(0, 1fr) auto; }
-.msg-user .portrait  { order: 2; }
-.msg-user .msg-main  { order: 1; }
-.msg-user .balaur-avatar img { transform: scaleX(-1); }
-.msg-with-avatar { display: grid; }
 
 /* Portrait — the art is borderless; this wood frame is chat context. */
 .portrait {
@@ -556,9 +539,6 @@ textarea:focus-visible,
   background: var(--portrait-bg);
   box-shadow: inset 0 0 0 2px var(--gold-deep), var(--drop-hard);
   padding: 3px;
-}
-.msg-user .portrait .balaur-avatar {
-  box-shadow: inset 0 0 0 2px var(--indigo-deep), var(--drop-hard);
 }
 
 /* Nameplate — a small wood plate hung beneath the portrait frame. */
@@ -582,121 +562,11 @@ textarea:focus-visible,
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.msg-user   .who { color: var(--indigo); }
-.msg-balaur .who { color: var(--gold); }
 
-.msg-main {
-  position: relative;
-  min-width: 0;
-  min-height: calc(var(--portrait-size) + 10px);
-  background-color: var(--surface);
-  background-image: var(--grain-ink);
-  background-size: 4px 4px;
-  color: var(--ink);
-  border: 2px solid var(--parch-edge);
-  border-radius: var(--radius);
-  box-shadow: var(--parch-bevel);
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
-}
 
-/* Pixel speech tail — stepped squares pointing at the speaker. */
-.msg-main::before,
-.msg-main::after {
-  content: "";
-  position: absolute;
-  top: 36px;
-  width: 10px;
-  height: 10px;
-  background: var(--surface);
-  border: 2px solid var(--parch-edge);
-}
-.msg-balaur .msg-main::before { left: -10px; border-right: 0; }
-.msg-balaur .msg-main::after  { left: -17px; top: 39px; width: 7px; height: 7px; border-right: 0; }
-.msg-user   .msg-main::before { right: -10px; border-left: 0; }
-.msg-user   .msg-main::after  { right: -17px; top: 39px; width: 7px; height: 7px; border-left: 0; }
 
-.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; width: 100%; }
 
-/* ── Message draft — the composer as an unsent message ────────────
-   Dashed = draft (the established vocabulary). No speech tail until it is
-   spoken; the border solidifies to gold while writing. */
 
-.msg-draft .msg-main {
-  border-style: dashed;
-  box-shadow: none;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: var(--space-3) 14px 10px;
-}
-.msg-draft .msg-main::before,
-.msg-draft .msg-main::after { content: none; }
-.msg-draft:focus-within .msg-main {
-  border-style: solid;
-  border-color: var(--gold-deep);
-  box-shadow: var(--parch-bevel);
-}
-.msg-draft textarea {
-  width: 100%;
-  background: transparent;
-  border: 0;
-  resize: none;
-  font: 16px/1.6 var(--font-body);
-  color: var(--ink);
-  caret-color: var(--ember-deep);
-  padding: 2px var(--space-1);
-  min-height: 52px;
-  max-height: 28vh;
-}
-.msg-draft textarea:focus { outline: none; }
-.msg-draft textarea::placeholder { color: var(--ink-muted); opacity: .8; }
-.msg-draft-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-top: 2px dotted var(--parch-edge);
-  padding-top: 9px;
-}
-.msg-draft-hint {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--ink-muted);
-}
-.msg-draft .portrait .balaur-avatar { opacity: .92; }
-
-/* Tool/OS-access events — dark wood inset slab; the visible audit trail. */
-.msg-tool {
-  display: block;
-  background-color: var(--chrome-2);
-  background-image: var(--grain-warm);
-  background-size: 4px 4px;
-  border: 2px solid var(--outline-2);
-  border-radius: var(--radius);
-  box-shadow: var(--bevel-in);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--chrome-fg);
-  padding: 9px 14px;
-  margin: 0 0 0 var(--chat-gutter, 124px);
-  min-height: 0;
-}
-.msg-tool::before, .msg-tool::after { content: none; }
-.msg-tool .who {
-  position: static;
-  display: inline;
-  background: none;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-  color: var(--teal);
-  font-weight: 400;
-  max-width: none;
-}
 /* Pixel icon in a tool row — bare image, the row is the frame. */
 img.tool-icon {
   width: 18px;
@@ -705,7 +575,6 @@ img.tool-icon {
   vertical-align: -4px;
   margin-right: var(--space-2);
 }
-.msg-tool .body { display: inline; font-size: 13px; }
 
 .thinking { color: var(--teal-ink); font-family: var(--font-mono); font-size: 13px; }
 @keyframes basm-blink {
@@ -862,7 +731,6 @@ img.tool-icon {
   image-rendering: pixelated;
 }
 
-.msg-pending .msg-main { border-color: var(--gold-deep); }
 /* Activity is shown by light — the breathing teal glow behind the portrait. */
 .msg-pending .balaur-avatar,
 .balaur-avatar[data-state="thinking"],
@@ -1282,7 +1150,6 @@ dialog::backdrop {
 .recap-expand:hover { color: var(--gold); border-color: var(--gold-deep); }
 .recap-body    { margin: 6px 0 0; font-size: 14px; line-height: 1.55; color: var(--chrome-fg); }
 .recap-children { margin-left: 14px; }
-.recap-children .msg { margin: var(--space-2) 0; font-size: 14px; }
 .recap-daylink {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1798,7 +1665,6 @@ progress.pull-progress-bar::-moz-progress-bar {
 
 @media (max-width: 640px) {
   .balaur-avatar { --avatar-size: 42px; }
-  .msg-with-avatar { gap: 10px; }
   .model-switcher { align-items: stretch; flex-direction: column; }
 }
 
@@ -1993,13 +1859,6 @@ progress.pull-progress-bar::-moz-progress-bar {
 .quest-stack { display: flex; flex-direction: column; gap: var(--space-4); }
 
 /* ── Draft composer glue ─────────────────────────────────────────── */
-/* The chat-form lives inside .msg-draft in the flow; wire up column layout. */
-.msg-draft .chat-form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
 
 /* Slim chatbar — form removed; reduce height pressure. */
 .chatbar-slim {
@@ -2049,9 +1908,6 @@ progress.pull-progress-bar::-moz-progress-bar {
 /* Compact composer in the rail: drop the avatar column and the chat-bubble
    min-height (which was stretching the portrait to the full row), leaving just
    the textarea + send row. */
-#dock .msg-draft { flex: 0 0 auto; margin: var(--space-2) 10px; }
-#dock .msg-draft .portrait { display: none; }
-#dock .msg-draft .msg-main { min-height: 0; }
 
 #dock .chatbar,
 #dock .chatbar-slim {
