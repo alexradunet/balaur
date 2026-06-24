@@ -177,19 +177,19 @@ in this batch except the merge-friction note below. P1 first (a live regression
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 175 | Fix the briefing's "logged yesterday" line (queries the dead `entries` collection; always empty in prod) | P1 | S | — | BLOCKED (import cycle: life/day.go imports tasks — re-scoping as 175a) |
+| 175 | Fix the briefing's "logged yesterday" line (queries the dead `entries` collection; always empty in prod) | P1 | S | — | BLOCKED (import cycle: life/day.go imports tasks — DONE (re-scoped to read measure nodes directly — no life import; executed + reviewed; merged to local main) |
 | 176 | Characterize the node-spine data migrations against populated rows (up+down round-trip) | P1 | M | — (precedes any future node-spine migration) | DONE (executed + reviewed APPROVE; merged to local main) |
 | 177 | Card spec→renderer parity test (two registries drift silently → runtime "unhandled card type") | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 178 | Assert migration prefixes are strictly increasing, not merely unique | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 179 | Docs truth-sync: phantom `BALAUR_CHAT_MODEL`/`EMBED` env vars, stale collection list, missing CLI cmds (+dual-SQLite note) | P2 | S | — | DONE (executed + reviewed; substantive docs correct; merged to local main) |
-| 180 | Harden the `/ui/*` CSRF guard against `Origin: null` (sandboxed-iframe bypass) | P2 | S | — | TODO |
+| 180 | Harden the `/ui/*` CSRF guard against `Origin: null` (sandboxed-iframe bypass) | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 181 | Stop a spurious nudge when a recurring task is completed before its due time | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
-| 182 | Replace the Chronicle telescope's per-period N+1 with one ranged query (`recap.FindMany`) | P2 | S | — (see 187 merge-friction) | TODO |
-| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | TODO |
-| 190 | SPIKE: close the no-terminal first-run gap (no-args launcher → loopback browser-open) | P2 | L | — | TODO |
-| 191 | Node authoring: `props` on `node_write` + a `node_edit` verb (closes the typed-object CRUD asymmetry) | P2 | M | — | TODO |
+| 182 | Replace the Chronicle telescope's per-period N+1 with one ranged query (`recap.FindMany`) | P2 | S | — (see 187 merge-friction) | DONE (executed + reviewed APPROVE; merged to local main) |
+| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | REVISE (cache correct but introduces a Touch data-race; plan refined, re-executing in wave 3) |
+| 190 | SPIKE: close the no-terminal first-run gap (no-args launcher → loopback browser-open) | P2 | L | — | DONE (spike: prototype + design note; executed + reviewed APPROVE; merged to local main) |
+| 191 | Node authoring: `props` on `node_write` + a `node_edit` verb (closes the typed-object CRUD asymmetry) | P2 | M | — | REVISE (node_edit needs an owner-type guard; plan refined, re-executing in wave 3) |
 | 184 | Scope `ActiveSubgraph`'s edges query to the visible node set (stop loading the whole `edges` table) | P3 | S | — | TODO |
-| 185 | Document a mandatory `go test ./internal/ext/...` gate for any goja bump (docs/process; no version change) | P3 | S | — | TODO |
+| 185 | Document a mandatory `go test ./internal/ext/...` gate for any goja bump (docs/process; no version change) | P3 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 186 | Decompose `settingsfocus.go` (619 lines) into one file per settings section (mechanical) | P3 | M | — | TODO |
 | 187 | Give the hourly recap catch-up a high-water mark (stop re-walking all history) | P3 | M | 182 (both edit `recap/generate.go` — land 182 first) | TODO |
 | 188 | Collapse the duplicated FTS5+fallback skeleton in `SearchActive`/`SearchAllActive` (opportunistic) | P3 | S | — | TODO |
