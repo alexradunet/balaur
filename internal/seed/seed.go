@@ -137,8 +137,26 @@ func Reset(app core.App) (*Result, error) {
 	if res.Memories, err = del("nodes", "type = 'memory' && props.source = {:m}", dbx.Params{"m": Marker}); err != nil {
 		return nil, err
 	}
-	if res.LifeEntries, err = del("entries", "value ~ {:m}", dbx.Params{"m": `"seed":true`}); err != nil {
-		return nil, err
+	// Life measures are now type=measure nodes (plan 168); seed marker is props.seed=true.
+	// We load and delete them one-by-one since PocketBase filter cannot reach inside JSON.
+	{
+		measureNodes, err2 := app.FindRecordsByFilter("nodes",
+			"type = 'measure' && status = 'active'", "", 0, 0, nil)
+		if err2 != nil {
+			return nil, fmt.Errorf("resetting measure nodes: %w", err2)
+		}
+		count := 0
+		for _, r := range measureNodes {
+			if v, ok := nodes.Props(r)["seed"]; ok {
+				if b, ok := v.(bool); ok && b {
+					if err2 := app.Delete(r); err2 != nil {
+						return nil, fmt.Errorf("deleting seed measure node: %w", err2)
+					}
+					count++
+				}
+			}
+		}
+		res.LifeEntries = count
 	}
 	if res.Skills, err = del("nodes", "type = 'skill' && ("+nameTitleFilter(seedSkillNames)+")", nameParams(seedSkillNames)); err != nil {
 		return nil, err
@@ -354,8 +372,18 @@ func seedNotes(app core.App) (int, error) {
 }
 
 func seedLife(app core.App, now time.Time) (int, error) {
-	if n, _ := app.CountRecords("entries", dbx.NewExp("value LIKE {:m}", dbx.Params{"m": `%"seed":true%`})); n > 0 {
-		return 0, nil
+	// Idempotency: check for existing seed measure nodes (props.seed=true).
+	// Filter in Go since PocketBase filter cannot reach inside JSON props.
+	existingMeasures, err := app.FindRecordsByFilter("nodes",
+		"type = 'measure' && status = 'active'", "", 0, 0, nil)
+	if err == nil {
+		for _, r := range existingMeasures {
+			if v, ok := nodes.Props(r)["seed"]; ok {
+				if b, ok := v.(bool); ok && b {
+					return 0, nil // already seeded
+				}
+			}
+		}
 	}
 	flag := map[string]any{"seed": true}
 	specs := []life.LogOpts{

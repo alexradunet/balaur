@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
+	ilife "github.com/alexradunet/balaur/internal/life"
 	itasks "github.com/alexradunet/balaur/internal/tasks"
 	_ "github.com/alexradunet/balaur/migrations"
 )
@@ -40,19 +41,15 @@ func seedTask(t testing.TB, app *tests.TestApp, title string, status string, due
 
 func seedLifeEntry(t testing.TB, app *tests.TestApp, kind string, valueNum float64, text string, notedAt time.Time) *core.Record {
 	t.Helper()
-	coll, err := app.FindCollectionByNameOrId("entries")
+	// Measures are now type=measure nodes (plan 168); use life.Log.
+	rec, err := ilife.Log(app, ilife.LogOpts{
+		Kind:     kind,
+		ValueNum: valueNum,
+		Text:     text,
+		NotedAt:  notedAt,
+	})
 	if err != nil {
-		t.Fatalf("find entries collection: %v", err)
-	}
-	rec := core.NewRecord(coll)
-	rec.Set("kind", kind)
-	if valueNum != 0 {
-		rec.Set("value_num", valueNum)
-	}
-	rec.Set("text", text)
-	rec.Set("noted_at", notedAt.UTC())
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save life entry: %v", err)
+		t.Fatalf("seed life entry %q: %v", kind, err)
 	}
 	return rec
 }
