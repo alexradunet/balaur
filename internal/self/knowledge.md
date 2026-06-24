@@ -126,6 +126,13 @@ One binary, layered as: gateway → turn pipeline → business logic.
   memory/skill are born proposed and become active only on the owner's
   approval. Traversal and search filter to status=active — a proposed or
   rejected node is never surfaced as fact.
+  What is NOT a node: conversations, messages, and summaries stay their own
+  relational collections — an append-heavy message log is not an object, so
+  folding it onto the spine would buy nothing and cost write-path speed. The
+  conversation is where nodes get created and linked (via remember,
+  journal_write, node_write/node_link), but the message stream itself never
+  becomes a node; a cross-layer edge from a node to its source conversation is
+  possible on this schema but is not built yet.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
   generates recaps, a daily briefing opens the day. Each is idempotent
   and disableable by env.
