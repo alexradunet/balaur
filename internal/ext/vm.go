@@ -18,6 +18,12 @@ import (
 // no require, no $os, no DB. OS reach stays the OS tools' concern behind
 // its own gate; extensions are for new verbs, not new privileges.
 
+// goja is pinned to a reviewed master commit in go.mod (no upstream
+// semver tags exist) because this VM runs untrusted-author extension JS.
+// Any goja version bump MUST be gated on `go test ./internal/ext/...`
+// (the sandbox-boundary regression suite) and a review of the new commit —
+// govulncheck catches CVEs, not behavioral sandbox-escape changes.
+
 // maxToolOutput bounds what one extension call feeds back to the model
 // (mirrors internal/tools.maxOutput).
 const maxToolOutput = 48 * 1024
