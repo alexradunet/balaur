@@ -49,8 +49,8 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 164 | Object-type registry (types-as-data) | P1 | M | — | DONE (worktree `worktree-agent-ac3cb1463cac93015`, reviewed/APPROVED, awaiting owner merge) |
-| 165 | Per-type property schemas + templates + validation | P1 | M | 164 | TODO |
+| 164 | Object-type registry (types-as-data) | P1 | M | — | DONE (merged to main) |
+| 165 | Per-type property schemas + templates + validation | P1 | M | 164 | DONE (merged to main) |
 | 166 | First-class relations + AI link/traverse/query tools | P1 | M | 164 (165 helps) | TODO |
 | 167 | Fold tasks into the spine (type=task nodes) | P2 | L | 164, 165 | TODO |
 | 168 | Fold life-log into the spine (type=measure nodes) | P2 | L | 164, 165 | TODO |
