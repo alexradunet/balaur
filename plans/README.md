@@ -149,3 +149,84 @@ clean on the shared checkout.
   validated against a closed `node_types` row — is exactly Capacities'
   `structureId` / Anytype's `type_key` *interface* without the meta-circular
   *storage* cost. Decision unchanged; evidence strengthened.
+
+---
+
+# Advisory batch — 2026-06-25 full-codebase audit (plans 175–192)
+
+A fresh, whole-repo `/improve` pass (8 parallel category audits → vetted →
+planned), **separate** from the 164–174 object/node program above. Authored by
+the advisory session on **2026-06-25** against the `12a48bf`–`5dfb285` range
+(HEAD advanced from `12a48bf` to `5dfb285` mid-session via a parallel UI session;
+every plan's in-scope files were unchanged across that range, re-verified per
+plan — individual plan headers record the exact "Planned at" SHA each was
+checked against). The codebase audited clean: 51K LOC Go / 20K LOC tests, zero
+TODO/FIXME, CI gating gofmt+vet+staticcheck+govulncheck+race+cross-compile — so
+these are subtle findings, not low-hanging fruit. Each plan is shippable on its
+own and written for an executor with **zero context**.
+
+All 24 vetted findings were turned into plans (the owner selected "everything"
+plus three direction spikes). Two findings were **merged** into single plans
+(the two migration-test findings → 176; three doc-drift findings → 179).
+
+## Execution order & status (175–192)
+
+Recommended order top-to-bottom; nothing has a hard code dependency on another
+in this batch except the merge-friction note below. P1 first (a live regression
++ data-safety on the prod box), then P2, then P3 / spikes.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 175 | Fix the briefing's "logged yesterday" line (queries the dead `entries` collection; always empty in prod) | P1 | S | — | BLOCKED (import cycle: life/day.go imports tasks — re-scoping as 175a) |
+| 176 | Characterize the node-spine data migrations against populated rows (up+down round-trip) | P1 | M | — (precedes any future node-spine migration) | DONE (executed + reviewed APPROVE; merged to local main) |
+| 177 | Card spec→renderer parity test (two registries drift silently → runtime "unhandled card type") | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
+| 178 | Assert migration prefixes are strictly increasing, not merely unique | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
+| 179 | Docs truth-sync: phantom `BALAUR_CHAT_MODEL`/`EMBED` env vars, stale collection list, missing CLI cmds (+dual-SQLite note) | P2 | S | — | DONE (executed + reviewed; substantive docs correct; merged to local main) |
+| 180 | Harden the `/ui/*` CSRF guard against `Origin: null` (sandboxed-iframe bypass) | P2 | S | — | TODO |
+| 181 | Stop a spurious nudge when a recurring task is completed before its due time | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
+| 182 | Replace the Chronicle telescope's per-period N+1 with one ranged query (`recap.FindMany`) | P2 | S | — (see 187 merge-friction) | TODO |
+| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | TODO |
+| 190 | SPIKE: close the no-terminal first-run gap (no-args launcher → loopback browser-open) | P2 | L | — | TODO |
+| 191 | Node authoring: `props` on `node_write` + a `node_edit` verb (closes the typed-object CRUD asymmetry) | P2 | M | — | TODO |
+| 184 | Scope `ActiveSubgraph`'s edges query to the visible node set (stop loading the whole `edges` table) | P3 | S | — | TODO |
+| 185 | Document a mandatory `go test ./internal/ext/...` gate for any goja bump (docs/process; no version change) | P3 | S | — | TODO |
+| 186 | Decompose `settingsfocus.go` (619 lines) into one file per settings section (mechanical) | P3 | M | — | TODO |
+| 187 | Give the hourly recap catch-up a high-water mark (stop re-walking all history) | P3 | M | 182 (both edit `recap/generate.go` — land 182 first) | TODO |
+| 188 | Collapse the duplicated FTS5+fallback skeleton in `SearchActive`/`SearchAllActive` (opportunistic) | P3 | S | — | TODO |
+| 189 | Default-deny cloud-metadata/link-local egress from extension `balaur.http` (opt-out) | P3 | M | — | TODO |
+| 192 | SPIKE: sovereign export — one-way Markdown vault mirror + encrypted backup (design + thin prototype) | P3 | L | — | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+## Dependency notes (175–192)
+
+- **176 before any future node-spine data migration.** It's the characterization
+  net that proves the tasks→/measures→/journal→nodes moves are lossless; land it
+  before anything else touches `migrations/175000*.go` data transforms. No hard
+  dep on the others, but high-value to do early.
+- **182 before 187 (merge friction, not a logic dep).** Both edit
+  `internal/recap/generate.go`: 182 adds `recap.FindMany` (read path), 187 adds a
+  high-water mark to `EnsureSummaries` (write path). They don't conflict
+  logically, but land 182 first and rebase 187 to avoid a textual clash.
+- Everything else is independent and can be executed/merged in any order. The two
+  SPIKEs (190, 192) produce a design note + thin prototype, not a finished
+  feature — schedule their follow-up build plans separately.
+
+## Findings considered and rejected (175–192)
+
+- **Two CGO-free SQLite stacks in the binary** (ncruces/go-sqlite3 wazero for the
+  FTS5 search index + modernc.org/sqlite as PocketBase's driver) — *not worth a
+  plan*: it's a deliberate, code-documented trade-off (FTS5 availability;
+  `internal/search/index.go` header). Recorded instead as a one-line "Known
+  limitations" note inside **plan 179** so the dual-engine cost is tracked, with a
+  periodic re-check of whether the modernc path has gained FTS5.
+- **`internal/ui/chat/markdown.go` `g.Raw` as an XSS hole** — *rejected (clean)*:
+  goldmark runs without `WithUnsafe` (escapes raw HTML) → `bluemonday.UGCPolicy()`
+  sanitizes → the post-sanitize wikilink injection `html.EscapeString`s every
+  dynamic part (`display`, `href`, `id`). The `g.Raw` wraps already-sanitized
+  HTML — correct usage, not a finding.
+- **`PERF-01` recap hourly re-walk impact "HIGH"** — *downgraded, still planned as
+  187 (P3)*: the queries are indexed point-reads on a background cron (~430/hr
+  after a year), so absolute cost is modest; the plan is scoped proportionately
+  (owner_settings marker, no migration) and explicitly warns against
+  over-engineering.
