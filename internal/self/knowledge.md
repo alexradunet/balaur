@@ -286,9 +286,11 @@ source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
 the bottom). The surrounding dock chrome (grip, recap zone, nudge poller,
 composer, model-modal dialog) renders via the chat.Dock gomponents organism
 (internal/ui/chat/dock.go). The inline transcript is TODAY only — earlier turns
-collapse into the recap telescope: the #recap zone lazy-loads /ui/recap/bands on
-scroll-up (day cards for earlier this week, then week/month/quarter/year summary
-bands). Clicking a summary opens its node — days at /ui/show/day, coarser periods
+are reached via the Chronicle: a dock button ("◇ earlier — open Chronicle")
+and a Chronicle nav destination open /ui/show/chronicle in the side panel,
+which renders the full recap telescope (day cards for earlier this week, then
+week/month/quarter/year summary bands) reliably on open (no IntersectionObserver).
+Clicking a summary card opens its node — days at /ui/show/day, coarser periods
 at the synthesised /ui/show/period?type=&start= node (its recap + what got
 done/logged across the span + drill-down to children + a breadcrumb up).
 The chatbar and head-switcher now render via gomponents node builders

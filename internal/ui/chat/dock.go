@@ -82,16 +82,17 @@ func dockHead() g.Node {
 	)
 }
 
-// recapZone renders the telescope sentinel div when HasRecap is true. The
-// data-on:intersect__once attribute triggers a lazy load of recap bands when
-// the element scrolls into view — #recap is patched in-place by recap.go.
+// recapZone renders the Chronicle navigation button when HasRecap is true.
+// The button opens the Chronicle page in the side panel — the full telescope
+// rendered reliably on demand (no fragile IntersectionObserver).
 func recapZone(hasRecap bool) g.Node {
 	if !hasRecap {
 		return nil
 	}
 	return h.Div(h.ID("recap"), h.Class("recap-zone"),
-		g.Attr("data-on:intersect__once", "@get('/ui/recap/bands')"),
-		h.P(h.Class("recap-hint"), g.Text("◇ further back…")),
+		h.Button(h.Class("recap-hint"), h.Type("button"),
+			g.Attr("data-on:click", "@get('/ui/show/chronicle'); basmOpenPanel()"),
+			g.Text("◇ earlier — open Chronicle")),
 	)
 }
 

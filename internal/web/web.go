@@ -14,6 +14,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	g "maragu.dev/gomponents"
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/feature"
@@ -144,12 +145,18 @@ func Register(se *core.ServeEvent) error {
 	// switch. UnregisterAll on terminate keeps the global registry clean between
 	// test apps.
 	feature.RegisterAll(se.App)
+	// Chronicle: the telescope-as-a-page rendered in the side panel. Registered
+	// here (not in a feature package) because the renderer lives in internal/web.
+	ui.RegisterCard("chronicle", func(_ ui.CardSize, _ map[string]string) (g.Node, error) {
+		return h.chronicleBody(), nil
+	})
 	// Dev convenience: if BALAUR_MISTRAL_KEY is set (make dev sources dev.env),
 	// register + activate the Mistral cloud model so chat works during testing.
 	// No-op without the key — never auto-enables the cloud path in prod.
 	bootstrapDevCloudModel(se.App)
 	se.App.OnTerminate().BindFunc(func(e *core.TerminateEvent) error {
 		feature.UnregisterAll()
+		ui.UnregisterCard("chronicle")
 		return e.Next()
 	})
 	se.Router.GET("/", h.root) // exact / → Home; any unregistered path → redirect Home
@@ -183,7 +190,6 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/review/edit/{id}/decline", h.reviewEditDecline)
 	se.Router.POST("/ui/ext/{id}/approve", h.extApprove)
 	se.Router.POST("/ui/ext/{id}/decline", h.extDecline)
-	se.Router.GET("/ui/recap/bands", h.recapBands)
 	se.Router.GET("/ui/recap/expand", h.recapExpand)
 	if devSeedEnabled() {
 		se.Router.POST("/ui/dev/seed-recaps", h.seedRecaps)
