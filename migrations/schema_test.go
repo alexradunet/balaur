@@ -115,22 +115,34 @@ func TestSchemaBaseline(t *testing.T) {
 		t.Error("index idx_node_types_name missing")
 	}
 
-	// 9. node_types has nine seeded types: the eight built-ins plus task (plan 167).
+	// 9. node_types has ten seeded types: the eight built-ins plus task (plan 167) plus measure (plan 168).
 	ntRecs, err := app.FindRecordsByFilter("node_types", "", "", 0, 0, nil)
 	if err != nil {
 		t.Fatalf("node_types seed check: %v", err)
 	}
-	if len(ntRecs) < 9 {
-		t.Errorf("node_types seed: got %d rows, want >= 9", len(ntRecs))
+	if len(ntRecs) < 10 {
+		t.Errorf("node_types seed: got %d rows, want >= 10", len(ntRecs))
 	}
 	ntNames := make(map[string]bool, len(ntRecs))
 	for _, r := range ntRecs {
 		ntNames[r.GetString("name")] = true
 	}
-	for _, name := range []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place", "task"} {
+	for _, name := range []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place", "task", "measure"} {
 		if !ntNames[name] {
 			t.Errorf("node_types seed: %q missing", name)
 		}
+	}
+
+	// 14. measure type has a kind property schema (plan 168).
+	measureTypeRec, err := app.FindFirstRecordByData("node_types", "name", "measure")
+	if err != nil {
+		t.Fatalf("node_types measure row missing: %v", err)
+	}
+	if measureTypeRec.GetString("properties") == "" {
+		t.Error("node_types measure.properties should be non-empty (plan 168)")
+	}
+	if measureTypeRec.GetString("born_status") != "active" {
+		t.Errorf("measure born_status = %q, want active", measureTypeRec.GetString("born_status"))
 	}
 
 	// 13. task type has a state property schema (plan 167).

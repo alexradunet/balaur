@@ -74,7 +74,8 @@ One binary, layered as: gateway → turn pipeline → business logic.
 - Business packages, one concern each: conversation (master thread +
   windows), tasks (commitments, recurrence DSL, nudges, briefing — backed
   by `type=task` nodes; the old `tasks` collection is retired), life
-  (owner-defined log + journal), knowledge (memory & skill lifecycle —
+  (owner-defined log + journal — measures backed by `type=measure` nodes;
+  metric name in `props.kind`, value in `props.value_num`), knowledge (memory & skill lifecycle —
   the consent boundary), recap (hierarchical summaries), verify (words
   vs deeds), heads (switchable personas — built-ins, active head,
   custom CRUD, tool-group filter), store (the one PocketBase seam), search (the
@@ -96,6 +97,10 @@ One binary, layered as: gateway → turn pipeline → business logic.
   The `tasks` collection was retired in plan 167; tasks are now
   `type=task` nodes in the `nodes` collection, with workflow state
   (`open`/`done`/`dropped`) stored in `props.state`.
+  Life-log measures were folded into `nodes` as `type=measure` in plan 168:
+  each metric point is a linkable node with `props.kind` (e.g. "weight"),
+  `props.value_num`, `props.unit`, and `props.noted_at`. The `entries`
+  collection now holds only task-completion rows (`kind='completion'`).
   Inspectable with any SQLite tool. The knowledge spine is unified:
   every memory, skill, journal day, note, and typed object (person,
   book, idea, place) is a typed row in `nodes` (distinguished by `type`),

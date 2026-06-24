@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/types"
 
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
 )
 
@@ -39,8 +38,14 @@ type LogOpts struct {
 	NotedAt  time.Time
 }
 
-// Log stores one entry. The owner's statement is the consent; corrections
-// go through Drop.
+// fmtTime formats a time as the PocketBase date string "2006-01-02 15:04:05.000Z".
+// Stored in props.noted_at so hydrated rec.GetDateTime("noted_at") works.
+func fmtTime(t time.Time) string {
+	return t.UTC().Format("2006-01-02 15:04:05.000Z")
+}
+
+// Log stores one entry as a type=measure node. The owner's statement is the
+// consent; corrections go through Drop.
 func Log(app core.App, o LogOpts) (*core.Record, error) {
 	kind := NormalizeKind(o.Kind)
 	if kind == "" {
@@ -52,41 +57,86 @@ func Log(app core.App, o LogOpts) (*core.Record, error) {
 	if o.NotedAt.IsZero() {
 		o.NotedAt = time.Now()
 	}
-	col, err := app.FindCollectionByNameOrId("entries")
+
+	props := map[string]any{
+		"kind":     kind,
+		"noted_at": fmtTime(o.NotedAt.UTC()),
+	}
+	if o.ValueNum != 0 {
+		props["value_num"] = o.ValueNum
+	}
+	if u := strings.ToLower(strings.TrimSpace(o.Unit)); u != "" {
+		props["unit"] = u
+	}
+	// Merge extra details (e.g. {"seed":true}).
+	for k, v := range o.Details {
+		if _, exists := props[k]; !exists {
+			props[k] = v
+		}
+	}
+
+	// Title: "<kind> <date>" e.g. "weight 2026-06-24"
+	title := kind + " " + o.NotedAt.UTC().Format("2006-01-02")
+	body := strings.TrimSpace(o.Text)
+
+	rec, err := nodes.Create(app, "measure", title, body, nodes.StatusActive, props)
 	if err != nil {
-		return nil, fmt.Errorf("finding entries collection: %w", err)
+		return nil, fmt.Errorf("saving %s measure: %w", kind, err)
 	}
-	rec := core.NewRecord(col)
-	rec.Set("kind", kind)
-	rec.Set("value_num", o.ValueNum)
-	rec.Set("unit", strings.ToLower(strings.TrimSpace(o.Unit)))
-	rec.Set("text", strings.TrimSpace(o.Text))
-	if o.Details != nil {
-		rec.Set("value", o.Details)
-	}
-	rec.Set("noted_at", o.NotedAt.UTC())
-	if err := app.Save(rec); err != nil {
-		return nil, fmt.Errorf("saving %s entry: %w", kind, err)
-	}
-	store.Audit(app, "life", "entry.log", rec.Id, true, map[string]any{"kind": kind})
+	hydrate(rec)
+	store.Audit(app, "life", "life.log", rec.Id, true, map[string]any{"kind": kind})
 	return rec, nil
 }
 
-// Drop deletes one owner-logged entry (a correction, not a lifecycle).
+// Drop deletes one owner-logged measure (a correction, not a lifecycle).
 func Drop(app core.App, id string) (string, error) {
-	rec, err := app.FindRecordById("entries", strings.TrimSpace(id))
+	rec, err := app.FindRecordById("nodes", strings.TrimSpace(id))
 	if err != nil {
 		return "", fmt.Errorf("life: no entry %q — check entry_series for ids", id)
 	}
-	kind := rec.GetString("kind")
+	if rec.GetString("type") != "measure" {
+		return "", fmt.Errorf("life: %q is not a measure node", id)
+	}
+	kind := nodes.PropString(rec, "kind")
 	if reserved[kind] {
 		return "", fmt.Errorf("life: %q entries are managed by their own machinery", kind)
 	}
 	if err := app.Delete(rec); err != nil {
-		return "", fmt.Errorf("dropping entry: %w", err)
+		return "", fmt.Errorf("dropping measure: %w", err)
 	}
-	store.Audit(app, "life", "entry.drop", id, true, map[string]any{"kind": kind})
+	store.Audit(app, "life", "life.drop", id, true, map[string]any{"kind": kind})
 	return kind, nil
+}
+
+// hydrate sets legacy field aliases on a measure node so callers can use
+// rec.GetString("kind"), rec.GetFloat("value_num"), rec.GetDateTime("noted_at"), etc.
+// without knowing the node storage shape. Uses SetRaw to bypass schema validation —
+// these are ephemeral read-only aliases.
+func hydrate(rec *core.Record) {
+	props := nodes.Props(rec)
+	getString := func(key string) string {
+		if v, ok := props[key]; ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+		return ""
+	}
+	getFloat := func(key string) float64 {
+		if v, ok := props[key]; ok {
+			if f, ok := v.(float64); ok {
+				return f
+			}
+		}
+		return 0
+	}
+
+	rec.SetRaw("kind", getString("kind"))
+	rec.SetRaw("value_num", getFloat("value_num"))
+	rec.SetRaw("unit", getString("unit"))
+	// noted_at stored as PB datetime string; SetRaw so GetDateTime("noted_at") works.
+	rec.SetRaw("noted_at", getString("noted_at"))
+	rec.SetRaw("text", rec.GetString("body"))
 }
 
 // KindInfo describes one tracker the owner actually uses.
@@ -101,40 +151,91 @@ type KindInfo struct {
 // Kinds returns the owner's tracker inventory, most recently used first.
 // What exists is what the owner logged — nothing is predefined.
 func Kinds(app core.App) ([]KindInfo, error) {
-	var rows []struct {
-		Kind string `db:"kind"`
-		N    int    `db:"n"`
-		Last string `db:"last"`
-		Num  int    `db:"num"`
-		Unit string `db:"unit"`
-	}
-	err := app.DB().NewQuery(`
-		SELECT kind, COUNT(*) AS n, MAX(noted_at) AS last,
-		       SUM(CASE WHEN value_num != 0 THEN 1 ELSE 0 END) AS num,
-		       COALESCE(MAX(NULLIF(unit, '')), '') AS unit
-		FROM entries
-		WHERE kind NOT IN ('completion', 'journal')
-		GROUP BY kind
-		ORDER BY last DESC`).All(&rows)
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'measure' && status = 'active'", "-created", 0, 0, nil)
 	if err != nil {
 		return nil, fmt.Errorf("listing kinds: %w", err)
 	}
-	out := make([]KindInfo, 0, len(rows))
-	for _, r := range rows {
-		info := KindInfo{Kind: r.Kind, Count: r.N, NumCount: r.Num, Unit: r.Unit}
-		if t, err := time.Parse(types.DefaultDateLayout, r.Last); err == nil {
-			info.Last = t
+
+	type kindAgg struct {
+		count    int
+		numCount int
+		unit     string
+		last     time.Time
+	}
+	agg := map[string]*kindAgg{}
+	for _, r := range recs {
+		hydrate(r)
+		kind := r.GetString("kind")
+		if kind == "" {
+			continue
 		}
-		out = append(out, info)
+		a, ok := agg[kind]
+		if !ok {
+			a = &kindAgg{}
+			agg[kind] = a
+		}
+		a.count++
+		if r.GetFloat("value_num") != 0 {
+			a.numCount++
+			if u := r.GetString("unit"); u != "" {
+				a.unit = u
+			}
+		}
+		if t := r.GetDateTime("noted_at").Time(); !t.IsZero() && t.After(a.last) {
+			a.last = t
+		}
+	}
+
+	out := make([]KindInfo, 0, len(agg))
+	for kind, a := range agg {
+		out = append(out, KindInfo{
+			Kind:     kind,
+			Count:    a.count,
+			NumCount: a.numCount,
+			Unit:     a.unit,
+			Last:     a.last,
+		})
+	}
+	// Sort most recently used first.
+	for i := 0; i < len(out); i++ {
+		for j := i + 1; j < len(out); j++ {
+			if out[j].Last.After(out[i].Last) {
+				out[i], out[j] = out[j], out[i]
+			}
+		}
 	}
 	return out, nil
 }
 
 // Series returns a kind's entries since a time, oldest first.
 func Series(app core.App, kind string, since time.Time) ([]*core.Record, error) {
-	return app.FindRecordsByFilter("entries",
-		"kind = {:k} && noted_at >= {:since}", "noted_at", 500, 0,
-		dbx.Params{"k": NormalizeKind(kind), "since": store.PBTime(since)})
+	k := NormalizeKind(kind)
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'measure' && status = 'active'", "created", 0, 0, nil)
+	if err != nil {
+		return nil, fmt.Errorf("loading measure series: %w", err)
+	}
+	out := make([]*core.Record, 0)
+	for _, r := range recs {
+		if nodes.PropString(r, "kind") != k {
+			continue
+		}
+		notedAtStr := nodes.PropString(r, "noted_at")
+		if notedAtStr == "" {
+			continue
+		}
+		notedAt, err := time.Parse("2006-01-02 15:04:05.000Z", notedAtStr)
+		if err != nil {
+			continue
+		}
+		if notedAt.Before(since) {
+			continue
+		}
+		hydrate(r)
+		out = append(out, r)
+	}
+	return out, nil
 }
 
 // Summary reduces a series' numeric points.
@@ -171,4 +272,33 @@ func Summarize(recs []*core.Record) Summary {
 		s.Points++
 	}
 	return s
+}
+
+// listMeasuresInRange loads active type=measure nodes whose noted_at falls in
+// [start, end), hydrated. Used by Day.
+func listMeasuresInRange(app core.App, start, end time.Time) ([]*core.Record, error) {
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'measure' && status = 'active'", "created", 0, 0, nil)
+	if err != nil {
+		return nil, fmt.Errorf("loading measures for range: %w", err)
+	}
+	// Filter by noted_at in Go since noted_at is stored in props (JSON), not a
+	// top-level DateField — PocketBase filter cannot reach inside JSON easily.
+	out := make([]*core.Record, 0)
+	for _, r := range recs {
+		notedAtStr := nodes.PropString(r, "noted_at")
+		if notedAtStr == "" {
+			continue
+		}
+		notedAt, err := time.Parse("2006-01-02 15:04:05.000Z", notedAtStr)
+		if err != nil {
+			continue
+		}
+		if notedAt.Before(start) || !notedAt.Before(end) {
+			continue
+		}
+		hydrate(r)
+		out = append(out, r)
+	}
+	return out, nil
 }

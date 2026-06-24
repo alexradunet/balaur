@@ -130,8 +130,8 @@ func TestDrop(t *testing.T) {
 	if err != nil || kind != "mood" {
 		t.Fatalf("drop: kind=%q err=%v", kind, err)
 	}
-	if _, err := app.FindRecordById("entries", rec.Id); err == nil {
-		t.Error("entry still exists after drop")
+	if _, err := app.FindRecordById("nodes", rec.Id); err == nil {
+		t.Error("measure node still exists after drop")
 	}
 	if _, err := Drop(app, "nope"); err == nil || !strings.Contains(err.Error(), "no entry") {
 		t.Errorf("missing id: %v", err)

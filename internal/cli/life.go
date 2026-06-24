@@ -14,6 +14,8 @@ import (
 )
 
 func entryJSON(r *core.Record) map[string]any {
+	// Works for both type=measure nodes (hydrated) and legacy entries records.
+	// After plan 168 measures are nodes; hydrate aliases kind/value_num/unit/noted_at/text.
 	out := map[string]any{
 		"id":       r.Id,
 		"kind":     r.GetString("kind"),

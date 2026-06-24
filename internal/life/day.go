@@ -37,15 +37,13 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 	}
 	data.Journal = recs
 
-	// Logged entries: kind != 'completion' && kind != 'journal', noted_at in [ds, de)
-	recs, err = app.FindRecordsByFilter("entries",
-		"kind != 'completion' && kind != 'journal' && noted_at >= {:s} && noted_at < {:e}",
-		"noted_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	// Logged measures: type=measure nodes whose noted_at falls in [ds, de).
+	// noted_at lives in props (JSON) so we filter in Go after loading.
+	logged, err := listMeasuresInRange(app, ds, de)
 	if err != nil {
 		return data, fmt.Errorf("day logged query: %w", err)
 	}
-	data.Logged = recs
+	data.Logged = logged
 
 	// Done tasks: type=task nodes with props.state='done' and done_at in [ds, de).
 	// done_at lives in props so we filter in Go after loading active task nodes.
