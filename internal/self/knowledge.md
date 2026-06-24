@@ -307,8 +307,8 @@ patch targets for `patchChatbar`/`setActiveHead`. The active
 head is switched from the dock via POST /ui/heads/active, and the heads section
 manages personas via POST /ui/heads/new and POST /ui/heads/{id}/delete; the
 machine-facing
-CLI (doctor, chat, task, memory, skill, life, journal, day, recap, history,
-audit, verify, model, self, ext, seed) printing v1 JSON envelopes
+CLI (doctor, chat, task, memory, skill, note, search, life, journal, day, recap,
+history, audit, verify, model, self, ext, seed) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface.

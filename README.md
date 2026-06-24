@@ -22,14 +22,14 @@ database you own and can open with any SQLite tool.
 ## Current shape
 
 - **One binary:** `balaur` — web UI, database, migrations, agent loop.
-- **Data:** PocketBase collections — `conversations`, `messages`,
-  `memories`, `skills`, `heads`, `audit_log` — in plain SQLite
-  under `pb_data/`.
+- **Data:** PocketBase collections — `conversations`, `messages`, `nodes`
+  (the unified knowledge spine: memories, skills, notes, and typed objects),
+  `edges`, `heads`, `audit_log` — in plain SQLite under `pb_data/`.
 - **UI:** server-rendered typed `gomponents` over Datastar (SSE hypermedia),
   styled by the Hearthwood/Basm design system (see `DESIGN.md`). The PocketBase
   dashboard at `/_/` stays the superuser engine room.
 - **Models:** Balaur runs local GGUF models in-process. Install one from the
-  settings models section (an absolute `.gguf` path) or via `BALAUR_CHAT_MODEL`;
+  settings models section (an absolute `.gguf` path);
   it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
   Vulkan GPU. Local is the default and stays first-class; an EU/GDPR-compliant
   cloud model (Mistral today — the curated picker is EU-only for AI sovereignty)
@@ -175,15 +175,14 @@ runtime, so the Go build stays CGO-free. Two runtime assets are owner-supplied
 - the native llama.cpp library — point `BALAUR_LIB_PATH` at its directory
   (CPU by default; `BALAUR_PROCESSOR=vulkan` selects the Vulkan variant)
 - a GGUF model file — install it from the settings models section
-  (`/ui/show/settings?section=models`) or pin one with `BALAUR_CHAT_MODEL`.
+  (`/ui/show/settings?section=models`).
   That page can also fetch Balaur's official curated model in one click
   (owner-initiated download into `BALAUR_MODELS_DIR`; plan 086)
 
 ```bash
-# Run a local GGUF on a Vulkan GPU:
+# Run on a Vulkan GPU (install the GGUF from the Models page, not an env var):
 BALAUR_LIB_PATH=~/.local/share/balaur/kronk/lib \
-BALAUR_PROCESSOR=vulkan \
-BALAUR_CHAT_MODEL=/models/qwen3.gguf go run . serve
+BALAUR_PROCESSOR=vulkan go run . serve
 ```
 
 Vulkan needs the host Vulkan loader + GPU driver/ICD (e.g. `mesa-vulkan-drivers`)
@@ -201,8 +200,6 @@ Optional environment variables:
 | `BALAUR_ALLOWED_HOSTS` | (unset) | Comma-separated `host[:port]` values allowed as the Host header beyond loopback (LAN names, NetBird — see [docs/netbird.md](docs/netbird.md)) |
 | `BALAUR_LIB_PATH` | XDG `~/.local/share/balaur/kronk/lib` | Directory holding the prebuilt llama.cpp library (yzma dlopens it) |
 | `BALAUR_PROCESSOR` | `cpu` | llama.cpp variant to load — `cpu` or `vulkan` |
-| `BALAUR_CHAT_MODEL` | (unset) | Absolute path to a local `.gguf` chat model |
-| `BALAUR_EMBED_MODEL` | (unset) | Absolute path to a local `.gguf` embedding model |
 | `BALAUR_MODELS_DIR` | `~/.local/share/balaur/models` | Directory where in-app model downloads are saved |
 | `BALAUR_HF_TOKEN` | (unset) | Optional Hugging Face token for downloading gated models |
 | `BALAUR_OS_ACCESS` | `0` | Set to `1` to enable read/write/edit/bash tools (every invocation is audited) |
@@ -303,6 +300,8 @@ is non-fatal).
 | `balaur task add/list/done/snooze/drop` | Commitments, directly. | no |
 | `balaur memory propose/list/recall/approve/reject/archive/edit` | Memory lifecycle across the consent boundary. | no |
 | `balaur skill propose/list/show/approve/reject/archive` | Skill lifecycle. | no |
+| `balaur note add/list/show/drop` | Owner-authored notes as `type=note` nodes. | no |
+| `balaur search <terms>` | Cross-type FTS5 recall over approved knowledge nodes. | no |
 | `balaur life log/series/kinds/drop` | The owner-defined life log. | no |
 | `balaur journal write`, `balaur day <date>` | Keep a journal line verbatim; read one day (journal, log, done, recap). | no |
 | `balaur recap show/ensure` | Read stored summaries; run the idempotent catch-up. | ensure |

@@ -234,7 +234,7 @@ lean and high-signal — add a rule only when it changes a real decision.
 - The Johnny Decimal Markdown vault mirror (one-way export + git) is
   roadmap, not shipped. Do not claim it in user-facing copy until real.
 - Local inference is embedded (`internal/kronk`, the Kronk SDK). GGUF model files
-  are runtime assets, owner-supplied via `BALAUR_CHAT_MODEL` or the Models page;
+  are runtime assets, owner-supplied via the Models page;
   the engine never downloads anything on boot. CPU is the default;
   `BALAUR_PROCESSOR=vulkan` offloads to a Vulkan GPU (the host loader + driver are
   host setup, outside the repo). Owner-initiated model download ships (plan 086);
@@ -259,6 +259,12 @@ lean and high-signal — add a rule only when it changes a real decision.
   collapsed into one undifferentiated `memory` kind — nothing branched on it.
   Project→Campaign is roadmap, not built: a future `campaign` entity linking
   quests/tasks. Existing project-flavoured memories are now plain memories.
+- Balaur runs two SQLite engines on purpose: PocketBase's `modernc.org/sqlite`
+  pure-Go driver for the main database, and `ncruces/go-sqlite3` (wazero) for
+  the rebuildable FTS5 search sidecar (`pb_data/search.db`) because FTS5 is
+  needed for recall (see `internal/search/index.go` header). Both stay CGO-free.
+  This is a deliberate cost, not drift — do not "consolidate" to one driver
+  without re-checking FTS5 support.
 
 ## Safety
 
