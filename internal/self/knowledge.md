@@ -223,7 +223,11 @@ self tool, which reports the actual registry):
 - Extensions: propose_extension submits a balaur-extension — one
   JavaScript file in pb_extensions/ that registers new tools via
   balaur.registerTool({name, description, parameters, handler}); handlers
-  may call balaur.http. An extension's tools join your registry only
+  may call balaur.http, which by default refuses egress to cloud-metadata
+  and link-local addresses (169.254.0.0/16, fe80::/10, fd00:ec2::254) —
+  loopback/local services stay reachable, and an owner can re-enable
+  link-local egress via the ext_local_egress setting. An extension's tools
+  join your registry only
   while the owner has approved exactly that file content (sha256-pinned);
   any change re-proposes it, and every invocation is audited. Extensions
   add verbs, not privileges — no filesystem, no shell, no npm.

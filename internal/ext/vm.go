@@ -3,10 +3,13 @@ package ext
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/dop251/goja"
@@ -37,14 +40,66 @@ const invokeTimeout = 30 * time.Second
 // httpTimeout bounds one balaur.http request inside a handler.
 const httpTimeout = 15 * time.Second
 
-// extHTTPClient never follows redirects: an approved extension's reviewed
-// code is exactly what runs — a redirect chain must be followed explicitly
-// by the handler if it wants to. Local addresses stay deliberately
-// reachable (see httpBinding's comment).
-var extHTTPClient = &http.Client{
-	CheckRedirect: func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	},
+// errEgressBlocked is returned by the guarded dialer when a handler targets a
+// default-denied range; it reaches the JS handler as a normal returned error
+// (httpClient.Do surfaces the dial error, which httpBinding turns into a JS
+// exception) — never a process crash.
+var errEgressBlocked = errors.New("balaur.http: egress to cloud-metadata / link-local addresses is blocked by default (enable the ext_local_egress owner setting to allow local egress)")
+
+// deniedEgressIP reports whether addr (an already-resolved "host:port" handed
+// to the dialer's Control hook) targets a range balaur.http refuses by default:
+// the cloud instance-metadata endpoints and link-local space. Loopback is NOT
+// denied — reaching local services is by-design (httpBinding's comment); only
+// the credential-bearing metadata/link-local ranges are hardened here. Because
+// the check runs post-DNS on the connect target, a hostname that resolves to a
+// denied IP is blocked too.
+func deniedEgressIP(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false // a hostname slipped through unresolved; let Dial proceed normally
+	}
+	// IPv4 link-local 169.254.0.0/16 (incl. the canonical metadata IP
+	// 169.254.169.254) and IPv6 link-local fe80::/10.
+	if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+	// IPv6 cloud-metadata address used by some providers.
+	if ip.Equal(net.ParseIP("fd00:ec2::254")) {
+		return true
+	}
+	return false
+}
+
+// extHTTPClient builds the per-call HTTP client for balaur.http. It never
+// follows redirects: an approved extension's reviewed code is exactly what
+// runs — a redirect chain must be followed explicitly by the handler if it
+// wants to. By default a guarded dialer refuses the cloud-metadata /
+// link-local ranges (see deniedEgressIP); loopback and other local services
+// stay deliberately reachable (see httpBinding's comment). When the owner sets
+// ext_local_egress (localEgress=true) the guard is lifted and the dialer
+// behaves normally.
+func extHTTPClient(localEgress bool) *http.Client {
+	c := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	if !localEgress {
+		d := &net.Dialer{
+			Control: func(_, address string, _ syscall.RawConn) error {
+				if deniedEgressIP(address) {
+					return errEgressBlocked
+				}
+				return nil
+			},
+		}
+		c.Transport = &http.Transport{DialContext: d.DialContext}
+	}
+	return c
 }
 
 // ToolDef is one tool an extension registers.
@@ -63,7 +118,7 @@ type captured struct {
 // withHTTP=false is extract mode: loading an extension must be free of
 // side effects, so balaur.http throws there — effects happen only inside
 // an invoked handler, where they are audited per call.
-func newVM(ctx context.Context, src, name string, withHTTP bool) (*goja.Runtime, []captured, error) {
+func newVM(ctx context.Context, src, name string, withHTTP, localEgress bool) (*goja.Runtime, []captured, error) {
 	vm := goja.New()
 	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
 
@@ -89,7 +144,7 @@ func newVM(ctx context.Context, src, name string, withHTTP bool) (*goja.Runtime,
 		return goja.Undefined()
 	})
 	if withHTTP {
-		_ = balaur.Set("http", httpBinding(ctx, vm))
+		_ = balaur.Set("http", httpBinding(ctx, vm, localEgress))
 	} else {
 		_ = balaur.Set("http", func(goja.FunctionCall) goja.Value {
 			panic(vm.NewTypeError("balaur.http is only available inside a tool handler, never at load time"))
@@ -113,7 +168,7 @@ func newVM(ctx context.Context, src, name string, withHTTP bool) (*goja.Runtime,
 
 // extract loads src side-effect-free and returns the tools it registers.
 func extract(src, name string) ([]ToolDef, error) {
-	_, regs, err := newVM(context.Background(), src, name, false)
+	_, regs, err := newVM(context.Background(), src, name, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -127,14 +182,14 @@ func extract(src, name string) ([]ToolDef, error) {
 // invoke runs src in a fresh VM and calls the named tool's handler.
 // Fresh-VM-per-call keeps extensions stateless and goroutine-safe by
 // construction; small files compile in well under a millisecond.
-func invoke(ctx context.Context, src, name, tool, argsJSON string) (out string, err error) {
+func invoke(ctx context.Context, src, name, tool, argsJSON string, localEgress bool) (out string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("extension %s: %v", name, r)
 		}
 	}()
 
-	vm, regs, err := newVM(ctx, src, name, true)
+	vm, regs, err := newVM(ctx, src, name, true, localEgress)
 	if err != nil {
 		return "", fmt.Errorf("extension %s: %w", name, err)
 	}
@@ -205,7 +260,8 @@ func clip(s string) string {
 // {status, body, headers}. Errors throw as JS exceptions so handlers can
 // try/catch. Local addresses are deliberately reachable: a personal box
 // talks to its own services; the audit log carries every invocation.
-func httpBinding(ctx context.Context, vm *goja.Runtime) func(goja.FunctionCall) goja.Value {
+func httpBinding(ctx context.Context, vm *goja.Runtime, localEgress bool) func(goja.FunctionCall) goja.Value {
+	client := extHTTPClient(localEgress)
 	return func(call goja.FunctionCall) goja.Value {
 		opts, _ := call.Argument(0).Export().(map[string]any)
 		if opts == nil {
@@ -237,7 +293,7 @@ func httpBinding(ctx context.Context, vm *goja.Runtime) func(goja.FunctionCall) 
 				}
 			}
 		}
-		resp, err := extHTTPClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			panic(vm.NewGoError(err))
 		}
