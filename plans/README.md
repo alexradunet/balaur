@@ -59,6 +59,7 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 | 171 | Unify journal node into the day node (one `type=day` page/date) | P2 | L | 160, 168, 169 | DONE (merged to main; clean first pass) |
 | 172 | Multi-year telescope demo seed (every recap band populates) | P2 | L | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/172-multiyear-telescope-demo-seed` @ `27ea219` — merge pending owner) |
 | 173 | Chronicle history page in the side panel (replace flaky dock auto-load) | P2 | M | 172 | DONE (executed + reviewed APPROVE; worktree branch `worktree-agent-a0283d90b6ae7a654` @ `da6c225` — merge pending owner; combined walk with 172 verified populated) |
+| 174 | UI cleanup sweep, rail-collapse fix, pixel-snappy motion quick-wins | P1 | L | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
@@ -77,6 +78,19 @@ panel (a nav button + a dock button open it; cards open period/day nodes).
 **Run 172 before 173** so the page has data to show in dev (not a hard code
 dependency — 173 builds and tests independently — but the browser verification
 in 173 Step 8 assumes 172's seed).
+
+### UI cleanup & motion (174)
+
+A separate track from the object/node program, written by the advisory session
+on 2026-06-24 from a live browser tour + a five-dimension UI audit + the 2026
+motion research in [`docs/ui-motion-2026.md`](../docs/ui-motion-2026.md).
+Seven independently-shippable steps: sanitize leaking tool errors (S1), fix the
+rail-collapse where an open panel squeezes the chat to ~170px (S2), delete the
+dead CSS/`board.js` layer left by past migrations (S3), wire-or-delete the
+catalog-only `internal/ui` atoms + add a coverage test (S4), fix storybook drift
+(S5), and land the two lowest-risk motion wins — Datastar view-transitions + one
+reduced-motion layer (S6) and pure-CSS entry/exit panels + wiring the `Toast`
+atom (S7). Touches no migrations/data. Do S1–S2 first (user-facing bugs).
 
 ## Dependency notes
 
