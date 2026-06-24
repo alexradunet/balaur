@@ -38,7 +38,7 @@
 - name: NetBird reminder
   ansible.builtin.debug:
     msg: >-
-      {{ 'NetBird connected — read the overlay IP/FQDN from `netbird status`, set'
-         + ' balaur_allowed_hosts, and re-run -t balaur,netbird.'
+      {{ 'NetBird connected — read the overlay IP/FQDN from `netbird status`; if'
+         + ' it differs from the Makefile BALAUR_ALLOWED_HOSTS default, add it there.'
          if ('Connected' in (nb_status.stdout | default('')) or netbird_setup_key | length > 0)
          else 'NetBird installed. Join with: sudo netbird up  (SSO) or pass -e netbird_setup_key=...' }}

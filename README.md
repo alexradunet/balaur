@@ -147,27 +147,24 @@ database you own and can open with any SQLite tool.
 make run
 ```
 
-For live-reload development, run `make dev` (uses [air](https://github.com/air-verse/air)).
+`make run` serves your **real** instance — the personal data dir at
+`~/.local/share/balaur/pb_data` — on port **8080** (bound `0.0.0.0` so it's
+reachable over a NetBird mesh; loopback at http://127.0.0.1:8080/, superuser at
+`/_/`). There is no daemon; for an always-on box, run it inside a long-lived
+[zellij](https://zellij.dev) session so it survives SSH logout (`make dev`
+likewise).
 
-If `air` is not installed, `make dev` downloads and runs the latest release automatically.
+For live-reload development, run `make dev` (uses [air](https://github.com/air-verse/air);
+if `air` is not installed it downloads and runs the latest release
+automatically). It serves a **separate, throwaway** instance from the repo-local
+`pb_data/` directory on port **8090** (http://127.0.0.1:8090/), restarting
+whenever Go, HTML, CSS, JS, or static asset files change. The two never share
+data, so `make run` (prod, 8080) and `make dev` (dev, 8090) can run side by side.
 
-Then open http://127.0.0.1:8090/ for Balaur, or
-http://127.0.0.1:8090/_/ to create the superuser and inspect data.
-
-`make dev` uses the repo-local `pb_data/` directory and restarts Balaur
-whenever Go, HTML, CSS, JS, or static asset files change. If the
-always-on user service is running, stop it first or move one process to a
-different port:
-
-```bash
-make stop-user-service
-make dev
-```
-
-Just run it:
+To run the binary directly with custom flags:
 
 ```bash
-go run . serve
+go run . serve --http 127.0.0.1:8080 --dir ~/.local/share/balaur/pb_data
 ```
 
 **Local inference**: Balaur runs GGUF models in-process via the embedded Kronk
@@ -254,40 +251,25 @@ CGO_ENABLED=0 go build -o balaur .
 
 ## Always on
 
-On Linux with systemd, Balaur can run as a user service. This keeps it on
-loopback at http://127.0.0.1:8090/ and stores production data under
-`~/.local/share/balaur/pb_data`, separate from the repo-local development
-data directory.
+There is no daemon or systemd unit — Balaur runs in the foreground. To keep your
+real instance always on, run `make run` inside a long-lived
+[zellij](https://zellij.dev) session and detach:
 
 ```bash
-make install-user-service
-make start-user-service
+zellij              # or: zellij attach -c balaur
+make run            # prod: ~/.local/share/balaur/pb_data on :8080
+# Ctrl-o d          # detach; the session (and Balaur) keeps running
 ```
 
-The install target builds a CGO-free binary, copies it to
-`~/.local/bin/balaur`, installs `contrib/systemd/balaur.service` to
-`~/.config/systemd/user/balaur.service`, creates `~/.config/balaur/env` if it
-does not already exist, and reloads the user systemd manager.
-
-Useful service commands:
-
-```bash
-make status-user-service
-make logs-user-service
-make restart-user-service
-make stop-user-service
-```
-
-Edit `~/.config/balaur/env` for model paths or optional features. The file is
-not overwritten by later installs.
-
-To let the user service start at boot before you log in, enable linger once:
+The session survives SSH logout. To also keep it alive across reboots, enable
+logind linger once:
 
 ```bash
 loginctl enable-linger "$USER"
 ```
 
-Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —
+Set model paths or optional features as environment variables in front of
+`make run` (or export them in the session). Cross-compiles to linux/darwin/windows, amd64/arm64, from any machine —
 no C toolchain. The Go binary is CGO-free; the native llama.cpp library and GGUF
 model weights are runtime assets, dlopen'd/read at runtime from outside the binary.
 

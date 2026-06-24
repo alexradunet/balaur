@@ -2,7 +2,7 @@
 
 A re-runnable Ansible playbook that turns a fresh Debian 13 VPS into a
 ready-to-develop **Balaur** box: Go toolchain + dev tools, the repo's own `make`
-targets wired up, the systemd service, browser UI verification, the `graphify`
+targets wired up, browser UI verification, the `graphify`
 knowledge-graph CLI, `zellij`, NetBird mesh access, and the security hardening
 applied to this box (SSH key-only, ufw, fail2ban, auto-updates, sysctl).
 
@@ -41,7 +41,7 @@ go version && air -v && zellij --version && timedatectl
 ## Configure
 
 Edit `group_vars/all.yml`. Key knobs: `go_target` (pin to go.mod's `go` line),
-`timezone`, `balaur_install_service`, `zellij_version`, and the hardening vars.
+`timezone`, `balaur_build`, `zellij_version`, and the hardening vars.
 
 **Secrets are never committed.** Pass them at run time:
 
@@ -59,7 +59,7 @@ Edit `group_vars/all.yml`. Key knobs: `go_target` (pin to go.mod's `go` line),
 | `gotools` | gopls, dlv, air, staticcheck, govulncheck | `~/go/bin` |
 | `github` | `gh` + git identity | apt + global |
 | `claude` | Claude Code (native installer) | `~/.local/bin` |
-| `balaur` | data dirs, git hooks, env file, `make build`, systemd `--user` service | `~/.local/share/balaur`, `~/.config` |
+| `balaur` | data dirs, git hooks, `make build`, logind linger | `~/.local/share/balaur` |
 | `node` + `playwright` | Node + Chromium + system libs (for `/verify`) | apt + `~/.cache/ms-playwright` |
 | `graphify` | `graphifyy` via pipx (CLI `graphify`) | `~/.local/bin` |
 | `zellij` | static musl binary | `~/.local/bin` |
@@ -79,13 +79,14 @@ Edit `group_vars/all.yml`. Key knobs: `go_target` (pin to go.mod's `go` line),
   models are owner-installed via Balaur's Models page; this only creates their
   dirs under `~/.local/share/balaur`.
 - **NetBird + Balaur**: after `netbird up`, read the overlay IP/FQDN from
-  `netbird status`, set `balaur_allowed_hosts`, and re-run `-t balaur`. Per
-  `docs/netbird.md`, **NetBird ACLs are the only gate** — Balaur's UI has no
-  login, so any peer that can reach the prod port (`:8080`) or the dev/staging
-  port (`:8090`) gets full owner access. Only prod (`:8080`) is permanently open
-  on `wt0`; the dev/staging port (`:8090`) is opened on demand by `make dev`
-  (`balaur_dev_port`, never provisioned open). ufw stays default-deny inbound
-  (NetBird is outbound WireGuard, so it still works). See `docs/two-instances.md`.
+  `netbird status`; if it differs from the Makefile `BALAUR_ALLOWED_HOSTS`
+  default, add it there (there is no env file). Per `docs/netbird.md`, **NetBird
+  ACLs are the only gate** — Balaur's UI has no login, so any peer that can reach
+  the prod port (`:8080`) or the dev/staging port (`:8090`) gets full owner
+  access. Only prod (`:8080`) is permanently open on `wt0`; the dev/staging port
+  (`:8090`) is opened on demand by `make dev` (`balaur_dev_port`, never
+  provisioned open). ufw stays default-deny inbound (NetBird is outbound
+  WireGuard, so it still works). See `docs/two-instances.md`.
 - **wsh**: there is no standalone installer; Wave Terminal auto-deploys `wsh`
   into `~/.waveterm/bin` the first time you SSH to this box from Wave on your
   laptop. Nothing to provision.

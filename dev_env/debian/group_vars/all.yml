@@ -14,15 +14,13 @@ git_user_email: ""
 # System timezone. NTP stays on, so the 04:00 auto-reboot resolves to this zone.
 timezone: "Europe/Bucharest"
 
-# Balaur app / service
+# Balaur app
 balaur_build: true               # `make build` to verify the CGO-free build
-balaur_install_service: true     # install + enable the systemd --user service
-# Prod (live personal) instance, reachable over the NetBird mesh (Option B —
-# bind the overlay IP) on 8080. The dev/staging hot-reload instance runs via
-# `make dev` on 8090. Empty balaur_http leaves the loopback default. See
-# docs/netbird.md and docs/two-instances.md.
-balaur_http: "100.124.113.87:8080"
-balaur_allowed_hosts: "balaur-113-87.netbird.cloud,100.124.113.87"  # no port; covers both ports
+# Balaur has no daemon: prod runs via `make run` (real data dir, :8080) and the
+# hot-reload instance via `make dev` (throwaway repo pb_data, :8090), both kept
+# alive in a zellij session (linger is enabled so it survives logout). The mesh
+# bind (0.0.0.0:8080) and BALAUR_ALLOWED_HOSTS live in the repo Makefile, not an
+# env file. See docs/netbird.md and docs/two-instances.md.
 
 # Optional installers
 claude_install: true
@@ -65,7 +63,6 @@ gopath: "{{ ansible_env.HOME }}/go"
 local_bin: "{{ ansible_env.HOME }}/.local/bin"
 balaur_repo: "{{ (playbook_dir + '/../..') | realpath }}"
 data_dir: "{{ ansible_env.HOME }}/.local/share/balaur"
-config_dir: "{{ ansible_env.HOME }}/.config/balaur"
 
 go_tools:
   - golang.org/x/tools/gopls@latest

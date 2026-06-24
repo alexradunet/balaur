@@ -15,11 +15,14 @@ The server is `go run . serve`. Start it with the Bash tool's
 `run_in_background` so it stays up across turns:
 
 ```bash
-go run . serve            # = make run; uses repo-local pb_data/ (already has the owner)
+go run . serve            # defaults to 127.0.0.1:8090 + repo-local pb_data/ (already has the owner)
 ```
 
-- `:8090` already taken? The always-on user service or a `make dev` is holding
-  it. **Reuse it** — don't start a second. To take it over: `make stop-user-service`.
+This is the dev instance (8090, throwaway repo `pb_data/`) — NOT `make run`,
+which serves the owner's real data on 8080.
+
+- `:8090` already taken? A `make dev` (air) is holding it. **Reuse it** — don't
+  start a second. Don't kill the owner's `make dev`.
 - Want hot reload while iterating: `make dev` (air) instead. Same port.
 
 ## 2. Wait for readiness (first run compiles)
@@ -59,7 +62,7 @@ python3 scripts/fake-model.py script.json &   # see README "CLI for agents & tes
 ## 5. Clean up
 
 Kill **only the server you started** (TaskStop the background Bash, or its PID).
-Never kill the owner's `make dev` / user service.
+Never kill the owner's `make dev` or `make run`.
 
 ## Full PocketBase API access (as `claude`)
 

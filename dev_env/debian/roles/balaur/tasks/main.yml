@@ -3,8 +3,13 @@
 # checked out. This role wires the repo's own make targets — it does NOT
 # re-template anything. It NEVER downloads the llama.cpp runtime or GGUF models
 # (those are owner-installed via the Models page); it only creates their dirs.
+#
+# There is no daemon: Balaur runs in the foreground via `make run` (prod, real
+# data dir on :8080) or `make dev` (hot-reload, throwaway repo pb_data on :8090),
+# kept alive inside a long-lived zellij session. BALAUR_ALLOWED_HOSTS for mesh
+# access ships as a default in the repo Makefile, so there is no env file to seed.
 
-- name: Create Balaur data + config directories
+- name: Create Balaur data directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -13,8 +18,6 @@
     - "{{ data_dir }}/pb_data"
     - "{{ data_dir }}/models"
     - "{{ data_dir }}/kronk/lib"
-    - "{{ config_dir }}"
-    - "{{ ansible_env.HOME }}/.config/systemd/user"
 
 - name: Activate the repo pre-commit hook (.githooks)
   community.general.git_config:
@@ -22,30 +25,6 @@
     scope: local
     repo: "{{ balaur_repo }}"
     value: .githooks
-
-- name: Seed the Balaur env file (never overwrite an edited one)
-  ansible.builtin.copy:
-    src: "{{ balaur_repo }}/contrib/systemd/balaur.env.example"
-    dest: "{{ config_dir }}/env"
-    remote_src: true
-    force: false
-    mode: "0600"
-
-- name: Set BALAUR_ALLOWED_HOSTS for mesh access
-  ansible.builtin.lineinfile:
-    path: "{{ config_dir }}/env"
-    regexp: '^#?\s*BALAUR_ALLOWED_HOSTS='
-    line: "BALAUR_ALLOWED_HOSTS={{ balaur_allowed_hosts }}"
-  when: balaur_allowed_hosts | length > 0
-
-# Bind address override (e.g. the NetBird overlay IP — Option B in docs/netbird.md).
-# Empty default leaves the systemd unit's 127.0.0.1:8080 loopback bind in place.
-- name: Set BALAUR_HTTP bind address
-  ansible.builtin.lineinfile:
-    path: "{{ config_dir }}/env"
-    regexp: '^#?\s*BALAUR_HTTP='
-    line: "BALAUR_HTTP={{ balaur_http }}"
-  when: balaur_http | length > 0
 
 - name: Verify the CGO-free build (`make build`)
   ansible.builtin.command: make build
@@ -55,29 +34,17 @@
   environment: "{{ go_env }}"
   when: balaur_build | bool
 
-- name: Install + start the systemd user service
-  when: balaur_install_service | bool
-  block:
-    - name: Enable lingering so the user service runs without a login
-      become: true
-      ansible.builtin.command: "loginctl enable-linger {{ ansible_user_id }}"
-      args:
-        creates: "/var/lib/systemd/linger/{{ ansible_user_id }}"
+# Linger keeps the owner's zellij server (and the `make run` inside it) alive
+# after SSH logout and across reboots, without a system service.
+- name: Enable lingering so the zellij session survives logout
+  become: true
+  ansible.builtin.command: "loginctl enable-linger {{ ansible_user_id }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ ansible_user_id }}"
 
-    # Reuse the repo's make targets (install-user-service + start-user-service).
-    # systemctl --user needs XDG_RUNTIME_DIR; linger above guarantees /run/user/<uid>.
-    - name: Install + enable + start the Balaur user service
-      ansible.builtin.command: "{{ item }}"
-      args:
-        chdir: "{{ balaur_repo }}"
-      loop:
-        - make install-user-service
-        - make start-user-service
-      environment: "{{ go_env | combine({'XDG_RUNTIME_DIR': '/run/user/' ~ ansible_user_uid}) }}"
-      changed_when: true
-
-    - name: Next steps
-      ansible.builtin.debug:
-        msg:
-          - "Balaur service installed. Status:  systemctl --user status balaur"
-          - "Dev loop instead:  cd {{ balaur_repo }} && make dev   (hot reload)"
+- name: Next steps
+  ansible.builtin.debug:
+    msg:
+      - "Balaur has no daemon. Start it in a zellij session:"
+      - "  cd {{ balaur_repo }} && zellij    then  make run   (prod, :8080)"
+      - "  hot-reload dev loop instead:       make dev   (:8090)"

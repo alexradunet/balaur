@@ -8,9 +8,9 @@ into the binary was considered and deliberately rejected: it pulls a very
 large dependency tree into an otherwise minimal, CGO-free build, and host
 networking belongs outside this repository.
 
-> This box runs two instances (see `docs/two-instances.md`): the prod systemd
-> service on **8080** and the `make dev` hot-reload staging instance on
-> **8090**. The steps below configure the prod service; the example port in
+> This box runs two instances (see `docs/two-instances.md`): the prod `make run`
+> instance on **8080** and the `make dev` hot-reload staging instance on
+> **8090**. The steps below configure the prod instance; the example port in
 > some commands is illustrative — substitute the port for the instance you mean.
 
 ## 1. Make the box a NetBird peer
@@ -30,9 +30,9 @@ Balaur repository.
 
 ## 2. Bind Balaur to a reachable address
 
-By default the prod service serves on `127.0.0.1:8080`, reachable only from the
-box itself. Bind it so NetBird peers can reach it, using PocketBase's `--http`
-flag:
+`make run` serves prod on `0.0.0.0:8080`, already reachable by NetBird peers.
+To bind a different address (e.g. only the overlay IP), pass PocketBase's
+`--http` flag — `make run PROD_HTTP=...`, or run the binary directly:
 
 ```bash
 # Option A — bind every interface; let NetBird's ACLs be the firewall.
