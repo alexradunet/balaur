@@ -3431,15 +3431,14 @@ html.app #panel.app-panel .k-heading:not(.k-heading-proposed):not(.k-heading-mut
 #panel-inner { display: flex; flex-direction: column; min-height: 100%; }
 .panel-empty { padding: var(--space-6); color: var(--ink-muted); font-family: var(--font-mono); font-size: 13px; }
 .panel-head {
-  display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+  display: flex; align-items: center; gap: var(--space-2);
+  height: 44px; padding: 0 var(--space-3); /* match the nav rail toggle height */
   background: var(--surface-2); border-bottom: 2px solid var(--parch-edge);
   font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .06em; color: var(--ink); position: sticky; top: 0; z-index: var(--z-sticky);
 }
 .panel-head-icon { width: 16px; height: 16px; image-rendering: pixelated; }
 .panel-head-title { flex: 1 1 auto; }
-.panel-close { background: none; border: 0; cursor: pointer; color: var(--ink-muted); font-size: 13px; line-height: 1; padding: 2px 4px; }
-.panel-close:hover { color: var(--ink); }
 .panel-body { padding: var(--space-4); }
 .panel-body .kcard { padding: 15px 18px; }
 .panel-body > .k-tabs { margin-bottom: var(--space-3); }
@@ -3509,11 +3508,9 @@ html.app .panel-resizer:hover,
 html.app .panel-resizer.dragging { background: var(--gold-deep); opacity: .5; }
 
 /* Re-opening a collapsed panel lives on the always-on nav rail's toggle now
-   (the old fixed .panel-reveal handle was removed — it collided with the rail). */
-
-/* Collapse control in the panel head bar — same look as .panel-close. */
-html.app .panel-collapse { background: none; border: 0; cursor: pointer; color: var(--ink-muted); font-size: 13px; line-height: 1; padding: 2px 4px; }
-html.app .panel-collapse:hover { color: var(--ink); }
+   (the old fixed .panel-reveal handle was removed — it collided with the rail).
+   Collapse/close both live on the nav rail, so the panel head carries no
+   controls — just the icon + title. */
 
 /* Narrow viewports (≤720px): chat + the always-on rail stay in flow; the panel
    becomes a fixed overlay that slides in to the LEFT of the rail. */
@@ -3586,6 +3583,7 @@ html.app .composer { position: relative; }
 .navrail-toggle:hover, .navrail-btn:hover { background: var(--chrome-2); color: var(--gold); }
 .navrail-toggle:focus-visible, .navrail-btn:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
 .navrail-chevron { font-size: 22px; line-height: 1; }
+.navrail-glyph { font-size: 16px; line-height: 1; }
 .navrail-list { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); flex: 1 1 auto; }
 .navrail-icon { width: 22px; height: 22px; image-rendering: pixelated; }
 .navrail-btn-active { background: var(--chrome-2); box-shadow: inset 3px 0 0 var(--gold); }

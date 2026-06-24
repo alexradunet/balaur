@@ -15,9 +15,9 @@ type PanelProps struct {
 	Body  g.Node // pre-rendered artifact body (a Focus card or a Cluster)
 }
 
-// Panel frames the active artifact: a .panel-head bar (icon + title + a close
-// control) atop the scrollable #panel-body. One panel is active at a time; the
-// gateway replaces this node's content to switch artifacts.
+// Panel frames the active artifact: a .panel-head bar (icon + title) atop the
+// scrollable #panel-body. One panel is active at a time; the gateway replaces
+// this node's content to switch artifacts. Collapse/close live on the nav rail.
 func Panel(p PanelProps) g.Node {
 	inner := []g.Node{h.ID("panel-inner")}
 	if p.Title == "" && p.Body == nil {
@@ -32,14 +32,6 @@ func Panel(p PanelProps) g.Node {
 	}
 	head = append(head,
 		h.Span(h.Class("panel-head-title"), g.Text(p.Title)),
-		// Collapse control: hides the panel (persisted server-side via basmTogglePanel).
-		h.Button(h.Class("panel-collapse"), h.Type("button"),
-			g.Attr("onclick", "basmTogglePanel()"),
-			h.Aria("label", "Collapse panel"), g.Text("›")),
-		// Close control: clears the panel (and the persisted pointer) via @get.
-		h.Button(h.Class("panel-close"), h.Type("button"),
-			g.Attr("data-on:click__prevent", "@get('/ui/show/close')"),
-			h.Aria("label", "Close panel"), g.Text("✕")),
 	)
 	inner = append(inner,
 		h.Header(head...),

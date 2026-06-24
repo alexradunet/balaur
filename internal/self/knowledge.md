@@ -223,8 +223,11 @@ domain sidebar rail was retired in plan 102; navigation now has two surfaces
 that share one destination source (web.navDestinations → []ui.CommandItem):
 (1) the composer /-command palette (ui.CommandPalette) that appears when the
 draft starts with "/", and (2) the right nav rail — a panel expand/collapse
-toggle, one icon per primary destination (Quests, Life, Memory, Skills,
-Settings), and a chooser (lens) popover listing the rest. There is no topbar and
+toggle, a close (✕) control that clears the active artifact (GET /ui/show/close),
+one icon per primary destination (Quests, Life, Memory, Skills, Settings), and a
+chooser (lens) popover listing the rest. The panel head itself carries no
+controls now — just the artifact icon + title, sized to the rail toggle's height.
+There is no topbar and
 no burger. On narrow viewports (≤720px) the layout is chat + the always-on rail;
 the panel slides in as a fixed overlay to the rail's left (plan 098). Both nav
 surfaces fire GET /ui/show/{type}; the full destination set is Quests, Life, the

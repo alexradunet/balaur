@@ -290,12 +290,12 @@ func chatpanelStory() Story {
 	})
 	return Story{
 		ID: "chatpanel", Group: "Chat", Title: "Panel", Wide: true,
-		Blurb: "The single-active right-panel frame. A sticky .panel-head bar (icon + title + collapse + close " +
-			"controls) tops the scrollable #panel-body. Only one artifact is active at a time — the gateway morphs " +
-			"#panel-inner by root id to swap. Body is pre-rendered by the web layer; the organism imports no " +
-			"feature/cards. The collapse (›) and close (✕) controls are inert in the storybook — they call " +
-			"basmTogglePanel() and @get /ui/show/close respectively. The .panel-resizer drag handle and " +
-			"the right nav rail (which re-opens a collapsed panel) are shell chrome (chatshell.go), not part of this organism.",
+		Blurb: "The single-active right-panel frame. A sticky .panel-head bar (icon + title only, sized to match " +
+			"the nav rail toggle) tops the scrollable #panel-body. Only one artifact is active at a time — the gateway " +
+			"morphs #panel-inner by root id to swap. Body is pre-rendered by the web layer; the organism imports no " +
+			"feature/cards. Collapse and close both live on the right nav rail now (basmTogglePanel() / @get " +
+			"/ui/show/close), so the head carries no controls. The .panel-resizer drag handle and the right nav rail " +
+			"are shell chrome (chatshell.go), not part of this organism.",
 		Variants: []Variant{
 			{"with artifact", chat.Panel(chat.PanelProps{Title: "Quest Log", Icon: "scroll", Body: sample})},
 			{"empty", chat.Panel(chat.PanelProps{})},

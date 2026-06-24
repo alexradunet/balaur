@@ -18,7 +18,6 @@ func TestPanelWithTitleIconBody(t *testing.T) {
 		"panel-head-title",
 		"Quest Log",
 		`id="panel-body"`,
-		"panel-close",
 		"/static/icons/scroll.png",
 		"BODY",
 	} {
