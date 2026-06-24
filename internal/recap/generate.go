@@ -78,6 +78,41 @@ func Lookup(byPeriod map[string]*core.Record, p Period) *core.Record {
 	return byPeriod[summaryKey(p.Type, p.Start)]
 }
 
+// highWaterKey is the owner_settings key holding the newest CONTIGUOUSLY
+// summarised day for one conversation (value: "YYYY-MM-DD" in the owner's
+// wall clock). It lets the hourly catch-up resume past already-settled days
+// instead of re-walking all history; the Find/exists short-circuit in
+// ensureOne remains the correctness safety net, so a stale mark can never
+// PERMANENTLY skip a genuinely-missing summary.
+func highWaterKey(conversationID string) string {
+	return "recap_highwater_" + conversationID
+}
+
+// loadHighWater returns the persisted high-water day for the conversation as a
+// local-midnight time in loc, or the zero time when none is stored or it is
+// unparseable (so the caller falls back to walking from oldest).
+func loadHighWater(app core.App, conversationID string, loc *time.Location) time.Time {
+	raw := store.GetOwnerSetting(app, highWaterKey(conversationID), "")
+	if raw == "" {
+		return time.Time{}
+	}
+	t, err := time.ParseInLocation("2006-01-02", raw, loc)
+	if err != nil {
+		return time.Time{} // unreadable mark → fall back to oldest, never crash
+	}
+	return t
+}
+
+// saveHighWater records day d (local midnight) as the newest contiguously
+// settled day for the conversation. Best-effort: a failure to persist only
+// means the next run re-walks from the previous mark — the Find short-circuit
+// keeps that correct, just not maximally cheap. Never abort the run on this.
+func saveHighWater(app core.App, conversationID string, d time.Time) {
+	if err := store.SetOwnerSetting(app, highWaterKey(conversationID), d.Format("2006-01-02")); err != nil {
+		app.Logger().Warn("recap: high-water persist failed", "error", err)
+	}
+}
+
 func save(app core.App, conversationID string, p Period, content string, count int) error {
 	col, err := app.FindCollectionByNameOrId("summaries")
 	if err != nil {
@@ -245,11 +280,38 @@ func EnsureSummaries(ctx context.Context, app core.App, client llm.Client, conve
 	// generated period starts won't match the ones the UI looks up.
 	oldest := oldestRecs[0].GetDateTime("created").Time().In(now.Location())
 
-	// Days, oldest first.
-	for d := Day(oldest); d.End.Before(now) || d.End.Equal(now); d = Containing("day", d.End) {
-		if _, err := ensureOne(ctx, app, client, conversationID, d, now); err != nil {
+	// Days. Resume from the persisted high-water mark instead of re-walking
+	// from oldest; the Find/exists short-circuit in ensureOne is the safety net
+	// so a stale mark can never permanently skip a genuinely-missing summary.
+	start := oldest
+	if hw := loadHighWater(app, conversationID, now.Location()); hw.After(start) {
+		start = hw
+	}
+	contiguous := time.Time{}
+	stillContiguous := true
+	for d := Day(start); d.End.Before(now) || d.End.Equal(now); d = Containing("day", d.End) {
+		ok, err := ensureOne(ctx, app, client, conversationID, d, now)
+		if err != nil {
 			return err
 		}
+		if stillContiguous {
+			settled := ok
+			if !ok {
+				// No summary written: settled only if the day was genuinely
+				// quiet (no source), not if a summary failed to materialise.
+				if src, _, srcErr := daySource(app, conversationID, d); srcErr == nil && src == "" {
+					settled = true
+				}
+			}
+			if settled {
+				contiguous = d.Start
+			} else {
+				stillContiguous = false // stop advancing the mark past this gap
+			}
+		}
+	}
+	if !contiguous.IsZero() {
+		saveHighWater(app, conversationID, contiguous)
 	}
 	// Parents bottom-up: weeks and months (from days), then quarters
 	// (from months), then years (from quarters).
