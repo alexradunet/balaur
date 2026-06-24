@@ -126,6 +126,18 @@ One binary, layered as: gateway → turn pipeline → business logic.
   memory/skill are born proposed and become active only on the owner's
   approval. Traversal and search filter to status=active — a proposed or
   rejected node is never surfaced as fact.
+  Day pages (plan 169): each owner-local calendar day is anchored by a
+  `type=day` node (one per day, title = "YYYY-MM-DD", `props.date` = same
+  key). Every new non-day node automatically receives an `on_day` edge
+  pointing to its creation-day node; the hook that writes this edge skips
+  `type=day` nodes to avoid recursion. Querying a day node's inbound
+  neighbourhood (`node_related`, direction=in, type=on_day) returns
+  everything created that day. `node_get` on a day node also surfaces the
+  day's recap summary if one exists in the `summaries` collection
+  (`period_type='day'`). Summaries remain relational — they are NOT turned
+  into nodes; the day node is the stable graph anchor, and the recap is
+  rendered onto it at read time. The `on_day` edge type is system-only and
+  is never asserted via `node_link`.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
   generates recaps, a daily briefing opens the day. Each is idempotent
   and disableable by env.

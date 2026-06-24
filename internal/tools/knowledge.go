@@ -7,9 +7,11 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/nodes"
 )
@@ -363,6 +365,23 @@ func nodeGetTool(app core.App) agent.Tool {
 			out, _ := nodes.Outbound(app, rec.Id)
 			back, _ := nodes.Backlinks(app, rec.Id)
 			fmt.Fprintf(&b, "\nLinks: %d outbound, %d backlinks", len(out), len(back))
+
+			// For day nodes, append the day's recap summary if one exists.
+			if rec.GetString("type") == "day" {
+				dateKey := nodes.PropString(rec, "date")
+				if dateKey != "" {
+					if conv, err := conversation.Master(app); err == nil {
+						sum, err := app.FindFirstRecordByFilter("summaries",
+							"conversation = {:conv} && period_type = 'day' && period_start ~ {:d}",
+							dbx.Params{"conv": conv.Id, "d": dateKey + "%"})
+						if err == nil {
+							fmt.Fprintf(&b, "\n\n## Day recap\n%s", sum.GetString("content"))
+						} else {
+							fmt.Fprintf(&b, "\n\nNo recap yet for %s.", dateKey)
+						}
+					}
+				}
+			}
 			return b.String(), nil
 		},
 	}
