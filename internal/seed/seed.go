@@ -276,6 +276,16 @@ func seedMessages(app core.App, now time.Time) (int, error) {
 		user      string
 		assistant string
 	}{
+		// Deep history — one turn per quarter/month back to seedHistoryStart.
+		// Sparse but present so period nodes aren't empty.
+		{1140, "What did we focus on at the start of this year?", "We were settling into the new routines — daily walks, the first garden plan, and sorting the home office."},
+		{1000, "How did last winter feel in terms of habits?", "A steady quarter: the weekly review held, reading picked up, and the fence project was first sketched out."},
+		{800, "Can you remind me what we talked about that spring?", "We planned the first seedling tray and had a long exchange about the allotment versus the back garden."},
+		{600, "What was on my mind around autumn that year?", "Mostly the reading list and the greenhouse idea — you mentioned reusing the old window frames."},
+		{430, "Help me think through the annual review.", "We grouped the year into three themes: garden, habits, and the home project. Each had a win and a thing to carry forward."},
+		{300, "Recap what we covered about the budget last spring.", "Fixed costs were stable; the greenhouse was the main discretionary item and we agreed to revisit in summer."},
+		{210, "How was the mood tracking going around that time?", "Consistently around 4/5 — the workout streak was holding and the weekly review was becoming automatic."},
+		{120, "Let's review what happened with the tomato bed.", "Good yield that season: watered every two days, pruned the suckers, and avoided blight despite the wet August."},
 		{82, "Let's set up the garden plan for spring.", "We grouped it into soil prep, the fence repair, and the first seedling tray."},
 		{61, "Help me think through the budget this month.", "I separated the fixed costs from the uncertain ones and flagged two to revisit."},
 		{40, "I want to start a weekly review habit.", "Good idea — I added a recurring task for Sunday evenings to anchor it."},
@@ -522,21 +532,18 @@ func seedHeads(app core.App) (int, error) {
 
 // --- helpers ----------------------------------------------------------------
 
-// seedPeriods is the fixed set of recap windows seeding fills — shared by
-// seedSummaries (create) and Reset (delete) so they always agree.
+// seedHistoryStart is the deterministic oldest edge of the demo history — far
+// enough back that recap.Bands yields day, week, month, quarter AND year bands.
+func seedHistoryStart(now time.Time) time.Time { return now.AddDate(0, -38, 0) }
+
+// seedPeriods returns the full telescope set derived from recap.Bands so that
+// seedSummaries (create) and Reset (delete) always agree.
 func seedPeriods(now time.Time) []recap.Period {
-	return []recap.Period{
-		recap.Day(now.AddDate(0, 0, -1)),
-		recap.Day(now.AddDate(0, 0, -3)),
-		// Four previous weeks fill the "Past weeks" telescope band so the
-		// scroll-back demonstrates week summaries that open period nodes.
-		recap.Week(now.AddDate(0, 0, -7)),
-		recap.Week(now.AddDate(0, 0, -14)),
-		recap.Week(now.AddDate(0, 0, -21)),
-		recap.Week(now.AddDate(0, 0, -28)),
-		recap.Month(now.AddDate(0, -1, 0)),
-		recap.Month(now.AddDate(0, -2, 0)),
+	var out []recap.Period
+	for _, band := range recap.Bands(now, seedHistoryStart(now)) {
+		out = append(out, band.Periods...)
 	}
+	return out
 }
 
 func summaryText(p recap.Period) string {
@@ -545,8 +552,12 @@ func summaryText(p recap.Period) string {
 		return fmt.Sprintf("Demo day recap (%s): a short planning exchange and one concrete follow-up.", p.Start.Format("Jan 2"))
 	case "week":
 		return fmt.Sprintf("Demo weekly recap (week of %s): garden work, a workout streak, and the weekly review.", p.Start.Format("Jan 2"))
-	default:
+	case "month":
 		return fmt.Sprintf("Demo monthly recap (%s): several small conversations grouped into a monthly card.", p.Start.Format("January 2006"))
+	case "quarter":
+		return fmt.Sprintf("Demo quarterly recap (%s): a season of steady projects — garden, reading, and home repairs.", recap.Label(p))
+	default: // year
+		return fmt.Sprintf("Demo yearly recap (%s): the year in broad strokes — habits kept, a move considered, the garden grown.", p.Start.Format("2006"))
 	}
 }
 
