@@ -300,9 +300,14 @@ re-downloading). The owner switches between downloaded tiers like any local
 model, and picks CPU vs GPU there, saved as owner_settings "llm_processor" and
 applied at restart. There is no manual GGUF-path entry. Local is the default
 provider path and the model runs in-process via the embedded Kronk engine. The
-owner can also add an opt-in OpenAI-compatible cloud model (provider kind
-`openai`) from the same Models page: it is never the default and never
-auto-selected, the first activation per provider requires an explicit
+owner can also add an opt-in cloud model from the same Models page. The curated
+preset picker only features cloud providers established in the EU and bound by
+GDPR — Mistral today — in line with Balaur's European AI-sovereignty stance (EU
+AI Act); a US-jurisdiction provider does not belong in that list. The underlying
+transport is the generic OpenAI-compatible HTTP client (provider kind `openai`
+internally), so an owner can still point the Advanced · custom-endpoint form at
+any OpenAI-compatible URL they choose. A cloud model is never the default and
+never auto-selected, the first activation per provider requires an explicit
 "messages will leave your box" confirmation, embeddings stay local, and the API
 key is stored on-box (hidden field, redacted from the UI and audit log) and
 never logged. There is no Ollama (removed in plan 074).

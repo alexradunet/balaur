@@ -32,7 +32,7 @@ func modelcardStory() Story {
 				Progress: 42, ProgressLabel: "1.1 GB / 2.7 GB · 4.1 MB/s",
 			})},
 			{"cloud · active", modelcards.ModelCard(modelcards.ModelView{
-				ID: "c1", Name: "GPT-4o", Detail: "gpt-4o · api.openai.com",
+				ID: "c1", Name: "Mistral Small", Detail: "mistral-small-latest · api.mistral.ai",
 				Kind: "cloud", Status: modelcards.StatusActive, Cloud: true,
 			})},
 		},
@@ -153,22 +153,18 @@ func modelspanelStory() Story {
 func cloudmodelStory() Story {
 	return Story{
 		ID: "cloudmodel", Group: "Models", Title: "Cloud model (opt-in)", Wide: true,
-		Blurb: "Balaur runs local by default, but an owner can opt in to an OpenAI-compatible cloud model (OpenAI, OpenRouter, Groq, Anthropic via its compat shim, LM Studio…). The add form makes the trade-off explicit and requires a consent checkbox before a key is stored; a first-use dialog confirms the destination before the model can go active. A turn never leaves the box without the owner's deliberate, informed click.",
+		Blurb: "Balaur runs local by default, but an owner can opt in to a cloud model. The curated picker only features EU-jurisdiction, GDPR-bound providers (Mistral today) in line with Balaur's European AI-sovereignty stance; the Advanced · custom-endpoint form still accepts any OpenAI-compatible URL. The add form makes the trade-off explicit and requires a consent checkbox before a key is stored; a first-use dialog confirms the destination before the model can go active. A turn never leaves the box without the owner's deliberate, informed click.",
 		Variants: []Variant{
 			{"provider presets · picker", modelcards.CloudPresetPicker([]modelcards.CloudPresetView{
 				{Key: "mistral", Name: "Mistral", Label: "Mistral Small", Region: "EU · GDPR",
 					Blurb:     "French, GDPR-compliant, OpenAI-compatible. Generous free tier.",
 					ChatModel: "mistral-small-latest", KeyHint: "your Mistral API key",
 					SignupURL: "https://console.mistral.ai/api-keys", Featured: true},
-				{Key: "openai", Name: "OpenAI", Label: "OpenAI GPT-5 mini", Region: "US",
-					Blurb:     "OpenAI's hosted models via the official API.",
-					ChatModel: "gpt-5-mini", KeyHint: "sk-…",
-					SignupURL: "https://platform.openai.com/api-keys"},
 			})},
 			{"add a cloud model · form", modelcards.CloudForm(modelcards.CloudFormView{})},
 			{"add form · error", modelcards.CloudForm(modelcards.CloudFormView{Error: "name, base URL, label, and chat model are required"})},
 			{"first-use consent dialog", modelcards.CloudConsent(modelcards.CloudConsentView{
-				ModelID: "c1", ModelName: "GPT-4o", ProviderName: "OpenAI",
+				ModelID: "c1", ModelName: "Mistral Small", ProviderName: "Mistral",
 			})},
 			{"panel · local + cloud, with add form", modelcards.Panel(modelcards.PanelView{
 				ProcessorRunning: "cpu",
@@ -176,7 +172,7 @@ func cloudmodelStory() Story {
 				ShowCloudForm:    true,
 				Models: []modelcards.ModelView{
 					{ID: "m1", Name: "Qwen3.5 4B", Detail: "Qwen3.5-4B-Q4_K_M.gguf · on this box", Kind: "local", Status: modelcards.StatusActive, VRAM: "~3 GB"},
-					{ID: "c1", Name: "GPT-4o", Detail: "gpt-4o · api.openai.com", Kind: "cloud", Status: modelcards.StatusAvailable, Cloud: true},
+					{ID: "c1", Name: "Mistral Small", Detail: "mistral-small-latest · api.mistral.ai", Kind: "cloud", Status: modelcards.StatusAvailable, Cloud: true},
 				},
 			})},
 		},

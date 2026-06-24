@@ -8,7 +8,7 @@ package llm
 // already include the API version segment (e.g. ".../v1") and carry no trailing
 // slash — the client appends "/chat/completions" directly (see openai.go).
 type CloudPreset struct {
-	Key        string // stable id the preset picker posts ("mistral" | "openai")
+	Key        string // stable id the preset picker posts (e.g. "mistral")
 	Name       string // provider/record name, e.g. "Mistral" (≤ 80 chars)
 	Label      string // model display label, e.g. "Mistral Small" (≤ 80 chars)
 	Region     string // short origin tag for the UI, e.g. "EU · GDPR" or "US"
@@ -21,11 +21,20 @@ type CloudPreset struct {
 	Default    bool   // the featured/recommended provider (exactly one is true)
 }
 
-// CloudPresets returns the curated cloud-provider catalog. Mistral is the
-// featured default: a French, GDPR-compliant provider with an OpenAI-compatible
-// API and a generous free tier, so it is Balaur's recommended European cloud
-// path. Each model id is a provider-maintained rolling alias ("…-latest") so a
-// new model generation does not require a code change here.
+// CloudPresets returns the curated cloud-provider catalog.
+//
+// Sovereignty policy: Balaur only features cloud providers that are established
+// in the EU and bound by EU data-protection law (GDPR), in line with the EU AI
+// Act / European AI-sovereignty stance. A US-jurisdiction provider — even one
+// with an OpenAI-compatible API — does NOT belong in this catalog, regardless of
+// model quality. The generic OpenAI-compatible transport (openai.go) still lets
+// an owner point the Advanced · custom-endpoint form at any URL they choose; the
+// curated list is where Balaur takes a position, and that position is EU-only.
+//
+// Mistral is the featured default: a French, GDPR-compliant provider with an
+// OpenAI-compatible API and a generous free tier. Each model id is a
+// provider-maintained rolling alias ("…-latest") so a new model generation does
+// not require a code change here.
 func CloudPresets() []CloudPreset {
 	return []CloudPreset{
 		{
@@ -39,17 +48,6 @@ func CloudPresets() []CloudPreset {
 			KeyHint:   "your Mistral API key",
 			SignupURL: "https://console.mistral.ai/api-keys",
 			Default:   true,
-		},
-		{
-			Key:       "openai",
-			Name:      "OpenAI",
-			Label:     "OpenAI GPT-5 mini",
-			Region:    "US",
-			Blurb:     "OpenAI's hosted models via the official API.",
-			BaseURL:   "https://api.openai.com/v1",
-			ChatModel: "gpt-5-mini",
-			KeyHint:   "sk-…",
-			SignupURL: "https://platform.openai.com/api-keys",
 		},
 	}
 }

@@ -93,11 +93,15 @@ lean and high-signal — add a rule only when it changes a real decision.
   a local GGUF model is loaded by yzma (purego — CGO stays off; the native
   llama.cpp lib is `dlopen`'d at runtime), behind the internal `llm` interface.
   Local is the default provider path and stays first-class. There is also an
-  opt-in, consent-gated OpenAI-compatible remote path (provider kind `openai`,
-  `internal/llm/openai.go`) the owner can add from the Models page — never the
-  default, never auto-selected, and a turn only leaves the box on the owner's
-  explicit, confirmed selection (embeddings stay local; the API key is stored
-  on-box and never logged). There is no Ollama (removed in plan 074).
+  opt-in, consent-gated remote path over the generic OpenAI-compatible HTTP
+  client (provider kind `openai`, `internal/llm/openai.go`). For EU
+  AI-sovereignty, Balaur's curated cloud-provider catalog
+  (`internal/llm/presets.go`) only features EU-jurisdiction, GDPR-bound
+  providers — Mistral today; a US provider does not belong there, even with an
+  OpenAI-compatible API. The owner adds a cloud model from the Models page —
+  never the default, never auto-selected, and a turn only leaves the box on the
+  owner's explicit, confirmed selection (embeddings stay local; the API key is
+  stored on-box and never logged). There is no Ollama (removed in plan 074).
 - Keep context transparent: durable state lives in PocketBase collections
   (inspectable SQLite) and exported Markdown, never hidden in-session state.
 

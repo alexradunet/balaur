@@ -112,12 +112,12 @@ func CloudForm(v CloudFormView) g.Node {
 		g.If(v.Error != "", ui.Alert(ui.AlertProps{Tone: "danger", Title: "Couldn't add model"}, g.Text(v.Error))),
 		h.Form(h.Class("card cloud-model-form"),
 			data.On("submit", "@post('/ui/model/cloud', {contentType:'form'})", data.ModifierPrevent),
-			ui.TextField(ui.FieldProps{Label: "Provider name", Name: "name", Placeholder: "OpenAI"}, h.Required()),
-			ui.TextField(ui.FieldProps{Label: "Base URL", Name: "base_url", Placeholder: "https://api.openai.com/v1", Type: "url"}, h.Required()),
-			ui.TextField(ui.FieldProps{Label: "Chat model id", Name: "chat_model", Placeholder: "gpt-4o"}, h.Required()),
-			ui.TextField(ui.FieldProps{Label: "Display label", Name: "label", Placeholder: "GPT-4o"}, h.Required()),
-			ui.TextField(ui.FieldProps{Label: "Embedding model id (optional)", Name: "embed_model", Placeholder: "text-embedding-3-small"}),
-			ui.TextField(ui.FieldProps{Label: "API key", Name: "api_key", Type: "password", Placeholder: "sk-…",
+			ui.TextField(ui.FieldProps{Label: "Provider name", Name: "name", Placeholder: "Mistral"}, h.Required()),
+			ui.TextField(ui.FieldProps{Label: "Base URL", Name: "base_url", Placeholder: "https://api.mistral.ai/v1", Type: "url"}, h.Required()),
+			ui.TextField(ui.FieldProps{Label: "Chat model id", Name: "chat_model", Placeholder: "mistral-small-latest"}, h.Required()),
+			ui.TextField(ui.FieldProps{Label: "Display label", Name: "label", Placeholder: "Mistral Small"}, h.Required()),
+			ui.TextField(ui.FieldProps{Label: "Embedding model id (optional)", Name: "embed_model", Placeholder: "mistral-embed"}),
+			ui.TextField(ui.FieldProps{Label: "API key", Name: "api_key", Type: "password", Placeholder: "your provider API key",
 				Hint: keyStorageHint},
 				g.Attr("autocomplete", "off")),
 			consentCheck(),
@@ -130,8 +130,8 @@ func CloudForm(v CloudFormView) g.Node {
 // activates a cloud model whose provider has not been acknowledged yet.
 type CloudConsentView struct {
 	ModelID      string // model record id — posted on confirm/cancel
-	ModelName    string // display label, e.g. "GPT-4o"
-	ProviderName string // e.g. "OpenAI"
+	ModelName    string // display label, e.g. "Mistral Small"
+	ProviderName string // e.g. "Mistral"
 }
 
 // CloudConsent renders the first-use confirmation as a drop-in replacement for

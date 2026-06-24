@@ -25,11 +25,26 @@ func TestCloudPresetsCatalog(t *testing.T) {
 	for _, p := range presets {
 		keys[p.Key] = p
 	}
-	for _, want := range []string{"mistral", "openai"} {
+	for _, want := range []string{"mistral"} {
 		if _, ok := keys[want]; !ok {
 			t.Errorf("catalog missing key %q", want)
 		}
 	}
+
+	t.Run("EU-sovereignty: every preset is EU/GDPR and openai is not featured", func(t *testing.T) {
+		// The curated catalog only features EU-jurisdiction, GDPR-bound
+		// providers (see CloudPresets() sovereignty policy). A US provider
+		// like OpenAI must never reappear here, even though the generic
+		// transport could speak to it via the custom-endpoint form.
+		if _, ok := keys["openai"]; ok {
+			t.Error("catalog features key \"openai\"; the curated list is EU-only")
+		}
+		for _, p := range presets {
+			if !strings.Contains(p.Region, "EU") {
+				t.Errorf("%s: Region %q is not EU; curated presets must be EU/GDPR", p.Key, p.Region)
+			}
+		}
+	})
 
 	t.Run("exactly one default and it is mistral", func(t *testing.T) {
 		var defaults []string

@@ -31,10 +31,10 @@ database you own and can open with any SQLite tool.
 - **Models:** Balaur runs local GGUF models in-process. Install one from the
   settings models section (an absolute `.gguf` path) or via `BALAUR_CHAT_MODEL`;
   it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
-  Vulkan GPU. Local is the default and stays first-class; an OpenAI-compatible
-  cloud model (OpenAI, OpenRouter, Groq, …) can be added opt-in from the Models
-  page, consent-gated — never the default, and a turn only leaves the box on your
-  explicit, confirmed selection.
+  Vulkan GPU. Local is the default and stays first-class; an EU/GDPR-compliant
+  cloud model (Mistral today — the curated picker is EU-only for AI sovereignty)
+  can be added opt-in from the Models page, consent-gated — never the default,
+  and a turn only leaves the box on your explicit, confirmed selection.
 - **Heads:** switchable personas. A head is a name + purpose + avatar +
   optional capability-group tool filter. Built-in `balaur`, `scholar`,
   `planner`, and `coach` ship out of the box; create your own from the heads
