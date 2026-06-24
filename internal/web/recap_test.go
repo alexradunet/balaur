@@ -5,27 +5,31 @@ import (
 	"testing"
 )
 
-func TestRecapBandsNodeEmpty(t *testing.T) {
-	out := renderNodeHTML(recapBandsNode(nil))
-	if out != "" {
-		t.Errorf("empty []bandView: want empty string, got %q", out)
+func TestChronicleBandsNodeEmpty(t *testing.T) {
+	out := renderNodeHTML(chronicleBandsNode(nil))
+	if !strings.Contains(out, "k-section") {
+		t.Errorf("empty state: want k-section, got %q", out)
+	}
+	if !strings.Contains(out, "Chronicle") {
+		t.Errorf("empty state: want 'Chronicle' heading, got %q", out)
+	}
+	if !strings.Contains(out, "No history yet") {
+		t.Errorf("empty state: want 'No history yet' message, got %q", out)
 	}
 	if strings.Contains(out, "recap-band") {
 		t.Errorf("empty: must not contain recap-band: %s", out)
 	}
-	if strings.Contains(out, "stitch") {
-		t.Errorf("empty: must not contain stitch: %s", out)
-	}
 }
 
-func TestRecapBandsNodeStructure(t *testing.T) {
+func TestChronicleBandsNodeStructure(t *testing.T) {
 	view := []bandView{
 		{Heading: "Earlier this week", Cards: []recapView{
 			{Type: "day", Label: "Mon", Content: "busy day", Start: "1000", HasChild: false},
 		}},
 	}
-	out := renderNodeHTML(recapBandsNode(view))
+	out := renderNodeHTML(chronicleBandsNode(view))
 	for _, want := range []string{
+		`class="chronicle-focus"`,
 		`class="recap-band"`,
 		`class="recap-heading"`,
 		"◇",
@@ -38,19 +42,22 @@ func TestRecapBandsNodeStructure(t *testing.T) {
 	}
 }
 
-func TestRecapBandsNodeReverseOrder(t *testing.T) {
+func TestChronicleBandsNodeForwardOrder(t *testing.T) {
+	// Chronicle renders newest band first (natural order), unlike the old dock
+	// sentinel which reversed. A = "Earlier this week", B = "Past months":
+	// A should appear before B in the output.
 	view := []bandView{
 		{Heading: "A"},
 		{Heading: "B"},
 	}
-	out := renderNodeHTML(recapBandsNode(view))
-	posA := strings.Index(out, "A")
-	posB := strings.Index(out, "B")
+	out := renderNodeHTML(chronicleBandsNode(view))
+	posA := strings.Index(out, " A</h2>")
+	posB := strings.Index(out, " B</h2>")
 	if posA == -1 || posB == -1 {
 		t.Fatalf("A or B not found in output:\n%s", out)
 	}
-	if posB >= posA {
-		t.Errorf("reverse order: B must appear before A, got B@%d A@%d", posB, posA)
+	if posA >= posB {
+		t.Errorf("forward order: A must appear before B, got A@%d B@%d", posA, posB)
 	}
 }
 

@@ -244,6 +244,15 @@ func init() {
 			H:     24,
 			// no params — the unified queue of everything awaiting the owner's approval
 		},
+		{
+			// chronicle is the telescope-as-a-page: the full day→year recap history
+			// rendered in the side panel, each band card opening its period/day node.
+			Type:  "chronicle",
+			Label: "Chronicle",
+			Icon:  "hourglass",
+			W:     6,
+			H:     30,
+		},
 	}
 
 	byType = make(map[string]Spec, len(registry))

@@ -58,43 +58,6 @@ func (h *handlers) recapCard(p recap.Period, rec *core.Record) recapView {
 	return v
 }
 
-// recapBands renders the whole telescope above the chat history.
-func (h *handlers) recapBands(e *core.RequestEvent) error {
-	master, err := conversation.Master(h.app)
-	if err != nil {
-		return e.InternalServerError("master conversation", err)
-	}
-	oldest, ok := conversation.OldestMessageTime(h.app, master.Id)
-	if !ok {
-		return nil // no history, nothing further back — leave the sentinel hint
-	}
-	// Same timezone as generation (store.OwnerLocation).
-	loc := store.OwnerLocation(h.app)
-	oldest = oldest.In(loc)
-
-	var view []bandView
-	for _, band := range recap.Bands(time.Now().In(loc), oldest) {
-		bv := bandView{Heading: bandHeading(band.Type)}
-		for _, p := range band.Periods {
-			rec := recap.Find(h.app, master.Id, p)
-			card := h.recapCard(p, rec)
-			if card.Missing {
-				continue // quiet or not-yet-summarised periods stay invisible
-			}
-			bv.Cards = append(bv.Cards, card)
-		}
-		if len(bv.Cards) > 0 {
-			view = append(view, bv)
-		}
-	}
-
-	// The #recap sentinel (data-on:intersect__once) stays as the container; the
-	// bands fill its inner so the once-fired sentinel is never re-armed.
-	sse := datastar.NewSSE(e.Response, e.Request)
-	_ = sse.PatchElements(renderNodeHTML(recapBandsNode(view)), datastar.WithSelectorID("recap"), datastar.WithModeInner())
-	return nil
-}
-
 func bandHeading(periodType string) string {
 	switch periodType {
 	case "day":
@@ -323,23 +286,57 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 	return out
 }
 
-// recapBandsNode renders the telescope bands into #recap. Bands render in
-// reverse (the year band sits highest); empty input renders nothing.
-func recapBandsNode(view []bandView) g.Node {
+// chronicleView loads the telescope bands for the master conversation, oldest last.
+func (h *handlers) chronicleView() []bandView {
+	master, err := conversation.Master(h.app)
+	if err != nil {
+		return nil
+	}
+	oldest, ok := conversation.OldestMessageTime(h.app, master.Id)
+	if !ok {
+		return nil
+	}
+	loc := store.OwnerLocation(h.app)
+	oldest = oldest.In(loc)
+	var view []bandView
+	for _, band := range recap.Bands(time.Now().In(loc), oldest) {
+		bv := bandView{Heading: bandHeading(band.Type)}
+		for _, p := range band.Periods {
+			card := h.recapCard(p, recap.Find(h.app, master.Id, p))
+			if card.Missing {
+				continue
+			}
+			bv.Cards = append(bv.Cards, card)
+		}
+		if len(bv.Cards) > 0 {
+			view = append(view, bv)
+		}
+	}
+	return view
+}
+
+// chronicleBody is the Chronicle page body: telescope top-down (newest band first), or an empty state.
+func (hh *handlers) chronicleBody() g.Node {
+	return chronicleBandsNode(hh.chronicleView())
+}
+
+// chronicleBandsNode renders Chronicle bands top-down (newest first), or the empty state.
+func chronicleBandsNode(view []bandView) g.Node {
 	if len(view) == 0 {
-		return g.Text("")
+		return h.Section(h.Class("k-section"),
+			h.H2(h.Class("k-heading"), g.Text("Chronicle")),
+			h.P(h.Class("k-sub"), g.Text("No history yet. As days pass and recaps are kept, your past appears here — days, then weeks, months, and years.")))
 	}
-	bands := make([]g.Node, 0, len(view)+1)
-	for i := len(view) - 1; i >= 0; i-- {
-		b := view[i]
-		bands = append(bands, h.Section(h.Class("recap-band"),
-			h.H2(h.Class("recap-heading"),
-				h.Span(h.Class("recap-rune"), g.Text("◇")), g.Text(" "+b.Heading)),
-			recapCardsNode(b.Cards),
-		))
+	bands := make([]g.Node, 0, len(view)*2)
+	for _, b := range view {
+		bands = append(bands,
+			h.Section(h.Class("recap-band"),
+				h.H2(h.Class("recap-heading"),
+					h.Span(h.Class("recap-rune"), g.Text("◇")), g.Text(" "+b.Heading)),
+				recapCardsNode(b.Cards)),
+			h.Div(h.Class("stitch")))
 	}
-	bands = append(bands, h.Div(h.Class("stitch")))
-	return g.Group(bands)
+	return h.Div(h.Class("chronicle-focus"), g.Group(bands))
 }
 
 // recapCardsNode renders a row of recap cards. The card head+body OPEN the

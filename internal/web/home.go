@@ -26,6 +26,7 @@ func navDestinations() []ui.CommandItem {
 	return []ui.CommandItem{
 		{Label: "Quests", Key: "quests", Icon: "scroll", URL: "/ui/show/quests"},
 		{Label: "Life", Key: "life", Icon: "orb", URL: "/ui/show/lifelog"},
+		{Label: "Chronicle", Key: "chronicle", Icon: "hourglass", URL: "/ui/show/chronicle"},
 		{Label: "Facts", Key: "facts", Icon: "tome", URL: "/ui/show/memory?category=fact"},
 		{Label: "Preferences", Key: "preferences", Icon: "tome", URL: "/ui/show/memory?category=preference"},
 		{Label: "People", Key: "people", Icon: "tome", URL: "/ui/show/memory?category=person"},
@@ -53,6 +54,7 @@ func navRailPrimary() []ui.CommandItem {
 	return []ui.CommandItem{
 		{Label: "Quests", Icon: "scroll", URL: "/ui/show/quests"},
 		{Label: "Life", Icon: "orb", URL: "/ui/show/lifelog"},
+		{Label: "Chronicle", Icon: "hourglass", URL: "/ui/show/chronicle"},
 		{Label: "Memory", Icon: "tome", URL: "/ui/show/memory?category=fact"},
 		{Label: "Skills", Icon: "key", URL: "/ui/show/skills"},
 		{Label: "Settings", Icon: "shield", URL: "/ui/show/settings?section=profile"},
