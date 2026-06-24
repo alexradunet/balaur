@@ -11,6 +11,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/life"
+	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
@@ -26,13 +27,15 @@ type DayLine struct {
 
 // DayFocusView is the day focus body's view-model.
 type DayFocusView struct {
-	Date    string
-	Label   string
-	IsToday bool
-	Journal []DayJournalEntry
-	Recap   string
-	Done    []DayLine
-	Logs    []DayLine
+	Date        string
+	Label       string
+	IsToday     bool
+	ParentURL   string // telescope breadcrumb up to the containing week
+	ParentLabel string
+	Journal     []DayJournalEntry
+	Recap       string
+	Done        []DayLine
+	Logs        []DayLine
 }
 
 // BuildDayFocus assembles the DayFocusView from live data for the given date
@@ -53,6 +56,14 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 		Date:    d.Format(dayLayout),
 		Label:   d.Format("Monday, January 2 2006"),
 		IsToday: d.Equal(today),
+	}
+
+	// Telescope breadcrumb up to the containing week, mirroring the period card
+	// (period.go). The day is the bottom rung of the same drill-down.
+	if pt := recap.ParentType("day"); pt != "" {
+		parent := recap.Containing(pt, d)
+		v.ParentURL = periodShowURL(parent)
+		v.ParentLabel = recap.Label(parent)
 	}
 
 	var convID string
@@ -139,12 +150,19 @@ func DayJournal(v DayFocusView) g.Node {
 }
 
 // DayFocus renders the day card's full-canvas focus body: the journal section,
-// the recap summary, done tasks, and the day's log. Nav-free — plan 093.
+// the recap summary, done tasks, and the day's log. The only navigation is the
+// telescope breadcrumb up to the containing week (plan 093 kept prev/next-day
+// arrows out; the up-crumb was added so the day isn't a dead end).
 // Ports {{define "day_focus"}} from web/templates/day-focus.html.
 func DayFocus(v DayFocusView) g.Node {
 	titleKids := []g.Node{h.Class("day-title"), g.Text(v.Label)}
 	if v.IsToday {
 		titleKids = append(titleKids, g.Text(" "), h.Span(h.Class("tag"), g.Text("today")))
+	}
+
+	var crumb g.Node
+	if v.ParentURL != "" {
+		crumb = h.P(h.Class("period-crumb"), periodLink("↑ "+v.ParentLabel, v.ParentURL))
 	}
 
 	// Recap section content
@@ -163,6 +181,7 @@ func DayFocus(v DayFocusView) g.Node {
 
 	return h.Div(h.Class("day-focus"),
 		h.H2(titleKids...),
+		crumb,
 		DayJournal(v),
 		h.Div(h.Class("stitch")),
 		h.Section(h.Class("k-section"),

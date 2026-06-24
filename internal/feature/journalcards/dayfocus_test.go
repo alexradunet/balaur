@@ -8,14 +8,17 @@ import (
 )
 
 // TestDayFocusContract guards the class/markup contract the served CSS
-// (day-focus, day-title, day-journal, tl-items, …) depends on — nav-free (plan 093).
+// (day-focus, day-title, day-journal, tl-items, …) depends on. The only nav is
+// the telescope breadcrumb up to the week (plan 093 kept prev/next-day arrows out).
 // Note: gomponents HTML-escapes attribute values, so ' → &#39; and & → &amp;.
 func TestDayFocusContract(t *testing.T) {
 	v := journalcards.DayFocusView{
-		Date:    "2026-06-10",
-		Label:   "Wednesday, June 10 2026",
-		IsToday: false,
-		Recap:   "You sorted the notary papers.",
+		Date:        "2026-06-10",
+		Label:       "Wednesday, June 10 2026",
+		IsToday:     false,
+		ParentURL:   "/ui/show/period?type=week&start=1749506400",
+		ParentLabel: "Week of June 8",
+		Recap:       "You sorted the notary papers.",
 		Journal: []journalcards.DayJournalEntry{
 			{ID: "j1", Time: "21:40", Text: "A good, quiet day."},
 		},
@@ -33,6 +36,11 @@ func TestDayFocusContract(t *testing.T) {
 		`<div class="day-focus">`,
 		// Title heading (no nav wrapper)
 		`<h2 class="day-title">Wednesday, June 10 2026</h2>`,
+		// Telescope breadcrumb up to the containing week
+		`<p class="period-crumb">`,
+		`class="recap-daylink"`,
+		`↑ Week of June 8`,
+		`basmOpenPanel()`,
 		// Journal section
 		`<section class="k-section" id="day-journal">`,
 		`<h2 class="k-heading">Your thoughts</h2>`,
