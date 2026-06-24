@@ -8,10 +8,36 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 12a48bf..HEAD -- internal/knowledge/ internal/turn/turn.go internal/search/index.go main.go`
+> `git diff --stat ced5326..HEAD -- internal/knowledge/ internal/turn/turn.go internal/search/index.go main.go`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
+
+> **⚠ REVISION (round 2) — REQUIRED, read before Step 1.** A first execution of
+> this plan passed all functional criteria but introduced a **data race**: the
+> per-turn `knowledge.Touch` (called from `internal/turn/turn.go` after the model
+> reads context) does `app.Save(rec)` on records that may be the **cached
+> pointers** returned by `UpfrontMemories` — so one turn mutates a shared cached
+> record while another goroutine reads the cached set. This version MUST fix it:
+> 1. **Invariant: a cached record is never passed to `app.Save`.** Make the cache
+>    hand callers records that `Touch`/`app.Save` will never mutate — simplest
+>    correct option: cache an immutable snapshot and have `UpfrontMemories` /
+>    `ActiveSkills` return **fresh `*core.Record` copies** per call (copying a
+>    dozen records is far cheaper than the full `ListByTypeStatus` scan + hydrate
+>    this plan removes). (Alternatively, ensure the records fed to the per-turn
+>    `Touch` are re-loaded by id, never the cached instances.)
+> 2. Add a concurrency regression test under the race detector: one goroutine
+>    loops `UpfrontMemories`/`BuildContext`, another loops `Touch` on an upfront
+>    memory. Run `CGO_ENABLED=1 go test -race ./internal/knowledge/ ./internal/turn/`
+>    (CI runs the race detector this way) — must be clean.
+> 3. Document the concurrency invariant in the cache's doc comment (not only the
+>    selection/ordering reasoning).
+> Treat this as both a Done criterion and a STOP condition: if you cannot
+> guarantee the cache is never mutated via `Touch`, STOP and report instead of
+> shipping the race. **Base note:** this plan now executes against `origin/main`
+> (`ced5326`), whose `main.go` already carries plan 190's no-args launcher — put
+> your cache-invalidation hook in the existing `registerSearchIndex` hook area
+> and edit `main.go` additively; do NOT touch 190's launcher branch.
 
 ## Status
 

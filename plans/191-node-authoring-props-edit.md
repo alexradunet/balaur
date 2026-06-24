@@ -8,10 +8,29 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 12a48bf..HEAD -- internal/tools/knowledge.go internal/tools/graph.go internal/nodes/nodes.go internal/nodes/schema.go internal/cli/knowledge.go internal/self/knowledge.md`
+> `git diff --stat ced5326..HEAD -- internal/tools/knowledge.go internal/tools/graph.go internal/nodes/nodes.go internal/nodes/schema.go internal/cli/knowledge.go internal/self/knowledge.md`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
+
+> **⚠ REVISION (round 2) — REQUIRED, read before Step 1.** A first execution passed
+> all functional criteria but left a **consent hole**: the new `node_edit` verb
+> (and the `nodes.Update` helper it calls) can edit ANY node by id — including
+> `memory` and `skill` nodes, which must change only through the consent-gated
+> `propose_edit` path (a PRODUCT pillar). This version MUST guard it:
+> 1. `nodes.Update` (or `node_edit` before calling it) must REJECT nodes whose
+>    type is not owner-authored — specifically reject `memory` and `skill`. Load
+>    `nodes.OwnerAuthoredTypes` and refuse any type not in that set, returning a
+>    clear error that steers the model to `remember` / `propose_edit` for
+>    memory/skill. (Owner-authored types — `note`/`book`/`person`/`place`/`idea` —
+>    are born active and editable in place; memory/skill are not.)
+> 2. Add a test asserting `node_edit`/`nodes.Update` on a `memory` node (and a
+>    `skill` node) is REJECTED, and on an owner-authored type succeeds.
+> Treat this as both a Done criterion and a STOP condition — do NOT ship a
+> `node_edit` that can mutate memory/skill. **Base note:** this plan now executes
+> against `origin/main` (`ced5326`); `internal/self/knowledge.md` already carries
+> plans 179 + 190's edits — add your node-verb docs additively in the tools
+> section, do NOT revert those.
 
 ## Status
 
