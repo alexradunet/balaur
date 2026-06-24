@@ -196,3 +196,90 @@ func TestEnsureSummariesHierarchy(t *testing.T) {
 		t.Fatalf("year content: %q", years[0].GetString("content"))
 	}
 }
+
+func TestEnsureSummariesHighWaterSkipsSettledDays(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+	seedTurn(t, app, master.Id, "day one", time.Date(2026, 5, 4, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "day two", time.Date(2026, 5, 5, 10, 0, 0, 0, loc))
+
+	client := newEchoClient()
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, loc)
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+	// Both day summaries exist now.
+	days, _ := app.FindRecordsByFilter("summaries", "period_type = 'day'", "period_start", 0, 0, nil)
+	if len(days) != 2 {
+		t.Fatalf("day summaries = %d, want 2", len(days))
+	}
+
+	// Delete May 4's summary — it is BELOW the high-water (newest contiguous
+	// settled day = May 5). A rerun must NOT regenerate it (loop starts past it).
+	may4 := Day(time.Date(2026, 5, 4, 0, 0, 0, 0, loc))
+	if rec := Find(app, master.Id, may4); rec != nil {
+		if err := app.Delete(rec); err != nil {
+			t.Fatalf("delete: %v", err)
+		}
+	}
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("rerun: %v", err)
+	}
+	if Find(app, master.Id, may4) != nil {
+		t.Fatalf("May 4 summary was regenerated; high-water did not skip it")
+	}
+}
+
+func TestEnsureSummariesFillsGapBeforeHighWater(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+	// Three chat days; we simulate an import that only summarised the newest.
+	seedTurn(t, app, master.Id, "gap day", time.Date(2026, 5, 4, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "mid day", time.Date(2026, 5, 5, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "newest", time.Date(2026, 5, 6, 10, 0, 0, 0, loc))
+
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, loc)
+	client := newEchoClient()
+	// FIRST run with no high-water: walks from oldest, fills all three, and the
+	// gap (May 4) is filled because the mark is empty on a fresh box.
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+	for _, day := range []time.Time{
+		time.Date(2026, 5, 4, 0, 0, 0, 0, loc),
+		time.Date(2026, 5, 5, 0, 0, 0, 0, loc),
+		time.Date(2026, 5, 6, 0, 0, 0, 0, loc),
+	} {
+		if Find(app, master.Id, Day(day)) == nil {
+			t.Fatalf("day %s summary missing — gap not filled", day.Format("2006-01-02"))
+		}
+	}
+}
+
+func TestEnsureSummariesFreshBoxFromOldest(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+	seedTurn(t, app, master.Id, "oldest", time.Date(2026, 4, 1, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "newer", time.Date(2026, 4, 3, 10, 0, 0, 0, loc))
+
+	now := time.Date(2026, 4, 10, 12, 0, 0, 0, loc)
+	if err := EnsureSummaries(context.Background(), app, newEchoClient(), master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+	days, _ := app.FindRecordsByFilter("summaries", "period_type = 'day'", "period_start", 0, 0, nil)
+	if len(days) != 2 {
+		t.Fatalf("fresh-box day summaries = %d, want 2 (both chat days from oldest)", len(days))
+	}
+}
