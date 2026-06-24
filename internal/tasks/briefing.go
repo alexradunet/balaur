@@ -11,6 +11,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
 )
 
@@ -139,10 +140,9 @@ func dayLine(r *core.Record, now time.Time, overdue bool, streak int) string {
 // Today context block stays commitments.
 func loggedYesterday(app core.App, now time.Time) string {
 	ys := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -1)
-	recs, err := app.FindRecordsByFilter("entries",
-		"kind != 'completion' && kind != 'journal' && noted_at >= {:s} && noted_at < {:e}",
-		"noted_at", 12, 0,
-		dbx.Params{"s": store.PBTime(ys), "e": store.PBTime(ys.AddDate(0, 0, 1))})
+	ye := ys.AddDate(0, 0, 1)
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'measure' && status = 'active'", "", 0, 0, nil)
 	if err != nil || len(recs) == 0 {
 		return ""
 	}
@@ -151,15 +151,37 @@ func loggedYesterday(app core.App, now time.Time) string {
 		if len(parts) >= 4 {
 			break
 		}
-		p := r.GetString("kind")
-		if v := r.GetFloat("value_num"); v != 0 {
-			p = fmt.Sprintf("%s %g %s", p, v, r.GetString("unit"))
-		} else if t := compressLine(r.GetString("text"), 40); t != "" {
-			p = p + ": " + t
+		// noted_at lives in props (JSON); PB filters can't reach it, so filter in Go.
+		notedAt, perr := time.Parse("2006-01-02 15:04:05.000Z", nodes.PropString(r, "noted_at"))
+		if perr != nil || notedAt.Before(ys) || !notedAt.Before(ye) {
+			continue
+		}
+		kind := nodes.PropString(r, "kind")
+		p := kind
+		if v := measureValueNum(r); v != 0 {
+			p = fmt.Sprintf("%s %g %s", kind, v, nodes.PropString(r, "unit"))
+		} else if t := compressLine(r.GetString("body"), 40); t != "" {
+			p = kind + ": " + t
 		}
 		parts = append(parts, strings.TrimSpace(p))
 	}
+	if len(parts) == 0 {
+		return ""
+	}
 	return "logged yesterday: " + strings.Join(parts, " · ")
+}
+
+// measureValueNum reads a measure node's numeric value_num out of props (0 when
+// absent/non-numeric). nodes.PropString covers strings; there is no PropFloat.
+func measureValueNum(r *core.Record) float64 {
+	var p map[string]any
+	if err := r.UnmarshalJSONField("props", &p); err != nil {
+		return 0
+	}
+	if v, ok := p["value_num"].(float64); ok {
+		return v
+	}
+	return 0
 }
 
 func compressLine(s string, n int) string {

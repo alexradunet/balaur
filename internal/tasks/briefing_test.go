@@ -9,8 +9,30 @@ import (
 
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llmtest"
+	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
+
+// seedMeasure writes a type=measure node the way internal/life.Log does, so
+// the briefing's loggedYesterday reads it out of the nodes spine (the real
+// production source — the entries column path is dead post-migration).
+func seedMeasure(t *testing.T, app core.App, kind, unit, body string, valueNum float64, notedAt time.Time) {
+	t.Helper()
+	props := map[string]any{
+		"kind":     kind,
+		"noted_at": notedAt.UTC().Format("2006-01-02 15:04:05.000Z"),
+	}
+	if valueNum != 0 {
+		props["value_num"] = valueNum
+	}
+	if unit != "" {
+		props["unit"] = unit
+	}
+	title := kind + " " + notedAt.UTC().Format("2006-01-02")
+	if _, err := nodes.Create(app, "measure", title, body, nodes.StatusActive, props); err != nil {
+		t.Fatalf("seeding %s measure node: %v", kind, err)
+	}
+}
 
 func briefingMessages(t *testing.T, app core.App) []*core.Record {
 	t.Helper()
@@ -134,19 +156,15 @@ func TestBriefingMentionsYesterdayLog(t *testing.T) {
 	if _, err := Create(app, CreateOpts{Title: "Pay rent", Due: at(15)}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	// An owner-defined tracker entry from yesterday (kind is free text).
-	col, err := app.FindCollectionByNameOrId("entries")
-	if err != nil {
-		t.Fatalf("entries collection: %v", err)
-	}
-	rec := core.NewRecord(col)
-	rec.Set("kind", "weight")
-	rec.Set("value_num", 82.5)
-	rec.Set("unit", "kg")
-	rec.Set("noted_at", now.AddDate(0, 0, -1).UTC())
-	if err := app.Save(rec); err != nil {
-		t.Fatalf("save entry: %v", err)
-	}
+	// Owner-logged measures live in the nodes spine as type=measure (post the
+	// measures_to_nodes migration), not the dead entries column.
+	yest := now.AddDate(0, 0, -1)
+	// A numeric measure from yesterday: rendered as "kind value unit".
+	seedMeasure(t, app, "weight", "kg", "", 82.5, yest)
+	// A text-only measure from yesterday: rendered as "kind: <body>".
+	seedMeasure(t, app, "mood", "", "calm and focused", 0, yest)
+	// A measure two days ago must NOT appear (the window is yesterday only).
+	seedMeasure(t, app, "steps", "", "", 9000, now.AddDate(0, 0, -2))
 
 	if err := Briefing(app, nil, now, 9); err != nil {
 		t.Fatalf("briefing: %v", err)
@@ -155,8 +173,18 @@ func TestBriefingMentionsYesterdayLog(t *testing.T) {
 	if len(msgs) != 1 {
 		t.Fatalf("messages = %d, want 1", len(msgs))
 	}
-	if c := msgs[0].GetString("content"); !strings.Contains(c, "logged yesterday: weight 82.5 kg") {
-		t.Errorf("yesterday line missing in:\n%s", c)
+	c := msgs[0].GetString("content")
+	if !strings.Contains(c, "logged yesterday: ") {
+		t.Fatalf("yesterday line missing in:\n%s", c)
+	}
+	if !strings.Contains(c, "weight 82.5 kg") {
+		t.Errorf("numeric measure missing in:\n%s", c)
+	}
+	if !strings.Contains(c, "mood: calm and focused") {
+		t.Errorf("text measure missing in:\n%s", c)
+	}
+	if strings.Contains(c, "steps") {
+		t.Errorf("measure from two days ago leaked into the yesterday line:\n%s", c)
 	}
 }
 
