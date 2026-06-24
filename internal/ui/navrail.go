@@ -19,9 +19,8 @@ type NavRailProps struct {
 }
 
 // NavRail renders the always-visible right icon rail: a panel expand/collapse
-// toggle, a close control (clears the active artifact via /ui/show/close), one
-// icon per Primary destination, and a chooser (lens) that opens a popover
-// listing the rest of the destinations. Destination clicks fire the
+// toggle, one icon per Primary destination, and a chooser (lens) that opens a
+// popover listing the rest of the destinations. Destination clicks fire the
 // non-polluting /ui/show door (@get) and expand the panel live via
 // basmOpenPanel(); the rail reuses ui.CommandItem so the composer palette and
 // the rail share one destination source (no second nav list to drift). The
@@ -40,16 +39,6 @@ func NavRail(p NavRailProps) g.Node {
 		g.Attr("aria-expanded", expanded),
 		h.Span(h.Class("navrail-chevron"), g.Attr("aria-hidden", "true"), g.Text("›")),
 	)
-	// Close — clears the active artifact (and the persisted pointer) via @get,
-	// morphing the panel back to its empty placeholder. The panel head carries no
-	// controls now, so close lives on the rail beside the collapse toggle.
-	closeBtn := h.Button(
-		h.Class("navrail-btn navrail-close"), h.Type("button"),
-		g.Attr("data-on:click__prevent", "@get('/ui/show/close')"),
-		h.Aria("label", "Close panel"), h.Title("Close panel"),
-		h.Span(h.Class("navrail-glyph"), g.Attr("aria-hidden", "true"), g.Text("✕")),
-	)
-
 	primary := make([]g.Node, 0, len(p.Primary))
 	for _, it := range p.Primary {
 		primary = append(primary, navRailButton(it, it.URL == p.ActiveURL))
@@ -59,7 +48,7 @@ func NavRail(p NavRailProps) g.Node {
 		h.Class("navrail"), h.ID("navrail"),
 		g.Attr("aria-label", "Navigation"),
 		g.Attr("data-signals:navOpen", "false"),
-		toggle, closeBtn,
+		toggle,
 		h.Nav(append([]g.Node{h.Class("navrail-list")}, primary...)...),
 	}
 

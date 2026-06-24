@@ -192,7 +192,7 @@ func navrailStory() Story {
 	}
 	return Story{
 		ID: "navrail", Group: "Navigation", Title: "Nav rail (right icon rail)", OnDock: true,
-		Blurb: "The always-on, far-right icon rail for the single-page chat shell. The top toggle expands/collapses the right panel (the chevron flips while collapsed); the close (✕) control beneath it clears the active artifact via @get /ui/show/close (the panel head carries no controls now); each Primary destination is a dedicated icon that opens its card in the panel via a Datastar @get to the non-polluting /ui/show door (and expands the panel via basmOpenPanel); the chooser (lens) opens a parchment popover listing the rest. ActiveURL highlights the matching icon (gold inset + aria-current). Items reuse ui.CommandItem, the same source as the composer /-palette.",
+		Blurb: "The always-on, far-right icon rail for the single-page chat shell. The top toggle expands/collapses the right panel (the chevron flips while collapsed); each Primary destination is a dedicated icon that opens its card in the panel via a Datastar @get to the non-polluting /ui/show door (and expands the panel via basmOpenPanel); the chooser (lens) opens a parchment popover listing the rest. ActiveURL highlights the matching icon (gold inset + aria-current). Items reuse ui.CommandItem, the same source as the composer /-palette.",
 		Variants: []Variant{
 			{"expanded · Quests active", ui.NavRail(ui.NavRailProps{Primary: primary, More: more, ActiveURL: "/ui/show/quests"})},
 			{"collapsed", ui.NavRail(ui.NavRailProps{Primary: primary, More: more, Collapsed: true})},
