@@ -56,6 +56,7 @@ func main() {
 		registerBriefing(se.App)
 		registerSearchIndex(se.App)
 		registerGraphLinks(se.App)
+		registerDayLinks(se.App)
 		return se.Next()
 	})
 
@@ -255,6 +256,23 @@ func registerSearchIndex(app core.App) {
 	app.OnRecordAfterCreateSuccess("nodes").BindFunc(upsertHook)
 	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(upsertHook)
 	app.OnRecordAfterDeleteSuccess("nodes").BindFunc(deleteHook)
+}
+
+// registerDayLinks auto-creates an on_day edge from every new non-day node to
+// its creation-day node. Bound only to create (a node's creation day is fixed).
+// A failure is logged but never fatal — a day-link error must not block the save.
+// The type != "day" guard is the recursion guard: creating a day node would
+// otherwise trigger the hook again, which would create another day node, forever.
+func registerDayLinks(app core.App) {
+	hook := func(e *core.RecordEvent) error {
+		if e.Record.GetString("type") != "day" {
+			if err := nodes.LinkOnDay(app, e.Record); err != nil {
+				app.Logger().Warn("day: on_day link failed", "id", e.Record.Id, "err", err)
+			}
+		}
+		return e.Next()
+	}
+	app.OnRecordAfterCreateSuccess("nodes").BindFunc(hook)
 }
 
 // registerGraphLinks keeps node→node "links" edges in sync with [[wikilinks]]

@@ -21,6 +21,7 @@ var inverseLabels = map[string]string{
 	"relates_to": "relates to",
 	"part_of":    "has part",
 	"about":      "referenced by",
+	"on_day":     "created on",
 }
 
 // InverseLabel returns the display inverse for a relation type.
