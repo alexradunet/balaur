@@ -90,14 +90,21 @@ One binary, layered as: gateway → turn pipeline → business logic.
   restart — or via BALAUR_PROCESSOR).
 - Data lives in PocketBase collections: conversations, messages,
   nodes, edges, tasks, entries, summaries, heads,
-  llm_providers, llm_models, llm_settings, extensions, audit_log.
+  llm_providers, llm_models, llm_settings, extensions, audit_log,
+  node_types.
   Inspectable with any SQLite tool. The knowledge spine is unified:
   every memory, skill, journal day, note, and typed object (person,
   book, idea, place) is a typed row in `nodes` (distinguished by `type`),
   linked to other nodes through `edges`. Node bodies support
   `[[wikilinks]]`: on save, each link becomes a node→node `links` edge,
   resolving by title to an existing active node or creating an active stub
-  node. Consent lives in `nodes.status`:
+  node. Node types are owner-extensible: `nodes.type` is an open string
+  validated against the `node_types` registry collection (a config sibling
+  to `llm_models`). Each registry row carries the type's name, label, icon,
+  and `born_status` — the consent default for agent-created nodes of that
+  type ("active" for owner-authored types, "proposed" for consent-gated
+  types like memory and skill). Adding a new type is one registry row; no
+  code change needed. Consent lives in `nodes.status`:
   notes/journal/typed objects are born active (owner-authored, trusted);
   memory/skill are born proposed and become active only on the owner's
   approval. Traversal and search filter to status=active — a proposed or

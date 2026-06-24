@@ -19,11 +19,12 @@ func hasIndex(t *testing.T, app core.App, name string) bool {
 func TestSchemaBaseline(t *testing.T) {
 	app := storetest.NewApp(t)
 
-	// 1. All 14 app collections exist (+ built-in users).
+	// 1. All 15 app collections exist (+ built-in users).
 	for _, name := range []string{
 		"users", "heads", "conversations", "messages", "nodes", "edges",
 		"audit_log", "summaries", "tasks", "entries", "extensions",
 		"llm_providers", "llm_models", "llm_settings", "owner_settings",
+		"node_types",
 	} {
 		if _, err := app.FindCollectionByNameOrId(name); err != nil {
 			t.Errorf("collection %q missing: %v", name, err)
@@ -106,6 +107,37 @@ func TestSchemaBaseline(t *testing.T) {
 		t.Errorf("owner_settings soul_avatar seed missing: %v", err)
 	} else if rec.GetString("value") != "male" {
 		t.Errorf("soul_avatar = %q, want male", rec.GetString("value"))
+	}
+
+	// 8. node_types unique index.
+	if !hasIndex(t, app, "idx_node_types_name") {
+		t.Error("index idx_node_types_name missing")
+	}
+
+	// 9. node_types has the eight seeded types including note and memory.
+	ntRecs, err := app.FindRecordsByFilter("node_types", "", "", 0, 0, nil)
+	if err != nil {
+		t.Fatalf("node_types seed check: %v", err)
+	}
+	if len(ntRecs) < 8 {
+		t.Errorf("node_types seed: got %d rows, want >= 8", len(ntRecs))
+	}
+	ntNames := make(map[string]bool, len(ntRecs))
+	for _, r := range ntRecs {
+		ntNames[r.GetString("name")] = true
+	}
+	for _, name := range []string{"note", "memory", "skill", "journal", "person", "book", "idea", "place"} {
+		if !ntNames[name] {
+			t.Errorf("node_types seed: %q missing", name)
+		}
+	}
+
+	// 10. nodes.type is now a TextField (no longer a SelectField).
+	nodesCol := mustCol(t, app, "nodes")
+	if f := nodesCol.Fields.GetByName("type"); f == nil {
+		t.Error("nodes.type field missing")
+	} else if _, ok := f.(*core.TextField); !ok {
+		t.Errorf("nodes.type should be TextField, got %T", f)
 	}
 }
 
