@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat ced5326..HEAD -- internal/knowledge/ internal/turn/turn.go internal/search/index.go main.go`
+> `git diff --stat b6d02c5..HEAD -- internal/knowledge/ internal/turn/turn.go internal/search/index.go main.go`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -26,10 +26,18 @@
 >    dozen records is far cheaper than the full `ListByTypeStatus` scan + hydrate
 >    this plan removes). (Alternatively, ensure the records fed to the per-turn
 >    `Touch` are re-loaded by id, never the cached instances.)
-> 2. Add a concurrency regression test under the race detector: one goroutine
->    loops `UpfrontMemories`/`BuildContext`, another loops `Touch` on an upfront
->    memory. Run `CGO_ENABLED=1 go test -race ./internal/knowledge/ ./internal/turn/`
->    (CI runs the race detector this way) — must be clean.
+> 2. **The regression test MUST FAIL when the fix is reverted (round-3 update).**
+>    A `-race`-only test does NOT work here — `app.Save`'s internal locking masks
+>    the window, so reverting the fix still passes under `-race`. Write a
+>    DETERMINISTIC corruption assertion instead: warm the cache, capture an
+>    upfront memory's `use_count` via `nodes.PropInt` on the record returned by
+>    `UpfrontMemories`; call `Touch(app, Memory, thatReturnedRecord)`; then
+>    re-read `UpfrontMemories` and assert the snapshot's `use_count` is UNCHANGED
+>    (Touch mutated only the throwaway copy, never the cached snapshot). PROVE the
+>    test is a real guard by temporarily reverting `copyForRead` to `return recs`
+>    and confirming the new test FAILS, then restore (report that you did this).
+>    Keep a `-race` test too (`CGO_ENABLED=1 go test -race ./internal/knowledge/
+>    ./internal/turn/`) as a bonus, but the deterministic assertion is the guard.
 > 3. Document the concurrency invariant in the cache's doc comment (not only the
 >    selection/ordering reasoning).
 > Treat this as both a Done criterion and a STOP condition: if you cannot
