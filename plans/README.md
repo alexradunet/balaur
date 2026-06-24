@@ -56,6 +56,7 @@ These hold for **all** plans 164–168. They are deliberate and load-bearing:
 | 168 | Fold life-log into the spine (type=measure nodes) | P2 | L | 164, 165 | DONE (merged to main; 1 revision round) |
 | 169 | Day pages (`type=day` nodes + `on_day` edges) | P2 | M | 164, 165, 166 | DONE (merged to main; clean first pass) |
 | 170 | Rich interconnected 2-month demo seed | P2 | L | 164–169 | DONE (merged to main; clean first pass) |
+| 171 | Unify journal node into the day node (one `type=day` page/date) | P2 | L | 160, 168, 169 | DONE (merged to main; clean first pass) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 
