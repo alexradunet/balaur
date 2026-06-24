@@ -298,12 +298,13 @@ func relatedStory() Story {
 	}
 }
 
-// graphStory documents the 1-hop SVG graph card: the focus node at center and
-// its direct neighbors on a single ring, server-rendered (no JS physics).
+// graphStory documents the 1-hop graph card: live, an interactive force-graph
+// canvas, with the concentric SVG (focus node + neighbors on one ring) as the
+// no-JS / storybook fallback shown here.
 func graphStory() Story {
 	return Story{
 		ID: "graphcard", Group: "Cards", Title: "GraphCard",
-		Blurb: "A static 1-hop snapshot of a node's neighborhood: the focus node (gold) at center, its direct neighbors (teal) on one ring, edges drawn center-to-neighbor. Server-rendered SVG, Datastar-only — no physics, no force-direction, no zoom (deferred). status=active only. Node titles render only inside escaped <text>/<title>, never in a coordinate or attribute. Neighbor dots morph the panel to that node's show card; an empty neighborhood still draws the focus dot + a \"No links yet\" caption.",
+		Blurb: "A node's 1-hop neighborhood: the focus node (gold) at center, its direct neighbors (teal) on one ring, edges center-to-neighbor. Live, this is an interactive force-graph canvas (#graphbox, driven by /static/graph-canvas.js over /ui/graph.json); the server-rendered concentric SVG shown here is the no-JS / storybook fallback. status=active only. Node titles render only inside escaped <text>/<title>, never in a coordinate or attribute. Neighbor dots morph the panel to that node's show card; an empty neighborhood still draws the focus dot + a \"No links yet\" caption.",
 		Variants: []Variant{
 			{"3 neighbors", graphcards.GraphCard(graphcards.GraphView{
 				FocusID: "n1", FocusTitle: "Greenhouse plan", FocusIcon: "💡",
@@ -322,12 +323,12 @@ func graphStory() Story {
 			{"Neighbors", "[]GraphNode", "nil", "1-hop neighbors; capped at 24 in the renderer. Each is a per-type glyph + escaped label."},
 		},
 		Dos: []string{
-			"Keep it a static 1-hop snapshot — Neighborhood gives the active, de-duped set.",
+			"Feed Neighborhood's active, de-duped 1-hop set; the SVG fallback caps the ring at 24 for legibility.",
 			"Render titles only through g.Text in <text>/<title>; coordinates are computed floats.",
 			"Draw the focus node last so it sits on top.",
 		},
 		Donts: []string{
-			"Add physics or interactivity — the graph is a read-only 1-hop snapshot (deferred).",
+			"Pack more than ~24 neighbors into the SVG ring — a denser ring is unreadable (the renderer caps it).",
 			"Interpolate a node title into an SVG coordinate, path, or attribute.",
 		},
 	}
@@ -719,7 +720,7 @@ func periodfocusStory() Story {
 }
 
 // settingsfocusStory documents the settings panel body — section content with
-// an in-panel tab strip (Profile / Appearance / Models / Heads), navigated via
+// an in-panel tab strip (Profile / Models / Heads / Nudges / Capabilities), navigated via
 // /ui/show/settings (plan 101). The sidebar Settings entry summons the panel;
 // tabs switch sections without persisting a new chip or transcript row.
 func settingsfocusStory() Story {
@@ -747,15 +748,18 @@ func settingsfocusStory() Story {
 
 	return Story{
 		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
-		Blurb: "The settings panel body: an in-panel tab strip (Profile / Appearance / Models / Heads) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel — runtime rows, the CPU/GPU control, and the official-model download/install CTA.",
+		Blurb: "The settings panel body: an in-panel tab strip (Profile / Models / Heads / Nudges / Capabilities) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel — runtime rows, the CPU/GPU control, and the official-model download/install CTA; Heads, Nudges, and Capabilities render their respective section views.",
 		Variants: []Variant{
 			{"profile section", settingscards.SettingsFocus(profileView)},
 			{"models section", settingscards.SettingsFocus(modelsView)},
 		},
 		Props: []Prop{
-			{"Section", "string", `"profile"`, `Active section: "profile", "models", "heads", or "appearance". Controls which content renders.`},
+			{"Section", "string", `"profile"`, `Active section: "profile", "models", "heads", "nudges", or "capabilities". Controls which content renders.`},
 			{"Profile", "ProfileView", "—", "Profile section view: OwnerName, AvatarOptions (soul), BalaurOptions (head), SavedName flash."},
 			{"Models", "modelcards.PanelView", "—", "Models panel view; passed directly to modelcards.Panel."},
+			{"Heads", "headscards.HeadsView", "—", `Heads section view; rendered when Section == "heads".`},
+			{"Nudge", "NudgeView", "—", `Nudges section view; rendered when Section == "nudges".`},
+			{"Capabilities", "CapabilitiesView", "—", `Capabilities section view; rendered when Section == "capabilities".`},
 		},
 		Dos: []string{
 			"Use #identity-card, #soul-section, #balaur-section as the SSE outer-patch targets after profile POSTs.",
