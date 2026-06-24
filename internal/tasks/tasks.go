@@ -211,13 +211,19 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 	}
 
 	anchor := rec.GetDateTime("due").Time().In(now.Location())
+	after := now
 	// From-done anchoring is an interval concept; calendar-pattern rules
 	// keep their day-and-hour pattern even on records that predate the
 	// Create-time validation.
 	if rec.GetBool("recur_from_done") && !calendarRule(rule) {
-		anchor = now
+		anchor = now // interval-from-completion: next is one step from completion
+	} else if anchor.After(now) {
+		// Early completion: the owner satisfied the current (future) occurrence.
+		// Advance strictly past it so the just-finished slot is not re-scheduled
+		// (and, with nudged_at cleared below, never re-nudged) at its old due.
+		after = anchor
 	}
-	next := Next(rule, anchor, now)
+	next := Next(rule, anchor, after)
 	props["due"] = fmtTime(next.UTC())
 	delete(props, "nudged_at")
 	delete(props, "snoozed_until")
