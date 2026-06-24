@@ -394,7 +394,11 @@ whether the seam is configured and valid.
 
 Layout map (file → concern):
 
-- main.go — wire-up: PocketBase app, migrations, CLI, routes, crons
+- main.go — wire-up: PocketBase app, migrations, CLI, routes, crons.
+  A bare `balaur` (no args) is the no-terminal launcher: it boots a
+  loopback UI on the XDG data dir and opens the browser.
+- internal/launch — the no-args loopback launcher helpers (XDG data dir,
+  free loopback port, browser-open); fires only on a bare argv
 - migrations/ — schema as Go code
 - internal/turn — the shared turn pipeline + model resolution
 - internal/agent, internal/llm — loop and model seam

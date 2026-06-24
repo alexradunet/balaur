@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/kronk"
+	"github.com/alexradunet/balaur/internal/launch"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/recap"
@@ -35,6 +37,30 @@ import (
 )
 
 func main() {
+	// No-args launcher (plan 190): a bare `balaur` with no subcommand is the
+	// no-terminal entry point — default the data dir to XDG, bind a free loopback
+	// port, and open the browser. It works purely by rewriting argv into a normal
+	// `serve …` invocation BEFORE pocketbase.New() (--dir is an eager flag parsed
+	// at construction), so every existing path — explicit `serve`, the CLI verbs,
+	// the Makefile binds — is untouched: this fires only on a truly bare argv.
+	if launch.IsLauncherInvocation(os.Args[1:]) {
+		port, err := launch.FreeLoopbackPort()
+		if err != nil {
+			log.Fatal(err)
+		}
+		addr := fmt.Sprintf("127.0.0.1:%d", port)
+		os.Args = append(os.Args[:1], "serve", "--http", addr, "--dir", launch.DataDir())
+		// Browser-open in its own goroutine once the listener accepts. A failure
+		// is non-fatal — print the URL so the owner can open it manually. This is
+		// pre-New(), so structured app.Logger() does not exist yet; stderr is the
+		// one allowed exception (see plan 190).
+		go func() {
+			if err := launch.OpenAfterReady(addr); err != nil {
+				fmt.Fprintf(os.Stderr, "could not open a browser automatically — open http://%s/ to reach Balaur (%v)\n", addr, err)
+			}
+		}()
+	}
+
 	app := pocketbase.New()
 
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
