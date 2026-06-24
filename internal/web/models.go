@@ -43,6 +43,7 @@ type homeData struct {
 	ActiveHeadName  string       // current head name (switcher label)
 	HeadChoices     []headChoice // roster for the switcher
 	ChatBodyHTML    g.Node       // history (chat.Message panels) or the hearth greeting
+	CompactSummary  string       // rolling compaction summary, shown atop today's dock when compacted today
 }
 
 // headChoice is one entry in the dock head switcher.

@@ -108,7 +108,7 @@ func TestRunNotesUnbackedCaptureClaim(t *testing.T) {
 		t.Fatalf("fabricated claims must be tagged uncommitted, got %d (err %v)", len(uncommitted), err)
 	}
 	master, _ := conversation.Master(app)
-	ctxTurns, err := conversation.RecentTurns(app, master.Id, 50)
+	ctxTurns, err := conversation.RecentTurns(app, master.Id, 50, time.Time{})
 	if err != nil {
 		t.Fatalf("RecentTurns: %v", err)
 	}

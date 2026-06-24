@@ -52,7 +52,7 @@ func TestSchemaBaseline(t *testing.T) {
 	}
 	for _, fc := range []fieldCheck{
 		{"heads", []string{"name", "purpose", "balaur_avatar", "capability_groups"}, []string{"tools"}},
-		{"conversations", []string{"kind", "status"}, []string{"summary", "head", "parent"}},
+		{"conversations", []string{"kind", "status", "summary", "compacted_through"}, []string{"head", "parent"}},
 		{"messages", []string{"origin"}, nil},
 		{"nodes", []string{"type", "title", "body", "status", "props"}, []string{"content", "category", "name"}},
 		{"edges", []string{"source", "target", "type", "context"}, nil},

@@ -79,7 +79,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 		return res, err
 	}
 	head := heads.Active(app)
-	recent, err := conversation.RecentTurns(app, master.Id, RecentTurnWindow)
+	recent, err := conversation.RecentTurns(app, master.Id, RecentTurnWindow, conversation.CompactedThrough(master))
 	if err != nil {
 		return res, err
 	}
@@ -98,7 +98,7 @@ func Run(ctx context.Context, app core.App, client llm.Client, userText string, 
 	todayBlock := tasks.TodayBlock(app, now)
 	loop := &agent.Loop{Client: client, Tools: ToolsForHead(app, head.Groups), MaxSteps: maxSteps(), Logger: app.Logger()}
 	history := make([]llm.Message, 0, len(recent)+2)
-	history = append(history, llm.Message{Role: "system", Content: systemPrompt + headFlavor(head.Name, head.Purpose) + nowLine(now) + todayBlock + knowledgeBlock})
+	history = append(history, llm.Message{Role: "system", Content: systemPrompt + headFlavor(head.Name, head.Purpose) + nowLine(now) + todayBlock + knowledgeBlock + summaryBlock(master.GetString("summary"))})
 	history = append(history, recent...)
 	history = append(history, llm.Message{Role: "user", Content: userText})
 	contextLen := len(history)
@@ -224,6 +224,16 @@ func headFlavor(name, purpose string) string {
 		return ""
 	}
 	return "\n\nRight now you answer as your " + name + " head — " + purpose + "."
+}
+
+// summaryBlock injects the rolling compaction summary the owner built with
+// /compact. After the live thread is folded, this is what carries the gist of
+// earlier turns forward into context. Empty summary adds nothing.
+func summaryBlock(summary string) string {
+	if summary == "" {
+		return ""
+	}
+	return "\n\nEarlier in this conversation, compacted to a summary:\n" + summary
 }
 
 // nowLine grounds the model in the present moment. Relative dates in the

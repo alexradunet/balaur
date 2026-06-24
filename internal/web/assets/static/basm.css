@@ -2847,6 +2847,22 @@ progress.pull-progress-bar::-moz-progress-bar {
 .dlg-body { font-size: 15px; line-height: 1.55; }
 .dlg-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: flex-end; }
 
+/* Compact modal — the manual /compact review dialog. A native <dialog> opened
+   with showModal() (UA-centered, so unlike .dlg it must NOT override inset/margin),
+   parchment material with a dimmed backdrop. */
+.compact-modal {
+  width: min(560px, calc(100% - 40px));
+  background: var(--surface); background-image: var(--grain-ink); background-size: 4px 4px; color: var(--ink);
+  border: 2px solid var(--gold-deep); box-shadow: var(--parch-bevel); padding: 22px;
+}
+.compact-modal::backdrop { background: rgba(10, 5, 1, .72); }
+.compact-modal-hint, .compact-modal-msg { margin: 0 0 var(--space-3); font-size: 14px; line-height: 1.55; color: var(--ink-muted); }
+.compact-modal-text {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 9em;
+  font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--ink);
+  background: var(--surface-2); border: 2px solid var(--parch-edge); box-shadow: var(--bevel-in); padding: var(--space-3);
+}
+
 /* ── SectionLabel — mono caption + trailing dashed hairline rule ─────────── */
 .section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
 .section-label-text {
@@ -3199,6 +3215,22 @@ progress.pull-progress-bar::-moz-progress-bar {
 .cmsg-md pre code { background: none; border: 0; padding: 0; }
 .cmsg-md a { color: inherit; text-decoration: underline; }
 .cmsg-md blockquote { margin: 0 0 .6em; padding-left: .8em; border-left: 3px solid var(--parch-edge); color: var(--ink-muted); }
+
+/* Compact note — the rolling /compact summary, a centered parchment slip above
+   today's (now-cleared) transcript. Quieter than a speech panel: it is a marker
+   of folded history, not a turn. */
+.compact-note {
+  align-self: center;
+  width: min(var(--measure), 100%);
+  margin: var(--space-2) auto var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  opacity: .92;
+}
+.compact-note-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--gold-ink); margin-bottom: var(--space-2);
+}
+.compact-note-body { font-size: 14px; line-height: 1.55; color: var(--ink-muted); }
 
 /* Tool call — a Balaur turn in the speech-panel frame whose body is the audit
    trail: the tool indicator, its result, and any surfaced artifact chip. Reuses

@@ -163,6 +163,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.GET("/storybook", h.storybookHome)
 	se.Router.GET("/storybook/{id}", h.storybookStory)
 	se.Router.POST("/ui/chat", h.chat)
+	se.Router.POST("/ui/compact", h.compact)
+	se.Router.POST("/ui/compact/accept", h.compactAccept)
 	se.Router.GET("/ui/chatbar", h.chatbar)
 	se.Router.POST("/ui/model/select", h.selectModel)
 	se.Router.POST("/ui/model/processor", h.setProcessor)
@@ -270,8 +272,20 @@ func (h *handlers) dockData() (homeData, error) {
 	now := time.Now().In(loc)
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	if master, err := conversation.Master(h.app); err == nil {
-		if recs, err := conversation.MessagesBetween(h.app, master.Id, startOfToday, startOfToday.AddDate(0, 0, 1)); err == nil {
+		// The live dock starts at the compaction boundary when the owner has
+		// folded part of today (max of midnight and the last compact) — so
+		// compacted turns drop from the scroll-back, leaving a clean slate.
+		boundary := startOfToday
+		if ct := conversation.CompactedThrough(master); ct.After(boundary) {
+			boundary = ct
+		}
+		if recs, err := conversation.MessagesBetween(h.app, master.Id, boundary, startOfToday.AddDate(0, 0, 1)); err == nil {
 			data.History = h.messageViews(recs)
+		}
+		// Show the rolling summary atop today's dock only when the last compact
+		// was today; older summary lives on in context, not on the live surface.
+		if ct := conversation.CompactedThrough(master); !ct.IsZero() && !ct.In(loc).Before(startOfToday) {
+			data.CompactSummary = master.GetString("summary")
 		}
 		// The telescope appears once any history predates today (owner tz).
 		if oldest, ok := conversation.OldestMessageTime(h.app, master.Id); ok {

@@ -32,7 +32,16 @@ GGUF-path form; the curated catalog is the supported path.
 
 The name is the Romanian fairy-tale dragon with many heads. There is one
 master conversation, persisted forever and summarized by the recap
-telescope. Heads are switchable personas (internal/heads): the active
+telescope. The owner can also compact mid-day, by hand: a composer
+button and the /compact command fold today's live transcript into the
+conversation's rolling summary and advance a compacted_through boundary,
+clearing the dock to a clean slate while the summary carries the gist
+forward in context (RecentTurns reads only past the boundary; the turn
+pipeline injects the summary). It is a declinable proposal — Balaur drafts
+the summary, the owner reviews/edits it in a modal and Accepts, Refreshes,
+or Declines; only Accept writes, and each compact appends a dated section.
+The turns themselves are never deleted, so the end-of-day recap still sees
+the full day. Heads are switchable personas (internal/heads): the active
 head's name and purpose flavor the master turn's system prompt, its
 avatar marks its replies, and its capability groups filter which tools
 the turn may use. Built-in balaur/scholar/planner/coach plus

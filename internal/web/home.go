@@ -39,6 +39,9 @@ func navDestinations() []ui.CommandItem {
 		{Label: "Profile", Key: "profile", URL: "/ui/show/settings?section=profile"},
 		{Label: "Models", Key: "models", URL: "/ui/show/settings?section=models"},
 		{Label: "Heads", Key: "heads", URL: "/ui/show/settings?section=heads"},
+		// Action (not navigation): folds today's transcript into the rolling
+		// summary and clears the dock. Posts instead of opening a panel.
+		{Label: "Compact today", Key: "compact", Icon: "hourglass", URL: "/ui/compact", Post: true},
 	}
 }
 
@@ -72,7 +75,9 @@ func navRailMore() []ui.CommandItem {
 	}
 	var more []ui.CommandItem
 	for _, it := range navDestinations() {
-		if !primary[it.URL] {
+		// Action items (e.g. /compact) are not panel destinations — the rail
+		// only carries navigation.
+		if !primary[it.URL] && !it.Post {
 			more = append(more, it)
 		}
 	}
@@ -102,6 +107,7 @@ func composerNode(d homeData) g.Node {
 		ID:          "chat-draft",
 		Disabled:    !d.ChatReady,
 		Palette:     commandPaletteNode(),
+		CompactURL:  "/ui/compact",
 	})
 }
 

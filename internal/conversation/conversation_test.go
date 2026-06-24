@@ -2,6 +2,9 @@ package conversation
 
 import (
 	"testing"
+	"time"
+
+	"github.com/pocketbase/dbx"
 
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/storetest"
@@ -50,7 +53,7 @@ func TestAppendAndRecentTurnsRoundtrip(t *testing.T) {
 
 	// RecentTurns: text turns only, chronological, no tool rounds, no
 	// empty assistant turns.
-	got, err := RecentTurns(app, master.Id, 10)
+	got, err := RecentTurns(app, master.Id, 10, time.Time{})
 	if err != nil {
 		t.Fatalf("RecentTurns: %v", err)
 	}
@@ -70,7 +73,7 @@ func TestAppendAndRecentTurnsRoundtrip(t *testing.T) {
 	}
 
 	// Window limit keeps the most recent turns, still chronological.
-	last2, _ := RecentTurns(app, master.Id, 2)
+	last2, _ := RecentTurns(app, master.Id, 2, time.Time{})
 	if len(last2) != 2 || last2[0].Content != "how are you" || last2[1].Content != "well, thank you" {
 		t.Fatalf("window wrong: %+v", last2)
 	}
@@ -109,7 +112,7 @@ func TestRecentTurnsExcludesRuntimeOrigins(t *testing.T) {
 	add("user", "thanks", "")
 	add("assistant", "Anytime.", "")
 
-	got, err := RecentTurns(app, master.Id, 10)
+	got, err := RecentTurns(app, master.Id, 10, time.Time{})
 	if err != nil {
 		t.Fatalf("RecentTurns: %v", err)
 	}
@@ -131,6 +134,35 @@ func TestRecentTurnsExcludesRuntimeOrigins(t *testing.T) {
 	hist, _ := History(app, master.Id, 50)
 	if len(hist) != 5 {
 		t.Fatalf("history = %d records, want 5 (nothing dropped from the record)", len(hist))
+	}
+}
+
+// TestRecentTurnsBoundary: a non-zero `after` excludes turns at or before the
+// compaction boundary — they live in the rolling summary, not the live thread.
+func TestRecentTurnsBoundary(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, _ := Master(app)
+
+	for _, c := range []string{"old one", "old two", "fresh"} {
+		if err := Append(app, master.Id, llm.Message{Role: "user", Content: c}, ""); err != nil {
+			t.Fatalf("append: %v", err)
+		}
+	}
+	// Backdate the first two turns well before the boundary (created is an
+	// autodate, so rewrite it directly — as a vault import would).
+	old := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := app.DB().NewQuery(
+		"UPDATE messages SET created = {:at} WHERE content LIKE 'old %'").
+		Bind(dbx.Params{"at": old.Format("2006-01-02 15:04:05.000Z")}).Execute(); err != nil {
+		t.Fatalf("backdate: %v", err)
+	}
+
+	got, err := RecentTurns(app, master.Id, 20, old.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("RecentTurns: %v", err)
+	}
+	if len(got) != 1 || got[0].Content != "fresh" {
+		t.Fatalf("boundary should keep only post-boundary turns, got %+v", got)
 	}
 }
 

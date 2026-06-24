@@ -65,6 +65,13 @@ func daySource(app core.App, conversationID string, p Period) (string, int, erro
 	if len(recs) == 0 {
 		return "", 0, nil
 	}
+	return transcriptSource(recs)
+}
+
+// transcriptSource renders user/assistant message records as the "Owner:/Balaur:"
+// dialogue fed to a summary call, clipped to the per-call budget. Shared by the
+// day recap and the manual compaction path (CompactToday).
+func transcriptSource(recs []*core.Record) (string, int, error) {
 	var b strings.Builder
 	for _, r := range recs {
 		who := "Owner"

@@ -193,6 +193,20 @@ func (h *handlers) renderMessages(views []messageView) g.Node {
 // setup notice). Everything goes through the chat components so the empty state,
 // history, and the live stream share one look.
 func (h *handlers) chatBodyHTML(d homeData) g.Node {
+	// A compact today puts its rolling summary atop the dock, above whatever
+	// remains of the live thread (usually nothing — the clean slate).
+	if d.CompactSummary != "" {
+		nodes := []g.Node{chat.CompactNote(d.CompactSummary)}
+		if len(d.History) > 0 {
+			nodes = append(nodes, h.renderMessages(d.History))
+		} else {
+			nodes = append(nodes, chat.Message(chat.MessageProps{
+				Role: "balaur", AvatarSrc: d.BalaurAvatarURL, Who: "Balaur",
+				Content: "Folded the earlier thread into the note above. Clean slate — where to next?",
+			}))
+		}
+		return g.Group(nodes)
+	}
 	if len(d.History) > 0 {
 		return h.renderMessages(d.History)
 	}

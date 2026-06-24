@@ -87,6 +87,8 @@ var stories = []Story{
 	composerStory(),
 	commandpaletteStory(),
 	chatdockStory(),
+	compactnoteStory(),
+	compactdialogStory(),
 	chatclusterStory(),
 	chatpanelStory(),
 	chatartifactchipStory(),

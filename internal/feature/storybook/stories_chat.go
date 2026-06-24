@@ -176,6 +176,7 @@ func composerStory() Story {
 		Blurb: "The owner's single seat of action — every input is given here. The parchment draft is a textarea with a send button, the tool wells, the sound toggle, and the owner's soul portrait.",
 		Variants: []Variant{
 			{"draft", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening."})},
+			{"with compact button", ui.Composer(ui.ComposerProps{AvatarSrc: "/static/crest.png", Placeholder: "Speak; I am listening.", CompactURL: "/ui/compact"})},
 		},
 		Props: []Prop{
 			{"Who", "string", `"You"`, "Nameplate under the owner portrait."},
@@ -184,6 +185,7 @@ func composerStory() Story {
 			{"Hint", "string", "unsent · enter speaks", "Foot hint; defaults to the live copy."},
 			{"SendLabel", "string", `"Send"`, "The submit button label."},
 			{"Tools", "[]string", "scroll·tome·lens", "/static/icons names for the tool wells, left of the sound toggle."},
+			{"CompactURL", "string", `""`, "When set, an enabled hourglass tool-well button that @posts there to fold today's transcript into a rolling summary (manual /compact)."},
 		},
 		Dos: []string{
 			"Route every owner input through this one surface — text, choices, task and memory decisions.",
@@ -352,6 +354,7 @@ func commandpaletteStory() Story {
 					{Label: "Profile", Key: "profile", URL: "/ui/show/settings?section=profile"},
 					{Label: "Models", Key: "models", URL: "/ui/show/settings?section=models"},
 					{Label: "Heads", Key: "heads", URL: "/ui/show/settings?section=heads"},
+					{Label: "Compact today", Key: "compact", Icon: "hourglass", URL: "/ui/compact", Post: true},
 				}),
 			)},
 		},
@@ -359,7 +362,8 @@ func commandpaletteStory() Story {
 			{"Label", "string", "—", "Display name shown in the menu row."},
 			{"Key", "string", "—", "Lowercase slug the owner types after '/' to filter to this item. The menu shows items whose Key starts with the typed query."},
 			{"Icon", "string", `""`, "Optional /static/icons stem (without extension) — pixel-art sprite shown left of the label."},
-			{"URL", "string", "—", "The /ui/show/{type}?{query} URL; fired as @get on click and used as the no-JS href fallback."},
+			{"URL", "string", "—", "The action URL; fired as @get (navigation) or @post (Post action) on click, and used as the no-JS href fallback."},
+			{"Post", "bool", "false", "When true the item is an ACTION that @posts URL instead of navigating (e.g. /compact). The last item above is a Post action."},
 		},
 		Dos: []string{
 			"Fire the non-polluting /ui/show door — the same door card-footer links use.",
@@ -402,6 +406,65 @@ func chatartifactchipStory() Story {
 		Donts: []string{
 			"Import internal/feature or internal/cards from internal/ui/chat.",
 			"Add chip chrome (border, icon) inside the rail — chips live in #chat only.",
+		},
+	}
+}
+
+func compactnoteStory() Story {
+	return Story{
+		ID: "compactnote", Group: "Chat", Title: "CompactNote", Wide: true, OnDock: true,
+		Blurb: "The rolling /compact summary, a centered parchment slip pinned atop today's dock after the owner " +
+			"folds the earlier thread. It marks folded history (the turns stay in the record); the transcript below " +
+			"it is the clean slate. Summary text is trusted Balaur prose, rendered as Markdown.",
+		Variants: []Variant{
+			{"folded summary", chat.CompactNote("You scoped the manual compact feature — a button and a /compact command that fold today's thread into a rolling summary, reviewed in a modal before it commits. We settled on appending a dated section per compact.")},
+		},
+		Props: []Prop{
+			{"summary", "string", "—", "The rolling compaction summary (Markdown), shown above today's transcript."},
+		},
+		Dos: []string{
+			"Show it only when the last compact was today — older summary lives in context, not on the surface.",
+			"Keep it quieter than a speech panel: it is a marker of folded history, not a turn.",
+		},
+		Donts: []string{
+			"Render it for past days — those collapse into the recap telescope.",
+		},
+	}
+}
+
+func compactdialogStory() Story {
+	return Story{
+		ID: "compactdialog", Group: "Chat", Title: "CompactDialog", Wide: true,
+		Blurb: "The manual-compaction review modal (a native <dialog id=compact-modal>, opened with showModal()). " +
+			"Form mode proposes an editable summary the owner Accepts (commit), Refreshes (regenerate), or Declines " +
+			"(discard) — folding is a declinable proposal, like every Balaur mutation. Message mode shows a single " +
+			"note + Close (nothing to fold, or no model). Open renders it in place for the story.",
+		Variants: []Variant{
+			{"form (review & edit)", ui.CompactDialog(ui.CompactDialogProps{
+				Open:       true,
+				Draft:      "You scoped the manual compact feature and chose to append a dated section per compact, reviewed in a modal before it commits.",
+				AcceptURL:  "/ui/compact/accept",
+				RefreshURL: "/ui/compact",
+			})},
+			{"message (nothing to fold)", ui.CompactDialog(ui.CompactDialogProps{
+				Open:    true,
+				Message: "Nothing new to fold — today's thread is already clear.",
+			})},
+		},
+		Props: []Prop{
+			{"Draft", "string", `""`, "Proposed summary text, editable in the textarea (form mode)."},
+			{"Message", "string", `""`, "Info line; when set, renders message mode (note + Close) instead of the form."},
+			{"AcceptURL", "string", "—", "@post target that commits the edited summary."},
+			{"RefreshURL", "string", "—", "@post target that regenerates the draft."},
+			{"Signal", "string", `"compactDraft"`, "Signal two-way bound to the textarea so Accept can post the owner's edits."},
+			{"Open", "bool", "false", "Render the <dialog> in place (storybook). Production appends it and calls showModal()."},
+		},
+		Dos: []string{
+			"Let the owner edit the draft before it commits — folding is declinable.",
+			"Seed the textarea signal from Draft so Refresh/edit round-trips cleanly.",
+		},
+		Donts: []string{
+			"Commit on draft — only Accept writes; Decline/Refresh never persist.",
 		},
 	}
 }

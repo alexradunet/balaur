@@ -7,8 +7,11 @@
 // messages collection; the model sees only the last few text turns
 // (RecentTurns). Durable facts belong in approved memories — that is what
 // makes the master compactable and even archivable without losing the
-// companion. Compaction into the conversations.summary field is the named
-// next slice.
+// companion. Manual compaction is shipped: the owner folds earlier turns into
+// the rolling conversations.summary field and advances compacted_through, the
+// boundary past which RecentTurns stops reading (the summary carries the gist
+// forward instead). The turns themselves stay in the record — only the live
+// view and model context move past them.
 package conversation
 
 import (
@@ -64,6 +67,13 @@ func Master(app core.App) (*core.Record, error) {
 	return rec, nil
 }
 
+// CompactedThrough returns the conversation's manual-compaction boundary: turns
+// at or before it have been folded into the rolling summary. The zero time means
+// nothing has been compacted yet.
+func CompactedThrough(conv *core.Record) time.Time {
+	return conv.GetDateTime("compacted_through").Time()
+}
+
 // Append persists one turn. toolName is the human-readable tool name for
 // role=tool turns (the llm.Message itself only carries the opaque call id);
 // pass "" for other roles. Tool payloads land in a dedicated JSON field so
@@ -117,13 +127,22 @@ func AppendOriginRec(app core.App, conversationID string, msg llm.Message, toolN
 // tool detail stays in the record. Runtime artifacts — caught fabrications
 // (OriginUncommitted) and honesty notes (OriginCheck) — are also excluded so a
 // lie the model told once is never replayed back to it as a pattern to imitate.
-func RecentTurns(app core.App, conversationID string, limit int) ([]llm.Message, error) {
+//
+// When after is non-zero, turns at or before it are excluded too: that is the
+// manual-compaction boundary (see CompactedThrough) — those turns now live in
+// the rolling summary, not the live thread.
+func RecentTurns(app core.App, conversationID string, limit int, after time.Time) ([]llm.Message, error) {
 	filter := fmt.Sprintf(
 		"conversation = {:conv} && (role = 'user' || role = 'assistant') && content != '' && origin != '%s' && origin != '%s'",
 		OriginUncommitted, OriginCheck)
+	params := dbx.Params{"conv": conversationID}
+	if !after.IsZero() {
+		filter += " && created > {:after}"
+		params["after"] = after.UTC().Format(types.DefaultDateLayout)
+	}
 	recs, err := app.FindRecordsByFilter("messages",
 		filter, "-@rowid", limit, 0,
-		dbx.Params{"conv": conversationID})
+		params)
 	if err != nil {
 		return nil, fmt.Errorf("loading recent turns: %w", err)
 	}

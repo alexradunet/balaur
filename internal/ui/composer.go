@@ -29,6 +29,11 @@ type ComposerProps struct {
 	// Palette is an optional command menu rendered inside the composer root so
 	// CSS can anchor it above the textarea (plan 102). It self-shows via Datastar.
 	Palette g.Node
+
+	// CompactURL, when set, renders an enabled "Compact today" tool-well button
+	// that @posts there — the manual counterpart to the end-of-day recap. It
+	// folds today's transcript into a rolling summary and clears the dock.
+	CompactURL string
 }
 
 // Composer renders the wood input ledge: corner brackets, a top row of tool
@@ -53,6 +58,12 @@ func Composer(p ComposerProps, attrs ...g.Node) g.Node {
 	}
 
 	toolRow := []g.Node{h.Class("composer-tools")}
+	if p.CompactURL != "" {
+		toolRow = append(toolRow, h.Button(h.Class("composer-tool composer-compact"), h.Type("button"),
+			h.Aria("label", "Compact today"),
+			g.Attr("data-on:click__prevent", "@post('"+p.CompactURL+"')"),
+			h.Img(h.Src("/static/icons/hourglass.png"), h.Alt(""), g.Attr("decoding", "async"))))
+	}
 	for _, t := range tools {
 		toolRow = append(toolRow, h.Button(h.Class("composer-tool"), h.Type("button"),
 			h.Disabled(), h.Aria("label", t+" (coming soon)"),

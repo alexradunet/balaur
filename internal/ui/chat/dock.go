@@ -40,6 +40,7 @@ type DockProps struct {
 //  5. #nudge-poll — the agent-initiated-message poller
 //  6. the Composer slot (ui.Composer, caller-rendered)
 //  7. <dialog id="model-modal"> — opened by basm.js after a model panel swap
+//  8. <dialog id="compact-modal"> — the /compact review modal (gateway-opened)
 //
 // The Switchers slot is appended after the Composer when non-nil (pre-rendered
 // chatbar/head-switcher gomponents node — may be nil; wiring into homePage is deferred).
@@ -61,6 +62,9 @@ func Dock(p DockProps, attrs ...g.Node) g.Node {
 		nudgePoll(p.NowMillis),
 		p.Composer,
 		h.Dialog(h.ID("model-modal"), g.Attr("aria-labelledby", "model-modal-title")),
+		// Persistent empty host for the manual /compact review modal; the gateway
+		// outer-patches its content and opens it with showModal() (see web/compact.go).
+		h.Dialog(h.ID("compact-modal"), h.Class("compact-modal")),
 		p.Switchers,
 	)
 
