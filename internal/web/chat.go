@@ -3,6 +3,7 @@ package web
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"regexp"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -81,4 +82,28 @@ func (h *handlers) chatErrText(err error) string {
 		return "the model is unreachable — check the active provider in Settings"
 	}
 	return err.Error()
+}
+
+// reURL and rePath redact provider endpoints and absolute filesystem paths from
+// text that may leave the box. A failed tool is formatted "error: <detail>" by
+// the agent loop (internal/agent) and rendered verbatim into the transcript;
+// without this a failing OS or HTTP tool could surface a private path, token, or
+// provider URL to the owner (AGENTS.md: sanitize before displaying/persisting).
+var (
+	reURL  = regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+`)
+	rePath = regexp.MustCompile(`(?:/[A-Za-z0-9._-]+){2,}/?`)
+)
+
+func redactSensitive(s string) string {
+	s = reURL.ReplaceAllString(s, "[link]")
+	return rePath.ReplaceAllString(s, "[path]")
+}
+
+// chatToolErrText sanitizes a failed tool's "error: <detail>" message for the
+// transcript: it logs the raw detail and redacts URLs/paths. The model's own
+// copy of the tool result (internal/agent) is unaffected — this only shapes the
+// owner-facing tool row, so useful error structure survives while secrets don't.
+func (h *handlers) chatToolErrText(detail string) string {
+	h.app.Logger().Warn("chat: tool error", "detail", detail)
+	return redactSensitive(detail)
 }

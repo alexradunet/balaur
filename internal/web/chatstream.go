@@ -219,6 +219,13 @@ func (s *chatStream) handleToolResult(ev agent.Event) {
 		s.endArtifactCluster(rest, title, cs)
 		return
 	}
+	// A failed tool arrives as "error: <detail>" (internal/agent). Log the raw
+	// detail and redact URLs/paths so a failing OS/HTTP tool can't leak a private
+	// path, token, or provider URL into the transcript (AGENTS.md).
+	if detail, ok := strings.CutPrefix(ev.Text, "error: "); ok {
+		s.endTool(clipText("error: "+s.h.chatToolErrText(detail), 2000), nil)
+		return
+	}
 	s.endTool(clipText(ev.Text, 2000), nil)
 }
 
