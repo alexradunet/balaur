@@ -47,6 +47,80 @@ func seedTurn(t *testing.T, app core.App, convID, text string, at time.Time) {
 	}
 }
 
+func TestFindMany(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+
+	loc := time.UTC
+	// Seed three days of chat; EnsureSummaries will produce day summaries.
+	day1 := time.Date(2026, 5, 4, 10, 0, 0, 0, loc)
+	day2 := time.Date(2026, 5, 5, 10, 0, 0, 0, loc)
+	day3 := time.Date(2026, 5, 6, 10, 0, 0, 0, loc)
+	seedTurn(t, app, master.Id, "planted the garden", day1)
+	seedTurn(t, app, master.Id, "fixed the fence", day2)
+	seedTurn(t, app, master.Id, "wrote the report", day3)
+
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, loc)
+	client := newEchoClient()
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+
+	// Build periods matching the seeded days.
+	p1 := Day(day1)
+	p2 := Day(day2)
+	p3 := Day(day3)
+	// One absent period that was never seeded.
+	absent := Day(time.Date(2026, 5, 7, 0, 0, 0, 0, loc))
+
+	periods := []Period{p1, p2, p3, absent}
+	got, err := FindMany(app, master.Id, periods)
+	if err != nil {
+		t.Fatalf("FindMany: %v", err)
+	}
+
+	// Three present periods must be found with matching content.
+	for _, p := range []Period{p1, p2, p3} {
+		rec := got[summaryKey(p.Type, p.Start)]
+		if rec == nil {
+			t.Fatalf("period %v missing from FindMany result", p.Start)
+		}
+		if rec.GetString("content") == "" {
+			t.Fatalf("period %v has empty content", p.Start)
+		}
+	}
+
+	// Absent period must be missing.
+	if got[summaryKey(absent.Type, absent.Start)] != nil {
+		t.Fatal("absent period unexpectedly present in FindMany result")
+	}
+
+	// No extras: exactly 3 records in the map.
+	if len(got) != 3 {
+		t.Fatalf("FindMany len = %d, want 3", len(got))
+	}
+
+	// Lookup helper matches the same records.
+	if Lookup(got, p1) == nil {
+		t.Fatal("Lookup(p1) returned nil")
+	}
+	if Lookup(got, absent) != nil {
+		t.Fatal("Lookup(absent) returned non-nil")
+	}
+
+	// Empty input returns a non-nil empty map without error.
+	empty, err := FindMany(app, master.Id, nil)
+	if err != nil {
+		t.Fatalf("FindMany(nil): %v", err)
+	}
+	if empty == nil || len(empty) != 0 {
+		t.Fatalf("FindMany(nil) = %v, want empty non-nil map", empty)
+	}
+}
+
 func TestEnsureSummariesHierarchy(t *testing.T) {
 	app := storetest.NewApp(t)
 	master, err := conversation.Master(app)

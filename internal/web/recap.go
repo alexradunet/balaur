@@ -105,9 +105,14 @@ func (h *handlers) recapExpand(e *core.RequestEvent) error {
 		}
 		b.WriteString(renderNodeHTML(h.renderMessages(h.messageViews(msgs))))
 	} else {
+		children := recap.Children(p)
+		byPeriod, err := recap.FindMany(h.app, master.Id, children)
+		if err != nil {
+			return e.InternalServerError("loading summaries", err)
+		}
 		var cards []recapView
-		for _, child := range recap.Children(p) {
-			if rec := recap.Find(h.app, master.Id, child); rec != nil {
+		for _, child := range children {
+			if rec := recap.Lookup(byPeriod, child); rec != nil {
 				cards = append(cards, h.recapCard(child, rec))
 			}
 		}
@@ -314,9 +319,13 @@ func (h *handlers) chronicleView() []bandView {
 	oldest = oldest.In(loc)
 	var view []bandView
 	for _, band := range recap.Bands(time.Now().In(loc), oldest) {
+		byPeriod, err := recap.FindMany(h.app, master.Id, band.Periods)
+		if err != nil {
+			return nil // same fail-soft contract as the early returns above
+		}
 		bv := bandView{Heading: bandHeading(band.Type)}
 		for _, p := range band.Periods {
-			card := h.recapCard(p, recap.Find(h.app, master.Id, p))
+			card := h.recapCard(p, recap.Lookup(byPeriod, p))
 			if card.Missing {
 				continue
 			}
