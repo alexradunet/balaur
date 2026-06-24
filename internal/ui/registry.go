@@ -1,6 +1,11 @@
 package ui
 
-import g "maragu.dev/gomponents"
+import (
+	"maps"
+	"slices"
+
+	g "maragu.dev/gomponents"
+)
 
 // CardSize selects which size a card renders at: a compact board tile or the
 // full-canvas focus view.
@@ -30,4 +35,10 @@ func UnregisterCard(typ string) { delete(cardRegistry, typ) }
 func LookupCard(typ string) (CardFunc, bool) {
 	fn, ok := cardRegistry[typ]
 	return fn, ok
+}
+
+// RegisteredCardTypes returns every registered card type, sorted. Intended for
+// tests that assert each card surface is documented in the storybook.
+func RegisteredCardTypes() []string {
+	return slices.Sorted(maps.Keys(cardRegistry))
 }
