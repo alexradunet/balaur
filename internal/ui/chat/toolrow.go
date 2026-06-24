@@ -22,6 +22,8 @@ type ToolRowProps struct {
 	Who       string // nameplate name (default "Balaur"); rendered "{Who} · Tool"
 	AvatarSrc string // Balaur portrait — the same avatar as the head's spoken turns
 	Content   string // result detail line ("" while pending)
+	Args      string // tool call arguments (pretty JSON); shown in a collapsed fold
+	Reasoning string // model reasoning leading into the call; collapsed, optional
 	Chip      g.Node // optional artifact re-open chip, rendered inside the body
 	Pending   bool   // running state: glow + "running…", before the result returns
 	ID        string
@@ -80,11 +82,27 @@ func toolBody(p ToolRowProps) g.Node {
 		ui.Icon(p.Icon),
 		g.Text("tool · "+p.Tool),
 	))
+	if p.Args != "" {
+		kids = append(kids, toolFold("tool-args", "arguments", p.Args))
+	}
 	if p.Content != "" {
 		kids = append(kids, h.Div(h.Class("tool-result"), g.Text(p.Content)))
+	}
+	if p.Reasoning != "" {
+		kids = append(kids, toolFold("tool-reasoning", "reasoning", p.Reasoning))
 	}
 	if p.Chip != nil {
 		kids = append(kids, p.Chip)
 	}
 	return h.Div(kids...)
+}
+
+// toolFold renders a collapsed-by-default disclosure carrying verbatim model
+// text (call arguments or reasoning). The body is escaped g.Text in a <pre> so
+// nothing is interpreted as markup; the audit trail stays literal.
+func toolFold(cls, label, body string) g.Node {
+	return h.Details(h.Class(cls),
+		h.Summary(g.Text(label)),
+		h.Pre(g.Text(body)),
+	)
 }

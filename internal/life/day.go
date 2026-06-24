@@ -48,16 +48,43 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 		}
 	}
 
-	// Logged measures: type=measure nodes whose noted_at falls in [ds, de).
-	// noted_at lives in props (JSON) so we filter in Go after loading.
-	logged, err := listMeasuresInRange(app, ds, de)
+	// Logged measures + done tasks/completions over [ds, de). Shared with the
+	// period-node aggregator (Range) so the day and period lenses never drift.
+	rd, err := Range(app, ds, de)
 	if err != nil {
-		return data, fmt.Errorf("day logged query: %w", err)
+		return data, err
+	}
+	data.Logged, data.Done = rd.Logged, rd.Done
+
+	// Day recap, when available
+	if rec := recap.Find(app, conversationID, recap.Day(d)); rec != nil {
+		data.Recap = rec
+	}
+
+	return data, nil
+}
+
+// RangeData is what was done and logged across an arbitrary [start, end) span —
+// the period-node generalisation of DayData's Done/Logged. It carries no
+// journal/recap: those are period-type-specific and resolved by the caller.
+type RangeData struct {
+	Done   []*core.Record // tasks done_at + completion entries noted_at in range
+	Logged []*core.Record // measure entries noted_at in range
+}
+
+// Range aggregates done tasks/completions and logged measures over [start, end)
+// in the caller's location — the data behind a week/month/quarter/year node.
+func Range(app core.App, start, end time.Time) (RangeData, error) {
+	data := RangeData{}
+
+	// Logged measures: type=measure nodes whose noted_at falls in [start, end).
+	logged, err := listMeasuresInRange(app, start, end)
+	if err != nil {
+		return data, fmt.Errorf("range logged query: %w", err)
 	}
 	data.Logged = logged
 
-	// Done tasks: type=task nodes with props.state='done' and done_at in [ds, de).
-	// done_at lives in props so we filter in Go after loading active task nodes.
+	// Done tasks: active type=task nodes with status=done and done_at in range.
 	if all, err2 := nodes.ListByTypeStatus(app, "task", nodes.StatusActive); err2 == nil {
 		for _, r := range all {
 			tasks.Hydrate(r)
@@ -65,25 +92,22 @@ func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 				continue
 			}
 			doneAt := r.GetDateTime("done_at").Time()
-			if doneAt.IsZero() || doneAt.Before(ds) || !doneAt.Before(de) {
+			if doneAt.IsZero() || doneAt.Before(start) || !doneAt.Before(end) {
 				continue
 			}
 			data.Done = append(data.Done, r)
 		}
 	}
 
-	recs, err = app.FindRecordsByFilter("entries",
-		"kind = 'completion' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 200, 0,
-		dbx.Params{"s": store.PBTime(ds), "e": store.PBTime(de)})
+	// Completion entries in range. Limit 0 (unlimited): a month/quarter/year can
+	// hold far more than a single day's worth.
+	recs, err := app.FindRecordsByFilter("entries",
+		"kind = 'completion' && noted_at >= {:s} && noted_at < {:e}", "noted_at", 0, 0,
+		dbx.Params{"s": store.PBTime(start), "e": store.PBTime(end)})
 	if err != nil {
-		return data, fmt.Errorf("day completions query: %w", err)
+		return data, fmt.Errorf("range completions query: %w", err)
 	}
 	data.Done = append(data.Done, recs...)
-
-	// Day recap, when available
-	if rec := recap.Find(app, conversationID, recap.Day(d)); rec != nil {
-		data.Recap = rec
-	}
 
 	return data, nil
 }

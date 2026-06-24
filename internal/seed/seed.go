@@ -283,6 +283,9 @@ func seedMessages(app core.App, now time.Time) (int, error) {
 		{12, "Draft a short note about the project backlog.", "The backlog narrowed to three tasks with clear next actions; the rest are parked."},
 		{5, "How did this week go?", "Steady week: two workouts logged, the weekly review done, and the fence half-finished."},
 		{1, "What should I focus on tomorrow?", "The overdue fence repair first, then the weekly review and a short walk."},
+		// A turn dated today so the home dock's live chat (today only) isn't bare;
+		// everything older now lives behind the recap telescope.
+		{0, "Morning — what's on for today?", "A light day: finish the fence repair, then the weekly review and a walk before the rain."},
 	}
 
 	count := 0
@@ -525,8 +528,12 @@ func seedPeriods(now time.Time) []recap.Period {
 	return []recap.Period{
 		recap.Day(now.AddDate(0, 0, -1)),
 		recap.Day(now.AddDate(0, 0, -3)),
+		// Four previous weeks fill the "Past weeks" telescope band so the
+		// scroll-back demonstrates week summaries that open period nodes.
 		recap.Week(now.AddDate(0, 0, -7)),
 		recap.Week(now.AddDate(0, 0, -14)),
+		recap.Week(now.AddDate(0, 0, -21)),
+		recap.Week(now.AddDate(0, 0, -28)),
 		recap.Month(now.AddDate(0, -1, 0)),
 		recap.Month(now.AddDate(0, -2, 0)),
 	}

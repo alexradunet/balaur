@@ -23,6 +23,23 @@ import (
 // nudgeBatchLimit bounds one tick's pickup; the rest fires next minute.
 const nudgeBatchLimit = 20
 
+// NudgeSuppressed reports whether the owner has muted or disabled nudges via
+// owner_settings — the soft, UI-driven layer above the BALAUR_NUDGE env kill
+// switch (which the cron scheduler honors separately). nudge_enabled "0" turns
+// them off; nudge_muted_until (RFC3339) silences them until that time. The
+// manual "nudge now" control bypasses this by calling Nudge directly.
+func NudgeSuppressed(app core.App, now time.Time) bool {
+	if store.GetOwnerSetting(app, "nudge_enabled", "1") == "0" {
+		return true
+	}
+	if until := store.GetOwnerSetting(app, "nudge_muted_until", ""); until != "" {
+		if t, err := time.Parse(time.RFC3339, until); err == nil && now.Before(t) {
+			return true
+		}
+	}
+	return false
+}
+
 // composeTimeout bounds the optional model call; the deterministic line
 // must never wait long on a slow model.
 const composeTimeout = 60 * time.Second

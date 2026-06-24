@@ -198,6 +198,7 @@ func skillFooterActions(r SkillRecord) g.Node {
 				h.Input(h.Type("hidden"), h.Name("to"), h.Value("archived")),
 				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Archive")),
 			),
+			ui.AskChip("ask balaur", "Revise this skill “"+r.Name+"”: "),
 			g.If(r.UseCount > 0, h.Span(h.Class("kcard-meta"), g.Text(fmt.Sprintf("used ×%d", r.UseCount)))),
 		})
 	case "archived":

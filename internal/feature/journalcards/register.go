@@ -16,12 +16,14 @@ import (
 // serve time (via feature.RegisterAll from web.Register).
 func Register(app core.App) {
 	registerDay(app)
+	registerPeriod(app)
 }
 
 // Unregister removes them. Called from web.Register's OnTerminate hook so the
 // global ui registry stays clean between test apps.
 func Unregister() {
 	ui.UnregisterCard("day")
+	ui.UnregisterCard("period")
 }
 
 // init self-registers this feature so the declarative registry (and web.Register)

@@ -19,6 +19,7 @@ import (
 	"github.com/alexradunet/balaur/internal/feature"
 	_ "github.com/alexradunet/balaur/internal/feature/all"
 	"github.com/alexradunet/balaur/internal/kronk"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/shell"
@@ -172,6 +173,12 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/knowledge/{kind}/{id}/transition", h.knowledgeTransition)
 	se.Router.POST("/ui/knowledge/{kind}/{id}/edit", h.knowledgeEdit)
 	se.Router.POST("/ui/node/{id}/edit", h.nodeEdit)
+	// Unified review queue: approve/decline model-proposed edits to active
+	// knowledge, and approve/decline proposed extensions. Owner-consent actions.
+	se.Router.POST("/ui/review/edit/{id}/approve", h.reviewEditApprove)
+	se.Router.POST("/ui/review/edit/{id}/decline", h.reviewEditDecline)
+	se.Router.POST("/ui/ext/{id}/approve", h.extApprove)
+	se.Router.POST("/ui/ext/{id}/decline", h.extDecline)
 	se.Router.GET("/ui/recap/bands", h.recapBands)
 	se.Router.GET("/ui/recap/expand", h.recapExpand)
 	if devSeedEnabled() {
@@ -184,6 +191,13 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
+	// Nudge controls (settings → nudges): owner-driven mute/disable + manual fire.
+	se.Router.POST("/ui/nudge/toggle", h.nudgeToggle)
+	se.Router.POST("/ui/nudge/mute", h.nudgeMute)
+	se.Router.POST("/ui/nudge/now", h.nudgeNow)
+	// Manual life-log entry (parity with the agent's log_entry).
+	se.Router.POST("/ui/life/log", h.lifeLog)
+	se.Router.POST("/ui/life/entry/{id}/drop", h.lifeEntryDrop)
 	// Heads — switchable personas. The active head flavors the master turn.
 	se.Router.POST("/ui/heads/active", h.setActiveHead)
 	se.Router.POST("/ui/heads/new", h.createHead)
@@ -230,26 +244,28 @@ func (h *handlers) renderPageError(e *core.RequestEvent, status int, ctx string,
 	return page.Render(e.Response)
 }
 
-// historyWindow caps the page-load transcript; older turns live behind the
-// recap telescope.
-const historyWindow = 60
-
 // dockData assembles the companion-chat view-model (model state + history +
 // recap flag) shared by the home page and the board dock (chat_dock fragment).
+//
+// The inline transcript is TODAY only (owner timezone): today is live chat,
+// every earlier period collapses into the recap telescope. This keeps months
+// of backdated history out of the scroll-back — the owner reaches summaries,
+// not raw "further back" text.
 func (h *handlers) dockData() (homeData, error) {
 	data, err := h.homeData()
 	if err != nil {
 		return homeData{}, err
 	}
+	loc := store.OwnerLocation(h.app)
+	now := time.Now().In(loc)
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	if master, err := conversation.Master(h.app); err == nil {
-		if recs, err := conversation.History(h.app, master.Id, historyWindow); err == nil {
+		if recs, err := conversation.MessagesBetween(h.app, master.Id, startOfToday, startOfToday.AddDate(0, 0, 1)); err == nil {
 			data.History = h.messageViews(recs)
 		}
-		// The telescope appears once any history predates today.
+		// The telescope appears once any history predates today (owner tz).
 		if oldest, ok := conversation.OldestMessageTime(h.app, master.Id); ok {
-			now := time.Now()
-			startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-			data.HasRecap = oldest.Before(startOfToday)
+			data.HasRecap = oldest.In(loc).Before(startOfToday)
 		}
 	}
 	data.ChatBodyHTML = h.chatBodyHTML(data) // history (or greeting), via chat.Message

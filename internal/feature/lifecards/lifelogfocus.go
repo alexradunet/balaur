@@ -6,11 +6,18 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	data "maragu.dev/gomponents-datastar"
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/life"
 	"github.com/alexradunet/balaur/internal/ui"
 )
+
+// LifelogRecentEntry is one text-kind log line plus its node id, so the owner
+// can drop a mistaken entry by hand (parity with the agent's entry_drop).
+type LifelogRecentEntry struct {
+	ID, Line string
+}
 
 // LifeKindFocusView is one tracked kind's full summary for the lifelog focus —
 // numeric kinds carry a sparkline + last value + change; text kinds carry their
@@ -23,7 +30,7 @@ type LifeKindFocusView struct {
 	SparkLastX, SparkLastY string // last point (the gold dot)
 	LastVal, LastAt        string
 	Change                 string
-	Recent                 []string
+	Recent                 []LifelogRecentEntry
 }
 
 // LifelogFocusView is the lifelog focus body's view-model: every tracked kind
@@ -59,7 +66,7 @@ func buildLifelogFocus(app core.App) LifelogFocusView {
 					if t := recs[i].GetString("text"); t != "" {
 						line += " — " + ui.Clip(t, 120)
 					}
-					v.Recent = append(v.Recent, line)
+					v.Recent = append(v.Recent, LifelogRecentEntry{ID: recs[i].Id, Line: line})
 				}
 			}
 			kinds = append(kinds, v)
@@ -68,13 +75,22 @@ func buildLifelogFocus(app core.App) LifelogFocusView {
 	return LifelogFocusView{Kinds: kinds, Habits: buildLifelogHabits(app, now)}
 }
 
-// LifelogFocus renders the lifelog focus body — the full life overview: a habit
-// strip plus every tracked kind (numeric → sparkline + trend, text → recent
-// lines). Read-only; entries are logged via chat. Ports {{define "life_body"}}
+// LifelogFocus renders the lifelog focus body — the full life overview: a manual
+// log form, a habit strip, plus every tracked kind (numeric → sparkline + trend,
+// text → recent lines with a per-row drop). The form/drop give the owner the same
+// log/drop the agent has via chat. Ports {{define "life_body"}}
 // (lifelog-focus.html) to gomponents, preserving every class so the served CSS
 // applies unchanged.
 func LifelogFocus(v LifelogFocusView) g.Node {
 	var out []g.Node
+
+	// Manual log form — parity with the agent's log_entry. The owner can record
+	// a measure by hand, not only via chat.
+	kindNames := make([]string, 0, len(v.Kinds))
+	for _, k := range v.Kinds {
+		kindNames = append(kindNames, k.Kind)
+	}
+	out = append(out, lifeLogForm(kindNames), h.Div(h.Class("stitch")))
 
 	if len(v.Habits) > 0 {
 		tags := make([]g.Node, 0, len(v.Habits))
@@ -113,6 +129,29 @@ func LifelogFocus(v LifelogFocusView) g.Node {
 	return g.Group(out)
 }
 
+// lifeLogForm renders the owner's manual entry form: a kind (with a datalist of
+// kinds already in use), an optional numeric value + unit, and an optional note.
+// Posts to /ui/life/log, which re-renders the panel.
+func lifeLogForm(kinds []string) g.Node {
+	opts := make([]g.Node, 0, len(kinds))
+	for _, k := range kinds {
+		opts = append(opts, h.Option(h.Value(k)))
+	}
+	return h.Section(h.Class("k-section"),
+		h.H2(h.Class("k-heading"), g.Text("Log an entry")),
+		h.Form(h.Class("life-log-form"),
+			data.On("submit", "@post('/ui/life/log', {contentType:'form'})", data.ModifierPrevent),
+			h.Input(h.Type("text"), h.Name("kind"), h.Placeholder("kind (e.g. weight, mood)"),
+				h.Required(), g.Attr("list", "life-kinds"), g.Attr("autocomplete", "off")),
+			g.El("datalist", h.ID("life-kinds"), g.Group(opts)),
+			h.Input(h.Type("text"), h.Name("value_num"), h.Placeholder("value (optional)"), g.Attr("inputmode", "decimal")),
+			h.Input(h.Type("text"), h.Name("unit"), h.Placeholder("unit (optional)")),
+			h.Input(h.Type("text"), h.Name("text"), h.Placeholder("note (optional)")),
+			h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text("Log")),
+		),
+	)
+}
+
 // lifeKindCard renders one tracked-kind card (article.kcard.life-card).
 func lifeKindCard(k LifeKindFocusView) g.Node {
 	body := []g.Node{
@@ -138,7 +177,14 @@ func lifeKindCard(k LifeKindFocusView) g.Node {
 	} else {
 		lines := []g.Node{h.Class("life-lines")}
 		for _, r := range k.Recent {
-			lines = append(lines, h.Li(g.Text(r)))
+			lines = append(lines, h.Li(h.Class("life-line"),
+				h.Span(h.Class("life-line-text"), g.Text(r.Line)),
+				h.Form(h.Class("life-line-drop"),
+					data.On("submit", "@post('/ui/life/entry/"+r.ID+"/drop')", data.ModifierPrevent),
+					h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"),
+						g.Attr("title", "Drop this entry"), g.Text("×")),
+				),
+			))
 		}
 		body = append(body, h.Ul(lines...))
 	}

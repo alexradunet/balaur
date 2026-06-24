@@ -62,9 +62,23 @@ func TestRecapCardsNodeHasChild(t *testing.T) {
 	if !strings.Contains(out, `class="recap-card recap-week"`) {
 		t.Errorf("missing article class:\n%s", out)
 	}
-	// gomponents HTML-escapes single quotes in attribute values to &#39;
+	// The card body (open-zone) and label both open the synthesised period node.
+	// gomponents HTML-escapes single quotes to &#39; and & to &amp; in attrs.
+	if !strings.Contains(out, `class="recap-open-zone"`) {
+		t.Errorf("missing recap-open-zone:\n%s", out)
+	}
+	if !strings.Contains(out, "@get(&#39;/ui/show/period?type=week&amp;start=1700000000&#39;)") {
+		t.Errorf("missing period-node @get:\n%s", out)
+	}
+	if !strings.Contains(out, `href="/ui/show/period?type=week&amp;start=1700000000"`) {
+		t.Errorf("missing period-node label anchor href:\n%s", out)
+	}
+	// The inline peek still expands children and stops propagation.
 	if !strings.Contains(out, "@get(&#39;/ui/recap/expand?type=week&amp;start=1700000000&#39;)") {
 		t.Errorf("missing expand @get for HasChild card:\n%s", out)
+	}
+	if !strings.Contains(out, "evt.stopPropagation()") {
+		t.Errorf("missing stopPropagation on secondary control:\n%s", out)
 	}
 	if !strings.Contains(out, "recap-open") {
 		t.Errorf("missing recap-open class toggle:\n%s", out)
@@ -86,14 +100,18 @@ func TestRecapCardsNodeDayWithDate(t *testing.T) {
 		{Type: "day", Label: "Mon 23 Jun", Content: "quiet day", Start: "1750000000", Date: "2025-06-23", HasChild: false},
 	}
 	out := renderNodeHTML(recapCardsNode(cards))
-	if !strings.Contains(out, `class="recap-daylink"`) {
-		t.Errorf("missing recap-daylink:\n%s", out)
+	// The card body + label open the day node; there is no separate "visit" link.
+	if !strings.Contains(out, `class="recap-open-zone"`) {
+		t.Errorf("missing recap-open-zone:\n%s", out)
+	}
+	if !strings.Contains(out, "@get(&#39;/ui/show/day?date=2025-06-23&#39;)") {
+		t.Errorf("missing day-node @get:\n%s", out)
 	}
 	if !strings.Contains(out, `href="/ui/show/day?date=2025-06-23"`) {
-		t.Errorf("missing daylink href:\n%s", out)
+		t.Errorf("missing day-node label anchor href:\n%s", out)
 	}
-	if !strings.Contains(out, ">visit<") {
-		t.Errorf("missing 'visit' link text:\n%s", out)
+	if strings.Contains(out, ">visit<") || strings.Contains(out, `class="recap-daylink"`) {
+		t.Errorf("day card must no longer carry a separate 'visit' link:\n%s", out)
 	}
 	// gomponents HTML-escapes single quotes in attribute values to &#39;
 	if !strings.Contains(out, "@get(&#39;/ui/recap/expand?type=day&amp;start=1750000000&#39;)") {

@@ -23,7 +23,7 @@ func TestLifelogFocusContract(t *testing.T) {
 		Kinds: []lifecards.LifeKindFocusView{
 			{Kind: "weight", Unit: "kg", Count: 12, Numeric: true, LastVal: "82.5", LastAt: "Jun 11",
 				Change: "-0.8 over 90d", Points: "4.0,40.0 236.0,8.0", SparkLastX: "236.0", SparkLastY: "8.0"},
-			{Kind: "gratitude", Count: 2, Recent: []string{"Jun 10 — quiet morning"}},
+			{Kind: "gratitude", Count: 2, Recent: []lifecards.LifelogRecentEntry{{ID: "n1", Line: "Jun 10 — quiet morning"}}},
 		},
 	}))
 	for _, want := range []string{
@@ -40,7 +40,9 @@ func TestLifelogFocusContract(t *testing.T) {
 		`<polyline points="4.0,40.0 236.0,8.0" fill="none">`,
 		`<circle cx="236.0" cy="8.0" r="3">`,
 		`<p class="life-change">-0.8 over 90d</p>`,
-		`<ul class="life-lines"><li>Jun 10 — quiet morning</li></ul>`,
+		`<ul class="life-lines"><li class="life-line">`,
+		`<span class="life-line-text">Jun 10 — quiet morning</span>`,
+		`@post(&#39;/ui/life/entry/n1/drop&#39;)`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("lifelog focus missing %q in:\n%s", want, got)

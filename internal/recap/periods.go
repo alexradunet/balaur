@@ -106,6 +106,26 @@ func childType(periodType string) string {
 	}
 }
 
+// ParentType maps a period to the granularity that encloses it — the inverse
+// walk used to climb UP the telescope for a breadcrumb (a week's parent is the
+// month it starts in). Years have no parent (""). Note the asymmetry with
+// childType: months expand DOWN to days, but a week still climbs UP to its
+// month — the breadcrumb follows calendar containment, not the child lens.
+func ParentType(periodType string) string {
+	switch periodType {
+	case "day":
+		return "week"
+	case "week":
+		return "month"
+	case "month":
+		return "quarter"
+	case "quarter":
+		return "year"
+	default:
+		return ""
+	}
+}
+
 // Children returns the sub-periods of p at its child granularity, oldest
 // first. Days have no children (they expand to raw messages).
 func Children(p Period) []Period {

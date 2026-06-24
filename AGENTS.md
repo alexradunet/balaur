@@ -247,6 +247,14 @@ lean and high-signal — add a rule only when it changes a real decision.
   (out of v1 scope — those installs download unverified until hashes are added).
 - Vault auto-recall is not implemented yet. When added, keep secrets out of
   content that may leave the box (logs, exports, audit entries).
+- Undo on tool-call cards is deferred. Only ~6 of ~22 agent mutations invert
+  cleanly without new storage (head switch-back, snooze-clear, undo-a-just-
+  created node); hard deletes (`entry_drop`, `node_drop`, `head_delete`) and
+  `task_done` need a soft-delete / inverse-op ledger. Until then, reversibility
+  stands on declinable proposals + the review queue + the audit log; a partial
+  undo (some cards only) is intentionally avoided. Tool-call *arguments* now
+  re-render on reload (read from the persisted `tool_payload`); reasoning is not
+  persisted, so it stays live-only.
 
 ## Safety
 

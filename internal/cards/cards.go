@@ -96,6 +96,20 @@ func init() {
 			},
 		},
 		{
+			// period is the coarser telescope lens (week/month/quarter/year):
+			// a SYNTHESISED view over the summary + range aggregates, never a
+			// stored node (only type=day nodes exist — plan 171).
+			Type:  "period",
+			Label: "Period",
+			Icon:  "hourglass",
+			W:     4,
+			H:     22,
+			Params: []ParamSpec{
+				{Name: "type", Required: true, Enum: []string{"week", "month", "quarter", "year"}, Doc: "period granularity"},
+				{Name: "start", Required: true, Doc: "period start as unix seconds"},
+			},
+		},
+		{
 			Type:  "measure",
 			Label: "Measure",
 			Icon:  "orb",
@@ -219,8 +233,16 @@ func init() {
 			W:     6,
 			H:     24,
 			Params: []ParamSpec{
-				{Name: "section", Enum: []string{"profile", "models", "heads", "appearance"}, Doc: "settings section (default profile)"},
+				{Name: "section", Enum: []string{"profile", "models", "heads", "appearance", "capabilities", "nudges"}, Doc: "settings section (default profile)"},
 			},
+		},
+		{
+			Type:  "review",
+			Label: "Review",
+			Icon:  "key",
+			W:     6,
+			H:     24,
+			// no params — the unified queue of everything awaiting the owner's approval
 		},
 	}
 

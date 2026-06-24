@@ -13,7 +13,8 @@ import (
 
 // Tools returns the enabled tool set: knowledge tools always (they only
 // propose — the consent boundary holds), task, life and journal tools
-// always (owner-consented by nature), OS access opt-in (AGENTS.md),
+// always (owner-consented by nature), persona/profile management always
+// (reversible, audited config), OS access opt-in (AGENTS.md),
 // propose_extension always (proposing is consent-safe), then approved
 // balaur-extensions (collision-guarded so an extension can never shadow a
 // built-in), and the read-only self tool last so its capability inventory
@@ -25,6 +26,8 @@ func Tools(app core.App) []agent.Tool {
 	ts = append(ts, tools.JournalTools(app)...)
 	ts = append(ts, tools.ChoiceTools(app)...)
 	ts = append(ts, tools.UITools(app)...)
+	ts = append(ts, tools.HeadsTools(app)...)
+	ts = append(ts, tools.ProfileTools(app)...)
 	if os.Getenv("BALAUR_OS_ACCESS") == "1" {
 		ts = append(ts, tools.OSAccess(app)...)
 	}
@@ -44,6 +47,18 @@ func Tools(app core.App) []agent.Tool {
 	return append(ts, self.Tool(app, names))
 }
 
+// ToolNames returns the names of the full enabled tool set, for read-only
+// surfaces like the capability roster (settings → capabilities). It mirrors
+// Tools(app) so the UI roster matches the registry that actually ships a turn.
+func ToolNames(app core.App) []string {
+	ts := Tools(app)
+	names := make([]string, 0, len(ts))
+	for _, t := range ts {
+		names = append(names, t.Spec.Name)
+	}
+	return names
+}
+
 // ToolsForHead returns the tool set for a head with the given capability
 // groups. Empty groups returns the full Tools(app) — identical to the main
 // head. Otherwise it assembles the always-on core (offer_choices, UI
@@ -60,9 +75,14 @@ func ToolsForHead(app core.App, groups []string) []agent.Tool {
 		sel[g] = true
 	}
 
-	// Always-on core: interaction + UI composition.
+	// Always-on core: interaction + UI composition + persona/profile management.
+	// Heads/profile tools are core (not a capability group) so a scoped head can
+	// still switch back and manage identity — they are meta-capability, not a
+	// privilege grant.
 	ts := tools.ChoiceTools(app)
 	ts = append(ts, tools.UITools(app)...)
+	ts = append(ts, tools.HeadsTools(app)...)
+	ts = append(ts, tools.ProfileTools(app)...)
 
 	if sel["memory"] {
 		ts = append(ts, tools.KnowledgeTools(app)...)

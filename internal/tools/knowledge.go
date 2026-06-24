@@ -27,6 +27,7 @@ func KnowledgeTools(app core.App) []agent.Tool {
 		searchTool(app),
 		skillTool(app),
 		proposeSkillTool(app),
+		proposeEditTool(app),
 		nodeWriteTool(app),
 		nodeListTool(app),
 		nodeGetTool(app),
@@ -244,6 +245,82 @@ func proposeSkillTool(app core.App) agent.Tool {
 			}
 			return MarkProposal("nodes", rec.Id,
 				fmt.Sprintf("Skill proposal %q sent to the owner for approval. You cannot use it until approved.", args.Name)), nil
+		},
+	}
+}
+
+// proposeEditTool lets the model propose a change to an existing ACTIVE memory
+// or skill. The change is parked (knowledge.ProposeEdit) and the current version
+// is untouched until the owner approves it in the review queue — preserving the
+// consent boundary (the model proposes; the owner applies).
+func proposeEditTool(app core.App) agent.Tool {
+	return agent.Tool{
+		Spec: agent.ToolSpecOf("propose_edit",
+			"Propose a change to an existing ACTIVE memory or skill — revised wording, importance, "+
+				"category, when-to-use, or archival. The owner approves it in the review queue before it "+
+				"takes effect; the current version is untouched until then. To save something NEW, use "+
+				"remember or propose_skill instead.",
+			obj(map[string]any{
+				"id":          str("Id of the active memory or skill node to revise."),
+				"title":       str("Optional: new title (memory) or name (skill)."),
+				"content":     str("Optional: new full detail (memory) or procedure body (skill)."),
+				"category":    map[string]any{"type": "string", "enum": []string{"fact", "preference", "person", "project", "context"}, "description": "Optional: new category (memories only)."},
+				"importance":  map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Optional: new importance 1-5 (memories only)."},
+				"description": str("Optional: new one-line description (skills only)."),
+				"when_to_use": str("Optional: new recall/use hint."),
+				"archive":     map[string]any{"type": "boolean", "description": "Propose archiving this item instead of editing it."},
+			}, "id")),
+		Execute: func(ctx context.Context, argsJSON string) (string, error) {
+			var args struct {
+				ID          string `json:"id"`
+				Title       string `json:"title"`
+				Content     string `json:"content"`
+				Category    string `json:"category"`
+				Importance  *int   `json:"importance"`
+				Description string `json:"description"`
+				WhenToUse   string `json:"when_to_use"`
+				Archive     bool   `json:"archive"`
+			}
+			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+				return "", fmt.Errorf("propose_edit: bad arguments: %w", err)
+			}
+			id := strings.TrimSpace(args.ID)
+			if id == "" {
+				return "", fmt.Errorf("propose_edit: id is required")
+			}
+			fields := map[string]string{}
+			if args.Title != "" {
+				fields["title"] = args.Title // memory title
+				fields["name"] = args.Title  // skill name (UpdateFields whitelists per kind)
+			}
+			if args.Content != "" {
+				fields["content"] = args.Content
+			}
+			if args.Category != "" {
+				fields["category"] = args.Category
+			}
+			if args.Importance != nil {
+				fields["importance"] = fmt.Sprintf("%d", *args.Importance)
+			}
+			if args.Description != "" {
+				fields["description"] = args.Description
+			}
+			if args.WhenToUse != "" {
+				fields["when_to_use"] = args.WhenToUse
+			}
+			rec, err := knowledge.ProposeEdit(app, id, fields, args.Archive)
+			if err != nil {
+				return "", fmt.Errorf("propose_edit: %w", err)
+			}
+			verb := "edit"
+			if args.Archive {
+				verb = "archival"
+			}
+			// Plain result (no proposal marker): the active node already exists, so
+			// the inline proposal-card path would mis-handle it. Review lands in the
+			// queue; the args are visible on the tool row.
+			return fmt.Sprintf("Proposed %s of %q for the owner's approval — review it in the queue. The current version is unchanged until then.",
+				verb, rec.GetString("title")), nil
 		},
 	}
 }

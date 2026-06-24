@@ -41,6 +41,29 @@ func buttonStory() Story {
 	}
 }
 
+func askchipStory() Story {
+	return Story{
+		ID: "askchip", Group: "Atoms", Title: "AskChip",
+		Blurb: "A small pill that hands a hand-driven card back to the agent: clicking it seeds the composer draft with an intent and focuses it, so the owner sends (or refines) the prompt instead of retyping. Pure client-side — it writes the page-global `message` signal the composer binds; no route, no SSE.",
+		Variants: []Variant{
+			{"revise memory", ui.AskChip("ask balaur", "Revise this memory “prefers green tea, no sugar”: ")},
+			{"expand skill", ui.AskChip("ask balaur", "Expand this skill “morning routine”: ")},
+		},
+		Props: []Prop{
+			{"label", "string", "—", `Chip text, e.g. "ask balaur".`},
+			{"intent", "string", "—", "The draft seeded into the composer. Double-encoded (JS string literal + HTML-escaped), so a card title is safe to interpolate."},
+		},
+		Dos: []string{
+			"Seed a concrete, editable intent the owner can send or refine.",
+			"Place it beside a card's hand-driven actions, not in place of them.",
+		},
+		Donts: []string{
+			"Auto-send the turn — the chip seeds the draft; the owner decides.",
+			"Interpolate raw HTML or untrusted markup into the intent.",
+		},
+	}
+}
+
 func tagStory() Story {
 	return Story{
 		ID: "tag", Group: "Atoms", Title: "Tag",

@@ -75,29 +75,12 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 	}
 
 	for _, r := range dd.Done {
-		coll := r.Collection()
-		timeField := "done_at"
-		if coll.Name == "entries" {
-			timeField = "noted_at"
-		}
-		v.Done = append(v.Done, DayLine{
-			Time: r.GetDateTime(timeField).Time().In(loc).Format("15:04"),
-			Text: r.GetString("title") + r.GetString("text"),
-		})
+		v.Done = append(v.Done, doneLine(r, loc, "15:04"))
 	}
 	sort.Slice(v.Done, func(i, j int) bool { return v.Done[i].Time < v.Done[j].Time })
 
 	for _, r := range dd.Logged {
-		text := r.GetString("kind")
-		if val := r.GetFloat("value_num"); val != 0 {
-			text = fmt.Sprintf("%s: %g %s", text, val, r.GetString("unit"))
-		} else if t := r.GetString("text"); t != "" {
-			text = text + ": " + ui.Clip(t, 120)
-		}
-		v.Logs = append(v.Logs, DayLine{
-			Time: r.GetDateTime("noted_at").Time().In(loc).Format("15:04"),
-			Text: text,
-		})
+		v.Logs = append(v.Logs, logLine(r, loc, "15:04"))
 	}
 
 	if dd.Recap != nil {
@@ -175,39 +158,8 @@ func DayFocus(v DayFocusView) g.Node {
 		recapText = h.P(h.Class("k-sub"), g.Text("No summary kept for this day."))
 	}
 
-	// Done section
-	var doneContent g.Node
-	if len(v.Done) > 0 {
-		items := make([]g.Node, 0, len(v.Done))
-		for _, dl := range v.Done {
-			items = append(items,
-				h.Li(h.Class("tl-item"),
-					h.Span(h.Class("tl-time"), g.Text(dl.Time)),
-					g.Text(" "+dl.Text),
-				),
-			)
-		}
-		doneContent = h.Ul(h.Class("tl-items"), g.Group(items))
-	} else {
-		doneContent = h.P(h.Class("k-sub"), g.Text("Nothing marked done this day."))
-	}
-
-	// Logs section
-	var logsContent g.Node
-	if len(v.Logs) > 0 {
-		items := make([]g.Node, 0, len(v.Logs))
-		for _, dl := range v.Logs {
-			items = append(items,
-				h.Li(h.Class("tl-item"),
-					h.Span(h.Class("tl-time"), g.Text(dl.Time)),
-					g.Text(" "+dl.Text),
-				),
-			)
-		}
-		logsContent = h.Ul(h.Class("tl-items"), g.Group(items))
-	} else {
-		logsContent = h.P(h.Class("k-sub"), g.Text("Nothing logged this day."))
-	}
+	doneContent := lineList(v.Done, "Nothing marked done this day.")
+	logsContent := lineList(v.Logs, "Nothing logged this day.")
 
 	return h.Div(h.Class("day-focus"),
 		h.H2(titleKids...),
@@ -228,4 +180,56 @@ func DayFocus(v DayFocusView) g.Node {
 			logsContent,
 		),
 	)
+}
+
+// doneWhen returns the timestamp a done record is filed under: task done_at, or
+// completion entry noted_at. Used both to render and to sort across a span.
+func doneWhen(r *core.Record) time.Time {
+	field := "done_at"
+	if r.Collection().Name == "entries" {
+		field = "noted_at"
+	}
+	return r.GetDateTime(field).Time()
+}
+
+// doneLine maps a done record (task done_at, or completion entry noted_at) to a
+// DayLine, formatting its time with timeFmt. Shared by the day and period nodes
+// so the two lenses render done items identically.
+func doneLine(r *core.Record, loc *time.Location, timeFmt string) DayLine {
+	return DayLine{
+		Time: doneWhen(r).In(loc).Format(timeFmt),
+		Text: r.GetString("title") + r.GetString("text"),
+	}
+}
+
+// logLine maps a logged measure record to a DayLine. Numeric measures render as
+// "kind: value unit"; text measures as "kind: clipped-text".
+func logLine(r *core.Record, loc *time.Location, timeFmt string) DayLine {
+	text := r.GetString("kind")
+	if val := r.GetFloat("value_num"); val != 0 {
+		text = fmt.Sprintf("%s: %g %s", text, val, r.GetString("unit"))
+	} else if t := r.GetString("text"); t != "" {
+		text = text + ": " + ui.Clip(t, 120)
+	}
+	return DayLine{
+		Time: r.GetDateTime("noted_at").Time().In(loc).Format(timeFmt),
+		Text: text,
+	}
+}
+
+// lineList renders a Done/Logs timeline (tl-items), or an empty-state line.
+func lineList(lines []DayLine, empty string) g.Node {
+	if len(lines) == 0 {
+		return h.P(h.Class("k-sub"), g.Text(empty))
+	}
+	items := make([]g.Node, 0, len(lines))
+	for _, dl := range lines {
+		items = append(items,
+			h.Li(h.Class("tl-item"),
+				h.Span(h.Class("tl-time"), g.Text(dl.Time)),
+				g.Text(" "+dl.Text),
+			),
+		)
+	}
+	return h.Ul(h.Class("tl-items"), g.Group(items))
 }

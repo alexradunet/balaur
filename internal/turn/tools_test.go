@@ -31,13 +31,24 @@ func TestToolsForHeadMemoryOnly(t *testing.T) {
 	if !got["recall"] {
 		t.Error("memory group should include recall")
 	}
+	// The propose-and-approve edit verb rides the memory group.
+	if !got["propose_edit"] {
+		t.Error("memory group should include propose_edit")
+	}
 	// Task group absent.
 	if got["task_add"] {
 		t.Error("task_add must be absent without the tasks group")
 	}
-	// Always-on core present.
+	// Always-on core present — including persona/profile management, so a scoped
+	// head can still switch back and manage identity.
 	if !got["offer_choices"] {
 		t.Error("always-on offer_choices missing")
+	}
+	if !got["head_switch"] {
+		t.Error("always-on head_switch missing — a scoped head could not switch back")
+	}
+	if !got["profile_set"] {
+		t.Error("always-on profile_set missing")
 	}
 	if !got["self"] {
 		t.Error("always-on self missing")

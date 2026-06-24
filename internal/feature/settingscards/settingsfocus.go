@@ -17,6 +17,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
@@ -29,8 +31,10 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/llm"
+	"github.com/alexradunet/balaur/internal/self"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
+	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // cloudPresetViews maps the curated catalog (llm.CloudPresets) into the
@@ -72,10 +76,42 @@ type ProfileView struct {
 
 // SettingsFocusView is the view-model for the full settings focus body.
 type SettingsFocusView struct {
-	Section string               // "profile" | "models" | "heads"
-	Profile ProfileView          // used when Section == "profile"
-	Models  modelcards.PanelView // used when Section == "models"
-	Heads   headscards.HeadsView // used when Section == "heads"
+	Section      string               // "profile" | "models" | "heads" | "nudges" | "capabilities"
+	Profile      ProfileView          // used when Section == "profile"
+	Models       modelcards.PanelView // used when Section == "models"
+	Heads        headscards.HeadsView // used when Section == "heads"
+	Nudge        NudgeView            // used when Section == "nudges"
+	Capabilities CapabilitiesView     // used when Section == "capabilities"
+}
+
+// NudgeView is the view-model for the nudge controls section.
+type NudgeView struct {
+	Enabled    bool   // the nudge_enabled owner setting (default on)
+	MutedUntil string // human label of the active mute window end; empty if not muted
+}
+
+// CapabilitiesView is the read-only roster of what Balaur can do right now — the
+// owner-facing mirror of the `self` tool.
+type CapabilitiesView struct {
+	Tools      []string
+	Gates      []GateView
+	Model      string // active model label; "local (default)" when none chosen
+	Skills     []string
+	Extensions []ExtStatusView
+	Version    string
+	Commit     string
+}
+
+// GateView is one capability gate and its state.
+type GateView struct {
+	Name string
+	On   bool
+}
+
+// ExtStatusView groups extensions by consent-ledger status.
+type ExtStatusView struct {
+	Status string
+	Names  []string
 }
 
 // ---------------------------------------------------------------------------
@@ -250,7 +286,7 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusView, error) {
 	section := params["section"]
 	switch section {
-	case "models", "heads":
+	case "models", "heads", "nudges", "capabilities":
 		// known sections
 	default:
 		section = "profile"
@@ -265,10 +301,68 @@ func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusVi
 		view.Models = pv
 	case "heads":
 		view.Heads = headscards.BuildHeads(app)
+	case "nudges":
+		view.Nudge = BuildNudge(app)
+	case "capabilities":
+		view.Capabilities = BuildCapabilities(app)
 	default:
 		view.Profile = BuildProfile(app, false)
 	}
 	return view, nil
+}
+
+// BuildNudge reads the owner's nudge controls from owner_settings.
+func BuildNudge(app core.App) NudgeView {
+	v := NudgeView{Enabled: store.GetOwnerSetting(app, "nudge_enabled", "1") != "0"}
+	if until := store.GetOwnerSetting(app, "nudge_muted_until", ""); until != "" {
+		now := time.Now()
+		if t, err := time.Parse(time.RFC3339, until); err == nil && now.Before(t) {
+			v.MutedUntil = t.In(now.Location()).Format("Mon 15:04")
+		}
+	}
+	return v
+}
+
+// BuildCapabilities assembles the read-only roster from self.Inventory, fed the
+// live tool names. self.Inventory returns live Go types (not JSON), so the type
+// assertions are stable.
+func BuildCapabilities(app core.App) CapabilitiesView {
+	inv := self.Inventory(app, turn.ToolNames(app))
+	cv := CapabilitiesView{}
+	if tn, ok := inv["tools"].([]string); ok {
+		cv.Tools = tn
+	}
+	if v, ok := inv["version"].(string); ok {
+		cv.Version = v
+	}
+	if c, ok := inv["commit"].(string); ok {
+		cv.Commit = c
+	}
+	if sk, ok := inv["skills"].([]string); ok {
+		cv.Skills = sk
+	}
+	if gates, ok := inv["gates"].(map[string]any); ok {
+		for _, name := range []string{"os_access", "recap", "nudge", "briefing"} {
+			on, _ := gates[name].(bool)
+			cv.Gates = append(cv.Gates, GateView{Name: name, On: on})
+		}
+	}
+	if mc, ok := inv["model_choice"].(map[string]any); ok {
+		provider, _ := mc["provider"].(string)
+		model, _ := mc["model"].(string)
+		kind, _ := mc["kind"].(string)
+		cv.Model = strings.TrimSpace(provider + " · " + model + " (" + kind + ")")
+	} else {
+		cv.Model = "local (default)"
+	}
+	if exts, ok := inv["extensions"].(map[string][]string); ok {
+		for _, status := range []string{"active", "proposed", "disabled"} {
+			if names := exts[status]; len(names) > 0 {
+				cv.Extensions = append(cv.Extensions, ExtStatusView{Status: status, Names: names})
+			}
+		}
+	}
+	return cv
 }
 
 // ExamplePanelView returns a populated PanelView for use in the storybook
@@ -414,6 +508,10 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		content = modelcards.Panel(v.Models)
 	case "heads":
 		content = headscards.HeadsCard(v.Heads)
+	case "nudges":
+		content = NudgeSection(v.Nudge)
+	case "capabilities":
+		content = CapabilitiesSection(v.Capabilities)
 	default:
 		content = g.Group([]g.Node{
 			ProfileIdentityCard(v.Profile),
@@ -423,4 +521,99 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 	}
 
 	return h.Div(h.Class("settings-section"), content)
+}
+
+// NudgeSection renders the nudge controls (#nudge-section): on/off, mute
+// windows, and a manual "nudge me now". Re-render target after the /ui/nudge/*
+// handlers (outer patch #nudge-section).
+func NudgeSection(v NudgeView) g.Node {
+	post := func(url string) g.Node {
+		return data.On("submit", "@post('"+url+"', {contentType:'form'})", data.ModifierPrevent)
+	}
+	status := "Nudges are on."
+	if !v.Enabled {
+		status = "Nudges are off."
+	} else if v.MutedUntil != "" {
+		status = "Muted until " + v.MutedUntil + "."
+	}
+	toggleLabel := "Turn off"
+	if !v.Enabled {
+		toggleLabel = "Turn on"
+	}
+	muteBtn := func(hours, label string) g.Node {
+		return h.Form(post("/ui/nudge/mute"),
+			h.Input(h.Type("hidden"), h.Name("hours"), h.Value(hours)),
+			h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text(label)),
+		)
+	}
+	return h.Article(h.Class("profile-card"), h.ID("nudge-section"),
+		h.H2(h.Class("profile-card-title"), g.Text("Nudges")),
+		h.P(h.Class("profile-hint"), g.Text("Reminders for due tasks, delivered as one chat message. "+status)),
+		h.Div(h.Class("kcard-actions"),
+			h.Form(post("/ui/nudge/toggle"),
+				h.Button(h.Class("btn btn-primary btn-sm"), h.Type("submit"), g.Text(toggleLabel)),
+			),
+			h.Form(post("/ui/nudge/now"),
+				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Nudge me now")),
+			),
+		),
+		h.P(h.Class("profile-hint"), g.Text("Mute for a while:")),
+		h.Div(h.Class("kcard-actions"),
+			muteBtn("1", "1 hour"),
+			muteBtn("4", "4 hours"),
+			muteBtn("8", "8 hours"),
+			muteBtn("24", "until tomorrow"),
+		),
+	)
+}
+
+// CapabilitiesSection renders the read-only capability roster: the live tool
+// set, gates, active model, skills, and extensions — the owner-facing mirror of
+// the `self` tool, where model/cloud "parity = visibility" lands (selection
+// stays an owner-only consent gate elsewhere). All values render via g.Text.
+func CapabilitiesSection(v CapabilitiesView) g.Node {
+	pills := func(items []string) g.Node {
+		tags := make([]g.Node, 0, len(items))
+		for _, s := range items {
+			tags = append(tags, ui.Tag(g.Text(s)))
+		}
+		return h.Div(h.Class("habit-strip"), g.Group(tags))
+	}
+	gateTags := make([]g.Node, 0, len(v.Gates))
+	for _, gt := range v.Gates {
+		state := "off"
+		if gt.On {
+			state = "on"
+		}
+		gateTags = append(gateTags, ui.Tag(g.Text(gt.Name+": "+state)))
+	}
+
+	out := []g.Node{
+		h.H2(h.Class("profile-card-title"), g.Text("What Balaur can do")),
+		h.P(h.Class("profile-hint"), g.Text("The live tool set, gates, and model. Model selection stays yours — this is visibility, not control.")),
+		h.Section(h.Class("k-section"),
+			h.H3(g.Text(fmt.Sprintf("Tools (%d)", len(v.Tools)))),
+			pills(v.Tools),
+		),
+		h.Section(h.Class("k-section"),
+			h.H3(g.Text("Gates")),
+			h.Div(h.Class("habit-strip"), g.Group(gateTags)),
+		),
+		h.Section(h.Class("k-section"),
+			h.H3(g.Text("Model")),
+			h.P(g.Text(v.Model)),
+		),
+	}
+	if len(v.Skills) > 0 {
+		out = append(out, h.Section(h.Class("k-section"),
+			h.H3(g.Text("Skills")), pills(v.Skills)))
+	}
+	for _, ex := range v.Extensions {
+		out = append(out, h.Section(h.Class("k-section"),
+			h.H3(g.Text("Extensions · "+ex.Status)), pills(ex.Names)))
+	}
+	if v.Version != "" || v.Commit != "" {
+		out = append(out, h.P(h.Class("profile-hint"), g.Text("Build: "+v.Version+" ("+v.Commit+")")))
+	}
+	return h.Div(out...)
 }

@@ -61,6 +61,95 @@ func TestProposeAndApproveMemory(t *testing.T) {
 	}
 }
 
+// TestProposeEditLifecycle: the model parks an edit on an active memory without
+// touching its approved content; the owner applies it (content changes, envelope
+// clears) or declines it (content stays, envelope clears). The propose audits as
+// actor=model — a model write to active knowledge can never read as the owner's.
+func TestProposeEditLifecycle(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	rec, err := ProposeMemory(app, MemoryProposal{Title: "Prefers tea", Content: "Black, no sugar.", Category: "preference", Importance: 3})
+	if err != nil {
+		t.Fatalf("ProposeMemory: %v", err)
+	}
+	if _, err := Transition(app, Memory, rec.Id, StatusActive); err != nil {
+		t.Fatalf("activate: %v", err)
+	}
+
+	// Model proposes an edit — parked, audited actor=model, content untouched.
+	if _, err := ProposeEdit(app, rec.Id, map[string]string{"content": "Green tea, no sugar.", "importance": "5"}, false); err != nil {
+		t.Fatalf("ProposeEdit: %v", err)
+	}
+	cur, _ := app.FindRecordById("nodes", rec.Id)
+	if got := cur.GetString("body"); got != "Black, no sugar." {
+		t.Errorf("active content must be untouched until approval, got %q", got)
+	}
+	if _, _, ok := PendingEdit(cur); !ok {
+		t.Fatal("expected a parked pending edit")
+	}
+	if got := modelAudit(t, app, "knowledge.propose_edit"); got != 1 {
+		t.Errorf("want 1 actor=model propose_edit audit, got %d", got)
+	}
+	if pend, _ := PendingEdits(app); len(pend) != 1 {
+		t.Errorf("PendingEdits want 1, got %d", len(pend))
+	}
+
+	// Owner approves — applied, envelope cleared, change audited as owner.
+	if _, err := ApplyEdit(app, rec.Id); err != nil {
+		t.Fatalf("ApplyEdit: %v", err)
+	}
+	cur, _ = app.FindRecordById("nodes", rec.Id)
+	if got := cur.GetString("body"); got != "Green tea, no sugar." {
+		t.Errorf("approved edit should apply, got %q", got)
+	}
+	if got := nodes.PropInt(cur, "importance"); got != 5 {
+		t.Errorf("approved importance want 5, got %d", got)
+	}
+	if _, _, ok := PendingEdit(cur); ok {
+		t.Error("envelope should be cleared after apply")
+	}
+	if countAudit(t, app, "knowledge.edit", true) != 1 {
+		t.Error("apply should audit knowledge.edit (actor=owner)")
+	}
+
+	// Decline a second proposal — content stays, envelope clears.
+	if _, err := ProposeEdit(app, rec.Id, map[string]string{"content": "rejected change"}, false); err != nil {
+		t.Fatalf("ProposeEdit 2: %v", err)
+	}
+	if _, err := DeclineEdit(app, rec.Id); err != nil {
+		t.Fatalf("DeclineEdit: %v", err)
+	}
+	cur, _ = app.FindRecordById("nodes", rec.Id)
+	if got := cur.GetString("body"); got != "Green tea, no sugar." {
+		t.Errorf("declined edit must not change content, got %q", got)
+	}
+	if _, _, ok := PendingEdit(cur); ok {
+		t.Error("envelope should be cleared after decline")
+	}
+}
+
+// TestProposeEditRejectsNonActive: edits can only be proposed against active
+// knowledge — a still-proposed node is not yet the owner's to revise.
+func TestProposeEditRejectsNonActive(t *testing.T) {
+	app := storetest.NewApp(t)
+	rec, _ := ProposeMemory(app, MemoryProposal{Title: "x", Importance: 1})
+	if _, err := ProposeEdit(app, rec.Id, map[string]string{"content": "y"}, false); err == nil {
+		t.Fatal("propose_edit on a proposed (non-active) node should fail")
+	}
+}
+
+// modelAudit counts allowed audit rows for an action attributed to the model.
+func modelAudit(t *testing.T, app core.App, action string) int {
+	t.Helper()
+	recs, err := app.FindRecordsByFilter("audit_log",
+		"action = {:a} && actor = 'model' && allowed = true", "", 0, 0,
+		dbx.Params{"a": action})
+	if err != nil {
+		t.Fatalf("querying audit_log: %v", err)
+	}
+	return len(recs)
+}
+
 func TestLifecycleRejectsInvalidTransitions(t *testing.T) {
 	app := storetest.NewApp(t)
 	rec, err := ProposeMemory(app, MemoryProposal{Title: "x", Importance: 1})

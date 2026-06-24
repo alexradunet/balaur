@@ -160,6 +160,7 @@ func memoryActions(r MemoryRecord) g.Node {
 				h.Input(h.Type("hidden"), h.Name("to"), h.Value("archived")),
 				h.Button(h.Class("btn btn-ghost btn-sm"), h.Type("submit"), g.Text("Archive")),
 			),
+			ui.AskChip("ask balaur", "Revise this memory “"+r.Title+"”: "),
 		}
 		if r.UseCount > 0 {
 			nodes = append(nodes, h.Span(h.Class("kcard-meta"), g.Text(fmt.Sprintf("used ×%d", r.UseCount))))

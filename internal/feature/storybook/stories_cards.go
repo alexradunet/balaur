@@ -8,6 +8,7 @@ import (
 	"github.com/alexradunet/balaur/internal/feature/journalcards"
 	"github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	"github.com/alexradunet/balaur/internal/feature/lifecards"
+	"github.com/alexradunet/balaur/internal/feature/reviewcards"
 	"github.com/alexradunet/balaur/internal/feature/settingscards"
 	"github.com/alexradunet/balaur/internal/feature/taskcards"
 	"github.com/alexradunet/balaur/internal/ui"
@@ -51,13 +52,112 @@ func questsfocusStory() Story {
 	}
 }
 
+// reviewqueueStory documents the unified review queue: the one owner surface for
+// everything awaiting consent, with model-proposed edits shown as before→after
+// diffs.
+func reviewqueueStory() Story {
+	populated := reviewcards.ReviewCard(reviewcards.ReviewView{
+		Memories: []g.Node{
+			knowledgecards.MemoryRecordCard(knowledgecards.MemoryRecord{
+				ID: "m1", Status: "proposed", Category: "preference",
+				Title: "Prefers tea", Content: "Black, no sugar.", Importance: 3,
+			}),
+		},
+		Edits: []reviewcards.EditProposalView{
+			{ID: "n2", Kind: "memory", Title: "Prefers tea", Rows: []reviewcards.EditDiffRow{
+				{Field: "detail", Before: "Black, no sugar.", After: "Green tea, no sugar."},
+				{Field: "importance", Before: "3", After: "4"},
+			}},
+			{ID: "n3", Kind: "skill", Title: "weekly-review", Archive: true},
+		},
+		Extensions: []reviewcards.ExtProposalView{
+			{ID: "e1", Name: "weather", Summary: "fetch the local forecast"},
+		},
+	})
+	return Story{
+		ID: "reviewqueue", Group: "Cards", Title: "ReviewQueue", Wide: true, OnDark: true,
+		Blurb: "The unified review queue: one owner surface for everything awaiting consent — proposed memories/skills, model-proposed edits to active knowledge (rendered as before → after diffs), and proposed extensions. Approve/decline call the domain directly and re-render the queue.",
+		Variants: []Variant{
+			{"populated", populated},
+			{"empty", reviewcards.ReviewCard(reviewcards.ReviewView{})},
+		},
+		Props: []Prop{
+			{"Memories", "[]g.Node", "nil", "Pre-rendered proposed-memory record cards (reused from knowledgecards)."},
+			{"Skills", "[]g.Node", "nil", "Pre-rendered proposed-skill record cards."},
+			{"Edits", "[]EditProposalView", "nil", "Model-proposed edits to active knowledge; each renders a before → after diff with approve/decline."},
+			{"Extensions", "[]ExtProposalView", "nil", "Proposed extensions awaiting approval."},
+		},
+		Dos: []string{
+			"Keep approval an owner action — the model proposes; the owner approves here.",
+			"Show the before → after diff so the owner sees exactly what changes.",
+		},
+		Donts: []string{
+			"Auto-apply a proposed edit — the active version stays until approval.",
+			"Mix the queue with the active management grids.",
+		},
+	}
+}
+
+// nudgesectionStory documents the owner's nudge controls in settings.
+func nudgesectionStory() Story {
+	return Story{
+		ID: "nudgesection", Group: "Settings", Title: "NudgeSection", Wide: true, OnDark: true,
+		Blurb: "Owner controls for the task nudger: enable/disable, mute for a window, or fire one now. Writes owner_settings — the soft layer above the BALAUR_NUDGE env kill switch. 'Nudge now' bypasses the mute (an explicit owner action).",
+		Variants: []Variant{
+			{"on", settingscards.NudgeSection(settingscards.NudgeView{Enabled: true})},
+			{"muted", settingscards.NudgeSection(settingscards.NudgeView{Enabled: true, MutedUntil: "Wed 14:30"})},
+			{"off", settingscards.NudgeSection(settingscards.NudgeView{Enabled: false})},
+		},
+		Props: []Prop{
+			{"Enabled", "bool", "true", "Whether nudges fire at all (the nudge_enabled owner setting)."},
+			{"MutedUntil", "string", "—", "Human label of the active mute-window end; empty when not muted."},
+		},
+		Dos: []string{
+			"Keep the env BALAUR_NUDGE as the hard kill switch; this is the soft, owner-driven layer.",
+		},
+		Donts: []string{
+			"Block 'nudge now' while muted — an explicit owner action overrides the mute.",
+		},
+	}
+}
+
+// capabilitiesStory documents the read-only capability roster in settings.
+func capabilitiesStory() Story {
+	return Story{
+		ID: "capabilities", Group: "Settings", Title: "Capabilities", Wide: true, OnDark: true,
+		Blurb: "The read-only capability roster: the live tool set, gates, active model, skills, and extensions — the owner-facing mirror of the `self` tool. Model selection stays owner-only; this is visibility, not control.",
+		Variants: []Variant{
+			{"populated", settingscards.CapabilitiesSection(settingscards.CapabilitiesView{
+				Tools:      []string{"remember", "recall", "task_add", "propose_edit", "head_switch", "profile_set"},
+				Gates:      []settingscards.GateView{{Name: "os_access", On: false}, {Name: "recap", On: true}, {Name: "nudge", On: true}, {Name: "briefing", On: true}},
+				Model:      "local (default)",
+				Skills:     []string{"weekly-review"},
+				Extensions: []settingscards.ExtStatusView{{Status: "active", Names: []string{"weather"}}},
+				Version:    "dev", Commit: "abc1234",
+			})},
+		},
+		Props: []Prop{
+			{"Tools", "[]string", "—", "Live registered tool names, shown as pills."},
+			{"Gates", "[]GateView", "—", "Capability gates (os_access, recap, nudge, briefing) and their state."},
+			{"Model", "string", "—", "Active model — local by default; a cloud model only on the owner's explicit selection."},
+		},
+		Dos: []string{
+			"Mirror what the `self` tool reports — one source of truth for capability.",
+		},
+		Donts: []string{
+			"Offer model/cloud SELECTION here — that stays an owner-only consent gate elsewhere.",
+		},
+	}
+}
+
 // lifelogfocusStory documents the lifelog card's full-canvas focus body — the
 // life overview ported to gomponents (chat.Message-style components are for the
-// chat; this is the page body). Read-only; entries are logged via chat.
+// chat; this is the page body). The owner can log and drop entries by hand here,
+// mirroring the agent's log_entry/entry_drop.
 func lifelogfocusStory() Story {
 	return Story{
 		ID: "lifelogfocus", Group: "Cards", Title: "LifelogFocus", Wide: true, OnDark: true,
-		Blurb: "The life overview as the lifelog card's focus body: a habit strip plus every tracked kind. Numeric kinds chart a sparkline + trend; text kinds list recent lines. The kinds are the owner's to invent — entries are logged via chat, so this surface is read-only.",
+		Blurb: "The life overview as the lifelog card's focus body: a 'Log an entry' form plus a per-row drop (parity with the agent's log_entry/entry_drop), a habit strip, plus every tracked kind. Numeric kinds chart a sparkline + trend; text kinds list recent lines. The kinds are the owner's to invent.",
 		Variants: []Variant{
 			{"tracked + habits", lifecards.LifelogFocus(lifecards.LifelogFocusView{
 				Habits: []lifecards.LifeHabitView{
@@ -67,7 +167,10 @@ func lifelogfocusStory() Story {
 				Kinds: []lifecards.LifeKindFocusView{
 					{Kind: "weight", Unit: "kg", Count: 12, Numeric: true, LastVal: "82.5", LastAt: "Jun 11",
 						Change: "-0.8 over 90d", Points: "4.0,40.0 120.0,22.0 236.0,8.0", SparkLastX: "236.0", SparkLastY: "8.0"},
-					{Kind: "gratitude", Count: 3, Recent: []string{"Jun 10 — the morning was quiet", "Jun 9 — a long walk by the river"}},
+					{Kind: "gratitude", Count: 3, Recent: []lifecards.LifelogRecentEntry{
+						{ID: "n1", Line: "Jun 10 — the morning was quiet"},
+						{ID: "n2", Line: "Jun 9 — a long walk by the river"},
+					}},
 				},
 			})},
 			{"empty", lifecards.LifelogFocus(lifecards.LifelogFocusView{})},
@@ -517,6 +620,87 @@ func dayfocusStory() Story {
 		Donts: []string{
 			"Add prev/next navigation — the day artifact is nav-free; the chat is the nav surface.",
 			"Swap PATH vs QUERY for write/drop — the handlers parse them differently.",
+		},
+	}
+}
+
+// periodfocusStory documents the period node (week/month/quarter/year): a
+// SYNTHESISED telescope lens — the period's recap summary, drill-down links to
+// its child periods, a breadcrumb up to the enclosing period, and what got done
+// and logged across the whole span. Opened from a telescope summary card via
+// /ui/show/period?type=&start=. Not a stored node (only type=day nodes exist).
+func periodfocusStory() Story {
+	return Story{
+		ID: "periodfocus", Group: "Cards", Title: "PeriodFocus", Wide: true, OnDark: true,
+		Blurb: "The week/month/quarter/year node: a synthesised lens over a period's recap summary, drill-down links to its children, a breadcrumb up to its parent, and what got done/logged across the span. Nav-free except the telescope links, which morph the panel in place.",
+		Variants: []Variant{
+			{"week · recap + days", journalcards.PeriodFocus(journalcards.PeriodFocusView{
+				Type:        "week",
+				Label:       "Week of June 1 2026",
+				Recap:       "A steady week: you shipped the journal merge and kept training most evenings.",
+				ParentURL:   "/ui/show/period?type=month&start=1748736000",
+				ParentLabel: "June 2026",
+				Children: []journalcards.PeriodChild{
+					{Label: "Monday, June 1 2026", URL: "/ui/show/day?date=2026-06-01"},
+					{Label: "Tuesday, June 2 2026", URL: "/ui/show/day?date=2026-06-02"},
+					{Label: "Wednesday, June 3 2026", URL: "/ui/show/day?date=2026-06-03"},
+				},
+				Done: []journalcards.DayLine{
+					{Time: "Jun 1 09:14", Text: "Ship plan 171"},
+					{Time: "Jun 3 16:02", Text: "Close 3 quests"},
+				},
+				Logs: []journalcards.DayLine{
+					{Time: "Jun 2 08:00", Text: "mood: 7"},
+				},
+			})},
+			{"month · day children", journalcards.PeriodFocus(journalcards.PeriodFocusView{
+				Type:        "month",
+				Label:       "June 2026",
+				Recap:       "June was about consolidation — fewer new threads, more finishing.",
+				ParentURL:   "/ui/show/period?type=quarter&start=1743465600",
+				ParentLabel: "Q2 2026",
+				Children: []journalcards.PeriodChild{
+					{Label: "Monday, June 8 2026", URL: "/ui/show/day?date=2026-06-08"},
+					{Label: "Tuesday, June 16 2026", URL: "/ui/show/day?date=2026-06-16"},
+				},
+				Done: []journalcards.DayLine{
+					{Time: "Jun 8 11:00", Text: "Notary papers filed"},
+				},
+			})},
+			{"quarter · sparse", journalcards.PeriodFocus(journalcards.PeriodFocusView{
+				Type:        "quarter",
+				Label:       "Q2 2026",
+				Recap:       "A quarter of quiet, deliberate progress.",
+				ParentURL:   "/ui/show/period?type=year&start=1735689600",
+				ParentLabel: "2026",
+				Children: []journalcards.PeriodChild{
+					{Label: "April 2026", URL: "/ui/show/period?type=month&start=1743465600"},
+					{Label: "May 2026", URL: "/ui/show/period?type=month&start=1746057600"},
+					{Label: "June 2026", URL: "/ui/show/period?type=month&start=1748736000"},
+				},
+			})},
+			{"empty period", journalcards.PeriodFocus(journalcards.PeriodFocusView{
+				Type:  "week",
+				Label: "Week of January 5 2026",
+			})},
+		},
+		Props: []Prop{
+			{"Type", "string", "—", "week | month | quarter | year (day has its own DayFocus card)."},
+			{"Label", "string", "—", "Human period label (recap.Label)."},
+			{"Recap", "string", "—", "Period summary text; empty → 'No summary kept for this period.'"},
+			{"ParentURL", "string", "—", "Breadcrumb up to the enclosing period; empty for year."},
+			{"ParentLabel", "string", "—", "Label for the parent breadcrumb link."},
+			{"Children", "[]PeriodChild", "nil", "Drill-down links to child periods/days."},
+			{"Done", "[]DayLine", "nil", "Tasks/completions done across the span."},
+			{"Logs", "[]DayLine", "nil", "Tracked entries logged across the span."},
+		},
+		Dos: []string{
+			"Open via /ui/show/period?type=&start= (start = period start as unix seconds).",
+			"Point day children at /ui/show/day?date= and coarser children at /ui/show/period.",
+		},
+		Donts: []string{
+			"Treat a period as a stored node — it is synthesised from the summary + range aggregates.",
+			"Add a 'day' period type — days have their own DayFocus card.",
 		},
 	}
 }

@@ -91,3 +91,47 @@ func TestDayDataBoundary(t *testing.T) {
 		}
 	}
 }
+
+// TestRange verifies the period aggregator honours the half-open [start, end)
+// window: a record at exactly start is included, at exactly end is excluded.
+func TestRange(t *testing.T) {
+	app := storetest.NewApp(t)
+	loc := time.UTC
+	start := time.Date(2026, 6, 1, 0, 0, 0, 0, loc)
+	end := time.Date(2026, 6, 8, 0, 0, 0, 0, loc) // exclusive
+
+	// Logged measures: at start (incl), mid (incl), one second before start (excl).
+	for _, lo := range []LogOpts{
+		{Kind: "weight", ValueNum: 80, Unit: "kg", NotedAt: start},
+		{Kind: "weight", ValueNum: 79, Unit: "kg", NotedAt: time.Date(2026, 6, 4, 9, 0, 0, 0, loc)},
+		{Kind: "weight", ValueNum: 81, Unit: "kg", NotedAt: start.Add(-time.Second)},
+	} {
+		if _, err := Log(app, lo); err != nil {
+			t.Fatalf("log %v: %v", lo.NotedAt, err)
+		}
+	}
+
+	// Done tasks: one mid (incl), one at exactly end (excl).
+	mkDone := func(title string, at time.Time) {
+		rec, err := tasks.Create(app, tasks.CreateOpts{Title: title})
+		if err != nil {
+			t.Fatalf("task create: %v", err)
+		}
+		if _, err := tasks.Done(app, rec, at); err != nil {
+			t.Fatalf("task done: %v", err)
+		}
+	}
+	mkDone("inside", time.Date(2026, 6, 3, 12, 0, 0, 0, loc))
+	mkDone("at-end", end)
+
+	rd, err := Range(app, start, end)
+	if err != nil {
+		t.Fatalf("range: %v", err)
+	}
+	if len(rd.Logged) != 2 {
+		t.Fatalf("logged = %d, want 2 (start+mid incl, before excl)", len(rd.Logged))
+	}
+	if len(rd.Done) != 1 {
+		t.Fatalf("done = %d, want 1 (inside incl, at-end excl)", len(rd.Done))
+	}
+}

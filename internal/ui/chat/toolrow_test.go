@@ -53,6 +53,39 @@ func TestToolRowPending(t *testing.T) {
 	}
 }
 
+// TestToolRowArgsReasoning: the call arguments and the model's reasoning render
+// in collapsed folds, escaped verbatim — the audit trail never executes markup.
+func TestToolRowArgsReasoning(t *testing.T) {
+	got := render(t, chat.ToolRow(chat.ToolRowProps{
+		Tool: "task_add", Icon: "scroll", AvatarSrc: "/static/crest.png",
+		Content:   "added task",
+		Args:      `{"title":"<b>x</b>"}`,
+		Reasoning: "because <reasons>",
+	}))
+	for _, want := range []string{
+		`<details class="tool-args"><summary>arguments</summary><pre>`,
+		`<details class="tool-reasoning"><summary>reasoning</summary><pre>`,
+		`&lt;b&gt;x&lt;/b&gt;`,    // args escaped, not raw markup
+		`because &lt;reasons&gt;`, // reasoning escaped
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("tool row missing %q in: %s", want, got)
+		}
+	}
+	if strings.Contains(got, "<b>x</b>") {
+		t.Errorf("args must be escaped, not raw markup: %s", got)
+	}
+}
+
+// TestToolRowNoFolds: with no args/reasoning, no folds render — the trail stays
+// compact (only the tool line + result).
+func TestToolRowNoFolds(t *testing.T) {
+	got := render(t, chat.ToolRow(chat.ToolRowProps{Tool: "x", Icon: "scroll", Content: "done"}))
+	if strings.Contains(got, "tool-args") || strings.Contains(got, "tool-reasoning") {
+		t.Errorf("no folds expected when args/reasoning empty: %s", got)
+	}
+}
+
 // TestToolRowChip: a surfaced artifact chip rides inside the tool card body.
 func TestToolRowChip(t *testing.T) {
 	chip := chat.ArtifactChip(chat.ArtifactChipProps{Title: "Settings", Icon: "key", ReopenURL: "/ui/show/settings"})

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -173,6 +174,7 @@ type messageView struct {
 	BalaurAvatarURL string // resolved Balaur head avatar URL
 	OwnerName       string // display name for the "You" label
 	WhoLabel        string // assistant display name ("Balaur", or the active head's name)
+	Args            string // tool-call arguments (pretty JSON) for the collapsed fold on reload
 
 	// Datastar streaming fields (master chat dock). BubbleID/BodyID give a
 	// streamed element a stable id so the SSE handler can morph it in place;
@@ -207,7 +209,7 @@ func (h *handlers) renderMessages(views []messageView) g.Node {
 			}
 			nodes = append(nodes, chat.ToolRow(chat.ToolRowProps{
 				Tool: mv.Tool, Icon: toolIconFile(mv.Tool), Who: mv.WhoLabel,
-				AvatarSrc: mv.BalaurAvatarURL, Content: mv.Content, Chip: chip,
+				AvatarSrc: mv.BalaurAvatarURL, Content: mv.Content, Args: mv.Args, Chip: chip,
 			}))
 			if mv.CardBody != nil { // proposal → framed as a Balaur card turn below
 				nodes = append(nodes, chat.CardTurn(chat.CardTurnProps{
@@ -249,6 +251,11 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 	balaurURL := store.BalaurAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)
 	out := make([]messageView, 0, len(recs))
+	// Tool-call args ride on the assistant record's tool_payload (one entry per
+	// call); the matching tool-result rows follow in order with no persisted
+	// call-id link. Queue them per turn so each reloaded tool row shows the same
+	// args fold as the live stream.
+	var pendingArgs []string
 	for _, r := range recs {
 		mv := messageView{
 			Role:            r.GetString("role"),
@@ -259,6 +266,25 @@ func (h *handlers) messageViews(recs []*core.Record) []messageView {
 			BalaurAvatarURL: balaurURL,
 			OwnerName:       ownerName,
 			WhoLabel:        "Balaur",
+		}
+		switch mv.Role {
+		case "assistant":
+			// Capture even for tool-call-only turns (skipped below) so the
+			// queue stays aligned with the tool rows that follow.
+			if raw := r.GetString("tool_payload"); raw != "" {
+				var calls []struct {
+					Args string `json:"args"`
+				}
+				if json.Unmarshal([]byte(raw), &calls) == nil {
+					for _, c := range calls {
+						pendingArgs = append(pendingArgs, prettyJSON(c.Args))
+					}
+				}
+			}
+		case "tool":
+			if len(pendingArgs) > 0 {
+				mv.Args, pendingArgs = pendingArgs[0], pendingArgs[1:]
+			}
 		}
 		// Re-render marked tool results.
 		// Consumer order: uicard → choices → proposal → refresh → plain.
@@ -316,32 +342,41 @@ func recapBandsNode(view []bandView) g.Node {
 	return g.Group(bands)
 }
 
-// recapCardsNode renders a row of expandable recap cards.
+// recapCardsNode renders a row of recap cards. The card head+body OPEN the
+// period/day node (day → /ui/show/day, coarser → /ui/show/period); a secondary
+// button still peeks inline (day transcript / child cards). The inline expand
+// renders into .recap-children, which sits OUTSIDE the clickable open-zone so
+// an expanded transcript never re-triggers navigation.
 func recapCardsNode(cards []recapView) g.Node {
 	items := make([]g.Node, 0, len(cards))
 	for _, c := range cards {
-		var controls []g.Node
-		controls = append(controls, h.Span(h.Class("recap-label"), g.Text(c.Label)))
+		// Node URL: coarser lenses open the synthesised period node; days open
+		// the day node. @get morphs the panel (a plain nav would render raw SSE).
+		nodeURL := "/ui/show/day?date=" + c.Date
+		expandType := "day"
+		expandLabel := "transcript"
 		if c.HasChild {
-			expr := "el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=" + c.Type + "&start=" + c.Start + "')"
-			controls = append(controls, h.Button(h.Class("recap-expand"), h.Type("button"),
-				g.Attr("data-on:click", expr), g.Text("open")))
-		} else {
-			if c.Date != "" {
-				controls = append(controls, h.A(h.Class("recap-daylink"),
-					h.Href("/ui/show/day?date="+c.Date),
-					// @get morphs the panel; a plain href would full-navigate to the
-					// SSE-only /ui/show route and render raw patch text.
-					g.Attr("data-on:click__prevent", "@get('/ui/show/day?date="+c.Date+"'); basmOpenPanel()"),
-					g.Text("visit")))
-			}
-			expr := "el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type=day&start=" + c.Start + "')"
-			controls = append(controls, h.Button(h.Class("recap-expand"), h.Type("button"),
-				g.Attr("data-on:click", expr), g.Text("transcript")))
+			nodeURL = "/ui/show/period?type=" + c.Type + "&start=" + c.Start
+			expandType = c.Type
+			expandLabel = "open"
 		}
+		openNode := "@get('" + nodeURL + "'); basmOpenPanel()"
+
+		// Label is a real anchor (keyboard/AT focusable) to the node; stop
+		// propagation so it doesn't also fire the open-zone's click.
+		label := h.A(h.Class("recap-label"), h.Href(nodeURL),
+			g.Attr("data-on:click__prevent", "evt.stopPropagation(); "+openNode),
+			g.Text(c.Label))
+		// Secondary inline peek; stopPropagation so it expands without navigating.
+		expand := h.Button(h.Class("recap-expand"), h.Type("button"),
+			g.Attr("data-on:click", "evt.stopPropagation(); el.closest('.recap-card').classList.add('recap-open'); @get('/ui/recap/expand?type="+expandType+"&start="+c.Start+"')"),
+			g.Text(expandLabel))
+
 		items = append(items, h.Article(h.Class("recap-card recap-"+c.Type),
-			h.Header(h.Class("recap-head"), g.Group(controls)),
-			h.P(h.Class("recap-body"), g.Text(c.Content)),
+			h.Div(h.Class("recap-open-zone"), g.Attr("data-on:click", openNode),
+				h.Header(h.Class("recap-head"), label, expand),
+				h.P(h.Class("recap-body"), g.Text(c.Content)),
+			),
 			h.Div(h.Class("recap-children"), h.ID("recap-children-"+c.Type+"-"+c.Start)),
 		))
 	}

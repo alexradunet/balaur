@@ -161,7 +161,10 @@ self tool, which reports the actual registry):
 
 - Knowledge: everything is a typed node in the unified spine. remember and
   propose_skill create memory/skill nodes the owner must approve (born
-  proposed); recall searches approved memory nodes, and the cross-type search
+  proposed); propose_edit parks a proposed change (or archival) on an existing
+  ACTIVE memory/skill without touching its approved content — the owner approves
+  it in the review queue, preserving the consent boundary; recall searches
+  approved memory nodes, and the cross-type search
   tool (CLI: `balaur search <terms>`) queries approved nodes of all knowledge
   types via the unified `knowledge_fts` index, with a deterministic substring
   fallback when the sidecar is unavailable; skill loads an approved
@@ -194,7 +197,8 @@ self tool, which reports the actual registry):
   Owner-voiced tasks act directly; every mutation is audited. Task cards in the
   web UI carry the same edit/done/snooze/drop actions.
 - Life log: log_entry, entry_series, entry_drop — kinds are invented by
-  the owner, never by you.
+  the owner, never by you. The lifelog card in the web UI carries the same
+  log/drop by hand (a "Log an entry" form + a per-row drop).
 - Journal: journal_write keeps the owner's words verbatim in the type=day
   node's body — one day node per date, born active, appended to across the
   day. type=journal is retired (plan 171); the day node is both the journal
@@ -211,6 +215,16 @@ self tool, which reports the actual registry):
   add verbs, not privileges — no filesystem, no shell, no npm.
 - Dialogue choices: offer_choices presents the owner with 2–5 numbered reply buttons in chat; the owner may click one (it arrives as their next message) or type freely. Use it when a decision has clear concrete options, not for open-ended questions.
 - Card composition: card_show renders one live card in the right panel (single-card seam); show_cards renders a hand-picked cluster of 1–8 cards in the right panel as a single active artifact — use it when the owner asks to see multiple domains at once ("show my quests and my weight together"). Both are always-on UI tools available to all heads.
+- Personas & profile: head_switch changes the active head (persona) for the
+  NEXT turn (this turn's tools are already fixed); head_create and head_delete
+  add or remove custom heads (built-ins cannot be deleted); profile_set updates
+  the owner's display name and the soul/balaur avatars. Heads are a capability
+  filter, not a privilege grant, so these are always-on core tools every head
+  carries, and reversible, audited config. Model/cloud SELECTION stays
+  owner-only (a hard consent gate) — there is deliberately no tool for it.
+- Review queue: the owner approves everything awaiting consent in one place —
+  /ui/show/review — proposed memories/skills, propose_edit changes to active
+  knowledge (shown as before→after diffs), and proposed extensions.
 - self: this tool — your self-knowledge and live capability inventory.
 
 Surfaces: the web UI — / is Home, the single-page chat shell.
@@ -266,7 +280,13 @@ h.renderMessages and the live SSE stream in chatstream.go share one markup
 source), and the input is a functional ui.Composer (@posts /ui/chat, pinned at
 the bottom). The surrounding dock chrome (grip, recap zone, nudge poller,
 composer, model-modal dialog) renders via the chat.Dock gomponents organism
-(internal/ui/chat/dock.go). The chatbar and head-switcher now render via gomponents node builders
+(internal/ui/chat/dock.go). The inline transcript is TODAY only — earlier turns
+collapse into the recap telescope: the #recap zone lazy-loads /ui/recap/bands on
+scroll-up (day cards for earlier this week, then week/month/quarter/year summary
+bands). Clicking a summary opens its node — days at /ui/show/day, coarser periods
+at the synthesised /ui/show/period?type=&start= node (its recap + what got
+done/logged across the span + drill-down to children + a breadcrumb up).
+The chatbar and head-switcher now render via gomponents node builders
 (`chatBarNode`/`headSwitcherNode` in `internal/web/home.go`); they are still SSE
 patch targets for `patchChatbar`/`setActiveHead`. The active
 head is switched from the dock via POST /ui/heads/active, and the heads section
@@ -290,7 +310,9 @@ GET /ui/cards/{type}?params — each card is a server-rendered HTML fragment
 (HATEOAS). The types are: today (open tasks due today), quests (task list,
 status param), calendar (month grid, month param), timeline (forward days,
 days param), day (a day-of-life summary
-tile + full focus, date param), measure (numeric sparkline
+tile + full focus, date param), period (a synthesised week/month/quarter/year
+node — recap + range aggregates + drill-down + breadcrumb; type+start params),
+measure (numeric sparkline
 for a life kind, kind required + days param), lines (text entries for a life
 kind, kind required + limit param), memory (a memory slice — category or the Awaiting proposed queue; category + view + query + limit params), skills (active skills, limit param), heads (the persona roster — built-ins plus customs, no params),
 habits (recurring tasks with their streak, no params), tasks (bare stack of

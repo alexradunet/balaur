@@ -56,6 +56,15 @@ func chattoolrowStory() Story {
 				chat.ToolRow(chat.ToolRowProps{Tool: "settings", Icon: "key", AvatarSrc: "/static/crest.png", Pending: true}))},
 			{"with artifact", h.Div(h.Class("chat"),
 				chat.ToolRow(chat.ToolRowProps{Tool: "card_show", Icon: "key", AvatarSrc: "/static/crest.png", Content: "showing the owner the Settings card", Chip: settingsChip}))},
+			{"with args", h.Div(h.Class("chat"),
+				chat.ToolRow(chat.ToolRowProps{Tool: "task_add", Icon: "scroll", AvatarSrc: "/static/crest.png",
+					Content: "added task: water the tomatoes · every 2 days 18:00",
+					Args:    "{\n  \"title\": \"water the tomatoes\",\n  \"due\": \"18:00\",\n  \"recurrence\": \"daily:2\"\n}"}))},
+			{"with reasoning", h.Div(h.Class("chat"),
+				chat.ToolRow(chat.ToolRowProps{Tool: "remember", Icon: "tome", AvatarSrc: "/static/crest.png",
+					Content:   "proposed a memory for your approval",
+					Args:      "{\n  \"title\": \"prefers green tea, no sugar\"\n}",
+					Reasoning: "The owner mentioned tea twice and corrected the sugar — worth remembering the preference."}))},
 		},
 		Props: []Prop{
 			{"Tool", "string", "—", `Machine name of the tool call; rendered "tool · {Tool}", mono.`},
@@ -63,6 +72,8 @@ func chattoolrowStory() Story {
 			{"Who", "string", `"Balaur"`, `Nameplate name; rendered "{Who} · Tool" (matches the head's spoken turns).`},
 			{"AvatarSrc", "string", "—", "Path to the Balaur portrait PNG — the same avatar as the head's message turns."},
 			{"Content", "string", "—", "The result / detail line (empty while pending)."},
+			{"Args", "string", "—", "Pretty-printed call arguments, shown in a collapsed-by-default fold (escaped, verbatim)."},
+			{"Reasoning", "string", "—", "Model reasoning leading into the call, in a second collapsed fold (off-screen by default)."},
 			{"Chip", "g.Node", "nil", "Optional artifact re-open chip, rendered inside the card body."},
 			{"Pending", "bool", "false", `Running state — breathing glow + "running…" — before the tool returns.`},
 			{"ID", "string", "—", "Optional root element id — lets the chat stream morph the row once the tool returns."},
@@ -70,10 +81,11 @@ func chattoolrowStory() Story {
 		},
 		Dos: []string{
 			"Show every tool and OS-access event — the trail is the trust.",
+			"Surface the call's arguments in the collapsed fold — the inputs are part of the trail.",
 			"Keep the tool turn in the same speech-panel frame as Balaur's words.",
 		},
 		Donts: []string{
-			"Hide or collapse tool rows.",
+			"Hide the tool row itself, or omit the result line.",
 			"Render a tool call as a separate inset slab divorced from Balaur's turns.",
 		},
 	}

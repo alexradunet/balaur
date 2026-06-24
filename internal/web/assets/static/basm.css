@@ -1258,7 +1258,11 @@ dialog::backdrop {
 .recap-card.recap-open { border-left-color: var(--gold); }
 /* Once expanded, the trigger collapses (Datastar adds .recap-open on click;
    the old htmx path removed the button outright). */
-.recap-card.recap-open > .recap-head .recap-expand { display: none; }
+.recap-card.recap-open .recap-expand { display: none; }
+/* The card head + body open the period/day node on click (plan: telescope →
+   node). The children container sits OUTSIDE this zone so expanded transcripts
+   don't re-trigger navigation. */
+.recap-open-zone { cursor: pointer; }
 .recap-head {
   display: flex;
   align-items: baseline;
@@ -1271,7 +1275,9 @@ dialog::backdrop {
   text-transform: uppercase;
   letter-spacing: .05em;
   color: var(--gold);
+  text-decoration: none; /* label is an anchor to the period/day node */
 }
+.recap-label:hover { color: var(--gold-deep); }
 .recap-expand {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -1434,6 +1440,12 @@ dialog::backdrop {
 .life-lines { list-style: none; margin: var(--space-1) 0 0; padding: 0; font-size: 14px; }
 .life-lines li { padding: 3px 0; border-top: 1px dashed var(--parch-edge); }
 .life-lines li:first-child { border-top: none; }
+.life-line { display: flex; align-items: baseline; gap: var(--space-2); }
+.life-line-text { flex: 1; min-width: 0; }
+.life-line-drop { flex: none; margin: 0; }
+.life-line-drop .btn { padding: 0 6px; line-height: 1.4; opacity: .4; }
+.life-line:hover .life-line-drop .btn,
+.life-line-drop .btn:focus-visible { opacity: 1; }
 
 /* ── Day pages ───────────────────────────────────────────────────── */
 
@@ -3216,6 +3228,62 @@ progress.pull-progress-bar::-moz-progress-bar {
 /* The artifact chip now lives inside the card — drop the transcript gutter indent,
    and keep it a content-sized pill (the column flex would otherwise stretch it full-width). */
 .cmsg-tool .art-chip { margin: 2px 0 0; align-self: flex-start; }
+
+/* Collapsed disclosure folds inside a tool turn — the call's arguments and the
+   model's pre-call reasoning. Closed by default so the trail stays compact, but
+   the inputs are one click away (plan: tool-call transparency). */
+.cmsg-tool .tool-args,
+.cmsg-tool .tool-reasoning { font-family: var(--font-mono); font-size: 12px; align-self: stretch; }
+.cmsg-tool .tool-args > summary,
+.cmsg-tool .tool-reasoning > summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--ink-muted);
+  letter-spacing: .03em;
+}
+.cmsg-tool summary::-webkit-details-marker { display: none; }
+.cmsg-tool .tool-args > summary::before,
+.cmsg-tool .tool-reasoning > summary::before { content: "▸ "; }
+.cmsg-tool details[open] > summary::before { content: "▾ "; }
+.cmsg-tool .tool-args pre,
+.cmsg-tool .tool-reasoning pre {
+  margin: var(--space-1, 4px) 0 0;
+  padding: var(--space-2, 8px);
+  background: rgba(0, 0, 0, .18);
+  border-radius: 2px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink-muted);
+}
+
+/* Ask-Balaur chip — a quiet pill on a card footer (internal/ui/askchip.go) that
+   seeds the composer with an intent, handing the card back to the agent. Reads
+   as secondary beside the card's hand-driven actions. */
+.ask-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: .02em;
+  color: var(--teal-ink);
+  background: transparent;
+  border: 1px solid var(--ink-faint, rgba(0, 0, 0, .2));
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ask-chip:hover { background: rgba(0, 0, 0, .12); }
+.ask-chip .tool-icon { width: 13px; height: 13px; opacity: .8; }
+
+/* Review queue — a model-proposed edit renders its fields as before → after
+   diffs (internal/feature/reviewcards). del is the current value, ins the
+   proposed one; the owner approves/declines the whole change. */
+.review-diff-list { list-style: none; margin: var(--space-2, 8px) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2, 8px); }
+.review-diff-list > li { display: flex; flex-direction: column; gap: 2px; }
+.review-diff { font-family: var(--font-mono); font-size: 12.5px; }
+.review-diff del { color: var(--ink-muted); text-decoration: line-through; }
+.review-diff ins { color: var(--teal-ink); text-decoration: none; }
 
 /* Card turn — an inline artifact card (a task/knowledge proposal) framed as a
    Balaur turn. Reuses the .cmsg* frame (portrait, parchment panel, nameplate);

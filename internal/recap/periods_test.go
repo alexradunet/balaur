@@ -39,6 +39,21 @@ func TestPeriodMath(t *testing.T) {
 	}
 }
 
+func TestParentType(t *testing.T) {
+	cases := map[string]string{
+		"day":     "week",
+		"week":    "month",
+		"month":   "quarter",
+		"quarter": "year",
+		"year":    "", // no enclosing period
+	}
+	for in, want := range cases {
+		if got := ParentType(in); got != want {
+			t.Errorf("ParentType(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestChildren(t *testing.T) {
 	// A week expands to 7 days.
 	days := Children(Week(date(2026, 6, 10)))

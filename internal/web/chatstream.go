@@ -1,6 +1,8 @@
 package web
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -47,14 +49,16 @@ type chatStream struct {
 	soulURL   string
 	ownerName string
 
-	bubbleN  int
-	toolN    int
-	bubbleID string // current assistant bubble root id ("" = none open)
-	bodyID   string // current assistant bubble body id (morph target)
-	toolName string // tool of the open tool row
-	toolID   string // open tool row root id
-	toolBody string // open tool row body id
-	buf      strings.Builder
+	bubbleN   int
+	toolN     int
+	bubbleID  string // current assistant bubble root id ("" = none open)
+	bodyID    string // current assistant bubble body id (morph target)
+	toolName  string // tool of the open tool row
+	toolID    string // open tool row root id
+	toolBody  string // open tool row body id
+	toolArgs  string // pretty-printed args of the open tool call (collapsed fold)
+	buf       strings.Builder
+	reasonBuf strings.Builder // reasoning streamed for the current step (collapsed)
 }
 
 // newChatStream upgrades the response to a Datastar SSE connection and prepares
@@ -104,7 +108,8 @@ func (s *chatStream) balaurBubble(content string, pending bool) g.Node {
 func (s *chatStream) toolCard(content string, chip g.Node, pending bool) g.Node {
 	return chat.ToolRow(chat.ToolRowProps{
 		Tool: s.toolName, Icon: toolIconFile(s.toolName), Who: s.who, AvatarSrc: s.balaURL,
-		ID: s.toolID, BodyID: s.toolBody, Content: content, Chip: chip, Pending: pending,
+		ID: s.toolID, BodyID: s.toolBody, Content: content, Args: s.toolArgs,
+		Reasoning: s.reasonBuf.String(), Chip: chip, Pending: pending,
 	})
 }
 
@@ -133,6 +138,11 @@ func (s *chatStream) openBubble() {
 	s.bubbleID = fmt.Sprintf("balaur-%s-%d", s.base, s.bubbleN)
 	s.bodyID = s.bubbleID + "-body"
 	s.buf.Reset()
+	// A new bubble opens after each tool result and at turn start: clear the
+	// per-step transparency buffers so the next step's tool row shows its own
+	// args/reasoning, not the prior step's.
+	s.toolArgs = ""
+	s.reasonBuf.Reset()
 	s.appendNode(s.balaurBubble("", true))
 }
 
@@ -156,10 +166,15 @@ func (s *chatStream) emit(ev agent.Event) {
 	case "text":
 		s.buf.WriteString(ev.Text)
 		s.morphNode(chat.MessageBody(s.bodyID, s.buf.String()))
+	case "reasoning":
+		// The model's pre-call reasoning streams here; we accumulate it and
+		// surface it collapsed on the step's tool row (off-screen by default).
+		s.reasonBuf.WriteString(ev.Text)
 	case "tool_start":
 		s.finalizeBubble()
 		s.toolN++
 		s.toolName = ev.Tool
+		s.toolArgs = prettyJSON(ev.Text) // args ride in the tool_start event's Text
 		s.toolID = fmt.Sprintf("tool-%s-%d", s.base, s.toolN)
 		s.toolBody = s.toolID + "-body"
 		s.appendNode(s.toolCard("", nil, true)) // pending "running…" until the result lands
@@ -267,6 +282,21 @@ func (s *chatStream) note(origin, content string) {
 	s.appendNode(chat.Message(chat.MessageProps{
 		Role: "balaur", AvatarSrc: s.balaURL, Who: s.who, Origin: origin, Content: content,
 	}))
+}
+
+// prettyJSON indents a tool call's raw argument JSON for the collapsed args
+// fold. It is best-effort: non-JSON or malformed args render verbatim rather
+// than vanish, so the audit trail never silently drops what the model sent.
+func prettyJSON(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, []byte(s), "", "  "); err != nil {
+		return s
+	}
+	return buf.String()
 }
 
 // finish closes the last open bubble and clears the streaming signal.

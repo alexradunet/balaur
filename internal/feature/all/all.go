@@ -9,6 +9,7 @@ import (
 	_ "github.com/alexradunet/balaur/internal/feature/journalcards"
 	_ "github.com/alexradunet/balaur/internal/feature/knowledgecards"
 	_ "github.com/alexradunet/balaur/internal/feature/lifecards"
+	_ "github.com/alexradunet/balaur/internal/feature/reviewcards"
 	_ "github.com/alexradunet/balaur/internal/feature/settingscards"
 	_ "github.com/alexradunet/balaur/internal/feature/taskcards"
 )

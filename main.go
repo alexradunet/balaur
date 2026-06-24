@@ -170,7 +170,11 @@ func registerNudge(app core.App) {
 		return
 	}
 	scheduleJob(app, "nudge", "* * * * *", true, func(client llm.Client) {
-		if err := tasks.Nudge(app, client, time.Now()); err != nil {
+		now := time.Now()
+		if tasks.NudgeSuppressed(app, now) { // owner muted/disabled nudges (soft layer)
+			return
+		}
+		if err := tasks.Nudge(app, client, now); err != nil {
 			app.Logger().Warn("nudge: run stopped", "error", err)
 		}
 	})
