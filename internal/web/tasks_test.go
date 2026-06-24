@@ -97,6 +97,32 @@ func TestQuestsArtifactEndpoint(t *testing.T) {
 	})
 }
 
+// TestTaskTransitionEmitsToast verifies a transition also patches an owner-facing
+// toast pill into the body-level #toast-region (plan 174 S7).
+func TestTaskTransitionEmitsToast(t *testing.T) {
+	cases := []struct{ to, tone, msg string }{
+		{"done", "toast-success", "Marked done."},
+		{"dropped", "toast-info", "Dropped."},
+	}
+	for _, c := range cases {
+		t.Run(c.to, func(t *testing.T) {
+			app := newWebApp(t)
+			rec := seedTaskWithRecur(t, app, "Toast me", "open", "", time.Now().Add(time.Hour))
+			scenario := tests.ApiScenario{
+				Name:            "transition emits toast: " + c.to,
+				Method:          "POST",
+				URL:             "/ui/tasks/" + rec.Id + "/transition",
+				Body:            strings.NewReader("to=" + c.to),
+				Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+				TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+				ExpectedStatus:  200,
+				ExpectedContent: []string{"toast-region", c.tone, c.msg},
+			}
+			scenario.Test(t)
+		})
+	}
+}
+
 // TestTaskTransitionRailRefresh verifies that a transition from any surface
 // emits only the in-place card patch (#tcard-{id} outer). The quests artifact
 // is now a flat stack — no separate rail OOB patch (plan 093).

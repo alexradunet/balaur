@@ -62,6 +62,10 @@ func ChatShell(p ChatShellProps) g.Node {
 					// supersedes the old fixed panel-reveal handle).
 					p.Rail,
 				),
+				// Body-level toast region: owner-action feedback patched in via SSE
+				// (append). Sibling of .app-shell so it escapes the grid/sticky
+				// stacking contexts and paints above everything (DESIGN.md overlay rule).
+				h.Div(h.ID("toast-region"), h.Class("toast-region"), h.Aria("live", "polite")),
 			),
 		),
 	})

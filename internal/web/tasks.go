@@ -152,6 +152,16 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	// All validation passed — open the SSE patch stream.
 	sse := datastar.NewSSE(e.Response, e.Request)
 
+	// Owner-action feedback (plan 174 S7): a toast into the body-level region.
+	switch e.Request.FormValue("to") {
+	case "done":
+		emitToast(sse, "success", "Marked done.")
+	case "dropped":
+		emitToast(sse, "info", "Dropped.")
+	case "snooze":
+		emitToast(sse, "info", "Snoozed.")
+	}
+
 	// A compact board row (the today/quests card ✓) removes itself outright.
 	// The caller names its source (a validated enum) so the row id is built
 	// server-side — we never trust a free-form selector from the form.

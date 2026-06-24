@@ -347,3 +347,26 @@ document.addEventListener('click', function (e) {
     r.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.sb-nav-item')) save(); });
   });
 })();
+
+// Toast auto-dismiss (plan 174 S7): when the server appends a .toast into
+// #toast-region, hold ~3s, then animate it out (.toast-out) and remove it.
+// Reduced-motion-safe — the exit animation collapses to instant via basm.css.
+(function () {
+  function basmToastInit() {
+    var region = document.getElementById('toast-region');
+    if (!region) return;
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) {
+        m.addedNodes.forEach(function (n) {
+          if (n.nodeType !== 1 || !n.classList || !n.classList.contains('toast')) return;
+          setTimeout(function () {
+            n.classList.add('toast-out');
+            setTimeout(function () { n.remove(); }, 200);
+          }, 3000);
+        });
+      });
+    }).observe(region, { childList: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', basmToastInit);
+  else basmToastInit();
+})();

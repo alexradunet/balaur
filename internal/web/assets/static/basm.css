@@ -3180,3 +3180,36 @@ html.app.panel-collapsed .navrail-chevron { transform: rotate(180deg); }
   ::view-transition-old(*),
   ::view-transition-new(*) { animation: none !important; }
 }
+
+/* ── Toast region (plan 174 S7) ─────────────────────────────────────────────
+   Owner-action feedback. A fixed bottom-center stack the SSE handlers append
+   .toast pills into (mode append); basmToast holds each, then animates it out
+   and removes it. Pixel-snappy stamp via steps(); the reduced-motion block
+   above collapses both keyframes to instant. */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.toast-region .toast {
+  pointer-events: auto;
+  animation: toast-in 120ms steps(3, end) both;
+}
+.toast-region .toast.toast-out {
+  animation: toast-out 140ms steps(3, end) both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(6px); }
+}
