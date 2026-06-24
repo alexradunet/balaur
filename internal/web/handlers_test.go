@@ -429,6 +429,64 @@ func TestOriginGuard(t *testing.T) {
 	}
 	scenario.TestAppFactory = newWebApp
 	scenario.Test(t)
+
+	// State-changing POSTs go through the CSRF rules in guardLocalUI. The test
+	// Host is example.com (newWebApp sets BALAUR_ALLOWED_HOSTS), so a same-origin
+	// Origin is http://example.com. POST /ui/panel/collapse needs no model and a
+	// trivial body, so a 403 is the guard's verdict and a 204 means the guard let
+	// the request reach the handler (uiPanelCollapse returns 204 No Content on a
+	// well-formed on=... body). headers carries the per-case CSRF headers on top
+	// of the form content-type. The 403 cases assert the guard's JSON error body
+	// so tests.ApiScenario does not also require an empty body.
+	csrf := func(extra map[string]string) map[string]string {
+		hdrs := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+		for k, v := range extra {
+			hdrs[k] = v
+		}
+		return hdrs
+	}
+	cases := []tests.ApiScenario{
+		{
+			Name:            "Origin: null rejected",
+			Headers:         csrf(map[string]string{"Origin": "null"}),
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"Cross-origin request rejected."},
+		},
+		{
+			Name:            "cross-site fetch-metadata rejected",
+			Headers:         csrf(map[string]string{"Sec-Fetch-Site": "cross-site"}),
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"Cross-site request rejected."},
+		},
+		{
+			Name:            "cross-origin Origin rejected",
+			Headers:         csrf(map[string]string{"Origin": "http://evil.example"}),
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"Cross-origin request rejected."},
+		},
+		{
+			Name:           "same-origin Origin allowed",
+			Headers:        csrf(map[string]string{"Origin": "http://example.com"}),
+			ExpectedStatus: 204,
+		},
+		{
+			Name:           "same-origin fetch-metadata allowed",
+			Headers:        csrf(map[string]string{"Sec-Fetch-Site": "same-origin"}),
+			ExpectedStatus: 204,
+		},
+		{
+			Name:           "no CSRF headers allowed (CLI/curl/harness)",
+			Headers:        csrf(nil),
+			ExpectedStatus: 204,
+		},
+	}
+	for _, sc := range cases {
+		sc.Method = "POST"
+		sc.URL = "/ui/panel/collapse"
+		sc.Body = strings.NewReader("on=1")
+		sc.TestAppFactory = newWebApp
+		t.Run(sc.Name, func(t *testing.T) { sc.Test(t) })
+	}
 }
 
 func TestChatCardShow(t *testing.T) {
