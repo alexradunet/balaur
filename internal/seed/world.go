@@ -468,12 +468,13 @@ func pastSunday(now time.Time, n int) time.Time {
 // --- journal ----------------------------------------------------------------
 
 func seedJournal(app core.App, now time.Time, out *[]*core.Record) (int, error) {
-	// Idempotency: seedNotes (seed.go) creates exactly one journal node with
-	// source=Marker. This seeder creates 9 more. If there are already >1
-	// journal nodes with source=Marker, we have already run.
-	journalNodes, _ := app.FindRecordsByFilter("nodes",
-		"type = 'journal' && props.source = {:m}", "", 0, 0, dbx.Params{"m": Marker})
-	if len(journalNodes) > 1 {
+	// Idempotency: check for existing seeded day nodes with source=Marker
+	// (plan 171: journal entries are now type=day nodes).
+	// seedNotes no longer creates a journal node, so >0 seeded day nodes means
+	// we have already run.
+	existingDayNodes, _ := app.FindRecordsByFilter("nodes",
+		"type = 'day' && props.source = {:m}", "", 0, 0, dbx.Params{"m": Marker})
+	if len(existingDayNodes) > 0 {
 		return 0, nil
 	}
 
@@ -497,11 +498,12 @@ func seedJournal(app core.App, now time.Time, out *[]*core.Record) (int, error) 
 	for _, s := range specs {
 		date := now.AddDate(0, 0, -s.daysAgo)
 		title := date.Format("Monday, January 2 2006")
-		rec, err := createMarked(app, "journal", title, s.body, map[string]any{
+		// plan 171: journal entries are type=day nodes (human title, body, props.date + source=Marker).
+		rec, err := createMarked(app, "day", title, s.body, map[string]any{
 			"date": date.Format("2006-01-02"),
 		})
 		if err != nil {
-			return count, fmt.Errorf("journal %q: %w", title, err)
+			return count, fmt.Errorf("journal day node %q: %w", title, err)
 		}
 		at := dayAt(now, s.daysAgo, 21, 0) // evenings
 		if err := backdate(app, "nodes", rec.Id, at); err != nil {
@@ -509,14 +511,13 @@ func seedJournal(app core.App, now time.Time, out *[]*core.Record) (int, error) 
 		}
 		rec, err = app.FindRecordById("nodes", rec.Id)
 		if err != nil {
-			return count, fmt.Errorf("reloading journal %q: %w", title, err)
+			return count, fmt.Errorf("reloading journal day node %q: %w", title, err)
 		}
 		if err := nodes.SyncLinks(app, rec); err != nil {
-			return count, fmt.Errorf("SyncLinks journal %q: %w", title, err)
+			return count, fmt.Errorf("SyncLinks journal day node %q: %w", title, err)
 		}
-		if err := linkOnDayAndMark(app, rec); err != nil {
-			return count, fmt.Errorf("LinkOnDay journal %q: %w", title, err)
-		}
+		// type=day nodes are recursion-guarded by LinkOnDay; they don't self-link.
+		// The day node IS the hub — no linkOnDayAndMark needed.
 		*out = append(*out, rec)
 		count++
 	}
@@ -917,25 +918,38 @@ func dayAt(now time.Time, daysAgo, hour, minute int) time.Time {
 	return time.Date(base.Year(), base.Month(), base.Day(), hour, minute, 0, 0, now.Location())
 }
 
-// seedResetDayNodes deletes type=day nodes with props.seed=true (those created
-// by the seeder). Called by Reset after all other node deletions so cascade
-// from above doesn't leave orphan day nodes.
-func seedResetDayNodes(app core.App) (int, error) {
-	recs, err := app.FindRecordsByFilter("nodes",
+// seedResetDayNodes deletes type=day nodes that were created by the seeder.
+// Two marker conventions:
+//   - props.seed=true: hub-only day nodes created by linkOnDayAndMark.
+//   - props.source=Marker: journal-originated day nodes (plan 171).
+//
+// Returns (journalCount, hubCount, error). journalCount is the number of
+// source=Marker day nodes deleted (journal entries); hubCount is the number
+// of seed=true day nodes deleted (on_day hubs). Called by Reset after all
+// other seeded nodes are deleted.
+func seedResetDayNodes(app core.App) (journalCount, hubCount int, err error) {
+	recs, loadErr := app.FindRecordsByFilter("nodes",
 		"type = 'day' && status = 'active'", "", 0, 0, nil)
-	if err != nil {
-		return 0, fmt.Errorf("loading day nodes for reset: %w", err)
+	if loadErr != nil {
+		return 0, 0, fmt.Errorf("loading day nodes for reset: %w", loadErr)
 	}
-	count := 0
 	for _, r := range recs {
-		if v, ok := nodes.Props(r)["seed"]; ok {
-			if b, ok2 := v.(bool); ok2 && b {
-				if err := app.Delete(r); err != nil {
-					return count, fmt.Errorf("deleting seed day node %s: %w", r.Id, err)
-				}
-				count++
-			}
+		p := nodes.Props(r)
+		seedFlag, _ := p["seed"].(bool)
+		source, _ := p["source"].(string)
+		isJournal := source == Marker
+		isHub := seedFlag && !isJournal
+		if !isJournal && !isHub {
+			continue
+		}
+		if delErr := app.Delete(r); delErr != nil {
+			return journalCount, hubCount, fmt.Errorf("deleting seed day node %s: %w", r.Id, delErr)
+		}
+		if isJournal {
+			journalCount++
+		} else {
+			hubCount++
 		}
 	}
-	return count, nil
+	return journalCount, hubCount, nil
 }

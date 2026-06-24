@@ -15,27 +15,38 @@ import (
 
 // DayData is everything a day page or `balaur day` needs, queried once.
 type DayData struct {
-	Journal []*core.Record // type=journal nodes for the day (props.date)
+	Journal []*core.Record // type=day node for the day (props.date); at most one
 	Logged  []*core.Record // entries other kinds, noted_at in day
 	Done    []*core.Record // tasks done_at in day
 	Recap   *core.Record   // day summary, nil when absent
 }
 
-// Day queries a full day's data: journal, logged entries, done tasks, and recap.
-// The day boundary is [d 00:00, d+1 00:00) in the caller's location.
+// dayKey is the props.date format (ISO "YYYY-MM-DD").
+const dayKey = "2006-01-02"
+
+// Day queries a full day's data: journal (the day node), logged entries, done
+// tasks, and recap. The day boundary is [d 00:00, d+1 00:00) in the caller's
+// location.
 func Day(app core.App, conversationID string, d time.Time) (DayData, error) {
 	ds, de := d, d.AddDate(0, 0, 1)
 	data := DayData{}
 
-	// Journal: the day's type=journal node(s), keyed by props.date.
-	dayKey := ds.Format(journalDayKey)
+	// Journal: the day's type=day node, keyed by props.date (plan 171).
+	// At most one per date; return as a slice to keep DayData.Journal compatible.
+	dateStr := ds.Format(dayKey)
 	recs, err := app.FindRecordsByFilter("nodes",
-		"type = 'journal' && status = 'active' && props.date = {:d}", "-created", 200, 0,
-		dbx.Params{"d": dayKey})
+		"type = 'day' && status = 'active' && props.date = {:d}", "-created", 1, 0,
+		dbx.Params{"d": dateStr})
 	if err != nil {
 		return data, fmt.Errorf("day journal query: %w", err)
 	}
-	data.Journal = recs
+	// Only include the day node in Journal if it has a non-empty body (i.e.
+	// the owner actually wrote something that day).
+	for _, r := range recs {
+		if r.GetString("body") != "" {
+			data.Journal = append(data.Journal, r)
+		}
+	}
 
 	// Logged measures: type=measure nodes whose noted_at falls in [ds, de).
 	// noted_at lives in props (JSON) so we filter in Go after loading.

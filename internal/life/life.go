@@ -18,7 +18,7 @@ import (
 	"github.com/alexradunet/balaur/internal/store"
 )
 
-var reserved = map[string]bool{"completion": true, "journal": true}
+var reserved = map[string]bool{"completion": true, "journal": true, "day": true}
 
 // NormalizeKind canonicalizes an owner-invented kind: lowercase, trimmed,
 // inner whitespace to dashes — "Blood Pressure" and "blood pressure" are

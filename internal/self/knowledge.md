@@ -133,18 +133,22 @@ One binary, layered as: gateway → turn pipeline → business logic.
   journal_write, node_write/node_link), but the message stream itself never
   becomes a node; a cross-layer edge from a node to its source conversation is
   possible on this schema but is not built yet.
-  Day pages (plan 169): each owner-local calendar day is anchored by a
-  `type=day` node (one per day, title = "YYYY-MM-DD", `props.date` = same
-  key). Every new non-day node automatically receives an `on_day` edge
-  pointing to its creation-day node; the hook that writes this edge skips
-  `type=day` nodes to avoid recursion. Querying a day node's inbound
-  neighbourhood (`node_related`, direction=in, type=on_day) returns
-  everything created that day. `node_get` on a day node also surfaces the
-  day's recap summary if one exists in the `summaries` collection
-  (`period_type='day'`). Summaries remain relational — they are NOT turned
-  into nodes; the day node is the stable graph anchor, and the recap is
-  rendered onto it at read time. The `on_day` edge type is system-only and
-  is never asserted via `node_link`.
+  Day pages (plans 169 + 171): each owner-local calendar day is anchored by
+  a single `type=day` node (one per day). The node is both the journal page
+  and the on_day hub: `title` = human-readable date ("Monday, January 2 2006"),
+  `body` = the owner's journal prose (same-day writes append, blank-line
+  separated), `props.date` = ISO key "YYYY-MM-DD" (the resolution key).
+  `type=journal` is retired — journal_write now writes to the day node's body.
+  JournalDrop clears the body without deleting the node (the hub must survive
+  to preserve on_day edges). Every new non-day node automatically receives an
+  `on_day` edge pointing to its creation-day node; the hook skips `type=day`
+  nodes to avoid recursion. Querying a day node's inbound neighbourhood
+  (`node_related`, direction=in, type=on_day) returns everything created that
+  day. `node_get` on a day node also surfaces the day's recap summary if one
+  exists in the `summaries` collection (`period_type='day'`). Summaries remain
+  relational — they are NOT turned into nodes; the day node is the stable graph
+  anchor, and the recap is rendered onto it at read time. The `on_day` edge
+  type is system-only and is never asserted via `node_link`.
 - Scheduled work: a minute cron nudges due tasks, an hourly catch-up
   generates recaps, a daily briefing opens the day. Each is idempotent
   and disableable by env.
@@ -191,8 +195,10 @@ self tool, which reports the actual registry):
   web UI carry the same edit/done/snooze/drop actions.
 - Life log: log_entry, entry_series, entry_drop — kinds are invented by
   the owner, never by you.
-- Journal: journal_write keeps the owner's words verbatim as a type=journal
-  node — one per day, born active, appended to across the day.
+- Journal: journal_write keeps the owner's words verbatim in the type=day
+  node's body — one day node per date, born active, appended to across the
+  day. type=journal is retired (plan 171); the day node is both the journal
+  page and the on_day hub.
 - OS access (opt-in, BALAUR_OS_ACCESS=1): read, write, edit, bash —
   every invocation audited. These are the tools you use to work on your
   own source code.

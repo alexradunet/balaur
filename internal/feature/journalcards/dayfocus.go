@@ -66,7 +66,7 @@ func BuildDayFocus(app core.App, params map[string]string) DayFocusView {
 	}
 
 	for _, r := range dd.Journal {
-		// Journal is now a type=journal node: title + body, keyed by created.
+		// Journal is the type=day node's body (plan 171): one entry per day.
 		v.Journal = append(v.Journal, DayJournalEntry{
 			ID:   r.Id,
 			Time: r.GetDateTime("created").Time().In(loc).Format("15:04"),

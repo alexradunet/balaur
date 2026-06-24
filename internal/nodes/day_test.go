@@ -65,6 +65,8 @@ func TestDayNodeIdempotent(t *testing.T) {
 }
 
 // TestDayNodeShape: the created day node has the right type, status, and props.
+// After plan 171, title = human-readable ("Monday, January 2 2006") and
+// props.date = ISO key ("YYYY-MM-DD").
 func TestDayNodeShape(t *testing.T) {
 	app := storetest.NewApp(t)
 
@@ -82,8 +84,9 @@ func TestDayNodeShape(t *testing.T) {
 		t.Errorf("status = %q, want active", n.GetString("status"))
 	}
 	wantKey := nodes.DayKey(ts, loc)
-	if n.GetString("title") != wantKey {
-		t.Errorf("title = %q, want %q", n.GetString("title"), wantKey)
+	wantLabel := ts.In(loc).Format("Monday, January 2 2006")
+	if n.GetString("title") != wantLabel {
+		t.Errorf("title = %q, want human label %q", n.GetString("title"), wantLabel)
 	}
 	if nodes.PropString(n, "date") != wantKey {
 		t.Errorf("props.date = %q, want %q", nodes.PropString(n, "date"), wantKey)
