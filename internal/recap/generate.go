@@ -33,6 +33,51 @@ func Find(app core.App, conversationID string, p Period) *core.Record {
 	return rec
 }
 
+// summaryKey is the identity of a stored summary within one conversation:
+// its (period_type, period_start). Built the same way for records returned by
+// FindMany and for the Period a caller looks up, so the lookup matches exactly.
+func summaryKey(periodType string, start time.Time) string {
+	return periodType + "|" + store.PBTime(start)
+}
+
+// FindMany batch-loads the stored summaries for the given periods in ONE
+// ranged query, returning a map keyed by summaryKey. Periods with no stored
+// summary are simply absent from the map. Replaces an N+1 of per-period Find
+// calls when a caller already holds the whole set (a Chronicle band, a
+// period's children). Find stays for single-period lookups.
+func FindMany(app core.App, conversationID string, periods []Period) (map[string]*core.Record, error) {
+	out := make(map[string]*core.Record, len(periods))
+	if len(periods) == 0 {
+		return out, nil
+	}
+	lo, hi := periods[0].Start, periods[0].Start
+	for _, p := range periods {
+		if p.Start.Before(lo) {
+			lo = p.Start
+		}
+		if hi.Before(p.Start) {
+			hi = p.Start
+		}
+	}
+	recs, err := app.FindRecordsByFilter("summaries",
+		"conversation = {:conv} && period_start >= {:lo} && period_start <= {:hi}",
+		"", 0, 0,
+		dbx.Params{"conv": conversationID, "lo": store.PBTime(lo), "hi": store.PBTime(hi)})
+	if err != nil {
+		return nil, fmt.Errorf("loading summaries: %w", err)
+	}
+	for _, rec := range recs {
+		key := summaryKey(rec.GetString("period_type"), rec.GetDateTime("period_start").Time())
+		out[key] = rec
+	}
+	return out, nil
+}
+
+// Lookup returns the summary for p from a map produced by FindMany, or nil.
+func Lookup(byPeriod map[string]*core.Record, p Period) *core.Record {
+	return byPeriod[summaryKey(p.Type, p.Start)]
+}
+
 func save(app core.App, conversationID string, p Period, content string, count int) error {
 	col, err := app.FindCollectionByNameOrId("summaries")
 	if err != nil {
