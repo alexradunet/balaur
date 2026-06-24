@@ -3501,10 +3501,13 @@ html.home #dock .chat .cmsg-portrait { width: 56px; height: 56px; }
    rules below generalise the existing html.home #dock block so they fire for
    the app-shell layout (html.app) too. */
 
-/* Three-column grid: [chat | panel | always-on nav rail]. */
+/* Three-column grid: [chat | panel | always-on nav rail]. The chat column keeps
+   a min-width FLOOR (not a bare 1fr) so an open panel can't squeeze the dock to
+   single-letter wraps between ~721px and wide desktop; the panel yields first
+   (minmax(0, …)) and goes off-canvas entirely ≤720px. */
 html.app .app-shell {
   display: grid;
-  grid-template-columns: 1fr var(--w-panel) var(--w-rail);
+  grid-template-columns: minmax(420px, 1fr) minmax(0, var(--w-panel)) var(--w-rail);
   height: 100dvh;
   overflow: hidden;
 }
