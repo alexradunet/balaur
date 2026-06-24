@@ -39,7 +39,6 @@
   /* Ink — text on parchment (constant) */
   --ink:       #2c2012;
   --ink-muted: #6f5e3c;
-  --on-surface: #2c2012;
   --ink-deep:   #1c0d04;                       /* darkest ink on a bright gold/ember fill */
   --portrait-bg: #101314;                      /* near-black portrait backdrop (theme-constant) */
   --candle-glow: #c88600;                      /* candle breathe glow (theme-constant warm gold) */
@@ -65,7 +64,6 @@
   --violet:     #c084fc;
   --good:       #7fcf6a;
   --good-ink:   #4c7a2c;
-  --steel:      #9b8a6c;
 
   /* Pixel grain (dither) */
   --grain-warm: repeating-conic-gradient(rgba(255,214,150,.022) 0% 25%, transparent 0% 50%); /* @kind other */
