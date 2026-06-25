@@ -8,10 +8,25 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat e06346d..HEAD -- internal/export/ internal/cli/export.go internal/cli/export_test.go internal/self/knowledge.md README.md`
+> `git diff --stat ce1ff54..HEAD -- internal/export/ internal/cli/export.go internal/cli/export_test.go internal/self/knowledge.md README.md`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
+>
+> **⚠ REVISION (round 2) — REQUIRED, read before Step 1.** A first execution was
+> correct in production code and the SACRED secret-redaction canary genuinely
+> bites — but the `day`/`task` **deferral guard test was vacuous** (it did not
+> fail if `day`/`task` were exported). Fix ONLY that test: in
+> `internal/export/mirror_test.go`, `TestMirrorSkipsDeferredTypes` must seed a
+> real ACTIVE `day` node AND an active `task` node, run `ExportMirror`, then walk
+> the whole mirror tree and assert NO file for either node exists (the day/task
+> title-slug `.md` is absent under any folder). PROVE it bites: temporarily remove
+> `day`/`task` from `deferredTypes` (so they WOULD export), confirm the test
+> FAILS, then restore (report you did this). Keep everything else exactly as-is —
+> do NOT weaken the secret-redaction canary or touch the mirror/git/CLI logic.
+> This re-executes against `origin/main` `ce1ff54`, whose
+> `internal/self/knowledge.md` already carries plan 193's launcher bullets — add
+> your export-capability note additively, do not revert those.
 >
 > **Set `TMPDIR` before any `go` command** (tmpfs link bug on this box):
 > `export TMPDIR=/home/alex/.cache/go-tmp` (create it first: `mkdir -p /home/alex/.cache/go-tmp`).
