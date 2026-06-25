@@ -301,3 +301,34 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED | REJECTED
   collection, only `status=active`; the secret-redaction canary test must never be
   weakened. `day`/`task` are deferred (need their own redaction pass); `measure`
   falls to the `90-99 Unsorted` bucket.
+
+---
+
+# Follow-up — 2026-06-25: complete code-tour coverage (198)
+
+A single docs plan, authored against `7642f92`, to make the `.tours/` CodeTour set
+**cover the whole codebase**. Today 10 tours touch ~12 of ~40 packages; this
+refreshes those 10 to shipped reality (they carry prose drift the lint can't see —
+e.g. orientation's "29 migration files" is now 10) and adds 10 new tours so every
+internal package is taught. Docs-only: `.tours/*.tour` are JSON data files; no
+product code changes. The `tours_test.go` lint gate keeps every anchor honest.
+
+## Status
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 198 | Complete code-tour coverage — refresh 10 existing tours + add 10 new (05 turn pipeline, 11 inference/Kronk, 12 persistence/store, 13 companion domain, 14 nodes/graph, 15 sovereign export, 16 extension sandbox, 17 tool surface, 18 component system/storybook, 19 bootstrapping) | P3 | L | none | DONE (executed via author+adversarial-verify workflow; reviewed APPROVE — 20 tours, all anchors verified on their named declarations, tours_test + full `go test ./...` + `make lint` green; committed on branch `advisor/198-code-tours` (c4772f0), not yet merged to main) |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED | REJECTED
+
+## Notes
+
+- **Single master plan by owner's choice.** Each tour section is independently
+  executable and validated alone by `go test . -run TestTours`, so the executor
+  can produce tours in batches; run the lint after each.
+- **End state is 20 tours, every package covered** (coverage matrix is in the
+  plan). Numbers stay stable (no renumber); `05` reuses the slot freed when the
+  old security-boundary tour was deleted.
+- **Read-only on code.** The plan's hard rule: tours describe the code; product
+  code never bends to a tour. Line numbers in the plan are approximate leads —
+  the binding contract is anchor-to-named-symbol + green lint.
