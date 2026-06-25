@@ -269,3 +269,34 @@ but a candidate for a cleaner test seam later.
   after a year), so absolute cost is modest; the plan is scoped proportionately
   (owner_settings marker, no migration) and explicitly warns against
   over-engineering.
+
+---
+
+# Follow-up batch — 2026-06-25: spike productionization (193–196)
+
+Turns the two design/spike outputs from the 175–192 batch (190 first-run, 192
+export) into real implementation plans, plus a cleanup the review flagged.
+Authored against `e06346d`.
+
+## Execution order & status
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 193 | First-run launcher hardening (stable default port 8099 + free-port fallback, friendlier URL message, `IsFirstRun` stat; loopback invariant kept) | P2 | M | 190 (done) | TODO |
+| 194 | Sovereign export Phase 2 — full Johnny Decimal Markdown vault mirror (all owner-authored types, full re-export, git commit, redaction canary extended) | P3 | L | 192 (done) | TODO |
+| 195 | Sovereign export Phase 3 — passphrase-encrypted backup over the mirror (CGO-free via `x/crypto`; "lost passphrase = lost backup") | P3 | M | 194 | TODO — **HELD** (encryption of the sovereign record; awaiting owner go + a cold review of the plan) |
+| 196 | Move plan 183's test-only compute-counter out of service code (no-op function-var hook) | P3 | S | 183 (done) | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED | REJECTED
+
+## Notes
+
+- **194 before 195**: 195 encrypts 194's mirror tree and overlaps `internal/export`.
+- **195 is gated**: it adds passphrase-encryption over the owner's life record —
+  held for an explicit owner go and a from-cold review (its authoring agent wrote
+  the plan file but failed to return its self-report, so it gets a closer read
+  before any execution).
+- **194's redaction invariant is sacred**: the exporter reads only the `nodes`
+  collection, only `status=active`; the secret-redaction canary test must never be
+  weakened. `day`/`task` are deferred (need their own redaction pass); `measure`
+  falls to the `90-99 Unsorted` bucket.
