@@ -19,6 +19,7 @@ import (
 
 	"github.com/alexradunet/balaur/internal/cli"
 	"github.com/alexradunet/balaur/internal/conversation"
+	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/kronk"
 	"github.com/alexradunet/balaur/internal/launch"
 	"github.com/alexradunet/balaur/internal/llm"
@@ -81,6 +82,7 @@ func main() {
 		registerNudge(se.App)
 		registerBriefing(se.App)
 		registerSearchIndex(se.App)
+		knowledge.RegisterCacheInvalidation(se.App)
 		registerGraphLinks(se.App)
 		registerDayLinks(se.App)
 		return se.Next()

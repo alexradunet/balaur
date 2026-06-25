@@ -184,6 +184,12 @@ func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
 	}
 	store.Audit(app, "owner", "knowledge."+to, "nodes/"+rec.Id, true,
 		map[string]any{"from": from})
+	// A status change in/out of active changes the cached upfront/skill set
+	// (validTransitions only allows active<->archived and proposed->active, so
+	// any successful memory/skill transition touches the active set).
+	if kind == Memory || kind == Skill {
+		invalidateContextCache(app)
+	}
 	return hydrate(kind, rec), nil
 }
 
@@ -224,6 +230,11 @@ func UpdateFields(app core.App, kind Kind, id string, fields map[string]string) 
 		return nil, fmt.Errorf("updating %s: %w", kind, err)
 	}
 	store.Audit(app, "owner", "knowledge.edit", "nodes/"+rec.Id, true, nil)
+	// An edit to title/body/importance changes the rendered upfront line or the
+	// importance>=4 membership; drop the cache so the next turn recomputes.
+	if kind == Memory || kind == Skill {
+		invalidateContextCache(app)
+	}
 	return hydrate(kind, rec), nil
 }
 
@@ -583,39 +594,31 @@ func SearchAllActive(app core.App, terms []string, limit int) ([]*core.Record, e
 }
 
 // UpfrontMemories returns the highest-importance active memories that are always
-// injected into context (tier 1 of the injection policy).
+// injected into context (tier 1 of the injection policy). Served from the
+// process-memory context cache (see cache.go) so a warm turn does not re-scan the
+// nodes collection. The returned records are FRESH copies (copyForRead): callers
+// may Touch them after a turn without mutating the shared cached snapshot.
 func UpfrontMemories(app core.App, limit int) ([]*core.Record, error) {
-	recs, err := nodes.ListByTypeStatus(app, string(Memory), StatusActive)
+	c, err := loadContextCache(app)
 	if err != nil {
 		return nil, err
 	}
-	hydrateAll(Memory, recs)
-	var out []*core.Record
-	for _, r := range recs {
-		if r.GetInt("importance") >= 4 {
-			out = append(out, r)
-		}
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].GetInt("importance") > out[j].GetInt("importance")
-	})
+	out := c.upfront
 	if limit > 0 && len(out) > limit {
-		out = out[:limit]
+		out = out[:limit] // cached slice is already importance-sorted
 	}
-	return out, nil
+	return copyForRead(out), nil
 }
 
 // ActiveSkills returns active skills for the context index, ordered by name.
+// Served from the context cache (see cache.go); returns fresh copies so a
+// caller's mutation never reaches the cached snapshot.
 func ActiveSkills(app core.App) ([]*core.Record, error) {
-	recs, err := nodes.ListByTypeStatus(app, string(Skill), StatusActive)
+	c, err := loadContextCache(app)
 	if err != nil {
 		return nil, err
 	}
-	hydrateAll(Skill, recs)
-	sort.SliceStable(recs, func(i, j int) bool {
-		return recs[i].GetString("title") < recs[j].GetString("title")
-	})
-	return recs, nil
+	return copyForRead(c.skills), nil
 }
 
 // LoadSkill fetches the first active skill whose title matches name (exact) and
