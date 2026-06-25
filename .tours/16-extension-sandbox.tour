@@ -1,0 +1,61 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "16 — The Extension Sandbox: Untrusted JS, Safely",
+  "description": "How balaur-extensions let the model propose new verbs without gaining new privileges. The tour traces the full lifecycle: discovery as a proposal, owner consent, sha256 pinning, the deliberately tiny goja VM surface, the egress guard, per-call auditing, the model's propose_extension verb, and the regression suite that makes a goja version bump a gated act.",
+  "steps": [
+    {
+      "file": "internal/ext/ext.go",
+      "line": 61,
+      "title": "16.1 — Discovery is not service",
+      "description": "`Sync` is the reconciliation loop between the filesystem (`pb_extensions/*.js`) and the consent ledger (the `extensions` PocketBase collection). The design invariant is stated at the top of the package: *discovery proposes, the owner approves, any change re-proposes, every invocation is audited.*\n\nThe three cases inside the loop make this concrete:\n\n- **First sight** — `find` returns an error (no row yet): `upsertProposal` writes a `proposed` row and audits `ext.discover`. The file is not loaded.\n- **Active and unchanged** — status is `active` and sha256 still matches: the file is extracted and added to the servable set.\n- **Active but changed** — the content differs from what was approved: `upsertProposal` re-proposes (drops the extension from service) and audits `ext.changed`.\n\nA fourth case handles files that vanish after approval: those rows are set to `disabled` rather than left in a phantom-active state.\n\nPer-file errors are audited and skipped — one broken extension must never break a turn. This is the AGENTS.md principle *extensions add verbs, not privileges* in its most literal form: nothing runs until the owner takes an explicit action."
+    },
+    {
+      "file": "internal/ext/ext.go",
+      "line": 150,
+      "title": "16.2 — Approval pins sha256",
+      "description": "`Approve` is the owner's consent action. It does three things in order:\n\n1. **Re-reads and re-hashes the file now** — approval is always consent to the file's *current* bytes, not to whatever was there when it was discovered.\n2. **Loads the file side-effect-free** (`extract`, which uses `newVM` with `withHTTP=false`) to confirm it at least registers at least one tool and does not crash on load.\n3. **Writes `sha256`, `status=active`, and the tool list** to the record, then calls `store.Audit` to record the approval in `audit_log`.\n\nThe consequence: if the file changes after approval, `Sync` sees the new hash, re-proposes the row, and drops the extension from service. The owner must run `Approve` again — consent to the new content — before it serves. There is no window between tamper and detection because the check happens on every `Sync` call, which is every turn.\n\nThis is the sha256-pinning invariant from AGENTS.md: *approval pins the file's sha256; any change re-proposes.*"
+    },
+    {
+      "file": "internal/ext/ext.go",
+      "line": 115,
+      "title": "16.3 — Tools join the loop",
+      "description": "`Tools` is the bridge from the extension system into the agent loop. It calls `Sync` (so every turn re-verifies the consent ledger) and builds a slice of `agent.Tool` values that the turn pipeline can hand to `agent.Loop` alongside the built-in tools.\n\nThe `taken` map is the namespace guard. It is populated with built-in tool names before `Tools` is called. If an extension tries to register a name that already exists — whether a built-in or an earlier extension — the collision is audited as `ext.collision` and the tool is silently skipped. The extension cannot shadow a built-in verb.\n\nThe actual tool bridging happens in `extTool` (line 130), which closes over the source text and tool definition. Invocations spin up a fresh goja VM each time, so there is no shared mutable state between calls.\n\nSee **Tour 03** for how the agent loop consumes this tool list, and **Tour 05** for where `ext.Tools` is composed with the built-in tool set inside `internal/turn`."
+    },
+    {
+      "file": "internal/ext/vm.go",
+      "line": 121,
+      "title": "16.4 — The VM surface",
+      "description": "`newVM` builds a fresh goja runtime and executes the extension source. The surface an extension sees is deliberately tiny — the package comment names it explicitly:\n\n> `goja`'s ECMAScript builtins (JSON, Math, RegExp…), `console.log` (no-op), `balaur.registerTool`, and — inside handlers only — `balaur.http`. No npm, no require, no $os, no DB.\n\n`registerTool` captures `{name, description, parameters, handler}` into a `captured` slice during the load-time run. The handler is a `goja.Callable` — a Go value that can be called later inside a guarded invocation context. If name, description, or handler is missing, `registerTool` panics (goja converts panics to JS exceptions), failing the load.\n\nThe `withHTTP` flag is false during `extract` (the side-effect-free load path used by `Approve`) and true during a real invocation (`invoke`). This is the mechanism behind the load-time-side-effects prohibition covered in step 16.5.\n\ngoja is pinned to a reviewed master commit (no upstream semver tags exist). Any bump must pass `go test ./internal/ext/...` — the sandbox-boundary regression suite — and a review of the new commit, because `govulncheck` catches CVEs but not behavioral sandbox-escape changes between arbitrary master commits."
+    },
+    {
+      "file": "internal/ext/vm.go",
+      "line": 146,
+      "title": "16.5 — Load-time side effects forbidden",
+      "description": "Lines 146–151 implement the load-time-side-effects prohibition in the simplest possible way: when `withHTTP=false` (extract mode), `balaur.http` is set to a function that always throws a `TypeError`. The message — *\"balaur.http is only available inside a tool handler, never at load time\"* — names the rule for the extension author.\n\nWhen `withHTTP=true` (invocation mode), the real `httpBinding` is installed instead.\n\nThe consequence: an extension that calls `balaur.http(...)` at the top level — outside any registered handler — will throw during `extract`, which means `Approve` will return an error and the extension will never become active. The test `TestLoadTimeSideEffectsAreForbidden` (step 16.9) verifies this path.\n\nThe design principle here is *no egress until invoked*: an extension cannot make network calls during the approval check, cannot exfiltrate the source code being loaded, and cannot perform any action that the owner has not explicitly triggered by calling a tool."
+    },
+    {
+      "file": "internal/ext/vm.go",
+      "line": 56,
+      "title": "16.6 — Egress guarded",
+      "description": "`deniedEgressIP` and `extHTTPClient` together implement the egress guard for `balaur.http` inside handler invocations.\n\n`deniedEgressIP` (line 56) checks the already-resolved connect target — it runs post-DNS in the dialer's `Control` hook, so a hostname that resolves to a denied IP is also blocked. The denied ranges are:\n\n- IPv4 link-local `169.254.0.0/16` (includes the canonical cloud instance-metadata address `169.254.169.254`)\n- IPv6 link-local `fe80::/10`\n- The IPv6 cloud-metadata address `fd00:ec2::254`\n\nLoopback is deliberately *not* denied — extensions are expected to call local services (the comment in `httpBinding` says this).\n\n`extHTTPClient` (line 85) wires this into an `*http.Client` with `CheckRedirect` returning `http.ErrUseLastResponse`, meaning **redirects are never followed automatically**. An approved extension's reviewed code is exactly what runs; if the handler needs to follow a redirect it must do so explicitly. This closes the redirect-to-metadata attack vector.\n\nWhen the owner sets the `ext_local_egress` owner setting to `\"1\"`, the guarded dialer is replaced with a plain dialer — local network access is then the owner's explicit choice."
+    },
+    {
+      "file": "internal/ext/ext.go",
+      "line": 141,
+      "title": "16.7 — Every call audited",
+      "description": "`extTool` builds the `agent.Tool` that wraps one extension tool definition. The `Execute` closure does three things:\n\n1. Reads the `ext_local_egress` owner setting to determine the egress policy for this call.\n2. Calls `invoke`, which spins up a fresh goja VM with `withHTTP=true` and calls the registered handler.\n3. **Calls `store.Audit` unconditionally** — whether the invocation succeeded or failed.\n\nThe audit entry records `\"ext.invoke\"` as the action, `extName+\"/\"+toolName` as the target, and the boolean success outcome. This means every single extension tool call — including those refused by the egress guard — lands in `audit_log`.\n\nThe AGENTS.md invariant is: *every invocation is audited.* The audit happens after the call (success or error is known), consistent with the repo-wide rule that audit entries must not be written for mutations that did not persist (here: any outcome is legitimate to audit because the invocation itself is the event being recorded)."
+    },
+    {
+      "file": "internal/ext/propose.go",
+      "line": 25,
+      "title": "16.8 — The propose verb",
+      "description": "`ProposeTool` is the model's `propose_extension` tool — the only way the model can grow new capability without a human dropping a file manually. Its design follows the *proposing is always allowed (like remember)* principle: writing a proposal is harmless because nothing runs until the owner approves.\n\nThe Execute function enforces several invariants before writing anything:\n\n- **Name must be kebab-case** (the `extNameRe` regexp) — enforces a safe, predictable namespace.\n- **Code must not exceed `maxFileSize`** (128 KB) — extensions are small verbs; large code belongs in Go.\n- **Syntax-check without executing** — `goja.Compile` parses the JS, catching obvious errors before the file is written. The VM is never run here.\n- **Must call `balaur.registerTool`** — a file that registers nothing would be dead code; the string check catches it cheaply before any I/O.\n- **Cannot silently replace an active extension** — if a row with that name is already `active`, the model is told to propose under a new name or ask the owner to disable it first.\n\nThe result message is careful not to claim the capability exists: *\"It is NOT active: its tools do not exist until the owner runs `balaur ext approve …` or approves it in the dashboard.\"* This prevents the model from hallucinating that its newly proposed tool is immediately callable."
+    },
+    {
+      "file": "internal/ext/ext_test.go",
+      "line": 116,
+      "title": "16.9 — The sandbox regression suite",
+      "description": "`internal/ext/ext_test.go` is the reason a goja version bump is a gated act. The suite tests the sandbox's behavioral boundaries, not just happy paths:\n\n- **`TestTamperReproposesAndDropsFromService` (line 116)** — approves a file, then overwrites it with different content. Verifies that `Tools` returns zero tools (the tampered content never runs), the record is back to `proposed`, and the event is audited as `ext.changed`. Then re-approves the new content and confirms it serves.\n\n- **`TestLoadTimeSideEffectsAreForbidden` (line 210)** — submits an extension that calls `balaur.http(...)` at the top level (not inside a handler). Verifies that `Approve` returns an error and the error message names the rule. This confirms that the `withHTTP=false` guard in `newVM` works end-to-end.\n\n- **`TestMetadataEgressDeniedByDefault` (line 273)** — registers a handler that calls the canonical cloud instance-metadata endpoint (`169.254.169.254`). Verifies that the invocation returns an error containing `\"blocked\"` and `\"egress\"`, and that the failed invocation is audited as disallowed. This confirms `deniedEgressIP` fires at the `Control` hook without any real network I/O.\n\nThese three tests define the security contract of the sandbox. They must pass on every goja bump — they are the gate, not a nice-to-have."
+    }
+  ]
+}

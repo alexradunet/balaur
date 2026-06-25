@@ -1,0 +1,67 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "18 — The Component System & Storybook",
+  "description": "How Balaur's web UI is assembled: the Hearthwood design tokens in basm.css, the typed gomponents atoms and organisms, the page shell, and the storybook as the single source of truth for every component. By the end you will know why every UI change starts with the storybook and ends with an updated story.",
+  "steps": [
+    {
+      "file": "internal/web/assets/static/basm.css",
+      "line": 16,
+      "title": "18.1 — Hearthwood tokens",
+      "description": "The `:root` block near the top of `basm.css` is the **canonical token source** for the entire UI. If `DESIGN.md` and this file ever disagree, this file wins — that rule is stated in the file header.\n\nThe tokens establish a fixed dark theme called Hearthwood — tavern-oak wood chrome (`--bg`, `--chrome`), parchment content panels (`--surface`, `--surface-2`), candlelit gold and ember accents, and precise ink colors for text on parchment. There is one and only one palette; no dual light/dark pairs, no theme-switching at runtime.\n\nThe layout-token scale (widths, spacing steps, breakpoints, z-index layers) follows in later sections of the same file. Design decisions that need tokens go here; nothing hardcodes a colour hex anywhere else in the codebase.\n\nAGENTS.md invariant: *deterministic, offline, free behaviour is the default* — a single baked theme with no toggle is the CSS equivalent."
+    },
+    {
+      "file": "internal/ui/button.go",
+      "line": 36,
+      "title": "18.2 — An atom: Button",
+      "description": "`Button` is a representative **Hearthwood atom** — the smallest reusable building block. A few patterns to notice:\n\n**The `h` alias.** The import `h \"maragu.dev/gomponents/html\"` is the canonical alias throughout `internal/ui`. A dot-import (`. \"...html\"`) is never used; naming the package `h` keeps element calls (`h.Button`, `h.A`, `h.Class`) readable and unambiguous.\n\n**Props struct, variadic children.** `ButtonProps` carries the configuration knobs (variant, size, href); open-ended children carry the label, type, or Datastar attribute. This pattern keeps the call site declarative and avoids boolean explosion.\n\n**One function, two renderers.** When `Href` is set the atom returns `<a>`; otherwise `<button>`. The switch happens once, here, so callers never guess which element to reach for.\n\n**Class order follows the export.** The comment on `buttonClass` notes that the classes are composed in the Hearthwood export's order: `btn`, then the variant, then the optional size. Keeping that order matches the design export's CSS, so the rendered class string stays byte-identical to the hand-rolled markup it replaced — the kind of constraint worth documenting in a comment, not in a test."
+    },
+    {
+      "file": "internal/ui/components.go",
+      "line": 28,
+      "title": "18.3 — Card chrome & the escaping firewall",
+      "description": "`CardHead` is the shared header for every domain card — the icon image and title row. Its existence means the card-head frame is written once instead of being hand-copied into every feature card.\n\nThe critical rule is in how user- and model-derived text enters the tree: **`g.Text` escapes its argument**; `g.Raw` does not. `g.Text(title)` means a model-generated card title cannot inject `<script>` or other markup into the page, no matter what the model produced. The comment above `ErrorStrip` (line 11) makes this explicit: \"Never replace g.Text here with g.Raw.\"\n\n`g.Raw` is reserved for already-trusted, already-rendered HTML — for example, Markdown that was sanitised server-side before being embedded. Anywhere a string originates from user input or model output, only `g.Text` is correct.\n\nThis is the **escaping firewall**: a structural invariant enforced by which gomponents function you pick, not by a runtime sanitiser. AGENTS.md names it directly: *user/model text renders through escaping `g.Text`; `g.Raw` is for already-trusted, already-rendered HTML only.*"
+    },
+    {
+      "file": "internal/ui/chat/dock.go",
+      "line": 52,
+      "title": "18.4 — A chat organism: Dock",
+      "description": "`Dock` is an **organism** — a larger unit built from atoms and slots. It renders the companion chat dock chrome, in order: the resize grip, the full-screen toggle header, the recap/Chronicle zone (a navigation button, emitted only when `HasRecap` is set — it opens the Chronicle on demand, no IntersectionObserver), the conversation wrapper, the nudge poller, the Composer slot, two `<dialog>` elements, and the optional Switchers slot.\n\nTwo design decisions are worth understanding:\n\n**Injected slots, not imports.** `DockProps` carries `Convo`, `Composer`, and `Switchers` as pre-rendered `g.Node` values supplied by the caller. `internal/ui/chat` never imports `internal/feature/*`. The feature packages compose atoms; the atom/organism packages stay ignorant of domain logic. This keeps the dependency graph acyclic.\n\n**Variant class as the single source.** The `DockVariant` string (`rail`, `overlay`, `home`) maps to a CSS class (`dock-v-rail`, etc.) which is the *only* place the chat column width is decided. The three hand-rolled width blocks that existed before were collapsed to this one class per variant — a suckless consolidation.\n\nCross-ref **Tour 07** (the web gateway) which assembles the Dock inside the page handler."
+    },
+    {
+      "file": "internal/ui/shell/shell.go",
+      "line": 30,
+      "title": "18.5 — The page shell",
+      "description": "`Page` is the **single place in the codebase that emits `<!doctype html>`**. Every full-page response traces back here.\n\nThe structure it assembles is minimal and deliberate:\n\n- `pageHead()` emits the fixed `<head>`: charset, viewport, `basm.css`, the no-flash localStorage script (restores dock state before first paint so there is no layout shift), favicon, and the scripts — `datastar.js` (the SSE/signal engine), `basm.js` (interaction helpers), and `graph-canvas.js` (boots the interactive graph card and lazy-loads the force-graph lib on first use).\n- The body carries a skip-link for keyboard/screen-reader users, a `.with-sidebar` layout wrapper, a `<main id=\"main\">` for the page body, and an `<aside id=\"dock\">` for the chat dock.\n\nThe `noFlashScript` constant is inlined (not a separate file) because it must execute synchronously before the browser renders the first frame. It is the one case where `g.Raw` is used on a string — but notice the string is a constant defined in this file, not anything coming from user input or the model.\n\n`ChatShell` (not shown here) is the primary shell for most pages; `Page` is kept for error pages that need a plain `<main>` slot."
+    },
+    {
+      "file": "internal/feature/storybook/story.go",
+      "line": 27,
+      "title": "18.6 — A story's anatomy",
+      "description": "`Story` is the contract that every component entry in the storybook must satisfy.\n\nThe core fields:\n- **`ID`** — the URL slug (`/storybook/{id}`) and the sidebar nav key.\n- **`Group`** — sidebar section (Foundations, Atoms, Forms, Chat, Cards, …).\n- **`Blurb`** — one sentence explaining what the component is for.\n- **`Variants []Variant`** — named, captioned instances of the component in different states; each renders as a tile on the canvas.\n- **`Props []Prop`** — the props table: name, type, default, description.\n- **`Dos` / `Donts []string`** — explicit usage guidance.\n\nThe rendering flags (`Wide`, `OnDark`, `OnDock`) handle components that would overflow narrow tiles or whose text colour requires a specific background to be legible — a practical accommodation to Hearthwood's fixed dark palette.\n\nFor foundation/overview entries (`Custom` set, no `Variants`), the story renders a bespoke canvas verbatim — used for the Colors, Typography, and Materials overviews.\n\nThe discipline here is intentional: every component gets the same structured treatment. An informal description in a comment, or a stray HTML file, would not be the source of truth."
+    },
+    {
+      "file": "internal/feature/storybook/story.go",
+      "line": 53,
+      "title": "18.7 — The story registry",
+      "description": "`var stories = []Story{…}` (line 53) is the **ordered registry**: the single source of truth for both the sidebar navigation and the `/storybook/{id}` route lookup.\n\nTwo accessor functions expose it without leaking the slice:\n- `Stories()` — returns the full ordered list; consumed by `sidebarFor` in the web layer to build the nav.\n- `Lookup(id)` — linear scan by ID; consumed by the story route handler.\n\nThe registry currently lists over 60 entries spanning Foundations (Colors, Typography, Materials), Atoms (Button, Tag, Badge, …), Feedback, Forms, Navigation, Display, Chat organisms, and domain Cards. Each entry is a function call returning a `Story` literal, defined in the relevant file within the `storybook` package.\n\n`Page(s Story) g.Node` (line 151) is the renderer: for a component story it assembles the blurb header, the variant tile grid, the props table, and the Do/Don't columns. For a foundation story it returns `s.Custom` verbatim.\n\nBecause the registry drives both the sidebar and the routes, adding a component to the storybook is a single operation: add its `Story` to this slice."
+    },
+    {
+      "file": "internal/web/storybook.go",
+      "line": 47,
+      "title": "18.8 — Storybook routes",
+      "description": "The web layer wires two routes to the storybook:\n- `GET /storybook` → `storybookHome` → `storybook.Overview()`\n- `GET /storybook/{id}` → `storybookStory` → `storybook.Lookup(id)` + `storybook.Page(s)`\n\nBoth routes converge on `renderStorybook` (line 47), which sets the content-type header and delegates page composition to `shell.SidebarPage` — the two-column shell with a fixed sidebar and a scrollable canvas.\n\n`sidebarFor` (line 64) builds the `shell.SidebarProps` from the registry: it iterates `storybook.Stories()`, groups entries by `Story.Group`, assigns a dot colour from `sidebarDots` per group, and marks the active item. Grouping logic lives in the web layer so the registry package (`internal/feature/storybook`) remains free of any shell import.\n\nThis is the AGENTS.md gateway pattern applied to the component catalog: the registry and renderer are pure gomponents; the route handlers are the thin gateway that wires them into an HTTP response through the shell."
+    },
+    {
+      "file": "internal/feature/taskcards/quests.go",
+      "line": 24,
+      "title": "18.9 — A domain card: QuestsCard",
+      "description": "`QuestsCard` is a representative **domain card** — a feature-level component that composes `ui` atoms into a PocketBase-aware view.\n\nNotice the composition:\n- The outer `h.Article` carries the CSS classes and the stable HTML ID (`ucard-quests`) that Datastar SSE patches target.\n- `ui.CardHead(…)` (from `internal/ui/components.go`) supplies the icon + title header — the shared chrome seen in step 18.3, reused here without re-implementing it.\n- The body is a `<ul>` of task rows, each with a `g.Text`-escaped title and an inline `<form>` for the `✓` done transition.\n- The footer carries an `all quests →` link with a Datastar `data-on:click__prevent` attribute that fires a GET to `/ui/show/quests` — the standard Datastar hypermedia pattern: a declarative attribute on an element, not a client-side router.\n\n`QuestsManageCard` (line 66) is the same card in its expanded \"focus\" mode — full task cards with Done/Snooze/Drop controls. One view type, two renderers, shared header atom.\n\nAGENTS.md invariant: domain cards live in `internal/feature/*cards`; they compose `ui` atoms but are never imported by `internal/ui`."
+    },
+    {
+      "file": "internal/feature/storybook/story.go",
+      "line": 27,
+      "title": "18.10 — The rule",
+      "description": "The storybook is the **source of truth** for the Balaur component system. AGENTS.md states this without qualification: *for any UI work, check the storybook first, reuse or extend a component instead of hand-rolling markup, and add or update its story in the same change.*\n\nIn practice this means:\n\n1. **Before writing a component**, open `/storybook` and check whether it already exists in the registry. If it does, extend `ButtonProps`, add a `Variant`, or compose from existing atoms rather than duplicating markup.\n2. **After building or changing a component**, update (or add) its `Story` entry: add the new variant tile, update the Props table, revise the Dos/Don'ts. The story and the component ship together in the same commit.\n3. **The storybook is the specification**. If a story says the `ghost` button should look a certain way, `basm.css` is wrong if it does not. The storybook is where the contract between designer intent and runtime behaviour is checked — in the running application, at `/storybook`, in a real browser.\n\nThis discipline keeps the component catalog accurate, makes regressions visible, and means any contributor can understand every UI primitive without reading scattered feature code."
+    }
+  ]
+}
