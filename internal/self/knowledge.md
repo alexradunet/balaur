@@ -325,8 +325,12 @@ one-way Johnny Decimal Markdown mirror of every owner-authored, active node into
 and committed to a git history under the dest (skipped cleanly if git is absent).
 The redaction boundary holds: it reads only `status=active` rows of the `nodes`
 collection, never any secret/token collection. `day`/`task` are deferred pending
-their own recap/transcript redaction pass. Encryption is Phase 3. The phased
-design lives in docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
+their own recap/transcript redaction pass. `--encrypt` (plan 195) wraps the whole
+mirror tree in a single passphrase-encrypted archive (scrypt-stretched
+passphrase, AES-256-GCM, CGO-free) for safe off-box backup — owner-supplied
+passphrase via `BALAUR_EXPORT_PASSPHRASE`, no escrow, no cloud: lose the
+passphrase and the backup is unrecoverable. The phased design lives in
+docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
 
 The quest log (the quests card, opens in the right panel at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
 
