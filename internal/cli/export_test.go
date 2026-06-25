@@ -12,7 +12,7 @@ import (
 
 // TestExportEmitsEnvelopeAndWritesFiles proves the `export` CLI emits a
 // {"v":1,"kind":"export",...} envelope with {files, dest}, and writes the active
-// note into its Johnny Decimal folder under --dir.
+// note into its Johnny Decimal folder under --out.
 func TestExportEmitsEnvelopeAndWritesFiles(t *testing.T) {
 	app := storetest.NewApp(t)
 	if _, err := nodes.Create(app, "note", "Exported Note", "Body with [[Link]].",
@@ -21,7 +21,7 @@ func TestExportEmitsEnvelopeAndWritesFiles(t *testing.T) {
 	}
 
 	out := t.TempDir()
-	env, err := executeEnvelope(t, exportCmd(app), "--dir", out)
+	env, err := executeEnvelope(t, exportCmd(app), "--out", out)
 	if err != nil {
 		t.Fatalf("export: %v", err)
 	}
@@ -55,7 +55,21 @@ func TestExportEmitsEnvelopeAndWritesFiles(t *testing.T) {
 	}
 }
 
-// TestExportDefaultsUnderDataDir proves that with no --dir the export defaults to
+// TestExportFlagDoesNotCollideWithDataDir guards against re-introducing a local
+// --dir flag on exportCmd, which collides with the global PocketBase --dir
+// (data dir) and causes the mirror to be written into pb_data (plan 197).
+func TestExportFlagDoesNotCollideWithDataDir(t *testing.T) {
+	app := storetest.NewApp(t)
+	cmd := exportCmd(app)
+	if cmd.Flags().Lookup("dir") != nil {
+		t.Fatal("export must NOT define a local --dir flag: it collides with the global PocketBase --dir (data dir), causing the mirror to be written into pb_data")
+	}
+	if cmd.Flags().Lookup("out") == nil {
+		t.Fatal("export dest flag must be --out")
+	}
+}
+
+// TestExportDefaultsUnderDataDir proves that with no --out the export defaults to
 // <data dir>/export. storetest's app has a real DataDir() under its temp root,
 // so the write lands there harmlessly and is cleaned up with the temp app.
 func TestExportDefaultsUnderDataDir(t *testing.T) {
