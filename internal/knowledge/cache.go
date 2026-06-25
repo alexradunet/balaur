@@ -2,7 +2,6 @@ package knowledge
 
 import (
 	"sort"
-	"sync/atomic"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -13,11 +12,12 @@ import (
 // lives. Mirrors search.StoreKey's package-const style.
 const contextCacheKey = "balaur.knowledge.contextCache"
 
-// contextCacheComputes counts how many times loadContextCache ran the full
-// nodes.ListByTypeStatus scan (a cache miss). It is the deterministic signal the
-// warm-cache test asserts on: a warm read must NOT increment it. Test-only seam,
-// kept tiny and unexported; service code never reads it.
-var contextCacheComputes atomic.Int64
+// onContextCacheMiss is a test-only seam fired once per cache MISS inside
+// loadContextCache (a miss runs the full nodes.ListByTypeStatus scan). It
+// defaults to a no-op so the production hot path carries no counter and no
+// shared mutable state; cache_test.go overrides it to assert the warm-read
+// guarantee (a warm read must NOT fire it). Keep it unexported and miss-only.
+var onContextCacheMiss = func() {}
 
 // contextCache holds the two sets that BuildContext injects on every turn: the
 // upfront (importance>=4) active memories and the active skills, already
@@ -93,7 +93,7 @@ func loadContextCache(app core.App) (*contextCache, error) {
 		}
 	}
 
-	contextCacheComputes.Add(1) // miss: the scan runs (see the warm-cache test)
+	onContextCacheMiss() // miss: the scan runs (see the warm-cache test)
 	upfront, err := computeUpfront(app, upfrontLimit)
 	if err != nil {
 		return &contextCache{}, err
