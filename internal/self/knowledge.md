@@ -320,7 +320,7 @@ history, audit, verify, model, self, ext, export, seed) printing v1 JSON envelop
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface. `balaur export` (plan 194) writes a
 one-way Johnny Decimal Markdown mirror of every owner-authored, active node into
-`<data dir>/export` (or `--dir`), grouped into JD folders (unmapped types →
+`<data dir>/export` (or `--out`), grouped into JD folders (unmapped types →
 `90-99 Unsorted/91 Other`), full re-export (byte-identical for unchanged data),
 and committed to a git history under the dest (skipped cleanly if git is absent).
 The redaction boundary holds: it reads only `status=active` rows of the `nodes`
