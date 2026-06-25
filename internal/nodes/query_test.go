@@ -121,13 +121,26 @@ func TestInverseLabel(t *testing.T) {
 func TestActiveSubgraph(t *testing.T) {
 	app := storetest.NewApp(t)
 
+	// a, b are active (in the visible set); c, d are rejected and p is proposed
+	// (out of the active set regardless of cap/timestamps). limit=50 means the
+	// cap plays no role — membership is decided purely by status, so the result
+	// is deterministic and not insert-order dependent.
 	a, _ := nodes.Create(app, "note", "Alpha", "", nodes.StatusActive, nil)
 	b, _ := nodes.Create(app, "note", "Beta", "", nodes.StatusActive, nil)
+	c, _ := nodes.Create(app, "note", "Gamma", "", nodes.StatusRejected, nil)
+	d, _ := nodes.Create(app, "note", "Delta", "", nodes.StatusRejected, nil)
 	p, _ := nodes.Create(app, "note", "Pending", "", nodes.StatusProposed, nil)
-	if _, err := nodes.AddEdge(app, a.Id, b.Id, "links", ""); err != nil {
+
+	if _, err := nodes.AddEdge(app, a.Id, b.Id, "links", ""); err != nil { // both active → returned
 		t.Fatalf("edge a→b: %v", err)
 	}
-	if _, err := nodes.AddEdge(app, a.Id, p.Id, "links", ""); err != nil {
+	if _, err := nodes.AddEdge(app, a.Id, c.Id, "links", ""); err != nil { // target rejected → drop (no dangle)
+		t.Fatalf("edge a→c: %v", err)
+	}
+	if _, err := nodes.AddEdge(app, c.Id, d.Id, "links", ""); err != nil { // both rejected → drop
+		t.Fatalf("edge c→d: %v", err)
+	}
+	if _, err := nodes.AddEdge(app, a.Id, p.Id, "links", ""); err != nil { // target proposed → drop
 		t.Fatalf("edge a→p: %v", err)
 	}
 
@@ -145,8 +158,11 @@ func TestActiveSubgraph(t *testing.T) {
 	if ids[p.Id] {
 		t.Error("consent breach: proposed node returned by ActiveSubgraph")
 	}
+	if ids[c.Id] || ids[d.Id] {
+		t.Errorf("out-of-set nodes returned: c=%v d=%v", ids[c.Id], ids[d.Id])
+	}
 	if len(edges) != 1 || edges[0].Source != a.Id || edges[0].Target != b.Id {
-		t.Errorf("edges = %+v, want only a→b (edge to proposed node dropped)", edges)
+		t.Errorf("edges = %+v, want only a→b (dangling, rejected, and proposed edges dropped)", edges)
 	}
 }
 

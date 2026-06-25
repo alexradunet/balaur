@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -70,19 +71,37 @@ func ActiveSubgraph(app core.App, limit int) ([]*core.Record, []Edge, error) {
 		return nil, nil, fmt.Errorf("active subgraph: loading nodes: %w", err)
 	}
 	in := make(map[string]bool, len(recs))
+	ids := make([]string, 0, len(recs))
 	for _, r := range recs {
 		in[r.Id] = true
+		ids = append(ids, r.Id)
 	}
 
-	allEdges, err := app.FindRecordsByFilter("edges", "", "", 0, 0, nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("active subgraph: loading edges: %w", err)
-	}
-	edges := make([]Edge, 0, len(allEdges))
-	for _, e := range allEdges {
-		s, t := e.GetString("source"), e.GetString("target")
-		if in[s] && in[t] {
-			edges = append(edges, Edge{Source: s, Target: t})
+	var edges []Edge
+	if len(ids) > 0 {
+		// Only edges touching a visible node can survive the both-endpoints
+		// check, so let the DB narrow the candidates instead of scanning the
+		// whole edges table. The Go check below is still the authority — an
+		// edge from a visible node to an out-of-set node matches this OR but
+		// must be dropped so no endpoint dangles (the consent/no-dangle spine).
+		params := dbx.Params{}
+		conds := make([]string, 0, len(ids))
+		for i, id := range ids {
+			sk, tk := fmt.Sprintf("s%d", i), fmt.Sprintf("t%d", i)
+			conds = append(conds, fmt.Sprintf("source = {:%s}", sk), fmt.Sprintf("target = {:%s}", tk))
+			params[sk], params[tk] = id, id
+		}
+		candidates, err := app.FindRecordsByFilter("edges",
+			strings.Join(conds, " || "), "", 0, 0, params)
+		if err != nil {
+			return nil, nil, fmt.Errorf("active subgraph: loading edges: %w", err)
+		}
+		edges = make([]Edge, 0, len(candidates))
+		for _, e := range candidates {
+			s, t := e.GetString("source"), e.GetString("target")
+			if in[s] && in[t] {
+				edges = append(edges, Edge{Source: s, Target: t})
+			}
 		}
 	}
 	return recs, edges, nil
