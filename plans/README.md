@@ -185,16 +185,16 @@ in this batch except the merge-friction note below. P1 first (a live regression
 | 180 | Harden the `/ui/*` CSRF guard against `Origin: null` (sandboxed-iframe bypass) | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 181 | Stop a spurious nudge when a recurring task is completed before its due time | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 182 | Replace the Chronicle telescope's per-period N+1 with one ranged query (`recap.FindMany`) | P2 | S | — (see 187 merge-friction) | DONE (executed + reviewed APPROVE; merged to local main) |
-| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | REVISE×2 (race-safe fix verified correct, but the regression test was vacuous; final round adds a deterministic guard, re-executing in wave 4) |
+| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | REVISE×3 (race fix + deterministic test now correct, but the cache still scanned every warm turn — final round adds the GetOk fast-path, re-executing in wave 5) |
 | 190 | SPIKE: close the no-terminal first-run gap (no-args launcher → loopback browser-open) | P2 | L | — | DONE (spike: prototype + design note; executed + reviewed APPROVE; merged to local main) |
 | 191 | Node authoring: `props` on `node_write` + a `node_edit` verb (closes the typed-object CRUD asymmetry) | P2 | M | — | DONE (re-executed with consent guard rejecting memory/skill; reviewed APPROVE; merged to local main) |
-| 184 | Scope `ActiveSubgraph`'s edges query to the visible node set (stop loading the whole `edges` table) | P3 | S | — | TODO |
+| 184 | Scope `ActiveSubgraph`'s edges query to the visible node set (stop loading the whole `edges` table) | P3 | S | — | REVISE (query.go fix correct; test was flaky on insert-order — refined to a deterministic test, re-executing in wave 5) |
 | 185 | Document a mandatory `go test ./internal/ext/...` gate for any goja bump (docs/process; no version change) | P3 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 186 | Decompose `settingsfocus.go` (619 lines) into one file per settings section (mechanical) | P3 | M | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 187 | Give the hourly recap catch-up a high-water mark (stop re-walking all history) | P3 | M | 182 (both edit `recap/generate.go` — land 182 first) | DONE (executed + reviewed APPROVE; built on 182's FindMany; merged to local main) |
-| 188 | Collapse the duplicated FTS5+fallback skeleton in `SearchActive`/`SearchAllActive` (opportunistic) | P3 | S | — | TODO |
+| 188 | Collapse the duplicated FTS5+fallback skeleton in `SearchActive`/`SearchAllActive` (opportunistic) | P3 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 189 | Default-deny cloud-metadata/link-local egress from extension `balaur.http` (opt-out) | P3 | M | — | DONE (executed + reviewed APPROVE; merged to local main) |
-| 192 | SPIKE: sovereign export — one-way Markdown vault mirror + encrypted backup (design + thin prototype) | P3 | L | — | TODO |
+| 192 | SPIKE: sovereign export — one-way Markdown vault mirror + encrypted backup (design + thin prototype) | P3 | L | — | DONE (spike: design spec + internal/export prototype + redaction canary; reviewed APPROVE; merged to local main) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 

@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat b6d02c5..HEAD -- internal/knowledge/ internal/turn/turn.go internal/search/index.go main.go`
+> `git diff --stat 3d4963c..HEAD -- internal/knowledge/ internal/turn/turn.go internal/search/index.go main.go`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -46,6 +46,35 @@
 > (`ced5326`), whose `main.go` already carries plan 190's no-args launcher — put
 > your cache-invalidation hook in the existing `registerSearchIndex` hook area
 > and edit `main.go` additively; do NOT touch 190's launcher branch.
+
+> **⚠ REVISION (round 4 — FINAL; this is the CORE perf requirement). Read before
+> Step 1.** Prior rounds fixed the data race and the regression test, but the
+> cache did NOT actually remove the scan from the hot path: `loadContextCache`
+> called `computeUpfront`/`computeActiveSkills` UNCONDITIONALLY at the top of
+> every call, then `GetOrSet` discarded the result on a warm cache — so the full
+> `nodes.ListByTypeStatus` scan + hydrate STILL ran every turn, defeating the
+> entire plan. Fix it:
+> 1. `loadContextCache` MUST begin with a `GetOk` fast-path that returns WITHOUT
+>    computing on a warm cache, and compute only on a miss:
+>    `if raw, ok := app.Store().GetOk(contextCacheKey); ok { if c, ok := raw.(*contextCache); ok && c != nil { return c, nil } }`
+>    then, ONLY on a miss, compute upfront + skills and store via `GetOrSet` on
+>    FULL success (keep the existing "never store a partial/empty snapshot on a
+>    compute error — return the fresh value WITHOUT storing" guard). Do NOT call
+>    `computeUpfront`/`computeActiveSkills` before the `GetOk` check.
+> 2. Add a DETERMINISTIC warm-cache assertion that the scan does NOT re-run on a
+>    warm read: seed active memories, warm the cache (one `UpfrontMemories` call),
+>    mutate a memory DIRECTLY via `app.Save` (bypassing the `Transition`/`UpdateFields`
+>    invalidators — a raw update does not fire the delete-only hook), and assert a
+>    second `UpfrontMemories` does NOT reflect the change (it served the snapshot,
+>    not a fresh scan); then call the invalidation path and assert it now does.
+> KEEP everything the prior round got right (the `copyForRead` race fix +
+> `TestCacheReturnedRecordIsThrowaway`, the delete-only invalidation hook, the
+> Memory/Skill invalidation in `Transition`/`UpdateFields`, the
+> `computeUpfront`/`computeActiveSkills` parity extraction). Done criterion + STOP
+> condition: if a warm turn still calls `nodes.ListByTypeStatus`, the plan is NOT
+> done. **This is the final revision round** — if the warm-cache criterion still
+> fails, STOP and report rather than improvising. Base: executes against
+> `origin/main` (`3d4963c`).
 
 ## Status
 

@@ -7,10 +7,28 @@
 > in `plans/README.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 12a48bf..HEAD -- internal/nodes/query.go internal/nodes/query_test.go`
+> **Drift check (run first)**: `git diff --stat 3d4963c..HEAD -- internal/nodes/query.go internal/nodes/query_test.go`
 > If either in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
+
+> **⚠ REVISION (round 2). Read before Step 1.** A first attempt produced a CORRECT
+> `query.go` change but a FLAKY test: the out-of-set case relied on
+> second-resolution insert ordering / `created` timestamps to push nodes past the
+> cap, so it failed intermittently and the executor STOPPED. Reproduce the
+> production fix (the `dbx.Params` `source IN (...) OR target IN (...)` filter
+> built from the capped node-id set, keeping the `in[s] && in[t]` both-endpoints
+> Go check and the `status='active'` filter, replacing the empty-filter full
+> scan). Make the TEST deterministic instead of cap/timestamp-dependent:
+> 1. Mark the out-of-set nodes `nodes.StatusRejected` (NOT active) so they are
+>    excluded from the `status='active'` set regardless of timestamps/cap; call
+>    `ActiveSubgraph(app, 50)` so the cap plays no role.
+> 2. Edges to exercise: a→b (both active → RETURNED), a→c (active→rejected → must
+>    DROP, no dangle), c→d (both rejected → must DROP), a→p (active→proposed → must
+>    DROP). Assert EXACTLY one edge a→b, and that c/d/p never appear.
+> 3. Prove non-flakiness: `go test ./internal/nodes/ -run '^TestActiveSubgraph$' -count=200`
+>    all pass. NO `time.Sleep`. Touch ONLY `internal/nodes/query.go` and
+>    `internal/nodes/query_test.go`. Base: executes against `origin/main` (`3d4963c`).
 
 ## Status
 
