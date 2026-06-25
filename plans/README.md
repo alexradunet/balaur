@@ -283,7 +283,7 @@ Authored against `e06346d`.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 193 | First-run launcher hardening (stable default port 8099 + free-port fallback, friendlier URL message, `IsFirstRun` stat; loopback invariant kept) | P2 | M | 190 (done) | DONE (executed + reviewed; loopback invariant + tests verified; merged to local main) |
-| 194 | Sovereign export Phase 2 — full Johnny Decimal Markdown vault mirror (all owner-authored types, full re-export, git commit, redaction canary extended) | P3 | L | 192 (done) | REVISE (code + sovereignty canary correct; day/task deferral-guard test was weak — refined to bite, re-executing) |
+| 194 | Sovereign export Phase 2 — full Johnny Decimal Markdown vault mirror (all owner-authored types, full re-export, git commit, redaction canary extended) | P3 | L | 192 (done) | DONE (full mirror; redaction canary + day/task deferral guard both proven to bite; hermetic export-repo git commit; reviewed APPROVE; merged to local main) |
 | 195 | Sovereign export Phase 3 — passphrase-encrypted backup over the mirror (CGO-free via `x/crypto`; "lost passphrase = lost backup") | P3 | M | 194 | TODO — **HELD** (encryption of the sovereign record; awaiting owner go + a cold review of the plan) |
 | 196 | Move plan 183's test-only compute-counter out of service code (no-op function-var hook) | P3 | S | 183 (done) | DONE (executed + reviewed APPROVE; warm-read guard still fails-on-revert; merged to local main) |
 
