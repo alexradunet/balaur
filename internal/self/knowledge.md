@@ -318,12 +318,15 @@ CLI (doctor, chat, task, memory, skill, note, search, life, journal, day, recap,
 history, audit, verify, model, self, ext, export, seed) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
-owner's engine room, never your surface. `balaur export` is a sovereign-export
-SPIKE stub (plan 192): a read-only, one-type (`note`) Markdown render of active
-nodes to a caller-supplied dir — no git, no encryption yet; the redaction
-boundary (active `nodes` rows only, never any secret/token collection) and the
-phased mirror→encryption plan live in
-docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
+owner's engine room, never your surface. `balaur export` (plan 194) writes a
+one-way Johnny Decimal Markdown mirror of every owner-authored, active node into
+`<data dir>/export` (or `--dir`), grouped into JD folders (unmapped types →
+`90-99 Unsorted/91 Other`), full re-export (byte-identical for unchanged data),
+and committed to a git history under the dest (skipped cleanly if git is absent).
+The redaction boundary holds: it reads only `status=active` rows of the `nodes`
+collection, never any secret/token collection. `day`/`task` are deferred pending
+their own recap/transcript redaction pass. Encryption is Phase 3. The phased
+design lives in docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
 
 The quest log (the quests card, opens in the right panel at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
 

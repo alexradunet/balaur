@@ -422,7 +422,6 @@ boundary) and `DESIGN.md` for the Basm design system.
 
 ## Roadmap (not shipped — honesty ledger)
 
-- Johnny Decimal Markdown vault mirror: one-way export + git history
 - Embedding recall (FTS5 lexical recall shipped; `Embed()` seam reserved
   for a second ranking stage behind the same SearchActive call)
 - Encrypted export

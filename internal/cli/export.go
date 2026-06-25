@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/spf13/cobra"
@@ -9,26 +10,30 @@ import (
 	"github.com/alexradunet/balaur/internal/export"
 )
 
-// exportCmd is the sovereign-export spike's CLI surface (plan 192): a one-type,
-// read-only Markdown export. It is a STUB — no git, no encryption, no full
-// exporter — exercising only internal/export.ExportType. See the design note at
-// docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
+// exportCmd is the sovereign-export CLI surface (plans 192/194): a one-way,
+// read-only Johnny Decimal Markdown mirror of every owner-authored active node,
+// committed to a git history under the dest. No encryption yet (Phase 3). See
+// the design note at docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
 func exportCmd(app core.App) *cobra.Command {
-	var typ, out string
+	var dir string
 	cmd := &cobra.Command{
 		Use:   "export",
-		Short: "Spike: read-only one-type Markdown export of active nodes (no git, no encryption)",
+		Short: "One-way Johnny Decimal Markdown mirror of active nodes (+ git history)",
 		Args:  cobra.NoArgs,
 	}
-	cmd.Flags().StringVar(&typ, "type", "note", "node type to export (spike: note only)")
-	cmd.Flags().StringVar(&out, "out", "", "destination directory (required; never the data dir)")
-	_ = cmd.MarkFlagRequired("out")
+	// Default: an "export" dir under the data dir. Resolved lazily in RunE so a
+	// custom --dir wins and we never capture a stale path at construction time.
+	cmd.Flags().StringVar(&dir, "dir", "", "destination directory (default: <data dir>/export)")
 	cmd.RunE = run(app, "export", func(cmd *cobra.Command, args []string) (any, error) {
-		paths, err := export.ExportType(app, typ, out)
+		dest := dir
+		if dest == "" {
+			dest = filepath.Join(app.DataDir(), "export")
+		}
+		files, err := export.ExportMirror(app, dest)
 		if err != nil {
 			return nil, fmt.Errorf("export: %w", err)
 		}
-		return map[string]any{"type": typ, "out": out, "files": paths}, nil
+		return map[string]any{"files": files, "dest": dest}, nil
 	})
 	return cmd
 }
