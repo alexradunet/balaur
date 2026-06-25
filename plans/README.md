@@ -185,10 +185,10 @@ in this batch except the merge-friction note below. P1 first (a live regression
 | 180 | Harden the `/ui/*` CSRF guard against `Origin: null` (sandboxed-iframe bypass) | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 181 | Stop a spurious nudge when a recurring task is completed before its due time | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 182 | Replace the Chronicle telescope's per-period N+1 with one ranged query (`recap.FindMany`) | P2 | S | — (see 187 merge-friction) | DONE (executed + reviewed APPROVE; merged to local main) |
-| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | REVISE×3 (race fix + deterministic test now correct, but the cache still scanned every warm turn — final round adds the GetOk fast-path, re-executing in wave 5) |
+| 183 | Cache per-turn upfront-memories + active-skills off the chat hot path (invalidate on real edits, not `Touch`) | P2 | M | — | DONE (GetOk fast-path + Clone race-fix + Memory/Skill invalidation; warm-read & throwaway-copy guards proven; -race clean; reviewed APPROVE; merged to local main — minor: a test-only atomic compute-counter lives in service code, see Execution log) |
 | 190 | SPIKE: close the no-terminal first-run gap (no-args launcher → loopback browser-open) | P2 | L | — | DONE (spike: prototype + design note; executed + reviewed APPROVE; merged to local main) |
 | 191 | Node authoring: `props` on `node_write` + a `node_edit` verb (closes the typed-object CRUD asymmetry) | P2 | M | — | DONE (re-executed with consent guard rejecting memory/skill; reviewed APPROVE; merged to local main) |
-| 184 | Scope `ActiveSubgraph`'s edges query to the visible node set (stop loading the whole `edges` table) | P3 | S | — | REVISE (query.go fix correct; test was flaky on insert-order — refined to a deterministic test, re-executing in wave 5) |
+| 184 | Scope `ActiveSubgraph`'s edges query to the visible node set (stop loading the whole `edges` table) | P3 | S | — | DONE (deterministic StatusRejected-based test, non-flaky at -count=200; reviewed APPROVE; merged to local main) |
 | 185 | Document a mandatory `go test ./internal/ext/...` gate for any goja bump (docs/process; no version change) | P3 | S | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 186 | Decompose `settingsfocus.go` (619 lines) into one file per settings section (mechanical) | P3 | M | — | DONE (executed + reviewed APPROVE; merged to local main) |
 | 187 | Give the hourly recap catch-up a high-water mark (stop re-walking all history) | P3 | M | 182 (both edit `recap/generate.go` — land 182 first) | DONE (executed + reviewed APPROVE; built on 182's FindMany; merged to local main) |
@@ -197,6 +197,45 @@ in this batch except the merge-friction note below. P1 first (a live regression
 | 192 | SPIKE: sovereign export — one-way Markdown vault mirror + encrypted backup (design + thin prototype) | P3 | L | — | DONE (spike: design spec + internal/export prototype + redaction canary; reviewed APPROVE; merged to local main) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+## Execution log (2026-06-25)
+
+All 18 plans were executed and reviewed via the `improve` skill's `execute` flow:
+each ran in an **isolated git worktree** (a cheaper executor implements + commits;
+never directly on `main`), then an **adversarial reviewer** re-ran every done
+criterion, checked scope, read the full diff, and audited the tests. The advisor
+rendered the final verdict; only APPROVED work was merged to `main`, gated on a
+green `go test ./...` + staticcheck, and pushed to `origin`. Run across 5 waves,
+serialized so each wave's worktrees branch off `origin/main` with prior waves
+present.
+
+The review loop caught — and kept off `main` — each of these before merge:
+
+- **175** — plan infeasible (Go import cycle `life`↔`tasks`: `life/day.go`
+  already imports `tasks`). Re-scoped to read `measure` nodes directly in
+  `internal/tasks`, then landed.
+- **175 / 190 / 183 / 192** — executors ran `graphify update .` inside their
+  worktrees, baking ephemeral worktree paths into the tracked
+  `graphify-out/graph.json`. Merged **source-only** (the graph is regenerated on
+  `main`, not from a throwaway path).
+- **183** (3 review rounds) — a chat-hot-path **data race** (`Touch` mutating
+  cached records via the by-reference `nodes.Props` map) → a **vacuous** `-race`
+  regression test (passed even when the fix was reverted) → a cache that **never
+  actually removed the per-turn scan** (computed before the `GetOk` check). Final
+  version: `Clone` race-fix + a deterministic throwaway-copy guard + a `GetOk`
+  fast-path + a warm-read no-rescan guard; `-race` clean.
+- **191** — `node_edit` could mutate `memory`/`skill` nodes, bypassing the
+  consent-gated `propose_edit` boundary (a product pillar). Refined to reject any
+  non-owner-authored type.
+- **184** — a flaky insert-order/timestamp-dependent test (executor STOPPED).
+  Refined to a deterministic `StatusRejected`-based test, proven non-flaky at
+  `-count=200`.
+
+**Known minor follow-up:** plan 183 introduced a package-level, test-only
+`contextCacheComputes atomic.Int64` counter in `internal/knowledge` service code
+— a soft brush against the "no global mutable state" rule. Justified (the plan's
+behavioral assertion alone could not catch the round-4 bug) and reviewer-accepted,
+but a candidate for a cleaner test seam later.
 
 ## Dependency notes (175–192)
 
