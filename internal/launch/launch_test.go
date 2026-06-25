@@ -1,6 +1,9 @@
 package launch
 
 import (
+	"fmt"
+	"net"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -90,4 +93,95 @@ func TestDataDir(t *testing.T) {
 			t.Errorf("DataDir() = %q, want suffix %q or fallback %q", got, want, "pb_data")
 		}
 	})
+}
+
+func TestSelectPort(t *testing.T) {
+	t.Run("default free", func(t *testing.T) {
+		// Attempt to pre-bind DefaultPort to check availability; if it fails,
+		// something else already holds it — skip this sub-case.
+		probe, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", DefaultPort))
+		if err != nil {
+			t.Skipf("127.0.0.1:%d already in use — cannot assert default-free path: %v", DefaultPort, err)
+		}
+		probe.Close()
+
+		port, err := SelectPort()
+		if err != nil {
+			t.Fatalf("SelectPort() error = %v", err)
+		}
+		if port < 1 || port > 65535 {
+			t.Errorf("port %d out of range 1..65535", port)
+		}
+		if port != DefaultPort {
+			t.Errorf("SelectPort() = %d, want DefaultPort %d (port was free)", port, DefaultPort)
+		}
+	})
+
+	t.Run("default occupied fallback", func(t *testing.T) {
+		// Bind DefaultPort and keep it open so SelectPort must fall back.
+		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", DefaultPort))
+		if err != nil {
+			t.Skipf("127.0.0.1:%d already in use by something else — cannot occupy it for fallback test: %v", DefaultPort, err)
+		}
+		t.Cleanup(func() { l.Close() })
+
+		port, err := SelectPort()
+		if err != nil {
+			t.Fatalf("SelectPort() fallback error = %v", err)
+		}
+		if port == DefaultPort {
+			t.Errorf("SelectPort() = DefaultPort %d, expected a different port when default is occupied", DefaultPort)
+		}
+		if port < 1 || port > 65535 {
+			t.Errorf("fallback port %d out of range 1..65535", port)
+		}
+	})
+}
+
+func TestIsFirstRun(t *testing.T) {
+	tests := []struct {
+		name string
+		dir  func() string
+		want bool
+	}{
+		{
+			"non-existent dir",
+			func() string { return filepath.Join(t.TempDir(), "does-not-exist") },
+			true,
+		},
+		{
+			"existing dir",
+			func() string { return t.TempDir() },
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := tt.dir()
+			got := IsFirstRun(dir)
+			if got != tt.want {
+				t.Errorf("IsFirstRun(%q) = %v, want %v", dir, got, tt.want)
+			}
+			if tt.want {
+				// IsFirstRun must not create the dir.
+				if _, err := os.Stat(dir); err == nil {
+					t.Errorf("IsFirstRun created %q — it must only stat, never mkdir", dir)
+				}
+			}
+		})
+	}
+}
+
+func TestSelectPortAddressIsLoopback(t *testing.T) {
+	port, err := SelectPort()
+	if err != nil {
+		t.Fatalf("SelectPort() error = %v", err)
+	}
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	if !strings.HasPrefix(addr, "127.0.0.1:") {
+		t.Errorf("constructed addr %q is not loopback", addr)
+	}
+	if strings.Contains(addr, "0.0.0.0") {
+		t.Errorf("constructed addr %q exposes all interfaces", addr)
+	}
 }

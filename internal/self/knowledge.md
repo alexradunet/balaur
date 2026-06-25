@@ -408,9 +408,11 @@ Layout map (file → concern):
 
 - main.go — wire-up: PocketBase app, migrations, CLI, routes, crons.
   A bare `balaur` (no args) is the no-terminal launcher: it boots a
-  loopback UI on the XDG data dir and opens the browser.
+  loopback UI on the XDG data dir, prefers a stable default port
+  (8099, falling back to a free port if taken), and opens the browser.
 - internal/launch — the no-args loopback launcher helpers (XDG data dir,
-  free loopback port, browser-open); fires only on a bare argv
+  stable default port + free-port fallback, first-run stat, browser-open);
+  fires only on a bare argv and never constructs a non-loopback address
 - migrations/ — schema as Go code
 - internal/turn — the shared turn pipeline + model resolution
 - internal/agent, internal/llm — loop and model seam

@@ -7,7 +7,9 @@
 package launch
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"os/exec"
@@ -31,6 +33,17 @@ func DataDir() string {
 		return "pb_data"
 	}
 	return filepath.Join(home, ".local", "share", "balaur", "pb_data")
+}
+
+// IsFirstRun reports whether dir does not yet exist — the cheap "this is the
+// owner's first boot" signal the design note (Q1) reserves for Phase 2
+// onboarding. It only stats; it never creates the dir, and the launcher never
+// gates the browser-open on it (the browser opens on every no-args boot). Any
+// stat error other than "not exist" (e.g. a permission error) is treated as
+// "not first run" — onboarding should not trigger on an ambiguous filesystem.
+func IsFirstRun(dir string) bool {
+	_, err := os.Stat(dir)
+	return errors.Is(err, fs.ErrNotExist)
 }
 
 // IsLauncherInvocation reports whether the process was invoked as a bare
@@ -58,6 +71,29 @@ func FreeLoopbackPort() (int, error) {
 		return 0, fmt.Errorf("finding a free loopback port: unexpected addr type %T", l.Addr())
 	}
 	return addr.Port, nil
+}
+
+// DefaultPort is the stable loopback port a no-args launch tries first, so the
+// URL (http://127.0.0.1:8099/) is bookmarkable instead of changing every boot.
+// It is deliberately in Balaur's 808x/809x family but is neither documented
+// bind — make run (prod) uses 8080 and make dev uses 8090 — so a normal dev box
+// never collides with a no-args launch. SelectPort falls back to a free port if
+// 8099 is already taken, so this only needs to be a sensible default.
+const DefaultPort = 8099
+
+// SelectPort returns the launcher's loopback port: DefaultPort when it is free,
+// otherwise a kernel-assigned free loopback port. It probes the default by
+// binding 127.0.0.1:DefaultPort and closing immediately; on any bind error
+// (port in use, permission) it falls back to FreeLoopbackPort. Like
+// FreeLoopbackPort there is a tiny TOCTOU window before serve re-binds — that is
+// acceptable for a localhost launcher (see docs/first-run-design.md).
+func SelectPort() (int, error) {
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", DefaultPort))
+	if err == nil {
+		l.Close()
+		return DefaultPort, nil
+	}
+	return FreeLoopbackPort()
 }
 
 // openCommand returns the OS-specific browser-open command for url. It is a pure

@@ -45,19 +45,29 @@ func main() {
 	// at construction), so every existing path — explicit `serve`, the CLI verbs,
 	// the Makefile binds — is untouched: this fires only on a truly bare argv.
 	if launch.IsLauncherInvocation(os.Args[1:]) {
-		port, err := launch.FreeLoopbackPort()
+		// First-run signal (design Q1): the data dir not existing before this boot
+		// means this is the owner's first launch. Computed BEFORE the argv rewrite
+		// adds --dir. Reserved for Phase 2 onboarding — it must NOT gate the
+		// browser-open, which happens on every no-args boot. Discarded for now so
+		// the seam exists without an unused-variable error (staticcheck gate).
+		_ = launch.IsFirstRun(launch.DataDir())
+
+		port, err := launch.SelectPort()
 		if err != nil {
 			log.Fatal(err)
 		}
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
+		url := "http://" + addr + "/"
 		os.Args = append(os.Args[:1], "serve", "--http", addr, "--dir", launch.DataDir())
-		// Browser-open in its own goroutine once the listener accepts. A failure
-		// is non-fatal — print the URL so the owner can open it manually. This is
-		// pre-New(), so structured app.Logger() does not exist yet; stderr is the
-		// one allowed exception (see plan 190).
+		// Always tell the owner the exact URL — a stable default port (8099) makes
+		// it bookmarkable. The browser-open runs in its own goroutine once the
+		// listener accepts; a failure is non-fatal, the URL is already printed.
+		// This is pre-New(), so structured app.Logger() does not exist yet; stderr
+		// is the one allowed exception (see plan 190).
+		fmt.Fprintf(os.Stderr, "Balaur is starting — open %s in your browser.\n", url)
 		go func() {
 			if err := launch.OpenAfterReady(addr); err != nil {
-				fmt.Fprintf(os.Stderr, "could not open a browser automatically — open http://%s/ to reach Balaur (%v)\n", addr, err)
+				fmt.Fprintf(os.Stderr, "(could not open a browser automatically: %v — open %s manually)\n", err, url)
 			}
 		}()
 	}
