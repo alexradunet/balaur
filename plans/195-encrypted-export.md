@@ -8,10 +8,48 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat e06346d..HEAD -- internal/export/ internal/cli/export.go internal/cli/export_test.go internal/self/knowledge.md go.mod`
+> `git diff --stat 9c88209..HEAD -- internal/export/ internal/cli/export.go internal/cli/export_test.go internal/self/knowledge.md go.mod`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
-> mismatch, treat it as a STOP condition.
+> mismatch, treat it as a STOP condition — EXCEPT for the three files the
+> COLD-REVIEW REFRESH below explicitly accounts for.
+
+> **⚠ COLD-REVIEW REFRESH (2026-06-25) — read this FIRST; it supersedes the stale
+> excerpts further down.** This plan was authored at `e06346d`, BEFORE plans 194
+> (the full Markdown mirror) and 197 (the `--out` dest-flag fix) landed. Both are
+> now on `origin/main` (`9c88209`). Apply these corrections:
+> 1. **Drift in `internal/cli/export.go`, `internal/cli/export_test.go`, and
+>    `internal/self/knowledge.md` is EXPECTED** (they changed when 194/197 landed)
+>    and is NOT a STOP here. READ THE LIVE files; the "Current state" excerpts for
+>    those three below are stale (they show the plan-192 spike) — ignore them. The
+>    `internal/export/encrypt.go` crypto core (Steps 1–2) is unaffected and correct
+>    as written.
+> 2. **The full mirror has landed.** `internal/export` now exports
+>    `func ExportMirror(app core.App, destDir string) ([]string, error)` (every
+>    owner-authored active node → Johnny Decimal tree; the redaction canary +
+>    day/task deferral are enforced there). The encrypt path's plaintext step MUST
+>    call `export.ExportMirror(app, tmpDir)` — NOT `ExportType` (the one-type
+>    spike). Ignore the "if 194 has NOT landed" branch in the DEPENDENCY note.
+> 3. **The current CLI** (`internal/cli/export.go`, post-197): `exportCmd` has one
+>    flag `--out` (dest dir, default `filepath.Join(app.DataDir(), "export")`,
+>    resolved lazily in RunE), NO `--type` flag, NO `MarkFlagRequired`; it calls
+>    `export.ExportMirror(app, dest)` and returns `{"files":…, "dest":…}`. ADD
+>    `--encrypt` (bool) + `--archive` (string), reading the passphrase from
+>    `BALAUR_EXPORT_PASSPHRASE` (Step 3). On `--encrypt`: render the mirror via
+>    `ExportMirror` into an `os.MkdirTemp` dir (`defer os.RemoveAll`), `EncryptDir`
+>    it to `--archive`, print the loud UNRECOVERABLE warning to stderr, return
+>    `{"archive":…, "encrypted":true}`. The non-encrypt path stays EXACTLY as it is
+>    today (`--out` → `ExportMirror`). Drop the Step-3 paragraph about removing
+>    `MarkFlagRequired("out")` — 194 already removed it.
+> 4. **`internal/self/knowledge.md`** already describes the shipped mirror (194);
+>    Step 5 ADDS the `--encrypt` capability to that CURRENT paragraph — do NOT
+>    reintroduce "spike"/"no encryption yet" framing.
+> 5. Step 4's stale test names (`TestExportRequiresOut`, etc.) — model the new
+>    `--encrypt` CLI test after the CURRENT `TestExportEmitsEnvelopeAndWritesFiles`
+>    in `internal/cli/export_test.go`.
+> Everything else (the crypto envelope, scrypt KDF, AES-256-GCM, header-as-AAD,
+> tar path-traversal guard, the three `encrypt_test` cases, the x/crypto
+> indirect→direct promotion, the CGO-free + no-new-module constraints) stands.
 
 ## Status
 
