@@ -1,7 +1,7 @@
 // Package search provides the FTS5 knowledge recall index — a rebuildable
 // sidecar SQLite database backed by the ncruces/go-sqlite3 wazero driver
 // (CGO-free, FTS5 included). It indexes all active node types (note, memory,
-// skill, journal, and typed objects), keyed by kind. The index is disposable:
+// skill, day, and typed objects), keyed by kind. The index is disposable:
 // deleting pb_data/search.db is always safe; it is rebuilt on the next boot.
 package search
 
