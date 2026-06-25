@@ -243,11 +243,11 @@ func TestCacheReturnedRecordIsThrowaway(t *testing.T) {
 }
 
 // TestCacheWarmReadDoesNotRescan is the CORE perf guard (round 4): a warm read
-// must NOT re-run the nodes.ListByTypeStatus scan. We assert on the deterministic
-// compute counter (incremented only on a cache MISS): the first read computes
-// once, subsequent warm reads compute zero more times, and only an invalidation
-// causes the next read to recompute. Reverting loadContextCache to compute
-// unconditionally (the round-4 bug) makes the warm-read assertion FAIL.
+// must NOT re-run the nodes.ListByTypeStatus scan. We install a local counter
+// via the onContextCacheMiss hook (fired only on a cache MISS) and assert the
+// first read computes once, warm reads compute zero more times, and only an
+// invalidation recomputes. Reverting loadContextCache to compute unconditionally
+// makes the warm-read assertion FAIL.
 //
 // We ALSO mutate a memory hook-free via app.Save and confirm the warm read does
 // not reflect it (a second, behavioral witness that no fresh scan ran).
@@ -255,11 +255,18 @@ func TestCacheWarmReadDoesNotRescan(t *testing.T) {
 	app := storetest.NewApp(t)
 	id := activeMemory(t, app, "stale-probe", 5)
 
-	start := contextCacheComputes.Load()
+	// Drive the production miss hook to count cache misses for this test only.
+	// Restore the no-op so other tests in the package are unaffected.
+	var computes int
+	prev := onContextCacheMiss
+	onContextCacheMiss = func() { computes++ }
+	t.Cleanup(func() { onContextCacheMiss = prev })
+
+	start := computes
 	if !contains(mustUpfront(t, app), id) { // miss: warms the cache, computes once
 		t.Fatal("memory missing before warm")
 	}
-	if got := contextCacheComputes.Load() - start; got != 1 {
+	if got := computes - start; got != 1 {
 		t.Fatalf("first (cold) read computed %d times, want 1", got)
 	}
 
@@ -276,12 +283,12 @@ func TestCacheWarmReadDoesNotRescan(t *testing.T) {
 		t.Fatalf("raw save: %v", err)
 	}
 
-	warm := contextCacheComputes.Load()
+	warm := computes
 	if !contains(mustUpfront(t, app), id) {
 		t.Fatal("warm read reflected a hook-free change — it re-scanned instead of serving the snapshot")
 	}
 	_ = mustUpfront(t, app) // another warm read
-	if got := contextCacheComputes.Load() - warm; got != 0 {
+	if got := computes - warm; got != 0 {
 		t.Fatalf("warm reads computed %d times, want 0 — the scan re-ran on a warm cache", got)
 	}
 
@@ -291,7 +298,7 @@ func TestCacheWarmReadDoesNotRescan(t *testing.T) {
 	if contains(mustUpfront(t, app), id) {
 		t.Fatal("after invalidation the demoted memory is still injected — recompute did not run")
 	}
-	if got := contextCacheComputes.Load() - warm; got != 1 {
+	if got := computes - warm; got != 1 {
 		t.Fatalf("post-invalidation reads computed %d times, want exactly 1", got)
 	}
 }
