@@ -15,17 +15,17 @@ import (
 // committed to a git history under the dest. No encryption yet (Phase 3). See
 // the design note at docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
 func exportCmd(app core.App) *cobra.Command {
-	var dir string
+	var out string
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "One-way Johnny Decimal Markdown mirror of active nodes (+ git history)",
 		Args:  cobra.NoArgs,
 	}
-	// Default: an "export" dir under the data dir. Resolved lazily in RunE so a
-	// custom --dir wins and we never capture a stale path at construction time.
-	cmd.Flags().StringVar(&dir, "dir", "", "destination directory (default: <data dir>/export)")
+	// Default: an "export" dir under the data dir. Named --out (NOT --dir) so it
+	// does not collide with the global PocketBase --dir data-dir flag — see plan 197.
+	cmd.Flags().StringVar(&out, "out", "", "destination directory (default: <data dir>/export)")
 	cmd.RunE = run(app, "export", func(cmd *cobra.Command, args []string) (any, error) {
-		dest := dir
+		dest := out
 		if dest == "" {
 			dest = filepath.Join(app.DataDir(), "export")
 		}
