@@ -4,10 +4,15 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/recap"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -164,4 +169,78 @@ func TestKnowledgeToolsIncludesNodeEdit(t *testing.T) {
 		}
 	}
 	t.Fatal("KnowledgeTools missing tool \"node_edit\"")
+}
+
+// TestNodeGetDayRecapFound proves node_get appends the day recap when a matching
+// summary exists, routing through recap.Find rather than a raw "summaries" query.
+func TestNodeGetDayRecapFound(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// Create a day node for 2026-01-15.
+	dateKey := "2026-01-15"
+	rec, err := nodes.Create(app, "day", "2026-01-15", "", nodes.StatusActive,
+		map[string]any{"date": dateKey})
+	if err != nil {
+		t.Fatalf("Create day node: %v", err)
+	}
+
+	// Get the master conversation (created on first call).
+	conv, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("Master: %v", err)
+	}
+
+	// Insert a matching day summary directly.
+	loc := store.OwnerLocation(app)
+	day, _ := time.ParseInLocation("2006-01-02", dateKey, loc)
+	period := recap.Day(day)
+
+	col, err := app.FindCollectionByNameOrId("summaries")
+	if err != nil {
+		t.Fatalf("find summaries collection: %v", err)
+	}
+	sum := core.NewRecord(col)
+	sum.Set("conversation", conv.Id)
+	sum.Set("period_type", period.Type)
+	sum.Set("period_start", period.Start.UTC())
+	sum.Set("period_end", period.End.UTC())
+	sum.Set("content", "A productive day in January.")
+	sum.Set("message_count", 2)
+	if err := app.Save(sum); err != nil {
+		t.Fatalf("save summary: %v", err)
+	}
+
+	tool := nodeGetTool(app)
+	got, err := tool.Execute(context.Background(), `{"id":"`+rec.Id+`"}`)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !strings.Contains(got, "## Day recap") {
+		t.Errorf("output missing '## Day recap'; got:\n%s", got)
+	}
+	if !strings.Contains(got, "A productive day in January.") {
+		t.Errorf("output missing summary content; got:\n%s", got)
+	}
+}
+
+// TestNodeGetDayRecapMissing proves node_get emits "No recap yet" when no
+// matching day summary exists.
+func TestNodeGetDayRecapMissing(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	dateKey := "2026-01-16"
+	rec, err := nodes.Create(app, "day", "2026-01-16", "", nodes.StatusActive,
+		map[string]any{"date": dateKey})
+	if err != nil {
+		t.Fatalf("Create day node: %v", err)
+	}
+
+	tool := nodeGetTool(app)
+	got, err := tool.Execute(context.Background(), `{"id":"`+rec.Id+`"}`)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !strings.Contains(got, "No recap yet for "+dateKey) {
+		t.Errorf("output missing 'No recap yet for %s'; got:\n%s", dateKey, got)
+	}
 }
