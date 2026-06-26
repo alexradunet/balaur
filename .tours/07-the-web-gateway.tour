@@ -41,7 +41,7 @@
     },
     {
       "file": "internal/web/tasks.go",
-      "line": 252,
+      "line": 191,
       "title": "7.7 — chatNudges: polling without WebSockets",
       "description": "```go\nfunc (h *handlers) chatNudges(e *core.RequestEvent) error {\n    recs, err := h.app.FindRecordsByFilter(\"messages\",\n        \"origin != '' && created > {:since}\", ...)\n    ...\n    sse := datastar.NewSSE(e.Response, e.Request)\n    _ = sse.PatchElements(renderNodeHTML(...),\n        datastar.WithSelectorID(\"chat\"),\n        datastar.WithModeAppend())\n    _ = sse.MarshalAndPatchSignals(struct {\n        NudgeSince int64 `json:\"nudgeSince\"`\n    }{last})\n    return nil\n}\n```\n\nAgent-initiated messages (origin != \"\") arrive outside the user-turn SSE stream, so a separate polling endpoint delivers them. A single SSE response can update several parts of the DOM at once — each `PatchElements` call targets an element by stable id, regardless of order in the stream.\n\nTwo things happen in one response:\n1. **Append new nudges** — the messages are rendered as gomponents nodes and appended to `#chat` (`WithModeAppend`). Chat turns never flow through here, so polling cannot duplicate them.\n2. **Advance the cursor signal** — `NudgeSince` is patched as a Datastar signal; the next poll reads it as the `?since=` query param, so only truly new records are fetched.\n\nNo WebSocket, no long-poll — plain idempotent polling. The server remains the single source of truth; Datastar carries fine-grained reactive state in client signals, but the DOM shape is server-rendered and patched by stable id, so there is no client-side view state to reconcile."
     }

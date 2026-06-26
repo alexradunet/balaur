@@ -59,34 +59,12 @@ func ParseArtifact(s string) (title string, cs []cards.Card, rest string, ok boo
 const showCardsMax = 8
 
 func showCardsTool(_ core.App) agent.Tool {
-	// Build a rich description that embeds the real registry vocabulary,
-	// so the model sees the actual types and their param docs.
-	var b strings.Builder
-	fmt.Fprint(&b, "Render a cluster of live UI cards into the conversation as ONE artifact "+
-		"(e.g. 'show my quests and my weight together'). Pick 1–8 cards; each is a "+
-		"{type, params} from the registry; the server renders each from the owner's real "+
-		"data. To draw the owner's individual quests as separate cards, use the \"tasks\" "+
-		"card (a bare stack of task cards) with a status/bucket/terms filter. Available types:\n")
-	for _, spec := range cards.All() {
-		fmt.Fprintf(&b, "  %s (%s)", spec.Type, spec.Label)
-		if len(spec.Params) > 0 {
-			fmt.Fprint(&b, " — params: ")
-			ps := make([]string, 0, len(spec.Params))
-			for _, p := range spec.Params {
-				entry := p.Name
-				if p.Required {
-					entry += " (required)"
-				}
-				if p.Doc != "" {
-					entry += ": " + p.Doc
-				}
-				ps = append(ps, entry)
-			}
-			fmt.Fprint(&b, strings.Join(ps, "; "))
-		}
-		fmt.Fprint(&b, "\n")
-	}
-	desc := b.String()
+	desc := "Render a cluster of live UI cards into the conversation as ONE artifact " +
+		"(e.g. 'show my quests and my weight together'). Pick 1–8 cards; each is a " +
+		"{type, params} from the registry; the server renders each from the owner's real " +
+		"data. To draw the owner's individual quests as separate cards, use the \"tasks\" " +
+		"card (a bare stack of task cards) with a status/bucket/terms filter. Available types:\n" +
+		cardRegistryVocab()
 
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("show_cards", desc,

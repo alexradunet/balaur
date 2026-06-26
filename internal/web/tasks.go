@@ -33,51 +33,6 @@ func (h *handlers) loadTaskNode(id string) (*core.Record, error) {
 // recap telescope. Calendar and timeline are read-only projections of the
 // recurrence rules; actions live on the task cards.
 
-// taskView is one task's template payload.
-type taskView struct {
-	ID, Title, Notes, Status string
-	DueLine                  string
-	Overdue                  bool
-	RecurLine                string
-}
-
-func taskViewOf(rec *core.Record, now time.Time) taskView {
-	v := taskView{
-		ID:     rec.Id,
-		Title:  rec.GetString("title"),
-		Notes:  rec.GetString("notes"),
-		Status: rec.GetString("status"),
-	}
-	if due := rec.GetDateTime("due").Time(); !due.IsZero() {
-		v.Overdue = due.In(now.Location()).Before(now) && v.Status == "open"
-		v.DueLine = tasks.DueLine(due, now, v.Status)
-	}
-	if rule, err := tasks.Parse(rec.GetString("recur")); err == nil && !rule.IsZero() {
-		v.RecurLine = tasks.Describe(rule)
-	}
-	return v
-}
-
-// questGroup buckets an open task by rhythm: Dailies (daily / every:1d),
-// Rituals (any other recurrence), Quests (one-off with due),
-// Side quests (one-off without due).
-// A recur string that fails to parse counts as one-off — same forgiving
-// behaviour as the builder (which ignores Parse errors when setting RecurLine).
-func questGroup(recur string, hasDue bool) string {
-	rule, err := tasks.Parse(recur)
-	if err != nil || rule.IsZero() {
-		if hasDue {
-			return "Quests"
-		}
-		return "Side quests"
-	}
-	// daily or every:1d → Dailies
-	if rule.Kind == "daily" || (rule.Kind == "every" && rule.N == 1) {
-		return "Dailies"
-	}
-	return "Rituals"
-}
-
 // ---- card + transitions ----
 
 // taskCard loads one task card as a standalone SSE fragment (plan 093: the
@@ -99,23 +54,7 @@ func (h *handlers) taskCard(e *core.RequestEvent) error {
 // taskCardHTML renders one task as its gomponents card (port of card-task.html)
 // to a string, for embedding in an SSE patch.
 func (h *handlers) taskCardHTML(rec *core.Record) (string, error) {
-	return renderNodeHTML(taskcards.TaskCard(taskCardViewOf(rec))), nil
-}
-
-// taskCardViewOf maps the web taskView onto the taskcards.TaskView the component takes.
-func taskCardViewOf(rec *core.Record) taskcards.TaskView {
-	now := time.Now()
-	v := taskViewOf(rec, now)
-	tv := taskcards.TaskView{
-		ID: v.ID, Title: v.Title, Status: v.Status,
-		DueLine: v.DueLine, RecurLine: v.RecurLine, Notes: v.Notes, Overdue: v.Overdue,
-		Recur: rec.GetString("recur"), // raw DSL the Edit form pre-fills
-	}
-	// datetime-local value in the same (Local) zone the card displays in.
-	if due := rec.GetDateTime("due").Time(); !due.IsZero() {
-		tv.DueInput = due.In(now.Location()).Format("2006-01-02T15:04")
-	}
-	return tv
+	return renderNodeHTML(taskcards.TaskCard(taskcards.TaskViewOf(rec, time.Now()))), nil
 }
 
 func (h *handlers) taskTransition(e *core.RequestEvent) error {

@@ -65,7 +65,7 @@ func buildQuestsFocusFrom(openRecs []*core.Record, doneRecs []*core.Record, now 
 	order := []string{"Dailies", "Rituals", "Quests", "Side quests"}
 
 	for _, rec := range openRecs {
-		tv := taskViewOf(rec, now)
+		tv := TaskViewOf(rec, now)
 		grp := questGroupName(rec.GetString("recur"), !rec.GetDateTime("due").Time().IsZero())
 		groupMap[grp].Tasks = append(groupMap[grp].Tasks, tv)
 	}
@@ -80,7 +80,7 @@ func buildQuestsFocusFrom(openRecs []*core.Record, doneRecs []*core.Record, now 
 
 	var done []TaskView
 	for _, r := range doneRecs {
-		done = append(done, taskViewOf(r, now))
+		done = append(done, TaskViewOf(r, now))
 	}
 
 	return QuestsFocusView{
