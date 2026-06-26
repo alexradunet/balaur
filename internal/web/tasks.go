@@ -17,12 +17,7 @@ import (
 
 // loadTaskNode fetches a task node by id from the nodes collection and hydrates it.
 func (h *handlers) loadTaskNode(id string) (*core.Record, error) {
-	rec, err := h.app.FindRecordById("nodes", id)
-	if err != nil {
-		return nil, err
-	}
-	tasks.Hydrate(rec)
-	return rec, nil
+	return tasks.Get(h.app, id)
 }
 
 // tasks.go is the life-organization surface, now expressed as cards. The

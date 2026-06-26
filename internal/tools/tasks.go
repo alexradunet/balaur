@@ -240,11 +240,10 @@ func taskUpdateTool(app core.App) agent.Tool {
 			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 				return "", fmt.Errorf("task_update: bad arguments: %w", err)
 			}
-			rec, err := app.FindRecordById("nodes", strings.TrimSpace(args.ID))
+			rec, err := tasks.Get(app, args.ID)
 			if err != nil {
 				return "", fmt.Errorf("task_update: no task with id %q — check task_list", args.ID)
 			}
-			tasks.Hydrate(rec)
 			loc := store.OwnerLocation(app)
 			opts := tasks.UpdateOpts{
 				Title:         args.Title,
@@ -411,11 +410,10 @@ func taskSnoozeTool(app core.App) agent.Tool {
 			if !until.After(time.Now()) {
 				return "", fmt.Errorf("task_snooze: %s is not in the future", fmtDue(until, loc))
 			}
-			rec, err := app.FindRecordById("nodes", args.ID)
+			rec, err := tasks.Get(app, args.ID)
 			if err != nil {
 				return "", fmt.Errorf("task_snooze: no task with id %q — check task_list", args.ID)
 			}
-			tasks.Hydrate(rec)
 			if err := tasks.Snooze(app, rec, until); err != nil {
 				return "", fmt.Errorf("task_snooze: %w", err)
 			}
@@ -452,10 +450,9 @@ func findTask(app core.App, argsJSON string) (*core.Record, error) {
 	if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 		return nil, fmt.Errorf("bad arguments: %w", err)
 	}
-	rec, err := app.FindRecordById("nodes", strings.TrimSpace(args.ID))
+	rec, err := tasks.Get(app, args.ID)
 	if err != nil {
 		return nil, fmt.Errorf("no task with id %q — check task_list", args.ID)
 	}
-	tasks.Hydrate(rec)
 	return rec, nil
 }
