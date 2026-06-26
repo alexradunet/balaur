@@ -40,11 +40,10 @@ func taskList(rs []*core.Record) []map[string]any {
 }
 
 func findTask(app core.App, id string) (*core.Record, error) {
-	rec, err := app.FindRecordById("nodes", strings.TrimSpace(id))
+	rec, err := tasks.Get(app, id)
 	if err != nil {
 		return nil, fmt.Errorf("no task with id %q — check `task list`", id)
 	}
-	tasks.Hydrate(rec)
 	return rec, nil
 }
 

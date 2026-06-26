@@ -372,6 +372,20 @@ func dehydrate(rec *core.Record) {
 // (cli, web, tools) that load task nodes directly and need the legacy field aliases.
 func Hydrate(rec *core.Record) { hydrate(rec) }
 
+// Get loads a task node by id and hydrates its legacy field aliases. It is the
+// single find-and-hydrate seam for callers (cli, web, tools) that hold a task
+// id; collapses the FindRecordById("nodes", id)+Hydrate pairing behind the
+// owning package. The collection name stays explicit here — Get hides the
+// pairing, not the spine.
+func Get(app core.App, id string) (*core.Record, error) {
+	rec, err := app.FindRecordById("nodes", strings.TrimSpace(id))
+	if err != nil {
+		return nil, fmt.Errorf("tasks: no task %q: %w", id, err)
+	}
+	hydrate(rec)
+	return rec, nil
+}
+
 // hydrate sets legacy field aliases on a task node so callers can use
 // rec.GetString("status"), rec.GetString("notes"), rec.GetDateTime("due"), etc.
 // without knowing the node storage shape. We use SetRaw to bypass the node

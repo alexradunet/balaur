@@ -548,3 +548,38 @@ func TestDoneEarlyCompletion(t *testing.T) {
 		t.Errorf("case4: NextDue %v not after now %v", res4.NextDue, now4)
 	}
 }
+
+func TestGet(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	// happy path: create a task then retrieve it via Get
+	rec, err := Create(app, CreateOpts{Title: "Buy groceries", Notes: "milk and eggs", Source: "test"})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	got, err := Get(app, rec.Id)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.GetString("status") != "open" {
+		t.Errorf("status = %q, want open (hydration not applied)", got.GetString("status"))
+	}
+	if got.GetString("title") != "Buy groceries" {
+		t.Errorf("title = %q, want %q", got.GetString("title"), "Buy groceries")
+	}
+
+	// Get trims whitespace in id
+	got2, err := Get(app, "  "+rec.Id+"  ")
+	if err != nil {
+		t.Fatalf("Get with padded id: %v", err)
+	}
+	if got2.Id != rec.Id {
+		t.Errorf("id mismatch: got %q, want %q", got2.Id, rec.Id)
+	}
+
+	// error path: nonexistent id returns non-nil error
+	_, err = Get(app, "nonexistent")
+	if err == nil {
+		t.Error("Get(nonexistent): want error, got nil")
+	}
+}
