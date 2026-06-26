@@ -332,3 +332,123 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED | REJECTED
 - **Read-only on code.** The plan's hard rule: tours describe the code; product
   code never bends to a tour. Line numbers in the plan are approximate leads —
   the binding contract is anchor-to-named-symbol + green lint.
+
+---
+
+# Advisory batch — 2026-06-26 modularity & coupling audit (plans 199–210)
+
+A read-only architecture audit focused on **reducing coupling / tangled code** so
+any one part of the system can be understood without tracing a path across many
+files. Authored by the `improve` skill on **2026-06-26** against `main` @ `07fb4d6`
+(unchanged through writing — every plan stamps `07fb4d6`). The audit (44 raw
+findings → 24 verified real tangles) confirmed Balaur is a **clean small-core DAG,
+not a ball of mud**: stable zero-efferent hubs (`store`/`ui`/`llm`/`nodes`) at the
+bottom, gateways on top, `turn` a real shared pipeline. The damage is shallow —
+a few god-files over the 500-LOC line and small verbatim dups where a consumer
+re-derives a fact its owning package should expose. **Every fix is
+extract/split/move/merge; no new abstraction.** The owner selected **full
+coverage**; all substantial findings became standalone plans, the two guard tests
+merged into one (209), and the five fold-in tidies into one sweep (210).
+
+## Execution order & status (199–210)
+
+Ordered to minimize churn (per the audit's §6): pure dedups/deletions first, then
+domain-getter extractions, then god-file splits, then policy/boundary fixes, then
+guard tests + the tidy sweep. No hard code dependencies between plans.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 199 | Collapse card-registry vocab + task view-model dups; delete dead `web.questGroup`/`TestQuestGroup` (#6+#5) | P3 | S | — | DONE (executed + reviewed APPROVE; merged to local main @ `20521f4` --no-ff) |
+| 200 | Add `tasks.Get(app,id)`; collapse 5 find-task-node+Hydrate sites across cli/web/tools (#3) | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main @ `cfff28a` --no-ff; tour anchor reconciled) |
+| 201 | Route `node_get`'s day-summary through `recap.Find`; delete the `summaries` literal from tools (#4) | P2 | S | — | TODO |
+| 202 | Add `tasks.DoneBetween`; move done-task derivation out of `life.Range` (#7) | P2 | S | — | TODO |
+| 203 | Extract the shared chat-history renderer into `web/history.go` (#9) | P3 | S | — | TODO |
+| 204 | Split `knowledge.go` (637 LOC) → `edit.go` + `search.go`; keep `matchesQuery` (#8) | P3 | S | — | TODO |
+| 205 | Split `web/models.go` (550 LOC) → dock view-model (`home.go`) + install orchestrators (`models_install.go`) + slim `models.go` (#1) | P3 | M | — | TODO |
+| 206 | Audit head mutations in-domain via an `actor` param — closes the unaudited web head switch/create/delete gap (#11) | P2 | S | — | TODO |
+| 207 | Extract `turn.ResolveProcessor` so `balaur chat` honors the owner's saved processor (#14) | P2 | S | — | TODO |
+| 208 | Add `kronk.RuntimeStatus`; drop the raw `ardanlabs/kronk` SDK import from `settingscards` (#15) | P2 | S | — | TODO |
+| 209 | Two guard tests: tool-marker round-trip/isolation (tools) + `heads.Groups`↔`ToolsForHead` wiring (turn) (#2+#12) | P3 | S | — | TODO |
+| 210 | Coupling tidy-sweep: `store.PBTime` dedup, `turn.finalize`, `seed.backdateAndReload`, `verify.ToolSucceeded`/`Honest`, knowledge↔nodes `Transition` (#18,#10,#16,#17,#13) | P3 | S–M | — | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+## Dependency notes (199–210)
+
+- **No hard code dependencies** — each plan builds and tests independently. The
+  ordering is churn-minimization, not blocking:
+  - Do **200/201/202** (domain getters) before **205** if landing both: they
+    lighten `web/tasks.go` and the task view-model so the `models.go` split
+    relocates less code. Not required.
+  - **203/204/205** are the same-package god-file splits; do the small ones
+    (203, 204) first to build confidence before the big one (205).
+  - **205** and **203** both touch `package web` but different files/symbols — no
+    conflict; if landing in the same branch, do 203 first.
+- **210 step 5** (knowledge↔nodes `Transition`) is the only MED-risk change in
+  the batch (changes a `nodes.Transition` signature + an error string). It is the
+  last, separable commit in 210; steps 1–4 stand alone if it's deferred.
+- **209** is tests-only and can land any time; if **210 step 3** (`turn.finalize`)
+  lands first, 209's group test still holds (it asserts behavior).
+
+### Merge-time reconcile — `.tours/07-the-web-gateway.tour` chatNudges anchor (199 + 200)
+
+Both **199** and **200** shrink `internal/web/tasks.go` ABOVE the `chatNudges`
+function, which tour 07 anchors. Developed in parallel worktrees off `07fb4d6`,
+neither could set the final anchor:
+- **199** removed ~61 lines (deleted view-model block) → its worktree set the
+  anchor to **line 191** (and `tours_test` *forced* this — 252 went out of range).
+- **200** removed ~5 lines (`loadTaskNode` collapse) → `chatNudges` sits at **247**
+  in its worktree; the anchor stayed **252** (still in-range, so `tours_test`
+  passed — silent content drift, lands 5 lines into the function body).
+
+**After BOTH merge to `main`, `chatNudges` lands at ~186**, so the anchor (191 from
+199) will be ~5 lines off and `tours_test` will NOT catch it (in-range).
+**Action at merge:** after merging 199 + 200 (and before pushing), grep the
+merged `internal/web/tasks.go` for `func (h *handlers) chatNudges` and set tour
+07's anchor `line` to that exact line. This is an advisor merge-reconcile step,
+not an executor task — the correct number only exists on combined `main`.
+
+**RESOLVED (merge of 199 + 200 to local main):** on combined `main`, `chatNudges`
+landed at **line 186**; tour 07's anchor was recomputed `191 → 186` in a
+`docs(tours):` commit, and `tours_test` + full `go test ./...` are green. A future
+plan that edits `internal/web/tasks.go` above line 186 must re-check this anchor.
+
+## Correction applied during planning (read before executing 210)
+
+- **#18 was re-homed from `nodes` to `store`.** The audit suggested adding
+  `nodes.PBTimeString`, but verification found `store.PBTime` ALREADY exists and
+  is byte-identical (`t.UTC().Format(types.DefaultDateLayout)` ==
+  `"2006-01-02 15:04:05.000Z"`), and `AGENTS.md` names `store` the owner of "time
+  formatting." Plan 210 step 1 therefore uses `store.PBTime` (+ a new
+  `store.ParsePBTime`) and explicitly does NOT add a `nodes` copy — that would be
+  a third identical helper and contradict the doctrine.
+
+## Findings considered and rejected (199–210)
+
+Coupling that looks bad but is correct — **not turned into change plans** (the
+audit's §5 + over-engineering refusals; recorded so nobody re-audits them):
+
+- **Per-medium marker decoding (#2 main body).** The CLI decoding 2 of 5 markers
+  is correct medium-adaptation, not drift (a `uicard` has no terminal rendering).
+  A typed `Event.Card` or `tools.ClassifyResult` only relocates the per-medium
+  branching. **Only the guard test shipped** (plan 209); the divergence stays.
+- **`web`/`cli` wide fan-out.** Breadth is rendering + non-turn surfaces (models,
+  export, recap browsing) that legitimately sit above the gateway line; the turn
+  hot path IS shared via `turn.Run`. No "service layer" manufactured to shrink Ce.
+- **`store` at Ce=0.** It stayed a leaf cross-cutting seam; no new domain logic
+  routed through it (plan 210 step 1 only ADDS a time helper there, its existing
+  concern).
+- **The `"nodes"` collection name across ~40 sites.** A deliberate repo-wide
+  idiom; `tasks.Get` (200) collapses the find+Hydrate *pairing*, not the name.
+- **`nodes.Transition` with no production callers.** Kept as the lifecycle home;
+  plan 210 step 5 has `knowledge` DELEGATE to it (not delete it), so a future
+  non-knowledge node type can still transition.
+- **Over-engineering temptations refused** (would trade a real one-binary/suckless
+  boundary for cosmetic line savings): a `Verdict` type / `core.Record` import in
+  `verify` (#17 — only primitive helpers shipped); `Event.Card`/`ClassifyResult`
+  (#2); a shared "progress orchestrator" interface over the two SSE handlers (#1);
+  folding `ext.Tools` unconditionally into the shared tool tail (#10 — the
+  `withExtensions` gate is load-bearing); `kronk.ResolveProcessor` forcing a
+  `kronk → store` edge (#14 — lives in `turn`); `turn.ToolGroups()` inverting
+  heads→pipeline (#12 — guard test instead); `nodes.SetPropAlias` wrapping a
+  one-liner (#18); pushing `cardRegistryVocab` down into `cards` (#6).
