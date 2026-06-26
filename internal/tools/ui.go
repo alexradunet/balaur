@@ -62,12 +62,11 @@ func UITools(app core.App) []agent.Tool {
 	return []agent.Tool{cardShowTool(app), showCardsTool(app)}
 }
 
-func cardShowTool(_ core.App) agent.Tool {
-	// Build a rich description that embeds the real registry vocabulary,
-	// so the model sees the actual types and their param docs.
+// cardRegistryVocab renders the live card registry as a model-facing vocabulary
+// block: one line per card type with its label and param docs. cardShowTool and
+// showCardsTool each prepend their own lead-in prose and append this.
+func cardRegistryVocab() string {
 	var b strings.Builder
-	fmt.Fprint(&b, "Render a live UI card into the conversation. Choose a type from the registry; "+
-		"the server renders it from the owner's real data. Available types:\n")
 	for _, spec := range cards.All() {
 		fmt.Fprintf(&b, "  %s (%s)", spec.Type, spec.Label)
 		if len(spec.Params) > 0 {
@@ -87,7 +86,13 @@ func cardShowTool(_ core.App) agent.Tool {
 		}
 		fmt.Fprint(&b, "\n")
 	}
-	desc := b.String()
+	return b.String()
+}
+
+func cardShowTool(_ core.App) agent.Tool {
+	desc := "Render a live UI card into the conversation. Choose a type from the registry; " +
+		"the server renders it from the owner's real data. Available types:\n" +
+		cardRegistryVocab()
 
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("card_show",

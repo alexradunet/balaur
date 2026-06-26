@@ -84,10 +84,12 @@ func questsManageBody(v QuestsView) g.Node {
 	return h.Div(h.Class("ucard-manage-list"), g.Group(items))
 }
 
-// taskViewOf builds the full task view-model (mirrors web/tasks.go taskCardViewOf,
-// including Recur/DueInput so the inline Edit form pre-fills on the quests/cluster
-// render paths, not only the standalone card route).
-func taskViewOf(rec *core.Record, now time.Time) TaskView {
+// TaskViewOf builds the full task view-model from a hydrated task node:
+// title/notes/status, the due line + overdue flag, the recurrence summary, and
+// the raw Recur DSL + datetime-local DueInput the inline Edit form pre-fills.
+// It is the single source of truth for a task's card view-model (web's
+// single-card route calls it too).
+func TaskViewOf(rec *core.Record, now time.Time) TaskView {
 	v := TaskView{
 		ID:     rec.Id,
 		Title:  rec.GetString("title"),
@@ -110,7 +112,7 @@ func taskViewOf(rec *core.Record, now time.Time) TaskView {
 func viewsOf(recs []*core.Record, now time.Time) []TaskView {
 	out := make([]TaskView, 0, len(recs))
 	for _, r := range recs {
-		out = append(out, taskViewOf(r, now))
+		out = append(out, TaskViewOf(r, now))
 	}
 	return out
 }
