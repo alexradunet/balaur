@@ -360,7 +360,7 @@ guard tests + the tidy sweep. No hard code dependencies between plans.
 |------|-------|----------|--------|------------|--------|
 | 199 | Collapse card-registry vocab + task view-model dups; delete dead `web.questGroup`/`TestQuestGroup` (#6+#5) | P3 | S | — | DONE (executed + reviewed APPROVE; merged to local main @ `20521f4` --no-ff) |
 | 200 | Add `tasks.Get(app,id)`; collapse 5 find-task-node+Hydrate sites across cli/web/tools (#3) | P2 | S | — | DONE (executed + reviewed APPROVE; merged to local main @ `cfff28a` --no-ff; tour anchor reconciled) |
-| 201 | Route `node_get`'s day-summary through `recap.Find`; delete the `summaries` literal from tools (#4) | P2 | S | — | TODO |
+| 201 | Route `node_get`'s day-summary through `recap.Find`; delete the `summaries` literal from tools (#4) | P2 | S | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/201-node-get-recap-find` @ `3e6962f` — merge pending owner; note: the "no `summaries`/`period_type`/`period_start`" grep criterion now matches only the explanatory comment — zero live refs, accepted) |
 | 202 | Add `tasks.DoneBetween`; move done-task derivation out of `life.Range` (#7) | P2 | S | — | TODO |
 | 203 | Extract the shared chat-history renderer into `web/history.go` (#9) | P3 | S | — | TODO |
 | 204 | Split `knowledge.go` (637 LOC) → `edit.go` + `search.go`; keep `matchesQuery` (#8) | P3 | S | — | TODO |
