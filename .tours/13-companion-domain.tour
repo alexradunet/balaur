@@ -41,7 +41,7 @@
     },
     {
       "file": "internal/life/day.go",
-      "line": 30,
+      "line": 29,
       "title": "13.7 — A day, assembled",
       "description": "```go\nfunc Day(app core.App, conversationID string, d time.Time) (DayData, error)\n```\n\n`Day` assembles everything that belongs to a calendar day into one `DayData` struct: the journal (the `type=day` node's body, if non-empty), logged measures and done tasks via `Range`, and the day recap summary if one exists.\n\nThe journal lives in `internal/life/journal.go`. `JournalWrite` (line 23) keeps the owner's words verbatim as the body of the `type=day` node — one node per calendar date, keyed on `props.date = YYYY-MM-DD`. Multiple writes in the same day **append** to that node's body (blank-line separated); the first write creates the node via `nodes.DayNode`. This append-only design means journal writes are safe to re-order and never overwrite earlier entries.\n\n`Range` (the shared aggregator) is the single query that feeds both the day view and the period-node aggregator — the day and period lenses never drift because they share code, not copy it. AGENTS.md: *one source of truth per concern.*"
     },
