@@ -310,6 +310,30 @@ func OpenTasks(app core.App, terms []string) ([]*core.Record, error) {
 	return out, nil
 }
 
+// DoneBetween returns active task nodes completed within [start, end): status
+// "done" with done_at in range. The symmetric sibling of OpenTasks — it owns the
+// "what counts as a done task" rule so cross-domain aggregators (life) don't
+// re-derive it. Records are returned hydrated (legacy field aliases set).
+func DoneBetween(app core.App, start, end time.Time) ([]*core.Record, error) {
+	recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+	if err != nil {
+		return nil, fmt.Errorf("tasks: loading task nodes: %w", err)
+	}
+	var out []*core.Record
+	for _, r := range recs {
+		hydrate(r)
+		if r.GetString("status") != "done" {
+			continue
+		}
+		doneAt := r.GetDateTime("done_at").Time()
+		if doneAt.IsZero() || doneAt.Before(start) || !doneAt.Before(end) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
 // Buckets groups open tasks the way humans plan: what slipped, what is
 // today's business, what comes later, what has no date yet.
 type Buckets struct {
