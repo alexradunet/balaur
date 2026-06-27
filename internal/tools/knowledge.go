@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
-	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/knowledge"
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/recap"
+	"github.com/alexradunet/balaur/internal/store"
 )
 
 // KnowledgeTools gives the model its memory and skill verbs. None of them
@@ -479,18 +481,22 @@ func nodeGetTool(app core.App) agent.Tool {
 			back, _ := nodes.Backlinks(app, rec.Id)
 			fmt.Fprintf(&b, "\nLinks: %d outbound, %d backlinks", len(out), len(back))
 
-			// For day nodes, append the day's recap summary if one exists.
+			// For day nodes, append the day's recap summary if one exists. The lookup
+			// goes through recap.Find (exact (period_type, period_start) match) so the
+			// summaries schema stays owned by internal/recap. recap.Day truncates to
+			// owner-local midnight, so parse the date in the owner's location — host
+			// time.Local would reintroduce a timezone skew on boxes whose process TZ
+			// differs from the owner setting.
 			if rec.GetString("type") == "day" {
 				dateKey := nodes.PropString(rec, "date")
 				if dateKey != "" {
-					if conv, err := conversation.Master(app); err == nil {
-						sum, err := app.FindFirstRecordByFilter("summaries",
-							"conversation = {:conv} && period_type = 'day' && period_start ~ {:d}",
-							dbx.Params{"conv": conv.Id, "d": dateKey + "%"})
-						if err == nil {
-							fmt.Fprintf(&b, "\n\n## Day recap\n%s", sum.GetString("content"))
-						} else {
-							fmt.Fprintf(&b, "\n\nNo recap yet for %s.", dateKey)
+					if day, perr := time.ParseInLocation("2006-01-02", dateKey, store.OwnerLocation(app)); perr == nil {
+						if conv, err := conversation.Master(app); err == nil {
+							if sum := recap.Find(app, conv.Id, recap.Day(day)); sum != nil {
+								fmt.Fprintf(&b, "\n\n## Day recap\n%s", sum.GetString("content"))
+							} else {
+								fmt.Fprintf(&b, "\n\nNo recap yet for %s.", dateKey)
+							}
 						}
 					}
 				}
