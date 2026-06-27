@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 07fb4d6..HEAD -- internal/tasks/tasks.go internal/life/day.go`
+> `git diff --stat 146f9c1..HEAD -- internal/tasks/tasks.go internal/life/day.go`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" excerpts against the live code before proceeding; on a
 > mismatch, treat it as a STOP condition.
@@ -20,7 +20,7 @@
 - **Risk**: LOW
 - **Depends on**: none (independent of #200, though both touch `tasks`)
 - **Category**: tech-debt
-- **Planned at**: commit `07fb4d6`, 2026-06-26
+- **Planned at**: commit `146f9c1`, 2026-06-26 (reconciled 2026-06-27 — rebased onto 200's `tasks.Get`; excerpts re-verified, `OpenTasks` + `life.Range` unchanged)
 
 ## Why this matters
 
@@ -89,7 +89,9 @@ func Range(app core.App, start, end time.Time) (RangeData, error) {
 Removing the task-half block orphans the `nodes` import in `day.go`. `tasks`
 stays (the file will now call `tasks.DoneBetween`).
 
-The existing sibling to mirror — `internal/tasks/tasks.go:289`:
+The existing sibling to mirror — `internal/tasks/tasks.go:292` (note: 200's
+`tasks.Get` now sits further down at ~line 380, below both `OpenTasks` and the
+`DoneBetween` insertion point — it does not interact with this change):
 
 ```go
 // OpenTasks returns open tasks, optionally narrowed by LIKE terms over
