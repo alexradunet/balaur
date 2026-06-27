@@ -432,6 +432,83 @@ func TestBucket(t *testing.T) {
 	}
 }
 
+func TestDoneBetween(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	windowStart := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	windowEnd := time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC)
+
+	// before: done_at before the window — must be excluded.
+	recBefore, err := Create(app, CreateOpts{Title: "Before window"})
+	if err != nil {
+		t.Fatalf("create before: %v", err)
+	}
+	if _, err := Done(app, recBefore, windowStart.Add(-time.Hour)); err != nil {
+		t.Fatalf("done before: %v", err)
+	}
+
+	// inside: done_at inside the window — must be included.
+	recInside, err := Create(app, CreateOpts{Title: "Inside window"})
+	if err != nil {
+		t.Fatalf("create inside: %v", err)
+	}
+	insideTime := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	if _, err := Done(app, recInside, insideTime); err != nil {
+		t.Fatalf("done inside: %v", err)
+	}
+
+	// open: never completed — must be excluded.
+	if _, err := Create(app, CreateOpts{Title: "Still open"}); err != nil {
+		t.Fatalf("create open: %v", err)
+	}
+
+	got, err := DoneBetween(app, windowStart, windowEnd)
+	if err != nil {
+		t.Fatalf("DoneBetween: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("DoneBetween: got %d records, want 1", len(got))
+	}
+	if got[0].GetString("title") != "Inside window" {
+		t.Errorf("DoneBetween: got title %q, want %q", got[0].GetString("title"), "Inside window")
+	}
+	if got[0].GetString("status") != "done" {
+		t.Errorf("DoneBetween: record not hydrated, status = %q", got[0].GetString("status"))
+	}
+
+	// Boundary: done_at == end is EXCLUDED.
+	recAtEnd, err := Create(app, CreateOpts{Title: "At boundary end"})
+	if err != nil {
+		t.Fatalf("create at-end: %v", err)
+	}
+	if _, err := Done(app, recAtEnd, windowEnd); err != nil {
+		t.Fatalf("done at-end: %v", err)
+	}
+	got2, err := DoneBetween(app, windowStart, windowEnd)
+	if err != nil {
+		t.Fatalf("DoneBetween boundary: %v", err)
+	}
+	if len(got2) != 1 {
+		t.Errorf("DoneBetween boundary: got %d records, want 1 (end boundary must be excluded)", len(got2))
+	}
+
+	// Boundary: done_at == start is INCLUDED.
+	recAtStart, err := Create(app, CreateOpts{Title: "At boundary start"})
+	if err != nil {
+		t.Fatalf("create at-start: %v", err)
+	}
+	if _, err := Done(app, recAtStart, windowStart); err != nil {
+		t.Fatalf("done at-start: %v", err)
+	}
+	got3, err := DoneBetween(app, windowStart, windowEnd)
+	if err != nil {
+		t.Fatalf("DoneBetween start boundary: %v", err)
+	}
+	if len(got3) != 2 {
+		t.Errorf("DoneBetween start boundary: got %d records, want 2 (start boundary must be included)", len(got3))
+	}
+}
+
 // nodes_Props is a test-local alias to access props for raw test setup.
 // Uses the real nodes.Props which handles the types.JSONRaw round-trip.
 func nodes_Props(rec *core.Record) map[string]any {

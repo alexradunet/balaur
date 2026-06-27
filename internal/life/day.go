@@ -7,7 +7,6 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/recap"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
@@ -84,20 +83,13 @@ func Range(app core.App, start, end time.Time) (RangeData, error) {
 	}
 	data.Logged = logged
 
-	// Done tasks: active type=task nodes with status=done and done_at in range.
-	if all, err2 := nodes.ListByTypeStatus(app, "task", nodes.StatusActive); err2 == nil {
-		for _, r := range all {
-			tasks.Hydrate(r)
-			if r.GetString("status") != "done" {
-				continue
-			}
-			doneAt := r.GetDateTime("done_at").Time()
-			if doneAt.IsZero() || doneAt.Before(start) || !doneAt.Before(end) {
-				continue
-			}
-			data.Done = append(data.Done, r)
-		}
+	// Done tasks: completed task nodes with done_at in range. tasks owns the
+	// done-task rule (see tasks.DoneBetween) so this aggregator doesn't re-derive it.
+	done, err := tasks.DoneBetween(app, start, end)
+	if err != nil {
+		return data, fmt.Errorf("range done-tasks query: %w", err)
 	}
+	data.Done = done
 
 	// Completion entries in range. Limit 0 (unlimited): a month/quarter/year can
 	// hold far more than a single day's worth.
