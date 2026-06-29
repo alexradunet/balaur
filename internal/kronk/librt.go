@@ -86,6 +86,24 @@ func InstallDirFor(root, arch, goos, processor string) string {
 	return filepath.Join(root, goos, arch, processor)
 }
 
+// RuntimeStatus reports whether the llama.cpp runtime for processor ("cpu" or
+// "vulkan") is supported on this host, and — if installed — its version string.
+// It wraps the SDK's libs.IsSupported + version-file read and computes the host
+// triple itself, so callers (the Models settings view) need not import the kronk
+// SDK. supported=false means the triple is not a supported build; an empty
+// version with supported=true means supported-but-not-installed.
+func RuntimeStatus(processor string) (supported bool, version string) {
+	goos, goarch := runtime.GOOS, runtime.GOARCH
+	if !libs.IsSupported(goarch, goos, processor) {
+		return false, ""
+	}
+	dir := InstallDirFor(LibRoot(), goarch, goos, processor)
+	if vt, err := libs.ReadVersionFile(dir); err == nil {
+		return true, vt.Version
+	}
+	return true, ""
+}
+
 //go:embed runtime_sums.json
 var runtimeSumsJSON []byte
 
