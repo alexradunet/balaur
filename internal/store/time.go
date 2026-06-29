@@ -30,3 +30,8 @@ func OwnerLocation(app core.App) *time.Location {
 	}
 	return loc
 }
+
+// ParsePBTime parses a PocketBase DateTime string (the format PBTime emits).
+func ParsePBTime(s string) (time.Time, error) {
+	return time.Parse(types.DefaultDateLayout, s)
+}

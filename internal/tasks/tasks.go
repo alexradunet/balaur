@@ -46,7 +46,7 @@ func Create(app core.App, o CreateOpts) (*core.Record, error) {
 		"source":          strings.TrimSpace(o.Source),
 	}
 	if !o.Due.IsZero() {
-		props["due"] = fmtTime(o.Due.UTC())
+		props["due"] = store.PBTime(o.Due.UTC())
 	}
 
 	rec, err := nodes.Create(app, "task", title, strings.TrimSpace(o.Notes), nodes.StatusActive, props)
@@ -162,7 +162,7 @@ func Update(app core.App, rec *core.Record, now time.Time, o UpdateOpts) error {
 	if due.IsZero() {
 		delete(props, "due")
 	} else {
-		props["due"] = fmtTime(due.UTC())
+		props["due"] = store.PBTime(due.UTC())
 	}
 	rec.Set("props", props)
 
@@ -199,7 +199,7 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 
 	if rule.IsZero() {
 		props["state"] = "done"
-		props["done_at"] = fmtTime(now.UTC())
+		props["done_at"] = store.PBTime(now.UTC())
 		rec.Set("props", props)
 		dehydrate(rec)
 		if err := app.Save(rec); err != nil {
@@ -224,7 +224,7 @@ func Done(app core.App, rec *core.Record, now time.Time) (DoneResult, error) {
 		after = anchor
 	}
 	next := Next(rule, anchor, after)
-	props["due"] = fmtTime(next.UTC())
+	props["due"] = store.PBTime(next.UTC())
 	delete(props, "nudged_at")
 	delete(props, "snoozed_until")
 	rec.Set("props", props)
@@ -257,7 +257,7 @@ func Snooze(app core.App, rec *core.Record, until time.Time) error {
 		return fmt.Errorf("tasks: %q is not open", rec.GetString("title"))
 	}
 	props := nodes.Props(rec)
-	props["snoozed_until"] = fmtTime(until.UTC())
+	props["snoozed_until"] = store.PBTime(until.UTC())
 	delete(props, "nudged_at")
 	rec.Set("props", props)
 	dehydrate(rec)
@@ -447,13 +447,6 @@ func hydrate(rec *core.Record) {
 	}
 	rec.SetRaw("recur_from_done", rfd)
 	rec.SetRaw("source", getString("source"))
-}
-
-// fmtTime formats a time as the PocketBase date string used for DateFields:
-// "2006-01-02 15:04:05.000Z". Using this format in props means hydrated
-// rec.GetDateTime("due") works exactly as before.
-func fmtTime(t time.Time) string {
-	return t.UTC().Format("2006-01-02 15:04:05.000Z")
 }
 
 // matchTerms reports whether rec's title or notes contain all the given terms
