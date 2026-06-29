@@ -123,6 +123,53 @@ func TestInstallRuntime_Unsupported(t *testing.T) {
 	}
 }
 
+// TestRuntimeStatus verifies the basic contract of RuntimeStatus:
+// - a supported processor on this host returns supported==true,
+// - a bogus processor returns supported==false.
+// The version half is not asserted: on a box with no installed runtime the
+// version is "" (valid), and pointing LibRoot at an empty temp dir via
+// BALAUR_LIB_PATH confirms the not-installed path.
+func TestRuntimeStatus(t *testing.T) {
+	goarch := runtime.GOARCH
+	goos := runtime.GOOS
+
+	t.Run("cpu_supported_on_host", func(t *testing.T) {
+		if !libs.IsSupported(goarch, goos, "cpu") {
+			t.Skipf("cpu not supported on %s/%s — skipping", goos, goarch)
+		}
+		t.Setenv("BALAUR_LIB_PATH", t.TempDir())
+		supported, _ := RuntimeStatus("cpu")
+		if !supported {
+			t.Error("expected supported=true for cpu on this host")
+		}
+	})
+
+	t.Run("bogus_processor_unsupported", func(t *testing.T) {
+		supported, version := RuntimeStatus("nonsense")
+		if supported {
+			t.Error("expected supported=false for bogus processor")
+		}
+		if version != "" {
+			t.Errorf("expected empty version for unsupported processor, got %q", version)
+		}
+	})
+
+	t.Run("cpu_not_installed_empty_version", func(t *testing.T) {
+		if !libs.IsSupported(goarch, goos, "cpu") {
+			t.Skipf("cpu not supported on %s/%s — skipping", goos, goarch)
+		}
+		t.Setenv("BALAUR_LIB_PATH", t.TempDir())
+		supported, version := RuntimeStatus("cpu")
+		if !supported {
+			t.Error("expected supported=true for cpu")
+		}
+		// No runtime installed in the fresh temp dir — version must be empty.
+		if version != "" {
+			t.Errorf("expected empty version in fresh dir, got %q", version)
+		}
+	})
+}
+
 // TestInstallRuntime_SeamWorks verifies the installFn seam is invoked by InstallRuntime.
 func TestInstallRuntime_SeamWorks(t *testing.T) {
 	goarch := runtime.GOARCH

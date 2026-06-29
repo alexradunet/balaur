@@ -6,11 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/pocketbase/pocketbase/core"
-
-	"github.com/ardanlabs/kronk/sdk/tools/libs"
 
 	"github.com/alexradunet/balaur/internal/feature/modelcards"
 	"github.com/alexradunet/balaur/internal/kronk"
@@ -101,25 +98,23 @@ func BuildModelsPanelView(app core.App, errMsg string) (modelcards.PanelView, er
 	}
 	view.RuntimeMissing = !kronk.RuntimeInstalled()
 
-	// Build the runtime section: cpu and vulkan rows.
-	goos := runtime.GOOS
-	goarch := runtime.GOARCH
+	// Build the runtime section: cpu and vulkan rows. Status comes from
+	// kronk.RuntimeStatus (the kronk seam over the SDK), mapped to UI constants
+	// here — UI vocabulary stays in the UI.
 	for _, proc := range []string{"cpu", "vulkan"} {
 		rv := modelcards.RuntimeView{
 			Processor:       proc,
 			NeedsHostLoader: proc == "vulkan",
 		}
-		if !libs.IsSupported(goarch, goos, proc) {
+		supported, version := kronk.RuntimeStatus(proc)
+		switch {
+		case !supported:
 			rv.Status = modelcards.StatusUnsupported
-		} else {
-			dir := kronk.InstallDirFor(kronk.LibRoot(), goarch, goos, proc)
-			vt, err := libs.ReadVersionFile(dir)
-			if err == nil && vt.Version != "" {
-				rv.Status = modelcards.StatusInstalled
-				rv.Version = vt.Version
-			} else {
-				rv.Status = modelcards.StatusAvailable
-			}
+		case version != "":
+			rv.Status = modelcards.StatusInstalled
+			rv.Version = version
+		default:
+			rv.Status = modelcards.StatusAvailable
 		}
 		view.RuntimeSection = append(view.RuntimeSection, rv)
 	}
