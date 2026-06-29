@@ -216,8 +216,12 @@ func TestSeedPeriodsCoversAllBands(t *testing.T) {
 // and that quarter/year rows do not use the generic month text.
 func TestSeedSummariesPopulatesAllBandLevels(t *testing.T) {
 	app := storetest.NewApp(t)
-	if _, err := Run(app); err != nil {
-		t.Fatalf("Run: %v", err)
+	// Anchor to a fixed Wednesday so all five recap bands (incl. the day band,
+	// which is empty on Mondays by design) are populated — deterministic
+	// regardless of when the suite runs. Mirrors TestSeedPeriodsCoversAllBands.
+	now := time.Date(2026, 6, 24, 12, 0, 0, 0, time.UTC)
+	if _, err := runAt(app, now); err != nil {
+		t.Fatalf("runAt: %v", err)
 	}
 
 	wantTypes := []string{"day", "week", "month", "quarter", "year"}
