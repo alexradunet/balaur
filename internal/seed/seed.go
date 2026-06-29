@@ -527,7 +527,7 @@ func seedHeads(app core.App) (int, error) {
 		if _, err := app.FindFirstRecordByFilter("heads", "name = {:n}", dbx.Params{"n": name}); err == nil {
 			continue
 		}
-		if _, err := heads.Create(app, name, "tends the garden plan and seasonal chores; practical and seasonal", "balaur-16", []string{"tasks", "life", "memory"}); err != nil {
+		if _, err := heads.Create(app, "seed", name, "tends the garden plan and seasonal chores; practical and seasonal", "balaur-16", []string{"tasks", "life", "memory"}); err != nil {
 			return count, fmt.Errorf("seeding head %q: %w", name, err)
 		}
 		count++

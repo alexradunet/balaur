@@ -89,13 +89,21 @@ func Active(app core.App) Head {
 	return main
 }
 
-// SetActive persists the active head id/key.
-func SetActive(app core.App, id string) error {
-	return store.SetOwnerSetting(app, activeHeadSetting, id)
+// SetActive persists the active head id/key and audits the switch.
+func SetActive(app core.App, actor, id string) error {
+	if err := store.SetOwnerSetting(app, activeHeadSetting, id); err != nil {
+		return err
+	}
+	name := id
+	if h, ok := Find(app, id); ok {
+		name = h.Name
+	}
+	store.Audit(app, actor, "head.switch", "heads/"+id, true, map[string]any{"name": name})
+	return nil
 }
 
-// Create adds a custom head and returns its record id.
-func Create(app core.App, name, purpose, avatar string, groups []string) (string, error) {
+// Create adds a custom head, returns its record id, and audits the creation.
+func Create(app core.App, actor, name, purpose, avatar string, groups []string) (string, error) {
 	col, err := app.FindCollectionByNameOrId("heads")
 	if err != nil {
 		return "", err
@@ -108,17 +116,23 @@ func Create(app core.App, name, purpose, avatar string, groups []string) (string
 	if err := app.Save(rec); err != nil {
 		return "", err
 	}
+	store.Audit(app, actor, "head.create", "heads/"+rec.Id, true, map[string]any{"name": name})
 	return rec.Id, nil
 }
 
-// Delete removes a custom head record. Built-ins (keys, not record ids) never
-// reach here — callers gate on BuiltIn first.
-func Delete(app core.App, id string) error {
+// Delete removes a custom head record and audits the deletion. Built-ins (keys,
+// not record ids) never reach here — callers gate on BuiltIn first.
+func Delete(app core.App, actor, id string) error {
 	rec, err := app.FindRecordById("heads", id)
 	if err != nil {
 		return err
 	}
-	return app.Delete(rec)
+	name := rec.GetString("name")
+	if err := app.Delete(rec); err != nil {
+		return err
+	}
+	store.Audit(app, actor, "head.delete", "heads/"+id, true, map[string]any{"name": name})
+	return nil
 }
 
 func headFromRecord(r *core.Record) Head {

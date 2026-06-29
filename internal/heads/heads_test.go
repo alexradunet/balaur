@@ -3,6 +3,9 @@ package heads
 import (
 	"testing"
 
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
+
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -15,7 +18,7 @@ func TestActiveDefaultsToMain(t *testing.T) {
 
 func TestSetAndResolveBuiltin(t *testing.T) {
 	app := storetest.NewApp(t)
-	if err := SetActive(app, "scholar"); err != nil {
+	if err := SetActive(app, "owner", "scholar"); err != nil {
 		t.Fatalf("SetActive: %v", err)
 	}
 	h := Active(app)
@@ -29,7 +32,7 @@ func TestSetAndResolveBuiltin(t *testing.T) {
 
 func TestCustomHeadRoundTripAndActive(t *testing.T) {
 	app := storetest.NewApp(t)
-	id, err := Create(app, "Scribe", "edits prose", "balaur-07", []string{"journal"})
+	id, err := Create(app, "owner", "Scribe", "edits prose", "balaur-07", []string{"journal"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -46,7 +49,7 @@ func TestCustomHeadRoundTripAndActive(t *testing.T) {
 		t.Fatalf("custom groups = %v, want [journal]", last.Groups)
 	}
 	// Becomes active, then resolves.
-	if err := SetActive(app, id); err != nil {
+	if err := SetActive(app, "owner", id); err != nil {
 		t.Fatalf("SetActive(custom): %v", err)
 	}
 	if Active(app).ID != id {
@@ -56,12 +59,57 @@ func TestCustomHeadRoundTripAndActive(t *testing.T) {
 
 func TestDeletedActiveCustomFallsBackToMain(t *testing.T) {
 	app := storetest.NewApp(t)
-	id, _ := Create(app, "Temp", "", "", nil)
-	_ = SetActive(app, id)
-	if err := Delete(app, id); err != nil {
+	id, _ := Create(app, "owner", "Temp", "", "", nil)
+	_ = SetActive(app, "owner", id)
+	if err := Delete(app, "owner", id); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 	if got := Active(app).ID; got != MainKey {
 		t.Errorf("after deleting active custom, active = %q, want %q", got, MainKey)
 	}
+}
+
+func TestSetActiveAudits(t *testing.T) {
+	app := storetest.NewApp(t)
+	if err := SetActive(app, "owner", "scholar"); err != nil {
+		t.Fatalf("SetActive: %v", err)
+	}
+	if n := countAudit(t, app, "head.switch", "owner"); n != 1 {
+		t.Errorf("head.switch audit rows = %d, want 1", n)
+	}
+}
+
+func TestCreateAudits(t *testing.T) {
+	app := storetest.NewApp(t)
+	if _, err := Create(app, "owner", "Gardener", "tends the garden", "", nil); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if n := countAudit(t, app, "head.create", "owner"); n != 1 {
+		t.Errorf("head.create audit rows = %d, want 1", n)
+	}
+}
+
+func TestDeleteAudits(t *testing.T) {
+	app := storetest.NewApp(t)
+	id, err := Create(app, "owner", "Temp", "", "", nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := Delete(app, "owner", id); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if n := countAudit(t, app, "head.delete", "owner"); n != 1 {
+		t.Errorf("head.delete audit rows = %d, want 1", n)
+	}
+}
+
+func countAudit(t *testing.T, app core.App, action, actor string) int {
+	t.Helper()
+	recs, err := app.FindRecordsByFilter("audit_log",
+		"action = {:a} && actor = {:actor} && allowed = true", "", 0, 0,
+		dbx.Params{"a": action, "actor": actor})
+	if err != nil {
+		t.Fatalf("querying audit_log: %v", err)
+	}
+	return len(recs)
 }

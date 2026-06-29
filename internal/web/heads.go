@@ -17,7 +17,7 @@ func (h *handlers) setActiveHead(e *core.RequestEvent) error {
 	if _, ok := heads.Find(h.app, id); !ok {
 		return e.BadRequestError("unknown head", nil)
 	}
-	if err := heads.SetActive(h.app, id); err != nil {
+	if err := heads.SetActive(h.app, "owner", id); err != nil {
 		return e.InternalServerError("saving active head", err)
 	}
 	data, err := h.homeData()
@@ -58,7 +58,7 @@ func (h *handlers) createHead(e *core.RequestEvent) error {
 	purpose := strings.TrimSpace(e.Request.FormValue("purpose"))
 	avatar := e.Request.FormValue("balaur_avatar")
 	groups := validGroups(e.Request.Form["tools"])
-	if _, err := heads.Create(h.app, name, purpose, avatar, groups); err != nil {
+	if _, err := heads.Create(h.app, "owner", name, purpose, avatar, groups); err != nil {
 		return e.InternalServerError("creating head", err)
 	}
 	return h.renderHeadsCard(e)
@@ -73,9 +73,9 @@ func (h *handlers) deleteHead(e *core.RequestEvent) error {
 		return e.BadRequestError("cannot delete this head", nil)
 	}
 	if heads.Active(h.app).ID == id {
-		_ = heads.SetActive(h.app, heads.MainKey)
+		_ = heads.SetActive(h.app, "owner", heads.MainKey)
 	}
-	if err := heads.Delete(h.app, id); err != nil {
+	if err := heads.Delete(h.app, "owner", id); err != nil {
 		return e.InternalServerError("deleting head", err)
 	}
 	return h.renderHeadsCard(e)
