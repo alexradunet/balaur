@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 07fb4d6..HEAD -- internal/tools internal/turn/tools.go internal/heads/heads.go`
+> `git diff --stat d4f38d0..HEAD -- internal/tools internal/turn/tools.go internal/heads/heads.go` (expect EMPTY — re-baselined after 206/208)
 > If any in-scope source changed, re-confirm the marker/Parse function names and
 > `heads.Groups` against the live code; on a mismatch, treat it as a STOP
 > condition.
