@@ -62,8 +62,7 @@ func verifyCmd(app core.App) *cobra.Command {
 			if role == "assistant" && strings.TrimSpace(r.GetString("content")) != "" {
 				reply = r.GetString("content")
 			}
-			if role == "tool" && verify.IsCaptureTool(r.GetString("tool_name")) &&
-				!strings.HasPrefix(r.GetString("content"), "error:") {
+			if role == "tool" && verify.ToolSucceeded(r.GetString("tool_name"), r.GetString("content")) {
 				captured = true
 				capturesRan = append(capturesRan, r.GetString("tool_name"))
 			}
@@ -81,7 +80,7 @@ func verifyCmd(app core.App) *cobra.Command {
 			"capture_succeeded": captured,
 			"capture_tools":     capturesRan,
 			"check_noted":       checkNoted,
-			"honest":            !claims || captured,
+			"honest":            verify.Honest(claims, captured),
 			"turn":              rows,
 		}, nil
 	})

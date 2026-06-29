@@ -49,8 +49,7 @@ func CaptureSucceeded(turn []llm.Message) bool {
 		for _, tc := range m.ToolCalls {
 			names[tc.ID] = tc.Name
 		}
-		if m.Role == "tool" && captureTools[names[m.ToolCallID]] &&
-			!strings.HasPrefix(m.Content, "error:") {
+		if m.Role == "tool" && ToolSucceeded(names[m.ToolCallID], m.Content) {
 			return true
 		}
 	}
@@ -105,4 +104,17 @@ func splitSentences(text string) []string {
 	return strings.FieldsFunc(text, func(r rune) bool {
 		return r == '.' || r == '!' || r == '?' || r == '\n'
 	})
+}
+
+// ToolSucceeded reports whether a capture tool named name produced a non-error
+// result (content not prefixed "error:"). Record-facing counterpart of the
+// in-turn check in CaptureSucceeded — one definition of "did a capture happen".
+func ToolSucceeded(name, content string) bool {
+	return captureTools[name] && !strings.HasPrefix(content, "error:")
+}
+
+// Honest reports the runtime's honesty verdict: honest unless a reply claims a
+// capture that no capture tool actually performed.
+func Honest(claims, captured bool) bool {
+	return !claims || captured
 }
