@@ -35,7 +35,7 @@
     },
     {
       "file": "internal/life/life.go",
-      "line": 67,
+      "line": 61,
       "title": "13.6 — The life log",
       "description": "```go\nfunc Log(app core.App, o LogOpts) (*core.Record, error)\n```\n\nOwner-defined measures — weight, mood, steps, sleep, anything — are stored as `type=measure` nodes. The measure `kind` is a free-form string normalised to lowercase; the owner invents their own vocabulary. `noted_at` is the chronological truth: you can log yesterday's weight today and it files correctly.\n\nSystem kinds (`\"completion\"`, `\"journal\"`) are reserved and rejected here — they enter through their own verbs (`task_done`, `journal.write`) to keep the audit trail unambiguous.\n\nThe `value_num` field carries numeric values (weight, steps); `unit` carries the unit string; `body` carries free text. All three are optional — a mood log might carry only a text description, a step count only a number.\n\nThe owner's statement is the consent; corrections go through `Drop`. There is no proposal step here either — life logging is immediate and reversible."
     },
