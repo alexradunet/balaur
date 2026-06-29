@@ -24,7 +24,7 @@ var chatClients = func(app core.App) (llm.Client, error) {
 	// create one here (native runtime + model load stay lazy until inference).
 	eng := kronk.FromStore(app)
 	if eng == nil {
-		eng = kronk.NewEngine(kronk.LibRoot(), kronk.Processor())
+		eng = kronk.NewEngine(kronk.LibRoot(), turn.ResolveProcessor(app))
 		app.Store().Set(kronk.StoreKey, eng)
 	}
 	src := &turn.ClientSource{Engine: eng}
