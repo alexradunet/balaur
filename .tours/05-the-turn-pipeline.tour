@@ -29,7 +29,7 @@
     },
     {
       "file": "internal/turn/tools.go",
-      "line": 69,
+      "line": 57,
       "title": "5.5 — Head filtering: capability groups",
       "description": "```go\nfunc ToolsForHead(app core.App, groups []string) []agent.Tool\n```\n\nWhen the active head has no groups (the main Balaur head), this calls `Tools(app)` and returns the full set. When a head declares groups, it assembles a narrower set:\n\n```go\nts := tools.ChoiceTools(app)\nts = append(ts, tools.UITools(app)...)\nts = append(ts, tools.HeadsTools(app)...)\nts = append(ts, tools.ProfileTools(app)...)\n\nif sel[\"memory\"] { ts = append(ts, tools.KnowledgeTools(app)...) }\nif sel[\"tasks\"]  { ts = append(ts, tools.TaskTools(app)...)     }\n...\n```\n\nHeads/profile tools are always included, regardless of groups. The comment explains why: they are *meta-capability*, not a privilege grant — a scoped head still needs to be able to switch back and manage identity.\n\nThe six group keys (`memory`, `tasks`, `life`, `journal`, `os`, `extensions`) mirror the `heads.Groups` variable in `internal/heads/heads.go`. The built-in specialist heads use these: Scholar gets `[\"memory\"]`; Planner gets `[\"tasks\", \"memory\"]`; Coach gets `[\"journal\", \"life\", \"memory\"]`.\n\n**This is a capability filter, not a security boundary** — the comment says so explicitly. The returned tools still run with the owner's full trust. Step 5.8 of this tour covers why.\n\nCross-reference: **Tour 17** for the tool constructors; **Tour 05, step 5.8** for the heads persona model."
     },

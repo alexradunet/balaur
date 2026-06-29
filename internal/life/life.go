@@ -39,12 +39,6 @@ type LogOpts struct {
 	NotedAt  time.Time
 }
 
-// fmtTime formats a time as the PocketBase date string "2006-01-02 15:04:05.000Z".
-// Stored in props.noted_at so hydrated rec.GetDateTime("noted_at") works.
-func fmtTime(t time.Time) string {
-	return t.UTC().Format("2006-01-02 15:04:05.000Z")
-}
-
 // measureNotedAt parses a measure node's props.noted_at (the PB datetime string)
 // into a time. The bool is false when the value is absent or unparseable — the
 // caller skips such rows. Chronology comes from noted_at, never the DB `created`
@@ -55,7 +49,7 @@ func measureNotedAt(r *core.Record) (time.Time, bool) {
 	if s == "" {
 		return time.Time{}, false
 	}
-	t, err := time.Parse("2006-01-02 15:04:05.000Z", s)
+	t, err := store.ParsePBTime(s)
 	if err != nil {
 		return time.Time{}, false
 	}
@@ -78,7 +72,7 @@ func Log(app core.App, o LogOpts) (*core.Record, error) {
 
 	props := map[string]any{
 		"kind":     kind,
-		"noted_at": fmtTime(o.NotedAt.UTC()),
+		"noted_at": store.PBTime(o.NotedAt.UTC()),
 	}
 	if o.ValueNum != 0 {
 		props["value_num"] = o.ValueNum

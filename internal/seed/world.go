@@ -318,13 +318,9 @@ func seedWorldNotes(app core.App, now time.Time, out map[string]*core.Record) (i
 			return count, fmt.Errorf("note %q: %w", s.title, err)
 		}
 		at := dayAt(now, s.daysAgo, 9, 30)
-		if err := backdate(app, "nodes", rec.Id, at); err != nil {
-			return count, err
-		}
-		// Reload after backdate so GetDateTime("created") reflects the new time.
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, at)
 		if err != nil {
-			return count, fmt.Errorf("reloading note %q: %w", s.title, err)
+			return count, err
 		}
 		if err := nodes.SyncLinks(app, rec); err != nil {
 			return count, fmt.Errorf("SyncLinks %q: %w", s.title, err)
@@ -380,10 +376,7 @@ func seedTaskHistory(app core.App, now time.Time, out map[string]*core.Record) (
 			return count, fmt.Errorf("task %q: %w", o.title, err)
 		}
 		createdAt := dayAt(now, o.daysAgo, 8, 0)
-		if err := backdate(app, "nodes", rec.Id, createdAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, createdAt)
 		if err != nil {
 			return count, err
 		}
@@ -507,10 +500,7 @@ func seedTaskHistory(app core.App, now time.Time, out map[string]*core.Record) (
 			return count, fmt.Errorf("long-tail task %q: %w", lt.title, err)
 		}
 		createdAt := dayAt(now, createdDaysAgo, 9, 0)
-		if err := backdate(app, "nodes", rec.Id, createdAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, createdAt)
 		if err != nil {
 			return count, err
 		}
@@ -580,12 +570,9 @@ func seedJournal(app core.App, now time.Time, out *[]*core.Record) (int, error) 
 			return count, fmt.Errorf("journal day node %q: %w", title, err)
 		}
 		at := dayAt(now, s.daysAgo, 21, 0) // evenings
-		if err := backdate(app, "nodes", rec.Id, at); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, at)
 		if err != nil {
-			return count, fmt.Errorf("reloading journal day node %q: %w", title, err)
+			return count, err
 		}
 		if err := nodes.SyncLinks(app, rec); err != nil {
 			return count, fmt.Errorf("SyncLinks journal day node %q: %w", title, err)
@@ -641,10 +628,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("weight %d daysAgo: %w", dAgo, err)
 		}
-		if err := backdate(app, "nodes", rec.Id, o.NotedAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, o.NotedAt)
 		if err != nil {
 			return count, err
 		}
@@ -676,10 +660,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("workout %d daysAgo: %w", dAgo, err)
 		}
-		if err := backdate(app, "nodes", rec.Id, o.NotedAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, o.NotedAt)
 		if err != nil {
 			return count, err
 		}
@@ -717,10 +698,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("mood %d daysAgo: %w", dAgo, err)
 		}
-		if err := backdate(app, "nodes", rec.Id, o.NotedAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, o.NotedAt)
 		if err != nil {
 			return count, err
 		}
@@ -747,10 +725,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("water %d daysAgo: %w", dAgo, err)
 		}
-		if err := backdate(app, "nodes", rec.Id, o.NotedAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, o.NotedAt)
 		if err != nil {
 			return count, err
 		}
@@ -776,10 +751,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if werr != nil {
 			return count, fmt.Errorf("long-tail weight month-%d: %w", monthsBack, werr)
 		}
-		if err := backdate(app, "nodes", wrec.Id, wo.NotedAt); err != nil {
-			return count, err
-		}
-		wrec, werr = app.FindRecordById("nodes", wrec.Id)
+		wrec, werr = backdateAndReload(app, wrec, wo.NotedAt)
 		if werr != nil {
 			return count, werr
 		}
@@ -805,10 +777,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if merr != nil {
 			return count, fmt.Errorf("long-tail mood month-%d: %w", monthsBack, merr)
 		}
-		if err := backdate(app, "nodes", mrec.Id, mo.NotedAt); err != nil {
-			return count, err
-		}
-		mrec, merr = app.FindRecordById("nodes", mrec.Id)
+		mrec, merr = backdateAndReload(app, mrec, mo.NotedAt)
 		if merr != nil {
 			return count, merr
 		}
@@ -850,10 +819,7 @@ func seedLifeSeries(app core.App, now time.Time) (int, error) {
 		if err != nil {
 			return count, fmt.Errorf("reading %d daysAgo: %w", rp.daysAgo, err)
 		}
-		if err := backdate(app, "nodes", rec.Id, o.NotedAt); err != nil {
-			return count, err
-		}
-		rec, err = app.FindRecordById("nodes", rec.Id)
+		rec, err = backdateAndReload(app, rec, o.NotedAt)
 		if err != nil {
 			return count, err
 		}
@@ -1084,4 +1050,18 @@ func seedResetDayNodes(app core.App) (journalCount, hubCount int, err error) {
 		}
 	}
 	return journalCount, hubCount, nil
+}
+
+// backdateAndReload backdates a node's `created` to at and returns a freshly
+// reloaded record so GetDateTime("created") reflects the new time. Centralises
+// the backdate+reload pair every seed site needs before LinkOnDay/SyncLinks.
+func backdateAndReload(app core.App, rec *core.Record, at time.Time) (*core.Record, error) {
+	if err := backdate(app, "nodes", rec.Id, at); err != nil {
+		return nil, err
+	}
+	reloaded, err := app.FindRecordById("nodes", rec.Id)
+	if err != nil {
+		return nil, fmt.Errorf("reloading node %q after backdate: %w", rec.Id, err)
+	}
+	return reloaded, nil
 }

@@ -108,7 +108,7 @@ func Nudge(app core.App, client llm.Client, now time.Time) error {
 	}
 	for _, rec := range recs {
 		props := nodes.Props(rec)
-		props["nudged_at"] = fmtTime(now.UTC())
+		props["nudged_at"] = store.PBTime(now.UTC())
 		rec.Set("props", props)
 		dehydrate(rec)
 		if err := app.Save(rec); err != nil {

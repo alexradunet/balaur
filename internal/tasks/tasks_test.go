@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -167,7 +168,7 @@ func TestDoneRecurringFixedSchedule(t *testing.T) {
 	}
 	// Simulate a fired nudge that must be cleared by the bump.
 	props := nodes_Props(rec)
-	props["nudged_at"] = fmtTime(now.UTC())
+	props["nudged_at"] = store.PBTime(now.UTC())
 	rec.Set("props", props)
 	dehydrate(rec)
 	if err := app.Save(rec); err != nil {
@@ -234,7 +235,7 @@ func TestSnoozeAndDrop(t *testing.T) {
 	}
 	// Simulate a fired nudge.
 	props := nodes_Props(rec)
-	props["nudged_at"] = fmtTime(now.UTC())
+	props["nudged_at"] = store.PBTime(now.UTC())
 	rec.Set("props", props)
 	dehydrate(rec)
 	if err := app.Save(rec); err != nil {

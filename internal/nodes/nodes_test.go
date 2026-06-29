@@ -42,11 +42,11 @@ func TestTransitionLifecycle(t *testing.T) {
 	}
 
 	// proposed → archived is forbidden.
-	if _, err := nodes.Transition(app, rec.Id, nodes.StatusArchived); err == nil {
+	if _, err := nodes.Transition(app, rec.Id, nodes.StatusArchived, "node"); err == nil {
 		t.Error("proposed → archived should be rejected")
 	}
 	// proposed → active is allowed.
-	if _, err := nodes.Transition(app, rec.Id, nodes.StatusActive); err != nil {
+	if _, err := nodes.Transition(app, rec.Id, nodes.StatusActive, "node"); err != nil {
 		t.Errorf("proposed → active: %v", err)
 	}
 }

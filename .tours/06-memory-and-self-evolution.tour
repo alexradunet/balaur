@@ -17,13 +17,13 @@
     },
     {
       "file": "internal/knowledge/knowledge.go",
-      "line": 167,
+      "line": 161,
       "title": "6.3 — Transition: validate, save, audit",
       "description": "`Transition` is the only path that changes a knowledge node's status. It:\n\n1. Fetches the record from the `nodes` collection.\n2. Checks the transition is allowed via `validTransitions`.\n3. Saves — `app.Save` bypasses API rules by design (trusted owner code; AGENTS.md: *Go-side record access bypasses API rules*).\n4. Audits the outcome — both allowed **and** denied transitions land in `audit_log`, so the owner can see every approval and every refused attempt.\n5. Invalidates the in-process context cache so the next turn sees the updated active set.\n\nThe audit-after-save ordering is deliberate: AGENTS.md requires *audit strictly after a successful write* — the log must not record a mutation that did not persist.\n\nCallers reach this from the web UI's transition endpoints (`/ui/knowledge/memories/:id/transition`, `/ui/knowledge/skills/:id/transition`) and from CLI commands. The model never calls it directly."
     },
     {
       "file": "internal/knowledge/knowledge.go",
-      "line": 198,
+      "line": 174,
       "title": "6.4 — UpdateFields: the edit whitelist",
       "description": "```go\nwritable := map[Kind][]string{\n    Memory: {\"title\", \"content\", \"importance\", \"when_to_use\"},\n    Skill:  {\"name\", \"description\", \"content\", \"when_to_use\"},\n}\n```\n\nThe edit form posts arbitrary form fields; only whitelisted ones are applied. `status` is deliberately NOT in this map — editing a proposal and approving it stay two separate, explicit actions.\n\n`title`/`name` map to the node's `title` field. `content` maps to `body`. `importance` and `when_to_use` live in the `props` JSON blob. This alias layer is why the card and CLI layers can read records the same way they always have, even though the underlying schema changed from dedicated collection columns to the unified node layout.\n\nNote: the old `category` field was removed (migration `1750000080_drop_memory_category.go`) — it was the unused memory category axis collapsed into one undifferentiated kind. The whitelist no longer includes it."
     },

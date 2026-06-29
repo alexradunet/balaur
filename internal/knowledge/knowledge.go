@@ -19,7 +19,6 @@ package knowledge
 
 import (
 	"fmt"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -157,35 +156,13 @@ func ProposeSkill(app core.App, p SkillProposal) (*core.Record, error) {
 	return hydrate(Skill, rec), nil
 }
 
-// validTransitions encodes the owner-driven lifecycle. Key: from → allowed to.
-// Sourced from internal/nodes (one source of truth).
-var validTransitions = nodes.ValidTransitions
-
 // Transition moves a node to a new status on the owner's behalf. It validates
 // the lifecycle and audits.
 func Transition(app core.App, kind Kind, id, to string) (*core.Record, error) {
-	rec, err := app.FindRecordById("nodes", id)
+	rec, err := nodes.Transition(app, id, to, "knowledge")
 	if err != nil {
-		return nil, fmt.Errorf("finding %s record: %w", kind, err)
+		return nil, err
 	}
-	from := rec.GetString("status")
-
-	allowed := slices.Contains(validTransitions[from], to)
-	if !allowed {
-		store.Audit(app, "owner", "knowledge."+to, "nodes/"+rec.Id, false,
-			map[string]any{"from": from})
-		return nil, fmt.Errorf("knowledge: cannot move %s from %q to %q", kind, from, to)
-	}
-
-	rec.Set("status", to)
-	if err := app.Save(rec); err != nil {
-		return nil, fmt.Errorf("updating %s status: %w", kind, err)
-	}
-	store.Audit(app, "owner", "knowledge."+to, "nodes/"+rec.Id, true,
-		map[string]any{"from": from})
-	// A status change in/out of active changes the cached upfront/skill set
-	// (validTransitions only allows active<->archived and proposed->active, so
-	// any successful memory/skill transition touches the active set).
 	if kind == Memory || kind == Skill {
 		invalidateContextCache(app)
 	}

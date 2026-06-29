@@ -233,15 +233,16 @@ func ListByTypeStatus(app core.App, typ, status string) ([]*core.Record, error) 
 }
 
 // Transition moves a node to a new status on the owner's behalf, validating the
-// lifecycle and auditing the outcome.
-func Transition(app core.App, id, to string) (*core.Record, error) {
+// lifecycle and auditing the outcome. auditPrefix is prepended to the action
+// (e.g. "node" → "node.archived"; "knowledge" → "knowledge.archived").
+func Transition(app core.App, id, to, auditPrefix string) (*core.Record, error) {
 	rec, err := app.FindRecordById("nodes", id)
 	if err != nil {
 		return nil, fmt.Errorf("finding node %q: %w", id, err)
 	}
 	from := rec.GetString("status")
 	if !slices.Contains(ValidTransitions[from], to) {
-		store.Audit(app, "owner", "node."+to, "nodes/"+rec.Id, false,
+		store.Audit(app, "owner", auditPrefix+"."+to, "nodes/"+rec.Id, false,
 			map[string]any{"from": from})
 		return nil, fmt.Errorf("nodes: cannot move from %q to %q", from, to)
 	}
@@ -249,7 +250,7 @@ func Transition(app core.App, id, to string) (*core.Record, error) {
 	if err := app.Save(rec); err != nil {
 		return nil, fmt.Errorf("updating node status: %w", err)
 	}
-	store.Audit(app, "owner", "node."+to, "nodes/"+rec.Id, true,
+	store.Audit(app, "owner", auditPrefix+"."+to, "nodes/"+rec.Id, true,
 		map[string]any{"from": from})
 	return rec, nil
 }
