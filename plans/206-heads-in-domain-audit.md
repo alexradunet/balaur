@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 07fb4d6..HEAD -- internal/heads/heads.go internal/tools/heads.go internal/web/heads.go internal/seed/seed.go`
+> `git diff --stat 59a94e0..HEAD -- internal/heads/heads.go internal/tools/heads.go internal/web/heads.go internal/seed/seed.go` (expect EMPTY)
 > If any in-scope file changed since this plan was written, compare the "Current
 > state" excerpts against the live code before proceeding; on a mismatch, treat
 > it as a STOP condition.
@@ -20,7 +20,7 @@
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: tech-debt (closes a real behavioral gap: an unaudited mutation)
-- **Planned at**: commit `07fb4d6`, 2026-06-26
+- **Planned at**: commit `07fb4d6`, 2026-06-26 (re-verified against `59a94e0` 2026-06-29: heads/tools/web unchanged; `seed.go` shifted by 211 so the `heads.Create` call is now line **530**, not 525. No tour reconcile needed — tours 05/17/19 anchor `heads.go:27/:83`, `tools/heads.go:23`, `seed.go:70`, all ABOVE 206's changes.)
 
 ## Why this matters
 
@@ -120,7 +120,7 @@ _ = heads.SetActive(h.app, heads.MainKey)
 if err := heads.Delete(h.app, id); err != nil { ... }
 ```
 
-### `internal/seed/seed.go:525` — one Create call
+### `internal/seed/seed.go:530` — one Create call
 
 ```go
 if _, err := heads.Create(app, name, "tends the garden plan and seasonal chores; practical and seasonal", "balaur-16", []string{"tasks", "life", "memory"}); err != nil {
@@ -145,7 +145,7 @@ if _, err := heads.Create(app, name, "tends the garden plan and seasonal chores;
 - `internal/heads/heads.go` (add `actor` param + audit-after-write to `SetActive`/`Create`/`Delete`)
 - `internal/tools/heads.go` (pass `actor="model"`; remove the now-duplicated `store.Audit` calls)
 - `internal/web/heads.go` (pass `actor="owner"`)
-- `internal/seed/seed.go` (pass `actor="seed"` at line 525)
+- `internal/seed/seed.go` (pass `actor="seed"` at line 530)
 
 **Out of scope** (do NOT touch):
 - The `heads.Find`/`BuiltIn` gating in tools and web — unchanged.
@@ -242,7 +242,7 @@ func Delete(app core.App, actor, id string) error {
 
 **Verify**: `go build ./internal/web/...` → exit 0
 
-### Step 4: Update `internal/seed/seed.go:525` — pass `actor="seed"`
+### Step 4: Update `internal/seed/seed.go:530` — pass `actor="seed"`
 
 ```go
 if _, err := heads.Create(app, "seed", name, "tends the garden plan and seasonal chores; practical and seasonal", "balaur-16", []string{"tasks", "life", "memory"}); err != nil {
