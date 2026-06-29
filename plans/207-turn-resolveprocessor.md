@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 07fb4d6..HEAD -- main.go internal/cli/chat.go internal/turn/models.go`
+> `git diff --stat a016252..HEAD -- main.go internal/cli/chat.go internal/turn/models.go` (expect EMPTY)
 > If any in-scope file changed since this plan was written, compare the "Current
 > state" excerpts against the live code before proceeding; on a mismatch, treat
 > it as a STOP condition.
@@ -20,7 +20,7 @@
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: bug (fixes a real behavioral fork) + tech-debt
-- **Planned at**: commit `07fb4d6`, 2026-06-26
+- **Planned at**: commit `07fb4d6`, 2026-06-26 (re-verified against `a016252` 2026-06-29: the 3 Go files unchanged; `store` STAYS in main.go [used at ~lines 194/235]; removing `resolveProcessor` shifts 2 main.go tour anchors — see Step 4 repoint)
 
 ## Why this matters
 
@@ -132,6 +132,20 @@ import (
 - `internal/turn/models.go` (add `ResolveProcessor`)
 - `main.go` (call `turn.ResolveProcessor`; delete the local `resolveProcessor`)
 - `internal/cli/chat.go` (use `turn.ResolveProcessor(app)` instead of `kronk.Processor()`)
+- `.tours/19-bootstrapping.tour` (repoint `scheduleJob` + `registerSearchIndex` anchors — see Step 4)
+- `.tours/09-recall-and-search.tour` (repoint the `registerSearchIndex` anchor — see Step 4)
+
+> **Why the tours are in scope:** deleting `resolveProcessor` (~20 lines) from
+> `main.go` shifts the two functions BELOW it up. Two tours anchor those by line:
+> tour 19 anchors `scheduleJob` (currently `main.go:157`) and `registerSearchIndex`
+> (currently `main.go:247`); tour 09 anchors `registerSearchIndex` (`main.go:247`).
+> `tours_test` (in `go test ./...`, run by the pre-commit hook) fails on an
+> out-of-range anchor, so they MUST be repointed (Step 4). The anchors ABOVE
+> `resolveProcessor` — `main.go:40` (func main), `:47`, `:75`, `:126`
+> (registerKronkEngine) in tours 00/19 — do NOT shift (`store` stays imported, so
+> no line is removed above line 130); leave them. Tour 11 (`turn/models.go`,
+> `ResolveProcessor` appended at end) and tour 10 (`cli/chat.go`, 1-line in-place
+> edit) are unaffected.
 
 **Out of scope** (do NOT touch):
 - `internal/kronk` — do NOT add the helper there (forbidden `kronk → store` edge).
@@ -188,13 +202,14 @@ func ResolveProcessor(app core.App) string {
   ```
 - Delete the local `resolveProcessor` function (lines 130–149) and its doc
   comment.
-- After deletion, `store` may be unused in `main.go`. Run `go build ./...`; if
-  it reports `"store" imported and not used`, remove the `store` import from
-  `main.go`. (Do NOT remove `kronk` — still used by `registerKronkEngine`,
-  `scheduleJob`, etc.)
+- **KEEP the `store` import in `main.go`** — it is still used outside
+  `resolveProcessor` (at ~lines 194 and 235, `store.OwnerLocation` in the cron
+  jobs). Do NOT remove it; `go build` would fail if you did. (Also keep `kronk` —
+  used by `registerKronkEngine`/`scheduleJob`.)
 
 **Verify**:
 - `grep -n "func resolveProcessor" main.go` → no matches
+- `grep -c "store\." main.go` → ≥ 2 (store stays)
 - `go build .` → exit 0
 - `go vet .` → exit 0
 
@@ -213,13 +228,35 @@ saved processor exactly as the server does.)
 - `grep -n "kronk.Processor()" internal/cli/chat.go` → no matches
 - `go build ./internal/cli/...` → exit 0
 
-### Step 4: Full verification
+### Step 4: Repoint the shifted main.go tour anchors
+
+Deleting `resolveProcessor` moved `scheduleJob` and `registerSearchIndex` up. Find
+their new lines:
+```
+grep -n "^func scheduleJob\|^func registerSearchIndex" main.go
+```
+Call them LINE_SJ and LINE_RSI. Update the tour anchor objects that currently
+point at the OLD lines (match by the `"line"` value AND the neighbouring
+`"title"`):
+- `.tours/19-bootstrapping.tour`: anchor `"line": 157` (title `19.6 — Cron choreography…`, scheduleJob) → LINE_SJ
+- `.tours/19-bootstrapping.tour`: anchor `"line": 247` (title `19.7 — The search sidecar…`, registerSearchIndex) → LINE_RSI
+- `.tours/09-recall-and-search.tour`: anchor `"line": 247` (title `9.9 — registerSearchIndex…`) → LINE_RSI
+
+Do NOT touch the other `main.go` anchors (`:40`, `:47`, `:75`, `:126` in tours
+00/19) — they sit above the deleted function and do not move.
+
+**Verify**:
+- `grep -c '"line": 247' .tours/19-bootstrapping.tour .tours/09-recall-and-search.tour` → 0 for both (both 247 anchors repointed)
+- `go test . -run TestTours -count=1` → PASS
+
+### Step 5: Full verification
 
 **Verify**:
 - `gofmt -l . internal/turn internal/cli` → prints nothing
 - `go vet ./...` → exit 0
-- `go test ./internal/turn/... ./internal/cli/...` → PASS
-- `go test ./...` → all pass
+- `go test ./internal/turn/... ./internal/cli/... -count=1` → PASS
+- `go test . -run TestTours -count=1` → PASS
+- `go test ./... -count=1` → all pass
 
 ## Test plan
 
@@ -247,8 +284,10 @@ Machine-checkable. ALL must hold:
 - [ ] `grep -rn "func ResolveProcessor" internal/turn/` returns one match
 - [ ] `grep -n "func resolveProcessor" main.go` returns no matches
 - [ ] `grep -n "kronk.Processor()" internal/cli/chat.go` returns no matches
-- [ ] `go test ./...` exits 0; `TestResolveProcessor` exists and passes
-- [ ] No files outside the in-scope list are modified (`git status`)
+- [ ] `grep -c "store\." main.go` ≥ 2 (the `store` import was kept)
+- [ ] `go test . -run TestTours -count=1` passes (the 3 repointed anchors resolve)
+- [ ] `go test ./... -count=1` exits 0; `TestResolveProcessor` exists and passes
+- [ ] Only the 3 Go files + the 2 tour files modified (`git status`)
 - [ ] `plans/README.md` status row updated
 
 ## STOP conditions
