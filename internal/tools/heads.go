@@ -47,10 +47,9 @@ func headSwitchTool(app core.App) agent.Tool {
 			if !ok {
 				return "", fmt.Errorf("head_switch: no head %q", id)
 			}
-			if err := heads.SetActive(app, id); err != nil {
+			if err := heads.SetActive(app, "model", id); err != nil {
 				return "", fmt.Errorf("head_switch: %w", err)
 			}
-			store.Audit(app, "model", "head.switch", "heads/"+id, true, map[string]any{"name": head.Name})
 			return fmt.Sprintf("Active head set to %q — it takes effect on the next turn.", head.Name), nil
 		},
 	}
@@ -88,11 +87,10 @@ func headCreateTool(app core.App) agent.Tool {
 			if args.Avatar != "" && !store.ValidBalaurAvatarKey(args.Avatar) {
 				return "", fmt.Errorf("head_create: %q is not a valid balaur avatar key", args.Avatar)
 			}
-			id, err := heads.Create(app, args.Name, args.Purpose, args.Avatar, args.Groups)
+			id, err := heads.Create(app, "model", args.Name, args.Purpose, args.Avatar, args.Groups)
 			if err != nil {
 				return "", fmt.Errorf("head_create: %w", err)
 			}
-			store.Audit(app, "model", "head.create", "heads/"+id, true, map[string]any{"name": args.Name})
 			return fmt.Sprintf("Created head %q (id %s).", args.Name, id), nil
 		},
 	}
@@ -119,10 +117,9 @@ func headDeleteTool(app core.App) agent.Tool {
 			if head.BuiltIn {
 				return "", fmt.Errorf("head_delete: %q is a built-in head and cannot be deleted", head.Name)
 			}
-			if err := heads.Delete(app, id); err != nil {
+			if err := heads.Delete(app, "model", id); err != nil {
 				return "", fmt.Errorf("head_delete: %w", err)
 			}
-			store.Audit(app, "model", "head.delete", "heads/"+id, true, map[string]any{"name": head.Name})
 			return fmt.Sprintf("Deleted head %q.", head.Name), nil
 		},
 	}
