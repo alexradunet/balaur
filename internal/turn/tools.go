@@ -32,19 +32,7 @@ func Tools(app core.App) []agent.Tool {
 		ts = append(ts, tools.OSAccess(app)...)
 	}
 	ts = append(ts, ext.ProposeTool(app))
-
-	taken := map[string]bool{"self": true}
-	for _, t := range ts {
-		taken[t.Spec.Name] = true
-	}
-	ts = append(ts, ext.Tools(app, taken)...)
-
-	names := make([]string, 0, len(ts)+1)
-	for _, t := range ts {
-		names = append(names, t.Spec.Name)
-	}
-	names = append(names, "self")
-	return append(ts, self.Tool(app, names))
+	return finalize(app, ts, true)
 }
 
 // ToolNames returns the names of the full enabled tool set, for read-only
@@ -102,14 +90,21 @@ func ToolsForHead(app core.App, groups []string) []agent.Tool {
 	if sel["extensions"] {
 		ts = append(ts, ext.ProposeTool(app))
 	}
+	return finalize(app, ts, sel["extensions"])
+}
 
-	// self (and any approved extensions) come last, collision-guarded against
-	// the names assembled so far — mirroring Tools(app).
+// finalize applies the shared tool-assembly tail: the collision-guard taken set
+// (reserving "self"), the conditional approved-extension append, and the trailing
+// self tool scoped to the final names. withExtensions gates ext.Tools — true for
+// the full set (Tools), the head's own selection for ToolsForHead. Folding it in
+// unconditionally would leak approved extensions into heads that didn't select
+// them, so the param is load-bearing.
+func finalize(app core.App, ts []agent.Tool, withExtensions bool) []agent.Tool {
 	taken := map[string]bool{"self": true}
 	for _, t := range ts {
 		taken[t.Spec.Name] = true
 	}
-	if sel["extensions"] {
+	if withExtensions {
 		ts = append(ts, ext.Tools(app, taken)...)
 	}
 	names := make([]string, 0, len(ts)+1)
