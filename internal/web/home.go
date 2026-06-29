@@ -7,15 +7,123 @@ package web
 
 import (
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/heads"
+	"github.com/alexradunet/balaur/internal/store"
+	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/ui"
 	"github.com/alexradunet/balaur/internal/ui/chat"
 	"github.com/alexradunet/balaur/internal/ui/shell"
 )
+
+type homeData struct {
+	Title           string
+	ModelChoices    []turn.ModelChoice
+	ActiveModel     string
+	ModelError      string
+	ModelHint       string
+	ChatReady       bool
+	ChatPlaceholder string
+	History         []messageView
+	HasRecap        bool
+	DevSeed         bool
+	NowMillis       int64        // nudge-poll cursor: only messages after page load
+	SoulAvatarURL   string       // resolved soul avatar URL
+	OwnerName       string       // display name for the "You" label in chat
+	BalaurAvatarURL string       // resolved Balaur head avatar URL
+	ActiveHeadID    string       // current head id/key
+	ActiveHeadName  string       // current head name (switcher label)
+	HeadChoices     []headChoice // roster for the switcher
+	ChatBodyHTML    g.Node       // history (chat.Message panels) or the hearth greeting
+	CompactSummary  string       // rolling compaction summary, shown atop today's dock when compacted today
+}
+
+// headChoice is one entry in the dock head switcher.
+type headChoice struct {
+	ID, Name, AvatarURL string
+	Active              bool
+}
+
+func (h *handlers) homeData() (homeData, error) {
+	data := homeData{Title: "Balaur", ChatPlaceholder: "Choose a model before chatting", NowMillis: time.Now().UnixMilli()}
+	choices, active, err := turn.ModelChoices(h.app)
+	if err != nil {
+		return data, err
+	}
+	data.ModelChoices = choices
+	data.DevSeed = os.Getenv("BALAUR_DEV_SEED") == "1"
+	data.SoulAvatarURL = store.SoulAvatarURL(h.app)
+	data.OwnerName = store.OwnerName(h.app)
+	data.BalaurAvatarURL = store.BalaurAvatarURL(h.app)
+	activeHead := heads.Active(h.app)
+	data.ActiveHeadID = activeHead.ID
+	data.ActiveHeadName = activeHead.Name
+	for _, hd := range heads.List(h.app) {
+		data.HeadChoices = append(data.HeadChoices, headChoice{
+			ID:        hd.ID,
+			Name:      hd.Name,
+			AvatarURL: store.BalaurAvatarURLForKey(h.app, hd.Avatar),
+			Active:    hd.ID == activeHead.ID,
+		})
+	}
+	if active.Key == "" {
+		data.ModelError = "No active model. Install one on the Models page."
+		return data, nil
+	}
+	data.ActiveModel = active.Name
+	data.ChatReady = true
+	data.ChatPlaceholder = "Speak with Balaur via " + active.Name + "..."
+	return data, nil
+}
+
+func (h *handlers) chatbar(e *core.RequestEvent) error {
+	data, err := h.homeData()
+	if err != nil {
+		return e.InternalServerError("loading chatbar", err)
+	}
+	sse := datastar.NewSSE(e.Response, e.Request)
+	if err := h.patchChatbar(sse, data); err != nil {
+		return e.InternalServerError("rendering chatbar", err)
+	}
+	return nil
+}
+
+// patchChatbar patches #chatbar and, once a model is ready, #chat-draft so the
+// composer enables without a reload. The chatbar carries the 2s poll only while
+// not ready; the re-rendered (ready) chatbar drops the interval, so polling
+// stops. Shared by the 2s poll and the model-setup flows.
+func (h *handlers) patchChatbar(sse *datastar.ServerSentEventGenerator, data homeData) error {
+	if err := sse.PatchElements(renderNodeHTML(chatBarNode(data)),
+		datastar.WithSelectorID("chatbar"), datastar.WithModeOuter()); err != nil {
+		return nil // client gone
+	}
+	if data.ChatReady {
+		patchOuter(sse, "chat-draft", composerNode(data))
+	}
+	return nil
+}
+
+// refreshDockChrome re-patches the persistent dock chrome (#chatbar and, when a
+// model is ready, the #chat-draft composer) on the same SSE stream. Panel saves
+// (avatar, active model) re-render only their own card fragment; without this the
+// dock's soul avatar, head avatar, and active-model label stay stale until a full
+// reload — the bug this fixes. Best-effort: a chrome refresh must never fail a
+// save that already persisted, so a homeData error is logged and swallowed.
+func (h *handlers) refreshDockChrome(sse *datastar.ServerSentEventGenerator) {
+	data, err := h.homeData()
+	if err != nil {
+		h.app.Logger().Warn("refreshing dock chrome failed", "err", err)
+		return
+	}
+	_ = h.patchChatbar(sse, data)
+}
 
 // navDestinations is the canonical list of owner-navigable panel destinations.
 // It is the single source feeding BOTH the composer /-command palette and the
