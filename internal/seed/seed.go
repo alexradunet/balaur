@@ -68,7 +68,12 @@ type Result struct {
 // Run seeds dummy data, skipping any collection already seeded. It is safe to
 // call repeatedly: a second call with no Reset between adds nothing.
 func Run(app core.App) (*Result, error) {
-	now := time.Now()
+	return runAt(app, time.Now())
+}
+
+// runAt is Run with an injectable clock so date-dependent seeding (recap bands,
+// task due dates, measure timestamps) is deterministic in tests.
+func runAt(app core.App, now time.Time) (*Result, error) {
 	res := &Result{}
 
 	n, err := seedMessages(app, now)
