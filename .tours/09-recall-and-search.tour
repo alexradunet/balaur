@@ -53,7 +53,7 @@
     },
     {
       "file": "main.go",
-      "line": 247,
+      "line": 226,
       "title": "9.9 — registerSearchIndex: boot + hooks",
       "description": "```go\nfunc registerSearchIndex(app core.App) {\n    dbPath := filepath.Join(app.DataDir(), \"search.db\")\n\n    openAndRebuild := func() (*search.Index, error) { ... }\n\n    ix, err := openAndRebuild()\n    if err != nil {\n        // Corrupt or unreadable — delete and retry once.\n        os.Remove(dbPath)\n        ix, err = openAndRebuild()\n        if err != nil { return } // LIKE fallback active\n    }\n\n    app.Store().Set(search.StoreKey, ix)\n\n    app.OnRecordAfterCreateSuccess(\"nodes\").BindFunc(upsertHook)\n    app.OnRecordAfterUpdateSuccess(\"nodes\").BindFunc(upsertHook)\n    app.OnRecordAfterDeleteSuccess(\"nodes\").BindFunc(deleteHook)\n}\n```\n\nThe lifecycle:\n1. **Open** the sidecar database (creates `search.db` if absent).\n2. **Rebuild** from all active nodes — full index from PocketBase.\n3. **Retry once** if the file was corrupt: delete and try again; if it fails a second time, log a warning and return without setting `StoreKey`. `searchActiveNodes` transparently uses the LIKE fallback.\n4. **Store** the `*Index` singleton in `app.Store()` under `search.StoreKey`.\n5. **Bind hooks** on the `nodes` collection (not `memories` — all node types are indexed): create/update → `Upsert`, delete → `Delete`. Hooks keep the index eventually consistent between boots.\n\nThe hooks re-read `StoreKey` on every invocation rather than closing over `ix` — this is safe because the index is never replaced after boot."
     }

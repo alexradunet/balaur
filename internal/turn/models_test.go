@@ -10,6 +10,40 @@ import (
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
+// TestResolveProcessor covers the three resolution paths for the llama.cpp
+// processor variant: default (env absent), owner preference wins, and the
+// fail-safe that degrades a missing runtime back to cpu.
+func TestResolveProcessor(t *testing.T) {
+	t.Run("default returns cpu when no env and no owner setting", func(t *testing.T) {
+		app := storetest.NewApp(t)
+		t.Setenv("BALAUR_PROCESSOR", "")
+		if got := ResolveProcessor(app); got != "cpu" {
+			t.Errorf("ResolveProcessor = %q, want cpu", got)
+		}
+	})
+
+	t.Run("owner cpu preference returns cpu", func(t *testing.T) {
+		app := storetest.NewApp(t)
+		if err := store.SetOwnerSetting(app, "llm_processor", "cpu"); err != nil {
+			t.Fatalf("SetOwnerSetting: %v", err)
+		}
+		if got := ResolveProcessor(app); got != "cpu" {
+			t.Errorf("ResolveProcessor = %q, want cpu", got)
+		}
+	})
+
+	t.Run("vulkan preferred but not installed degrades to cpu", func(t *testing.T) {
+		app := storetest.NewApp(t)
+		if err := store.SetOwnerSetting(app, "llm_processor", "vulkan"); err != nil {
+			t.Fatalf("SetOwnerSetting: %v", err)
+		}
+		// kronk.RuntimeInstalledFor("vulkan") is false on the test box.
+		if got := ResolveProcessor(app); got != "cpu" {
+			t.Errorf("ResolveProcessor = %q, want cpu (fail-safe: vulkan not installed)", got)
+		}
+	})
+}
+
 // TestModelChoicesBareBox characterizes ModelChoices on a fresh install: the
 // "Local model" provider is seeded but no model, so there are no choices and
 // nothing is active until the owner installs a GGUF.

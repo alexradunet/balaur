@@ -204,6 +204,25 @@ func (s *ClientSource) ClientFor(app core.App, choice ModelChoice) (llm.Client, 
 	return nil, fmt.Errorf("unknown model provider %q", choice.Provider)
 }
 
+// ResolveProcessor picks the llama.cpp variant to load: the owner's saved choice
+// from the Models page (owner_settings "llm_processor") wins; absent a valid one,
+// it falls back to BALAUR_PROCESSOR / the cpu default. The native library loads
+// once per process, so callers resolve this once at engine construction.
+//
+// Fail-safe: a chosen non-cpu variant whose .so isn't installed would strand ALL
+// inference; degrade to cpu rather than brick the engine. Lives in turn (not
+// kronk) so owner-settings policy stays out of the dlopen engine package.
+func ResolveProcessor(app core.App) string {
+	candidate := kronk.Processor() // BALAUR_PROCESSOR or the cpu default
+	if p := store.GetOwnerSetting(app, "llm_processor", ""); p == "cpu" || p == "vulkan" {
+		candidate = p // the owner's Models-page choice wins
+	}
+	if candidate != "cpu" && !kronk.RuntimeInstalledFor(candidate) {
+		return "cpu"
+	}
+	return candidate
+}
+
 func (s *ClientSource) clientForConfig(app core.App, cfg store.LLMConfig) (llm.Client, error) {
 	switch cfg.Kind {
 	case "local":
