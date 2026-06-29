@@ -363,7 +363,8 @@ guard tests + the tidy sweep. No hard code dependencies between plans.
 | 201 | Route `node_get`'s day-summary through `recap.Find`; delete the `summaries` literal from tools (#4) | P2 | S | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/201-node-get-recap-find` @ `3e6962f` — merge pending owner; note: the "no `summaries`/`period_type`/`period_start`" grep criterion now matches only the explanatory comment — zero live refs, accepted) |
 | 202 | Add `tasks.DoneBetween`; move done-task derivation out of `life.Range` (#7) | P2 | S | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/202-tasks-donebetween` @ `beafc4b` — merge pending owner; plan rebased onto `146f9c1` pre-dispatch. MERGE-TIME RECONCILE: dropping the `internal/nodes` import shifted `life/day.go` up 1 line → set tour `13-companion-domain.tour` `day.go` anchor `30 → 29` (in-range, so `tours_test` won't flag it)) |
 | 203 | Extract the shared chat-history renderer into `web/history.go` (#9) | P3 | S | — | DONE (executed + reviewed APPROVE; worktree branch `advisor/203-web-history-renderer-split` @ `7fcd6dc` — merge pending owner; clean — no tour anchors `recap.go`, so no reconcile) |
-| 204 | Split `knowledge.go` (637 LOC) → `edit.go` + `search.go`; keep `matchesQuery` (#8) | P3 | S | — | TODO |
+| 204 | Split `knowledge.go` (637 LOC) → `edit.go` + `search.go`; keep `matchesQuery` (#8) | P3 | S | 211 | IN PROGRESS (was reviewed APPROVE-quality in worktree off pre-211 main; unblocked now that 211 greened the gate — re-executing off green main, then merge. Plan reconciled to also repoint 2 tour anchors: searchActiveNodes/SearchActive knowledge.go→search.go) |
+| 211 | Make the seed band-coverage test deterministic via a `runAt(app,now)` seam (fixes a Monday-only RED gate; follow-up discovered while executing 204) | P1 | S | — | DONE (executed + reviewed APPROVE; uncached `go test ./... -count=1` green; merged to local main @ `7e52490` --no-ff) |
 | 205 | Split `web/models.go` (550 LOC) → dock view-model (`home.go`) + install orchestrators (`models_install.go`) + slim `models.go` (#1) | P3 | M | — | TODO |
 | 206 | Audit head mutations in-domain via an `actor` param — closes the unaudited web head switch/create/delete gap (#11) | P2 | S | — | TODO |
 | 207 | Extract `turn.ResolveProcessor` so `balaur chat` honors the owner's saved processor (#14) | P2 | S | — | TODO |
@@ -372,6 +373,41 @@ guard tests + the tidy sweep. No hard code dependencies between plans.
 | 210 | Coupling tidy-sweep: `store.PBTime` dedup, `turn.finalize`, `seed.backdateAndReload`, `verify.ToolSucceeded`/`Honest`, knowledge↔nodes `Transition` (#18,#10,#16,#17,#13) | P3 | S–M | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
+
+## ✅ RESOLVED (was ⛔ BLOCKER) — date-fragile seed test reded the gate (discovered 2026-06-29, executing 204)
+
+**RESOLVED by plan 211** (`runAt(app, now)` seam; the test now anchors a fixed
+Wednesday — merged to main). The uncached `go test ./... -count=1` is green again.
+Lesson kept: gate every merge with `-count=1` so Go's test cache can't mask a
+date-dependent failure. Original diagnosis preserved below for the record.
+
+**`internal/seed` `TestSeedSummariesPopulatesAllBandLevels` failed every Monday**, so a
+fresh `go test ./...` is RED — the pre-commit hook + the merge gate block ALL
+commits (including 204, and even docs commits). This is a **pre-existing bug,
+NOT caused by any 199–210 plan** — it lives in `internal/seed`, outside this batch.
+
+Root cause: the test calls `seed.Run(app)` with the **real `time.Now()`** (its
+sibling `TestSeedPeriodsCoversAllBands` uses a *fixed* `2026-06-24`, so it's
+deterministic). `recap.Bands` builds the "day" band as *days of the current ISO
+week, before today* — on a **Monday** that set is empty by design, so the seed
+writes no `day` summary and the test's "≥1 row per period_type" assertion fails
+("no day row found"). It passes Tue–Sun, fails Mon.
+
+Why it wasn't caught earlier in this session: **Go's test cache.** Plain
+`go test ./...` reused a cached `internal/seed` PASS from a non-Monday run; the
+executor's fresh worktree (no cache) and `-count=1` runs exposed the real Monday
+failure. Run gates with `-count=1` (or `go clean -testcache`) to avoid masking.
+
+**Recommended fix (deferred, owner to decide — see the held AskUserQuestion):** add
+a `runAt(app, now)` seam in `internal/seed` so `Run` keeps real `time.Now()` in
+production but the test anchors a fixed non-Monday date (mirroring
+`TestSeedPeriodsCoversAllBands`). Small, doctrine-aligned, deterministic.
+
+**Current hold state:** owner chose "hold the loop." 204's verified-correct work is
+staged in worktree `advisor/204-knowledge-file-split` (5 files, uncommitted —
+build/vet/tours all green there; only the red gate blocks the commit). `internal/seed`
+untouched. `origin/main` = `79c6784` (199–203 live). Resume = fix the seed test →
+merge 204 (+ fix) on a genuinely green `-count=1` suite → continue 205+.
 
 ## Dependency notes (199–210)
 

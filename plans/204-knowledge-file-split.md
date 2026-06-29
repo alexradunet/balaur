@@ -118,6 +118,19 @@ import (
 - `internal/knowledge/knowledge.go` (remove the two extracted blocks; drop the `search` import)
 - `internal/knowledge/edit.go` (create; parked-edit envelope)
 - `internal/knowledge/search.go` (create; search trio)
+- `.tours/09-recall-and-search.tour` (repoint the 2 search-symbol anchors — see Step 4)
+- `.tours/06-memory-and-self-evolution.tour` (repoint the 1 `SearchActive` anchor — see Step 4)
+
+> **Why the tours are in scope:** two `.tours/` files anchor symbols this plan
+> MOVES to `search.go`. `tours_test` (part of `go test ./...`, run by the
+> pre-commit hook) fails on an out-of-range or moved anchor, so the commit is
+> blocked until they're repointed. This is the AGENTS.md rule: *fix the tour in
+> the same commit when a change breaks a tour anchor.* Affected anchors:
+> - `09-recall-and-search.tour`: `searchActiveNodes` (currently `knowledge.go:463`) and `SearchActive` (currently `knowledge.go:509`) → both move to `search.go`.
+> - `06-memory-and-self-evolution.tour`: `SearchActive` (currently `knowledge.go:509`) → moves to `search.go`.
+> The OTHER `06` anchors (`knowledge.go:1` package doc, `:167` `Transition`, `:198`
+> `UpdateFields`) STAY in `knowledge.go` and are ABOVE both removed blocks, so
+> they do NOT shift — do not touch them.
 
 **Out of scope** (do NOT touch):
 - `matchesQuery` — stays in `knowledge.go`.
@@ -214,7 +227,37 @@ same package.
 - `grep -n "internal/search" internal/knowledge/knowledge.go` → no matches
 - `gofmt -l internal/knowledge` → prints nothing
 
-### Step 4: Build and test
+### Step 4: Repoint the search-symbol tour anchors to `search.go`
+
+After Step 2 (`search.go` created) and Step 3 (`knowledge.go` trimmed),
+`searchActiveNodes` and `SearchActive` live in `search.go`. Three tour anchors
+still point at them in `knowledge.go` — repoint each (BOTH `file` AND `line`) or
+`tours_test` fails the pre-commit hook.
+
+First get their new lines in `search.go`:
+```
+grep -n "^func searchActiveNodes\|^func SearchActive(" internal/knowledge/search.go
+```
+Call these LINE_SAN (searchActiveNodes) and LINE_SA (SearchActive).
+
+Then in each tour JSON, find the anchor object and change `"file"` to
+`internal/knowledge/search.go` and `"line"` to the new value:
+- `.tours/09-recall-and-search.tour`: anchor `"line": 463` (searchActiveNodes) → `search.go` / LINE_SAN
+- `.tours/09-recall-and-search.tour`: anchor `"line": 509` (SearchActive) → `search.go` / LINE_SA
+- `.tours/06-memory-and-self-evolution.tour`: anchor `"line": 509` (SearchActive) → `search.go` / LINE_SA
+
+Do NOT touch the other `06` anchors (`knowledge.go:1` package doc, `:167`
+`Transition`, `:198` `UpdateFields`) — they stay in `knowledge.go`, above both
+removed blocks, so their lines are unchanged.
+
+**Verify**:
+- `grep -c '"file": "internal/knowledge/knowledge.go"' .tours/09-recall-and-search.tour` → 0
+- `grep -c '"file": "internal/knowledge/search.go"' .tours/09-recall-and-search.tour` → 2
+- `grep -c '"file": "internal/knowledge/knowledge.go"' .tours/06-memory-and-self-evolution.tour` → 3
+- `grep -c '"file": "internal/knowledge/search.go"' .tours/06-memory-and-self-evolution.tour` → 1
+- `go test . -run TestTours` → PASS (the anchor gate)
+
+### Step 5: Build and test
 
 **Verify**:
 - `go build ./internal/knowledge/...` → exit 0 (proves each file's imports match
@@ -243,8 +286,10 @@ Machine-checkable. ALL must hold:
 - [ ] `grep -n "func matchesQuery" internal/knowledge/knowledge.go` returns one match
 - [ ] `grep -n "internal/search" internal/knowledge/knowledge.go` returns no matches
 - [ ] `gofmt -l internal/knowledge` prints nothing
+- [ ] `grep -c '"file": "internal/knowledge/knowledge.go"' .tours/09-recall-and-search.tour` returns 0; the same grep on `.tours/06-memory-and-self-evolution.tour` returns 3
+- [ ] `go test . -run TestTours` passes (the moved search anchors now resolve in `search.go`)
 - [ ] `go test ./...` exits 0
-- [ ] Only `knowledge.go` modified and `edit.go`/`search.go` created (`git status`)
+- [ ] Only `knowledge.go` modified, `edit.go`/`search.go` created, and the 2 tour files repointed (`git status` shows exactly these 5 paths)
 - [ ] `plans/README.md` status row updated
 
 ## STOP conditions
