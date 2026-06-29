@@ -40,8 +40,8 @@
       "description": "```go\nfunc BuildContext(app core.App, userMessage string) (string, []*core.Record)\n```\n\nTwo return values: the prompt block AND the records it injected. The chat handler calls `knowledge.Touch` on each used record after the turn — bumping `use_count` and `last_used` in `props`.\n\nUsage stats feed the owner's curation: on the Memory page you can see which memories actually earn their context tokens (\"used ×7\") and which are dead weight worth archiving. Self-evolution needs feedback loops, and this is the simplest honest one.\n\nThe caller is `internal/turn` — the shared pipeline every gateway uses. `BuildContext` never appears in `internal/web` or `internal/cli` directly; it is always below the gateway line."
     },
     {
-      "file": "internal/knowledge/knowledge.go",
-      "line": 509,
+      "file": "internal/knowledge/search.go",
+      "line": 76,
       "title": "6.7 — SearchActive: FTS5 fast path + LIKE fallback",
       "description": "`SearchActive` delegates to `searchActiveNodes`, the shared FTS5-or-fallback skeleton:\n\n- **FTS5 fast path:** if the sidecar index (`internal/search`) is present in `app.Store()` under `search.StoreKey`, runs `ix.QueryKind(terms, \"memory\", limit)` — bm25-ranked, kind-filtered. Keeps only `status=active` records.\n- **LIKE fallback:** queries `nodes` directly with `ListByTypeStatus(app, \"memory\", StatusActive)`, then filters by substring match and sorts by importance descending.\n\nThe FTS5 index is opened at boot and stored in `app.Store()` — no import cycle, no global variable. It is **disposable**: deleting `pb_data/search.db` is always safe; it is rebuilt on the next boot from the active nodes in PocketBase.\n\nThe fallback is the plain path that existed before the index landed: same semantics, always available. The FTS5 path is purely additive — better ranking, same API.\n\n**Tour 09** covers the FTS5 sidecar (`internal/search`) in depth."
     },
