@@ -8,7 +8,7 @@
 > maintain the index.
 >
 > **Drift check (run first)**:
-> `git diff --stat 07fb4d6..HEAD -- internal/kronk/librt.go internal/feature/settingscards/settingsfocus_models.go`
+> `git diff --stat 6c6a5f1..HEAD -- internal/kronk/librt.go internal/feature/settingscards/settingsfocus_models.go` (expect EMPTY)
 > If either file changed since this plan was written, compare the "Current state"
 > excerpts against the live code before proceeding; on a mismatch, treat it as a
 > STOP condition.
@@ -20,7 +20,7 @@
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: tech-debt
-- **Planned at**: commit `07fb4d6`, 2026-06-26
+- **Planned at**: commit `07fb4d6`, 2026-06-26 (re-verified against `6c6a5f1` 2026-06-29: both files unchanged. NO tour reconcile needed — tour 11 anchors `librt.go:32` `InstallRuntime`, which is ABOVE the `RuntimeStatus` insertion point [near `InstallDirFor`, line 85]. Add `RuntimeStatus` AFTER `InstallRuntime`, never before it, so the anchor doesn't shift. No tour anchors `settingsfocus_models.go`.)
 
 ## Why this matters
 
