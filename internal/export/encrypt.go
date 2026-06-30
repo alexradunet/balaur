@@ -102,7 +102,7 @@ func EncryptDir(srcDir, destFile, passphrase string) error {
 // the passphrase, GCM-opens the ciphertext, and untars into destDir. A wrong
 // passphrase (or any tampered byte) fails the GCM auth tag and returns
 // ErrBadPassphrase with NOTHING written to destDir (decrypt fully in memory,
-// untar only after Open succeeds). Used by the round-trip test; not a CLI verb.
+// untar only after Open succeeds). Exposed as the `balaur restore` CLI verb.
 func DecryptDir(srcFile, destDir, passphrase string) error {
 	if passphrase == "" {
 		return fmt.Errorf("export: empty passphrase")

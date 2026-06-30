@@ -314,6 +314,7 @@ is non-fatal).
 | `balaur self [--section]` | Build stamp, live capability inventory, source seam; optionally one self-knowledge section (overview, architecture, capabilities, source, devloop). | no |
 | `balaur ext list/approve/disable/show` | balaur-extensions lifecycle: review proposals, consent (pins sha256), turn off, inspect code. | no |
 | `balaur export [--encrypt --archive <path>]` | Read-only Markdown mirror of active nodes (sovereign vault); `--encrypt` wraps it as a passphrase-protected archive. | no |
+| `balaur restore --archive <path> --out <dir>` | Decrypt an `export --encrypt` archive back into a readable Markdown tree (passphrase via `BALAUR_EXPORT_PASSPHRASE`). | no |
 | `balaur seed` | Populate the dev/demo data set. | no |
 
 Every command works on a fresh data dir: pending migrations apply on

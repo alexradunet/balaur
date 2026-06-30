@@ -69,6 +69,7 @@ func Register(app core.App, root *cobra.Command) {
 		selfCmd(app),
 		extCmd(app),
 		exportCmd(app),
+		restoreCmd(app),
 		doctorCmd(app),
 		seedCmd(app),
 	)
