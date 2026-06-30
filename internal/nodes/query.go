@@ -107,6 +107,38 @@ func ActiveSubgraph(app core.App, limit int) ([]*core.Record, []Edge, error) {
 	return recs, edges, nil
 }
 
+// EdgesTouching returns every record in the edges collection whose source or
+// target is one of ids, in a single query. Uses the same OR-filter idiom as
+// ActiveSubgraph. The caller is responsible for any further filtering (e.g.
+// both-endpoints-active); an edge where only one endpoint is in ids is still
+// returned.
+func EdgesTouching(app core.App, ids []string) ([]*core.Record, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	params := dbx.Params{}
+	conds := make([]string, 0, len(ids)*2)
+	for i, id := range ids {
+		sk, tk := fmt.Sprintf("s%d", i), fmt.Sprintf("t%d", i)
+		conds = append(conds, fmt.Sprintf("source = {:%s}", sk), fmt.Sprintf("target = {:%s}", tk))
+		params[sk], params[tk] = id, id
+	}
+	edges, err := app.FindRecordsByFilter("edges",
+		strings.Join(conds, " || "), "", 0, 0, params)
+	if err != nil {
+		return nil, fmt.Errorf("edges touching: %w", err)
+	}
+	return edges, nil
+}
+
+// ActiveByIDs is the exported form of the package-private activeByIDs: loads
+// nodes by id and returns only the active ones, preserving the caller's id
+// order. The status=active filter is the consent spine — proposed and rejected
+// nodes are never returned.
+func ActiveByIDs(app core.App, ids []string) ([]*core.Record, error) {
+	return activeByIDs(app, ids)
+}
+
 // matchesProps reports whether rec satisfies every key→substring pair.
 func matchesProps(rec *core.Record, match map[string]string) bool {
 	for key, sub := range match {
