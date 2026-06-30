@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pocketbase/pocketbase/core"
+
 	"github.com/alexradunet/balaur/internal/export"
 	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
@@ -147,24 +149,13 @@ func TestMirrorUnmappedTypeGoesUnsorted(t *testing.T) {
 	}
 }
 
-// TestMirrorSkipsDeferredTypes is the deferral GUARD: an active day node AND an
-// active task node must produce NO file anywhere in the mirror tree, and no
-// returned path — proving day/task are never exported raw (their recap/transcript
-// content needs its own redaction pass). It walks the WHOLE tree, so it bites if
-// either type is removed from deferredTypes.
+// TestMirrorSkipsDeferredTypes is the deferral GUARD: an active task node must
+// produce NO file anywhere in the mirror tree, and no returned path — proving
+// task is never exported raw (its content needs its own redaction pass). It walks
+// the WHOLE tree, so it bites if task is removed from deferredTypes.
+// (day was un-deferred in plan 225; see TestDayJournalExportLeakTest.)
 func TestMirrorSkipsDeferredTypes(t *testing.T) {
 	app := storetest.NewApp(t)
-
-	// A real active day node (DayNode creates a type=day active node titled with
-	// the human-readable date).
-	dayNode, err := nodes.DayNode(app, time.Now())
-	if err != nil {
-		t.Fatalf("create day node: %v", err)
-	}
-	if dayNode.GetString("status") != nodes.StatusActive {
-		t.Fatalf("day node not active: %q", dayNode.GetString("status"))
-	}
-	daySlug := slugForTest(dayNode.GetString("title")) + ".md"
 
 	// A real active task node (state is the one required prop).
 	taskNode, err := nodes.Create(app, "task", "Buy Milk", "",
@@ -190,34 +181,26 @@ func TestMirrorSkipsDeferredTypes(t *testing.T) {
 		t.Fatalf("export mirror: %v", err)
 	}
 
-	// No returned path may carry the day/task JD folder prefix or the node slug.
+	// No returned path may carry the task JD folder prefix or the task slug.
 	for _, p := range paths {
-		if strings.HasPrefix(p, "50-59 Journal/") || strings.HasPrefix(p, "60-69 Tasks/") {
-			t.Errorf("deferred type leaked a returned path: %q", p)
+		if strings.HasPrefix(p, "60-69 Tasks/") {
+			t.Errorf("deferred task type leaked a returned path: %q", p)
 		}
-		base := filepath.Base(p)
-		if base == daySlug {
-			t.Errorf("day node file returned: %q", p)
-		}
-		if base == taskSlug {
+		if filepath.Base(p) == taskSlug {
 			t.Errorf("task node file returned: %q", p)
 		}
 	}
 
-	// Walk the whole written tree: no day/task file may exist under any folder.
+	// Walk the whole written tree: no task file may exist under any folder.
 	for rel := range readAll(t, dir) {
 		if strings.HasPrefix(rel, ".git") {
 			continue
 		}
-		base := filepath.Base(rel)
-		if base == daySlug {
-			t.Errorf("day node file exists on disk: %q", rel)
-		}
-		if base == taskSlug {
+		if filepath.Base(rel) == taskSlug {
 			t.Errorf("task node file exists on disk: %q", rel)
 		}
-		if strings.Contains(rel, "50-59 Journal") || strings.Contains(rel, "60-69 Tasks") {
-			t.Errorf("deferred JD folder written: %q", rel)
+		if strings.Contains(rel, "60-69 Tasks") {
+			t.Errorf("deferred task JD folder written: %q", rel)
 		}
 	}
 }
@@ -299,6 +282,107 @@ func TestMirrorGitCommit(t *testing.T) {
 	}
 	if status := gitOut("status", "--porcelain"); status != "" {
 		t.Errorf("working tree not clean after commit:\n%s", status)
+	}
+}
+
+// TestDayJournalExportLeakTest is the redaction proof for day-journal export
+// (plan 225). It seeds a day node with a known journal body AND a real record
+// in the `summaries` collection with a DISTINCT marker string, then asserts:
+//  1. The journal body appears in an exported file (day node is exported).
+//  2. The recap marker appears in NO exported file (the exporter never opens
+//     the summaries collection — the redaction boundary holds).
+//  3. A second ExportMirror over unchanged data produces byte-identical files.
+func TestDayJournalExportLeakTest(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	const journalText = "JOURNAL_BODY_OWNER_WORDS"
+	const recapMarker = "RECAP_MARKER_MODEL_TEXT_DO_NOT_LEAK"
+
+	// Seed a day node with a known journal body (verbatim owner text).
+	dayNode, err := nodes.DayNode(app, time.Now())
+	if err != nil {
+		t.Fatalf("create day node: %v", err)
+	}
+	dayNode.Set("body", journalText)
+	if err := app.Save(dayNode); err != nil {
+		t.Fatalf("set day body: %v", err)
+	}
+
+	// Seed a recap summary in the `summaries` collection with a distinct marker.
+	// summaries.conversation is a required RelationField — create a conversation first.
+	convCol, err := app.FindCollectionByNameOrId("conversations")
+	if err != nil {
+		t.Fatalf("find conversations collection: %v", err)
+	}
+	conv := core.NewRecord(convCol)
+	conv.Set("title", "Test Conversation")
+	conv.Set("kind", "master")
+	conv.Set("status", "open")
+	if err := app.Save(conv); err != nil {
+		t.Fatalf("save test conversation: %v", err)
+	}
+	sumCol, err := app.FindCollectionByNameOrId("summaries")
+	if err != nil {
+		t.Fatalf("find summaries collection: %v", err)
+	}
+	now := time.Now().UTC().Truncate(24 * time.Hour) // start of today UTC
+	sum := core.NewRecord(sumCol)
+	sum.Set("conversation", conv.Id)
+	sum.Set("period_type", "day")
+	sum.Set("period_start", now)
+	sum.Set("period_end", now.Add(24*time.Hour-time.Millisecond))
+	sum.Set("content", recapMarker)
+	sum.Set("message_count", 0)
+	if err := app.Save(sum); err != nil {
+		t.Fatalf("save test summary: %v", err)
+	}
+
+	dir := t.TempDir()
+	paths, err := export.ExportMirror(app, dir)
+	if err != nil {
+		t.Fatalf("export mirror: %v", err)
+	}
+
+	// 1. The journal body must appear in an exported file.
+	journalFound := false
+	for _, content := range readAll(t, dir) {
+		if strings.Contains(content, journalText) {
+			journalFound = true
+		}
+	}
+	if !journalFound {
+		t.Errorf("journal body %q not found in any exported file (paths: %v)", journalText, paths)
+	}
+
+	// 2. The recap marker must appear in NO exported file — the exporter must
+	// never open the summaries collection (the redaction boundary).
+	for name, content := range readAll(t, dir) {
+		if strings.HasPrefix(name, ".git") {
+			continue
+		}
+		if strings.Contains(content, recapMarker) {
+			t.Fatalf("RECAP MARKER LEAKED into %s — summaries collection read by exporter:\n%s", name, content)
+		}
+	}
+
+	// 3. Determinism: a second run over unchanged data produces byte-identical files.
+	first := readAll(t, dir)
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("second export: %v", err)
+	}
+	second := readAll(t, dir)
+	stripGit := func(m map[string]string) map[string]string {
+		out := map[string]string{}
+		for k, v := range m {
+			if !strings.HasPrefix(k, ".git") {
+				out[k] = v
+			}
+		}
+		return out
+	}
+	if !reflect.DeepEqual(stripGit(first), stripGit(second)) {
+		t.Errorf("re-export not byte-identical:\nfirst:  %v\nsecond: %v",
+			stripGit(first), stripGit(second))
 	}
 }
 
