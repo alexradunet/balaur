@@ -244,6 +244,10 @@ func Register(se *core.ServeEvent) error {
 	// Panel collapse + width persistence (plan 103). POST-only; no GET door.
 	se.Router.POST("/ui/panel/collapse", h.uiPanelCollapse)
 	se.Router.POST("/ui/panel/width", h.uiPanelWidth)
+	// Messenger gateway (plan 231): loopback-only, consent-gated, token-authed
+	// endpoint a local bridge can POST a message to and receive a reply from.
+	// Disabled until the owner sets owner_settings.messenger_token.
+	se.Router.POST("/api/messenger/turn", h.messengerTurn)
 	return nil
 }
 
