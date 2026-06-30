@@ -518,10 +518,10 @@ then P3/P4. Nothing here depends on the 199–211 plans (all merged).
 | 215 | Batch the graph-page BFS (per-level, not per-node queries) | P2 | S | LOW | — | DONE (merged `d460b31`) |
 | 217 | De-flake the two clock-coupled tests (seed + briefing) | P2 | S | LOW | — | DONE (merged `0206c6c`) |
 | 218 | Wrap nudge mark-then-post in a transaction (mirror `Done`) | P2 | S | LOW | — | DONE (merged `1e7a2b3`) |
-| 216 | Recap parent-period high-water mark | P3 | M | **MED** | — | TODO |
-| 222 | `llm_settings` singleton: retry-on-conflict (optional) | P3 | S | LOW | — | TODO |
-| 219 | De-dup repeated `OwnerLocation` resolution in `recap/compact` | P4 | S | LOW | — | TODO |
-| 220 | Bound `knowledge` list query (push order+limit into SQL) | P4 | S | LOW | — | TODO |
+| 216 | Recap parent-period high-water mark | P3 | M | **MED** | — | DONE (merged `4f08285`; +tour 13.9 reconcile) |
+| 222 | `llm_settings` singleton: retry-on-conflict (optional) | P3 | S | LOW | — | DONE (merged `3554242`) |
+| 219 | De-dup repeated `OwnerLocation` resolution in `recap/compact` | P4 | S | LOW | — | DONE (merged `47c1a2a`) |
+| 220 | Bound `knowledge` list query (push order+limit into SQL) | P4 | S | LOW | — | DEFERRED — `importance` is a `props` JSON key, not a sortable column; capped fetch can't preserve top-N-by-importance without `json_extract` (plan's STOP #1, scoped out). Moot at v1 scale. |
 
 ## Direction plans — decide before building
 
@@ -531,8 +531,8 @@ shippable** (the crypto already exists; only a CLI verb is missing).
 
 | Plan | Bet | Effort | North-star fit | Status |
 |------|-----|--------|----------------|--------|
-| 224 | `balaur restore` CLI verb over the existing `DecryptDir` | S | Sovereignty (own your backups) — execute-ready | TODO |
-| 227 | Node→origin-turn provenance edge (copy the `on_day` pattern) | S | Transparency (where did this come from?) | TODO |
+| 224 | `balaur restore` CLI verb over the existing `DecryptDir` | S | Sovereignty (own your backups) — execute-ready | DONE (merged `bd8908d`) |
+| 227 | Node→origin-turn provenance edge (copy the `on_day` pattern) | S | Transparency (where did this come from?) | HELD — Phase-0 design decision needed (A: thread turn-id via context / B: infer latest msg / C: provenance as a prop). Owner picks before code. |
 | 223 | Embedding-recall spike: wire hybrid recall *or* delete the dead seam | M | Honesty (no write-only `Embed` path) | TODO |
 | 225 | Vault mirror: un-defer `day` (then `task`) export — **gated** | M | Sovereignty (Markdown vault) — needs a redaction leak test | TODO |
 | 226 | Standalone-executable first-run onboarding spike | L | The whole north star (one binary a non-tech owner can run) | TODO |
