@@ -252,6 +252,58 @@ func TestHeadSwitcherNode(t *testing.T) {
 	}
 }
 
+// TestOnboardingBanner verifies the first-run onboarding banner appears on Home
+// when the first-run flag is stashed in app.Store() AND no model is active, and
+// is absent in the normal case (no flag) or when a model is already active.
+func TestOnboardingBanner(t *testing.T) {
+	t.Run("first-run with no model: banner present", func(t *testing.T) {
+		s := tests.ApiScenario{
+			Name:   "GET / first-run banner present",
+			Method: "GET",
+			URL:    "/",
+			TestAppFactory: func(tb testing.TB) *tests.TestApp {
+				app := newWebApp(tb)
+				app.Store().Set("balaur_first_run", true)
+				return app
+			},
+			ExpectedStatus: 200,
+			ExpectedContent: []string{
+				`class="onboarding-banner"`,
+				`set up your companion`,
+				`/ui/show/settings?section=models`,
+			},
+		}
+		s.Test(t)
+	})
+
+	t.Run("no first-run flag: banner absent", func(t *testing.T) {
+		s := tests.ApiScenario{
+			Name:               "GET / no banner without first-run flag",
+			Method:             "GET",
+			URL:                "/",
+			TestAppFactory:     newWebApp,
+			ExpectedStatus:     200,
+			NotExpectedContent: []string{`class="onboarding-banner"`},
+		}
+		s.Test(t)
+	})
+
+	t.Run("first-run but model active: banner absent", func(t *testing.T) {
+		app := newWebApp(t)
+		seedScriptedModel(t, app)
+		app.Store().Set("balaur_first_run", true)
+		s := tests.ApiScenario{
+			Name:               "GET / no banner when model active",
+			Method:             "GET",
+			URL:                "/",
+			TestAppFactory:     func(tb testing.TB) *tests.TestApp { return app },
+			ExpectedStatus:     200,
+			NotExpectedContent: []string{`class="onboarding-banner"`},
+		}
+		s.Test(t)
+	})
+}
+
 // TestHomeDockSelectorIDs: the rendered HOME page must carry every selector id
 // the live SSE stream patches. This is the streaming contract test — if any id
 // is missing the stream patches #nowhere and silently does nothing.

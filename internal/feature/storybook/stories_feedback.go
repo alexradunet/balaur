@@ -47,6 +47,10 @@ func alertStory() Story {
 			{"info", ui.Alert(ui.AlertProps{Tone: "info", Title: "Heads up"}, g.Text("Your data stays on the box unless you switch models yourself."))},
 			{"warn", ui.Alert(ui.AlertProps{Tone: "warn", Title: "Caution"}, g.Text("This action enables OS access for the session."))},
 			{"danger", ui.Alert(ui.AlertProps{Tone: "danger", Title: "Stop"}, g.Text("This will permanently delete the record."))},
+			{"onboarding (with link)", ui.Alert(ui.AlertProps{Tone: "info", Title: "Welcome — set up your companion"},
+				g.Text("Install the inference engine and download a starter model to begin chatting. "),
+				h.A(h.Href("#"), g.Text("Open model setup →")),
+			)},
 		},
 		Props: []Prop{
 			{"Tone", "string", `"info"`, "Edge color + default icon: info, warn, danger."},

@@ -3213,3 +3213,24 @@ html.app.panel-collapsed .navrail-chevron { transform: rotate(180deg); }
   from { opacity: 1; transform: translateY(0); }
   to   { opacity: 0; transform: translateY(6px); }
 }
+
+/* onboarding-banner — first-run wrapper with dismiss button (plan 230).
+   The Alert fills the inner area; the dismiss ×  is positioned at top-right
+   of the wrapper so it doesn't push into the Alert's grid columns. */
+.onboarding-banner {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+.banner-dismiss {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: var(--space-1);
+}
+.banner-dismiss:hover { color: var(--ink); }

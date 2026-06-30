@@ -44,13 +44,14 @@ func main() {
 	// `serve …` invocation BEFORE pocketbase.New() (--dir is an eager flag parsed
 	// at construction), so every existing path — explicit `serve`, the CLI verbs,
 	// the Makefile binds — is untouched: this fires only on a truly bare argv.
+	// First-run signal (plan 230): captured before argv rewrite or PocketBase
+	// creates the data dir. Stashed in app.Store() at OnServe so the home
+	// handler can render the onboarding banner on the first boot without a model.
+	// Only meaningful for the no-args launcher path; stays false for explicit
+	// `balaur serve …` invocations so developers never see the banner.
+	var isFirstRun bool
 	if launch.IsLauncherInvocation(os.Args[1:]) {
-		// First-run signal (design Q1): the data dir not existing before this boot
-		// means this is the owner's first launch. Computed BEFORE the argv rewrite
-		// adds --dir. Reserved for Phase 2 onboarding — it must NOT gate the
-		// browser-open, which happens on every no-args boot. Discarded for now so
-		// the seam exists without an unused-variable error (staticcheck gate).
-		_ = launch.IsFirstRun(launch.DataDir())
+		isFirstRun = launch.IsFirstRun(launch.DataDir())
 
 		port, err := launch.SelectPort()
 		if err != nil {
@@ -84,6 +85,9 @@ func main() {
 	cli.Register(app, app.RootCmd)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// Stash first-run flag captured at boot; read by the home handler to
+		// decide whether to show the onboarding banner (plan 230).
+		se.App.Store().Set("balaur_first_run", isFirstRun)
 		registerKronkEngine(se.App)
 		if err := web.Register(se); err != nil {
 			return err

@@ -214,6 +214,30 @@ func composerNode(d homeData) g.Node {
 	})
 }
 
+// onboardingBannerNode renders the first-run onboarding banner — an info Alert
+// with a link to model setup. Shown only when first-run AND no active model;
+// dismissible via the client-side $firstRunDismissed signal so the owner can
+// hide it without setting up a model. The banner NEVER gates the composer; the
+// composer's disabled state is driven by ChatReady, not by the banner.
+func onboardingBannerNode() g.Node {
+	return h.Div(h.Class("onboarding-banner"),
+		g.Attr("data-show", "!$firstRunDismissed"),
+		ui.Alert(ui.AlertProps{Tone: "info", Title: "Welcome — set up your companion"},
+			g.Text("Install the inference engine and download a starter model to begin chatting. "),
+			h.A(
+				h.Href("/ui/show/settings?section=models"),
+				g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=models'); basmOpenPanel()"),
+				g.Text("Open model setup →"),
+			),
+		),
+		h.Button(h.Type("button"), h.Class("banner-dismiss"),
+			g.Attr("aria-label", "Dismiss this banner"),
+			g.Attr("data-on:click__prevent", "$firstRunDismissed=true"),
+			g.Text("×"),
+		),
+	)
+}
+
 // root handles GET / and, because "/" is the router's subtree catch-all, any
 // path with no more-specific route. The exact root renders Home; every other
 // (retired or unknown) path redirects to Home — preserving the catch-all
@@ -321,11 +345,18 @@ func (h *handlers) homePage(e *core.RequestEvent) error {
 	if err != nil {
 		return h.renderPageError(e, http.StatusInternalServerError, "loading companion dock", err, "Something went wrong", "Balaur could not open this page. Try again, or head back home.")
 	}
+	// First-run onboarding banner (plan 230): stashed at boot in main.go.
+	firstRunRaw, _ := h.app.Store().GetOk("balaur_first_run")
+	isFirstRun, _ := firstRunRaw.(bool)
+	convo := dock.ChatBodyHTML
+	if isFirstRun && !dock.ChatReady {
+		convo = g.Group([]g.Node{onboardingBannerNode(), convo})
+	}
 	dockNode := chat.Dock(chat.DockProps{
 		Variant:   chat.DockHome,
 		HasRecap:  dock.HasRecap,
 		NowMillis: dock.NowMillis,
-		Convo:     dock.ChatBodyHTML,
+		Convo:     convo,
 		Composer:  composerNode(dock),
 	})
 	// No model yet: force the models panel open so the owner has a one-click
