@@ -26,6 +26,8 @@ __debug_bin*
 # Local environment
 .env
 .env.*
+# …but the committed template (placeholders only) is tracked.
+!.env.example
 
 # Claude Code: ignore personal/local state (settings.local.json, locks,
 # worktrees) but track shared project config so the setup syncs across machines.

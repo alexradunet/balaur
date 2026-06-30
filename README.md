@@ -193,7 +193,8 @@ Vulkan needs the host Vulkan loader + GPU driver/ICD (e.g. `mesa-vulkan-drivers`
 Secrets (OAuth tokens, vault entries) live in the local PocketBase data
 directory and its backups. Treat `pb_data/` as secret.
 
-Optional environment variables:
+Optional environment variables (`.env.example` at the repo root is the canonical,
+commented list of every `BALAUR_*` switch — copy it to `.env` to configure a box):
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

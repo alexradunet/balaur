@@ -6,6 +6,14 @@ BALAUR_DATA_DIR ?= $(HOME)/.local/share/balaur/pb_data
 # exported below, lets the host guard accept mesh hostnames).
 PROD_HTTP ?= 0.0.0.0:8080
 
+# The Go linker writes large temp objects; the host's default /tmp is a small
+# tmpfs and the linker OOMs there (`signal: killed`) during test/lint/vulncheck.
+# Point TMPDIR at real disk for every child `go` process. Override via env if
+# your /tmp is real disk: make test TMPDIR=/tmp
+TMPDIR ?= $(HOME)/.cache/go-tmp
+export TMPDIR
+$(shell mkdir -p $(TMPDIR))
+
 .PHONY: help tools dev dev-port-open dev-port-close run seed build test race fmt vet staticcheck vulncheck lint
 
 help:
