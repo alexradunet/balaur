@@ -184,6 +184,98 @@ func TestBuildGraphDataNoEdges(t *testing.T) {
 	}
 }
 
+// TestBuildGraphDataDepth2AndInbound: the batched BFS collects depth-2 outbound
+// chains, inbound edges, excludes proposed nodes (consent spine), and drops
+// dangling links (links whose endpoint was excluded by the consent filter).
+func TestBuildGraphDataDepth2AndInbound(t *testing.T) {
+	app := newWebApp(t)
+
+	mkNode := func(title, status string) *core.Record {
+		t.Helper()
+		coll, err := app.FindCollectionByNameOrId("nodes")
+		if err != nil {
+			t.Fatalf("nodes collection: %v", err)
+		}
+		r := core.NewRecord(coll)
+		r.Set("type", "note")
+		r.Set("title", title)
+		r.Set("status", status)
+		if err := app.Save(r); err != nil {
+			t.Fatalf("save node %q: %v", title, err)
+		}
+		return r
+	}
+
+	focus := mkNode("Focus", nodes.StatusActive)
+	a := mkNode("A", nodes.StatusActive)   // depth-1 outbound
+	b := mkNode("B", nodes.StatusActive)   // depth-2 outbound (via A)
+	c := mkNode("C", nodes.StatusActive)   // depth-1 inbound
+	p := mkNode("P", nodes.StatusProposed) // proposed — must be excluded
+
+	if _, err := nodes.AddEdge(app, focus.Id, a.Id, "links", ""); err != nil {
+		t.Fatalf("edge focus→A: %v", err)
+	}
+	if _, err := nodes.AddEdge(app, a.Id, b.Id, "links", ""); err != nil {
+		t.Fatalf("edge A→B: %v", err)
+	}
+	if _, err := nodes.AddEdge(app, c.Id, focus.Id, "links", ""); err != nil {
+		t.Fatalf("edge C→focus: %v", err)
+	}
+	// A → P: proposed node must not appear, and the A→P link must be dropped.
+	if _, err := nodes.AddEdge(app, a.Id, p.Id, "links", ""); err != nil {
+		t.Fatalf("edge A→P: %v", err)
+	}
+
+	gd, err := buildGraphData(app, focus.Id, 2)
+	if err != nil {
+		t.Fatalf("buildGraphData: %v", err)
+	}
+
+	byNodeID := map[string]bool{}
+	for _, n := range gd.Nodes {
+		byNodeID[n.ID] = true
+	}
+	hasLink := func(s, tg string) bool {
+		for _, l := range gd.Links {
+			if l.Source == s && l.Target == tg {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !byNodeID[focus.Id] {
+		t.Error("focus missing from graph")
+	}
+	if !byNodeID[a.Id] {
+		t.Error("A (depth-1 outbound) missing from graph")
+	}
+	if !byNodeID[b.Id] {
+		t.Error("B (depth-2 outbound via A) missing from graph")
+	}
+	if !byNodeID[c.Id] {
+		t.Error("C (depth-1 inbound) missing from graph")
+	}
+	if byNodeID[p.Id] {
+		t.Error("consent breach: proposed node P leaked into the graph")
+	}
+	if len(gd.Nodes) != 4 {
+		t.Errorf("node count = %d, want 4 (focus, A, B, C)", len(gd.Nodes))
+	}
+	if !hasLink(focus.Id, a.Id) {
+		t.Error("focus→A link missing")
+	}
+	if !hasLink(a.Id, b.Id) {
+		t.Error("A→B link missing")
+	}
+	if !hasLink(c.Id, focus.Id) {
+		t.Error("C→focus link missing")
+	}
+	if hasLink(a.Id, p.Id) {
+		t.Error("dangling link A→P present (proposed endpoint not in graph)")
+	}
+}
+
 // TestBuildGraphDataInactiveFocus: an inactive focus is an error (the handler
 // turns it into a sanitized 404).
 func TestBuildGraphDataInactiveFocus(t *testing.T) {

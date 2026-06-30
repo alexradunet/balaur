@@ -1,11 +1,11 @@
 package web
 
 // graph.go — GET /ui/graph.json?id=&depth=: the node+edge data that feeds the
-// interactive force-graph canvas (the graph card). A depth-limited BFS over the
-// active-only nodes.Outbound/Backlinks helpers, so the consent spine holds:
-// proposed and rejected nodes are never reachable and never returned. Titles are
-// JSON-encoded and rendered as canvas text by the client (never HTML), so there
-// is no XSS surface. Read-only; no persistence, no chip.
+// interactive force-graph canvas (the graph card). A depth-limited BFS batched
+// per level (one edge query + one node query per level, not per node), so the
+// consent spine holds: proposed and rejected nodes are never reachable and never
+// returned. Titles are JSON-encoded and rendered as canvas text by the client
+// (never HTML), so there is no XSS surface. Read-only; no persistence, no chip.
 
 import (
 	"fmt"
@@ -40,10 +40,13 @@ type graphData struct {
 }
 
 // buildGraphData walks the active neighborhood of focusID out to depth hops
-// (1 or 2), collecting nodes and the edges between them. It reuses
-// nodes.Outbound/Backlinks — both status=active-filtered — so a proposed or
-// rejected node is never traversed into and never surfaced (the consent spine).
-// Links whose other endpoint falls beyond the node cap are dropped so the client
+// (1 or 2), collecting nodes and the edges between them. It batches one
+// nodes.EdgesTouching call per BFS level (not per node) and then one
+// nodes.ActiveByIDs call to resolve the new neighbors — so the N+1 query
+// pattern of the old per-node Outbound/Backlinks loop is gone. The consent
+// spine is preserved: only status=active neighbors are ever added to seen, so a
+// proposed or rejected node is never traversed into and never surfaced. Links
+// whose other endpoint falls beyond the node cap are dropped so the client
 // never sees a dangling reference.
 func buildGraphData(app core.App, focusID string, depth int) (graphData, error) {
 	focus, err := nodes.Get(app, focusID)
@@ -59,29 +62,47 @@ func buildGraphData(app core.App, focusID string, depth int) (graphData, error) 
 	frontier := []string{focus.Id}
 
 	for d := 0; d < depth && len(seen) < maxGraphNodes; d++ {
-		var next []string
+		if len(frontier) == 0 {
+			break
+		}
+		// One edge query per BFS level: fetch all edges touching any frontier node.
+		edgeRecs, err := nodes.EdgesTouching(app, frontier)
+		if err != nil {
+			return graphData{}, err
+		}
+		frontierSet := make(map[string]bool, len(frontier))
 		for _, id := range frontier {
-			out, err := nodes.Outbound(app, id)
-			if err != nil {
-				return graphData{}, err
-			}
-			for _, n := range out {
-				links[[2]string{id, n.Id}] = true
-				if _, ok := seen[n.Id]; !ok && len(seen) < maxGraphNodes {
-					seen[n.Id] = n
-					next = append(next, n.Id)
+			frontierSet[id] = true
+		}
+		// Collect neighbor ids not yet in seen (deduped), record all links.
+		neighborSet := map[string]bool{}
+		var neighborIDs []string
+		for _, e := range edgeRecs {
+			s, t := e.GetString("source"), e.GetString("target")
+			links[[2]string{s, t}] = true
+			if frontierSet[s] {
+				if _, ok := seen[t]; !ok && !neighborSet[t] {
+					neighborSet[t] = true
+					neighborIDs = append(neighborIDs, t)
 				}
 			}
-			back, err := nodes.Backlinks(app, id)
-			if err != nil {
-				return graphData{}, err
-			}
-			for _, n := range back {
-				links[[2]string{n.Id, id}] = true
-				if _, ok := seen[n.Id]; !ok && len(seen) < maxGraphNodes {
-					seen[n.Id] = n
-					next = append(next, n.Id)
+			if frontierSet[t] {
+				if _, ok := seen[s]; !ok && !neighborSet[s] {
+					neighborSet[s] = true
+					neighborIDs = append(neighborIDs, s)
 				}
+			}
+		}
+		// One node query per level: load only active neighbors (consent spine).
+		neighbors, err := nodes.ActiveByIDs(app, neighborIDs)
+		if err != nil {
+			return graphData{}, err
+		}
+		var next []string
+		for _, n := range neighbors {
+			if len(seen) < maxGraphNodes {
+				seen[n.Id] = n
+				next = append(next, n.Id)
 			}
 		}
 		frontier = next
