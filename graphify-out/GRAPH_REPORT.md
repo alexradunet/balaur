@@ -1,16 +1,16 @@
-# Graph Report - balaur  (2026-06-25)
+# Graph Report - agent-ae125aaf062ba28ff  (2026-06-30)
 
 ## Corpus Check
-- 639 files · ~802,510 words
+- 680 files · ~861,345 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7950 nodes · 14154 edges · 426 communities (411 shown, 15 thin omitted)
-- Extraction: 76% EXTRACTED · 24% INFERRED · 0% AMBIGUOUS · INFERRED: 3413 edges (avg confidence: 0.8)
+- 8551 nodes · 14863 edges · 441 communities (427 shown, 14 thin omitted)
+- Extraction: 76% EXTRACTED · 24% INFERRED · 0% AMBIGUOUS · INFERRED: 3505 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6eec565a`
+- Built from commit: `597e2a51`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -431,18 +431,33 @@
 - [[_COMMUNITY_Community 423|Community 423]]
 - [[_COMMUNITY_Community 424|Community 424]]
 - [[_COMMUNITY_Community 425|Community 425]]
+- [[_COMMUNITY_Community 426|Community 426]]
+- [[_COMMUNITY_Community 427|Community 427]]
+- [[_COMMUNITY_Community 428|Community 428]]
+- [[_COMMUNITY_Community 429|Community 429]]
+- [[_COMMUNITY_Community 430|Community 430]]
+- [[_COMMUNITY_Community 431|Community 431]]
+- [[_COMMUNITY_Community 432|Community 432]]
+- [[_COMMUNITY_Community 433|Community 433]]
+- [[_COMMUNITY_Community 434|Community 434]]
+- [[_COMMUNITY_Community 435|Community 435]]
+- [[_COMMUNITY_Community 436|Community 436]]
+- [[_COMMUNITY_Community 437|Community 437]]
+- [[_COMMUNITY_Community 438|Community 438]]
+- [[_COMMUNITY_Community 439|Community 439]]
+- [[_COMMUNITY_Community 440|Community 440]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `contains()` - 372 edges
-2. `Append()` - 280 edges
-3. `NewApp()` - 272 edges
+1. `contains()` - 375 edges
+2. `NewApp()` - 286 edges
+3. `Append()` - 284 edges
 4. `Text()` - 212 edges
 5. `_()` - 198 edges
-6. `newWebApp()` - 71 edges
+6. `newWebApp()` - 73 edges
 7. `Button()` - 57 edges
-8. `qa` - 51 edges
-9. `Audit()` - 49 edges
-10. `Parse()` - 46 edges
+8. `Audit()` - 52 edges
+9. `qa` - 51 edges
+10. `Master()` - 45 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `main()` --calls--> `ExitCode()`  [INFERRED]
@@ -459,11 +474,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (426 total, 15 thin omitted)
+## Communities (441 total, 14 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.30
-Nodes (7): App, Node, RequestEvent, handlers, NudgeView, BuildNudge(), NudgeSection()
+Cohesion: 0.27
+Nodes (8): Duration, App, Node, RequestEvent, handlers, NudgeView, BuildNudge(), NudgeSection()
 
 ### Community 1 - "Community 1"
 Cohesion: 0.17
@@ -474,60 +489,60 @@ Cohesion: 0.09
 Nodes (64): day(), emit(), ExitCode(), failJSON(), jsonTime(), Register(), run(), when() (+56 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.05
-Nodes (89): Callable, extApproveCmd(), extCmd(), extDisableCmd(), extJSON(), extListCmd(), extShowCmd(), buildHeader() (+81 more)
+Cohesion: 0.06
+Nodes (80): Callable, extApproveCmd(), extCmd(), extDisableCmd(), extJSON(), extListCmd(), extShowCmd(), buildHeader() (+72 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.07
 Nodes (26): Commands you will need, Current state, Done criteria (ALL must hold), Git workflow, How card pages work (inlined — you have not seen this dispatch), `internal/cards/cards.go` — the spec registry, `internal/ui/chat/dock.go` — the dock sentinel to replace, `internal/web/home.go` — nav destinations (the buttons) (+18 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (44): Head, Active(), Builtins(), Create(), Delete(), Find(), headFromRecord(), List() (+36 more)
+Cohesion: 0.06
+Nodes (56): Head, Active(), Builtins(), Create(), Delete(), Find(), headFromRecord(), List() (+48 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.10
-Nodes (33): buildGraph(), fc(), glyph(), GraphCard(), graphSVG(), Register(), GraphNode, GraphView (+25 more)
+Cohesion: 0.11
+Nodes (32): buildGraph(), fc(), glyph(), GraphCard(), graphSVG(), Register(), TestGraphCardRendersSVG(), TestNetworkCardRendersWholeGraph() (+24 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.19
-Nodes (21): App, Location, Node, Record, Time, T, BuildDayFocus(), DayFocus() (+13 more)
+Cohesion: 0.06
+Nodes (30): Architecture facts you must teach correctly (verified at `7642f92`), Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 198: A complete code tour of the whole Balaur codebase, Scope (+22 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.13
 Nodes (19): Story, Node, T, Node, T, calendarcellStory(), dayentryStory(), listStory() (+11 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.29
-Nodes (9): Period, RequestEvent, Time, handlers, demoSummaries(), demoTurns(), pbDate(), seedSummary (+1 more)
+Cohesion: 0.23
+Nodes (12): Period, RequestEvent, Time, handlers, ServeEvent, demoSummaries(), demoTurns(), devSeedEnabled() (+4 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.10
-Nodes (44): auditCmd(), chatCmd(), execute(), executeEnvelope(), executeList(), TestChatReportsToolsAndVerdict(), TestDoctorHealthyBox(), TestDoctorMissingCollectionFails() (+36 more)
+Cohesion: 0.13
+Nodes (34): auditCmd(), chatCmd(), execute(), executeEnvelope(), executeList(), TestChatReportsToolsAndVerdict(), TestDoctorHealthyBox(), TestDoctorModelReadyNonFatal() (+26 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.05
 Nodes (33): Hard Rules, Improve, Invocation variants, Phase 1 — Recon (always), Phase 2 — Audit (parallel), Phase 3 — Vet, prioritize, confirm, Phase 4 — Write the plans, Tone of the output (+25 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.09
-Nodes (42): TestMessageBalaur(), TestMessageBalaurMarkdown(), TestMessageBalaurOrigin(), TestMessagePending(), TestMessageUserDefaultName(), TestArtifactChipClickable(), TestArtifactChipNonClickable(), TestPanelEmpty() (+34 more)
+Cohesion: 0.06
+Nodes (44): TestAppDockResetsTop(), TestCmdPaletteActiveStyle(), TestNoUndefinedHearthwoodTokens(), TestPanelInkText(), TestStorybookStageInkText(), TestThemePaletteBlocks(), TestMessageBalaur(), TestMessageBalaurMarkdown() (+36 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.05
-Nodes (43): Unregister(), T, T, T, T, T, T, T (+35 more)
+Cohesion: 0.07
+Nodes (36): Unregister(), T, T, T, T, T, T, T (+28 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.15
-Nodes (29): App, T, PropDef, PropType, ApplyTemplate(), checkType(), isEmpty(), TestApplyTemplate_DoesNotOverwriteBody() (+21 more)
+Cohesion: 0.10
+Nodes (48): App, Record, App, T, App, activeByIDs(), AddEdge(), Backlinks() (+40 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.10
 Nodes (30): D, CancelFunc, ChatResponse, Chunk, Context, Engine, Engine, Message (+22 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.11
-Nodes (21): RequestEvent, handlers, Card, Node, RequestEvent, ServerSentEventGenerator, handlers, T (+13 more)
+Cohesion: 0.16
+Nodes (10): RequestEvent, Card, Node, RequestEvent, handlers, cardTitleIcon(), clusterChipNode(), emptyPanelNode() (+2 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.06
@@ -554,8 +569,8 @@ Cohesion: 0.06
 Nodes (32): Commands you will need, Conventions to honor (inlined — the executor has not read these docs), Current state, Design conflict resolutions (advisor — AUTHORITATIVE; override the in-body conflict blocks), Done criteria, Excerpt: `registerSearchIndex` registration + doc comment, LIVE at `0c85d0e` (`main.go:57-58`, `main.go:199-204`), Excerpt: `SearchActive`, LIVE at `0c85d0e` (`internal/knowledge/knowledge.go:302-360`), Excerpt: the FTS table + Rebuild source, LIVE at `0c85d0e` (`internal/search/index.go:36-92`) (+24 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.18
-Nodes (30): Buckets, App, Client, Record, Time, App, Record, T (+22 more)
+Cohesion: 0.06
+Nodes (82): Buckets, App, Client, Record, Time, App, Record, T (+74 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.08
@@ -566,8 +581,8 @@ Cohesion: 0.20
 Nodes (27): App, Record, T, ActiveLLMConfig(), configForModel(), configFrom(), DeleteLLMModel(), EnsureDefaultLLMConfig() (+19 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.15
-Nodes (36): App, Record, Time, Record, T, Buckets, CreateOpts, DoneResult (+28 more)
+Cohesion: 0.14
+Nodes (40): App, Record, Time, Record, T, Audit(), Buckets, CreateOpts (+32 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.07
@@ -594,8 +609,8 @@ Cohesion: 0.07
 Nodes (29): Commands you will need, Conventions, Current state, Done criteria, Git workflow, Maintenance notes, Plan 145: Cloud-preset picker UI — pick a provider, add only a key, Scope (+21 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.17
-Nodes (26): App, Node, Record, Node, T, buildMemoryManage(), buildMemorySummary(), mapMemoryRecords() (+18 more)
+Cohesion: 0.26
+Nodes (21): App, Node, Record, buildMemoryManage(), buildMemorySummary(), mapMemoryRecords(), memoryActions(), memoryBody() (+13 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.07
@@ -634,12 +649,12 @@ Cohesion: 0.07
 Nodes (27): Commands you will need, Current state, Done criteria, Git workflow, LOCKED schema this plan must implement (verbatim from the design), Maintenance notes, Plan 160: Greenfield knowledge spine — `nodes` + `edges`, memories/skills/journal folded into typed nodes, Repo conventions to honor (the executor has not read AGENTS.md) (+19 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.13
-Nodes (18): CloudConsentView, headChoice, App, CancelFunc, Node, RequestEvent, ServerSentEventGenerator, handlers (+10 more)
+Cohesion: 0.15
+Nodes (17): CloudConsentView, ServerSentEventGenerator, handlers, RequestEvent, handlers, App, CancelFunc, RequestEvent (+9 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.13
-Nodes (32): App, TB, Record, T, TB, TestApp, T, activateLocalModel() (+24 more)
+Nodes (33): T, App, TB, Record, T, TB, TestApp, TestHandleToolResultRefreshRoutes() (+25 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.07
@@ -670,16 +685,16 @@ Cohesion: 0.08
 Nodes (25): Direction findings — ALL RESOLVED (2026-06-12, sixth cycle), Eighteenth cycle (2026-06-18, owner-requested refinement): plans 101–103, Eighth cycle — Card-first: kill the pages (plans 050–057), Eleventh cycle (2026-06-17, UX/UI audit at `12a2ff5`): plans 075–085, Execution record (2026-06-12, second cycle), Fifteenth cycle (2026-06-18, owner-requested refinement): plans 095–096, Findings considered and rejected, Findings considered and rejected (do not re-audit) (+17 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.19
-Nodes (16): Context, Logger, T, resolveLibDir(), InstallDirFor(), InstallRuntime(), RuntimeVersion(), sha256File() (+8 more)
+Cohesion: 0.12
+Nodes (23): Context, Logger, T, resolveLibDir(), InstallDirFor(), InstallRuntime(), RuntimeStatus(), RuntimeVersion() (+15 more)
 
 ### Community 53 - "Community 53"
 Cohesion: 0.10
 Nodes (19): Conventions, Current state (read these — they are the merge targets), Done criteria, Maintenance notes, Plan 171: Unify the journal node into the day node (one `type=day` page per date), Status, Step 1: Make `nodes.DayNode` the single resolver (props.date + human title), Step 2: Point `JournalWrite`/`JournalDrop` at the day node (+11 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.21
-Nodes (24): App, Location, Record, Rule, Time, Month, T, Time (+16 more)
+Cohesion: 0.08
+Nodes (25): Commands you will need, Current state, Current state, Current state, Current state, Current state, Do, Do (+17 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.08
@@ -710,8 +725,8 @@ Cohesion: 0.08
 Nodes (25): Commands you will need, Current state, Done criteria, Download meter markup (consumes the missing classes), Empty state (weak wayfinding), Git workflow, Maintenance notes, Plan 146: Models page UX/UI polish — style the unstyled, sharpen affordances (+17 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.19
-Nodes (9): Choice, handlers, Builder, Card, Event, Node, ServerSentEventGenerator, chatSignals (+1 more)
+Cohesion: 0.15
+Nodes (12): Choice, handlers, T, Builder, Card, Event, Node, ServerSentEventGenerator (+4 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.13
@@ -754,16 +769,16 @@ Cohesion: 0.08
 Nodes (24): Commands you will need, Current state (live at `2b03f17`), Done criteria, Existing OpenAI tests — `internal/llm/openai_test.go`, Git workflow, Maintenance notes, OpenAI client request body — `internal/llm/openai.go` (~line 131), Plan 159: Make tool-calling reliable and observable (sampling + OpenAI wire correctness + debug trace) (+16 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.23
-Nodes (13): Node, Node, T, colorsCanvas(), materialsCanvas(), matTile(), section(), typeRole() (+5 more)
+Cohesion: 0.14
+Nodes (21): CloudFormView, CloudPresetView, Node, OfficialCTA, Node, T, OfficialCTA, officialCTACard() (+13 more)
 
 ### Community 74 - "Community 74"
-Cohesion: 0.11
-Nodes (30): CapabilitiesView, ExtStatusView, GateView, App, App, HeadsView, Node, PanelView (+22 more)
+Cohesion: 0.14
+Nodes (21): CapabilitiesView, ExtStatusView, GateView, App, App, HeadsView, PanelView, App (+13 more)
 
 ### Community 75 - "Community 75"
 Cohesion: 0.14
-Nodes (45): App, Period, Time, Weekday, App, Record, Time, Params (+37 more)
+Nodes (47): App, Period, Time, Weekday, App, Record, Time, Params (+39 more)
 
 ### Community 76 - "Community 76"
 Cohesion: 0.08
@@ -794,8 +809,8 @@ Cohesion: 0.08
 Nodes (23): Commands you will need, Conventions that apply here (AGENTS.md / CLAUDE.md), Current state, Done criteria, Downstream helper-function signatures the bodies call (do not change them), Files, Git workflow, Maintenance notes (+15 more)
 
 ### Community 83 - "Community 83"
-Cohesion: 0.09
-Nodes (46): CloudFormView, Node, Node, CloudPresetView, Node, OfficialCTA, Story, Node (+38 more)
+Cohesion: 0.11
+Nodes (28): Node, Story, Node, T, Node, T, CloudConsent(), CloudForm() (+20 more)
 
 ### Community 84 - "Community 84"
 Cohesion: 0.21
@@ -814,8 +829,8 @@ Cohesion: 0.09
 Nodes (22): Commands you will need, Critical legacy-alias detail (do NOT lose these), Current state, Done criteria, Exact current code (HEAD `ab2c0a9`), Git workflow, Maintenance notes, Plan 148: Make the avatar roster a single source of truth (+14 more)
 
 ### Community 88 - "Community 88"
-Cohesion: 0.15
-Nodes (13): CardSize, Card, Node, RequestEvent, handlers, Writer, RequestEvent, handlers (+5 more)
+Cohesion: 0.18
+Nodes (11): CardSize, Card, Node, RequestEvent, handlers, Writer, Spec, Values (+3 more)
 
 ### Community 89 - "Community 89"
 Cohesion: 0.06
@@ -862,20 +877,20 @@ Cohesion: 0.09
 Nodes (21): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 156: Collapse the 21 churned migrations into one clean schema baseline, Reference: the field shapes (from the live migrations), Scope (+13 more)
 
 ### Community 100 - "Community 100"
-Cohesion: 0.23
-Nodes (19): All(), TestAll(), TestGetEachType(), TestGetUnknown(), TestLayoutJSONRoundTrip(), TestNoWebImports(), TestSpecHasDefaultH(), TestValidateBadEnum() (+11 more)
+Cohesion: 0.13
+Nodes (30): Card, All(), clampInt(), clampLayout(), enumContains(), Get(), HasManage(), TestAll() (+22 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.16
-Nodes (30): T, App, T, App, Tool, T, TestDayDataBoundary(), TestRange() (+22 more)
+Cohesion: 0.14
+Nodes (34): T, App, T, App, Tool, T, TestBornStatus(), TestCreateKnownTypeSucceeds() (+26 more)
 
 ### Community 102 - "Community 102"
-Cohesion: 0.33
-Nodes (17): App, Location, Record, Time, Tool, Describe(), dueSuffix(), findTask() (+9 more)
+Cohesion: 0.20
+Nodes (25): App, Location, T, App, Location, Record, Time, Tool (+17 more)
 
 ### Community 103 - "Community 103"
-Cohesion: 0.15
-Nodes (21): App, Client, Context, Message, Record, Time, T, App (+13 more)
+Cohesion: 0.14
+Nodes (19): App, Client, Context, Message, Record, Time, T, Node (+11 more)
 
 ### Community 104 - "Community 104"
 Cohesion: 0.10
@@ -898,8 +913,8 @@ Cohesion: 0.10
 Nodes (19): 1. Brand essence, 2. Character and voice, 3. Honesty ledger, 4. Visual system — Hearthwood (Basm v2), 5. Quick checklist, Avatar rules, Balaur design system — Basm, Balaur head library — 16 personalities (+11 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.25
-Nodes (30): App, Index, Record, Kind, ActiveSkills(), ApplyEdit(), clampImportance(), clearPendingEdit() (+22 more)
+Cohesion: 0.23
+Nodes (27): App, Record, App, Record, computeActiveSkills(), computeUpfront(), copyForRead(), invalidateContextCache() (+19 more)
 
 ### Community 110 - "Community 110"
 Cohesion: 0.18
@@ -994,8 +1009,8 @@ Cohesion: 0.11
 Nodes (18): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 155: Remove the redundant `skills.enabled` boolean (derive enablement from `status`), Scope, Status (+10 more)
 
 ### Community 133 - "Community 133"
-Cohesion: 0.32
-Nodes (15): App, Node, Record, TaskView, Time, QuestsCard(), questsManageBody(), QuestsManageCard() (+7 more)
+Cohesion: 0.09
+Nodes (21): Commands you will need, Current state, Done criteria, Git workflow, `internal/heads/heads.go` — no auditing today, `internal/seed/seed.go:530` — one Create call, `internal/tools/heads.go` — currently audits after each call, `internal/web/heads.go` — currently UNAUDITED (+13 more)
 
 ### Community 134 - "Community 134"
 Cohesion: 0.25
@@ -1004,6 +1019,10 @@ Nodes (17): T, decodeJSON(), sseServer(), TestChatStreamAssemblesFragmentedToolC
 ### Community 135 - "Community 135"
 Cohesion: 0.08
 Nodes (24): Commands you will need, Conventions to match, Current state (from the tasks subsystem inventory), Done criteria, Field mapping (`tasks` row → `type=task` node), Maintenance notes, Plan 167: Fold `tasks` into the spine as `type=task` nodes, Query approach (+16 more)
+
+### Community 136 - "Community 136"
+Cohesion: 0.31
+Nodes (6): RequestEvent, handlers, T, TestMessageViewsClusterRendersNonClickableChip(), TestMessageViewsStripsRefreshMarker(), TestMessageViewsUicardRendersChip()
 
 ### Community 137 - "Community 137"
 Cohesion: 0.11
@@ -1058,32 +1077,32 @@ Cohesion: 0.12
 Nodes (16): 1. Think before coding, 2. Simplicity first, 3. Surgical changes, 4. Goal-driven execution, Architecture patterns, Balaur project instructions, Behavioral guidelines to reduce common LLM coding mistakes, Coding style (+8 more)
 
 ### Community 150 - "Community 150"
-Cohesion: 0.36
-Nodes (7): Node, T, FieldProps, TestTextFieldBasic(), TestTextFieldError(), TestTextFieldHintNoError(), TextField()
+Cohesion: 0.10
+Nodes (20): Commands you will need, Convention, Current state, Done criteria, Five call sites that hand-roll find+Hydrate, Git workflow, Maintenance notes, Plan 200: Add `tasks.Get(app, id)` and collapse the find-task-node-and-hydrate pattern across `cli`, `web`, and `tools` (+12 more)
 
 ### Community 151 - "Community 151"
 Cohesion: 0.08
-Nodes (42): AvatarEntry, GroupChoice, HeadRow, avatarRadios(), BuildHeads(), deleteForm(), groupCheckboxes(), groupPips() (+34 more)
+Nodes (60): AvatarEntry, GroupChoice, HeadRow, avatarRadios(), BuildHeads(), deleteForm(), groupCheckboxes(), groupPips() (+52 more)
 
 ### Community 152 - "Community 152"
 Cohesion: 0.20
 Nodes (12): Chunk, Client, Context, Message, ToolSpec, toWire(), toWireTools(), OpenAIClient (+4 more)
 
 ### Community 153 - "Community 153"
-Cohesion: 0.26
-Nodes (15): App, Tool, T, Choice, ChoiceTools(), MarkChoices(), offerChoicesTool(), ParseChoices() (+7 more)
+Cohesion: 0.20
+Nodes (18): App, Tool, T, T, Choice, ChoiceTools(), MarkChoices(), offerChoicesTool() (+10 more)
 
 ### Community 154 - "Community 154"
-Cohesion: 0.09
-Nodes (30): verifyCmd(), App, Command, App, Client, Context, Event, Message (+22 more)
+Cohesion: 0.16
+Nodes (16): App, Client, Context, Event, Message, Record, Time, T (+8 more)
 
 ### Community 155 - "Community 155"
-Cohesion: 0.19
-Nodes (19): CommandItem, homeData, Node, T, chatBarNode(), commandPaletteNode(), composerNode(), headSwitcherNode() (+11 more)
+Cohesion: 0.24
+Nodes (14): headChoice, CommandItem, Node, messageView, ModelChoice, headChoice, chatBarNode(), commandPaletteNode() (+6 more)
 
 ### Community 156 - "Community 156"
-Cohesion: 0.19
-Nodes (24): App, T, T, ProposeMemory(), countAudit(), modelAudit(), TestBuildContext(), TestFilterActive() (+16 more)
+Cohesion: 0.15
+Nodes (29): App, T, App, Index, Record, T, ProposeMemory(), countAudit() (+21 more)
 
 ### Community 157 - "Community 157"
 Cohesion: 0.07
@@ -1214,16 +1233,16 @@ Cohesion: 0.19
 Nodes (18): App, Node, Record, Time, App, Record, T, Time (+10 more)
 
 ### Community 189 - "Community 189"
-Cohesion: 0.25
-Nodes (19): Time, Weekday, Location, T, calendarRule(), Matches(), monthlyOn(), Next() (+11 more)
+Cohesion: 0.10
+Nodes (19): Commands you will need, Current state, Done criteria, Duplication 1 — card-registry vocabulary, Duplication 2 — task view-model in `internal/web/tasks.go`, Git workflow, Maintenance notes, Plan 199: Collapse two verbatim duplications in `internal/tools` and `internal/web` (card-registry vocabulary + task view-model), and delete dead `web.questGroup` (+11 more)
 
 ### Community 190 - "Community 190"
 Cohesion: 0.07
 Nodes (27): Commands you will need, Conventions that apply here (with exemplars), Current state, Done criteria, Files and roles, Git workflow, `internal/cli/cli_test.go` (append), `internal/nodes/nodes_test.go` (create or append) (+19 more)
 
 ### Community 191 - "Community 191"
-Cohesion: 0.21
-Nodes (17): App, Tool, App, Tool, T, Tool, clipN(), entryDropTool() (+9 more)
+Cohesion: 0.14
+Nodes (21): App, Tool, App, Tool, App, Tool, T, Tool (+13 more)
 
 ### Community 192 - "Community 192"
 Cohesion: 0.31
@@ -1294,8 +1313,8 @@ Cohesion: 0.43
 Nodes (18): ToolSpecOf(), App, Tool, KnowledgeTools(), MarkProposal(), nodeDropTool(), nodeEditTool(), nodeGetTool() (+10 more)
 
 ### Community 209 - "Community 209"
-Cohesion: 0.25
-Nodes (18): TestGraphCardRendersSVG(), TestNetworkCardRendersWholeGraph(), TestNoWebImports(), TestRelatedComputation(), T, App, Record, activeByIDs() (+10 more)
+Cohesion: 0.10
+Nodes (19): Commands you will need, Critical: `matchesQuery` STAYS in knowledge.go, Current state, Done criteria, Git workflow, Import bookkeeping, Maintenance notes, Plan 204: Split `internal/knowledge/knowledge.go` (637 LOC) — extract `edit.go` (parked-edit envelope) and `search.go` (search surfaces) (+11 more)
 
 ### Community 210 - "Community 210"
 Cohesion: 0.25
@@ -1342,24 +1361,24 @@ Cohesion: 0.13
 Nodes (14): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 139: Make the recurring `tasks.Done` completion+advance atomic, Scope, Status (+6 more)
 
 ### Community 221 - "Community 221"
-Cohesion: 0.32
-Nodes (14): App, FromStore(), App, Client, main(), registerBriefing(), registerDayLinks(), registerGraphLinks() (+6 more)
+Cohesion: 0.10
+Nodes (19): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 212: Stop the nudge poller from re-rendering honesty-check artifacts as duplicate chat messages, Repo conventions, Scope (+11 more)
 
 ### Community 222 - "Community 222"
-Cohesion: 0.21
-Nodes (11): Node, Node, T, ListItemProps, List(), ListItem(), TestListItemAttrsPassThrough(), TestListItemLink() (+3 more)
+Cohesion: 0.13
+Nodes (18): DB, App, Record, Node, Node, T, ListItemProps, Index (+10 more)
 
 ### Community 223 - "Community 223"
 Cohesion: 0.14
 Nodes (13): Commands you will need, Current state, Done criteria, Maintenance notes, Plan 058: Dock follow-up fixes — silent-403 + back-to-main mid-stream race, Status, Step A: Fix 1 — no more silent 403 (give feedback + clear the draft), Step B: Fix 2 — gate "← back to main" while a turn streams (+5 more)
 
 ### Community 224 - "Community 224"
-Cohesion: 0.43
-Nodes (4): RequestEvent, Time, handlers, dayStartOf()
+Cohesion: 0.13
+Nodes (19): App, Record, Time, T, RequestEvent, Time, handlers, T (+11 more)
 
 ### Community 225 - "Community 225"
-Cohesion: 0.06
-Nodes (40): ArtifactChipProps, CardTurn(), CardTurnProps, ChoiceItem, Choices(), ChoicesProps, Cluster(), ClusterProps (+32 more)
+Cohesion: 0.26
+Nodes (13): Story, chatartifactchipStory(), chatcardturnStory(), chatchoicesStory(), chatclusterStory(), chatdockStory(), chatmessageStory(), chatpanelStory() (+5 more)
 
 ### Community 226 - "Community 226"
 Cohesion: 0.28
@@ -1367,31 +1386,31 @@ Nodes (13): App, Record, T, ParseLinks(), resolveOrCreateStub(), SyncLinks(), Te
 
 ### Community 227 - "Community 227"
 Cohesion: 0.17
-Nodes (18): App, T, RequestEvent, handlers, AvatarEntry, avatarMap(), BalaurAvatarURL(), BalaurAvatarURLForKey() (+10 more)
+Nodes (20): App, T, RequestEvent, handlers, Record, AvatarEntry, avatarMap(), BalaurAvatarURL() (+12 more)
 
 ### Community 228 - "Community 228"
 Cohesion: 0.33
 Nodes (12): T, TB, TestApp, seedActiveMemory(), seedProposedMemory(), TestKnowledgeEditDatastar(), TestKnowledgeGridBadKindIsHTTPError(), TestKnowledgeGridDatastar() (+4 more)
 
 ### Community 229 - "Community 229"
-Cohesion: 0.26
-Nodes (13): Record, T, TB, TestApp, Time, seedTaskWithRecur(), TestQuestGroup(), TestQuestsArtifactEndpoint() (+5 more)
+Cohesion: 0.28
+Nodes (12): Record, T, TB, TestApp, Time, seedTaskWithRecur(), TestQuestsArtifactEndpoint(), TestQuestsFocusPrefillsEditForm() (+4 more)
 
 ### Community 230 - "Community 230"
 Cohesion: 0.19
 Nodes (17): Node, Node, T, LifeKindFocusView, lifeKindCard(), LifelogFocus(), lifeLogForm(), lifeSpark() (+9 more)
 
 ### Community 231 - "Community 231"
-Cohesion: 0.24
-Nodes (9): Node, Context, T, Fetch(), sha256hex(), TestFetch(), Progress, Overview() (+1 more)
+Cohesion: 0.14
+Nodes (15): tourFile, tourStep, Node, Context, T, Fetch(), sha256hex(), TestFetch() (+7 more)
 
 ### Community 232 - "Community 232"
 Cohesion: 0.17
 Nodes (22): ao(), b(), bo(), co(), eo(), fo(), go(), ho() (+14 more)
 
 ### Community 233 - "Community 233"
-Cohesion: 0.25
-Nodes (18): App, Tool, T, cardShowTool(), MarkUICard(), ParseUICard(), TestCardShowBadParamsReturnsPlainText(), TestCardShowHappyPath() (+10 more)
+Cohesion: 0.20
+Nodes (21): App, Tool, T, RequestEvent, handlers, cardRegistryVocab(), cardShowTool(), MarkUICard() (+13 more)
 
 ### Community 234 - "Community 234"
 Cohesion: 0.23
@@ -1402,12 +1421,12 @@ Cohesion: 0.32
 Nodes (15): App, Node, Time, CalCell, buildCalendar(), calBodyRows(), calCellNode(), CalendarCard() (+7 more)
 
 ### Community 236 - "Community 236"
-Cohesion: 0.23
-Nodes (9): Chunk, Context, Message, Mutex, ToolCall, ToolSpec, ToolCall(), Reply (+1 more)
+Cohesion: 0.15
+Nodes (19): Chunk, Context, Message, Mutex, ToolCall, ToolSpec, T, New() (+11 more)
 
 ### Community 237 - "Community 237"
-Cohesion: 0.23
-Nodes (5): bi(), we(), wi(), xi(), ze()
+Cohesion: 0.17
+Nodes (11): a(), bi(), fe(), H(), ia(), o(), r(), we() (+3 more)
 
 ### Community 238 - "Community 238"
 Cohesion: 0.16
@@ -1422,8 +1441,8 @@ Cohesion: 0.28
 Nodes (13): renderMarkdown(), RenderMarkdownLinked(), renderMarkdownString(), resolveTo(), TestRenderMarkdownLinkedAlias(), TestRenderMarkdownLinkedConvertErrorEscapes(), TestRenderMarkdownLinkedNoInjection(), TestRenderMarkdownLinkedPlainUnchanged() (+5 more)
 
 ### Community 241 - "Community 241"
-Cohesion: 0.21
-Nodes (28): Time, Month, T, Time, RequestEvent, Band, Period, Bands() (+20 more)
+Cohesion: 0.06
+Nodes (79): DayLine, App, Node, Time, App, Location, Node, Record (+71 more)
 
 ### Community 242 - "Community 242"
 Cohesion: 0.18
@@ -1442,12 +1461,12 @@ Cohesion: 0.17
 Nodes (24): commitMirror(), ExportMirror(), ExportType(), jdFolderFor(), render(), scalar(), slug(), readAll() (+16 more)
 
 ### Community 246 - "Community 246"
-Cohesion: 0.11
-Nodes (24): a(), an(), cn(), de(), displayable(), ee(), fe(), H() (+16 more)
+Cohesion: 0.12
+Nodes (19): an(), cn(), de(), displayable(), ee(), i(), Kn(), ln() (+11 more)
 
 ### Community 247 - "Community 247"
-Cohesion: 0.33
-Nodes (10): OfficialCTA, T, OfficialModel, OfficialByKey(), OfficialModels(), ctaFor(), fakeRuntimeLib(), TestClaimInFlightSingleWinner() (+2 more)
+Cohesion: 0.16
+Nodes (17): App, CloudPresetView, PanelView, OfficialCTA, T, OfficialModel, OfficialByKey(), OfficialModels() (+9 more)
 
 ### Community 248 - "Community 248"
 Cohesion: 0.18
@@ -1474,32 +1493,32 @@ Cohesion: 0.18
 Nodes (10): 04 — Port the Knowledge focus body (memory + skills manager) to gomponents, Action contract — preserve byte-for-byte, Context / why, Current state (read these), Done criteria, Escape hatches, Maintenance note, Scope (+2 more)
 
 ### Community 254 - "Community 254"
-Cohesion: 0.20
-Nodes (17): DayLine, App, Node, Period, T, BuildPeriodFocus(), PeriodFocus(), periodLink() (+9 more)
+Cohesion: 0.10
+Nodes (19): Commands you will need, Conventions, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Makefile (no `TMPDIR` anywhere), No `.env.example` (+11 more)
 
 ### Community 255 - "Community 255"
-Cohesion: 0.17
-Nodes (18): ae(), copy(), d(), g(), ga(), ia(), Jn(), jt() (+10 more)
+Cohesion: 0.18
+Nodes (17): ae(), copy(), d(), g(), ga(), Jn(), jt(), kt() (+9 more)
 
 ### Community 256 - "Community 256"
-Cohesion: 0.32
-Nodes (7): DB, App, Record, Index, matchExpr(), nodeExtra(), scanIDs()
+Cohesion: 0.18
+Nodes (16): verifyCmd(), App, Command, Message, T, CaptureSucceeded(), ClaimsCapture(), Honest() (+8 more)
 
 ### Community 257 - "Community 257"
-Cohesion: 0.23
-Nodes (14): App, T, BornStatus(), isNotFound(), OwnerAuthoredTypes(), TestBornStatus(), TestCreateKnownTypeSucceeds(), TestCreateNewRegistryTypeSucceeds() (+6 more)
+Cohesion: 0.11
+Nodes (18): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 208: Add `kronk.RuntimeStatus` and drop the raw `ardanlabs/kronk` SDK import from `internal/feature/settingscards`, Scope, Status (+10 more)
 
 ### Community 258 - "Community 258"
-Cohesion: 0.27
-Nodes (11): Location, Record, RequestEvent, Time, handlers, parseLocalDue(), questGroup(), snoozeUntil() (+3 more)
+Cohesion: 0.31
+Nodes (7): Location, Record, RequestEvent, Time, handlers, parseLocalDue(), snoozeUntil()
 
 ### Community 259 - "Community 259"
-Cohesion: 0.21
-Nodes (27): App, Client, Context, Location, Message, Period, Record, Time (+19 more)
+Cohesion: 0.19
+Nodes (28): App, Client, Context, Location, Message, Period, Record, Time (+20 more)
 
 ### Community 260 - "Community 260"
-Cohesion: 0.07
-Nodes (61): T, App, Node, Time, T, App, App, App (+53 more)
+Cohesion: 0.06
+Nodes (74): T, App, Node, Time, T, App, App, Node (+66 more)
 
 ### Community 261 - "Community 261"
 Cohesion: 0.36
@@ -1546,7 +1565,7 @@ Cohesion: 0.18
 Nodes (6): ci(), fi(), Hr(), na(), qe(), Vr()
 
 ### Community 272 - "Community 272"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (34): Message(), messageBody(), MessageProps, Append(), Node, Node, T, Node (+26 more)
 
 ### Community 273 - "Community 273"
@@ -1558,12 +1577,12 @@ Cohesion: 0.07
 Nodes (26): `chronicleView` — `internal/web/recap.go:303-330` (VERBATIM), Commands you will need, Conventions that apply here, Current state, Done criteria, Files, Git workflow, Maintenance notes (+18 more)
 
 ### Community 275 - "Community 275"
-Cohesion: 0.29
-Nodes (6): App, Node, T, registerSettings(), SettingsCard(), TestSettingsCard()
+Cohesion: 0.17
+Nodes (10): App, App, Node, T, init(), Register(), Unregister(), registerSettings() (+2 more)
 
 ### Community 276 - "Community 276"
-Cohesion: 0.22
-Nodes (11): Card, clampInt(), clampLayout(), enumContains(), Get(), HasManage(), TestHasManage(), TestLayoutClamping() (+3 more)
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state, Done criteria, Git workflow, Import sets after the split (derived from the symbol uses), Maintenance notes, Plan 205: Split `internal/web/models.go` (550 LOC) into the dock view-model (`home.go`), the model-install SSE orchestrators (`models_install.go`), and a slim `models.go` (model selection + cloud consent), Scope (+9 more)
 
 ### Community 277 - "Community 277"
 Cohesion: 0.22
@@ -1574,8 +1593,8 @@ Cohesion: 0.22
 Nodes (8): 1. Launch (background), 2. Wait for readiness (first run compiles), 3. Drive it — Playwright MCP, 4. Turns that need the model → make them deterministic, 5. Clean up, Full PocketBase API access (as `claude`), Report, Run & verify Balaur in the browser
 
 ### Community 279 - "Community 279"
-Cohesion: 0.43
-Nodes (7): TestAppDockResetsTop(), TestCmdPaletteActiveStyle(), TestNoUndefinedHearthwoodTokens(), TestPanelInkText(), TestStorybookStageInkText(), TestThemePaletteBlocks(), T
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 207: Extract `turn.ResolveProcessor` so `balaur chat` honors the owner's saved processor (closing a CLI/server fork), Scope, Status (+9 more)
 
 ### Community 280 - "Community 280"
 Cohesion: 0.10
@@ -1594,8 +1613,8 @@ Cohesion: 0.54
 Nodes (7): T, TaskView, renderTask(), TestTaskCardNonOpenShowsStatusNoActions(), TestTaskCardOpenHasAllActions(), TestTaskCardOpenHasEditForm(), TestTaskCardOverdueClass()
 
 ### Community 284 - "Community 284"
-Cohesion: 0.24
-Nodes (11): homeData, Node, Period, Record, handlers, bandView, messageView, bandHeading() (+3 more)
+Cohesion: 0.20
+Nodes (13): homeData, Node, handlers, Node, Period, Record, handlers, bandView (+5 more)
 
 ### Community 285 - "Community 285"
 Cohesion: 0.07
@@ -1606,8 +1625,8 @@ Cohesion: 0.32
 Nodes (12): App, Tool, T, auditOS(), bashTool(), clip(), editTool(), OSAccess() (+4 more)
 
 ### Community 287 - "Community 287"
-Cohesion: 0.22
-Nodes (10): Feature, RegisterAll(), TestRegistryRegistersAndUnregistersAll(), UnregisterAll(), funcAdapter, App, T, ServeEvent (+2 more)
+Cohesion: 0.08
+Nodes (21): Feature, Funcs(), RegisterAll(), TestRegistryRegistersAndUnregistersAll(), UnregisterAll(), funcAdapter, init(), init() (+13 more)
 
 ### Community 288 - "Community 288"
 Cohesion: 0.36
@@ -1626,32 +1645,32 @@ Cohesion: 0.58
 Nodes (8): CalView, T, renderCalendar(), syntheticCalView(), TestCalendarCard(), TestCalendarCardCellClasses(), TestCalendarCardDayLink(), TestCalendarCardItem()
 
 ### Community 292 - "Community 292"
-Cohesion: 0.14
-Nodes (20): Story, Node, Node, T, askchipStory(), avatarStory(), buttonStory(), cardStory() (+12 more)
+Cohesion: 0.18
+Nodes (15): Story, Node, T, askchipStory(), avatarStory(), buttonStory(), cardStory(), folkbandStory() (+7 more)
 
 ### Community 293 - "Community 293"
 Cohesion: 0.07
 Nodes (26): Commands you will need, Current state, Documented ports — the collision constraint (load-bearing), Done criteria, Git workflow, `internal/launch/launch.go` (verbatim, the parts you build on), `internal/launch/launch_test.go` (verbatim, the test style to match, `launch_test.go:1-30`), `internal/self/knowledge.md` (verbatim, the launcher description, `knowledge.md:409-413`) (+18 more)
 
 ### Community 294 - "Community 294"
-Cohesion: 0.10
-Nodes (30): Node, Story, Node, Node, CapabilitiesSection(), capabilitiesStory(), dayfocusStory(), graphStory() (+22 more)
+Cohesion: 0.11
+Nodes (27): Story, Node, Node, capabilitiesStory(), dayfocusStory(), graphStory(), guardiancardStory(), knowledgecardStory() (+19 more)
 
 ### Community 295 - "Community 295"
 Cohesion: 0.57
 Nodes (6): Node, T, render(), TestOfficialCTACards(), TestProcessorControlContract(), TestProcessorPillDisabledStates()
 
 ### Community 296 - "Community 296"
-Cohesion: 0.44
-Nodes (10): Node, T, renderNode(), TestProfileBalaurSectionContract(), TestProfileIdentityCardContract(), TestProfileIdentityCardNameYou(), TestProfileSoulSectionContract(), TestSettingsFocusHeadsSection() (+2 more)
+Cohesion: 0.28
+Nodes (16): Node, Node, Node, T, ProfileBalaurSection(), ProfileIdentityCard(), ProfileSoulSection(), SettingsFocus() (+8 more)
 
 ### Community 297 - "Community 297"
 Cohesion: 0.33
 Nodes (6): ToolCall, Chunk, Client, Message, ToolCall, ToolSpec
 
 ### Community 298 - "Community 298"
-Cohesion: 0.36
-Nodes (5): Context, Engine, Mutex, Kronk, NewEngine()
+Cohesion: 0.42
+Nodes (4): Context, Engine, Mutex, Kronk
 
 ### Community 299 - "Community 299"
 Cohesion: 0.08
@@ -1662,8 +1681,8 @@ Cohesion: 0.29
 Nodes (9): T, TestActiveSubgraph(), TestInverseLabel(), TestQueryAnyType(), TestQueryByType(), TestQueryLimit(), TestQueryPropMatch(), TestTypeIcons() (+1 more)
 
 ### Community 301 - "Community 301"
-Cohesion: 0.21
-Nodes (23): App, Client, Record, Time, App, Record, T, composeNudge() (+15 more)
+Cohesion: 0.22
+Nodes (24): App, Client, Record, Time, App, Record, T, composeNudge() (+16 more)
 
 ### Community 302 - "Community 302"
 Cohesion: 0.29
@@ -1695,7 +1714,7 @@ Nodes (27): apply(), deleteProperty(), get(), has(), ownKeys(), set(), ce(), he(
 
 ### Community 309 - "Community 309"
 Cohesion: 0.11
-Nodes (30): historyCmd(), messageJSON(), AppendOrigin(), AppendOriginRec(), CompactedThrough(), History(), Master(), MessagesBetween() (+22 more)
+Nodes (32): recapCmd(), recapEnsureCmd(), recapShowCmd(), AppendOrigin(), AppendOriginRec(), CompactedThrough(), History(), Master() (+24 more)
 
 ### Community 310 - "Community 310"
 Cohesion: 0.52
@@ -1718,12 +1737,12 @@ Cohesion: 0.08
 Nodes (24): Commands you will need, Current state, Done criteria, Git workflow, `internal/ext/ext.go` — where `app` IS in scope, `internal/ext/vm.go` — the bare client and the dial site, `internal/self/knowledge.md` — the running binary's self-description, `internal/store/owner_settings.go` — how owner flags are read (+16 more)
 
 ### Community 316 - "Community 316"
-Cohesion: 0.24
-Nodes (12): App, Node, Time, App, buildDay(), DayCard(), dayRecapLi(), dayStartOf() (+4 more)
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state, Done criteria, Git workflow, Group wiring (`internal/turn/tools.go` + `internal/heads/heads.go`), Maintenance notes, Markers (`internal/tools`), Plan 209: Two guard tests — tool-result marker round-trip/isolation (`internal/tools`) and `heads.Groups`↔`ToolsForHead` wiring (`internal/turn`) (+9 more)
 
 ### Community 317 - "Community 317"
-Cohesion: 0.36
-Nodes (11): Node, Node, taskActions(), TaskCard(), taskDue(), taskEditForm(), taskNotes(), transitionPost() (+3 more)
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state (each wrong claim + the code that proves it wrong), DESIGN.md — the "Honesty ledger" (`## 3. Honesty ledger`), Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 214: Docs truth-sync — fix DESIGN.md + README claims that contradict shipped code, README.md (+9 more)
 
 ### Community 318 - "Community 318"
 Cohesion: 0.08
@@ -1738,16 +1757,16 @@ Cohesion: 0.50
 Nodes (3): Node, T, render()
 
 ### Community 322 - "Community 322"
-Cohesion: 0.33
-Nodes (12): App, Tool, App, T, headCreateTool(), headDeleteTool(), HeadsTools(), headSwitchTool() (+4 more)
+Cohesion: 0.24
+Nodes (14): App, Tool, App, T, T, headCreateTool(), headDeleteTool(), HeadsTools() (+6 more)
 
 ### Community 323 - "Community 323"
-Cohesion: 0.67
-Nodes (3): T, TestRecapCard(), TestRecapCardEmpty()
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 216: Give the recap parent-period catch-up a per-type high-water mark (stop re-walking all history every cron tick), Scope, Status (+9 more)
 
 ### Community 324 - "Community 324"
-Cohesion: 0.21
-Nodes (15): App, Record, RequestEvent, handlers, T, buildGraphData(), buildWholeGraphData(), newGraphNode() (+7 more)
+Cohesion: 0.20
+Nodes (16): App, Record, RequestEvent, handlers, T, buildGraphData(), buildWholeGraphData(), newGraphNode() (+8 more)
 
 ### Community 325 - "Community 325"
 Cohesion: 0.67
@@ -1758,8 +1777,8 @@ Cohesion: 0.50
 Nodes (3): Node, T, Render()
 
 ### Community 327 - "Community 327"
-Cohesion: 0.67
-Nodes (3): T, TestHandleToolResultRefreshRoutes(), TestRefreshCardPatchesToday()
+Cohesion: 0.11
+Nodes (17): A — `internal/seed/seed_test.go`: `TestSeedRangeContent` uses the real clock twice, B — `internal/tasks/briefing_test.go`: `at()` reads the real clock; persisted `created` is real autodate, Commands you will need, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 217: Anchor two wall-clock-fragile tests to a fixed clock (`TestSeedRangeContent`, the briefing `at()` tests) (+9 more)
 
 ### Community 328 - "Community 328"
 Cohesion: 0.41
@@ -1770,16 +1789,16 @@ Cohesion: 0.67
 Nodes (3): T, TestKnowledgeArtifactRouting(), TestKnowledgeArtifacts()
 
 ### Community 339 - "Community 339"
-Cohesion: 0.20
-Nodes (19): App, Client, Engine, T, LLMConfig, ClientSource, ModelChoice, ActiveModelChoice() (+11 more)
+Cohesion: 0.17
+Nodes (22): App, Client, Engine, T, NewEngine(), LLMConfig, ClientSource, ModelChoice (+14 more)
 
 ### Community 348 - "Community 348"
-Cohesion: 0.17
-Nodes (21): T, T, PropString(), strptr(), TestAddEdgeIdempotent(), TestCreateAndProps(), TestDropCascadesEdges(), TestTransitionLifecycle() (+13 more)
+Cohesion: 0.27
+Nodes (13): T, PropString(), TestKnowledgeToolsIncludesNodeEdit(), TestNodeEditToolRejectsMissingNode(), TestNodeEditToolUpdatesProps(), TestNodeGetDayRecapFound(), TestNodeGetDayRecapMissing(), TestNodeWriteToolCreatesActiveNode() (+5 more)
 
 ### Community 349 - "Community 349"
-Cohesion: 0.46
-Nodes (7): App, Record, Edge, ActiveSubgraph(), matchesProps(), Query(), QueryOpts
+Cohesion: 0.42
+Nodes (9): App, Record, Edge, ActiveByIDs(), ActiveSubgraph(), EdgesTouching(), matchesProps(), Query() (+1 more)
 
 ### Community 350 - "Community 350"
 Cohesion: 0.27
@@ -1794,12 +1813,12 @@ Cohesion: 0.17
 Nodes (12): 174 — UI cleanup sweep, rail-collapse fix, and pixel-snappy motion quick-wins, Constraints (load-bearing — read before any step), Execution order, Out of scope (recorded so they aren't re-audited as gaps), S1 — Sanitize tool-execution errors before they render in chat, S2 — Fix the rail-collapse (open panel squeezes chat to ~170px), S3 — Delete dead CSS and the orphaned `board.js`, S4 — Wire-or-delete the catalog-only atoms; enforce coverage (+4 more)
 
 ### Community 354 - "Community 354"
-Cohesion: 0.36
-Nodes (6): App, Tool, T, profileSetTool(), ProfileTools(), TestProfileSetTool()
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 218: Make `tasks.Nudge` atomic — mark `nudged_at` and post the message in one transaction, Repo conventions, Scope (+9 more)
 
 ### Community 355 - "Community 355"
-Cohesion: 0.21
-Nodes (13): Story, Node, T, selectStory(), textfieldStory(), toggleStory(), boolStr(), TestToggleBare() (+5 more)
+Cohesion: 0.16
+Nodes (16): Story, Node, Node, T, selectStory(), textfieldStory(), toggleStory(), Select() (+8 more)
 
 ### Community 356 - "Community 356"
 Cohesion: 0.09
@@ -1810,12 +1829,12 @@ Cohesion: 0.20
 Nodes (14): App, Node, T, buildTimeline(), registerTimeline(), timelineBody(), TimelineCard(), timelineDay() (+6 more)
 
 ### Community 358 - "Community 358"
-Cohesion: 0.19
-Nodes (16): App, Node, Record, TaskView, Time, Node, T, QuestGroupView (+8 more)
+Cohesion: 0.08
+Nodes (40): T, App, Node, Record, TaskView, Time, App, Node (+32 more)
 
 ### Community 359 - "Community 359"
-Cohesion: 0.14
-Nodes (27): App, Record, Time, T, App, Location, Record, Time (+19 more)
+Cohesion: 0.26
+Nodes (15): App, Location, Record, Time, T, DayKey(), DayNode(), LinkOnDay() (+7 more)
 
 ### Community 360 - "Community 360"
 Cohesion: 0.20
@@ -1830,8 +1849,8 @@ Cohesion: 0.09
 Nodes (21): Commands you will need, Conventions that apply here (with exemplars), Current state, Done criteria, Git workflow, How Balaur's own UI issues state-changing requests (confirmed), Maintenance notes, Plan 180: Reject `Origin: null` and honor `Sec-Fetch-Site` in the `/ui/*` CSRF guard (+13 more)
 
 ### Community 363 - "Community 363"
-Cohesion: 0.33
-Nodes (8): Rule, Time, T, Occurrences(), TestOccurrencesCapped(), TestOccurrencesDailyWindow(), TestOccurrencesOneOff(), TestOccurrencesWeekly()
+Cohesion: 0.11
+Nodes (17): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 222: Give `SetActiveLLMModel`'s singleton upsert the same retry-once race guard as `SetOwnerSetting`, Repo conventions, Scope (+9 more)
 
 ### Community 364 - "Community 364"
 Cohesion: 0.09
@@ -1862,8 +1881,8 @@ Cohesion: 0.50
 Nodes (3): downNodeTypeSchemas(), App, upNodeTypeSchemas()
 
 ### Community 371 - "Community 371"
-Cohesion: 0.18
-Nodes (18): Duration, T, DataDir(), FreeLoopbackPort(), IsFirstRun(), IsLauncherInvocation(), OpenAfterReady(), OpenBrowser() (+10 more)
+Cohesion: 0.13
+Nodes (30): App, T, FromStore(), DataDir(), FreeLoopbackPort(), IsFirstRun(), IsLauncherInvocation(), OpenAfterReady() (+22 more)
 
 ### Community 372 - "Community 372"
 Cohesion: 0.43
@@ -1882,24 +1901,24 @@ Cohesion: 0.19
 Nodes (18): App, Node, Story, buildLines(), linesBody(), LinesCard(), registerLines(), LinesView (+10 more)
 
 ### Community 376 - "Community 376"
-Cohesion: 0.67
-Nodes (3): T, TestPage(), TestPageHTMLClass()
+Cohesion: 0.12
+Nodes (16): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 201: Route `node_get`'s day-summary lookup through `recap.Find`, deleting the hand-rolled `summaries` query from `internal/tools`, Scope, Status (+8 more)
 
 ### Community 377 - "Community 377"
-Cohesion: 0.50
-Nodes (3): App, Register(), Unregister()
+Cohesion: 0.12
+Nodes (16): Commands you will need, Current state, Done criteria, Git workflow, Import bookkeeping (the one non-trivial part), Maintenance notes, Plan 203: Extract the shared chat-history renderer from `web/recap.go` into `web/history.go`, Scope (+8 more)
 
 ### Community 378 - "Community 378"
 Cohesion: 0.39
 Nodes (11): App, T, Time, newEchoClient(), seedTurn(), TestEnsureSummariesFillsGapBeforeHighWater(), TestEnsureSummariesFreshBoxFromOldest(), TestEnsureSummariesHierarchy() (+3 more)
 
 ### Community 379 - "Community 379"
-Cohesion: 0.33
-Nodes (6): tourFile, tourStep, T, lineCount(), TestTours(), tourStep
+Cohesion: 0.12
+Nodes (16): Commands you will need, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 215: Batch the graph-card BFS — replace the per-node `Outbound`/`Backlinks` N+1 with a level-batched edge fetch, Scope, Status (+8 more)
 
 ### Community 380 - "Community 380"
-Cohesion: 0.17
-Nodes (12): App, CloudPresetView, PanelView, LibPath(), LibRoot(), ModelsDir(), RuntimeInstalled(), RuntimeInstalledFor() (+4 more)
+Cohesion: 0.12
+Nodes (16): Commands you will need, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 220: Bound `knowledge.FilterActive` — push ordering + a cap into the query instead of loading every active node and sorting in Go, Scope, Status (+8 more)
 
 ### Community 381 - "Community 381"
 Cohesion: 0.11
@@ -1910,24 +1929,24 @@ Cohesion: 0.11
 Nodes (18): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 188: Collapse the duplicated FTS5+fallback skeleton in SearchActive / SearchAllActive, Scope, Status (+10 more)
 
 ### Community 383 - "Community 383"
-Cohesion: 0.47
-Nodes (5): App, ResponseRecorder, T, serveReviewRoute(), TestReviewEditApproveApplies()
+Cohesion: 0.25
+Nodes (17): App, Kind, Record, App, ResponseRecorder, T, ApplyEdit(), clearPendingEdit() (+9 more)
 
 ### Community 384 - "Community 384"
-Cohesion: 0.67
-Nodes (3): TestChoices(), TestChoicesNoHint(), T
+Cohesion: 0.33
+Nodes (7): ChoiceItem, Choices(), TestChoices(), TestChoicesNoHint(), ChoicesProps, Node, T
 
 ### Community 385 - "Community 385"
 Cohesion: 0.50
 Nodes (3): downConversationCompaction(), App, upConversationCompaction()
 
 ### Community 389 - "Community 389"
-Cohesion: 0.16
-Nodes (16): Add(), Funcs(), init(), init(), Register(), Unregister(), App, App (+8 more)
+Cohesion: 0.12
+Nodes (15): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 202: Add `tasks.DoneBetween` and move the done-task derivation out of `life.Range`, Scope, Status (+7 more)
 
 ### Community 390 - "Community 390"
-Cohesion: 0.33
-Nodes (3): Execution order & status, Follow-up batch — 2026-06-25: spike productionization (193–196), Notes
+Cohesion: 0.22
+Nodes (6): Execution order & status, Follow-up — 2026-06-25: complete code-tour coverage (198), Follow-up batch — 2026-06-25: spike productionization (193–196), Notes, Notes, Status
 
 ### Community 391 - "Community 391"
 Cohesion: 0.36
@@ -1962,39 +1981,39 @@ Cohesion: 0.12
 Nodes (16): Commands you will need, Current state, Done criteria, Git workflow, Maintenance notes, Plan 175: Fix the morning briefing's "logged yesterday" line (always silently empty in production), Repo conventions that apply, Scope (+8 more)
 
 ### Community 399 - "Community 399"
-Cohesion: 0.32
-Nodes (15): App, Node, Record, SkillRecord, SkillRow, buildSkillsManage(), buildSkillsSummary(), mapRecords() (+7 more)
+Cohesion: 0.15
+Nodes (33): App, Node, Record, T, SkillRecord, SkillRow, buildSkillsManage(), buildSkillsSummary() (+25 more)
 
 ### Community 400 - "Community 400"
 Cohesion: 0.13
 Nodes (14): Commands you will need, Conventions, Current state, Done criteria, Maintenance notes, Plan 197: Fix the `balaur export` `--dir` flag collision (rename the dest flag to `--out`), Scope, Status (+6 more)
 
 ### Community 401 - "Community 401"
-Cohesion: 0.35
-Nodes (13): App, Node, Record, buildMeasure(), measureBody(), MeasureCard(), measureDataBody(), measureSparkline() (+5 more)
+Cohesion: 0.12
+Nodes (15): Commands you will need, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 211: Make the seed band-coverage summaries test deterministic via an injectable-now seam (fixes a Monday-only RED gate), Scope, Status (+7 more)
 
 ### Community 402 - "Community 402"
-Cohesion: 0.33
-Nodes (10): exportCmd(), runEncrypt(), TestExportDefaultsUnderDataDir(), TestExportEmitsEnvelopeAndWritesFiles(), TestExportEncryptRequiresPassphrase(), TestExportEncryptWritesArchiveAndWarns(), TestExportFlagDoesNotCollideWithDataDir(), App (+2 more)
+Cohesion: 0.17
+Nodes (20): exportCmd(), runEncrypt(), TestExportDefaultsUnderDataDir(), TestExportEmitsEnvelopeAndWritesFiles(), TestExportEncryptRequiresPassphrase(), TestExportEncryptWritesArchiveAndWarns(), TestExportFlagDoesNotCollideWithDataDir(), restoreCmd() (+12 more)
 
 ### Community 403 - "Community 403"
 Cohesion: 0.17
 Nodes (11): 1. Default data-dir location + first-run detection, 2. How first boot surfaces model/runtime install and the no-model-yet state, 3. How the owner restarts after the devloop, 4. How the no-args path coexists with explicit `serve` flags and the Makefile, 5. Loopback / non-exposure guarantee, 6. Per-OS double-click packaging (scoped, NOT built), First-run design note — closing the no-terminal launch gap, Open questions, resolved (+3 more)
 
 ### Community 404 - "Community 404"
-Cohesion: 0.36
-Nodes (11): T, Lookup(), Stories(), TestAllStoriesRender(), TestButtonCanvasRenders(), TestCardsCanvas(), TestColorsCanvas(), TestMaterialsCanvas() (+3 more)
+Cohesion: 0.12
+Nodes (15): Commands you will need, Current state, Done criteria — ALL must hold, Git workflow, Maintenance notes, Plan 219: De-duplicate repeated `store.OwnerLocation` calls within a single function, Scope, Status (+7 more)
 
 ### Community 405 - "Community 405"
 Cohesion: 0.27
 Nodes (8): T, App, CloudPreset, CloudPresetByKey(), CloudPresets(), TestCloudPresetByKey(), TestCloudPresetsCatalog(), bootstrapDevCloudModel()
 
 ### Community 406 - "Community 406"
-Cohesion: 0.38
-Nodes (10): T, New(), TestApprovedExtensionJoinsEveryGateway(), TestMaxStepsEnvRaisesTheCap(), TestNowLineGroundsTheMoment(), TestRunNotesUnbackedCaptureClaim(), TestRunPersistsHonestCaptureTurn(), TestRunPlainReplyNoCaptureClaim() (+2 more)
+Cohesion: 0.25
+Nodes (10): T, RequestEvent, handlers, SetOwnerSetting(), TestPanelCollapsed(), TestPanelWidthCSS(), TestParseShowURL(), TestShowURL() (+2 more)
 
 ### Community 407 - "Community 407"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (8): T, RequestEvent, handlers, clipText(), newNonce(), TestRedactSensitive(), redactSensitive(), readChatMessage()
 
 ### Community 408 - "Community 408"
@@ -2002,16 +2021,16 @@ Cohesion: 0.27
 Nodes (8): ClientSource, App, RequestEvent, handlers, guardLocalUI(), isAllowedHost(), sameHost(), toolIconFile()
 
 ### Community 409 - "Community 409"
-Cohesion: 0.44
-Nodes (9): App, Node, BacklinkView, buildNote(), LinkedBodyFixture(), LinkedFrom(), NoteCard(), registerNote() (+1 more)
+Cohesion: 0.15
+Nodes (19): Add(), App, Node, App, Node, BacklinkView, buildNote(), LinkedBodyFixture() (+11 more)
 
 ### Community 410 - "Community 410"
-Cohesion: 0.44
-Nodes (9): App, Record, computeActiveSkills(), computeUpfront(), copyForRead(), invalidateContextCache(), loadContextCache(), RegisterCacheInvalidation() (+1 more)
+Cohesion: 0.36
+Nodes (11): SetActive(), countAudit(), TestActiveDefaultsToMain(), TestCreateAudits(), TestCustomHeadRoundTripAndActive(), TestDeleteAudits(), TestDeletedActiveCustomFallsBackToMain(), TestSetActiveAudits() (+3 more)
 
 ### Community 411 - "Community 411"
-Cohesion: 0.27
-Nodes (6): Node, RequestEvent, ServerSentEventGenerator, handlers, closeCompactModal(), compactSignals
+Cohesion: 0.17
+Nodes (11): Current state (verified at `ef9f2df`), Done criteria, Notes, Plan 224 (DIR-03): Close the backup loop — add a `balaur restore` CLI verb over the existing `DecryptDir`, Proposed shape, Safety rules (non-negotiable — restore writes to the box), Status, STOP conditions (+3 more)
 
 ### Community 412 - "Community 412"
 Cohesion: 0.50
@@ -2026,64 +2045,124 @@ Cohesion: 0.46
 Nodes (6): T, MarkRefresh(), ParseRefresh(), TestParseRefreshDropsUnknownTypes(), TestParseRefreshPlainText(), TestRefreshMarkerRoundTrip()
 
 ### Community 415 - "Community 415"
-Cohesion: 0.73
-Nodes (5): recapCmd(), recapEnsureCmd(), recapShowCmd(), App, Command
+Cohesion: 0.40
+Nodes (10): TestDoctorMissingCollectionFails(), checkCollections(), checkDataDir(), checkExtensions(), checkModelReady(), checkOSAccess(), doctorCmd(), doctorCheck (+2 more)
 
 ### Community 416 - "Community 416"
 Cohesion: 0.60
 Nodes (5): Node, T, renderNode(), TestLifelogFocusContract(), TestLifelogFocusEmpty()
 
 ### Community 417 - "Community 417"
-Cohesion: 0.53
-Nodes (5): T, TestQuestsCardSummary(), TestQuestsCardSummaryEmpty(), TestQuestsManageCardEmpty(), TestQuestsManageCardRendersTaskCards()
+Cohesion: 0.36
+Nodes (10): T, strptr(), TestAddEdgeIdempotent(), TestCreateAndProps(), TestDropCascadesEdges(), TestTransitionLifecycle(), TestUpdateRejectsConsentGatedTypes(), TestUpdateRejectsInvalidProps() (+2 more)
 
 ### Community 418 - "Community 418"
-Cohesion: 0.70
-Nodes (4): App, Tool, JournalTools(), journalWriteTool()
+Cohesion: 0.22
+Nodes (8): App, Record, T, T, ListAudit(), TestListAudit(), TestListAuditLimit(), TestLifeEntryDrop()
 
 ### Community 419 - "Community 419"
-Cohesion: 0.60
-Nodes (4): T, TestMessageViewsClusterRendersNonClickableChip(), TestMessageViewsStripsRefreshMarker(), TestMessageViewsUicardRendersChip()
+Cohesion: 0.18
+Nodes (10): Current state (verified at `ef9f2df`), Decision gate (pick one, write it down), Done criteria (Phase 0), Notes for whoever picks the follow-up, Phase 0 — the spike (the only part to do now), Plan 223 (DIR-02): Spike — decide whether to wire embeddings into recall, or delete the dead `Embed` seam, Status, STOP conditions (+2 more)
 
 ### Community 420 - "Community 420"
 Cohesion: 0.40
 Nodes (5): Advisory batch — 2026-06-25 full-codebase audit (plans 175–192), Dependency notes (175–192), Execution log (2026-06-25), Execution order & status (175–192), Findings considered and rejected (175–192)
 
 ### Community 421 - "Community 421"
-Cohesion: 0.67
-Nodes (3): T, TestErrorStripIDRendersAndEscapes(), TestErrorStripRendersAndEscapes()
+Cohesion: 0.18
+Nodes (10): Current state (verified at `ef9f2df`), Decision gate, Done criteria (Phase 0), Notes, Phase 0 — the spike (do this now, write a finding), Plan 228 (DIR-04): Messenger gateway spike — prove the gateway line holds for a third surface, Status, STOP conditions (+2 more)
 
 ### Community 422 - "Community 422"
-Cohesion: 0.67
-Nodes (3): T, TestComposer(), TestComposerDefaults()
+Cohesion: 0.39
+Nodes (6): Node, T, Composer(), TestComposer(), TestComposerDefaults(), ComposerProps
 
 ### Community 423 - "Community 423"
-Cohesion: 0.50
-Nodes (3): T, TestPrettyJSON(), prettyJSON()
+Cohesion: 0.33
+Nodes (8): Node, T, Avatar(), Icon(), TestAvatarDecorativeDefaults(), TestAvatarNamedNotHidden(), TestIcon(), AvatarProps
 
 ### Community 424 - "Community 424"
+Cohesion: 0.20
+Nodes (9): Current state (verified at `ef9f2df`), Done criteria (Phase 1), Notes, Plan 225 (DIR-06): Complete the sovereign export — add the redaction pass that un-defers `day` and `task`, Status, STOP conditions, The bet, scoped (Pareto: journal first, the rest deferred-within-deferred), Why day/task were deferred (the real risk) (+1 more)
+
+### Community 425 - "Community 425"
+Cohesion: 0.20
+Nodes (9): Current state (verified at `ef9f2df`), Decision gate, Done criteria (Phase 0), Notes, Phase 0 — the gap map (do this now), Plan 226 (DIR-01): North-star spike — what stands between today's binary and a non-technical owner's double-click?, Status, STOP conditions (+1 more)
+
+### Community 426 - "Community 426"
+Cohesion: 0.20
+Nodes (9): Current state (verified at `ef9f2df`), Done criteria (Phase 0 — design), Notes, Plan 227 (DIR-05): Provenance edges — link every agent-created node back to the turn that created it, Status, STOP conditions, The bet, scoped, The load-bearing unknown (resolve in Phase 0 before any code) (+1 more)
+
+### Community 427 - "Community 427"
+Cohesion: 0.39
+Nodes (8): T, TestChatBarNode(), TestHeadSwitcherNode(), TestHomeDockSelectorIDs(), TestHomeFullChat(), TestHomePanelChrome(), TestHomePanelRestore(), TestModelSwitcherNode()
+
+### Community 428 - "Community 428"
+Cohesion: 0.64
+Nodes (7): App, Tool, clipN(), entryDropTool(), entrySeriesTool(), LifeTools(), logEntryTool()
+
+### Community 429 - "Community 429"
+Cohesion: 0.36
+Nodes (6): Node, T, TestTooltipBottom(), TestTooltipTop(), Tooltip(), TooltipProps
+
+### Community 430 - "Community 430"
+Cohesion: 0.33
+Nodes (5): Node, T, CommandPalette(), TestCommandPalette(), CommandItem
+
+### Community 431 - "Community 431"
+Cohesion: 0.29
+Nodes (7): Advisory batch — 2026-06-26 modularity & coupling audit (plans 199–210), Correction applied during planning (read before executing 210), Dependency notes (199–210), Execution order & status (199–210), Findings considered and rejected (199–210), Merge-time reconcile — `.tours/07-the-web-gateway.tour` chatNudges anchor (199 + 200), ✅ RESOLVED (was ⛔ BLOCKER) — date-fragile seed test reded the gate (discovered 2026-06-29, executing 204)
+
+### Community 432 - "Community 432"
+Cohesion: 0.60
+Nodes (5): ArtifactChipProps, ArtifactChip(), Panel(), PanelProps, Node
+
+### Community 433 - "Community 433"
+Cohesion: 0.40
+Nodes (5): historyCmd(), messageJSON(), App, Command, Record
+
+### Community 434 - "Community 434"
+Cohesion: 0.33
+Nodes (5): Evidence (the whole migration), If this ever changes, Plan 221: Characterization test for `1750000070_conversation_compaction` — REJECTED (pure-schema migration, no row transform), Verdict, Why rejected rather than "write it anyway"
+
+### Community 435 - "Community 435"
+Cohesion: 0.33
+Nodes (6): Audit pass — full sweep 2026-06-30 (plans 212–228), Considered and rejected (do not re-audit), Dependency & coordination notes, Direction plans — decide before building, Fix plans — execution order & status, What this pass did NOT cover
+
+### Community 436 - "Community 436"
+Cohesion: 0.83
+Nodes (3): CardTurn(), CardTurnProps, Node
+
+### Community 437 - "Community 437"
+Cohesion: 0.83
+Nodes (3): Cluster(), ClusterProps, Node
+
+### Community 438 - "Community 438"
+Cohesion: 0.50
+Nodes (3): T, TestEveryRegisteredCardHasAStory(), RegisteredCardTypes()
+
+### Community 439 - "Community 439"
 Cohesion: 0.67
-Nodes (3): T, TestDayCardReflectsJournalEntry(), TestJournalAndDayRoutesRetired()
+Nodes (3): T, TestDayDataBoundary(), TestRange()
 
 ## Knowledge Gaps
-- **3818 isolated node(s):** `$schema`, `allow`, `PostToolUse`, `PreToolUse`, `ponytail@ponytail` (+3813 more)
+- **4253 isolated node(s):** `$schema`, `allow`, `PostToolUse`, `PreToolUse`, `ponytail@ponytail` (+4248 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Append()` connect `Community 272` to `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 15`, `Community 18`, `Community 23`, `Community 25`, `Community 26`, `Community 33`, `Community 43`, `Community 54`, `Community 63`, `Community 73`, `Community 74`, `Community 75`, `Community 83`, `Community 84`, `Community 88`, `Community 101`, `Community 102`, `Community 103`, `Community 109`, `Community 110`, `Community 133`, `Community 150`, `Community 151`, `Community 152`, `Community 154`, `Community 155`, `Community 156`, `Community 187`, `Community 188`, `Community 189`, `Community 191`, `Community 208`, `Community 209`, `Community 210`, `Community 211`, `Community 221`, `Community 222`, `Community 225`, `Community 226`, `Community 227`, `Community 230`, `Community 231`, `Community 233`, `Community 234`, `Community 235`, `Community 238`, `Community 241`, `Community 245`, `Community 254`, `Community 256`, `Community 257`, `Community 260`, `Community 261`, `Community 262`, `Community 263`, `Community 276`, `Community 282`, `Community 284`, `Community 289`, `Community 292`, `Community 294`, `Community 301`, `Community 309`, `Community 317`, `Community 324`, `Community 339`, `Community 349`, `Community 350`, `Community 354`, `Community 355`, `Community 357`, `Community 358`, `Community 363`, `Community 372`, `Community 374`, `Community 375`, `Community 378`, `Community 380`, `Community 389`, `Community 397`, `Community 399`, `Community 401`, `Community 405`, `Community 406`, `Community 409`, `Community 410`, `Community 414`?**
-  _High betweenness centrality (0.082) - this node is a cross-community bridge._
-- **Why does `contains()` connect `Community 12` to `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 10`, `Community 13`, `Community 18`, `Community 23`, `Community 25`, `Community 26`, `Community 36`, `Community 44`, `Community 63`, `Community 73`, `Community 84`, `Community 91`, `Community 100`, `Community 101`, `Community 103`, `Community 109`, `Community 134`, `Community 150`, `Community 151`, `Community 153`, `Community 154`, `Community 155`, `Community 156`, `Community 188`, `Community 189`, `Community 208`, `Community 209`, `Community 210`, `Community 211`, `Community 222`, `Community 227`, `Community 230`, `Community 231`, `Community 233`, `Community 234`, `Community 238`, `Community 240`, `Community 243`, `Community 245`, `Community 254`, `Community 260`, `Community 263`, `Community 275`, `Community 276`, `Community 279`, `Community 282`, `Community 283`, `Community 286`, `Community 288`, `Community 290`, `Community 291`, `Community 292`, `Community 295`, `Community 296`, `Community 301`, `Community 309`, `Community 322`, `Community 323`, `Community 327`, `Community 328`, `Community 339`, `Community 348`, `Community 349`, `Community 358`, `Community 359`, `Community 365`, `Community 366`, `Community 371`, `Community 376`, `Community 378`, `Community 384`, `Community 391`, `Community 393`, `Community 397`, `Community 402`, `Community 404`, `Community 405`, `Community 406`, `Community 407`, `Community 408`, `Community 412`, `Community 413`, `Community 416`, `Community 417`, `Community 419`, `Community 421`, `Community 422`, `Community 423`, `Community 425`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Why does `NewApp()` connect `Community 101` to `Community 257`, `Community 3`, `Community 260`, `Community 5`, `Community 391`, `Community 10`, `Community 14`, `Community 402`, `Community 406`, `Community 23`, `Community 25`, `Community 26`, `Community 153`, `Community 156`, `Community 288`, `Community 36`, `Community 300`, `Community 301`, `Community 305`, `Community 309`, `Community 54`, `Community 188`, `Community 63`, `Community 192`, `Community 191`, `Community 322`, `Community 209`, `Community 339`, `Community 84`, `Community 348`, `Community 226`, `Community 227`, `Community 354`, `Community 359`, `Community 103`, `Community 233`, `Community 245`, `Community 378`, `Community 254`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Are the 363 inferred relationships involving `contains()` (e.g. with `TestLoopLogsToolCalls()` and `TestAppDockResetsTop()`) actually correct?**
-  _`contains()` has 363 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 276 inferred relationships involving `Append()` (e.g. with `collect()` and `.Run()`) actually correct?**
-  _`Append()` has 276 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 269 inferred relationships involving `NewApp()` (e.g. with `TestChatReportsToolsAndVerdict()` and `TestDoctorHealthyBox()`) actually correct?**
-  _`NewApp()` has 269 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Append()` connect `Community 272` to `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 8`, `Community 9`, `Community 10`, `Community 14`, `Community 15`, `Community 18`, `Community 23`, `Community 25`, `Community 26`, `Community 33`, `Community 43`, `Community 63`, `Community 73`, `Community 74`, `Community 75`, `Community 83`, `Community 84`, `Community 88`, `Community 100`, `Community 101`, `Community 102`, `Community 103`, `Community 109`, `Community 110`, `Community 151`, `Community 152`, `Community 154`, `Community 155`, `Community 156`, `Community 187`, `Community 188`, `Community 191`, `Community 208`, `Community 210`, `Community 211`, `Community 222`, `Community 226`, `Community 227`, `Community 230`, `Community 231`, `Community 233`, `Community 234`, `Community 235`, `Community 236`, `Community 238`, `Community 241`, `Community 245`, `Community 247`, `Community 256`, `Community 260`, `Community 261`, `Community 262`, `Community 263`, `Community 282`, `Community 284`, `Community 289`, `Community 294`, `Community 296`, `Community 301`, `Community 309`, `Community 324`, `Community 339`, `Community 349`, `Community 350`, `Community 355`, `Community 357`, `Community 358`, `Community 371`, `Community 372`, `Community 374`, `Community 375`, `Community 378`, `Community 383`, `Community 384`, `Community 397`, `Community 399`, `Community 405`, `Community 409`, `Community 414`, `Community 415`, `Community 422`, `Community 423`, `Community 430`, `Community 432`, `Community 433`, `Community 436`, `Community 437`?**
+  _High betweenness centrality (0.073) - this node is a cross-community bridge._
+- **Why does `contains()` connect `Community 12` to `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 8`, `Community 10`, `Community 13`, `Community 14`, `Community 18`, `Community 23`, `Community 25`, `Community 26`, `Community 36`, `Community 44`, `Community 62`, `Community 63`, `Community 73`, `Community 83`, `Community 84`, `Community 91`, `Community 100`, `Community 101`, `Community 103`, `Community 109`, `Community 134`, `Community 136`, `Community 153`, `Community 154`, `Community 156`, `Community 188`, `Community 208`, `Community 210`, `Community 211`, `Community 222`, `Community 224`, `Community 227`, `Community 230`, `Community 231`, `Community 233`, `Community 234`, `Community 236`, `Community 238`, `Community 240`, `Community 241`, `Community 243`, `Community 245`, `Community 256`, `Community 260`, `Community 263`, `Community 275`, `Community 282`, `Community 283`, `Community 286`, `Community 288`, `Community 290`, `Community 291`, `Community 295`, `Community 296`, `Community 301`, `Community 309`, `Community 322`, `Community 328`, `Community 339`, `Community 348`, `Community 349`, `Community 358`, `Community 365`, `Community 366`, `Community 371`, `Community 378`, `Community 384`, `Community 391`, `Community 393`, `Community 397`, `Community 399`, `Community 402`, `Community 405`, `Community 407`, `Community 408`, `Community 412`, `Community 413`, `Community 416`, `Community 417`, `Community 422`, `Community 423`, `Community 427`, `Community 430`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **Why does `NewApp()` connect `Community 101` to `Community 3`, `Community 260`, `Community 6`, `Community 391`, `Community 10`, `Community 14`, `Community 402`, `Community 23`, `Community 25`, `Community 410`, `Community 26`, `Community 156`, `Community 153`, `Community 415`, `Community 288`, `Community 417`, `Community 418`, `Community 36`, `Community 300`, `Community 301`, `Community 305`, `Community 309`, `Community 439`, `Community 188`, `Community 63`, `Community 192`, `Community 191`, `Community 322`, `Community 339`, `Community 84`, `Community 348`, `Community 224`, `Community 226`, `Community 227`, `Community 102`, `Community 359`, `Community 103`, `Community 233`, `Community 236`, `Community 241`, `Community 245`, `Community 378`, `Community 383`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Are the 366 inferred relationships involving `contains()` (e.g. with `TestLoopLogsToolCalls()` and `TestAppDockResetsTop()`) actually correct?**
+  _`contains()` has 366 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 283 inferred relationships involving `NewApp()` (e.g. with `TestChatReportsToolsAndVerdict()` and `TestDoctorHealthyBox()`) actually correct?**
+  _`NewApp()` has 283 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 280 inferred relationships involving `Append()` (e.g. with `collect()` and `.Run()`) actually correct?**
+  _`Append()` has 280 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 210 inferred relationships involving `Text()` (e.g. with `CardTurn()` and `Choices()`) actually correct?**
   _`Text()` has 210 INFERRED edges - model-reasoned connections that need verification._

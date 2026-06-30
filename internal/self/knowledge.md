@@ -315,7 +315,7 @@ head is switched from the dock via POST /ui/heads/active, and the heads section
 manages personas via POST /ui/heads/new and POST /ui/heads/{id}/delete; the
 machine-facing
 CLI (doctor, chat, task, memory, skill, note, search, life, journal, day, recap,
-history, audit, verify, model, self, ext, export, seed) printing v1 JSON envelopes
+history, audit, verify, model, self, ext, export, restore, seed) printing v1 JSON envelopes
 `{"v":1,"kind":"<cmd>","data":{…}}` for external harnesses — `balaur doctor`
 preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface. `balaur export` (plan 194) writes a
@@ -329,7 +329,12 @@ their own recap/transcript redaction pass. `--encrypt` (plan 195) wraps the whol
 mirror tree in a single passphrase-encrypted archive (scrypt-stretched
 passphrase, AES-256-GCM, CGO-free) for safe off-box backup — owner-supplied
 passphrase via `BALAUR_EXPORT_PASSPHRASE`, no escrow, no cloud: lose the
-passphrase and the backup is unrecoverable. The phased design lives in
+passphrase and the backup is unrecoverable. `balaur restore --archive <path>
+--out <dir>` (plan 224) is the matching recovery verb: it decrypts the archive
+back into a readable Markdown tree (same `BALAUR_EXPORT_PASSPHRASE` env var,
+never a flag). It does not re-import into the live database — the decrypted tree
+is the owner's human-readable recovered data. Wrong passphrase → clean error,
+nothing written; non-empty `--out` → refused. The phased design lives in
 docs/superpowers/specs/2026-06-25-sovereign-export-design.md.
 
 The quest log (the quests card, opens in the right panel at /ui/show/quests): rhythm groups Dailies/Rituals/Quests/Side quests; month calendar and 14-day timeline are their own cards.
