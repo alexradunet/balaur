@@ -178,18 +178,19 @@ func snoozeUntil(pick string, now time.Time) (time.Time, error) {
 
 // ---- nudge polling ----
 
-// chatNudges returns agent-initiated messages (origin != "") newer than
-// `since` (unix millis) as out-of-band fragments: the messages append to
-// #chat and the poller replaces itself with an advanced cursor. Chat turns
-// never flow through here — the streamed POST renders those — so polling
-// cannot duplicate them.
+// chatNudges returns agent-initiated messages (origin "nudge" or "briefing")
+// newer than `since` (unix millis) as out-of-band fragments: the messages
+// append to #chat and the poller replaces itself with an advanced cursor.
+// Runtime artifacts the honesty check writes during a turn (origin
+// "uncommitted"/"check") are deliberately excluded — the streamed turn already
+// renders those, so polling must not re-append them.
 func (h *handlers) chatNudges(e *core.RequestEvent) error {
 	ms, err := strconv.ParseInt(e.Request.URL.Query().Get("since"), 10, 64)
 	if err != nil {
 		return e.BadRequestError("bad since", err)
 	}
 	recs, err := h.app.FindRecordsByFilter("messages",
-		"origin != '' && created > {:since}", "@rowid", 20, 0,
+		"(origin = 'nudge' || origin = 'briefing') && created > {:since}", "@rowid", 20, 0,
 		dbx.Params{"since": store.PBTime(time.UnixMilli(ms))})
 	if err != nil {
 		return e.InternalServerError("loading nudges", err)
