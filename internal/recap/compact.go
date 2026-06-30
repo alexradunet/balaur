@@ -40,8 +40,9 @@ func DraftToday(ctx context.Context, app core.App, client llm.Client, conv *core
 	if err != nil {
 		return "", 0, err
 	}
-	label := fmt.Sprintf("Today, %s–%s", boundary.In(store.OwnerLocation(app)).Format("15:04"),
-		now.In(store.OwnerLocation(app)).Format("15:04"))
+	loc := store.OwnerLocation(app)
+	label := fmt.Sprintf("Today, %s–%s", boundary.In(loc).Format("15:04"),
+		now.In(loc).Format("15:04"))
 	stream, err := client.ChatStream(ctx, compactPrompt(label, source), nil)
 	if err != nil {
 		return "", 0, fmt.Errorf("summarising compaction: %w", err)
