@@ -29,8 +29,8 @@ database you own and can open with any SQLite tool.
   styled by the Hearthwood/Basm design system (see `DESIGN.md`). The PocketBase
   dashboard at `/_/` stays the superuser engine room.
 - **Models:** Balaur runs local GGUF models in-process. Install one from the
-  settings models section (an absolute `.gguf` path);
-  it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
+  settings models section (one click from the curated model catalog; the engine
+  downloads and verifies it); it runs on CPU by default, or set `BALAUR_PROCESSOR=vulkan` to offload to a
   Vulkan GPU. Local is the default and stays first-class; an EU/GDPR-compliant
   cloud model (Mistral today — the curated picker is EU-only for AI sovereignty)
   can be added opt-in from the Models page, consent-gated — never the default,
@@ -59,7 +59,7 @@ database you own and can open with any SQLite tool.
 - **Commitments captured in chat:** `task_add`, `task_list`, `task_done`,
   `task_snooze`, `task_drop` — one-offs and recurring habits/chores with a
   tiny recurrence DSL (`daily`, `every:3d`, `weekly:mon,thu`, `monthly:15`,
-  fixed-schedule or from-completion). Tasks live in the `tasks` collection;
+  fixed-schedule or from-completion). Tasks are `type=task` nodes in the unified `nodes` collection;
   completions land in `entries`, the life-log substrate. New tasks render
   as live cards in chat. Every turn is grounded in the present moment —
   date, time, timezone — so "tomorrow at 10" resolves against the box's
@@ -140,6 +140,7 @@ database you own and can open with any SQLite tool.
   and propose its own extensions in chat (`propose_extension`) — new
   capability without rebuild or restart, but never without the owner.
   See "balaur-extensions".
+- **Your record, portable:** `balaur export` writes a one-way Johnny Decimal Markdown mirror of your active nodes (plan 194); `--encrypt` produces a passphrase-protected archive (plan 195).
 
 ## Quick start
 
@@ -312,6 +313,8 @@ is non-fatal).
 | `balaur model` | Available and active model choices — a harness precondition check. | no |
 | `balaur self [--section]` | Build stamp, live capability inventory, source seam; optionally one self-knowledge section (overview, architecture, capabilities, source, devloop). | no |
 | `balaur ext list/approve/disable/show` | balaur-extensions lifecycle: review proposals, consent (pins sha256), turn off, inspect code. | no |
+| `balaur export [--encrypt --archive <path>]` | Read-only Markdown mirror of active nodes (sovereign vault); `--encrypt` wraps it as a passphrase-protected archive. | no |
+| `balaur seed` | Populate the dev/demo data set. | no |
 
 Every command works on a fresh data dir: pending migrations apply on
 first touch, so harness runs isolate cheaply with `--dir`:
@@ -425,7 +428,6 @@ boundary) and `DESIGN.md` for the Basm design system.
 
 - Embedding recall (FTS5 lexical recall shipped; `Embed()` seam reserved
   for a second ranking stage behind the same SearchActive call)
-- Encrypted export
 - Multi-human accounts (the schema allows it; v1 serves one owner)
 
 ## License
