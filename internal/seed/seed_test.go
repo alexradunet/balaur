@@ -249,11 +249,14 @@ func TestSeedSummariesPopulatesAllBandLevels(t *testing.T) {
 // period nodes are not empty.
 func TestSeedRangeContent(t *testing.T) {
 	app := storetest.NewApp(t)
-	if _, err := Run(app); err != nil {
-		t.Fatalf("Run: %v", err)
+	// Fixed Wednesday so the seeded history and the asserted month derive from one
+	// clock — deterministic regardless of the run date. Mirrors
+	// TestSeedSummariesPopulatesAllBandLevels.
+	now := time.Date(2026, 6, 24, 12, 0, 0, 0, time.UTC)
+	if _, err := runAt(app, now); err != nil {
+		t.Fatalf("runAt: %v", err)
 	}
 
-	now := time.Now()
 	month := recap.Month(now.AddDate(0, -8, 0))
 	data, err := life.Range(app, month.Start, month.End)
 	if err != nil {
