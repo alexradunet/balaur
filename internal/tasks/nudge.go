@@ -102,19 +102,31 @@ func Nudge(app core.App, client llm.Client, now time.Time) error {
 	if err != nil {
 		return err
 	}
-	if err := conversation.AppendOrigin(app, master.Id,
-		llm.Message{Role: "assistant", Content: text}, "", "nudge"); err != nil {
+	// The nudge message and the per-task nudged_at marks are one logical unit:
+	// nudged_at is the idempotency token for the message. RunInTransaction makes
+	// them all-or-nothing, so a crash/partial-save can't leave the message posted
+	// with tasks unmarked (which would re-fire the nudge next tick). Audit stays
+	// outside so a failed audit never rolls back the nudge. Mirrors tasks.Done.
+	if err := app.RunInTransaction(func(txApp core.App) error {
+		if err := conversation.AppendOrigin(txApp, master.Id,
+			llm.Message{Role: "assistant", Content: text}, "", "nudge"); err != nil {
+			return err
+		}
+		for _, rec := range recs {
+			props := nodes.Props(rec)
+			props["nudged_at"] = store.PBTime(now.UTC())
+			rec.Set("props", props)
+			dehydrate(rec)
+			if err := txApp.Save(rec); err != nil {
+				return fmt.Errorf("marking nudge on %q: %w", rec.GetString("title"), err)
+			}
+			hydrate(rec)
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 	for _, rec := range recs {
-		props := nodes.Props(rec)
-		props["nudged_at"] = store.PBTime(now.UTC())
-		rec.Set("props", props)
-		dehydrate(rec)
-		if err := app.Save(rec); err != nil {
-			return fmt.Errorf("marking nudge on %q: %w", rec.GetString("title"), err)
-		}
-		hydrate(rec)
 		store.Audit(app, "nudge", "task.nudge", rec.Id, true,
 			map[string]any{"title": rec.GetString("title")})
 	}

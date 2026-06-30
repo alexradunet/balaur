@@ -192,6 +192,50 @@ func TestNudgeRespectsFutureAndSnooze(t *testing.T) {
 	}
 }
 
+func TestNudgeIdempotencyTwoTasks(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := time.Now()
+
+	rec1, err := Create(app, CreateOpts{Title: "Call notary", Due: now.Add(-10 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create rec1: %v", err)
+	}
+	rec2, err := Create(app, CreateOpts{Title: "Send invoice", Due: now.Add(-5 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create rec2: %v", err)
+	}
+
+	// First call: one message, both tasks marked.
+	if err := Nudge(app, nil, now); err != nil {
+		t.Fatalf("first nudge: %v", err)
+	}
+	msgs := nudgeMessages(t, app)
+	if len(msgs) != 1 {
+		t.Fatalf("first nudge: got %d messages, want 1", len(msgs))
+	}
+	if got := loadTask(t, app, rec1.Id); got.GetDateTime("nudged_at").IsZero() {
+		t.Error("rec1 nudged_at not set after first nudge")
+	}
+	if got := loadTask(t, app, rec2.Id); got.GetDateTime("nudged_at").IsZero() {
+		t.Error("rec2 nudged_at not set after first nudge")
+	}
+
+	// Second call: DueForNudge returns nothing, no new message.
+	if err := Nudge(app, nil, now.Add(time.Minute)); err != nil {
+		t.Fatalf("second nudge: %v", err)
+	}
+	if msgs := nudgeMessages(t, app); len(msgs) != 1 {
+		t.Errorf("second nudge: got %d messages, want still 1", len(msgs))
+	}
+	due, err := DueForNudge(app, now.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("DueForNudge: %v", err)
+	}
+	if len(due) != 0 {
+		t.Errorf("DueForNudge after nudge: got %d, want 0", len(due))
+	}
+}
+
 func TestNudgeCatchesUpAfterDowntime(t *testing.T) {
 	app := storetest.NewApp(t)
 	now := time.Now()
