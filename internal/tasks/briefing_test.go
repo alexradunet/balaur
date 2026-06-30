@@ -43,11 +43,24 @@ func briefingMessages(t *testing.T, app core.App) []*core.Record {
 	return recs
 }
 
-// at returns today's date at the given local hour — briefing tests pin the
-// clock inside the real today so created-timestamp comparisons hold.
+// at returns a fixed Wednesday (2026-06-24) at the given local hour — briefing
+// tests anchor to this date so clock-sensitive assertions are deterministic
+// regardless of when the suite runs.
 func at(hour int) time.Time {
-	now := time.Now()
-	return time.Date(now.Year(), now.Month(), now.Day(), hour, 0, 0, 0, time.Local)
+	return time.Date(2026, 6, 24, hour, 0, 0, 0, time.Local)
+}
+
+// stampBriefingCreated rewrites the persisted created field on all origin=briefing
+// messages to match when, so BriefedToday comparisons are not skewed by the real
+// wall clock. Call immediately after a Briefing() that is expected to persist.
+func stampBriefingCreated(t *testing.T, app core.App, when time.Time) {
+	t.Helper()
+	for _, rec := range briefingMessages(t, app) {
+		rec.SetRaw("created", when.UTC().Format("2006-01-02 15:04:05.000Z"))
+		if err := app.Save(rec); err != nil {
+			t.Fatalf("stamping briefing created: %v", err)
+		}
+	}
 }
 
 func TestBriefingFiresOncePerDay(t *testing.T) {
@@ -62,6 +75,9 @@ func TestBriefingFiresOncePerDay(t *testing.T) {
 	if msgs := briefingMessages(t, app); len(msgs) != 1 {
 		t.Fatalf("first run: %d messages, want 1", len(msgs))
 	}
+	// Anchor the persisted created to the fixed clock so BriefedToday comparisons
+	// are not skewed by the real wall clock.
+	stampBriefingCreated(t, app, at(10))
 	// Same day, later tick: derived idempotency holds.
 	if err := Briefing(app, nil, at(11), 9); err != nil {
 		t.Fatalf("second run: %v", err)
