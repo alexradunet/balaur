@@ -12,6 +12,7 @@ import (
 	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/llmtest"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
 )
 
@@ -281,5 +282,171 @@ func TestEnsureSummariesFreshBoxFromOldest(t *testing.T) {
 	days, _ := app.FindRecordsByFilter("summaries", "period_type = 'day'", "period_start", 0, 0, nil)
 	if len(days) != 2 {
 		t.Fatalf("fresh-box day summaries = %d, want 2 (both chat days from oldest)", len(days))
+	}
+}
+
+// TestEnsureSummariesParentHighWater proves:
+//  1. Catch-up from empty generates all expected parent summaries for completed periods.
+//  2. After the run, parent HW keys are persisted for each period type.
+//  3. A second run makes zero additional model calls (HW + short-circuit block re-walks).
+//  4. The still-open current parent period is NOT marked as high-water, so it
+//     keeps being re-evaluated on subsequent runs within the same period.
+func TestEnsureSummariesParentHighWater(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+
+	// Two days of chat in Jan 2026 (Q1) and one in Feb 2026 (Q1) — gives
+	// two week summaries, two month summaries, one quarter, one year when now
+	// is in 2027.
+	seedTurn(t, app, master.Id, "jan week1", time.Date(2026, 1, 5, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "jan week2", time.Date(2026, 1, 12, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "feb mid", time.Date(2026, 2, 10, 10, 0, 0, 0, loc))
+
+	// now is well past 2026 so all parent periods are complete.
+	now := time.Date(2027, 3, 1, 12, 0, 0, 0, loc)
+	client := newEchoClient()
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+
+	// All parent periods that had content should be summarised.
+	months, _ := app.FindRecordsByFilter("summaries", "period_type = 'month'", "", 0, 0, nil)
+	if len(months) < 2 {
+		t.Fatalf("month summaries = %d, want >= 2 (Jan and Feb 2026)", len(months))
+	}
+	quarters, _ := app.FindRecordsByFilter("summaries", "period_type = 'quarter'", "", 0, 0, nil)
+	if len(quarters) < 1 {
+		t.Fatalf("quarter summaries = %d, want >= 1 (Q1 2026)", len(quarters))
+	}
+	years, _ := app.FindRecordsByFilter("summaries", "period_type = 'year'", "", 0, 0, nil)
+	if len(years) < 1 {
+		t.Fatalf("year summaries = %d, want >= 1 (2026)", len(years))
+	}
+
+	// Parent HW keys must be persisted for each type.
+	for _, pt := range []string{"week", "month", "quarter", "year"} {
+		v := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, pt), "")
+		if v == "" {
+			t.Errorf("parent HW key for %q not persisted after full run", pt)
+		}
+	}
+
+	// Second run must make zero additional model calls.
+	before := client.Calls
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries rerun: %v", err)
+	}
+	if client.Calls != before {
+		t.Fatalf("parent HW rerun made %d extra model calls, want 0", client.Calls-before)
+	}
+
+	// The current (still-open) parent period must NOT be in the HW mark for
+	// month, so a later run within 2027 still evaluates it. Advance now into
+	// a month that has content and check the month HW is earlier than it.
+	later := time.Date(2027, 3, 15, 12, 0, 0, 0, loc)
+	currentMonth := Containing("month", later)
+	hwRaw := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, "month"), "")
+	hwTime, _ := time.ParseInLocation("2006-01-02", hwRaw, loc)
+	if !hwTime.Before(currentMonth.Start) {
+		t.Fatalf("month HW %v is not before current month start %v — open period was prematurely marked",
+			hwTime, currentMonth.Start)
+	}
+}
+
+// TestEnsureSummariesParentHighWaterSkipsPast proves that a fully-past parent
+// period whose summary is deleted BELOW the high-water mark is not regenerated
+// (mirroring the day HW skip contract: the mark is a performance cut, not a
+// correctness guarantee for pre-mark periods).
+func TestEnsureSummariesParentHighWaterSkipsPast(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+	seedTurn(t, app, master.Id, "jan", time.Date(2026, 1, 5, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "feb", time.Date(2026, 2, 10, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "mar", time.Date(2026, 3, 10, 10, 0, 0, 0, loc))
+
+	// now past Q1 so Jan, Feb, Mar months all complete.
+	now := time.Date(2026, 7, 1, 12, 0, 0, 0, loc)
+	client := newEchoClient()
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+
+	// Jan month summary exists. Delete it — it is BELOW the HW mark (the mark
+	// advanced past March). A rerun must not regenerate it.
+	janMonth := Containing("month", time.Date(2026, 1, 1, 0, 0, 0, 0, loc))
+	if rec := Find(app, master.Id, janMonth); rec != nil {
+		if err := app.Delete(rec); err != nil {
+			t.Fatalf("delete Jan month: %v", err)
+		}
+	}
+
+	before := client.Calls
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("rerun: %v", err)
+	}
+	if client.Calls != before {
+		t.Fatalf("rerun made %d extra model calls; Jan month below HW should be skipped", client.Calls-before)
+	}
+	// Jan month summary is still gone — skipped by the HW (intentional).
+	if Find(app, master.Id, janMonth) != nil {
+		t.Fatal("Jan month summary was regenerated; expected HW to skip pre-mark periods")
+	}
+}
+
+// TestEnsureSummariesParentHighWaterGapAtMark proves that a summary for the
+// period AT the HW mark position is re-generated when deleted. The HW stores
+// the Start of the last fully-past period; Containing re-visits exactly that
+// period on the next run, so a deleted summary at the boundary is refilled.
+// Scenario: now is mid-Feb so only Jan is fully past; the month HW points to
+// Jan 2026. Deleting Jan's month summary and re-running must regenerate it.
+func TestEnsureSummariesParentHighWaterGapAtMark(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+	seedTurn(t, app, master.Id, "jan", time.Date(2026, 1, 5, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "feb", time.Date(2026, 2, 10, 10, 0, 0, 0, loc))
+
+	// now is mid-Feb: Jan is fully past, Feb is still running.
+	now := time.Date(2026, 2, 15, 12, 0, 0, 0, loc)
+	client := newEchoClient()
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries: %v", err)
+	}
+
+	// Month HW must be Jan 2026 (the only fully-past month).
+	hwRaw := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, "month"), "")
+	if hwRaw != "2026-01-01" {
+		t.Fatalf("month HW = %q, want 2026-01-01", hwRaw)
+	}
+
+	// Delete Jan's month summary. The next run starts at the HW (Jan 2026),
+	// re-visits Jan, and refills the missing summary.
+	janMonth := Containing("month", time.Date(2026, 1, 1, 0, 0, 0, 0, loc))
+	if rec := Find(app, master.Id, janMonth); rec != nil {
+		if err := app.Delete(rec); err != nil {
+			t.Fatalf("delete Jan month: %v", err)
+		}
+	}
+
+	before := client.Calls
+	if err := EnsureSummaries(context.Background(), app, client, master.Id, now); err != nil {
+		t.Fatalf("rerun: %v", err)
+	}
+	if client.Calls == before {
+		t.Fatal("rerun made no model calls; expected Jan month at HW boundary to be regenerated")
+	}
+	if Find(app, master.Id, janMonth) == nil {
+		t.Fatal("Jan month summary still missing; HW boundary period not refilled")
 	}
 }
