@@ -88,11 +88,19 @@ func highWaterKey(conversationID string) string {
 	return "recap_highwater_" + conversationID
 }
 
-// loadHighWater returns the persisted high-water day for the conversation as a
+// parentHighWaterKey is the owner_settings key for the newest fully-past
+// period of the given type (week/month/quarter/year) that has been walked for
+// one conversation. Mirrors the day high-water pattern, with one mark per
+// period type so week/month/quarter/year resume independently.
+func parentHighWaterKey(conversationID, periodType string) string {
+	return "recap_parent_highwater_" + conversationID + "_" + periodType
+}
+
+// loadHighWater returns the persisted high-water date stored under key as a
 // local-midnight time in loc, or the zero time when none is stored or it is
 // unparseable (so the caller falls back to walking from oldest).
-func loadHighWater(app core.App, conversationID string, loc *time.Location) time.Time {
-	raw := store.GetOwnerSetting(app, highWaterKey(conversationID), "")
+func loadHighWater(app core.App, key string, loc *time.Location) time.Time {
+	raw := store.GetOwnerSetting(app, key, "")
 	if raw == "" {
 		return time.Time{}
 	}
@@ -103,12 +111,12 @@ func loadHighWater(app core.App, conversationID string, loc *time.Location) time
 	return t
 }
 
-// saveHighWater records day d (local midnight) as the newest contiguously
-// settled day for the conversation. Best-effort: a failure to persist only
-// means the next run re-walks from the previous mark — the Find short-circuit
-// keeps that correct, just not maximally cheap. Never abort the run on this.
-func saveHighWater(app core.App, conversationID string, d time.Time) {
-	if err := store.SetOwnerSetting(app, highWaterKey(conversationID), d.Format("2006-01-02")); err != nil {
+// saveHighWater records date d (local midnight) under key. Best-effort: a
+// failure to persist only means the next run re-walks from the previous mark —
+// the Find short-circuit keeps that correct, just not maximally cheap. Never
+// abort the run on this.
+func saveHighWater(app core.App, key string, d time.Time) {
+	if err := store.SetOwnerSetting(app, key, d.Format("2006-01-02")); err != nil {
 		app.Logger().Warn("recap: high-water persist failed", "error", err)
 	}
 }
@@ -284,7 +292,7 @@ func EnsureSummaries(ctx context.Context, app core.App, client llm.Client, conve
 	// from oldest; the Find/exists short-circuit in ensureOne is the safety net
 	// so a stale mark can never permanently skip a genuinely-missing summary.
 	start := oldest
-	if hw := loadHighWater(app, conversationID, now.Location()); hw.After(start) {
+	if hw := loadHighWater(app, highWaterKey(conversationID), now.Location()); hw.After(start) {
 		start = hw
 	}
 	contiguous := time.Time{}
@@ -311,15 +319,30 @@ func EnsureSummaries(ctx context.Context, app core.App, client llm.Client, conve
 		}
 	}
 	if !contiguous.IsZero() {
-		saveHighWater(app, conversationID, contiguous)
+		saveHighWater(app, highWaterKey(conversationID), contiguous)
 	}
 	// Parents bottom-up: weeks and months (from days), then quarters
-	// (from months), then years (from quarters).
+	// (from months), then years (from quarters). Each type resumes from its
+	// own persisted high-water mark so a steady-state tick skips already-settled
+	// periods entirely rather than re-finding each one. Only fully-past periods
+	// (End <= now) are marked; the still-open period keeps getting re-evaluated.
 	for _, pt := range []string{"week", "month", "quarter", "year"} {
-		for p := Containing(pt, oldest); p.Start.Before(now); p = Containing(pt, p.End) {
+		pKey := parentHighWaterKey(conversationID, pt)
+		pStart := oldest
+		if hw := loadHighWater(app, pKey, now.Location()); hw.After(pStart) {
+			pStart = hw
+		}
+		var lastPast time.Time
+		for p := Containing(pt, pStart); p.Start.Before(now); p = Containing(pt, p.End) {
 			if _, err := ensureOne(ctx, app, client, conversationID, p, now); err != nil {
 				return err
 			}
+			if !p.End.After(now) { // period fully in the past → eligible to mark
+				lastPast = p.Start
+			}
+		}
+		if !lastPast.IsZero() {
+			saveHighWater(app, pKey, lastPast)
 		}
 	}
 	return nil
