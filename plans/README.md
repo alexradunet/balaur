@@ -512,12 +512,12 @@ then P3/P4. Nothing here depends on the 199–211 plans (all merged).
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Status |
 |------|-------|----------|--------|------|------------|--------|
-| 212 | Nudge poller re-appends honesty-check artifacts as duplicate chat | P1 | S | LOW | — | TODO |
-| 213 | DX: Makefile `TMPDIR` default + `.env.example` for `BALAUR_*` | P2 | S | LOW | — | TODO |
-| 214 | Docs truth-sync (DESIGN.md + README drift vs `self/knowledge.md`) | P2 | M | LOW | — | TODO |
-| 215 | Batch the graph-page BFS (per-level, not per-node queries) | P2 | S | LOW | — | TODO |
-| 217 | De-flake the two clock-coupled tests (seed + briefing) | P2 | S | LOW | — | TODO |
-| 218 | Wrap nudge mark-then-post in a transaction (mirror `Done`) | P2 | S | LOW | — | TODO |
+| 212 | Nudge poller re-appends honesty-check artifacts as duplicate chat | P1 | S | LOW | — | DONE (merged `2b406a2`) |
+| 213 | DX: Makefile `TMPDIR` default + `.env.example` for `BALAUR_*` | P2 | S | LOW | — | DONE (merged `69a5661`; +`!.env.example` gitignore negation; `make vulncheck` waived — box RAM-OOM, out of scope) |
+| 214 | Docs truth-sync (DESIGN.md + README drift vs `self/knowledge.md`) | P2 | M | LOW | — | DONE (merged `57dfa51`) |
+| 215 | Batch the graph-page BFS (per-level, not per-node queries) | P2 | S | LOW | — | DONE (merged `d460b31`) |
+| 217 | De-flake the two clock-coupled tests (seed + briefing) | P2 | S | LOW | — | DONE (merged `0206c6c`) |
+| 218 | Wrap nudge mark-then-post in a transaction (mirror `Done`) | P2 | S | LOW | — | DONE (merged `1e7a2b3`) |
 | 216 | Recap parent-period high-water mark | P3 | M | **MED** | — | TODO |
 | 222 | `llm_settings` singleton: retry-on-conflict (optional) | P3 | S | LOW | — | TODO |
 | 219 | De-dup repeated `OwnerLocation` resolution in `recap/compact` | P4 | S | LOW | — | TODO |
