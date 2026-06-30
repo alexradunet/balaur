@@ -62,10 +62,10 @@ var jdFolder = map[string]string{
 	"person": "20-29 People/21 People",
 	"book":   "30-39 Library/31 Books",
 	"place":  "40-49 Places/41 Places",
-	// "day" and "task" have JD folders in the design (50-59 Journal/51 Days,
-	// 60-69 Tasks/61 Tasks) but are DEFERRED — see deferredTypes. They are
-	// intentionally NOT exported until their recap/transcript redaction pass
-	// lands (a future plan).
+	"day":    "50-59 Journal/51 Days",
+	// "task" has a JD folder in the design (60-69 Tasks/61 Tasks) but is
+	// DEFERRED — see deferredTypes. It is intentionally NOT exported until its
+	// content redaction pass lands (a future plan).
 }
 
 // unsortedFolder is the fallback for any owner-authored type without an explicit
@@ -73,11 +73,10 @@ var jdFolder = map[string]string{
 const unsortedFolder = "90-99 Unsorted/91 Other"
 
 // deferredTypes are owner-authored types whose faithful export needs its own
-// redaction pass (day recap pages, task content). Exporting them raw could
-// surface un-reviewed content, so they are skipped entirely in this phase.
+// redaction pass. Exporting them raw could surface un-reviewed content, so they
+// are skipped entirely until their redaction pass + leak test land.
 // Do NOT remove a type from this set without adding its redaction pass + leak test.
 var deferredTypes = map[string]bool{
-	"day":  true,
 	"task": true,
 }
 
@@ -99,8 +98,9 @@ func jdFolderFor(typ string) string {
 // extensions, owner_settings, audit_log, or any token/secret/conversation
 // collection — the sovereign redaction boundary (asserted by the canary test).
 //
-// day and task are DEFERRED (deferredTypes): their recap/transcript content
-// needs its own redaction pass, so they are skipped here.
+// task is DEFERRED (deferredTypes): its content needs its own redaction pass, so
+// it is skipped here. day was un-deferred in plan 225 (leak test proved the body
+// carries only the owner's journal text — recap/summaries never touch the body).
 //
 // After writing the tree it commits the mirror to a git history under destDir
 // (offline; skipped cleanly when git is absent). It returns the relative file
