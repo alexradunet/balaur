@@ -300,6 +300,33 @@ func TestListLLMModelsMultipleProviders(t *testing.T) {
 	}
 }
 
+func TestSetActiveLLMModelIdempotent(t *testing.T) {
+	app := storetest.NewApp(t)
+	id, err := SaveCloudModel(app, "OpenAI", "https://api.openai.com/v1", cloudTestKey, "GPT-4o", "gpt-4o", "")
+	if err != nil {
+		t.Fatalf("save model: %v", err)
+	}
+	// Call twice with the same model — must succeed both times.
+	if err := SetActiveLLMModel(app, id, "owner"); err != nil {
+		t.Fatalf("first activate: %v", err)
+	}
+	if err := SetActiveLLMModel(app, id, "owner"); err != nil {
+		t.Fatalf("second activate: %v", err)
+	}
+	// Exactly one llm_settings row must exist.
+	n, err := app.CountRecords("llm_settings", nil)
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("llm_settings row count = %d, want 1", n)
+	}
+	// And it must point to the expected model.
+	if cfg, ok, err := ActiveLLMConfig(app); err != nil || !ok || cfg.ModelID != id {
+		t.Fatalf("active config: id=%q ok=%v err=%v", cfg.ModelID, ok, err)
+	}
+}
+
 func TestFindOrCreateLLMModelChangePathPersists(t *testing.T) {
 	app := storetest.NewApp(t)
 

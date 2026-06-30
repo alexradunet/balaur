@@ -253,14 +253,21 @@ func SetActiveLLMModel(app core.App, modelID, actor string) error {
 	if err != nil {
 		return err
 	}
-	settings, err := app.FindFirstRecordByData("llm_settings", "key", llmSettingsKey)
-	if err != nil {
-		settings = core.NewRecord(col)
-		settings.Set("key", llmSettingsKey)
+	save := func() error {
+		settings, err := app.FindFirstRecordByData("llm_settings", "key", llmSettingsKey)
+		if err != nil {
+			settings = core.NewRecord(col)
+			settings.Set("key", llmSettingsKey)
+		}
+		settings.Set("active_model", modelID)
+		return app.Save(settings)
 	}
-	settings.Set("active_model", modelID)
-	if err := app.Save(settings); err != nil {
-		return err
+	if err := save(); err != nil {
+		// Concurrent insert may have created the singleton between lookup and save;
+		// retry once, by which point the row exists and the retry updates it.
+		if err := save(); err != nil {
+			return fmt.Errorf("set active llm model: %w", err)
+		}
 	}
 	if actor == "" {
 		actor = "owner"
