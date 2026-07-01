@@ -223,6 +223,8 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/name", h.saveName)
 	se.Router.POST("/ui/profile/soul-avatar", h.setSoulAvatarFromProfile)
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
+	// Settings writes: capabilities / messenger token.
+	se.Router.POST("/ui/settings/messenger-token", h.saveMessengerToken)
 	// Nudge controls (settings → nudges): owner-driven mute/disable + manual fire.
 	se.Router.POST("/ui/nudge/toggle", h.nudgeToggle)
 	se.Router.POST("/ui/nudge/mute", h.nudgeMute)
