@@ -51,6 +51,20 @@ func main() {
 	// `balaur serve …` invocations so developers never see the banner.
 	var isFirstRun bool
 	if launch.IsLauncherInvocation(os.Args[1:]) {
+		// Single-instance guard (plan 232): if another server is already running
+		// on the same data dir, open it and exit rather than starting a second
+		// one. FAIL-OPEN: any error from RunningInstance → proceed to start.
+		// Stale locks (crashed/stopped instance) are handled by the TCP probe —
+		// no response means stale, and we proceed to start normally.
+		if addr, alive := launch.RunningInstance(launch.DataDir()); alive {
+			url := "http://" + addr + "/"
+			fmt.Fprintf(os.Stderr, "Balaur is already running — opening %s\n", url)
+			if err := launch.OpenBrowser(url); err != nil {
+				fmt.Fprintf(os.Stderr, "(could not open browser: %v — open %s manually)\n", err, url)
+			}
+			return
+		}
+
 		isFirstRun = launch.IsFirstRun(launch.DataDir())
 
 		port, err := launch.SelectPort()
@@ -59,6 +73,13 @@ func main() {
 		}
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
 		url := "http://" + addr + "/"
+
+		// Record this instance so a subsequent bare launch can find it.
+		// Best-effort: a write failure is logged but never blocks the launch.
+		if err := launch.WriteInstanceLock(launch.DataDir(), addr); err != nil {
+			fmt.Fprintf(os.Stderr, "(single-instance lock unavailable: %v)\n", err)
+		}
+
 		os.Args = append(os.Args[:1], "serve", "--http", addr, "--dir", launch.DataDir())
 		// Always tell the owner the exact URL — a stable default port (8099) makes
 		// it bookmarkable. The browser-open runs in its own goroutine once the
