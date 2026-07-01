@@ -185,3 +185,120 @@ func TestSelectPortAddressIsLoopback(t *testing.T) {
 		t.Errorf("constructed addr %q exposes all interfaces", addr)
 	}
 }
+
+// TestRunningInstance_Live: a lock pointing at a live listener is detected.
+func TestRunningInstance_Live(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	defer l.Close()
+	addr := l.Addr().String()
+
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	if err := WriteInstanceLock(dataDir, addr); err != nil {
+		t.Fatalf("WriteInstanceLock: %v", err)
+	}
+
+	got, alive := RunningInstance(dataDir)
+	if !alive {
+		t.Fatal("RunningInstance: want alive=true for a live listener")
+	}
+	if got != addr {
+		t.Errorf("RunningInstance addr = %q, want %q", got, addr)
+	}
+}
+
+// TestRunningInstance_Stale: a lock pointing at a closed port is fail-open.
+func TestRunningInstance_Stale(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	addr := l.Addr().String()
+	l.Close() // nothing listening on addr now
+
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	if err := WriteInstanceLock(dataDir, addr); err != nil {
+		t.Fatalf("WriteInstanceLock: %v", err)
+	}
+
+	_, alive := RunningInstance(dataDir)
+	if alive {
+		t.Fatal("RunningInstance: want alive=false for stale (no-response) lock")
+	}
+}
+
+// TestRunningInstance_Missing: no lock file → fail-open.
+func TestRunningInstance_Missing(t *testing.T) {
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	_, alive := RunningInstance(dataDir)
+	if alive {
+		t.Fatal("RunningInstance: want alive=false when lock file is absent")
+	}
+}
+
+// TestRunningInstance_Malformed: garbage bytes → fail-open, no panic.
+func TestRunningInstance_Malformed(t *testing.T) {
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	p := lockPath(dataDir)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(p, []byte("not json {{{"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	_, alive := RunningInstance(dataDir) // must not panic
+	if alive {
+		t.Fatal("RunningInstance: want alive=false for malformed lock")
+	}
+}
+
+// TestRunningInstance_RoundTrip: WriteInstanceLock + live listener → detected.
+func TestRunningInstance_RoundTrip(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	defer l.Close()
+	addr := l.Addr().String()
+
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	if err := WriteInstanceLock(dataDir, addr); err != nil {
+		t.Fatalf("WriteInstanceLock: %v", err)
+	}
+
+	got, alive := RunningInstance(dataDir)
+	if !alive || got != addr {
+		t.Errorf("round-trip: RunningInstance = (%q, %v), want (%q, true)", got, alive, addr)
+	}
+}
+
+// TestRunningInstance_DifferentDataDirs: two different data dirs use different
+// lock paths so they never collide.
+func TestRunningInstance_DifferentDataDirs(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	defer l.Close()
+	addr := l.Addr().String()
+
+	dataDir1 := filepath.Join(t.TempDir(), "pb_data")
+	dataDir2 := filepath.Join(t.TempDir(), "pb_data")
+
+	// Write a lock only for dataDir1.
+	if err := WriteInstanceLock(dataDir1, addr); err != nil {
+		t.Fatalf("WriteInstanceLock: %v", err)
+	}
+
+	// dataDir1 detects the live instance.
+	if _, alive := RunningInstance(dataDir1); !alive {
+		t.Error("RunningInstance(dataDir1): want alive=true")
+	}
+	// dataDir2 has no lock — fail-open.
+	if _, alive := RunningInstance(dataDir2); alive {
+		t.Error("RunningInstance(dataDir2): want alive=false (different data dir)")
+	}
+}

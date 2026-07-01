@@ -7,6 +7,7 @@
 package launch
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -153,4 +154,61 @@ func OpenAfterReady(addr string) error {
 		return err
 	}
 	return OpenBrowser("http://" + addr + "/")
+}
+
+// instanceLock is the JSON structure persisted in the lock file.
+type instanceLock struct {
+	Addr string `json:"addr"`
+	PID  int    `json:"pid"` // informational only; liveness is decided by probe
+}
+
+// lockPath returns the path of the single-instance lock file for the given
+// data dir. The lock lives in the parent of dataDir (e.g. ~/.local/share/balaur/)
+// so it is reachable even before pb_data/ is created on a first run.
+func lockPath(dataDir string) string {
+	return filepath.Join(filepath.Dir(dataDir), ".balaur-launcher.json")
+}
+
+// RunningInstance reads the single-instance lock for dataDir and probes the
+// recorded address. It returns (addr, true) ONLY when the address is present
+// in the lock AND a TCP connection succeeds (instance is live). Every error —
+// missing file, unreadable, malformed JSON, empty addr, probe timeout — returns
+// ("", false) so the caller proceeds to start a new server (fail-open).
+func RunningInstance(dataDir string) (addr string, alive bool) {
+	data, err := os.ReadFile(lockPath(dataDir))
+	if err != nil {
+		return "", false // missing or unreadable — proceed to start
+	}
+	var lock instanceLock
+	if err := json.Unmarshal(data, &lock); err != nil || lock.Addr == "" {
+		return "", false // malformed — proceed to start
+	}
+	conn, err := net.DialTimeout("tcp", lock.Addr, 300*time.Millisecond)
+	if err != nil {
+		return "", false // stale (crashed or stopped) — proceed to start
+	}
+	conn.Close()
+	return lock.Addr, true
+}
+
+// WriteInstanceLock records the running instance's addr (and PID for
+// diagnostics) in the lock file for dataDir. It MkdirAll's the lock's parent
+// directory (the balaur data root, one level above pb_data) before writing, so
+// the lock is always writable even on a first run before PocketBase creates
+// pb_data. Returns the first error encountered; the caller logs it and
+// continues — a write failure must never block the launch.
+func WriteInstanceLock(dataDir, addr string) error {
+	lock := instanceLock{Addr: addr, PID: os.Getpid()}
+	data, err := json.Marshal(lock)
+	if err != nil {
+		return fmt.Errorf("marshalling instance lock: %w", err)
+	}
+	p := lockPath(dataDir)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return fmt.Errorf("creating instance lock dir: %w", err)
+	}
+	if err := os.WriteFile(p, data, 0o644); err != nil {
+		return fmt.Errorf("writing instance lock: %w", err)
+	}
+	return nil
 }
