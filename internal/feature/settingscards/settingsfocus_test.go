@@ -165,6 +165,65 @@ func TestSettingsFocusModelsSection(t *testing.T) {
 	}
 }
 
+// TestCapabilitiesSectionHasMessengerGateway: the capabilities section renders
+// the messenger gateway control with an id, form, and name attribute so the SSE
+// patch target (#messenger-gateway-section) and Datastar @post are stable.
+func TestCapabilitiesSectionHasMessengerGateway(t *testing.T) {
+	view := settingscards.CapabilitiesView{MessengerToken: "tok123"}
+	got := renderNode(t, settingscards.CapabilitiesSection(view))
+	for _, want := range []string{
+		`id="messenger-gateway-section"`,
+		`@post(&#39;/ui/settings/messenger-token&#39;`,
+		`name="messenger_token"`,
+		`value="tok123"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("CapabilitiesSection missing %q", want)
+		}
+	}
+}
+
+// TestMessengerGatewaySectionDisabledStatus: no token → status line says disabled.
+func TestMessengerGatewaySectionDisabledStatus(t *testing.T) {
+	got := renderNode(t, settingscards.MessengerGatewaySection(settingscards.CapabilitiesView{}))
+	if !strings.Contains(got, "disabled") {
+		t.Errorf("MessengerGatewaySection: expected disabled status, got:\n%s", got)
+	}
+	if strings.Contains(got, "enabled") {
+		t.Errorf("MessengerGatewaySection: should not say enabled when token is empty, got:\n%s", got)
+	}
+}
+
+// TestMessengerGatewaySectionEnabledStatus: non-empty token → status line says enabled.
+func TestMessengerGatewaySectionEnabledStatus(t *testing.T) {
+	got := renderNode(t, settingscards.MessengerGatewaySection(settingscards.CapabilitiesView{MessengerToken: "abc"}))
+	if !strings.Contains(got, "Status: enabled") {
+		t.Errorf("MessengerGatewaySection: expected enabled status, got:\n%s", got)
+	}
+}
+
+// TestSettingsFocusCapabilitiesSection: section == "capabilities" renders the
+// capabilities roster with the messenger gateway control.
+func TestSettingsFocusCapabilitiesSection(t *testing.T) {
+	view := settingscards.SettingsFocusView{
+		Section:      "capabilities",
+		Capabilities: settingscards.CapabilitiesView{MessengerToken: ""},
+	}
+	got := renderNode(t, settingscards.SettingsFocus(view))
+	for _, want := range []string{
+		`class="settings-section"`,
+		`id="messenger-gateway-section"`,
+		`name="messenger_token"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("SettingsFocus (capabilities) missing %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, `id="identity-card"`) {
+		t.Error("SettingsFocus capabilities section must not render #identity-card")
+	}
+}
+
 // TestSettingsFocusHeadsSection: section == "heads" renders the heads roster
 // without an in-panel tab strip (plan 110).
 func TestSettingsFocusHeadsSection(t *testing.T) {

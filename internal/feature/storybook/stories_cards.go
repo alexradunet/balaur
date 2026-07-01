@@ -121,31 +121,39 @@ func nudgesectionStory() Story {
 	}
 }
 
-// capabilitiesStory documents the read-only capability roster in settings.
+// capabilitiesStory documents the read-only capability roster in settings plus
+// the writable messenger gateway token control.
 func capabilitiesStory() Story {
+	full := settingscards.CapabilitiesView{
+		Tools:      []string{"remember", "recall", "task_add", "propose_edit", "head_switch", "profile_set"},
+		Gates:      []settingscards.GateView{{Name: "os_access", On: false}, {Name: "recap", On: true}, {Name: "nudge", On: true}, {Name: "briefing", On: true}},
+		Model:      "local (default)",
+		Skills:     []string{"weekly-review"},
+		Extensions: []settingscards.ExtStatusView{{Status: "active", Names: []string{"weather"}}},
+		Version:    "dev", Commit: "abc1234",
+	}
 	return Story{
 		ID: "capabilities", Group: "Settings", Title: "Capabilities", Wide: true, OnDark: true,
-		Blurb: "The read-only capability roster: the live tool set, gates, active model, skills, and extensions — the owner-facing mirror of the `self` tool. Model selection stays owner-only; this is visibility, not control.",
+		Blurb: "The read-only capability roster: the live tool set, gates, active model, skills, and extensions — the owner-facing mirror of the `self` tool. Also carries the messenger gateway token control: set a token to enable the loopback endpoint, clear it to disable.",
 		Variants: []Variant{
-			{"populated", settingscards.CapabilitiesSection(settingscards.CapabilitiesView{
-				Tools:      []string{"remember", "recall", "task_add", "propose_edit", "head_switch", "profile_set"},
-				Gates:      []settingscards.GateView{{Name: "os_access", On: false}, {Name: "recap", On: true}, {Name: "nudge", On: true}, {Name: "briefing", On: true}},
-				Model:      "local (default)",
-				Skills:     []string{"weekly-review"},
-				Extensions: []settingscards.ExtStatusView{{Status: "active", Names: []string{"weather"}}},
-				Version:    "dev", Commit: "abc1234",
+			{"populated · messenger disabled", settingscards.CapabilitiesSection(full)},
+			{"messenger enabled", settingscards.CapabilitiesSection(settingscards.CapabilitiesView{
+				MessengerToken: "example-secret-token",
 			})},
 		},
 		Props: []Prop{
 			{"Tools", "[]string", "—", "Live registered tool names, shown as pills."},
 			{"Gates", "[]GateView", "—", "Capability gates (os_access, recap, nudge, briefing) and their state."},
 			{"Model", "string", "—", "Active model — local by default; a cloud model only on the owner's explicit selection."},
+			{"MessengerToken", "string", "—", "Current messenger gateway token. Non-empty = endpoint enabled; empty = disabled (fail-closed). Shown in this owner-only view so the owner can copy it into a bridge config."},
 		},
 		Dos: []string{
 			"Mirror what the `self` tool reports — one source of truth for capability.",
+			"Show the messenger status clearly (enabled vs disabled) alongside the token field.",
 		},
 		Donts: []string{
 			"Offer model/cloud SELECTION here — that stays an owner-only consent gate elsewhere.",
+			"Log or audit the messenger token value.",
 		},
 	}
 }

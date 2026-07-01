@@ -1,5 +1,6 @@
 // settingsfocus_capabilities.go — the Capabilities settings section: read-only
-// roster of tools, gates, model, skills, and extensions. Split out of settingsfocus.go (plan 186).
+// roster of tools, gates, model, skills, and extensions, plus the writable
+// messenger gateway token control. Split out of settingsfocus.go (plan 186).
 package settingscards
 
 import (
@@ -8,23 +9,27 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	g "maragu.dev/gomponents"
+	data "maragu.dev/gomponents-datastar"
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/self"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 	"github.com/alexradunet/balaur/internal/ui"
 )
 
 // CapabilitiesView is the read-only roster of what Balaur can do right now — the
-// owner-facing mirror of the `self` tool.
+// owner-facing mirror of the `self` tool. It also carries the writable
+// MessengerToken so the gateway control can be co-located with the other gates.
 type CapabilitiesView struct {
-	Tools      []string
-	Gates      []GateView
-	Model      string // active model label; "local (default)" when none chosen
-	Skills     []string
-	Extensions []ExtStatusView
-	Version    string
-	Commit     string
+	Tools          []string
+	Gates          []GateView
+	Model          string // active model label; "local (default)" when none chosen
+	Skills         []string
+	Extensions     []ExtStatusView
+	Version        string
+	Commit         string
+	MessengerToken string // current messenger_token; empty = gateway disabled
 }
 
 // GateView is one capability gate and its state.
@@ -78,6 +83,8 @@ func BuildCapabilities(app core.App) CapabilitiesView {
 			}
 		}
 	}
+	// Read the messenger token for the gateway control. Never log this value.
+	cv.MessengerToken = store.GetOwnerSetting(app, "messenger_token", "")
 	return cv
 }
 
@@ -129,5 +136,40 @@ func CapabilitiesSection(v CapabilitiesView) g.Node {
 	if v.Version != "" || v.Commit != "" {
 		out = append(out, h.P(h.Class("profile-hint"), g.Text("Build: "+v.Version+" ("+v.Commit+")")))
 	}
+	out = append(out, MessengerGatewaySection(v))
 	return h.Div(out...)
+}
+
+// MessengerGatewaySection renders the messenger gateway token control
+// (#messenger-gateway-section). Re-render target after POST
+// /ui/settings/messenger-token (outer patch #messenger-gateway-section).
+// The token is shown in the owner-only settings view so the owner can copy it
+// into a bridge config. Never log the token value.
+func MessengerGatewaySection(v CapabilitiesView) g.Node {
+	statusLine := "disabled — set a token to enable"
+	if v.MessengerToken != "" {
+		statusLine = "enabled"
+	}
+	return h.Article(
+		h.Class("profile-card"), h.ID("messenger-gateway-section"),
+		h.H3(h.Class("profile-card-title"), g.Text("Messenger gateway")),
+		h.P(h.Class("profile-hint"), g.Text("Set a token to enable the local messenger endpoint; clear it to disable.")),
+		h.P(h.Class("profile-hint"), g.Text("Status: "+statusLine+".")),
+		h.Form(
+			h.Class("profile-name-form"),
+			data.On("submit", "@post('/ui/settings/messenger-token', {contentType:'form'})", data.ModifierPrevent),
+			h.Label(h.For("messenger_token"), g.Text("Token")),
+			h.Div(h.Class("profile-name-row"),
+				h.Input(
+					h.ID("messenger_token"),
+					h.Name("messenger_token"),
+					h.Type("text"),
+					h.Value(v.MessengerToken),
+					h.Placeholder("set a secret token…"),
+					g.Attr("autocomplete", "off"),
+				),
+				h.Button(h.Class("btn btn-primary"), h.Type("submit"), g.Text("Save")),
+			),
+		),
+	)
 }
