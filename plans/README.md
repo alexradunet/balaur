@@ -606,7 +606,7 @@ merged `--no-ff`.
 | 231 | 228's Bet A — loopback/consent-gated messenger `POST /api/messenger/turn` over `turn.Run` (adversarial-reviewed; Bearer token is the primary gate, comment made honest) | DONE (merged `cfe7fd3`) |
 | 232 | 226 gap-map Row 12 — single-instance launcher guard (2nd bare launch opens the running instance; fail-open, stale-safe via TCP probe; launcher-only) | DONE (merged `312d5e0`) |
 | 233 | 231 follow-up (b) — owner Settings field to set/rotate `messenger_token` (`/ui/…`, never logged, empty clears→disables) | DONE (merged `c089668`) |
-| 234 | 231 follow-up (a) — cross-surface turn in-flight guard (`turn.TryBegin`, TryLock, one turn at a time on the master conversation; web acquires before `cs.start`; generalizes `messengerMu`) | IN PROGRESS |
+| 234 | 231 follow-up (a) — cross-surface turn in-flight guard (`turn.TryBegin`, TryLock, one turn at a time on the master conversation; web acquires before `cs.start`; generalizes `messengerMu`) | DONE — adversarial-reviewed SAFE (no lock-leak/deadlock/TOCTOU; 231 auth intact; 64-goroutine `-race` test) |
 
 Still open (gap-map + spike tails, not built): OS packaging (Row 11) + arm64
 checksums (Row 13); vault `task` export (225 Phase 2); a real messenger bridge
