@@ -593,3 +593,22 @@ shippable** (the crypto already exists; only a CLI verb is missing).
 - Direction plans are *spikes*, not committed roadmap: 226 and 228 in particular
   are L-effort bets the owner should weigh against the north star before any
   executor is dispatched.
+
+## Phase-1 & follow-up builds (from the spikes/findings; 2026-06-30 → 07-01)
+
+Owner said "go" on building the spike recommendations + their follow-ups. Each
+executor-built, reviewed (security-sensitive ones adversarially), green-gated,
+merged `--no-ff`.
+
+| Plan | Builds | Status |
+|------|--------|--------|
+| 230 | 226's recommended slice — first-run onboarding banner (reuses `ui.Alert`, opens the models panel, never gates chat) | DONE (merged `5a0eaa0`) |
+| 231 | 228's Bet A — loopback/consent-gated messenger `POST /api/messenger/turn` over `turn.Run` (adversarial-reviewed; Bearer token is the primary gate, comment made honest) | DONE (merged `cfe7fd3`) |
+| 232 | 226 gap-map Row 12 — single-instance launcher guard (2nd bare launch opens the running instance; fail-open, stale-safe via TCP probe; launcher-only) | DONE (merged `312d5e0`) |
+| 233 | 231 follow-up (b) — owner Settings field to set/rotate `messenger_token` (`/ui/…`, never logged, empty clears→disables) | DONE (merged `c089668`) |
+| 234 | 231 follow-up (a) — cross-surface turn in-flight guard (`turn.TryBegin`, TryLock, one turn at a time on the master conversation; web acquires before `cs.start`; generalizes `messengerMu`) | IN PROGRESS |
+
+Still open (gap-map + spike tails, not built): OS packaging (Row 11) + arm64
+checksums (Row 13); vault `task` export (225 Phase 2); a real messenger bridge
+(owner's own process, by design). `knowledge.md` "future messengers" stays
+roadmap until a bridge ships.
