@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/alexradunet/balaur/internal/heads"
 	"github.com/alexradunet/balaur/internal/store"
@@ -30,6 +31,21 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 	if msg == "" {
 		return e.BadRequestError("empty message", nil)
 	}
+
+	// Cross-surface in-flight guard: exactly one turn runs on the master
+	// conversation at a time (web + CLI + messenger). Acquire before any
+	// medium setup so a busy response never paints a user bubble or opens
+	// the stream. TryLock is intentional — at v1 a second concurrent turn
+	// is always a race, never a work queue.
+	end, ok := turn.TryBegin()
+	if !ok {
+		// Open a minimal SSE connection just to deliver the toast; no #chat
+		// mutation, no user bubble.
+		sse := datastar.NewSSE(e.Response, e.Request)
+		emitToast(sse, "warn", "One message is still being answered — try again in a moment.")
+		return nil
+	}
+	defer end()
 
 	soulURL := store.SoulAvatarURL(h.app)
 	ownerName := store.OwnerName(h.app)

@@ -23,7 +23,7 @@ import (
 // messengerBlockingClient implements llm.Client for in-flight guard tests.
 // ChatStream blocks until release is closed (or the context is cancelled),
 // and signals started (once) when it is first entered — at that point the
-// handler has already acquired messengerMu.
+// handler has already acquired the turn guard via turn.TryBegin.
 type messengerBlockingClient struct {
 	release chan struct{}
 	started chan struct{} // closed once on first ChatStream entry
@@ -247,8 +247,9 @@ func TestMessengerLoopbackGuard(t *testing.T) {
 // TestMessengerInFlight: a second POST while the first is mid-turn returns 429.
 //
 // The messengerBlockingClient signals `started` once ChatStream is entered,
-// meaning the handler has already acquired messengerMu by that point. The
-// second request is fired after that signal and must receive 429.
+// meaning the handler has already acquired the turn guard (turn.TryBegin) by
+// that point. The second request is fired after that signal and must receive
+// 429 via the shared cross-surface guard.
 func TestMessengerInFlight(t *testing.T) {
 	const token = "inflight-token"
 

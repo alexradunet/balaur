@@ -26,10 +26,9 @@ package web
 //  4. No secrets in output/logs — the token is never logged; errors are
 //     sanitized.
 //
-// Known limitation: messengerMu guards the MESSENGER surface against
-// self-collision. A cross-surface guard (web+CLI+messenger never concurrent
-// on the master conversation) is a deliberate follow-up below the gateway
-// line; it also exists as a gap between the web and CLI gateways today.
+// In-flight guard: turn.TryBegin (internal/turn) provides a cross-surface
+// guard — web, CLI, and messenger all acquire it before running a turn so the
+// master conversation is never written concurrently from any surface.
 
 import (
 	"context"
@@ -37,7 +36,6 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -46,11 +44,6 @@ import (
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
-
-// messengerMu is the gateway-local in-flight guard for the messenger surface.
-// If a messenger turn is already running, a second POST returns 429 instead
-// of starting a concurrent turn on the master conversation.
-var messengerMu sync.Mutex
 
 // messengerTurn handles POST /api/messenger/turn.
 func (h *handlers) messengerTurn(e *core.RequestEvent) error {
@@ -85,12 +78,13 @@ func (h *handlers) messengerTurn(e *core.RequestEvent) error {
 		return e.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 	}
 
-	// 4. In-flight guard — prevents a second messenger POST from running a
-	//    concurrent turn on the master conversation.
-	if !messengerMu.TryLock() {
+	// 4. Cross-surface in-flight guard — one turn at a time on the master
+	//    conversation (shared with the web and CLI gateways via turn.TryBegin).
+	end, ok := turn.TryBegin()
+	if !ok {
 		return e.JSON(http.StatusTooManyRequests, map[string]string{"error": "busy"})
 	}
-	defer messengerMu.Unlock()
+	defer end()
 
 	// 5. Parse body.
 	var body struct {

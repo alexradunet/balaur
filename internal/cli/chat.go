@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -61,6 +62,14 @@ func chatCmd(app core.App) *cobra.Command {
 		if err != nil {
 			return nil, err
 		}
+		// Cross-surface in-flight guard: one turn at a time on the master
+		// conversation (web + CLI + messenger share the same guard).
+		end, ok := turn.TryBegin()
+		if !ok {
+			return nil, errors.New("busy: a turn is already in progress")
+		}
+		defer end()
+
 		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 		defer cancel()
 
