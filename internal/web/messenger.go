@@ -26,6 +26,8 @@ package web
 //     No platform API is called anywhere in this file.
 //  4. No secrets in output/logs — the token is never logged; errors are
 //     sanitized.
+//  5. Failed auth is logged (remote addr only) and throttled: after 5
+//     consecutive bad tokens the endpoint answers 429 for a 30s cooldown.
 //
 // In-flight guard: turn.TryBegin (internal/turn) is a process-wide mutex —
 // within the serve process, web and messenger turns are serialized. It does
@@ -39,6 +41,8 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -47,6 +51,61 @@ import (
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/turn"
 )
+
+// Brute-force friction on the token check (v1 scale: one owner, one
+// bridge). After messengerMaxFailures consecutive bad tokens the endpoint
+// answers 429 until messengerCooldown passes; any successful auth resets
+// the counter. This is deliberate friction, NOT real rate limiting — no
+// per-IP tracking, no persistence across restarts.
+const (
+	messengerMaxFailures = 5
+	messengerCooldown    = 30 * time.Second
+)
+
+// authThrottle holds the failure counter. It lives on the handlers struct
+// (one instance per serve, shared across requests), so all access is
+// mutex-guarded. The zero value is ready to use.
+type authThrottle struct {
+	mu       sync.Mutex
+	failures int
+	lastFail time.Time
+	now      func() time.Time // test seam; nil means time.Now
+}
+
+func (t *authThrottle) clock() time.Time {
+	if t.now != nil {
+		return t.now()
+	}
+	return time.Now()
+}
+
+// allow reports whether an auth attempt may proceed. Cooldown expiry
+// resets the counter so one stale failure cannot re-lock the endpoint.
+func (t *authThrottle) allow() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.failures < messengerMaxFailures {
+		return true
+	}
+	if t.clock().Sub(t.lastFail) >= messengerCooldown {
+		t.failures = 0
+		return true
+	}
+	return false
+}
+
+func (t *authThrottle) fail() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.failures++
+	t.lastFail = t.clock()
+}
+
+func (t *authThrottle) success() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.failures = 0
+}
 
 // messengerTurn handles POST /api/messenger/turn.
 func (h *handlers) messengerTurn(e *core.RequestEvent) error {
@@ -70,6 +129,14 @@ func (h *handlers) messengerTurn(e *core.RequestEvent) error {
 		return e.JSON(http.StatusForbidden, map[string]string{"error": "messenger gateway is not enabled"})
 	}
 
+	// 3a. Brute-force friction: after messengerMaxFailures consecutive bad
+	//     tokens, reject with 429 until messengerCooldown passes. The body
+	//     differs from the turn guard's "busy" so callers can tell them apart.
+	if !h.messengerThrottle.allow() {
+		e.Response.Header().Set("Retry-After", strconv.Itoa(int(messengerCooldown/time.Second)))
+		return e.JSON(http.StatusTooManyRequests, map[string]string{"error": "too many failed auth attempts"})
+	}
+
 	// 3. Token auth — constant-time comparison; the header value is never logged.
 	authHeader := e.Request.Header.Get("Authorization")
 	const prefix = "Bearer "
@@ -78,8 +145,11 @@ func (h *handlers) messengerTurn(e *core.RequestEvent) error {
 		provided = authHeader[len(prefix):]
 	}
 	if subtle.ConstantTimeCompare([]byte(provided), []byte(tok)) != 1 {
+		h.messengerThrottle.fail()
+		h.app.Logger().Warn("messenger: auth failed", "remote", e.Request.RemoteAddr)
 		return e.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 	}
+	h.messengerThrottle.success()
 
 	// 4. In-flight guard — one turn at a time on the master conversation
 	//    within this process (shared with the web gateway via turn.TryBegin).

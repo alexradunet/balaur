@@ -284,6 +284,9 @@ func Register(se *core.ServeEvent) error {
 type handlers struct {
 	app     core.App
 	clients turn.ClientSource
+	// messengerThrottle adds brute-force friction to the messenger token
+	// check (messenger.go); per-instance, mutex-guarded — no package state.
+	messengerThrottle authThrottle
 }
 
 // renderPageError renders a sanitized error inside the Hearthwood shell so a

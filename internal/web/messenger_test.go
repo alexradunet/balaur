@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -288,4 +289,105 @@ func TestMessengerInFlight(t *testing.T) {
 	// Unblock the first turn and wait for it to finish.
 	close(release)
 	wg.Wait()
+}
+
+// TestMessengerAuthThrottleLockout: 5 consecutive bad tokens lock the
+// endpoint out; the 6th (bad or good) gets 429 with a distinct body from
+// the turn guard's "busy".
+func TestMessengerAuthThrottleLockout(t *testing.T) {
+	app, mux := buildMessengerRouter(t)
+	defer app.Cleanup()
+	if err := store.SetOwnerSetting(app, "messenger_token", "right-token"); err != nil {
+		t.Fatalf("SetOwnerSetting: %v", err)
+	}
+
+	for i := 0; i < messengerMaxFailures; i++ {
+		w := postMessenger(mux, "example.com", "Bearer wrong", `{"message":"hi"}`)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("attempt %d: status = %d, want 401; body: %s", i+1, w.Code, w.Body)
+		}
+	}
+
+	w := postMessenger(mux, "example.com", "Bearer wrong", `{"message":"hi"}`)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("6th bad attempt: status = %d, want 429; body: %s", w.Code, w.Body)
+	}
+	if !strings.Contains(w.Body.String(), "too many failed auth attempts") {
+		t.Errorf("429 body must mention throttle, not the turn guard's busy body; got: %s", w.Body)
+	}
+
+	// Even the correct token is rejected during lockout — no model is
+	// seeded, so if this ever ran a turn it would surface as a non-429
+	// status instead.
+	w = postMessenger(mux, "example.com", "Bearer right-token", `{"message":"hi"}`)
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("correct token during lockout: status = %d, want 429; body: %s", w.Code, w.Body)
+	}
+}
+
+// TestMessengerAuthThrottleSuccessResets: a successful auth resets the
+// failure counter, so a later run of failures below the limit never trips
+// the lockout.
+func TestMessengerAuthThrottleSuccessResets(t *testing.T) {
+	const token = "right-token"
+	app, mux := buildMessengerRouter(t)
+	defer app.Cleanup()
+	seedScriptedModel(t, app, llmtest.Text("ok"))
+	if err := store.SetOwnerSetting(app, "messenger_token", token); err != nil {
+		t.Fatalf("SetOwnerSetting: %v", err)
+	}
+
+	for i := 0; i < messengerMaxFailures-1; i++ {
+		w := postMessenger(mux, "example.com", "Bearer wrong", `{"message":"hi"}`)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("bad attempt %d: status = %d, want 401; body: %s", i+1, w.Code, w.Body)
+		}
+	}
+
+	w := postMessenger(mux, "example.com", "Bearer "+token, `{"message":"hi"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("correct token: status = %d, want 200; body: %s", w.Code, w.Body)
+	}
+
+	for i := 0; i < messengerMaxFailures; i++ {
+		w := postMessenger(mux, "example.com", "Bearer wrong", `{"message":"hi"}`)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("post-reset bad attempt %d: status = %d, want 401 (not 429); body: %s", i+1, w.Code, w.Body)
+		}
+	}
+}
+
+// TestAuthThrottleCooldown is a unit test on authThrottle using the fake
+// clock seam — no time.Sleep.
+func TestAuthThrottleCooldown(t *testing.T) {
+	now := time.Unix(0, 0)
+	th := &authThrottle{now: func() time.Time { return now }}
+
+	if !th.allow() {
+		t.Fatalf("fresh throttle: allow() = false, want true")
+	}
+
+	for i := 0; i < messengerMaxFailures; i++ {
+		th.fail()
+	}
+	if th.allow() {
+		t.Fatalf("after %d failures: allow() = true, want false", messengerMaxFailures)
+	}
+
+	now = now.Add(messengerCooldown)
+	if !th.allow() {
+		t.Fatalf("after cooldown: allow() = false, want true")
+	}
+	th.fail()
+	if !th.allow() {
+		t.Fatalf("after cooldown reset + 1 failure: allow() = false, want true (counter was reset)")
+	}
+
+	for i := 0; i < messengerMaxFailures; i++ {
+		th.fail()
+	}
+	th.success()
+	if !th.allow() {
+		t.Fatalf("after success(): allow() = false, want true")
+	}
 }
