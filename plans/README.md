@@ -665,7 +665,7 @@ Depends-on column says so.
 | 246 | Cap `node_list` tool output (50 + "showing N of M") and push `nodes.Query`'s limit into SQL when no prop filter | P3 | S | LOW | 250 (merge friction: same file) | TODO |
 | 243 | Port-sensitive `sameHost` Origin fallback (legacy-browser cross-port CSRF residual) | P3 | S | LOW | — | DONE (merged 8853936) |
 | 245 | Bound the task scans: push `props.state` filter into SQL (Step 1 = prove PB JSON-path filter or STOP) | P3 | M | MED | — | TODO |
-| 254 | Graphify hook friction: allowlist the mandated command, extension-anchored matchers, once-per-session injection | P3 | S | LOW | — | TODO |
+| 254 | Graphify hook friction: allowlist the mandated command, extension-anchored matchers, once-per-session injection | P3 | S | LOW | — | DONE (merged 585baf2) |
 
 ## Direction plans (255–258)
 
