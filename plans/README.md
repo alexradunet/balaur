@@ -674,7 +674,7 @@ Depends-on column says so.
 | 255 | Backup/export in the Settings UI (mirror button + passphrase-encrypted backup form over the built machinery; restore stays CLI) | M | Sovereignty made visible to the non-technical owner | — | TODO |
 | 256 | SPIKE: reference messenger bridge — transport/packaging decision doc + thin prototype (Telegram long-poll recommended; sender allowlist fail-closed) | M (spike) | One-companion daily surface; activates 231/233/234 | — | DONE (merged 959ba5a) |
 | 257 | Un-defer `task` export (plan-225 recipe: redaction pre-verify + adjacent-marker leak test) | S | Sovereignty: last owner-authored type missing from the mirror | 242 + 252 (merge friction: export.go + tour 15) | DONE (merged 43a423c) |
-| 258 | Pin linux/arm64 runtime checksums (hashes reproducible on any arch — verified against the kronk SDK; GH arm64 workflow as fallback) | S | Fail-closed supply chain before packaging widens the audience | — | TODO |
+| 258 | Pin linux/arm64 runtime checksums (hashes reproducible on any arch — verified against the kronk SDK; GH arm64 workflow as fallback) | S | Fail-closed supply chain before packaging widens the audience | — | DONE (merged 55d6104) |
 
 **Open bets recorded, no plans written (owner chose to defer):**
 - **OS packaging (gap-map Row 11)** — Linux-first AppImage via a release
