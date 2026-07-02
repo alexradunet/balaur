@@ -19,9 +19,10 @@ type fakeClient struct {
 }
 
 type fakeTurn struct {
-	text  string
-	tools []llm.ToolCall
-	err   error
+	text     string
+	tools    []llm.ToolCall
+	err      error
+	truncate bool // close the stream without a terminal Done chunk
 }
 
 func (f *fakeClient) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm.ToolSpec) (<-chan llm.Chunk, error) {
@@ -40,6 +41,9 @@ func (f *fakeClient) ChatStream(ctx context.Context, msgs []llm.Message, tools [
 		}
 		if turn.text != "" {
 			ch <- llm.Chunk{Content: turn.text}
+		}
+		if turn.truncate {
+			return // closed by the deferred close, no Done chunk
 		}
 		ch <- llm.Chunk{Done: true, ToolCalls: turn.tools}
 	}()
@@ -68,6 +72,33 @@ func TestRunPlainAnswer(t *testing.T) {
 	}
 	if events[len(events)-1].Kind != "done" {
 		t.Fatalf("expected done event, got %+v", events[len(events)-1])
+	}
+}
+
+func TestRunCancelledStreamIsError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // dead before the stream is drained
+
+	loop := &Loop{Client: &fakeClient{turns: []fakeTurn{{text: "partial rep", truncate: true}}}}
+	var events []Event
+	msgs, err := loop.Run(ctx, []llm.Message{{Role: "user", Content: "hi"}}, collect(&events))
+	if err == nil {
+		t.Fatal("expected error for a stream cut by cancellation")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected wrapped context.Canceled, got %v", err)
+	}
+	for _, e := range events {
+		if e.Kind == "done" {
+			t.Fatalf("cancelled stream must not emit a done event: %+v", events)
+		}
+	}
+	if events[len(events)-1].Kind != "error" {
+		t.Fatalf("expected trailing error event, got %+v", events[len(events)-1])
+	}
+	// The partial assistant text must NOT be appended (and thus never persisted).
+	if len(msgs) != 1 {
+		t.Fatalf("expected history unchanged (1 msg), got %d: %+v", len(msgs), msgs)
 	}
 }
 

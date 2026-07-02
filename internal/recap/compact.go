@@ -47,7 +47,7 @@ func DraftToday(ctx context.Context, app core.App, client llm.Client, conv *core
 	if err != nil {
 		return "", 0, fmt.Errorf("summarising compaction: %w", err)
 	}
-	text, err := llm.Collect(stream)
+	text, err := llm.Collect(ctx, stream)
 	if err != nil {
 		return "", 0, fmt.Errorf("summarising compaction: %w", err)
 	}

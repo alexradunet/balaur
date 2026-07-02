@@ -93,6 +93,7 @@ func (l *Loop) Run(ctx context.Context, history []llm.Message, emit func(Event))
 
 		var text strings.Builder
 		var calls []llm.ToolCall
+		var sawDone bool
 		for chunk := range stream {
 			if chunk.Err != nil {
 				emit(Event{Kind: "error", Err: chunk.Err})
@@ -106,8 +107,19 @@ func (l *Loop) Run(ctx context.Context, history []llm.Message, emit func(Event))
 				emit(Event{Kind: "reasoning", Text: chunk.Reasoning})
 			}
 			if chunk.Done {
+				sawDone = true
 				calls = chunk.ToolCalls
 			}
+		}
+
+		// A stream that closes without a terminal Done or Err chunk while the
+		// context is dead was cut mid-generation: the provider bridges guard
+		// sends with ctx.Done and can drop the terminal chunk on cancellation.
+		// Do not mistake the truncated text for a completed reply.
+		if !sawDone && ctx.Err() != nil {
+			err := fmt.Errorf("agent: model stream interrupted: %w", ctx.Err())
+			emit(Event{Kind: "error", Err: err})
+			return msgs, err
 		}
 
 		msgs = append(msgs, llm.Message{Role: "assistant", Content: text.String(), ToolCalls: calls})
