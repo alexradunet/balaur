@@ -80,19 +80,12 @@ func ActiveSubgraph(app core.App, limit int) ([]*core.Record, []Edge, error) {
 	var edges []Edge
 	if len(ids) > 0 {
 		// Only edges touching a visible node can survive the both-endpoints
-		// check, so let the DB narrow the candidates instead of scanning the
-		// whole edges table. The Go check below is still the authority — an
-		// edge from a visible node to an out-of-set node matches this OR but
-		// must be dropped so no endpoint dangles (the consent/no-dangle spine).
-		params := dbx.Params{}
-		conds := make([]string, 0, len(ids))
-		for i, id := range ids {
-			sk, tk := fmt.Sprintf("s%d", i), fmt.Sprintf("t%d", i)
-			conds = append(conds, fmt.Sprintf("source = {:%s}", sk), fmt.Sprintf("target = {:%s}", tk))
-			params[sk], params[tk] = id, id
-		}
-		candidates, err := app.FindRecordsByFilter("edges",
-			strings.Join(conds, " || "), "", 0, 0, params)
+		// check, so EdgesTouching lets the DB narrow the candidates instead
+		// of scanning the whole edges table. The Go check below is still the
+		// authority — EdgesTouching also returns edges where only ONE
+		// endpoint is in ids, and those must be dropped so no endpoint
+		// dangles (the consent/no-dangle spine).
+		candidates, err := EdgesTouching(app, ids)
 		if err != nil {
 			return nil, nil, fmt.Errorf("active subgraph: loading edges: %w", err)
 		}
@@ -108,10 +101,10 @@ func ActiveSubgraph(app core.App, limit int) ([]*core.Record, []Edge, error) {
 }
 
 // EdgesTouching returns every record in the edges collection whose source or
-// target is one of ids, in a single query. Uses the same OR-filter idiom as
-// ActiveSubgraph. The caller is responsible for any further filtering (e.g.
-// both-endpoints-active); an edge where only one endpoint is in ids is still
-// returned.
+// target is one of ids, in a single query. ActiveSubgraph delegates its
+// candidate fetch here. The caller is responsible for any further filtering
+// (e.g. both-endpoints-active); an edge where only one endpoint is in ids is
+// still returned.
 func EdgesTouching(app core.App, ids []string) ([]*core.Record, error) {
 	if len(ids) == 0 {
 		return nil, nil
