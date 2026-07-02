@@ -281,3 +281,55 @@ func TestNudgeCatchesUpAfterDowntime(t *testing.T) {
 		t.Errorf("lateness missing from catch-up nudge: %q", c)
 	}
 }
+
+// TestDueForNudgeAcrossStates pins the CURRENT behavior of DueForNudge
+// across a mixed-state seed (overdue/future/someday/snoozed/done/dropped),
+// so the SQL-filter loader swap in a later step is provably a no-op on
+// output: exactly the overdue open task fires.
+func TestDueForNudgeAcrossStates(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := nudgeNow()
+
+	hit, err := Create(app, CreateOpts{Title: "Overdue hit", Due: now.Add(-10 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create overdue: %v", err)
+	}
+	if _, err := Create(app, CreateOpts{Title: "Future item", Due: now.Add(2 * time.Hour)}); err != nil {
+		t.Fatalf("create future: %v", err)
+	}
+	if _, err := Create(app, CreateOpts{Title: "Someday item"}); err != nil {
+		t.Fatalf("create someday: %v", err)
+	}
+	snoozed, err := Create(app, CreateOpts{Title: "Snoozed item", Due: now.Add(-10 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create snoozed: %v", err)
+	}
+	if err := Snooze(app, snoozed, now.Add(time.Hour)); err != nil {
+		t.Fatalf("snooze: %v", err)
+	}
+	doneRec, err := Create(app, CreateOpts{Title: "Done item", Due: now.Add(-10 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create done: %v", err)
+	}
+	if _, err := Done(app, doneRec, now); err != nil {
+		t.Fatalf("done: %v", err)
+	}
+	droppedRec, err := Create(app, CreateOpts{Title: "Dropped item", Due: now.Add(-10 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create dropped: %v", err)
+	}
+	if err := Drop(app, droppedRec); err != nil {
+		t.Fatalf("drop: %v", err)
+	}
+
+	due, err := DueForNudge(app, now)
+	if err != nil {
+		t.Fatalf("DueForNudge: %v", err)
+	}
+	if len(due) != 1 || due[0].GetString("title") != "Overdue hit" {
+		t.Fatalf("DueForNudge: got %v, want exactly [Overdue hit]", due)
+	}
+	if due[0].Id != hit.Id {
+		t.Errorf("DueForNudge: got id %q, want %q", due[0].Id, hit.Id)
+	}
+}

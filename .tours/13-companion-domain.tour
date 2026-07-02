@@ -29,7 +29,7 @@
     },
     {
       "file": "internal/tasks/nudge.go",
-      "line": 88,
+      "line": 85,
       "title": "13.5 — Nudge and briefing crons",
       "description": "```go\nfunc Nudge(app core.App, client llm.Client, now time.Time) error\n```\n\n`Nudge` fires every due reminder as **one** assistant message (origin `\"nudge\"`) in the master conversation — one interruption, not one per task. The message text is model-composed in Balaur's voice when a client is available; a deterministic list is both the no-model default and the failure fallback. Idempotency is derived from `nudged_at` in each task's props: a task that already carries a `nudged_at` for the current due window is excluded by `DueForNudge` — no separate state table.\n\nThe companion to `Nudge` is `Briefing` in `internal/tasks/briefing.go` (line 46). `Briefing` fires once per local day after a configurable hour: it greets the owner with overdue items, today's commitments, and yesterday's log. Its idempotency is also derived — from whether an `origin=briefing` message exists since local midnight. A quiet day (no overdue, no today) produces no message: the companion does not manufacture noise.\n\nBoth functions follow the AGENTS.md rule: *deterministic, offline, free behaviour is the default* — the model path is opt-in, the deterministic path always succeeds."
     },

@@ -541,6 +541,132 @@ func TestDoneBetween(t *testing.T) {
 	}
 }
 
+// TestPropsStateJSONFilter guards the PocketBase capability this package's
+// loaders depend on: filter expressions reaching into the props json column
+// via dot paths (props.state). If a PocketBase upgrade breaks this, the
+// task loaders would silently return nothing — fail here instead.
+func TestPropsStateJSONFilter(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	if _, err := Create(app, CreateOpts{Title: "Open one"}); err != nil {
+		t.Fatalf("create open: %v", err)
+	}
+	recDone, err := Create(app, CreateOpts{Title: "Done one"})
+	if err != nil {
+		t.Fatalf("create done: %v", err)
+	}
+	if _, err := Done(app, recDone, time.Now()); err != nil {
+		t.Fatalf("done: %v", err)
+	}
+
+	open, err := app.FindRecordsByFilter("nodes",
+		"type = 'task' && status = 'active' && props.state = 'open'",
+		"-created", 0, 0, nil)
+	if err != nil {
+		t.Fatalf("props.state=open filter: %v", err)
+	}
+	if len(open) != 1 || open[0].GetString("title") != "Open one" {
+		t.Fatalf("props.state=open filter: got %d records, want exactly [Open one]", len(open))
+	}
+
+	done, err := app.FindRecordsByFilter("nodes",
+		"type = 'task' && status = 'active' && props.state = 'done'",
+		"-created", 0, 0, nil)
+	if err != nil {
+		t.Fatalf("props.state=done filter: %v", err)
+	}
+	if len(done) != 1 || done[0].GetString("title") != "Done one" {
+		t.Fatalf("props.state=done filter: got %d records, want exactly [Done one]", len(done))
+	}
+}
+
+// TestOpenTasksAndDoneBetweenAcrossStates pins the CURRENT behavior of
+// OpenTasks and DoneBetween across a mixed-state seed (someday/future/
+// overdue/snoozed open tasks, plus a done and a dropped task), so the
+// SQL-filter loader swap in later steps is provably a no-op on output.
+func TestOpenTasksAndDoneBetweenAcrossStates(t *testing.T) {
+	app := storetest.NewApp(t)
+	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
+
+	if _, err := Create(app, CreateOpts{Title: "Someday item"}); err != nil {
+		t.Fatalf("create someday: %v", err)
+	}
+	if _, err := Create(app, CreateOpts{Title: "Future item", Due: now.Add(2 * time.Hour)}); err != nil {
+		t.Fatalf("create future: %v", err)
+	}
+	if _, err := Create(app, CreateOpts{Title: "Overdue item", Due: now.Add(-10 * time.Minute)}); err != nil {
+		t.Fatalf("create overdue: %v", err)
+	}
+	snoozed, err := Create(app, CreateOpts{Title: "Snoozed item", Due: now.Add(-10 * time.Minute)})
+	if err != nil {
+		t.Fatalf("create snoozed: %v", err)
+	}
+	if err := Snooze(app, snoozed, now.Add(time.Hour)); err != nil {
+		t.Fatalf("snooze: %v", err)
+	}
+	doneTime := now.Add(-time.Hour)
+	doneRec, err := Create(app, CreateOpts{Title: "Done item"})
+	if err != nil {
+		t.Fatalf("create done: %v", err)
+	}
+	if _, err := Done(app, doneRec, doneTime); err != nil {
+		t.Fatalf("done: %v", err)
+	}
+	droppedRec, err := Create(app, CreateOpts{Title: "Dropped item"})
+	if err != nil {
+		t.Fatalf("create dropped: %v", err)
+	}
+	if err := Drop(app, droppedRec); err != nil {
+		t.Fatalf("drop: %v", err)
+	}
+
+	open, err := OpenTasks(app, nil)
+	if err != nil {
+		t.Fatalf("OpenTasks: %v", err)
+	}
+	wantTitles := []string{"Someday item", "Overdue item", "Snoozed item", "Future item"}
+	if len(open) != len(wantTitles) {
+		t.Fatalf("OpenTasks: got %d records, want %d", len(open), len(wantTitles))
+	}
+	if open[0].GetString("title") != "Someday item" {
+		t.Errorf("OpenTasks: first item = %q, want someday item first", open[0].GetString("title"))
+	}
+	gotTitles := make(map[string]bool, len(open))
+	for _, r := range open {
+		gotTitles[r.GetString("title")] = true
+		if r.GetString("status") != "open" {
+			t.Errorf("OpenTasks: %q not hydrated as open, status = %q", r.GetString("title"), r.GetString("status"))
+		}
+	}
+	for _, title := range wantTitles {
+		if !gotTitles[title] {
+			t.Errorf("OpenTasks: missing %q", title)
+		}
+	}
+	if gotTitles["Done item"] || gotTitles["Dropped item"] {
+		t.Errorf("OpenTasks: done/dropped task leaked into result: %v", gotTitles)
+	}
+
+	narrowed, err := OpenTasks(app, []string{"Overdue"})
+	if err != nil {
+		t.Fatalf("OpenTasks narrowed: %v", err)
+	}
+	if len(narrowed) != 1 || narrowed[0].GetString("title") != "Overdue item" {
+		t.Fatalf("OpenTasks narrowed: got %v, want exactly [Overdue item]", narrowed)
+	}
+
+	done, err := DoneBetween(app, doneTime.Add(-time.Minute), doneTime.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("DoneBetween: %v", err)
+	}
+	if len(done) != 1 || done[0].GetString("title") != "Done item" {
+		t.Fatalf("DoneBetween: got %v, want exactly [Done item]", done)
+	}
+	if done[0].GetString("status") != "done" {
+		t.Errorf("DoneBetween: not hydrated, status = %q", done[0].GetString("status"))
+	}
+}
+
 // nodes_Props is a test-local alias to access props for raw test setup.
 // Uses the real nodes.Props which handles the types.JSONRaw round-trip.
 func nodes_Props(rec *core.Record) map[string]any {
