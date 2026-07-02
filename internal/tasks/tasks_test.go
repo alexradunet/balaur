@@ -541,6 +541,45 @@ func TestDoneBetween(t *testing.T) {
 	}
 }
 
+// TestPropsStateJSONFilter guards the PocketBase capability this package's
+// loaders depend on: filter expressions reaching into the props json column
+// via dot paths (props.state). If a PocketBase upgrade breaks this, the
+// task loaders would silently return nothing — fail here instead.
+func TestPropsStateJSONFilter(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	if _, err := Create(app, CreateOpts{Title: "Open one"}); err != nil {
+		t.Fatalf("create open: %v", err)
+	}
+	recDone, err := Create(app, CreateOpts{Title: "Done one"})
+	if err != nil {
+		t.Fatalf("create done: %v", err)
+	}
+	if _, err := Done(app, recDone, time.Now()); err != nil {
+		t.Fatalf("done: %v", err)
+	}
+
+	open, err := app.FindRecordsByFilter("nodes",
+		"type = 'task' && status = 'active' && props.state = 'open'",
+		"-created", 0, 0, nil)
+	if err != nil {
+		t.Fatalf("props.state=open filter: %v", err)
+	}
+	if len(open) != 1 || open[0].GetString("title") != "Open one" {
+		t.Fatalf("props.state=open filter: got %d records, want exactly [Open one]", len(open))
+	}
+
+	done, err := app.FindRecordsByFilter("nodes",
+		"type = 'task' && status = 'active' && props.state = 'done'",
+		"-created", 0, 0, nil)
+	if err != nil {
+		t.Fatalf("props.state=done filter: %v", err)
+	}
+	if len(done) != 1 || done[0].GetString("title") != "Done one" {
+		t.Fatalf("props.state=done filter: got %d records, want exactly [Done one]", len(done))
+	}
+}
+
 // nodes_Props is a test-local alias to access props for raw test setup.
 // Uses the real nodes.Props which handles the types.JSONRaw round-trip.
 func nodes_Props(rec *core.Record) map[string]any {
