@@ -75,6 +75,13 @@ One binary, layered as: gateway → turn pipeline → business logic.
   present moment, today block, knowledge block, recent window), the
   agent loop, the verify honesty check with one self-repair pass, and
   persistence. It also resolves the active model choice.
+  A process-wide in-flight guard (turn.TryBegin) admits one turn at a
+  time on the master conversation across the serve process's callers —
+  the web chat handler and the consent-gated messenger API endpoint
+  (and any other in-process caller). A busy web turn gets the "One
+  message is still being answered" toast; a busy messenger POST gets
+  HTTP 429. The guard is per-process: a separate `balaur chat` process
+  is not covered by it.
 - internal/agent is the hand-rolled loop: messages → model → tool calls
   → tool results → model, until a plain answer (bounded rounds). Every
   step logs tools-offered and tool-calls-returned at Debug level; all
@@ -260,14 +267,15 @@ that share one destination source (web.navDestinations → []ui.CommandItem):
 (1) the composer /-command palette (ui.CommandPalette) that appears when the
 draft starts with "/", and (2) the right nav rail — a panel expand/collapse
 toggle, a close (✕) control that clears the active artifact (GET /ui/show/close),
-one icon per primary destination (Quests, Life, Memory, Skills, Settings), and a
+one icon per primary destination (Quests, Life, Chronicle, Memory, Skills, Settings), and a
 chooser (lens) popover listing the rest. The panel head itself carries no
 controls now — just the artifact icon + title, sized to the rail toggle's height.
 There is no topbar and
 no burger. On narrow viewports (≤720px) the layout is chat + the always-on rail;
 the panel slides in as a fixed overlay to the rail's left (plan 098). Both nav
 surfaces fire GET /ui/show/{type}; the full destination set is Quests, Life,
-Memory, Review, Skills, and the three settings sections (Profile, Models, Heads).
+Chronicle, Memory, Review, Skills, Graph, and the three settings sections
+(Profile, Models, Heads).
 
 The panel is collapsible and owner-resizable (plan 103). Collapse state is
 persisted as owner_settings["panel_collapsed"] ("1"/"0"/unset — unset derives
@@ -423,9 +431,16 @@ Layout map (file → concern):
   A bare `balaur` (no args) is the no-terminal launcher: it boots a
   loopback UI on the XDG data dir, prefers a stable default port
   (8099, falling back to a free port if taken), and opens the browser.
+  A single-instance guard (lock file + TCP liveness probe) makes a
+  second bare launch open the already-running instance and exit instead
+  of starting a second server; stale locks fail open and the launch
+  proceeds. On the first boot of a fresh data dir, a dismissible
+  onboarding banner routes the owner to model setup — it never gates
+  chat or the browser-open.
 - internal/launch — the no-args loopback launcher helpers (XDG data dir,
-  stable default port + free-port fallback, first-run stat, browser-open);
-  fires only on a bare argv and never constructs a non-loopback address
+  stable default port + free-port fallback, single-instance lock +
+  liveness probe, first-run stat, browser-open); fires only on a bare
+  argv and never constructs a non-loopback address
 - migrations/ — schema as Go code
 - internal/turn — the shared turn pipeline + model resolution
 - internal/agent, internal/llm — loop and model seam
