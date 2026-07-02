@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -8,6 +9,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
+	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	itasks "github.com/alexradunet/balaur/internal/tasks"
 	_ "github.com/alexradunet/balaur/migrations"
 )
@@ -271,6 +274,132 @@ func TestQuestsFocusPrefillsEditForm(t *testing.T) {
 			`value="2030-03-04T14:30"`, // DueInput pre-fill
 			`name="recur"`,
 			`value="daily"`, // Recur pre-fill
+		},
+	}
+	s.Test(t)
+}
+
+// ownerZoneSkipIfHostMatches skips owner-zone regression tests when the host
+// runs at UTC+14 itself, in which case an owner-zone bug and correct
+// owner-zone behavior would render identically.
+func ownerZoneSkipIfHostMatches(t *testing.T) {
+	t.Helper()
+	if _, off := time.Now().Zone(); off == 14*3600 {
+		t.Skip("host zone is UTC+14; owner-zone and host-zone results coincide")
+	}
+}
+
+// TestTaskEditParsesDueInOwnerZone guards the regression this plan fixes:
+// taskEdit must parse the datetime-local "due" field against the owner's
+// configured timezone, not the host zone.
+func TestTaskEditParsesDueInOwnerZone(t *testing.T) {
+	ownerZoneSkipIfHostMatches(t)
+	app := newWebApp(t)
+	if err := store.SetOwnerSetting(app, "timezone", "Pacific/Kiritimati"); err != nil {
+		t.Fatalf("set timezone: %v", err)
+	}
+	rec := seedTaskWithRecur(t, app, "Tax return", "open", "", time.Now().Add(time.Hour))
+
+	s := tests.ApiScenario{
+		Name:   "edit parses due in the owner zone",
+		Method: "POST",
+		URL:    "/ui/tasks/" + rec.Id + "/edit",
+		Body:   strings.NewReader("title=Tax+return&due=2027-03-01T15:00&recur=&notes="),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"tcard-" + rec.Id},
+		AfterTestFunc: func(tb testing.TB, app *tests.TestApp, _ *http.Response) {
+			got, err := app.FindRecordById("nodes", rec.Id)
+			if err != nil {
+				tb.Fatalf("reload: %v", err)
+			}
+			itasks.Hydrate(got)
+
+			loc, err := time.LoadLocation("Pacific/Kiritimati")
+			if err != nil {
+				tb.Fatalf("load zone: %v", err)
+			}
+			want := time.Date(2027, 3, 1, 15, 0, 0, 0, loc)
+			if d := got.GetDateTime("due").Time(); !d.Equal(want) {
+				tb.Errorf("stored due = %v, want %v", d, want)
+			}
+		},
+	}
+	s.Test(t)
+}
+
+// TestQuestsFocusRendersOwnerZoneDue proves BuildQuestsFocus resolves now in
+// the owner's zone: the edit-form due pre-fill (DueInput) must render in the
+// owner zone, not the host zone.
+func TestQuestsFocusRendersOwnerZoneDue(t *testing.T) {
+	ownerZoneSkipIfHostMatches(t)
+	app := newWebApp(t)
+	if err := store.SetOwnerSetting(app, "timezone", "Pacific/Kiritimati"); err != nil {
+		t.Fatalf("set timezone: %v", err)
+	}
+	// 02:00 UTC = 16:00 same day in UTC+14.
+	seedTaskWithRecur(t, app, "Owner zone due", "open", "", time.Date(2030, 3, 4, 2, 0, 0, 0, time.UTC))
+
+	s := tests.ApiScenario{
+		Name:            "quests focus renders the owner-zone due pre-fill",
+		Method:          "GET",
+		URL:             "/ui/show/quests",
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{`value="2030-03-04T16:00"`},
+	}
+	s.Test(t)
+}
+
+// TestTaskSnoozeTomorrowUsesOwnerZone guards the "tomorrow" snooze quick-pick:
+// its 09:00 target must land in the owner's zone, not the host zone.
+func TestTaskSnoozeTomorrowUsesOwnerZone(t *testing.T) {
+	ownerZoneSkipIfHostMatches(t)
+	app := newWebApp(t)
+	if err := store.SetOwnerSetting(app, "timezone", "Pacific/Kiritimati"); err != nil {
+		t.Fatalf("set timezone: %v", err)
+	}
+	loc, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
+	rec := seedTaskWithRecur(t, app, "Snooze me", "open", "", time.Now().Add(time.Hour))
+
+	// Compute the expectation before running the scenario (known negligible
+	// edge: crossing owner-zone midnight between here and the request).
+	ownerNow := time.Now().In(loc)
+	want := time.Date(ownerNow.Year(), ownerNow.Month(), ownerNow.Day(), 9, 0, 0, 0, loc).AddDate(0, 0, 1)
+
+	s := tests.ApiScenario{
+		Name:   "snooze tomorrow targets the owner zone",
+		Method: "POST",
+		URL:    "/ui/tasks/" + rec.Id + "/transition",
+		Body:   strings.NewReader("to=snooze&until=tomorrow"),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		TestAppFactory:  func(tb testing.TB) *tests.TestApp { return app },
+		ExpectedStatus:  200,
+		ExpectedContent: []string{"tcard-" + rec.Id},
+		AfterTestFunc: func(tb testing.TB, app *tests.TestApp, _ *http.Response) {
+			got, err := app.FindRecordById("nodes", rec.Id)
+			if err != nil {
+				tb.Fatalf("reload: %v", err)
+			}
+			itasks.Hydrate(got)
+
+			props := nodes.Props(got)
+			raw, _ := props["snoozed_until"].(string)
+			gotUntil, err := store.ParsePBTime(raw)
+			if err != nil {
+				tb.Fatalf("parse snoozed_until %q: %v", raw, err)
+			}
+			if !gotUntil.Equal(want) {
+				tb.Errorf("snoozed_until = %v, want %v", gotUntil, want)
+			}
 		},
 	}
 	s.Test(t)

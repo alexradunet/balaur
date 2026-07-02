@@ -433,6 +433,37 @@ func TestBucket(t *testing.T) {
 	}
 }
 
+// TestBucketHonorsNowZone documents the day-boundary semantics that make the
+// owner-zone threading (plan 238) fix the Overdue/Today split: Bucket's day
+// window is computed in now's location, so the same instant buckets
+// differently depending on which zone now carries.
+func TestBucketHonorsNowZone(t *testing.T) {
+	app := storetest.NewApp(t)
+	kir, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
+
+	due := time.Date(2030, 6, 15, 23, 0, 0, 0, kir)
+	if _, err := Create(app, CreateOpts{Title: "owner-zone due", Due: due}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	recs, err := OpenTasks(app, nil)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+
+	nowKir := time.Date(2030, 6, 15, 1, 0, 0, 0, kir) // = 2030-06-14 11:00 UTC
+	if b := Bucket(recs, nowKir); len(b.Today) != 1 {
+		t.Errorf("owner-zone now: Today = %d, want 1 (Overdue=%d Upcoming=%d)", len(b.Today), len(b.Overdue), len(b.Upcoming))
+	}
+
+	nowUTC := nowKir.UTC() // same instant, host/UTC zone
+	if b := Bucket(recs, nowUTC); len(b.Upcoming) != 1 {
+		t.Errorf("UTC now: Upcoming = %d, want 1 (Overdue=%d Today=%d)", len(b.Upcoming), len(b.Overdue), len(b.Today))
+	}
+}
+
 func TestDoneBetween(t *testing.T) {
 	app := storetest.NewApp(t)
 
