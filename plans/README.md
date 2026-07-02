@@ -654,7 +654,7 @@ Depends-on column says so.
 | 240 | Launcher probe identity: HTTP `/api/health` probe + loopback lock-addr validation; replace the tautological loopback test | P2 | S | LOW | — | DONE (merged 9f90c1c) |
 | 241 | Compaction boundary: `compacted_through` = drafted-through time, not commit click time (no more silently forgotten draft-window messages) | P2 | S | LOW | — | DONE (merged d939f5f) |
 | 242 | Export mirror prunes stale files in managed JD folders (archived/dropped/retitled nodes leave the plaintext tree) | P2 | S | MED | — | DONE (merged 0dc8f5d) |
-| 244 | Skip wikilink re-sync + FTS re-index on content-unchanged node saves (kills phantom `edge.create` audit rows, ~70 writes/turn) | P2 | S | MED | — | TODO |
+| 244 | Skip wikilink re-sync + FTS re-index on content-unchanged node saves (kills phantom `edge.create` audit rows, ~70 writes/turn) | P2 | S | MED | — | DONE (merged 4c3786b) |
 | 238 | Owner timezone in the web task surface + nudge cron (due parse, snooze, buckets, nudge prose — match briefing/recap) | P2 | M | MED | — | DONE (merged 8a53b94) |
 | 248 | Encrypted-backup failure-path tests: header/ciphertext tamper (AAD), tar traversal, truncation | P2 | S | LOW | — | DONE (merged 45007ae) |
 | 247 | Gateway busy/error-path tests: web toast, CLI busy envelope, messenger 400-releases-guard + IPv6 loopback host | P2 | S | LOW | 239 (merge friction: same test file) | DONE (merged 3de5847) |
@@ -664,7 +664,7 @@ Depends-on column says so.
 | 250 | Collapse the duplicated edges OR-filter builder (`ActiveSubgraph` delegates to `EdgesTouching`) | P3 | S | LOW | — | DONE (merged 118c4f6) |
 | 246 | Cap `node_list` tool output (50 + "showing N of M") and push `nodes.Query`'s limit into SQL when no prop filter | P3 | S | LOW | 250 (merge friction: same file) | DONE (merged 4858d9b) |
 | 243 | Port-sensitive `sameHost` Origin fallback (legacy-browser cross-port CSRF residual) | P3 | S | LOW | — | DONE (merged 8853936) |
-| 245 | Bound the task scans: push `props.state` filter into SQL (Step 1 = prove PB JSON-path filter or STOP) | P3 | M | MED | — | TODO |
+| 245 | Bound the task scans: push `props.state` filter into SQL (Step 1 = prove PB JSON-path filter or STOP) | P3 | M | MED | — | DONE (merged fa441f5) |
 | 254 | Graphify hook friction: allowlist the mandated command, extension-anchored matchers, once-per-session injection | P3 | S | LOW | — | DONE (merged 585baf2) |
 
 ## Direction plans (255–258)
@@ -673,7 +673,7 @@ Depends-on column says so.
 |------|-----|--------|----------------|------------|--------|
 | 255 | Backup/export in the Settings UI (mirror button + passphrase-encrypted backup form over the built machinery; restore stays CLI) | M | Sovereignty made visible to the non-technical owner | — | TODO |
 | 256 | SPIKE: reference messenger bridge — transport/packaging decision doc + thin prototype (Telegram long-poll recommended; sender allowlist fail-closed) | M (spike) | One-companion daily surface; activates 231/233/234 | — | DONE (merged 959ba5a) |
-| 257 | Un-defer `task` export (plan-225 recipe: redaction pre-verify + adjacent-marker leak test) | S | Sovereignty: last owner-authored type missing from the mirror | 242 + 252 (merge friction: export.go + tour 15) | TODO |
+| 257 | Un-defer `task` export (plan-225 recipe: redaction pre-verify + adjacent-marker leak test) | S | Sovereignty: last owner-authored type missing from the mirror | 242 + 252 (merge friction: export.go + tour 15) | DONE (merged 43a423c) |
 | 258 | Pin linux/arm64 runtime checksums (hashes reproducible on any arch — verified against the kronk SDK; GH arm64 workflow as fallback) | S | Fail-closed supply chain before packaging widens the audience | — | TODO |
 
 **Open bets recorded, no plans written (owner chose to defer):**
