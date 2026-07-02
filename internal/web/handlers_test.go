@@ -479,13 +479,60 @@ func TestOriginGuard(t *testing.T) {
 			Headers:        csrf(nil),
 			ExpectedStatus: 204,
 		},
+		{
+			Name:            "same-host cross-port Origin rejected",
+			URL:             "http://example.com:8090/ui/panel/collapse",
+			Headers:         csrf(map[string]string{"Origin": "http://example.com:3000"}),
+			ExpectedStatus:  403,
+			ExpectedContent: []string{"Cross-origin request rejected."},
+		},
+		{
+			Name:           "same host:port Origin allowed",
+			URL:            "http://example.com:8090/ui/panel/collapse",
+			Headers:        csrf(map[string]string{"Origin": "http://example.com:8090"}),
+			ExpectedStatus: 204,
+		},
 	}
 	for _, sc := range cases {
 		sc.Method = "POST"
-		sc.URL = "/ui/panel/collapse"
+		if sc.URL == "" {
+			sc.URL = "/ui/panel/collapse"
+		}
 		sc.Body = strings.NewReader("on=1")
 		sc.TestAppFactory = newWebApp
 		t.Run(sc.Name, func(t *testing.T) { sc.Test(t) })
+	}
+}
+
+// TestSameHost covers the port-sensitive Origin↔Host comparison used by the
+// guardLocalUI legacy-browser fallback (no Sec-Fetch-Site header).
+func TestSameHost(t *testing.T) {
+	cases := []struct {
+		name   string
+		origin string // full Origin header value
+		host   string // request Host
+		want   bool
+	}{
+		{"cross-port rejected", "http://localhost:3000", "localhost:8090", false},
+		{"same host:port allowed", "http://localhost:8090", "localhost:8090", true},
+		{"http default port matches :80", "http://localhost", "localhost:80", true},
+		{"https default port matches :443", "https://balaur", "balaur:443", true},
+		{"no port both sides allowed", "http://example.com", "example.com", true},
+		{"https origin vs :80 host rejected", "https://balaur", "balaur:80", false},
+		{"different host rejected", "http://evil.example", "localhost:8090", false},
+		{"ipv6 same host:port allowed", "http://[::1]:8090", "[::1]:8090", true},
+		{"ipv6 bare both sides allowed", "http://[::1]", "[::1]", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := url.Parse(tc.origin)
+			if err != nil {
+				t.Fatalf("parse origin %q: %v", tc.origin, err)
+			}
+			if got := sameHost(u, tc.host); got != tc.want {
+				t.Errorf("sameHost(%q, %q) = %v; want %v", tc.origin, tc.host, got, tc.want)
+			}
+		})
 	}
 }
 

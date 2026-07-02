@@ -5,13 +5,13 @@
   "steps": [
     {
       "file": "internal/web/web.go",
-      "line": 138,
+      "line": 166,
       "title": "7.1 — Register: one function mounts everything",
       "description": "```go\nfunc Register(se *core.ServeEvent) error {\n    se.Router.BindFunc(guardLocalUI)\n    ...\n    h := &handlers{app: se.App, clients: turn.ClientSource{...}}\n    feature.RegisterAll(se.App)\n    se.Router.GET(\"/\", h.root)\n    se.Router.POST(\"/ui/chat\", h.chat)\n    se.Router.GET(\"/ui/tasks/{id}/card\", h.taskCard)\n    se.Router.GET(\"/ui/chat/nudges\", h.chatNudges)\n    ...\n}\n```\n\n`Register` is called once from `main.go`'s `OnServe` hook after PocketBase is ready. It does three things:\n\n1. **Bind the guard** — `guardLocalUI` runs before every route handler (DNS-rebinding + CSRF defence).\n2. **Self-register feature cards** — `feature.RegisterAll` wires every domain card renderer (knowledge, tasks, life, etc.) into the global `ui` registry so `/ui/cards/{type}` can serve them without a static switch.\n3. **Mount routes** — product surface: `GET /` (home shell), `POST /ui/chat` (turn), `GET /storybook` (component catalog), and the full `/ui/*` family for task transitions, nudge polling, knowledge grids, node editing, review approvals, extension consent, and model management.\n\nGateway rule from AGENTS.md: `Register` is the only entry point; all handler methods are unexported and go through `h.*`. No handler reimplements turn logic — that lives in `internal/turn` (Tour 05)."
     },
     {
       "file": "internal/web/web.go",
-      "line": 64,
+      "line": 65,
       "title": "7.2 — guardLocalUI: DNS-rebinding + CSRF defence",
       "description": "```go\nfunc guardLocalUI(e *core.RequestEvent) error {\n    // skip PocketBase's own surfaces\n    if strings.HasPrefix(p, \"/api/\") || strings.HasPrefix(p, \"/_\") {\n        return e.Next()\n    }\n    // host check\n    if !isAllowedHost(host) {\n        return e.ForbiddenError(\"host not allowed\", nil)\n    }\n    // CSRF: Sec-Fetch-Site is primary; Origin is the fallback\n    switch e.Request.Header.Get(\"Sec-Fetch-Site\") {\n    case \"same-origin\", \"none\": return e.Next()\n    case \"\": // fall through to Origin check\n    default: return e.ForbiddenError(\"cross-site request rejected\", nil)\n    }\n    ...\n}\n```\n\nTwo layers of protection, both scoped to Balaur's own surfaces:\n\n- **Host check (DNS-rebinding defence):** the `Host` header must be a loopback address or `localhost`. An attacker's domain that DNS-resolves to 127.0.0.1 is blocked because the browser sends the attacker's domain name as `Host`, not `localhost`.\n- **CSRF defence (state-changing methods only):** `Sec-Fetch-Site` is browser-set and unforgeable — `same-origin` and `none` (top-level navigation) pass; any cross-site value is rejected. For older clients without fetch-metadata, the `Origin` header is the fallback: it must match `Host`, and the attacker-influenced value `null` (opaque/sandboxed origins) is an explicit rejection.\n\nPocketBase's `/api/` and `/_/` paths keep their own cookie-based auth and are deliberately skipped here."
     },

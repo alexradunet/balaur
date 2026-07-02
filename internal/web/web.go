@@ -58,7 +58,8 @@ func toolIconFile(name string) string {
 //     (comma-separated host[:port] values).
 //   - On state-changing methods: the browser-set, unspoofable Sec-Fetch-Site
 //     header is authoritative when present (only same-origin/none pass);
-//     otherwise an Origin header, when present, must match the request Host,
+//     otherwise an Origin header, when present, must match the request Host —
+//     port included (scheme-default ports normalized: http→80, https→443) —
 //     and the attacker-influenced value "null" (opaque/sandboxed origins) is a
 //     rejection. Absent both headers (curl, CLI, same-origin GET) passes.
 func guardLocalUI(e *core.RequestEvent) error {
@@ -94,7 +95,7 @@ func guardLocalUI(e *core.RequestEvent) error {
 				return e.ForbiddenError("cross-origin request rejected", nil)
 			}
 			u, err := url.Parse(origin)
-			if err != nil || !sameHost(u.Host, e.Request.Host) {
+			if err != nil || !sameHost(u, e.Request.Host) {
 				return e.ForbiddenError("cross-origin request rejected", nil)
 			}
 		}
@@ -121,17 +122,44 @@ func isAllowedHost(host string) bool {
 	return false
 }
 
-func sameHost(origin, request string) bool {
-	// Strip ports for comparison
-	origHost := origin
-	if h, _, err := net.SplitHostPort(origin); err == nil {
-		origHost = h
+// sameHost reports whether the Origin URL and the request Host name the same
+// host:port. A missing port normalizes to the origin scheme's default
+// (http→80, https→443) — browsers omit default ports from both Origin and
+// Host — so "http://localhost" matches request host "localhost:80", but a
+// page on localhost:3000 never matches a request to localhost:8090.
+func sameHost(origin *url.URL, request string) bool {
+	oh, op := splitHostOptionalPort(origin.Host)
+	rh, rp := splitHostOptionalPort(request)
+	def := schemeDefaultPort(origin.Scheme)
+	if op == "" {
+		op = def
 	}
-	reqHost := request
-	if h, _, err := net.SplitHostPort(request); err == nil {
-		reqHost = h
+	if rp == "" {
+		rp = def
 	}
-	return origHost == reqHost
+	return oh == rh && op != "" && op == rp
+}
+
+// splitHostOptionalPort splits host[:port], tolerating a missing port
+// (net.SplitHostPort errors on that). Brackets around a bare IPv6 literal
+// are stripped so "[::1]" and "[::1]:80" compare on the same host form.
+func splitHostOptionalPort(hostport string) (host, port string) {
+	if h, p, err := net.SplitHostPort(hostport); err == nil {
+		return h, p
+	}
+	return strings.Trim(hostport, "[]"), ""
+}
+
+// schemeDefaultPort returns the default port for http/https origins; other
+// schemes get none, so a portless non-http(s) origin never matches.
+func schemeDefaultPort(scheme string) string {
+	switch scheme {
+	case "http":
+		return "80"
+	case "https":
+		return "443"
+	}
+	return ""
 }
 
 // Register mounts the Balaur UI and static assets on the PocketBase router.
