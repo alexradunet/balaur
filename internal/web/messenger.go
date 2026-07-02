@@ -19,16 +19,19 @@ package web
 //     listener to 127.0.0.1, which is outside this handler's control.
 //  2. Consent-gated / fail-closed — DISABLED unless owner_settings key
 //     "messenger_token" is non-empty. No token → 403, no turn run. The owner
-//     sets the token via the PocketBase admin engine room; a settings-UI
-//     toggle is a natural follow-up.
+//     sets the token in Settings → Capabilities (POST
+//     /ui/settings/messenger-token, messenger_settings.go); the PocketBase
+//     admin engine room remains a fallback.
 //  3. No third-party routing — only accepts a local POST and returns a reply.
 //     No platform API is called anywhere in this file.
 //  4. No secrets in output/logs — the token is never logged; errors are
 //     sanitized.
 //
-// In-flight guard: turn.TryBegin (internal/turn) provides a cross-surface
-// guard — web, CLI, and messenger all acquire it before running a turn so the
-// master conversation is never written concurrently from any surface.
+// In-flight guard: turn.TryBegin (internal/turn) is a process-wide mutex —
+// within the serve process, web and messenger turns are serialized. It does
+// NOT reach across processes: a separate `balaur chat` process on the same
+// data dir takes its own copy of the mutex and is not serialized against a
+// running server (known limitation — see AGENTS.md).
 
 import (
 	"context"
@@ -78,8 +81,8 @@ func (h *handlers) messengerTurn(e *core.RequestEvent) error {
 		return e.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 	}
 
-	// 4. Cross-surface in-flight guard — one turn at a time on the master
-	//    conversation (shared with the web and CLI gateways via turn.TryBegin).
+	// 4. In-flight guard — one turn at a time on the master conversation
+	//    within this process (shared with the web gateway via turn.TryBegin).
 	end, ok := turn.TryBegin()
 	if !ok {
 		return e.JSON(http.StatusTooManyRequests, map[string]string{"error": "busy"})

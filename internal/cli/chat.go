@@ -62,8 +62,13 @@ func chatCmd(app core.App) *cobra.Command {
 		if err != nil {
 			return nil, err
 		}
-		// Cross-surface in-flight guard: one turn at a time on the master
-		// conversation (web + CLI + messenger share the same guard).
+		// Turn in-flight guard — per-process only. `balaur chat` is its own
+		// process, so when a server is running on the same data dir this does
+		// NOT serialize against the server's turns (known limitation — see
+		// AGENTS.md "Known limitations & deferred work"). The acquire is kept
+		// for symmetry with the other gateways and for any future in-process
+		// caller; cobra runs one command per process, so it never contends
+		// today.
 		end, ok := turn.TryBegin()
 		if !ok {
 			return nil, errors.New("busy: a turn is already in progress")
