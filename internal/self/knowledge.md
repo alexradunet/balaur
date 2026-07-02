@@ -182,7 +182,8 @@ self tool, which reports the actual registry):
   typed props validated against the type schema; node_edit updates an
   owner-authored node's title, body, or props in place (no consent gate — owner
   types are trusted; memory/skill changes still go through propose_edit);
-  node_list, node_get, and node_drop list, read, and delete them. node_get now also
+  node_list (newest 50, with a truncation note when more exist), node_get, and
+  node_drop list, read, and delete them. node_get now also
   returns the node's props and a one-line link summary (N outbound, M backlinks).
   Four graph verbs let you build and walk the object graph — all consent-filtered
   to active nodes only (proposed/rejected never surface):

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -68,6 +69,58 @@ func TestNodeWriteToolCreatesActiveNode(t *testing.T) {
 	}
 	if got := rec.GetString("body"); got != "south wall first" {
 		t.Fatalf("body = %q", got)
+	}
+}
+
+// TestNodeListToolCapsOutput proves node_list stops at 50 entries and tells
+// the model the listing is truncated (with the real total).
+func TestNodeListToolCapsOutput(t *testing.T) {
+	app := storetest.NewApp(t)
+	for i := range 60 {
+		if _, err := nodes.Create(app, "note", fmt.Sprintf("Note %02d", i), "", nodes.StatusActive, nil); err != nil {
+			t.Fatalf("Create %d: %v", i, err)
+		}
+	}
+	tool := nodeListTool(app)
+
+	out, err := tool.Execute(context.Background(), `{"type":"note"}`)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	entries := 0
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "- [") {
+			entries++
+		}
+	}
+	if entries != 50 {
+		t.Fatalf("want exactly 50 entries, got %d", entries)
+	}
+	if !strings.Contains(out, "showing 50 of 60") {
+		t.Fatalf("missing truncation note, got tail: %q", out[max(0, len(out)-120):])
+	}
+}
+
+// TestNodeListToolSmallListNoTruncationNote proves an under-cap listing has
+// no truncation line.
+func TestNodeListToolSmallListNoTruncationNote(t *testing.T) {
+	app := storetest.NewApp(t)
+	for i := range 3 {
+		if _, err := nodes.Create(app, "note", fmt.Sprintf("Note %d", i), "", nodes.StatusActive, nil); err != nil {
+			t.Fatalf("Create %d: %v", i, err)
+		}
+	}
+	tool := nodeListTool(app)
+
+	out, err := tool.Execute(context.Background(), `{"type":"note"}`)
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if strings.Count(out, "- [") != 3 {
+		t.Fatalf("want 3 entries, got: %q", out)
+	}
+	if strings.Contains(out, "showing") {
+		t.Fatalf("unexpected truncation note on a 3-item list: %q", out)
 	}
 }
 
