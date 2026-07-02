@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -170,10 +171,14 @@ func lockPath(dataDir string) string {
 }
 
 // RunningInstance reads the single-instance lock for dataDir and probes the
-// recorded address. It returns (addr, true) ONLY when the address is present
-// in the lock AND a TCP connection succeeds (instance is live). Every error —
-// missing file, unreadable, malformed JSON, empty addr, probe timeout — returns
-// ("", false) so the caller proceeds to start a new server (fail-open).
+// recorded address. It returns (addr, true) ONLY when the lock's address is
+// loopback AND GET http://<addr>/api/health answers HTTP 200 — PocketBase's
+// unauthenticated health endpoint, so a foreign process that grabbed the port
+// after Balaur stopped (the lock is deliberately not removed on shutdown) is
+// never mistaken for a live instance. Every other outcome — missing file,
+// unreadable, malformed JSON, empty or non-loopback addr, connection refused,
+// timeout, non-200, redirect — returns ("", false) so the caller proceeds to
+// start a new server (fail-open).
 func RunningInstance(dataDir string) (addr string, alive bool) {
 	data, err := os.ReadFile(lockPath(dataDir))
 	if err != nil {
@@ -183,11 +188,31 @@ func RunningInstance(dataDir string) (addr string, alive bool) {
 	if err := json.Unmarshal(data, &lock); err != nil || lock.Addr == "" {
 		return "", false // malformed — proceed to start
 	}
-	conn, err := net.DialTimeout("tcp", lock.Addr, 300*time.Millisecond)
+	host, _, err := net.SplitHostPort(lock.Addr)
+	if err != nil {
+		return "", false // malformed addr — proceed to start
+	}
+	if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+		// The lock is only ever written with 127.0.0.1:<port> (see main.go);
+		// anything else is tampering or corruption. Never probe or open it —
+		// the package never constructs a non-loopback address.
+		return "", false
+	}
+	client := &http.Client{
+		Timeout: 500 * time.Millisecond,
+		// A redirect is not Balaur's health endpoint — do not follow it.
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Get("http://" + lock.Addr + "/api/health")
 	if err != nil {
 		return "", false // stale (crashed or stopped) — proceed to start
 	}
-	conn.Close()
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", false // something else answered on the port — treat as stale
+	}
 	return lock.Addr, true
 }
 
