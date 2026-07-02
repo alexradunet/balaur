@@ -334,7 +334,7 @@ one-way Johnny Decimal Markdown mirror of every owner-authored, active node into
 stale files of archived or renamed nodes are pruned from the managed JD folders),
 and committed to a git history under the dest (skipped cleanly if git is absent).
 The redaction boundary holds: it reads only `status=active` rows of the `nodes`
-collection, never any secret/token collection. `task` is deferred pending its own content redaction pass; `day` exports its owner-authored journal body (plan 225 — recap/transcript text lives in the separate `summaries` collection, never the node body, and is leak-tested to stay out of the mirror). `--encrypt` (plan 195) wraps the whole
+collection, never any secret/token collection. `task` exports its owner-authored title, notes body, and scheduling props (plan 257 — nudge and completion text live in the separate `messages`/`entries` collections, never the node, and are leak-tested to stay out of the mirror); `day` exports its owner-authored journal body (plan 225 — recap/transcript text lives in the separate `summaries` collection, never the node body, and is leak-tested to stay out of the mirror). `--encrypt` (plan 195) wraps the whole
 mirror tree in a single passphrase-encrypted archive (scrypt-stretched
 passphrase, AES-256-GCM, CGO-free) for safe off-box backup — owner-supplied
 passphrase via `BALAUR_EXPORT_PASSPHRASE`, no escrow, no cloud: lose the
