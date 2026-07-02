@@ -9,6 +9,7 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -120,7 +121,7 @@ func viewsOf(recs []*core.Record, now time.Time) []TaskView {
 // renderQuests dispatches the quests card on its params (mirrors renderCardQuests):
 // mode=manage → the interactive fold; else a status/limit-filtered summary.
 func renderQuests(app core.App, params map[string]string) g.Node {
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	if params["mode"] == "manage" {
 		recs, _ := tasks.OpenTasks(app, nil)
 		if limit := ui.IntParam(params, "limit", 12); len(recs) > limit {

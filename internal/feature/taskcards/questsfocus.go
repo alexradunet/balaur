@@ -9,6 +9,7 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -33,7 +34,7 @@ const doneRecentlyFocusCap = 6
 // BuildQuestsFocus assembles the quests focus view from live data. Mirrors
 // buildQuestLog + loadQuestLogRecs in internal/web/tasks.go.
 func BuildQuestsFocus(app core.App) QuestsFocusView {
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 
 	openRecs, _ := tasks.OpenTasks(app, nil)
 	// Done tasks: load active task nodes and filter in Go for state=done.

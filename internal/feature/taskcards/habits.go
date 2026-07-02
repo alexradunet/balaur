@@ -8,6 +8,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -23,7 +24,7 @@ type HabitView struct {
 // buildHabits assembles the habits view-model from live data: open recurring
 // tasks with their current streaks. Mirrors the legacy handlers.buildHabits.
 func buildHabits(app core.App) []HabitView {
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	recs, err := tasks.OpenTasks(app, nil)
 	if err != nil {
 		return nil

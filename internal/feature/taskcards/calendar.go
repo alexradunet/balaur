@@ -9,6 +9,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -38,7 +39,7 @@ type CalView struct {
 // parameter (format "YYYY-MM"; empty or invalid falls back to the current month).
 // Mirrors legacy buildCalendar in internal/web/tasks.go.
 func buildCalendar(app core.App, monthParam string) CalView {
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	loc := now.Location()
 
 	base := now
