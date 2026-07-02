@@ -300,7 +300,18 @@ func registerSearchIndex(app core.App) {
 	}
 
 	app.OnRecordAfterCreateSuccess("nodes").BindFunc(upsertHook)
-	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(upsertHook)
+	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(func(e *core.RecordEvent) error {
+		// Metadata-only saves (knowledge.Touch use_count bumps, task nudged_at
+		// marks) change props the index does not store — skip the DELETE+INSERT.
+		// Original() carries the as-fetched (pre-save) field values; PocketBase
+		// only refreshes it on fetch (PostScan), never on save. A status flip
+		// (e.g. active→archived) changes an indexed gate, so it always passes
+		// through to Upsert's delete path.
+		if !search.IndexedFieldsChanged(e.Record.Original(), e.Record) {
+			return e.Next()
+		}
+		return upsertHook(e)
+	})
 	app.OnRecordAfterDeleteSuccess("nodes").BindFunc(deleteHook)
 }
 
@@ -322,11 +333,15 @@ func registerDayLinks(app core.App) {
 }
 
 // registerGraphLinks keeps node→node "links" edges in sync with [[wikilinks]]
-// in node bodies. On every node create/update it re-parses the body and rewrites
-// that node's link edges (creating stub nodes for unresolved titles). Cascade
-// delete on the edges relations (plan 160) cleans a deleted node's edges, so no
-// delete hook is needed here. A sync failure is logged, never fatal — a bad
-// parse must not block the owner's save.
+// in node bodies. On node create, and on any update that changed the body, it
+// re-parses the body and rewrites that node's link edges (creating stub nodes
+// for unresolved titles); body-unchanged updates (metadata-only saves like
+// knowledge.Touch or the task nudge mark) are skipped — the link set derives
+// from the body alone, and the full-replace would otherwise delete+recreate
+// every edge and write a phantom edge.create audit row per edge. Cascade
+// delete on the edges relations (plan 160) cleans a deleted node's edges, so
+// no delete hook is needed here. A sync failure is logged, never fatal — a
+// bad parse must not block the owner's save.
 func registerGraphLinks(app core.App) {
 	syncHook := func(e *core.RecordEvent) error {
 		if err := nodes.SyncLinks(app, e.Record); err != nil {
@@ -335,5 +350,10 @@ func registerGraphLinks(app core.App) {
 		return e.Next()
 	}
 	app.OnRecordAfterCreateSuccess("nodes").BindFunc(syncHook)
-	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(syncHook)
+	app.OnRecordAfterUpdateSuccess("nodes").BindFunc(func(e *core.RecordEvent) error {
+		if e.Record.GetString("body") == e.Record.Original().GetString("body") {
+			return e.Next()
+		}
+		return syncHook(e)
+	})
 }

@@ -211,3 +211,17 @@ func (ix *Index) QueryKind(terms []string, kind string, limit int) ([]string, er
 	}
 	return scanIDs(rows)
 }
+
+// IndexedFieldsChanged reports whether saving `after` over `before` touched
+// anything the FTS index stores (kind=type, title, content=body, extra) or the
+// status gate that decides index membership. Metadata-only saves — props like
+// use_count/last_used (knowledge.Touch) or nudged_at (the task nudge mark) —
+// return false, letting the update hook skip the DELETE+INSERT entirely.
+// before is expected to be e.Record.Original() (the pre-save field values).
+func IndexedFieldsChanged(before, after *core.Record) bool {
+	return before.GetString("type") != after.GetString("type") ||
+		before.GetString("title") != after.GetString("title") ||
+		before.GetString("body") != after.GetString("body") ||
+		before.GetString("status") != after.GetString("status") ||
+		nodeExtra(before) != nodeExtra(after)
+}

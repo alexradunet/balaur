@@ -356,3 +356,102 @@ func TestQueryEmpty(t *testing.T) {
 		t.Fatalf("empty query returned ids: %v", ids2)
 	}
 }
+
+// newFTSFieldsRecord builds an in-memory (unsaved) nodes record with the
+// fields IndexedFieldsChanged compares. No save is needed — the predicate
+// only reads field values off the two records.
+func newFTSFieldsRecord(t *testing.T, app core.App, typ, title, body, status, whenToUse string) *core.Record {
+	t.Helper()
+	col, err := app.FindCollectionByNameOrId("nodes")
+	if err != nil {
+		t.Fatalf("find nodes collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("type", typ)
+	rec.Set("title", title)
+	rec.Set("body", body)
+	rec.Set("status", status)
+	props := map[string]any{"use_count": 0, "last_used": ""}
+	if typ == "memory" {
+		props["when_to_use"] = whenToUse
+	}
+	rec.Set("props", props)
+	return rec
+}
+
+func TestIndexedFieldsChanged(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	tests := []struct {
+		name string
+		want bool
+		// before/after built with the same base fields, mutated per case.
+		mutate func(before, after *core.Record)
+	}{
+		{
+			name: "identical type/title/body/status/props",
+			want: false,
+			mutate: func(before, after *core.Record) {
+				// no mutation
+			},
+		},
+		{
+			name: "props-only change (Touch case)",
+			want: false,
+			mutate: func(before, after *core.Record) {
+				props := nodes.Props(after)
+				props["use_count"] = 1
+				props["last_used"] = "2026-07-02T00:00:00Z"
+				after.Set("props", props)
+			},
+		},
+		{
+			name: "title differs",
+			want: true,
+			mutate: func(before, after *core.Record) {
+				after.Set("title", "new title")
+			},
+		},
+		{
+			name: "body differs",
+			want: true,
+			mutate: func(before, after *core.Record) {
+				after.Set("body", "new body")
+			},
+		},
+		{
+			name: "status active vs archived",
+			want: true,
+			mutate: func(before, after *core.Record) {
+				after.Set("status", "archived")
+			},
+		},
+		{
+			name: "type differs",
+			want: true,
+			mutate: func(before, after *core.Record) {
+				after.Set("type", "note")
+			},
+		},
+		{
+			name: "memory when_to_use prop differs",
+			want: true,
+			mutate: func(before, after *core.Record) {
+				props := nodes.Props(after)
+				props["when_to_use"] = "a different hint"
+				after.Set("props", props)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			before := newFTSFieldsRecord(t, app, "memory", "same title", "same body", "active", "greeting")
+			after := newFTSFieldsRecord(t, app, "memory", "same title", "same body", "active", "greeting")
+			tt.mutate(before, after)
+			if got := IndexedFieldsChanged(before, after); got != tt.want {
+				t.Fatalf("IndexedFieldsChanged() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
