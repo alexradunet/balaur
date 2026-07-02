@@ -11,10 +11,13 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"github.com/alexradunet/balaur/internal/conversation"
 	"github.com/alexradunet/balaur/internal/export"
+	"github.com/alexradunet/balaur/internal/llm"
 	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/storetest"
+	"github.com/alexradunet/balaur/internal/tasks"
 )
 
 // TestMirrorLayoutPerType proves each mapped, non-deferred owner type lands in
@@ -146,62 +149,6 @@ func TestMirrorUnmappedTypeGoesUnsorted(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(want))); err != nil {
 		t.Errorf("unmapped measure file not on disk: %v", err)
-	}
-}
-
-// TestMirrorSkipsDeferredTypes is the deferral GUARD: an active task node must
-// produce NO file anywhere in the mirror tree, and no returned path — proving
-// task is never exported raw (its content needs its own redaction pass). It walks
-// the WHOLE tree, so it bites if task is removed from deferredTypes.
-// (day was un-deferred in plan 225; see TestDayJournalExportLeakTest.)
-func TestMirrorSkipsDeferredTypes(t *testing.T) {
-	app := storetest.NewApp(t)
-
-	// A real active task node (state is the one required prop).
-	taskNode, err := nodes.Create(app, "task", "Buy Milk", "",
-		nodes.StatusActive, map[string]any{"state": "open"})
-	if err != nil {
-		t.Fatalf("create task node: %v", err)
-	}
-	if taskNode.GetString("status") != nodes.StatusActive {
-		t.Fatalf("task node not active: %q", taskNode.GetString("status"))
-	}
-	taskSlug := slugForTest(taskNode.GetString("title")) + ".md"
-
-	// Also seed a non-deferred node so the export actually produces a tree to
-	// walk (a fully-empty mirror would pass vacuously).
-	if _, err := nodes.Create(app, "note", "Visible", "Plain.",
-		nodes.StatusActive, nil); err != nil {
-		t.Fatalf("create note: %v", err)
-	}
-
-	dir := t.TempDir()
-	paths, err := export.ExportMirror(app, dir)
-	if err != nil {
-		t.Fatalf("export mirror: %v", err)
-	}
-
-	// No returned path may carry the task JD folder prefix or the task slug.
-	for _, p := range paths {
-		if strings.HasPrefix(p, "60-69 Tasks/") {
-			t.Errorf("deferred task type leaked a returned path: %q", p)
-		}
-		if filepath.Base(p) == taskSlug {
-			t.Errorf("task node file returned: %q", p)
-		}
-	}
-
-	// Walk the whole written tree: no task file may exist under any folder.
-	for rel := range readAll(t, dir) {
-		if strings.HasPrefix(rel, ".git") {
-			continue
-		}
-		if filepath.Base(rel) == taskSlug {
-			t.Errorf("task node file exists on disk: %q", rel)
-		}
-		if strings.Contains(rel, "60-69 Tasks") {
-			t.Errorf("deferred task JD folder written: %q", rel)
-		}
 	}
 }
 
@@ -386,26 +333,6 @@ func TestDayJournalExportLeakTest(t *testing.T) {
 	}
 }
 
-// slugForTest mirrors export.slug for the deferral guard: it must compute the
-// same filename the exporter WOULD have used, so the test asserts that file is
-// absent. Kept tiny and standalone (export.slug is unexported).
-func slugForTest(title string) string {
-	var b strings.Builder
-	prevDash := false
-	for _, r := range strings.ToLower(title) {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			prevDash = false
-			continue
-		}
-		if !prevDash {
-			b.WriteByte('-')
-			prevDash = true
-		}
-	}
-	return strings.Trim(b.String(), "-")
-}
-
 // TestMirrorPrunesArchivedNode is the consent-withdrawal case: archiving an
 // active node must remove its file from the mirror's managed folder on the
 // next export.
@@ -564,5 +491,116 @@ func TestMirrorPruneSparesOwnerFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(strayMD); !os.IsNotExist(err) {
 		t.Errorf("stray.md should be removed, stat err = %v", err)
+	}
+}
+
+// TestTaskExportLeakTest is the redaction proof for task export (plan 257,
+// the same recipe plan 225 used for day). It seeds a real task (owner title +
+// notes) PLUS distinct marker strings in every adjacent surface a task
+// touches — a nudge-style assistant message in the master conversation
+// (`messages`) and a completion row in `entries` — then asserts:
+//  1. The task file exists in its JD folder with the H1 title, the owner's
+//     notes body, and the state frontmatter (task IS exported).
+//  2. Neither marker appears in ANY exported file — the exporter never opens
+//     messages or entries (the redaction boundary holds).
+//  3. A second ExportMirror over unchanged data produces byte-identical files.
+func TestTaskExportLeakTest(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	const notesText = "TASK_NOTES_OWNER_WORDS"
+	const nudgeMarker = "NUDGE_MARKER_ADJACENT_TEXT_DO_NOT_LEAK"
+	const entryMarker = "COMPLETION_ENTRY_MARKER_DO_NOT_LEAK"
+
+	// A real task through the owning package: title + owner notes, no due.
+	rec, err := tasks.Create(app, tasks.CreateOpts{Title: "Water Plants", Notes: notesText})
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	// Adjacent surface 1: a nudge-style assistant message in the master
+	// conversation (where Nudge posts its possibly model-composed text).
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master conversation: %v", err)
+	}
+	if err := conversation.AppendOrigin(app, master.Id,
+		llm.Message{Role: "assistant", Content: "Reminder: " + nudgeMarker}, "", "nudge"); err != nil {
+		t.Fatalf("append nudge message: %v", err)
+	}
+
+	// Adjacent surface 2: a completion row in `entries` (where tasks.Done
+	// logs recurring completions).
+	entriesCol, err := app.FindCollectionByNameOrId("entries")
+	if err != nil {
+		t.Fatalf("find entries collection: %v", err)
+	}
+	entry := core.NewRecord(entriesCol)
+	entry.Set("kind", "completion")
+	entry.Set("task", rec.Id)
+	entry.Set("text", entryMarker)
+	entry.Set("noted_at", time.Now().UTC())
+	if err := app.Save(entry); err != nil {
+		t.Fatalf("save completion entry: %v", err)
+	}
+
+	dir := t.TempDir()
+	paths, err := export.ExportMirror(app, dir)
+	if err != nil {
+		t.Fatalf("export mirror: %v", err)
+	}
+
+	// 1. The task file exists in its JD folder with title, notes, state.
+	const want = "60-69 Tasks/61 Tasks/water-plants.md"
+	found := false
+	for _, p := range paths {
+		if p == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("task file %q not in returned paths %v", want, paths)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(want)))
+	if err != nil {
+		t.Fatalf("read task file: %v", err)
+	}
+	text := string(raw)
+	for _, needle := range []string{"# Water Plants", notesText, `state: "open"`} {
+		if !strings.Contains(text, needle) {
+			t.Errorf("task file missing %q:\n%s", needle, text)
+		}
+	}
+
+	// 2. Neither adjacent-surface marker may appear anywhere in the tree.
+	for name, content := range readAll(t, dir) {
+		if strings.HasPrefix(name, ".git") {
+			continue
+		}
+		if strings.Contains(content, nudgeMarker) {
+			t.Fatalf("NUDGE MARKER LEAKED into %s — messages collection read by exporter:\n%s", name, content)
+		}
+		if strings.Contains(content, entryMarker) {
+			t.Fatalf("ENTRY MARKER LEAKED into %s — entries collection read by exporter:\n%s", name, content)
+		}
+	}
+
+	// 3. Determinism: a second run over unchanged data is byte-identical.
+	first := readAll(t, dir)
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("second export: %v", err)
+	}
+	second := readAll(t, dir)
+	stripGit := func(m map[string]string) map[string]string {
+		out := map[string]string{}
+		for k, v := range m {
+			if !strings.HasPrefix(k, ".git") {
+				out[k] = v
+			}
+		}
+		return out
+	}
+	if !reflect.DeepEqual(stripGit(first), stripGit(second)) {
+		t.Errorf("re-export not byte-identical:\nfirst:  %v\nsecond: %v",
+			stripGit(first), stripGit(second))
 	}
 }

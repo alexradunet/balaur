@@ -65,9 +65,7 @@ var jdFolder = map[string]string{
 	"book":   "30-39 Library/31 Books",
 	"place":  "40-49 Places/41 Places",
 	"day":    "50-59 Journal/51 Days",
-	// "task" has a JD folder in the design (60-69 Tasks/61 Tasks) but is
-	// DEFERRED — see deferredTypes. It is intentionally NOT exported until its
-	// content redaction pass lands (a future plan).
+	"task":   "60-69 Tasks/61 Tasks",
 }
 
 // unsortedFolder is the fallback for any owner-authored type without an explicit
@@ -78,9 +76,9 @@ const unsortedFolder = "90-99 Unsorted/91 Other"
 // redaction pass. Exporting them raw could surface un-reviewed content, so they
 // are skipped entirely until their redaction pass + leak test land.
 // Do NOT remove a type from this set without adding its redaction pass + leak test.
-var deferredTypes = map[string]bool{
-	"task": true,
-}
+// Currently empty: day graduated in plan 225 and task in plan 257, each behind
+// a dedicated leak test in mirror_test.go.
+var deferredTypes = map[string]bool{}
 
 // jdFolderFor returns the relative JD folder for a node type, defaulting to the
 // Unsorted bucket for any unmapped type.
@@ -100,9 +98,11 @@ func jdFolderFor(typ string) string {
 // extensions, owner_settings, audit_log, or any token/secret/conversation
 // collection — the sovereign redaction boundary (asserted by the canary test).
 //
-// task is DEFERRED (deferredTypes): its content needs its own redaction pass, so
-// it is skipped here. day was un-deferred in plan 225 (leak test proved the body
-// carries only the owner's journal text — recap/summaries never touch the body).
+// deferredTypes is currently empty but remains the gate for future types. day
+// was un-deferred in plan 225 (leak test: the body carries only the owner's
+// journal text — recap/summaries never touch the node). task was un-deferred in
+// plan 257 (leak test: the body carries only the owner's task notes — nudge and
+// completion text live in messages/entries, which the exporter never reads).
 //
 // After writing the tree it commits the mirror to a git history under destDir
 // (offline; skipped cleanly when git is absent). It returns the relative file
