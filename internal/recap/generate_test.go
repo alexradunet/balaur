@@ -350,7 +350,11 @@ func TestEnsureSummariesParentHighWater(t *testing.T) {
 	later := time.Date(2027, 3, 15, 12, 0, 0, 0, loc)
 	currentMonth := Containing("month", later)
 	hwRaw := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, "month"), "")
-	hwTime, _ := time.ParseInLocation("2006-01-02", hwRaw, loc)
+	datePart, zone, _ := strings.Cut(hwRaw, "|")
+	if zone != "UTC" {
+		t.Fatalf("month HW zone = %q, want UTC", zone)
+	}
+	hwTime, _ := time.ParseInLocation("2006-01-02", datePart, loc)
 	if !hwTime.Before(currentMonth.Start) {
 		t.Fatalf("month HW %v is not before current month start %v — open period was prematurely marked",
 			hwTime, currentMonth.Start)
@@ -426,8 +430,8 @@ func TestEnsureSummariesParentHighWaterGapAtMark(t *testing.T) {
 
 	// Month HW must be Jan 2026 (the only fully-past month).
 	hwRaw := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, "month"), "")
-	if hwRaw != "2026-01-01" {
-		t.Fatalf("month HW = %q, want 2026-01-01", hwRaw)
+	if hwRaw != "2026-01-01|UTC" {
+		t.Fatalf("month HW = %q, want 2026-01-01|UTC", hwRaw)
 	}
 
 	// Delete Jan's month summary. The next run starts at the HW (Jan 2026),
@@ -448,5 +452,102 @@ func TestEnsureSummariesParentHighWaterGapAtMark(t *testing.T) {
 	}
 	if Find(app, master.Id, janMonth) == nil {
 		t.Fatal("Jan month summary still missing; HW boundary period not refilled")
+	}
+}
+
+// TestEnsureSummariesParentHighWaterHoldsOnEmptyGeneration is the regression
+// for the permanent-hole bug: a catch-up over three past weeks where the
+// model returns whitespace for the middle week must not advance the week
+// mark past the first week (so the failed period is retried next run), while
+// the later week still generates in the same run.
+func TestEnsureSummariesParentHighWaterHoldsOnEmptyGeneration(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+
+	// One chat day per ISO week (all Mondays in 2026).
+	seedTurn(t, app, master.Id, "week one", time.Date(2026, 5, 4, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "week two", time.Date(2026, 5, 11, 10, 0, 0, 0, loc))
+	seedTurn(t, app, master.Id, "week three", time.Date(2026, 5, 18, 10, 0, 0, 0, loc))
+
+	now := time.Date(2026, 6, 10, 12, 0, 0, 0, loc) // all three weeks fully past; Q2/year still open
+
+	// Run 1: whitespace-only generation for week two's summary.
+	c := llmtest.New()
+	c.Respond = func(msgs []llm.Message) string {
+		label, _, _ := strings.Cut(msgs[len(msgs)-1].Content, ":")
+		if label == "Week of May 11 2026" {
+			return "   " // whitespace-only → ensureOne stores nothing
+		}
+		return "Recap of " + label
+	}
+	if err := EnsureSummaries(context.Background(), app, c, master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries run 1: %v", err)
+	}
+
+	week2 := Week(time.Date(2026, 5, 11, 0, 0, 0, 0, loc))
+	if Find(app, master.Id, week2) != nil {
+		t.Fatal("week 2 summary unexpectedly present after whitespace-only generation")
+	}
+	if Find(app, master.Id, Week(time.Date(2026, 5, 4, 0, 0, 0, 0, loc))) == nil {
+		t.Fatal("week 1 summary missing")
+	}
+	if Find(app, master.Id, Week(time.Date(2026, 5, 18, 0, 0, 0, 0, loc))) == nil {
+		t.Fatal("week 3 summary missing; the walk should continue past the failure")
+	}
+	if hw := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, "week"), ""); hw != "2026-05-04|UTC" {
+		t.Fatalf("week HW after run 1 = %q, want 2026-05-04|UTC (must not advance past the failed week)", hw)
+	}
+
+	// Run 2: a working model fills the hole.
+	if err := EnsureSummaries(context.Background(), app, newEchoClient(), master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries run 2: %v", err)
+	}
+	if Find(app, master.Id, week2) == nil {
+		t.Fatal("week 2 summary still missing after run 2")
+	}
+	if hw := store.GetOwnerSetting(app, parentHighWaterKey(master.Id, "week"), ""); hw != "2026-06-01|UTC" {
+		t.Fatalf("week HW after run 2 = %q, want 2026-06-01|UTC", hw)
+	}
+}
+
+// TestEnsureSummariesZoneChangeRewalksFromOldest is the regression for the
+// orphaned-history bug: changing the owner zone invalidates the high-water
+// marks and regenerates history keyed under the new zone.
+func TestEnsureSummariesZoneChangeRewalksFromOldest(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	loc := time.UTC
+	seedTurn(t, app, master.Id, "zoned day", time.Date(2026, 5, 4, 10, 0, 0, 0, loc))
+
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, loc)
+	if err := EnsureSummaries(context.Background(), app, newEchoClient(), master.Id, now); err != nil {
+		t.Fatalf("EnsureSummaries run 1: %v", err)
+	}
+	if hw := store.GetOwnerSetting(app, highWaterKey(master.Id), ""); !strings.HasSuffix(hw, "|UTC") {
+		t.Fatalf("day HW after run 1 = %q, want suffix |UTC", hw)
+	}
+
+	// Run 2 under a different zone (deterministic FixedZone, no tzdata dependency).
+	locB := time.FixedZone("UTC+3", 3*3600)
+	now2 := time.Date(2026, 5, 10, 12, 0, 0, 0, locB)
+	client2 := newEchoClient()
+	if err := EnsureSummaries(context.Background(), app, client2, master.Id, now2); err != nil {
+		t.Fatalf("EnsureSummaries run 2: %v", err)
+	}
+	if client2.Calls == 0 {
+		t.Fatal("zone change did not trigger a re-walk; expected model calls > 0")
+	}
+	if Find(app, master.Id, Day(time.Date(2026, 5, 4, 0, 0, 0, 0, locB))) == nil {
+		t.Fatal("day summary missing under the new zone's period start")
+	}
+	if hw := store.GetOwnerSetting(app, highWaterKey(master.Id), ""); !strings.HasSuffix(hw, "|UTC+3") {
+		t.Fatalf("day HW after run 2 = %q, want suffix |UTC+3", hw)
 	}
 }
