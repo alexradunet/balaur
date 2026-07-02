@@ -195,7 +195,10 @@ Secrets (OAuth tokens, vault entries) live in the local PocketBase data
 directory and its backups. Treat `pb_data/` as secret.
 
 Optional environment variables (`.env.example` at the repo root is the canonical,
-commented list of every `BALAUR_*` switch — copy it to `.env` to configure a box):
+commented list of every `BALAUR_*` switch). Balaur reads only real environment
+variables — nothing loads a `.env` file. Export them in your shell/session
+before starting the binary, e.g. `set -a; . ./.env; set +a`, or put dev-only
+values in `dev.env`, which `make dev` sources:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

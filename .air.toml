@@ -9,8 +9,8 @@ tmp_dir = "tmp"
   # [build].env does not propagate to the child binary).
   full_bin = "./tmp/balaur serve --http 0.0.0.0:8090 --dir ./pb_data"
   include_ext = ["go", "html", "css", "js", "png", "jpg", "jpeg", "svg", "woff", "woff2", "json"]
-  exclude_dir = [".git", ".github", ".cache", "tmp", "pb_data", "dist"]
-  exclude_file = []
+  exclude_dir = [".git", ".github", ".cache", "tmp", "pb_data", "dist", "graphify-out", ".playwright-mcp", "pb_extensions"]
+  exclude_file = ["skills-lock.json"]
   delay = 1000
   stop_on_error = true
 

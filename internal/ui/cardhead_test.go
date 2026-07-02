@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	g "maragu.dev/gomponents"
-	. "maragu.dev/gomponents/html"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -24,7 +24,7 @@ func TestCardHeadNoTrailing(t *testing.T) {
 
 func TestCardHeadWithTrailing(t *testing.T) {
 	var b strings.Builder
-	trailing := Span(Class("kcard-meta"), g.Text("limit: 6"))
+	trailing := h.Span(h.Class("kcard-meta"), g.Text("limit: 6"))
 	if err := ui.CardHead("/static/icons/tome.png", "Memory", trailing).Render(&b); err != nil {
 		t.Fatalf("render: %v", err)
 	}

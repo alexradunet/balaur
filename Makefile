@@ -14,7 +14,7 @@ TMPDIR ?= $(HOME)/.cache/go-tmp
 export TMPDIR
 $(shell mkdir -p $(TMPDIR))
 
-.PHONY: help tools dev dev-port-open dev-port-close run seed build test race fmt vet staticcheck vulncheck lint
+.PHONY: help tools dev dev-port-open dev-port-close run seed build test check race fmt vet staticcheck vulncheck lint
 
 help:
 	@echo "make run    # serve PROD: real data ($(BALAUR_DATA_DIR)), port 8080 — run inside a zellij session to persist"
@@ -24,6 +24,7 @@ help:
 	@echo "make dev-port-close  # close dev :$(DEV_PORT) again (sudo ufw)"
 	@echo "make build  # build a CGO-free binary"
 	@echo "make test   # go test ./..."
+	@echo "make check  # go test ./... -count=1 (uncached) — the merge/push gate"
 	@echo "make race   # go test -race ./... (requires CGO)"
 	@echo "make fmt    # gofmt -l ."
 	@echo "make vet    # go vet ./..."
@@ -91,6 +92,12 @@ build:
 test:
 	go test ./...
 
+# Uncached full suite — the merge/push gate. `make test` stays cached for
+# the inner loop; -count=1 here so Go's test cache cannot mask a date- or
+# environment-dependent failure (a cached green once hid a Monday-red test).
+check:
+	go test ./... -count=1
+
 race:
 	CGO_ENABLED=1 go test -race ./...
 
@@ -106,9 +113,9 @@ vet:
 	go vet ./...
 
 staticcheck:
-	go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+	go tool staticcheck ./...
 
 vulncheck:
-	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	go tool govulncheck ./...
 
 lint: fmt vet staticcheck test

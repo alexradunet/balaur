@@ -44,9 +44,10 @@ lean and high-signal — add a rule only when it changes a real decision.
   `/improve` execution worktrees are ephemeral: merge `--no-ff` (subject
   `merge: NNN — …`), then delete the worktree/branch. Still commit or push ONLY
   when the owner asks.
-- **Gate every push on a green full suite.** Run `go test ./...` (all packages)
-  before pushing; never push red. Use conventional-commit subjects
-  (`feat`/`fix`/`docs`/`refactor`/`style`).
+- **Gate every push on a green full suite.** Run `make check` (uncached
+  `go test ./... -count=1`, all packages) before pushing; never push red —
+  a cached green can mask date-dependent failures. Use conventional-commit
+  subjects (`feat`/`fix`/`docs`/`refactor`/`style`).
 - **The checkout is shared by parallel agent sessions** editing the same tree at
   once. Never revert or "fix" changes you didn't make; stage only your own
   files; `git fetch` and confirm a clean fast-forward before every push.
@@ -182,9 +183,12 @@ lean and high-signal — add a rule only when it changes a real decision.
 
 ## Go tooling & idioms
 
-- `staticcheck` and `govulncheck` gate CI and `make lint` alongside gofmt/vet —
-  keep both clean. Dead code (U1000), deprecated APIs (SA1019), and CVEs fail the
-  build, not just review.
+- `staticcheck` gates CI and `make lint` alongside gofmt/vet; `govulncheck`
+  gates CI only (`make vulncheck` exists but is not a local gate — the full
+  scan OOMs the low-RAM dev box). Both are pinned via go.mod `tool`
+  directives and run as `go tool staticcheck` / `go tool govulncheck`; bump
+  them deliberately with `go get -tool <pkg>@vX`. Keep both clean: dead code
+  (U1000), deprecated APIs (SA1019), and CVEs fail the build, not just review.
 - Prefer the modern stdlib: `slices`/`maps`/`cmp`, the `min`/`max`/`clear`
   builtins, `for range int`, `errors.Join`. Run the `modernize` analyzer
   periodically as a sweep (not a hard gate). See the `go-standards` skill.

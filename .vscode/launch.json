@@ -14,7 +14,7 @@
       "args": ["serve", "--http=127.0.0.1:8090"],
       "env": {
         "CGO_ENABLED": "0"
-        // To reach the dev UI from another host (Tailscale/LAN), add e.g.:
+        // To reach the dev UI from another host (NetBird/LAN — see docs/netbird.md), add e.g.:
         // "BALAUR_ALLOWED_HOSTS": "balaur.local"
       }
     },
@@ -36,17 +36,18 @@
       "program": "${workspaceFolder}/..."
     },
     {
-      // Attach the debugger to the ALREADY-RUNNING systemd `balaur` service
-      // (make start-user-service) without restarting it. Pick the process when
-      // prompted. Requires dlv (make tools).
+      // Attach the debugger to the ALREADY-RUNNING `make run` process (prod
+      // serve in a long-lived zellij session — there is no daemon or
+      // service unit) without restarting it. Pick the balaur/go-run process
+      // when prompted. Requires dlv (make tools).
       //
       // Notes:
-      //  - The service binary is built optimized (make build), so some
-      //    breakpoints/vars may be imprecise. For faithful debugging rebuild
-      //    with: go build -gcflags="all=-N -l" -o balaur .
+      //  - The running binary is built optimized, so some breakpoints/vars
+      //    may be imprecise. For faithful debugging rebuild with:
+      //    go build -gcflags="all=-N -l" -o balaur .
       //  - Same-user attach needs ptrace allowed. If attach fails with
       //    "operation not permitted": sudo sysctl -w kernel.yama.ptrace_scope=0
-      "name": "Attach: running balaur service",
+      "name": "Attach: running balaur (make run)",
       "type": "go",
       "request": "attach",
       "mode": "local",

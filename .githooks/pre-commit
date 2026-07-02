@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Balaur pre-commit hook — mirrors `make lint` (gofmt + vet + test) so CI
+# Balaur pre-commit hook — mirrors `make lint` (gofmt + vet + staticcheck + test) so CI
 # failures surface locally before you push. Activated by `core.hooksPath`,
 # which `make tools` sets; this file is committed so it travels across machines.
 #
@@ -11,5 +11,5 @@ if ! command -v go >/dev/null 2>&1; then
 	exit 0
 fi
 
-echo "pre-commit: running 'make lint' (gofmt + vet + test)…"
+echo "pre-commit: running 'make lint' (gofmt + vet + staticcheck + test)…"
 exec make lint
