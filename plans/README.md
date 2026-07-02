@@ -655,7 +655,7 @@ Depends-on column says so.
 | 241 | Compaction boundary: `compacted_through` = drafted-through time, not commit click time (no more silently forgotten draft-window messages) | P2 | S | LOW | — | DONE (merged d939f5f) |
 | 242 | Export mirror prunes stale files in managed JD folders (archived/dropped/retitled nodes leave the plaintext tree) | P2 | S | MED | — | DONE (merged 0dc8f5d) |
 | 244 | Skip wikilink re-sync + FTS re-index on content-unchanged node saves (kills phantom `edge.create` audit rows, ~70 writes/turn) | P2 | S | MED | — | TODO |
-| 238 | Owner timezone in the web task surface + nudge cron (due parse, snooze, buckets, nudge prose — match briefing/recap) | P2 | M | MED | — | TODO |
+| 238 | Owner timezone in the web task surface + nudge cron (due parse, snooze, buckets, nudge prose — match briefing/recap) | P2 | M | MED | — | DONE (merged 8a53b94) |
 | 248 | Encrypted-backup failure-path tests: header/ciphertext tamper (AAD), tar traversal, truncation | P2 | S | LOW | — | DONE (merged 45007ae) |
 | 247 | Gateway busy/error-path tests: web toast, CLI busy envelope, messenger 400-releases-guard + IPv6 loopback host | P2 | S | LOW | 239 (merge friction: same test file) | DONE (merged 3de5847) |
 | 252 | Docs truth-sync post-230/234: AGENTS.md vault bullet, `knowledge.md` (guard/launcher/banner/nav), tours 00/07/10/15/19, `first-run-design.md` | P2 | M | LOW | 236 | DONE (merged 29202e1) |
