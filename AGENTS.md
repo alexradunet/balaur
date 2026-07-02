@@ -245,9 +245,8 @@ lean and high-signal — add a rule only when it changes a real decision.
   `balaur export` writes the one-way Markdown mirror with a local git
   history, `--encrypt` wraps it in a passphrase-protected archive
   (scrypt + AES-256-GCM), and `balaur restore` decrypts an archive back to
-  a readable tree. Only the `task` type stays deferred pending its content
-  redaction pass; `day` journal bodies export behind a leak test. Do not
-  claim task export in user-facing copy until that redaction pass lands.
+  a readable tree. Every owner-authored type exports, each behind a leak test
+  (`day` plan 225, `task` plan 257).
 - Local inference is embedded (`internal/kronk`, the Kronk SDK). GGUF model files
   are runtime assets, owner-supplied via the Models page;
   the engine never downloads anything on boot. CPU is the default;
