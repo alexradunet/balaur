@@ -17,6 +17,7 @@ import (
 	"github.com/alexradunet/balaur/internal/nodes"
 	"github.com/alexradunet/balaur/internal/storetest"
 	itasks "github.com/alexradunet/balaur/internal/tasks"
+	"github.com/alexradunet/balaur/internal/turn"
 )
 
 // executeEnvelope runs a command and returns the raw v1 envelope from stdout.
@@ -666,5 +667,41 @@ func TestNoteAddAndEditWithProps(t *testing.T) {
 	}
 	if len(audits) < 1 {
 		t.Errorf("want a node.update audit row from the edit, got %d", len(audits))
+	}
+}
+
+// TestChatBusyGuard: while a turn is in flight (the test holds the
+// cross-surface guard), `balaur chat` must fail with the busy error envelope
+// and persist nothing. The fake client is still required because chatCmd
+// resolves the model BEFORE checking the guard (internal/cli/chat.go:61-71).
+func TestChatBusyGuard(t *testing.T) {
+	app := storetest.NewApp(t)
+	withScriptedClient(t, llmtest.New(llmtest.Text("must never be reached")))
+
+	end, ok := turn.TryBegin()
+	if !ok {
+		t.Fatal("turn guard unexpectedly already held")
+	}
+	defer end()
+
+	env, err := executeEnvelope(t, chatCmd(app), "hello")
+	if err == nil {
+		t.Fatal("chat must fail while a turn is in flight")
+	}
+	data, _ := env["data"].(map[string]any)
+	if data == nil {
+		t.Fatalf("error envelope missing data object: %v", env)
+	}
+	if got, _ := data["error"].(string); got != "busy: a turn is already in progress" {
+		t.Errorf("error = %q, want %q", got, "busy: a turn is already in progress")
+	}
+
+	// The rejection happens before turn.Run — nothing may be persisted.
+	recs, findErr := app.FindAllRecords("messages")
+	if findErr != nil {
+		t.Fatalf("FindAllRecords(messages): %v", findErr)
+	}
+	if len(recs) != 0 {
+		t.Errorf("busy rejection must persist no messages, found %d", len(recs))
 	}
 }
