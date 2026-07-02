@@ -44,9 +44,10 @@ lean and high-signal — add a rule only when it changes a real decision.
   `/improve` execution worktrees are ephemeral: merge `--no-ff` (subject
   `merge: NNN — …`), then delete the worktree/branch. Still commit or push ONLY
   when the owner asks.
-- **Gate every push on a green full suite.** Run `go test ./...` (all packages)
-  before pushing; never push red. Use conventional-commit subjects
-  (`feat`/`fix`/`docs`/`refactor`/`style`).
+- **Gate every push on a green full suite.** Run `make check` (uncached
+  `go test ./... -count=1`, all packages) before pushing; never push red —
+  a cached green can mask date-dependent failures. Use conventional-commit
+  subjects (`feat`/`fix`/`docs`/`refactor`/`style`).
 - **The checkout is shared by parallel agent sessions** editing the same tree at
   once. Never revert or "fix" changes you didn't make; stage only your own
   files; `git fetch` and confirm a clean fast-forward before every push.
