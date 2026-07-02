@@ -52,6 +52,15 @@ func TestDueLine(t *testing.T) {
 	}
 }
 
+// nudgeNow is the fixed anchor for the nudge tests, mirroring briefing_test's
+// at(): anchoring on the real time.Now() made the "overdue 3d" assertion
+// DST-sensitive — Lateness counts absolute 24h blocks, but calendar-day
+// seeding (AddDate) spans only 71h across spring-forward. Nothing in the
+// nudge path compares against the wall clock, so a fixed instant is safe.
+func nudgeNow() time.Time {
+	return time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
+}
+
 func nudgeMessages(t *testing.T, app core.App) []*core.Record {
 	t.Helper()
 	recs, err := app.FindRecordsByFilter("messages", "origin = 'nudge'", "@rowid", 0, 0)
@@ -74,7 +83,7 @@ func loadTask(t *testing.T, app core.App, id string) *core.Record {
 
 func TestNudgeFiresOnceAndMarks(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
 	rec, err := Create(app, CreateOpts{Title: "Call notary", Due: now.Add(-10 * time.Minute)})
 	if err != nil {
@@ -107,7 +116,7 @@ func TestNudgeFiresOnceAndMarks(t *testing.T) {
 
 func TestNudgeBatchesIntoOneMessage(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
 	for _, title := range []string{"Pay bill", "Stretch"} {
 		if _, err := Create(app, CreateOpts{Title: title, Due: now.Add(-time.Hour)}); err != nil {
@@ -129,7 +138,7 @@ func TestNudgeBatchesIntoOneMessage(t *testing.T) {
 
 func TestNudgeUsesComposedText(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
 	if _, err := Create(app, CreateOpts{Title: "Call notary", Due: now.Add(-time.Minute)}); err != nil {
 		t.Fatalf("create: %v", err)
@@ -146,7 +155,7 @@ func TestNudgeUsesComposedText(t *testing.T) {
 
 func TestNudgeFallsBackWhenModelFails(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
 	if _, err := Create(app, CreateOpts{Title: "Call notary", Due: now.Add(-time.Minute)}); err != nil {
 		t.Fatalf("create: %v", err)
@@ -162,7 +171,7 @@ func TestNudgeFallsBackWhenModelFails(t *testing.T) {
 
 func TestNudgeRespectsFutureAndSnooze(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
 	if _, err := Create(app, CreateOpts{Title: "Later", Due: now.Add(2 * time.Hour)}); err != nil {
 		t.Fatalf("create: %v", err)
@@ -194,7 +203,7 @@ func TestNudgeRespectsFutureAndSnooze(t *testing.T) {
 
 func TestNudgeIdempotencyTwoTasks(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
 	rec1, err := Create(app, CreateOpts{Title: "Call notary", Due: now.Add(-10 * time.Minute)})
 	if err != nil {
@@ -238,10 +247,11 @@ func TestNudgeIdempotencyTwoTasks(t *testing.T) {
 
 func TestNudgeCatchesUpAfterDowntime(t *testing.T) {
 	app := storetest.NewApp(t)
-	now := time.Now()
+	now := nudgeNow()
 
-	// Came due while the box slept three days — first tick picks it up once.
-	if _, err := Create(app, CreateOpts{Title: "Renew ID", Due: now.AddDate(0, 0, -3)}); err != nil {
+	// Came due 72h (3 absolute days, matching Lateness' duration math) before
+	// the first tick after downtime — picked up once.
+	if _, err := Create(app, CreateOpts{Title: "Renew ID", Due: now.Add(-72 * time.Hour)}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	if err := Nudge(app, nil, now); err != nil {
