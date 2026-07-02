@@ -29,6 +29,7 @@ func SettingsCard() g.Node {
 			h.Li(h.A(h.Href("/ui/show/settings?section=models"), g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=models'); basmOpenPanel()"), g.Text("Models & APIs"))),
 			h.Li(h.A(h.Href("/ui/show/settings?section=heads"), g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=heads'); basmOpenPanel()"), g.Text("Heads"))),
 			h.Li(h.A(h.Href("/ui/show/settings?section=appearance"), g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=appearance'); basmOpenPanel()"), g.Text("Appearance"))),
+			h.Li(h.A(h.Href("/ui/show/settings?section=backup"), g.Attr("data-on:click__prevent", "@get('/ui/show/settings?section=backup'); basmOpenPanel()"), g.Text("Backup"))),
 		),
 		h.Footer(h.Class("kcard-actions"), h.A(h.Href("/ui/show/settings"), g.Attr("data-on:click__prevent", "@get('/ui/show/settings'); basmOpenPanel()"), g.Text("open settings →"))),
 	)

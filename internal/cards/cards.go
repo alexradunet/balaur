@@ -239,7 +239,7 @@ func init() {
 			W:     6,
 			H:     24,
 			Params: []ParamSpec{
-				{Name: "section", Enum: []string{"profile", "models", "heads", "appearance", "capabilities", "nudges"}, Doc: "settings section (default profile)"},
+				{Name: "section", Enum: []string{"profile", "models", "heads", "appearance", "capabilities", "nudges", "backup"}, Doc: "settings section (default profile)"},
 			},
 		},
 		{

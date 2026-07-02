@@ -338,7 +338,12 @@ collection, never any secret/token collection. `task` exports its owner-authored
 mirror tree in a single passphrase-encrypted archive (scrypt-stretched
 passphrase, AES-256-GCM, CGO-free) for safe off-box backup — owner-supplied
 passphrase via `BALAUR_EXPORT_PASSPHRASE`, no escrow, no cloud: lose the
-passphrase and the backup is unrecoverable. `balaur restore --archive <path>
+passphrase and the backup is unrecoverable. Both verbs are also one click away
+in the web Settings → Backup section (POST /ui/settings/export writes the
+mirror to `<data dir>/export`; POST /ui/settings/backup encrypts it to
+`<data dir>/backup/`, passphrase typed into the form, used once, never stored
+or logged; both actions are audited as `export.mirror`/`export.encrypt`;
+restore stays CLI-only). `balaur restore --archive <path>
 --out <dir>` (plan 224) is the matching recovery verb: it decrypts the archive
 back into a readable Markdown tree (same `BALAUR_EXPORT_PASSPHRASE` env var,
 never a flag). It does not re-import into the live database — the decrypted tree

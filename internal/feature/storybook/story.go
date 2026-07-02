@@ -122,6 +122,7 @@ var stories = []Story{
 	reviewqueueStory(),
 	nudgesectionStory(),
 	capabilitiesStory(),
+	backupsectionStory(),
 	dayfocusStory(),
 	periodfocusStory(),
 	settingsfocusStory(),
