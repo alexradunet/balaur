@@ -284,7 +284,7 @@ func ensureOne(ctx context.Context, app core.App, client llm.Client, conversatio
 	if err != nil {
 		return ensureEmpty, fmt.Errorf("summarising %s: %w", periodLabel(p), err)
 	}
-	text, err := llm.Collect(stream)
+	text, err := llm.Collect(ctx, stream)
 	if err != nil {
 		return ensureEmpty, fmt.Errorf("summarising %s: %w", periodLabel(p), err)
 	}

@@ -222,7 +222,7 @@ func composeBriefing(client llm.Client, now time.Time, lines []string) string {
 	if err != nil {
 		return ""
 	}
-	text, err := llm.Collect(stream)
+	text, err := llm.Collect(ctx, stream)
 	if err != nil {
 		return ""
 	}

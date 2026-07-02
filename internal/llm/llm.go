@@ -44,7 +44,9 @@ type Chunk struct {
 type Client interface {
 	// ChatStream sends the conversation and streams the reply. The returned
 	// channel is closed after a Done or Err chunk. Implementations must
-	// honor ctx cancellation.
+	// honor ctx cancellation — on a cancelled ctx the channel may close
+	// WITHOUT a terminal chunk, so consumers must treat close-without-Done
+	// plus a dead ctx as an interrupted stream (see Collect and agent.Run).
 	ChatStream(ctx context.Context, msgs []Message, tools []ToolSpec) (<-chan Chunk, error)
 
 	// Embed returns one embedding vector per input text.

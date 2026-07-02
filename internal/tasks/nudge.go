@@ -199,7 +199,7 @@ func composeNudge(client llm.Client, recs []*core.Record, now time.Time) string 
 	if err != nil {
 		return ""
 	}
-	text, err := llm.Collect(stream)
+	text, err := llm.Collect(ctx, stream)
 	if err != nil {
 		return ""
 	}
