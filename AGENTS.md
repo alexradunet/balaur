@@ -183,9 +183,12 @@ lean and high-signal — add a rule only when it changes a real decision.
 
 ## Go tooling & idioms
 
-- `staticcheck` and `govulncheck` gate CI and `make lint` alongside gofmt/vet —
-  keep both clean. Dead code (U1000), deprecated APIs (SA1019), and CVEs fail the
-  build, not just review.
+- `staticcheck` gates CI and `make lint` alongside gofmt/vet; `govulncheck`
+  gates CI only (`make vulncheck` exists but is not a local gate — the full
+  scan OOMs the low-RAM dev box). Both are pinned via go.mod `tool`
+  directives and run as `go tool staticcheck` / `go tool govulncheck`; bump
+  them deliberately with `go get -tool <pkg>@vX`. Keep both clean: dead code
+  (U1000), deprecated APIs (SA1019), and CVEs fail the build, not just review.
 - Prefer the modern stdlib: `slices`/`maps`/`cmp`, the `min`/`max`/`clear`
   builtins, `for range int`, `errors.Join`. Run the `modernize` analyzer
   periodically as a sweep (not a hard gate). See the `go-standards` skill.

@@ -45,7 +45,7 @@
       "problemMatcher": []
     },
     {
-      "label": "lint (fmt + vet + test)",
+      "label": "lint (fmt + vet + staticcheck + test)",
       "type": "shell",
       "command": "make lint",
       "problemMatcher": ["$go"]
