@@ -11,7 +11,9 @@ package export
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -106,6 +108,9 @@ func jdFolderFor(typ string) string {
 // (offline; skipped cleanly when git is absent). It returns the relative file
 // paths written (slash-separated, under destDir), sorted, so the result is
 // deterministic.
+// Between writing and committing it prunes stale *.md files from the managed
+// JD folders (see pruneStale), so the tree holds exactly one file per ACTIVE
+// node.
 func ExportMirror(app core.App, destDir string) ([]string, error) {
 	types, err := nodes.OwnerAuthoredTypes(app)
 	if err != nil {
@@ -143,6 +148,13 @@ func ExportMirror(app core.App, destDir string) ([]string, error) {
 		}
 	}
 	slices.Sort(written)
+
+	// Prune stale files (archived/dropped/renamed nodes) from the managed
+	// folders BEFORE committing, so `git add -A` records the deletions in the
+	// same commit as the writes.
+	if err := pruneStale(destDir, written); err != nil {
+		return nil, err
+	}
 
 	// Commit the mirror to a local git history. A real git failure is surfaced;
 	// a missing git binary or an unchanged tree is not an error (the files are
@@ -298,4 +310,51 @@ func uniqueName(base, id string, used map[string]bool) string {
 	}
 	used[name] = true
 	return name
+}
+
+// pruneStale removes every *.md file under destDir's MANAGED folders (the
+// jdFolder values plus the Unsorted bucket) that this run did not write, so
+// the working tree holds exactly one file per ACTIVE node: a node archived,
+// dropped, or renamed to a new slug loses its old file on the next export and
+// `git add -A` records the deletion. The managed set is derived from jdFolder
+// dynamically so a newly mapped type is covered without touching this code.
+// Everything OUTSIDE the managed folders — owner files elsewhere under
+// destDir, the .git directory, non-.md files even inside managed folders —
+// is never touched. Managed folders are owned by the exporter: any .md file
+// in one that does not correspond to a written path is removed, whoever put
+// it there. Emptied directories are left in place (git does not track them).
+func pruneStale(destDir string, written []string) error {
+	managed := make([]string, 0, len(jdFolder)+1)
+	for _, f := range jdFolder {
+		managed = append(managed, f)
+	}
+	managed = append(managed, unsortedFolder)
+	slices.Sort(managed) // deterministic removal order
+
+	keep := make(map[string]bool, len(written))
+	for _, p := range written {
+		keep[p] = true
+	}
+	for _, rel := range managed {
+		absDir := filepath.Join(destDir, filepath.FromSlash(rel))
+		entries, err := os.ReadDir(absDir)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue // folder never written — nothing to prune
+		}
+		if err != nil {
+			return fmt.Errorf("export: reading %s: %w", absDir, err)
+		}
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+				continue
+			}
+			if keep[path.Join(rel, e.Name())] {
+				continue
+			}
+			if err := os.Remove(filepath.Join(absDir, e.Name())); err != nil {
+				return fmt.Errorf("export: pruning stale %s: %w", filepath.Join(absDir, e.Name()), err)
+			}
+		}
+	}
+	return nil
 }

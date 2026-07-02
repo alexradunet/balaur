@@ -405,3 +405,164 @@ func slugForTest(title string) string {
 	}
 	return strings.Trim(b.String(), "-")
 }
+
+// TestMirrorPrunesArchivedNode is the consent-withdrawal case: archiving an
+// active node must remove its file from the mirror's managed folder on the
+// next export.
+func TestMirrorPrunesArchivedNode(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	if _, err := nodes.Create(app, "note", "Keep Me", "Body.",
+		nodes.StatusActive, nil); err != nil {
+		t.Fatalf("create keep note: %v", err)
+	}
+	archiveMe, err := nodes.Create(app, "note", "Archive Me", "Body.",
+		nodes.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("create archive note: %v", err)
+	}
+
+	dir := t.TempDir()
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("first export: %v", err)
+	}
+	const keepPath = "10-19 Knowledge/11 Notes/keep-me.md"
+	const archivePath = "10-19 Knowledge/11 Notes/archive-me.md"
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(keepPath))); err != nil {
+		t.Fatalf("keep-me.md not written: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(archivePath))); err != nil {
+		t.Fatalf("archive-me.md not written: %v", err)
+	}
+
+	if _, err := nodes.Transition(app, archiveMe.Id, nodes.StatusArchived, "node"); err != nil {
+		t.Fatalf("archive node: %v", err)
+	}
+
+	written, err := export.ExportMirror(app, dir)
+	if err != nil {
+		t.Fatalf("second export: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(archivePath))); !os.IsNotExist(err) {
+		t.Errorf("archive-me.md should be pruned, stat err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(keepPath))); err != nil {
+		t.Errorf("keep-me.md should still exist: %v", err)
+	}
+	for _, p := range written {
+		if p == archivePath {
+			t.Errorf("returned written slice still contains archived path %q", p)
+		}
+	}
+}
+
+// TestMirrorPrunesRenamedNode is the retitle case: renaming an active node
+// must remove the old-slug file, leaving exactly one file for the node.
+func TestMirrorPrunesRenamedNode(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	rec, err := nodes.Create(app, "note", "Old Title", "Body.",
+		nodes.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("create note: %v", err)
+	}
+
+	dir := t.TempDir()
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("first export: %v", err)
+	}
+	const oldPath = "10-19 Knowledge/11 Notes/old-title.md"
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(oldPath))); err != nil {
+		t.Fatalf("old-title.md not written: %v", err)
+	}
+
+	newTitle := "New Title"
+	if _, err := nodes.Update(app, rec.Id, &newTitle, nil, nil); err != nil {
+		t.Fatalf("retitle node: %v", err)
+	}
+
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("second export: %v", err)
+	}
+	const newPath = "10-19 Knowledge/11 Notes/new-title.md"
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(newPath))); err != nil {
+		t.Errorf("new-title.md should exist: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(oldPath))); !os.IsNotExist(err) {
+		t.Errorf("old-title.md should be pruned, stat err = %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(dir, filepath.FromSlash("10-19 Knowledge/11 Notes")))
+	if err != nil {
+		t.Fatalf("read notes dir: %v", err)
+	}
+	mdCount := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+			mdCount++
+		}
+	}
+	if mdCount != 1 {
+		t.Errorf("want exactly one .md file in notes folder, got %d", mdCount)
+	}
+}
+
+// TestMirrorPruneSparesOwnerFiles proves the boundary invariant: prune only
+// ever removes *.md files directly inside managed JD folders. Owner files
+// outside managed folders, .md files in unmanaged dirs, and non-.md files
+// inside managed folders all survive; a stray .md inside a managed folder
+// (that no active node produced) is removed — the exact rule that makes the
+// archived/renamed cases work.
+func TestMirrorPruneSparesOwnerFiles(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	if _, err := nodes.Create(app, "note", "Real Note", "Body.",
+		nodes.StatusActive, nil); err != nil {
+		t.Fatalf("create note: %v", err)
+	}
+
+	dir := t.TempDir()
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("first export: %v", err)
+	}
+
+	// Plant owner files that must survive pruning.
+	outsidePath := filepath.Join(dir, "notes.txt")
+	if err := os.WriteFile(outsidePath, []byte("owner file"), 0o644); err != nil {
+		t.Fatalf("write outside file: %v", err)
+	}
+	unmanagedDir := filepath.Join(dir, "My Stuff")
+	if err := os.MkdirAll(unmanagedDir, 0o755); err != nil {
+		t.Fatalf("mkdir unmanaged: %v", err)
+	}
+	unmanagedMD := filepath.Join(unmanagedDir, "mine.md")
+	if err := os.WriteFile(unmanagedMD, []byte("owner md"), 0o644); err != nil {
+		t.Fatalf("write unmanaged md: %v", err)
+	}
+	notesDir := filepath.Join(dir, filepath.FromSlash("10-19 Knowledge/11 Notes"))
+	ownerTxt := filepath.Join(notesDir, "owner.txt")
+	if err := os.WriteFile(ownerTxt, []byte("owner txt in managed dir"), 0o644); err != nil {
+		t.Fatalf("write owner.txt: %v", err)
+	}
+	strayMD := filepath.Join(notesDir, "stray.md")
+	if err := os.WriteFile(strayMD, []byte("stray"), 0o644); err != nil {
+		t.Fatalf("write stray.md: %v", err)
+	}
+
+	if _, err := export.ExportMirror(app, dir); err != nil {
+		t.Fatalf("second export: %v", err)
+	}
+
+	if _, err := os.Stat(outsidePath); err != nil {
+		t.Errorf("notes.txt should survive: %v", err)
+	}
+	if _, err := os.Stat(unmanagedMD); err != nil {
+		t.Errorf("My Stuff/mine.md should survive: %v", err)
+	}
+	if _, err := os.Stat(ownerTxt); err != nil {
+		t.Errorf("11 Notes/owner.txt should survive: %v", err)
+	}
+	if _, err := os.Stat(strayMD); !os.IsNotExist(err) {
+		t.Errorf("stray.md should be removed, stat err = %v", err)
+	}
+}
