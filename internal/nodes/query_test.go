@@ -1,6 +1,7 @@
 package nodes_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/alexradunet/balaur/internal/nodes"
@@ -97,6 +98,46 @@ func TestQueryLimit(t *testing.T) {
 	}
 	if len(recs) != 3 {
 		t.Fatalf("want 3 (limit), got %d", len(recs))
+	}
+}
+
+// TestQueryDefaultCapNewestFirst proves the default cap of 50 applies to the
+// type branch and that ordering is -updated,-created: a just-edited old node
+// must survive the cap.
+func TestQueryDefaultCapNewestFirst(t *testing.T) {
+	app := storetest.NewApp(t)
+
+	first, err := nodes.Create(app, "note", "Oldest", "", nodes.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	for i := range 59 {
+		if _, err := nodes.Create(app, "note", fmt.Sprintf("N%02d", i), "", nodes.StatusActive, nil); err != nil {
+			t.Fatalf("Create %d: %v", i, err)
+		}
+	}
+	// Bump the oldest node: its updated timestamp is now the newest, so
+	// -updated,-created ordering must keep it inside the 50-record cap.
+	body := "edited"
+	if _, err := nodes.Update(app, first.Id, nil, &body, nil); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	recs, err := nodes.Query(app, nodes.QueryOpts{Type: "note"})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if len(recs) != 50 {
+		t.Fatalf("want 50 (default cap), got %d", len(recs))
+	}
+	found := false
+	for _, r := range recs {
+		if r.Id == first.Id {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("just-edited node fell out of the cap — ordering is not -updated,-created")
 	}
 }
 
