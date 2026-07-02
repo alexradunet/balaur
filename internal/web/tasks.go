@@ -49,7 +49,7 @@ func (h *handlers) taskCard(e *core.RequestEvent) error {
 // taskCardHTML renders one task as its gomponents card (port of card-task.html)
 // to a string, for embedding in an SSE patch.
 func (h *handlers) taskCardHTML(rec *core.Record) (string, error) {
-	return renderNodeHTML(taskcards.TaskCard(taskcards.TaskViewOf(rec, time.Now()))), nil
+	return renderNodeHTML(taskcards.TaskCard(taskcards.TaskViewOf(rec, time.Now().In(store.OwnerLocation(h.app))))), nil
 }
 
 func (h *handlers) taskTransition(e *core.RequestEvent) error {
@@ -57,7 +57,7 @@ func (h *handlers) taskTransition(e *core.RequestEvent) error {
 	if err != nil {
 		return h.cardError(e, err)
 	}
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(h.app))
 	switch e.Request.FormValue("to") {
 	case "done":
 		if _, err := tasks.Done(h.app, rec, now); err != nil {
@@ -129,13 +129,13 @@ func (h *handlers) taskEdit(e *core.RequestEvent) error {
 	recur := e.Request.FormValue("recur")
 	opts := tasks.UpdateOpts{Title: &title, Notes: &notes, Recur: &recur, SetDue: true}
 	if v := strings.TrimSpace(e.Request.FormValue("due")); v != "" {
-		due, err := parseLocalDue(v, time.Now().Location())
+		due, err := parseLocalDue(v, store.OwnerLocation(h.app))
 		if err != nil {
 			return h.cardError(e, err)
 		}
 		opts.Due = due
 	}
-	if err := tasks.Update(h.app, rec, time.Now(), opts); err != nil {
+	if err := tasks.Update(h.app, rec, time.Now().In(store.OwnerLocation(h.app)), opts); err != nil {
 		return h.cardError(e, err)
 	}
 	html, err := h.taskCardHTML(rec)
