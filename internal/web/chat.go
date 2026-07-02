@@ -32,8 +32,10 @@ func (h *handlers) chat(e *core.RequestEvent) error {
 		return e.BadRequestError("empty message", nil)
 	}
 
-	// Cross-surface in-flight guard: exactly one turn runs on the master
-	// conversation at a time (web + CLI + messenger). Acquire before any
+	// In-flight guard: exactly one turn runs on the master conversation at
+	// a time within this process (web + messenger; a separate `balaur chat`
+	// process is NOT serialized against this server — see AGENTS.md "Known
+	// limitations & deferred work"). Acquire before any
 	// medium setup so a busy response never paints a user bubble or opens
 	// the stream. TryLock is intentional — at v1 a second concurrent turn
 	// is always a race, never a work queue.

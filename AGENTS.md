@@ -275,6 +275,13 @@ lean and high-signal — add a rule only when it changes a real decision.
   needed for recall (see `internal/search/index.go` header). Both stay CGO-free.
   This is a deliberate cost, not drift — do not "consolidate" to one driver
   without re-checking FTS5 support.
+- The turn in-flight guard (`internal/turn/guard.go`) is per-process: a
+  package-level mutex serializing web + messenger turns inside the serve
+  process. A separate `balaur chat` process on the same data dir is NOT
+  serialized against a running server — two turns can interleave on the master
+  conversation. If cross-process serialization is ever needed, the deferred
+  design is a DB lease: an `owner_settings` marker with a TTL, acquired via an
+  atomic retry-on-conflict write — not another in-memory mutex.
 
 ## Safety
 

@@ -275,7 +275,8 @@ func TestMessengerInFlight(t *testing.T) {
 		postMessenger(mux, "example.com", "Bearer "+token, `{"message":"first"}`)
 	}()
 
-	// Wait until the handler has entered ChatStream (and thus holds messengerMu).
+	// Wait until the handler has entered ChatStream (and thus holds the turn
+	// in-flight guard, turn.TryBegin).
 	<-bc.started
 
 	// Second request while first is mid-turn.
