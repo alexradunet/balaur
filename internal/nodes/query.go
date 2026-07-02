@@ -23,12 +23,22 @@ func Query(app core.App, opts QueryOpts) ([]*core.Record, error) {
 		cap = 50
 	}
 
+	// With no prop filter the SQL result IS the final set, so the DB can
+	// bound the fetch. PropMatch needs every candidate: props live in a JSON
+	// column and are substring-matched in Go below.
+	sqlLimit := 0
+	if len(opts.PropMatch) == 0 {
+		sqlLimit = cap
+	}
+
 	var recs []*core.Record
 	var err error
 	if opts.Type != "" {
-		recs, err = ListByTypeStatus(app, opts.Type, StatusActive)
+		recs, err = app.FindRecordsByFilter("nodes",
+			"type = {:t} && status = {:s}", "-updated,-created", sqlLimit, 0,
+			dbx.Params{"t": opts.Type, "s": StatusActive})
 	} else {
-		recs, err = app.FindRecordsByFilter("nodes", "status = 'active'", "-updated,-created", 0, 0, nil)
+		recs, err = app.FindRecordsByFilter("nodes", "status = 'active'", "-updated,-created", sqlLimit, 0, nil)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("query: loading nodes: %w", err)

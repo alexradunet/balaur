@@ -47,7 +47,7 @@
     },
     {
       "file": "internal/tools/knowledge.go",
-      "line": 43,
+      "line": 44,
       "title": "6.8 — ProposalMarker: the two-consumer protocol",
       "description": "```go\nconst ProposalMarker = \"\\x00balaur-proposal:\"\n```\n\nWhen `remember` or `propose_skill` succeeds, the tool result is *marked*: a NUL-prefixed header carrying `kind/id`, then the model-facing text.\n\nTwo consumers read the same string:\n- **The model** sees \"Memory proposal … sent to the owner for approval. It is NOT yet part of your memory.\" — wording that prevents it from claiming success.\n- **The web layer** (`handleToolResult` in `chatstream.go`) detects the marker and renders an approval card instead of a raw tool row.\n\nA NUL byte never appears in normal model output, so there are no false positives. If the model echoes the marker it carries no instructions — just an id.\n\n`KnowledgeTools` (line 23) assembles the full tool set: `remember`, `recall`, `search`, `skill`, `propose_skill`, `propose_edit`, `node_write`, `node_edit`, `node_list`, `node_get`, `node_drop`, plus the graph tools. None of them mutate active knowledge — proposals only.\n\n**Tour 17** covers the full tool surface and marker protocol."
     },

@@ -5,13 +5,13 @@
   "steps": [
     {
       "file": "internal/tools/knowledge.go",
-      "line": 23,
+      "line": 24,
       "title": "17.1 — Knowledge verbs: proposals, not mutations",
       "description": "`KnowledgeTools` is the largest verb group. It returns eleven tools: `remember`, `recall`, `search`, `skill`, `propose_skill`, `propose_edit`, `node_write`, `node_edit`, `node_list`, `node_get`, `node_drop` — plus everything from `GraphTools` (appended at the end of the function).\n\nThe critical design invariant is stated in the function's comment: **`remember` and `propose_skill` create proposals, not mutations.** Calling `remember` calls `knowledge.ProposeMemory`, which creates a record with status `proposed`; the owner must approve it in the review queue before it becomes active knowledge. The same applies to `propose_skill` and `propose_edit`.\n\nThe consent boundary is enforced in `internal/knowledge`, not in the tool wording. The model cannot bypass it by phrasing the request differently — it has no other path.\n\nBy contrast, `node_write` and `node_edit` **are** direct mutations, born active. The distinction reflects authorship: owner-voiced knowledge (a note, a typed object the owner dictated) is trusted on arrival; AI-inferred memories require the owner's explicit sign-off.\n\nAGENTS.md invariant: *OS access is opt-in and audited; keep mutations owner-initiated and auditable.* Here, the initiation model differs by knowledge type rather than by tool gating.\n\nCross-reference: Tour 05 shows how `internal/turn/tools.go` assembles this group into the full tool set; Tour 14 covers the `nodes` collection and graph that these verbs write into."
     },
     {
       "file": "internal/tools/knowledge.go",
-      "line": 43,
+      "line": 44,
       "title": "17.2 — ProposalMarker: the approval-card signal",
       "description": "```go\nconst ProposalMarker = \"\\x00balaur-proposal:\"\n```\n\nWhen `remember` or `propose_skill` succeeds, it returns `MarkProposal(\"nodes\", rec.Id, modelText)`. The returned string starts with `\\x00balaur-proposal:kind/id\\n` followed by the human-readable model text.\n\nThe NUL byte (`\\x00`) is a deliberate choice: it is valid in a Go string and in JSON, but it is opaque to the model's tokeniser — the marker is inert noise to the model. The web layer (`internal/web/chat.go`) parses these markers from tool results and renders an approval card UI instead of a plain tool row. The model never sees the `\\x00` prefix stripped; it only sees the plain human text that follows the newline.\n\n`ParseProposal` (L53) splits the marker back into `kind`, `id`, and `rest` — the three pieces the web layer needs to construct the approval card URL. `ok` is false for any string that does not start with the marker, so ordinary tool results pass through untouched.\n\nThis file defines one of four marker constants. The pattern — a NUL-prefixed marker with a self-describing head line, followed by a newline and plain model text — is the same across all four. Step 17.3 covers the rest."
     },

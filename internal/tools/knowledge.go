@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/alexradunet/balaur/internal/agent"
@@ -408,6 +409,10 @@ func nodeEditTool(app core.App) agent.Tool {
 	}
 }
 
+// nodeListCap bounds node_list output: tool results enter the model
+// context mid-turn, and an uncapped listing can blow a small local window.
+const nodeListCap = 50
+
 func nodeListTool(app core.App) agent.Tool {
 	allTypes, err := nodes.TypeNames(app)
 	if err != nil || len(allTypes) == 0 {
@@ -416,7 +421,7 @@ func nodeListTool(app core.App) agent.Tool {
 	}
 	return agent.Tool{
 		Spec: agent.ToolSpecOf("node_list",
-			"List active knowledge nodes of a given type (newest first).",
+			"List active knowledge nodes of a given type (newest first, at most 50).",
 			obj(map[string]any{
 				"type": map[string]any{"type": "string", "enum": allTypes, "description": "Node type to list (default note)."},
 			}, "type")),
@@ -431,7 +436,7 @@ func nodeListTool(app core.App) agent.Tool {
 			if typ == "" {
 				typ = "note"
 			}
-			recs, err := nodes.ListByTypeStatus(app, typ, nodes.StatusActive)
+			recs, err := nodes.Query(app, nodes.QueryOpts{Type: typ, Limit: nodeListCap})
 			if err != nil {
 				return "", fmt.Errorf("node_list: %w", err)
 			}
@@ -441,6 +446,15 @@ func nodeListTool(app core.App) agent.Tool {
 			var b strings.Builder
 			for _, r := range recs {
 				fmt.Fprintf(&b, "- [%s] %s\n", r.Id, r.GetString("title"))
+			}
+			if len(recs) == nodeListCap {
+				total, err := app.CountRecords("nodes",
+					dbx.HashExp{"type": typ, "status": nodes.StatusActive})
+				if err != nil {
+					app.Logger().Warn("node_list: counting nodes for truncation note", "error", err)
+				} else if total > int64(nodeListCap) {
+					fmt.Fprintf(&b, "…showing %d of %d — use node_query or search to narrow.\n", nodeListCap, total)
+				}
 			}
 			return b.String(), nil
 		},
