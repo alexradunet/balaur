@@ -19,6 +19,12 @@ func (h *handlers) saveMessengerToken(e *core.RequestEvent) error {
 	if err := store.SetOwnerSetting(h.app, "messenger_token", token); err != nil {
 		return e.InternalServerError("saving messenger token", err)
 	}
+	// Audit the state transition only — never the token value.
+	state := "set"
+	if token == "" {
+		state = "cleared"
+	}
+	store.Audit(h.app, "owner", "messenger.token", "owner_settings/messenger_token", true, map[string]any{"state": state})
 	view := settingscards.BuildCapabilities(h.app)
 	var b strings.Builder
 	if err := settingscards.MessengerGatewaySection(view).Render(&b); err != nil {

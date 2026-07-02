@@ -1,6 +1,8 @@
 package web
 
 import (
+	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -29,6 +31,32 @@ func TestSaveMessengerTokenSetsAndPatches(t *testing.T) {
 			`value="secret42"`,
 		},
 		TestAppFactory: newWebApp,
+		AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+			recs, err := a.FindRecordsByFilter("audit_log", "action = 'messenger.token'", "", 0, 0)
+			if err != nil || len(recs) != 1 {
+				tb.Fatalf("expected exactly 1 messenger.token audit row, got %d (err %v)", len(recs), err)
+			}
+			rec := recs[0]
+			if rec.GetString("actor") != "owner" {
+				tb.Errorf("actor = %q, want %q", rec.GetString("actor"), "owner")
+			}
+			if rec.GetString("target") != "owner_settings/messenger_token" {
+				tb.Errorf("target = %q, want %q", rec.GetString("target"), "owner_settings/messenger_token")
+			}
+			if !rec.GetBool("allowed") {
+				tb.Errorf("allowed = false, want true")
+			}
+			raw, err := json.Marshal(rec)
+			if err != nil {
+				tb.Fatalf("marshal audit record: %v", err)
+			}
+			if !strings.Contains(string(raw), `"state":"set"`) {
+				tb.Errorf("audit record missing state:set; got: %s", raw)
+			}
+			if strings.Contains(string(raw), "secret42") {
+				tb.Errorf("audit record must never contain the token value; got: %s", raw)
+			}
+		},
 	}
 	scenario.Test(t)
 }
@@ -49,6 +77,19 @@ func TestSaveMessengerTokenClearsOnEmpty(t *testing.T) {
 			"disabled",
 		},
 		TestAppFactory: newWebApp,
+		AfterTestFunc: func(tb testing.TB, a *tests.TestApp, _ *http.Response) {
+			recs, err := a.FindRecordsByFilter("audit_log", "action = 'messenger.token'", "", 0, 0)
+			if err != nil || len(recs) != 1 {
+				tb.Fatalf("expected exactly 1 messenger.token audit row, got %d (err %v)", len(recs), err)
+			}
+			raw, err := json.Marshal(recs[0])
+			if err != nil {
+				tb.Fatalf("marshal audit record: %v", err)
+			}
+			if !strings.Contains(string(raw), `"state":"cleared"`) {
+				tb.Errorf("audit record missing state:cleared; got: %s", raw)
+			}
+		},
 	}
 	scenario.Test(t)
 }
