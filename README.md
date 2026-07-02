@@ -140,7 +140,7 @@ database you own and can open with any SQLite tool.
   and propose its own extensions in chat (`propose_extension`) — new
   capability without rebuild or restart, but never without the owner.
   See "balaur-extensions".
-- **Your record, portable:** `balaur export` writes a one-way Johnny Decimal Markdown mirror of your active nodes (plan 194); `--encrypt` produces a passphrase-protected archive (plan 195).
+- **Your record, portable:** `balaur export` writes a one-way Johnny Decimal Markdown mirror of your active nodes (plan 194); `--encrypt` produces a passphrase-protected archive (plan 195). Both are also one click away in the web UI under Settings → Backup (restore stays CLI-only).
 
 ## Quick start
 

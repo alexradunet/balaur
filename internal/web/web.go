@@ -253,6 +253,10 @@ func Register(se *core.ServeEvent) error {
 	se.Router.POST("/ui/profile/balaur-avatar", h.setBalaurAvatarPref)
 	// Settings writes: capabilities / messenger token.
 	se.Router.POST("/ui/settings/messenger-token", h.saveMessengerToken)
+	// Settings → Backup: owner-clickable export mirror + encrypted backup
+	// (web face of `balaur export` / `--encrypt`; restore stays CLI-only).
+	se.Router.POST("/ui/settings/export", h.exportMirrorNow)
+	se.Router.POST("/ui/settings/backup", h.backupEncryptNow)
 	// Nudge controls (settings → nudges): owner-driven mute/disable + manual fire.
 	se.Router.POST("/ui/nudge/toggle", h.nudgeToggle)
 	se.Router.POST("/ui/nudge/mute", h.nudgeMute)

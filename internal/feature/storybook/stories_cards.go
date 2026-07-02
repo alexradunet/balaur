@@ -158,6 +158,36 @@ func capabilitiesStory() Story {
 	}
 }
 
+// backupsectionStory documents the Backup & export settings section — the
+// web face of `balaur export` / `--encrypt`. Restore stays CLI-only.
+func backupsectionStory() Story {
+	return Story{
+		ID: "backupsection", Group: "Settings", Title: "Backup & export", Wide: true, OnDark: true,
+		Blurb: "Owner-clickable sovereignty: write the Johnny Decimal Markdown mirror, or wrap it in a passphrase-encrypted archive — no terminal, nothing leaves the box. The passphrase is typed once, used once, and never stored, logged, or echoed back. Lose it and the backup is unrecoverable: no recovery, no escrow, no cloud.",
+		Variants: []Variant{
+			{"idle", settingscards.BackupSection(settingscards.BackupView{})},
+			{"mirror written", settingscards.BackupSection(settingscards.BackupView{MirrorDone: true, MirrorFiles: 42, MirrorDest: "/home/owner/.balaur/pb_data/export"})},
+			{"backup written", settingscards.BackupSection(settingscards.BackupView{ArchivePath: "/home/owner/.balaur/pb_data/backup/balaur-backup-20260701-093000.enc"})},
+			{"error", settingscards.BackupSection(settingscards.BackupView{Error: "could not write the mirror — see the server log"})},
+		},
+		Props: []Prop{
+			{"MirrorDone", "bool", "false", "Last action wrote the Markdown mirror; shows the files/dest line."},
+			{"MirrorFiles", "int", "0", "Files written by that mirror run."},
+			{"MirrorDest", "string", "—", "Where the mirror was written (<data dir>/export)."},
+			{"ArchivePath", "string", "—", "Path of the encrypted archive just written; empty otherwise."},
+			{"Error", "string", "—", "Owner-safe error line; raw errors stay in the server log."},
+		},
+		Dos: []string{
+			"Carry the unrecoverable-passphrase warning verbatim next to the form.",
+			"Show the real on-disk paths — the owner should know exactly where their data is.",
+		},
+		Donts: []string{
+			"Echo, store, log, or audit the passphrase — the view-model has no passphrase field by design.",
+			"Offer restore here — decrypting an archive is CLI-only until upload/overwrite semantics exist.",
+		},
+	}
+}
+
 // lifelogfocusStory documents the lifelog card's full-canvas focus body — the
 // life overview ported to gomponents (chat.Message-style components are for the
 // chat; this is the page body). The owner can log and drop entries by hand here,
@@ -756,13 +786,13 @@ func settingsfocusStory() Story {
 
 	return Story{
 		ID: "settingsfocus", Group: "Cards", Title: "SettingsFocus", Wide: true, OnDark: true,
-		Blurb: "The settings panel body: an in-panel tab strip (Profile / Models / Heads / Nudges / Capabilities) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel — runtime rows, the CPU/GPU control, and the official-model download/install CTA; Heads, Nudges, and Capabilities render their respective section views.",
+		Blurb: "The settings panel body: an in-panel tab strip (Profile / Models / Heads / Nudges / Capabilities / Backup) navigated via /ui/show/settings — the panel door, no chip (plan 101). The sidebar Settings entry summons the panel; tabs switch sections without adding a chip. Profile shows identity + soul avatar + Balaur head pickers (form-per-button grids); Models renders modelcards.Panel — runtime rows, the CPU/GPU control, and the official-model download/install CTA; Heads, Nudges, and Capabilities render their respective section views.",
 		Variants: []Variant{
 			{"profile section", settingscards.SettingsFocus(profileView)},
 			{"models section", settingscards.SettingsFocus(modelsView)},
 		},
 		Props: []Prop{
-			{"Section", "string", `"profile"`, `Active section: "profile", "models", "heads", "nudges", or "capabilities". Controls which content renders.`},
+			{"Section", "string", `"profile"`, `Active section: "profile", "models", "heads", "nudges", "capabilities", or "backup". Controls which content renders.`},
 			{"Profile", "ProfileView", "—", "Profile section view: OwnerName, AvatarOptions (soul), BalaurOptions (head), SavedName flash."},
 			{"Models", "modelcards.PanelView", "—", "Models panel view; passed directly to modelcards.Panel."},
 			{"Heads", "headscards.HeadsView", "—", `Heads section view; rendered when Section == "heads".`},

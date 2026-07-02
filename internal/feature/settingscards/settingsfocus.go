@@ -19,12 +19,13 @@ import (
 
 // SettingsFocusView is the view-model for the full settings focus body.
 type SettingsFocusView struct {
-	Section      string               // "profile" | "models" | "heads" | "nudges" | "capabilities"
+	Section      string               // "profile" | "models" | "heads" | "nudges" | "capabilities" | "backup"
 	Profile      ProfileView          // used when Section == "profile"
 	Models       modelcards.PanelView // used when Section == "models"
 	Heads        headscards.HeadsView // used when Section == "heads"
 	Nudge        NudgeView            // used when Section == "nudges"
 	Capabilities CapabilitiesView     // used when Section == "capabilities"
+	Backup       BackupView           // used when Section == "backup"
 }
 
 // BuildSettingsFocus assembles the SettingsFocusView from live data. Each
@@ -32,7 +33,7 @@ type SettingsFocusView struct {
 func BuildSettingsFocus(app core.App, params map[string]string) (SettingsFocusView, error) {
 	section := params["section"]
 	switch section {
-	case "models", "heads", "nudges", "capabilities":
+	case "models", "heads", "nudges", "capabilities", "backup":
 		// known sections
 	default:
 		section = "profile"
@@ -71,6 +72,8 @@ func SettingsFocus(v SettingsFocusView) g.Node {
 		content = NudgeSection(v.Nudge)
 	case "capabilities":
 		content = CapabilitiesSection(v.Capabilities)
+	case "backup":
+		content = BackupSection(v.Backup)
 	default:
 		content = g.Group([]g.Node{
 			ProfileIdentityCard(v.Profile),
