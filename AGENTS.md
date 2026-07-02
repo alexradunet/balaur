@@ -241,8 +241,13 @@ lean and high-signal — add a rule only when it changes a real decision.
 - Multi-human multi-user is FUTURE work, not v1. V1 has one human owner.
   Schema decisions should not preclude multiple humans later, but no code
   path serves them yet.
-- The Johnny Decimal Markdown vault mirror (one-way export + git) is
-  roadmap, not shipped. Do not claim it in user-facing copy until real.
+- The Johnny Decimal Markdown vault mirror SHIPPED (plans 194/195/224/225):
+  `balaur export` writes the one-way Markdown mirror with a local git
+  history, `--encrypt` wraps it in a passphrase-protected archive
+  (scrypt + AES-256-GCM), and `balaur restore` decrypts an archive back to
+  a readable tree. Only the `task` type stays deferred pending its content
+  redaction pass; `day` journal bodies export behind a leak test. Do not
+  claim task export in user-facing copy until that redaction pass lands.
 - Local inference is embedded (`internal/kronk`, the Kronk SDK). GGUF model files
   are runtime assets, owner-supplied via the Models page;
   the engine never downloads anything on boot. CPU is the default;
