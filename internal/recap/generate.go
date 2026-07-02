@@ -79,11 +79,12 @@ func Lookup(byPeriod map[string]*core.Record, p Period) *core.Record {
 }
 
 // highWaterKey is the owner_settings key holding the newest CONTIGUOUSLY
-// summarised day for one conversation (value: "YYYY-MM-DD" in the owner's
-// wall clock). It lets the hourly catch-up resume past already-settled days
-// instead of re-walking all history; the Find/exists short-circuit in
-// ensureOne remains the correctness safety net, so a stale mark can never
-// PERMANENTLY skip a genuinely-missing summary.
+// summarised day for one conversation (value: "YYYY-MM-DD|<zone>" in the
+// owner's wall clock, stamped with the zone it was computed in). It lets the
+// hourly catch-up resume past already-settled days instead of re-walking all
+// history; the Find/exists short-circuit in ensureOne remains the
+// correctness safety net, so a stale mark can never PERMANENTLY skip a
+// genuinely-missing summary.
 func highWaterKey(conversationID string) string {
 	return "recap_highwater_" + conversationID
 }
@@ -97,26 +98,37 @@ func parentHighWaterKey(conversationID, periodType string) string {
 }
 
 // loadHighWater returns the persisted high-water date stored under key as a
-// local-midnight time in loc, or the zero time when none is stored or it is
-// unparseable (so the caller falls back to walking from oldest).
+// local-midnight time in loc, or the zero time when none is stored, it is
+// unparseable, or it was stamped under a different zone (so the caller falls
+// back to walking from oldest — a timezone change invalidates old marks
+// because historical period_starts no longer line up with stored summaries).
 func loadHighWater(app core.App, key string, loc *time.Location) time.Time {
 	raw := store.GetOwnerSetting(app, key, "")
 	if raw == "" {
 		return time.Time{}
 	}
-	t, err := time.ParseInLocation("2006-01-02", raw, loc)
+	datePart, zone, found := strings.Cut(raw, "|")
+	if !found || zone != loc.String() {
+		// Legacy zoneless mark, or the owner changed timezone: historical
+		// period_starts no longer line up with stored summaries, so walk
+		// from oldest once and re-key under the current zone.
+		return time.Time{}
+	}
+	t, err := time.ParseInLocation("2006-01-02", datePart, loc)
 	if err != nil {
 		return time.Time{} // unreadable mark → fall back to oldest, never crash
 	}
 	return t
 }
 
-// saveHighWater records date d (local midnight) under key. Best-effort: a
-// failure to persist only means the next run re-walks from the previous mark —
-// the Find short-circuit keeps that correct, just not maximally cheap. Never
-// abort the run on this.
+// saveHighWater records date d (local midnight) under key, stamped with d's
+// zone so a later timezone change invalidates the mark instead of silently
+// misreading it. Best-effort: a failure to persist only means the next run
+// re-walks from the previous mark — the Find short-circuit keeps that
+// correct, just not maximally cheap. Never abort the run on this.
 func saveHighWater(app core.App, key string, d time.Time) {
-	if err := store.SetOwnerSetting(app, key, d.Format("2006-01-02")); err != nil {
+	v := d.Format("2006-01-02") + "|" + d.Location().String()
+	if err := store.SetOwnerSetting(app, key, v); err != nil {
 		app.Logger().Warn("recap: high-water persist failed", "error", err)
 	}
 }
@@ -230,14 +242,27 @@ func periodLabel(p Period) string {
 	}
 }
 
+// ensureResult classifies what ensureOne left behind for a period, so the
+// high-water walks can tell "retry next run" apart from "settled forever".
+type ensureResult int
+
+const (
+	ensureOpen  ensureResult = iota // period still running — re-evaluate next run
+	ensureDone                      // a summary exists (pre-existing or just written)
+	ensureQuiet                     // period complete but has no source — nothing will ever appear
+	ensureEmpty                     // generation produced only whitespace — retry next run
+)
+
 // ensureOne generates and stores one period summary if missing and its
-// period is complete. Reports whether a summary now exists.
-func ensureOne(ctx context.Context, app core.App, client llm.Client, conversationID string, p Period, now time.Time) (bool, error) {
+// period is complete. Returns an ensureResult classifying the outcome so
+// callers can tell a settled period (done or genuinely quiet) apart from one
+// that should be retried on the next run (still open or an empty generation).
+func ensureOne(ctx context.Context, app core.App, client llm.Client, conversationID string, p Period, now time.Time) (ensureResult, error) {
 	if p.End.After(now) {
-		return false, nil // period still running
+		return ensureOpen, nil // period still running
 	}
 	if Find(app, conversationID, p) != nil {
-		return true, nil // already done — idempotency
+		return ensureDone, nil // already done — idempotency
 	}
 
 	var source string
@@ -249,29 +274,29 @@ func ensureOne(ctx context.Context, app core.App, client llm.Client, conversatio
 		source, count, err = childSource(app, conversationID, p)
 	}
 	if err != nil {
-		return false, err
+		return ensureEmpty, err
 	}
 	if source == "" {
-		return false, nil // silence is not an error; quiet days leave no card
+		return ensureQuiet, nil // silence is not an error; quiet days leave no card
 	}
 
 	stream, err := client.ChatStream(ctx, summarisePrompt(p, source), nil)
 	if err != nil {
-		return false, fmt.Errorf("summarising %s: %w", periodLabel(p), err)
+		return ensureEmpty, fmt.Errorf("summarising %s: %w", periodLabel(p), err)
 	}
 	text, err := llm.Collect(stream)
 	if err != nil {
-		return false, fmt.Errorf("summarising %s: %w", periodLabel(p), err)
+		return ensureEmpty, fmt.Errorf("summarising %s: %w", periodLabel(p), err)
 	}
 	if strings.TrimSpace(text) == "" {
-		return false, nil
+		return ensureEmpty, nil
 	}
 	if err := save(app, conversationID, p, strings.TrimSpace(text), count); err != nil {
-		return false, err
+		return ensureEmpty, err
 	}
 	store.Audit(app, "recap", "recap.generate", p.Type+"/"+p.Start.Format("2006-01-02"), true,
 		map[string]any{"sources": count})
-	return true, nil
+	return ensureDone, nil
 }
 
 // EnsureSummaries catches up every missing summary for the conversation,
@@ -298,20 +323,12 @@ func EnsureSummaries(ctx context.Context, app core.App, client llm.Client, conve
 	contiguous := time.Time{}
 	stillContiguous := true
 	for d := Day(start); d.End.Before(now) || d.End.Equal(now); d = Containing("day", d.End) {
-		ok, err := ensureOne(ctx, app, client, conversationID, d, now)
+		res, err := ensureOne(ctx, app, client, conversationID, d, now)
 		if err != nil {
 			return err
 		}
 		if stillContiguous {
-			settled := ok
-			if !ok {
-				// No summary written: settled only if the day was genuinely
-				// quiet (no source), not if a summary failed to materialise.
-				if src, _, srcErr := daySource(app, conversationID, d); srcErr == nil && src == "" {
-					settled = true
-				}
-			}
-			if settled {
+			if res == ensureDone || res == ensureQuiet {
 				contiguous = d.Start
 			} else {
 				stillContiguous = false // stop advancing the mark past this gap
@@ -324,8 +341,10 @@ func EnsureSummaries(ctx context.Context, app core.App, client llm.Client, conve
 	// Parents bottom-up: weeks and months (from days), then quarters
 	// (from months), then years (from quarters). Each type resumes from its
 	// own persisted high-water mark so a steady-state tick skips already-settled
-	// periods entirely rather than re-finding each one. Only fully-past periods
-	// (End <= now) are marked; the still-open period keeps getting re-evaluated.
+	// periods entirely rather than re-finding each one. Only the last
+	// CONTIGUOUSLY-settled fully-past period (End <= now) is marked — a period
+	// whose generation produced nothing holds the mark so the next run retries
+	// it — while the still-open period keeps getting re-evaluated regardless.
 	for _, pt := range []string{"week", "month", "quarter", "year"} {
 		pKey := parentHighWaterKey(conversationID, pt)
 		pStart := oldest
@@ -333,12 +352,18 @@ func EnsureSummaries(ctx context.Context, app core.App, client llm.Client, conve
 			pStart = hw
 		}
 		var lastPast time.Time
+		stillContiguous := true
 		for p := Containing(pt, pStart); p.Start.Before(now); p = Containing(pt, p.End) {
-			if _, err := ensureOne(ctx, app, client, conversationID, p, now); err != nil {
+			res, err := ensureOne(ctx, app, client, conversationID, p, now)
+			if err != nil {
 				return err
 			}
-			if !p.End.After(now) { // period fully in the past → eligible to mark
-				lastPast = p.Start
+			if stillContiguous && !p.End.After(now) { // fully past → eligible to mark
+				if res == ensureDone || res == ensureQuiet {
+					lastPast = p.Start
+				} else {
+					stillContiguous = false // failed generation: retry from here next run
+				}
 			}
 		}
 		if !lastPast.IsZero() {
