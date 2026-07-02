@@ -52,6 +52,22 @@ func TestDueLine(t *testing.T) {
 	}
 }
 
+// TestDueLineRendersInNowZone pins the contract registerNudge now relies on
+// (plan 238): an owner-zone now renders the due line — and Lateness — in the
+// owner's zone, not the instant's origin zone.
+func TestDueLineRendersInNowZone(t *testing.T) {
+	due := time.Date(2030, 1, 2, 12, 0, 0, 0, time.UTC)
+	now := due.Add(time.Hour).In(time.FixedZone("owner", 14*3600))
+
+	got := DueLine(due, now, "open")
+	if !strings.Contains(got, "Jan 3 at 02:00") {
+		t.Errorf("DueLine = %q, want it to contain %q", got, "Jan 3 at 02:00")
+	}
+	if !strings.HasPrefix(got, "overdue 1h") {
+		t.Errorf("DueLine = %q, want prefix %q", got, "overdue 1h")
+	}
+}
+
 // nudgeNow is the fixed anchor for the nudge tests, mirroring briefing_test's
 // at(): anchoring on the real time.Now() made the "overdue 3d" assertion
 // DST-sensitive — Lateness counts absolute 24h blocks, but calendar-day

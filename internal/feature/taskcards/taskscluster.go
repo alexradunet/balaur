@@ -9,6 +9,7 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/alexradunet/balaur/internal/nodes"
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -18,7 +19,7 @@ import (
 // an Article.kcard.ucard with head + footer). This is the "draw the cards for
 // THOSE quests" surface, reachable by card_show, /ui/show, and show_cards.
 func renderTasks(app core.App, params map[string]string) g.Node {
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	// cards.Validate already clamped limit to [1,50]; intParam handles missing/invalid.
 	limit := ui.IntParam(params, "limit", 12)
 	status := params["status"]

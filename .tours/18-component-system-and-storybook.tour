@@ -53,7 +53,7 @@
     },
     {
       "file": "internal/feature/taskcards/quests.go",
-      "line": 24,
+      "line": 25,
       "title": "18.9 — A domain card: QuestsCard",
       "description": "`QuestsCard` is a representative **domain card** — a feature-level component that composes `ui` atoms into a PocketBase-aware view.\n\nNotice the composition:\n- The outer `h.Article` carries the CSS classes and the stable HTML ID (`ucard-quests`) that Datastar SSE patches target.\n- `ui.CardHead(…)` (from `internal/ui/components.go`) supplies the icon + title header — the shared chrome seen in step 18.3, reused here without re-implementing it.\n- The body is a `<ul>` of task rows, each with a `g.Text`-escaped title and an inline `<form>` for the `✓` done transition.\n- The footer carries an `all quests →` link with a Datastar `data-on:click__prevent` attribute that fires a GET to `/ui/show/quests` — the standard Datastar hypermedia pattern: a declarative attribute on an element, not a client-side router.\n\n`QuestsManageCard` (line 66) is the same card in its expanded \"focus\" mode — full task cards with Done/Snooze/Drop controls. One view type, two renderers, shared header atom.\n\nAGENTS.md invariant: domain cards live in `internal/feature/*cards`; they compose `ui` atoms but are never imported by `internal/ui`."
     },

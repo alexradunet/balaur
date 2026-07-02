@@ -57,7 +57,7 @@ func (h *handlers) nudgeMute(e *core.RequestEvent) error {
 // nudgeNow fires one nudge immediately, bypassing the mute (explicit owner
 // action). The client is nil → the deterministic line ships (offline-safe).
 func (h *handlers) nudgeNow(e *core.RequestEvent) error {
-	if err := tasks.Nudge(h.app, nil, time.Now()); err != nil {
+	if err := tasks.Nudge(h.app, nil, time.Now().In(store.OwnerLocation(h.app))); err != nil {
 		return h.cardError(e, err)
 	}
 	return h.renderNudgeSection(e)

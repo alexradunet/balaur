@@ -8,6 +8,7 @@ import (
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -38,7 +39,7 @@ func buildTimeline(app core.App, days int) TLView {
 	if days <= 0 {
 		days = tlDefaultDays
 	}
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	loc := now.Location()
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 

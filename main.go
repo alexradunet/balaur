@@ -212,7 +212,7 @@ func registerNudge(app core.App) {
 		return
 	}
 	scheduleJob(app, "nudge", "* * * * *", true, func(client llm.Client) {
-		now := time.Now()
+		now := time.Now().In(store.OwnerLocation(app))
 		if tasks.NudgeSuppressed(app, now) { // owner muted/disabled nudges (soft layer)
 			return
 		}

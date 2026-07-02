@@ -13,6 +13,7 @@ import (
 	data "maragu.dev/gomponents-datastar"
 	h "maragu.dev/gomponents/html"
 
+	"github.com/alexradunet/balaur/internal/store"
 	"github.com/alexradunet/balaur/internal/tasks"
 	"github.com/alexradunet/balaur/internal/ui"
 )
@@ -30,7 +31,7 @@ type TodayView struct {
 // buildToday assembles the today view-model from live data: overdue + today's
 // open tasks. Mirrors the legacy renderCardToday/taskViewOf.
 func buildToday(app core.App) TodayView {
-	now := time.Now()
+	now := time.Now().In(store.OwnerLocation(app))
 	recs, _ := tasks.OpenTasks(app, nil)
 	bk := tasks.Bucket(recs, now)
 
