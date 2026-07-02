@@ -436,10 +436,11 @@ func compactdialogStory() Story {
 			"note + Close (nothing to fold, or no model). Open renders it in place for the story.",
 		Variants: []Variant{
 			{"form (review & edit)", ui.CompactDialog(ui.CompactDialogProps{
-				Open:       true,
-				Draft:      "You scoped the manual compact feature and chose to append a dated section per compact, reviewed in a modal before it commits.",
-				AcceptURL:  "/ui/compact/accept",
-				RefreshURL: "/ui/compact",
+				Open:           true,
+				Draft:          "You scoped the manual compact feature and chose to append a dated section per compact, reviewed in a modal before it commits.",
+				AcceptURL:      "/ui/compact/accept",
+				RefreshURL:     "/ui/compact",
+				DraftedThrough: "2026-06-24T12:00:00Z",
 			})},
 			{"message (nothing to fold)", ui.CompactDialog(ui.CompactDialogProps{
 				Open:    true,
@@ -452,6 +453,7 @@ func compactdialogStory() Story {
 			{"AcceptURL", "string", "—", "@post target that commits the edited summary."},
 			{"RefreshURL", "string", "—", "@post target that regenerates the draft."},
 			{"Signal", "string", `"compactDraft"`, "Signal two-way bound to the textarea so Accept can post the owner's edits."},
+			{"DraftedThrough", "string", `""`, "RFC3339Nano end of the drafted window; posted back on Accept so the commit pins the boundary to draft time."},
 			{"Open", "bool", "false", "Render the <dialog> in place (storybook). Production appends it and calls showModal()."},
 		},
 		Dos: []string{

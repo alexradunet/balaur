@@ -28,46 +28,65 @@ import (
 // DraftToday summarises today's not-yet-compacted transcript and returns the
 // proposed text WITHOUT persisting anything. Returns "" with count 0 when there
 // is nothing new to fold (the caller shows a gentle note instead of a draft).
-func DraftToday(ctx context.Context, app core.App, client llm.Client, conv *core.Record, now time.Time) (string, int, error) {
+// The third result is the drafted-through moment (the exclusive end of the
+// summarised window, [boundary, now)) that MUST be passed to CommitToday so
+// the boundary it writes matches what the summary actually covers.
+func DraftToday(ctx context.Context, app core.App, client llm.Client, conv *core.Record, now time.Time) (string, int, time.Time, error) {
 	turns, boundary, err := todayTurns(app, conv, now)
 	if err != nil {
-		return "", 0, err
+		return "", 0, time.Time{}, err
 	}
 	if len(turns) == 0 {
-		return "", 0, nil
+		return "", 0, now, nil
 	}
 	source, count, err := transcriptSource(turns)
 	if err != nil {
-		return "", 0, err
+		return "", 0, time.Time{}, err
 	}
 	loc := store.OwnerLocation(app)
 	label := fmt.Sprintf("Today, %s–%s", boundary.In(loc).Format("15:04"),
 		now.In(loc).Format("15:04"))
 	stream, err := client.ChatStream(ctx, compactPrompt(label, source), nil)
 	if err != nil {
-		return "", 0, fmt.Errorf("summarising compaction: %w", err)
+		return "", 0, time.Time{}, fmt.Errorf("summarising compaction: %w", err)
 	}
 	text, err := llm.Collect(ctx, stream)
 	if err != nil {
-		return "", 0, fmt.Errorf("summarising compaction: %w", err)
+		return "", 0, time.Time{}, fmt.Errorf("summarising compaction: %w", err)
 	}
-	return strings.TrimSpace(text), count, nil
+	return strings.TrimSpace(text), count, now, nil
 }
 
 // CommitToday appends an owner-approved summary section to the conversation's
-// rolling summary and advances compacted_through to now — the clean-slate point.
-// summary is the final (possibly edited) text; an empty summary is a no-op so a
-// blank accept can't wipe the thread. Audit lands strictly after the save.
-func CommitToday(app core.App, conv *core.Record, summary string, now time.Time) error {
+// rolling summary and advances compacted_through to draftedThrough — the end
+// of the window the approved summary covers, so messages that arrived between
+// draft and accept stay in context. summary is the final (possibly edited)
+// text; an empty summary is a no-op so a blank accept can't wipe the thread.
+// The [15:04 compact] label in the appended section is still stamped with
+// now (the commit moment) — that is a display timestamp of when the owner
+// folded, not the coverage boundary. Audit lands strictly after the save.
+func CommitToday(app core.App, conv *core.Record, summary string, draftedThrough, now time.Time) error {
 	summary = strings.TrimSpace(summary)
 	if summary == "" {
 		return nil
 	}
 	now = now.In(store.OwnerLocation(app))
 
+	if draftedThrough.IsZero() {
+		return fmt.Errorf("committing compaction: drafted-through time is missing")
+	}
+	if draftedThrough.After(now) {
+		return fmt.Errorf("committing compaction: drafted-through time %s is in the future", draftedThrough.Format(time.RFC3339))
+	}
+	if prev := conversation.CompactedThrough(conv); !prev.IsZero() && draftedThrough.Before(prev) {
+		return fmt.Errorf("committing compaction: drafted-through time %s precedes the existing boundary %s", draftedThrough.Format(time.RFC3339), prev.Format(time.RFC3339))
+	}
+
 	// Recompute the folded count for the audit trail (the owner only sends back
-	// edited text, not the message set).
-	turns, _, err := todayTurns(app, conv, now)
+	// edited text, not the message set). Recount over the drafted window so the
+	// audit matches what the summary actually folded, not what may have arrived
+	// since.
+	turns, _, err := todayTurns(app, conv, draftedThrough)
 	if err != nil {
 		return err
 	}
@@ -77,7 +96,7 @@ func CommitToday(app core.App, conv *core.Record, summary string, now time.Time)
 		section = existing + "\n\n" + section
 	}
 	conv.Set("summary", section)
-	conv.Set("compacted_through", now)
+	conv.Set("compacted_through", draftedThrough)
 	if err := app.Save(conv); err != nil {
 		return fmt.Errorf("saving compaction: %w", err)
 	}

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"strings"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -19,9 +20,11 @@ const (
 	compactAcceptURL = "/ui/compact/accept"
 )
 
-// compactSignals carries the (possibly edited) draft summary back from the modal.
+// compactSignals carries the (possibly edited) draft summary and its
+// drafted-through coverage boundary back from the modal.
 type compactSignals struct {
-	CompactDraft string `json:"compactDraft"`
+	CompactDraft          string `json:"compactDraft"`
+	CompactDraftedThrough string `json:"compactDraftedThrough"`
 }
 
 // compact drafts a summary of today's not-yet-compacted transcript and opens the
@@ -41,7 +44,8 @@ func (h *handlers) compact(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("compact", err)
 	}
-	draft, count, err := recap.DraftToday(e.Request.Context(), h.app, client, master, time.Now())
+	now := time.Now()
+	draft, count, through, err := recap.DraftToday(e.Request.Context(), h.app, client, master, now)
 	if err != nil {
 		h.app.Logger().Warn("compact: draft failed", "error", err)
 		h.openCompactModal(sse, ui.CompactDialog(ui.CompactDialogProps{
@@ -57,6 +61,7 @@ func (h *handlers) compact(e *core.RequestEvent) error {
 	}
 	h.openCompactModal(sse, ui.CompactDialog(ui.CompactDialogProps{
 		Draft: draft, AcceptURL: compactAcceptURL, RefreshURL: compactDraftURL,
+		DraftedThrough: through.UTC().Format(time.RFC3339Nano),
 	}))
 	return nil
 }
@@ -64,7 +69,10 @@ func (h *handlers) compact(e *core.RequestEvent) error {
 // compactAccept commits the owner-approved (possibly edited) summary: it folds
 // today's thread, re-renders the dock to the clean slate + summary card, clears
 // the composer draft, and closes the modal. A blank summary is a no-op in
-// CommitToday, so an empty accept cannot wipe the thread.
+// CommitToday, so an empty accept cannot wipe the thread. A commit whose
+// drafted-through timestamp is missing, unparsable, or invalid (future, or
+// preceding the existing boundary) is rejected with a visible error instead of
+// stamping the boundary with accept-click time.
 func (h *handlers) compactAccept(e *core.RequestEvent) error {
 	var sig compactSignals
 	_ = datastar.ReadSignals(e.Request, &sig)
@@ -74,8 +82,19 @@ func (h *handlers) compactAccept(e *core.RequestEvent) error {
 	if err != nil {
 		return e.InternalServerError("compact accept", err)
 	}
-	if err := recap.CommitToday(h.app, master, sig.CompactDraft, time.Now()); err != nil {
+	draftedThrough, perr := time.Parse(time.RFC3339Nano, strings.TrimSpace(sig.CompactDraftedThrough))
+	if perr != nil {
+		h.openCompactModal(sse, ui.CompactDialog(ui.CompactDialogProps{
+			Message: "This draft is stale or incomplete — close and start a fresh compact.",
+		}))
+		return nil
+	}
+	if err := recap.CommitToday(h.app, master, sig.CompactDraft, draftedThrough, time.Now()); err != nil {
 		h.app.Logger().Warn("compact: commit failed", "error", err)
+		h.openCompactModal(sse, ui.CompactDialog(ui.CompactDialogProps{
+			Message: "Couldn't fold today's thread — close and try a fresh compact.",
+		}))
+		return nil
 	}
 	if data, derr := h.dockData(); derr == nil {
 		_ = sse.PatchElements(renderNodeHTML(h.chatBodyHTML(data)),

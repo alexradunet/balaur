@@ -11,14 +11,17 @@ import (
 // owner reviews/edits the proposed Draft, then Accepts (commit), Refreshes
 // (regenerate), or Declines (discard). In message mode (Message set, no Draft)
 // it shows a single note + Close — used when there is nothing to fold or the
-// model is unavailable.
+// model is unavailable. Accept posts back both the edited draft and
+// DraftedThrough, so the commit pins compacted_through to the drafted-through
+// time rather than the accept-click time.
 type CompactDialogProps struct {
-	Draft      string // proposed summary, editable (form mode)
-	Message    string // info line (message mode); takes precedence over Draft
-	AcceptURL  string // @post target that commits the edited summary
-	RefreshURL string // @post target that regenerates the draft
-	Signal     string // signal bound to the textarea; defaults to "compactDraft"
-	Open       bool   // render the <dialog> in place (storybook); production uses showModal()
+	Draft          string // proposed summary, editable (form mode)
+	Message        string // info line (message mode); takes precedence over Draft
+	AcceptURL      string // @post target that commits the edited summary
+	RefreshURL     string // @post target that regenerates the draft
+	Signal         string // signal bound to the textarea; defaults to "compactDraft"
+	DraftedThrough string // RFC3339Nano coverage-end of the draft; posted back on Accept (form mode)
+	Open           bool   // render the <dialog> in place (storybook); production uses showModal()
 }
 
 // CompactDialog renders the compaction modal as a native <dialog id="compact-modal">
@@ -52,8 +55,10 @@ func CompactDialog(p CompactDialogProps) g.Node {
 	// json.Marshal turns the draft into a valid JS string literal (handles quotes
 	// and newlines) so it can seed the signal inline.
 	raw, _ := json.Marshal(p.Draft)
+	rawThrough, _ := json.Marshal(p.DraftedThrough)
 	kids = append(kids,
 		g.Attr("data-signals:"+sig, string(raw)),
+		g.Attr("data-signals:compactDraftedThrough", string(rawThrough)),
 		h.Div(h.Class("dlg-kicker"), g.Text("Compact today")),
 		h.H2(h.Class("dlg-title"), g.Text("Fold today into a summary")),
 		h.P(h.Class("compact-modal-hint"),
