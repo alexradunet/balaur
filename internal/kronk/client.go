@@ -107,6 +107,15 @@ func bridge(ctx context.Context, src <-chan model.ChatResponse, cancel context.C
 			case out <- ch:
 				return true
 			case <-ctx.Done():
+				// Best-effort: tell a still-draining consumer the stream
+				// was cut, so cancellation is not mistaken for a short
+				// successful reply. Non-blocking — a gone consumer must
+				// not wedge the goroutine (the consumer-side no-Done
+				// checks in agent.Run and llm.Collect remain the contract).
+				select {
+				case out <- llm.Chunk{Err: ctx.Err()}:
+				default:
+				}
 				return false
 			}
 		}
