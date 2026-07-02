@@ -6,6 +6,13 @@
 > recommendation each, and the recommended phasing. It deliberately stops short
 > of OS packaging and a first-run wizard — those are Phase 2.
 
+> **Status (2026-07-02):** this is the plan-190 spike record. Several
+> items marked "Phase 2" / "not built" below have since shipped: the stable
+> default port 8099 and the first-run stat (plan 193), the first-run
+> onboarding banner consuming that stat (plan 230), and the single-instance
+> guard (plan 232). Per-item annotations below mark what shipped; the
+> original reasoning is preserved unedited.
+
 ## What shipped in this spike (the thin prototype)
 
 A bare `balaur` invocation (no subcommand, no flags) now boots a working
@@ -52,6 +59,8 @@ the rewrite. Use it ONLY to decide whether to show onboarding later; never to
 gate the browser-open (the browser should open on every no-args boot). This
 spike does not implement the stat — it is noted for Phase 2 so onboarding has a
 trigger.
+
+*Shipped since: the stat landed as `launch.IsFirstRun` (plan 193); plan 230 consumes it for the onboarding banner — still never gating the browser-open.*
 
 ### 2. How first boot surfaces model/runtime install and the no-model-yet state
 
@@ -141,6 +150,8 @@ sub-questions for that pipeline:
   instance (or refuse), not start a second server on a second random port. Not
   built; needs a lockfile or a fixed-port probe.
 
+*Shipped since: plan 232 — `launch.WriteInstanceLock` + `launch.RunningInstance` (lock file + TCP liveness probe, fail-open on stale locks).*
+
 ## Recommended phasing
 
 **Phase 1 — the no-args launcher (this spike + a hardening follow-up).**
@@ -149,6 +160,8 @@ reversible. Hardening follow-up (small, separate): a single-instance guard; a
 **stable default port with fallback** (try a fixed port like 8090 first for a
 bookmarkable URL, fall back to a free port if taken) instead of always-random; a
 friendlier "open this URL" stderr message; the first-run stat from Q1.
+
+*Shipped since: all four hardening items landed — stable default port 8099 + fallback and the first-run stat (plan 193), the friendlier stderr URL message (main.go), the single-instance guard (plan 232).*
 
 **Phase 2 — packaging + first-run onboarding.** Per-OS double-click artifacts
 (out-of-repo, per AGENTS.md) and a first-run UI that lands on the Models section
