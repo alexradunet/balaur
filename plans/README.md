@@ -659,7 +659,7 @@ Depends-on column says so.
 | 248 | Encrypted-backup failure-path tests: header/ciphertext tamper (AAD), tar traversal, truncation | P2 | S | LOW | — | DONE (merged 45007ae) |
 | 247 | Gateway busy/error-path tests: web toast, CLI busy envelope, messenger 400-releases-guard + IPv6 loopback host | P2 | S | LOW | 239 (merge friction: same test file) | DONE (merged 3de5847) |
 | 252 | Docs truth-sync post-230/234: AGENTS.md vault bullet, `knowledge.md` (guard/launcher/banner/nav), tours 00/07/10/15/19, `first-run-design.md` | P2 | M | LOW | 236 | DONE (merged 29202e1) |
-| 253 | DX sweep: truthful `.env` docs, pinned lint tools (go.mod `tool` directive), air watcher excludes, `make check` (-count=1), lint-description drift, launch.json, ST1001 re-enabled | P2 | M | LOW | 252 (merge friction: AGENTS.md) | TODO |
+| 253 | DX sweep: truthful `.env` docs, pinned lint tools (go.mod `tool` directive), air watcher excludes, `make check` (-count=1), lint-description drift, launch.json, ST1001 re-enabled | P2 | M | LOW | 252 (merge friction: AGENTS.md) | DONE (merged b4f9562) |
 | 251 | PB 0.39.3 → 0.39.5 + goja MVS commit as ONE gated bump (ext-sandbox suite + owner ack of the goja commit range = STOP-BEFORE-MERGE) | P2 | M | MED | — (land after the code fixes are stable) | TODO |
 | 250 | Collapse the duplicated edges OR-filter builder (`ActiveSubgraph` delegates to `EdgesTouching`) | P3 | S | LOW | — | DONE (merged 118c4f6) |
 | 246 | Cap `node_list` tool output (50 + "showing N of M") and push `nodes.Query`'s limit into SQL when no prop filter | P3 | S | LOW | 250 (merge friction: same file) | DONE (merged 4858d9b) |
