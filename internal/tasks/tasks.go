@@ -286,20 +286,37 @@ func Drop(app core.App, rec *core.Record) error {
 	return nil
 }
 
+// taskRecordsByState loads active task nodes in one workflow state,
+// pushing the props.state filter into SQL so the scan set is the tasks
+// currently in that state — not every task ever created (done/dropped
+// one-offs keep node status "active" forever; only props.state moves).
+// PocketBase filter expressions reach into json columns via dot paths;
+// TestPropsStateJSONFilter guards that dependency. Records come back
+// hydrated, newest first (the order the old full scan returned).
+func taskRecordsByState(app core.App, state string) ([]*core.Record, error) {
+	recs, err := app.FindRecordsByFilter("nodes",
+		"type = 'task' && status = {:a} && props.state = {:st}",
+		"-created", 0, 0,
+		dbx.Params{"a": nodes.StatusActive, "st": state})
+	if err != nil {
+		return nil, fmt.Errorf("tasks: loading %s task nodes: %w", state, err)
+	}
+	for _, r := range recs {
+		hydrate(r)
+	}
+	return recs, nil
+}
+
 // OpenTasks returns open tasks, optionally narrowed by LIKE terms over
 // title and notes (ANDed — each term must match), due-ascending with
 // someday items (empty due) first.
 func OpenTasks(app core.App, terms []string) ([]*core.Record, error) {
-	recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+	recs, err := taskRecordsByState(app, "open")
 	if err != nil {
-		return nil, fmt.Errorf("tasks: loading task nodes: %w", err)
+		return nil, err
 	}
 	var out []*core.Record
 	for _, r := range recs {
-		hydrate(r)
-		if nodes.PropString(r, "state") != "open" {
-			continue
-		}
 		if !matchTerms(r, terms) {
 			continue
 		}
@@ -315,16 +332,12 @@ func OpenTasks(app core.App, terms []string) ([]*core.Record, error) {
 // "what counts as a done task" rule so cross-domain aggregators (life) don't
 // re-derive it. Records are returned hydrated (legacy field aliases set).
 func DoneBetween(app core.App, start, end time.Time) ([]*core.Record, error) {
-	recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+	recs, err := taskRecordsByState(app, "done")
 	if err != nil {
-		return nil, fmt.Errorf("tasks: loading task nodes: %w", err)
+		return nil, err
 	}
 	var out []*core.Record
 	for _, r := range recs {
-		hydrate(r)
-		if r.GetString("status") != "done" {
-			continue
-		}
 		doneAt := r.GetDateTime("done_at").Time()
 		if doneAt.IsZero() || doneAt.Before(start) || !doneAt.Before(end) {
 			continue
