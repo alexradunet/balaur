@@ -122,6 +122,47 @@ func TestFindMany(t *testing.T) {
 	}
 }
 
+// cutClient simulates a provider whose stream is cut by cancellation: the
+// bridge drops the terminal Done chunk and closes the channel around partial
+// text (the shape internal/kronk produces when ctx dies mid-generation).
+type cutClient struct{}
+
+func (cutClient) ChatStream(ctx context.Context, msgs []llm.Message, tools []llm.ToolSpec) (<-chan llm.Chunk, error) {
+	ch := make(chan llm.Chunk, 1)
+	ch <- llm.Chunk{Content: "half a summ"}
+	close(ch) // no Done chunk
+	return ch, nil
+}
+
+func (cutClient) Embed(ctx context.Context, texts []string) ([][]float32, error) {
+	return nil, nil
+}
+
+func TestEnsureOneCancelledStreamDoesNotSave(t *testing.T) {
+	app := storetest.NewApp(t)
+	master, err := conversation.Master(app)
+	if err != nil {
+		t.Fatalf("master: %v", err)
+	}
+	day := time.Date(2026, 5, 4, 10, 0, 0, 0, time.UTC)
+	seedTurn(t, app, master.Id, "planted the garden", day)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // the recap budget expired mid-generation
+
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, time.UTC)
+	res, err := ensureOne(ctx, app, cutClient{}, master.Id, Day(day), now)
+	if err == nil {
+		t.Fatal("expected error from an interrupted stream")
+	}
+	if res == ensureDone {
+		t.Fatal("interrupted generation must not report the summary as done")
+	}
+	if Find(app, master.Id, Day(day)) != nil {
+		t.Fatal("truncated summary must not be persisted (it would never be regenerated)")
+	}
+}
+
 func TestEnsureSummariesHierarchy(t *testing.T) {
 	app := storetest.NewApp(t)
 	master, err := conversation.Master(app)
