@@ -321,7 +321,8 @@ preflights the box (no model calls); the PocketBase dashboard at /_/ is the
 owner's engine room, never your surface. `balaur export` (plan 194) writes a
 one-way Johnny Decimal Markdown mirror of every owner-authored, active node into
 `<data dir>/export` (or `--out`), grouped into JD folders (unmapped types →
-`90-99 Unsorted/91 Other`), full re-export (byte-identical for unchanged data),
+`90-99 Unsorted/91 Other`), full re-export (byte-identical for unchanged data;
+stale files of archived or renamed nodes are pruned from the managed JD folders),
 and committed to a git history under the dest (skipped cleanly if git is absent).
 The redaction boundary holds: it reads only `status=active` rows of the `nodes`
 collection, never any secret/token collection. `task` is deferred pending its own content redaction pass; `day` exports its owner-authored journal body (plan 225 — recap/transcript text lives in the separate `summaries` collection, never the node body, and is leak-tested to stay out of the mirror). `--encrypt` (plan 195) wraps the whole
