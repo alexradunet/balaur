@@ -54,8 +54,8 @@ func main() {
 		// Single-instance guard (plan 232): if another server is already running
 		// on the same data dir, open it and exit rather than starting a second
 		// one. FAIL-OPEN: any error from RunningInstance → proceed to start.
-		// Stale locks (crashed/stopped instance) are handled by the TCP probe —
-		// no response means stale, and we proceed to start normally.
+		// Stale locks (crashed/stopped instance) are handled by the HTTP health
+		// probe — anything but a 200 from /api/health means stale; we start.
 		if addr, alive := launch.RunningInstance(launch.DataDir()); alive {
 			url := "http://" + addr + "/"
 			fmt.Fprintf(os.Stderr, "Balaur is already running — opening %s\n", url)

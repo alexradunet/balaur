@@ -3,12 +3,28 @@ package launch
 import (
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 )
+
+// healthServer starts a loopback HTTP server answering 200 on /api/health —
+// the identity signature RunningInstance probes for — and returns its
+// host:port address.
+func healthServer(t *testing.T) string {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+	return strings.TrimPrefix(ts.URL, "http://")
+}
 
 func TestIsLauncherInvocation(t *testing.T) {
 	tests := []struct {
@@ -172,28 +188,34 @@ func TestIsFirstRun(t *testing.T) {
 	}
 }
 
+// TestSelectPortAddressIsLoopback asserts the OBSERVED kernel address of the
+// selected port bound on 127.0.0.1 is loopback — not a prefix of a string the
+// test built itself.
 func TestSelectPortAddressIsLoopback(t *testing.T) {
 	port, err := SelectPort()
 	if err != nil {
 		t.Fatalf("SelectPort() error = %v", err)
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	if !strings.HasPrefix(addr, "127.0.0.1:") {
-		t.Errorf("constructed addr %q is not loopback", addr)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		// TOCTOU: something grabbed the port between SelectPort closing it and
+		// this bind — same accepted window the launcher itself lives with.
+		t.Skipf("port %d taken between SelectPort and re-bind: %v", port, err)
 	}
-	if strings.Contains(addr, "0.0.0.0") {
-		t.Errorf("constructed addr %q exposes all interfaces", addr)
+	defer l.Close()
+	tcpAddr, ok := l.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("unexpected addr type %T", l.Addr())
+	}
+	if !tcpAddr.IP.IsLoopback() {
+		t.Errorf("bound addr %v is not loopback", tcpAddr)
 	}
 }
 
-// TestRunningInstance_Live: a lock pointing at a live listener is detected.
+// TestRunningInstance_Live: a lock pointing at a live Balaur-shaped health
+// endpoint is detected.
 func TestRunningInstance_Live(t *testing.T) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("net.Listen: %v", err)
-	}
-	defer l.Close()
-	addr := l.Addr().String()
+	addr := healthServer(t)
 
 	dataDir := filepath.Join(t.TempDir(), "pb_data")
 	if err := WriteInstanceLock(dataDir, addr); err != nil {
@@ -255,14 +277,10 @@ func TestRunningInstance_Malformed(t *testing.T) {
 	}
 }
 
-// TestRunningInstance_RoundTrip: WriteInstanceLock + live listener → detected.
+// TestRunningInstance_RoundTrip: WriteInstanceLock + a live Balaur-shaped
+// health endpoint → detected.
 func TestRunningInstance_RoundTrip(t *testing.T) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("net.Listen: %v", err)
-	}
-	defer l.Close()
-	addr := l.Addr().String()
+	addr := healthServer(t)
 
 	dataDir := filepath.Join(t.TempDir(), "pb_data")
 	if err := WriteInstanceLock(dataDir, addr); err != nil {
@@ -278,12 +296,7 @@ func TestRunningInstance_RoundTrip(t *testing.T) {
 // TestRunningInstance_DifferentDataDirs: two different data dirs use different
 // lock paths so they never collide.
 func TestRunningInstance_DifferentDataDirs(t *testing.T) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("net.Listen: %v", err)
-	}
-	defer l.Close()
-	addr := l.Addr().String()
+	addr := healthServer(t)
 
 	dataDir1 := filepath.Join(t.TempDir(), "pb_data")
 	dataDir2 := filepath.Join(t.TempDir(), "pb_data")
@@ -300,5 +313,72 @@ func TestRunningInstance_DifferentDataDirs(t *testing.T) {
 	// dataDir2 has no lock — fail-open.
 	if _, alive := RunningInstance(dataDir2); alive {
 		t.Error("RunningInstance(dataDir2): want alive=false (different data dir)")
+	}
+}
+
+// TestRunningInstance_ForeignTCPListener: a plain TCP listener on the lock
+// addr (some other process that grabbed the port after Balaur stopped — the
+// lock is deliberately not removed on shutdown) must NOT count as alive: the
+// probe requires an HTTP 200 from /api/health, not just an accepted dial.
+func TestRunningInstance_ForeignTCPListener(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen: %v", err)
+	}
+	t.Cleanup(func() { l.Close() })
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close() // accepts TCP, speaks no HTTP
+		}
+	}()
+
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	if err := WriteInstanceLock(dataDir, l.Addr().String()); err != nil {
+		t.Fatalf("WriteInstanceLock: %v", err)
+	}
+	if _, alive := RunningInstance(dataDir); alive {
+		t.Fatal("RunningInstance: want alive=false for a non-HTTP TCP listener")
+	}
+}
+
+// TestRunningInstance_ForeignHTTPServer: an HTTP server that is not Balaur
+// (404s or redirects /api/health) is treated as stale — fail-open to start.
+func TestRunningInstance_ForeignHTTPServer(t *testing.T) {
+	tests := []struct {
+		name    string
+		handler http.Handler
+	}{
+		{"404 on health", http.NotFoundHandler()},
+		{"redirects health", http.RedirectHandler("http://127.0.0.1:1/", http.StatusFound)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(tt.handler)
+			t.Cleanup(ts.Close)
+			dataDir := filepath.Join(t.TempDir(), "pb_data")
+			if err := WriteInstanceLock(dataDir, strings.TrimPrefix(ts.URL, "http://")); err != nil {
+				t.Fatalf("WriteInstanceLock: %v", err)
+			}
+			if _, alive := RunningInstance(dataDir); alive {
+				t.Fatal("RunningInstance: want alive=false for a foreign HTTP server")
+			}
+		})
+	}
+}
+
+// TestRunningInstance_NonLoopbackAddr: a lock pointing off-box must never be
+// reported alive (and must never be probed) — the launcher's invariant is
+// that it never constructs, opens, or trusts a non-loopback address.
+func TestRunningInstance_NonLoopbackAddr(t *testing.T) {
+	dataDir := filepath.Join(t.TempDir(), "pb_data")
+	if err := WriteInstanceLock(dataDir, "10.0.0.5:8099"); err != nil {
+		t.Fatalf("WriteInstanceLock: %v", err)
+	}
+	if _, alive := RunningInstance(dataDir); alive {
+		t.Fatal("RunningInstance: want alive=false for a non-loopback lock addr")
 	}
 }

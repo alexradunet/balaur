@@ -11,7 +11,7 @@
     },
     {
       "file": "internal/launch/launch.go",
-      "line": 82,
+      "line": 83,
       "title": "19.2 — Port selection: stable default, loopback only",
       "description": "```go\nconst DefaultPort = 8099\n\nfunc SelectPort() (int, error) {\n    l, err := net.Listen(\"tcp\", fmt.Sprintf(\"127.0.0.1:%d\", DefaultPort))\n    if err == nil {\n        l.Close()\n        return DefaultPort, nil\n    }\n    return FreeLoopbackPort()\n}\n```\n\n`DefaultPort` (8099) is a **stable bookmark**: the URL `http://127.0.0.1:8099/` does not change between boots as long as the port is free, making it bookmarkable for a non-developer owner. It sits in Balaur's 808x/809x family but avoids the two documented dev binds (8080 for `make run`, 8090 for `make dev`) so a normal dev box never collides.\n\n`SelectPort` probes the default by binding it and closing immediately. On any bind error (port already in use, permission denied) it falls back to `FreeLoopbackPort`, which asks the kernel for any free port via `127.0.0.1:0`.\n\nEvery address the launcher ever produces is `127.0.0.1:…` — **the package never constructs a non-loopback address** (stated in the package doc comment). This is a deliberate local-first constraint: AGENTS.md says Balaur is a loopback-first service, not exposed to the network without an explicit threat model.\n\nThere is a small TOCTOU window between probing the port and `serve` re-binding it; this is documented and accepted for a localhost launcher."
     },
