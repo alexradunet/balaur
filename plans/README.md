@@ -647,9 +647,9 @@ Depends-on column says so.
 | Plan | Title | Priority | Effort | Risk | Depends on | Status |
 |------|-------|----------|--------|------|------------|--------|
 | 249 | De-flake `TestNudgeCatchesUpAfterDowntime` across DST (fixed clock + duration seeding) — protects the local merge gate | P2 | S | LOW | — | TODO |
-| 236 | Turn-guard honesty: rescope the false "web + CLI + messenger" cross-process claims to per-process truth; AGENTS.md known-limitation bullet | P1 | S | LOW | — | TODO |
+| 236 | Turn-guard honesty: rescope the false "web + CLI + messenger" cross-process claims to per-process truth; AGENTS.md known-limitation bullet | P1 | S | LOW | — | DONE (merged 4391e62) |
 | 235 | Stream cancel/timeout reported as success → error (agent `sawDone` backstop, `Collect(ctx, ch)`, kronk bridge best-effort Err chunk) | P1 | M | MED | — | TODO |
-| 237 | Recap high-water robustness: parent-walk settled guard (empty generation no longer skipped forever) + zone-stamped marks (tz change re-walks) | P1 | S | LOW | — | TODO |
+| 237 | Recap high-water robustness: parent-walk settled guard (empty generation no longer skipped forever) + zone-stamped marks (tz change re-walks) | P1 | S | LOW | — | DONE (merged cdb0a77) |
 | 239 | Messenger auth observability: Warn-log + small in-handler throttle on failed Bearer attempts; audit the token set/clear mutation | P2 | S | LOW | — | TODO |
 | 240 | Launcher probe identity: HTTP `/api/health` probe + loopback lock-addr validation; replace the tautological loopback test | P2 | S | LOW | — | TODO |
 | 241 | Compaction boundary: `compacted_through` = drafted-through time, not commit click time (no more silently forgotten draft-window messages) | P2 | S | LOW | — | TODO |
