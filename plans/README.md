@@ -652,13 +652,13 @@ Depends-on column says so.
 | 237 | Recap high-water robustness: parent-walk settled guard (empty generation no longer skipped forever) + zone-stamped marks (tz change re-walks) | P1 | S | LOW | — | DONE (merged cdb0a77) |
 | 239 | Messenger auth observability: Warn-log + small in-handler throttle on failed Bearer attempts; audit the token set/clear mutation | P2 | S | LOW | — | DONE (merged a17e752) |
 | 240 | Launcher probe identity: HTTP `/api/health` probe + loopback lock-addr validation; replace the tautological loopback test | P2 | S | LOW | — | DONE (merged 9f90c1c) |
-| 241 | Compaction boundary: `compacted_through` = drafted-through time, not commit click time (no more silently forgotten draft-window messages) | P2 | S | LOW | — | TODO |
+| 241 | Compaction boundary: `compacted_through` = drafted-through time, not commit click time (no more silently forgotten draft-window messages) | P2 | S | LOW | — | DONE (merged d939f5f) |
 | 242 | Export mirror prunes stale files in managed JD folders (archived/dropped/retitled nodes leave the plaintext tree) | P2 | S | MED | — | DONE (merged 0dc8f5d) |
 | 244 | Skip wikilink re-sync + FTS re-index on content-unchanged node saves (kills phantom `edge.create` audit rows, ~70 writes/turn) | P2 | S | MED | — | TODO |
 | 238 | Owner timezone in the web task surface + nudge cron (due parse, snooze, buckets, nudge prose — match briefing/recap) | P2 | M | MED | — | TODO |
 | 248 | Encrypted-backup failure-path tests: header/ciphertext tamper (AAD), tar traversal, truncation | P2 | S | LOW | — | DONE (merged 45007ae) |
-| 247 | Gateway busy/error-path tests: web toast, CLI busy envelope, messenger 400-releases-guard + IPv6 loopback host | P2 | S | LOW | 239 (merge friction: same test file) | TODO |
-| 252 | Docs truth-sync post-230/234: AGENTS.md vault bullet, `knowledge.md` (guard/launcher/banner/nav), tours 00/07/10/15/19, `first-run-design.md` | P2 | M | LOW | 236 | TODO |
+| 247 | Gateway busy/error-path tests: web toast, CLI busy envelope, messenger 400-releases-guard + IPv6 loopback host | P2 | S | LOW | 239 (merge friction: same test file) | DONE (merged 3de5847) |
+| 252 | Docs truth-sync post-230/234: AGENTS.md vault bullet, `knowledge.md` (guard/launcher/banner/nav), tours 00/07/10/15/19, `first-run-design.md` | P2 | M | LOW | 236 | DONE (merged 29202e1) |
 | 253 | DX sweep: truthful `.env` docs, pinned lint tools (go.mod `tool` directive), air watcher excludes, `make check` (-count=1), lint-description drift, launch.json, ST1001 re-enabled | P2 | M | LOW | 252 (merge friction: AGENTS.md) | TODO |
 | 251 | PB 0.39.3 → 0.39.5 + goja MVS commit as ONE gated bump (ext-sandbox suite + owner ack of the goja commit range = STOP-BEFORE-MERGE) | P2 | M | MED | — (land after the code fixes are stable) | TODO |
 | 250 | Collapse the duplicated edges OR-filter builder (`ActiveSubgraph` delegates to `EdgesTouching`) | P3 | S | LOW | — | DONE (merged 118c4f6) |
