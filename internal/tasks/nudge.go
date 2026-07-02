@@ -46,18 +46,15 @@ const composeTimeout = 60 * time.Second
 
 // DueForNudge returns open tasks whose nudge should fire at now: due has
 // passed, never fired (or re-armed by snooze/recurrence), snooze elapsed.
-// Tasks are now type=task nodes; we load all active task nodes and filter in Go.
+// The open-state filter runs in SQL (taskRecordsByState); the due/fired/
+// snooze checks stay in Go over the small open set.
 func DueForNudge(app core.App, now time.Time) ([]*core.Record, error) {
-	recs, err := nodes.ListByTypeStatus(app, "task", nodes.StatusActive)
+	recs, err := taskRecordsByState(app, "open")
 	if err != nil {
 		return nil, fmt.Errorf("tasks: loading task nodes for nudge: %w", err)
 	}
 	var out []*core.Record
 	for _, r := range recs {
-		hydrate(r)
-		if r.GetString("status") != "open" {
-			continue
-		}
 		due := r.GetDateTime("due").Time()
 		if due.IsZero() || !due.Before(now) {
 			continue
