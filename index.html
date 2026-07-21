@@ -70,6 +70,7 @@
         <div class="tip"><span>↘</span><div><b>Infinite zoom</b><p>Double-click a sub-canvas, or zoom into it past 220%. Zoom all the way out to return.</p></div></div>
         <button class="nav-item" id="exportWorkspaceButton"><span>⇩</span>Export whole space</button>
         <button class="nav-item" id="resetDemo"><span>↺</span>Reset starter</button>
+        <div class="storage-state" id="lifeStoreStatus" title="Preparing the local life database"><i></i> Preparing SQLite…</div>
         <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
       </section>
     </aside>
@@ -192,5 +193,6 @@
   </template>
 
   <script src="app.js"></script>
+  <script type="module" src="storage/life-store.js"></script>
 </body>
 </html>

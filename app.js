@@ -136,7 +136,7 @@ function saveCurrentCanvasState(){
   const record=workspace.canvases[currentCanvasId];if(!record)return;record.document=documentData;record.camera={...camera};const value=$("#canvasTitle")?.value.trim();if(value){if(record.jdCode){const formatted=formatJDCode(record.jdCode),title=(value.startsWith(formatted)?value.slice(formatted.length).replace(/^\s*(?:—|-)\s*/,""):value)||record.jdTitle||"Untitled";record.jdTitle=title;record.title=jdDisplayTitle(record.jdCode,title);const entry=jdEntries()[record.jdCode];if(entry)entry.title=title;}else record.title=value;}
 }
 function persistWorkspace(){
-  saveCurrentCanvasState();workspace.activeId=currentCanvasId;localStorage.setItem(WORKSPACE_KEY,JSON.stringify(workspace));localStorage.setItem("orbit-canvas-v1",JSON.stringify(workspace.canvases[workspace.rootId].document));localStorage.setItem("orbit-title",workspace.canvases[workspace.rootId].title);
+  saveCurrentCanvasState();workspace.activeId=currentCanvasId;localStorage.setItem(WORKSPACE_KEY,JSON.stringify(workspace));localStorage.setItem("orbit-canvas-v1",JSON.stringify(workspace.canvases[workspace.rootId].document));localStorage.setItem("orbit-title",workspace.canvases[workspace.rootId].title);try{window.orbitLifeStore?.syncCanvasRecord(workspace.canvases[currentCanvasId]);}catch(error){console.warn("Could not update the life database index",error);}
 }
 function scheduleSave() {
   $("#saveState").innerHTML = "<i></i> Saving…";
@@ -208,8 +208,9 @@ function createJohnnyDecimalStarterWorkspace(){
   });
   return normalizeWorkspace(result);
 }
+function resetLifeDatabase(){Promise.resolve(window.orbitLifeReady).then(store=>{if(!store)return;store.importSnapshot({schemaVersion:1});store.syncWorkspaceIndex(workspace);});}
 function loadJohnnyDecimalStarter(){
-  if(!confirm("Replace your current local space with the fictional age-30 Johnny Decimal starter? Export your space first if you want a backup."))return;workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#johnnyDecimalDialog")?.close();$("#canvasTitle").value=canvasRecord().title;persistWorkspace();render();fitView();toast("Johnny Decimal starter space loaded");
+  if(!confirm("Replace your current local space with the fictional age-30 Johnny Decimal starter? Export your space first if you want a backup."))return;workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#johnnyDecimalDialog")?.close();$("#canvasTitle").value=canvasRecord().title;persistWorkspace();resetLifeDatabase();render();fitView();toast("Johnny Decimal starter space loaded");
 }
 function portalPreview(document){
   const nodes=(document.nodes||[]).slice(0,28);if(!nodes.length)return '<span class="portal-empty">Empty canvas · open to begin</span>';
@@ -610,14 +611,14 @@ function downloadJSON(data,filename){const blob=new Blob([JSON.stringify(data,nu
 function exportCanvas() {
   downloadJSON(documentData,slug($("#canvasTitle").value||"life-canvas")+".canvas");toast("Current canvas exported");
 }
-function exportWorkspace(){
-  persistWorkspace();downloadJSON({format:"orbit-workspace",version:1,exportedAt:new Date().toISOString(),workspace},`${slug(workspace.canvases[workspace.rootId].title)}.orbit.json`);toast(`${Object.keys(workspace.canvases).length} canvases exported`);
+async function exportWorkspace(){
+  persistWorkspace();const store=await window.orbitLifeReady,lifeData=store?.exportSnapshot?.()||null;downloadJSON({format:"orbit-workspace",version:1,exportedAt:new Date().toISOString(),workspace,lifeData},`${slug(workspace.canvases[workspace.rootId].title)}.orbit.json`);toast(`${Object.keys(workspace.canvases).length} canvases and life data exported`);
 }
 function validWorkspaceBundle(data){
   const candidate=data?.format==="orbit-workspace"?data.workspace:data;if(candidate?.version!==1||!candidate.canvases||typeof candidate.canvases!=="object")return null;const records=Object.values(candidate.canvases);if(!records.length||!records.every(record=>record&&typeof record.id==="string"&&typeof record.title==="string"&&isCanvas(record.document)))return null;candidate.rootId=candidate.canvases[candidate.rootId]?candidate.rootId:records[0].id;candidate.activeId=candidate.canvases[candidate.activeId]?candidate.activeId:candidate.rootId;return normalizeWorkspace(candidate);
 }
 async function importCanvas(file) {
-  try {const parsed=JSON.parse(await file.text()),importedWorkspace=validWorkspaceBundle(parsed);if(importedWorkspace){if(!confirm(`Import this Orbit space with ${Object.keys(importedWorkspace.canvases).length} canvases? Your current local space will be replaced.`))return;workspace=importedWorkspace;currentCanvasId=workspace.activeId;documentData=workspace.canvases[currentCanvasId].document;camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();render();fitView();toast("Whole workspace imported");return;}if(!isCanvas(parsed))throw new Error("Not a valid JSON Canvas document or Orbit workspace");documentData={nodes:parsed.nodes||[],edges:parsed.edges||[]};selected=null;scheduleSave();render();fitView();toast("Canvas imported");}
+  try {const parsed=JSON.parse(await file.text()),importedWorkspace=validWorkspaceBundle(parsed);if(importedWorkspace){if(!confirm(`Import this Orbit space with ${Object.keys(importedWorkspace.canvases).length} canvases? Your current local space will be replaced.`))return;workspace=importedWorkspace;currentCanvasId=workspace.activeId;documentData=workspace.canvases[currentCanvasId].document;camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();const store=await window.orbitLifeReady;if(store){store.importSnapshot(parsed.lifeData||{schemaVersion:1});store.syncWorkspaceIndex(workspace);}render();fitView();toast("Whole workspace and life data imported");return;}if(!isCanvas(parsed))throw new Error("Not a valid JSON Canvas document or Orbit workspace");documentData={nodes:parsed.nodes||[],edges:parsed.edges||[]};selected=null;scheduleSave();render();fitView();toast("Canvas imported");}
   catch(error){alert(`Could not import this file.\n\n${error.message}`);}
 }
 
@@ -823,7 +824,7 @@ $("#aiSettingsForm").onsubmit=event=>{event.preventDefault();if(!event.currentTa
 $("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.reportValidity())return;const button=$("#testAIProvider");try{const settings=settingsFromForm();button.disabled=true;setSettingsResult("Testing direct browser connection…");setSettingsResult(await testAIProvider(settings),"success");}catch(error){setSettingsResult(error.message,"error");}finally{button.disabled=false;}};
 $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
 $("#canvasTitle").value=canvasRecord().title;$("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
-$("#resetDemo").onclick=()=>{if(confirm("Reset the whole space to the age-30 Johnny Decimal starter? Every nested canvas and local change will be replaced.")){workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();render();fitView();toast("Johnny Decimal starter restored");}};
+$("#resetDemo").onclick=()=>{if(confirm("Reset the whole space to the age-30 Johnny Decimal starter? Every nested canvas and local change will be replaced.")){workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();resetLifeDatabase();render();fitView();toast("Johnny Decimal starter restored");}};
 $("#minimap").onclick=fitView;
 
 window.addEventListener("keydown",event=>{

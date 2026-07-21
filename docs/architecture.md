@@ -22,6 +22,12 @@ A practical model is:
 
 For sync, use immutable operations and a document revision rather than writing whole files from several clients concurrently.
 
+### Implemented storage bridge
+
+The browser prototype now vendors official SQLite Wasm and initializes a versioned life database in `storage/life-store.js`. On GitHub Pages it uses SQLite's `:localStorage:` kvvfs because the host cannot provide the COOP/COEP headers required by the official OPFS worker build. The database indexes canvases and nodes and provides repositories for tasks, habits, habit entries, journals, calendar events, and activity history.
+
+Whole-workspace backup serializes those tables as normalized JSON rather than coupling exports to a particular SQLite binary/VFS. The same store contract can move to Worker + OPFS or native Tauri SQLite. Details are in [life-data.md](life-data.md).
+
 ## Nested canvases and infinite zoom
 
 A large space can contain an arbitrary hierarchy of smaller canvases without extending JSON Canvas:

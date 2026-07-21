@@ -21,9 +21,9 @@ A small, standalone proof of concept for a life-management app whose primary int
 - Prompt-first AI notes that generate Markdown directly onto the canvas
 - Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
 - Library filters
-- Browser-local persistence
-- JSON Canvas `.canvas` import/export and whole-space `.orbit.json` backup/restore
-- No runtime dependencies or build step
+- Browser-local persistence with an actual SQLite Wasm life database
+- JSON Canvas `.canvas` import/export and whole-space `.orbit.json` backup/restore, including normalized SQLite data
+- No package install, CDN, or build step; SQLite Wasm is vendored locally
 - Locally vendored BASM / Pixel Loom Linen tokens and self-hosted fonts
 
 ## Run locally
@@ -70,6 +70,14 @@ Index
 The starter includes 9 areas, 17 categories, and 34 practical item notes covering life admin, health and fitness, career, money, home systems, relationships, learning, hobbies, travel, and archives. It is an editable example rather than personal, financial, or medical advice.
 
 Area, category, and canvas-item portals remain standard JSON Canvas file nodes. Item notes store their identifier in a harmless Markdown comment and heading. IDs are checked for the correct parent range, duplicates are rejected, and the canvas hierarchy is sorted numerically. The same dialog provides direct **Go to ID** navigation.
+
+## Local SQLite life database
+
+Orbit combines JSON Canvas documents with a queryable SQLite database. Canvas files own visible notes, geometry, links, and Johnny Decimal structure; SQLite owns task workflow, habit history, journal indexes, calendar events, and activity records.
+
+The static prototype runs official SQLite Wasm `3.53.0` against SQLite's `:localStorage:` kvvfs backend. The sidebar reports the database status. This is intentionally a starter backend: it works on GitHub Pages but is synchronous and subject to localStorage quota. The planned production adapter uses OPFS in a Worker, while Tauri can use native SQLite with the same schema.
+
+Whole-space export serializes the database as normalized JSON alongside every canvas, and Import restores both layers. See [`docs/life-data.md`](docs/life-data.md) for the schema, runtime API, backup format, and OPFS migration path.
 
 ## Connect an AI provider
 
@@ -124,7 +132,7 @@ This project is intentionally built with browser standards and no UI framework o
 - **Capacitor** as an optional mobile shell around the same web application
 - `.canvas` files as the portable format while indexed task/calendar projections remain app metadata
 
-See [`docs/architecture.md`](docs/architecture.md) for the standards-first application design, [`docs/design-system.md`](docs/design-system.md) for the BASM / Pixel Loom integration, and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
+See [`docs/architecture.md`](docs/architecture.md) for the standards-first application design, [`docs/life-data.md`](docs/life-data.md) for JSON Canvas + SQLite storage, [`docs/design-system.md`](docs/design-system.md) for the BASM / Pixel Loom integration, and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
 
 ## License
 

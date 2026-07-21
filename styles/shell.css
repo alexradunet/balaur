@@ -61,5 +61,6 @@
   .sidebar-bottom { margin-top:auto; }
   .tip { display:flex; gap:10px; padding:12px; margin-bottom:10px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface-container-low); color:var(--muted); font-size:9px; }
   .tip > span { color:var(--secondary); }.tip b{color:var(--on-surface);font-size:10px}.tip p{margin:2px 0 0}
+  .storage-state{padding:8px 10px 2px;color:var(--muted);font:8px var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.storage-state i{display:inline-block;width:5px;height:5px;margin-right:6px;border-radius:50%;background:var(--outline)}.storage-state.ready i{background:var(--secondary)}.storage-state.error{color:var(--error)}.storage-state.error i{background:var(--error)}
   .spec-link { color:var(--muted); font:9px var(--font-mono); text-decoration:none; display:flex; justify-content:space-between; padding:10px; }
 }
