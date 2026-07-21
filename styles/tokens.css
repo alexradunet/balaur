@@ -10,7 +10,7 @@
     --balaur-color-parchment-300: #d7c48f;
     --balaur-color-parchment-200: #eee0ba;
     --balaur-color-ink-900: #2a2015;
-    --balaur-color-ink-700: #66583c;
+    --balaur-color-ink-700: #574a31;
     --balaur-color-bone-100: #f1e7d4;
     --balaur-color-bone-300: #cfc1aa;
     --balaur-color-gold-500: #f2c14e;
@@ -60,9 +60,14 @@
     --balaur-outline-width: 2px;
     --balaur-shadow-paper: 4px 5px 0 var(--balaur-color-outline);
     --balaur-shadow-overlay: 0 12px 0 rgb(5 3 2 / 82%);
+    /* Clean carved-oak furniture: a smooth vertical grain lit by a soft
+       candle-gold sheen at the top-leading corner and deepened by a vignette
+       at the trailing corner. No hard stripes — the surface reads as a single
+       crafted panel rather than a repeating comb. */
     --balaur-texture-oak:
-      repeating-linear-gradient(90deg, rgb(255 255 255 / 2%) 0 36px, rgb(0 0 0 / 14%) 37px 40px),
-      linear-gradient(90deg, var(--balaur-color-oak-700), var(--balaur-color-oak-900) 48%, var(--balaur-color-oak-800));
+      radial-gradient(135% 120% at 10% -20%, rgb(242 193 78 / 7%), transparent 48%),
+      radial-gradient(120% 130% at 100% 120%, rgb(0 0 0 / 26%), transparent 62%),
+      linear-gradient(180deg, var(--balaur-color-oak-800), var(--balaur-color-oak-900) 72%);
     --balaur-texture-map:
       linear-gradient(rgb(200 169 107 / 4%) 1px, transparent 1px),
       linear-gradient(90deg, rgb(200 169 107 / 4%) 1px, transparent 1px),

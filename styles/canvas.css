@@ -163,9 +163,11 @@
     inset: 10px 11px auto auto;
     width: 9px;
     height: 9px;
-    border: 2px solid var(--balaur-color-ink-900);
+    /* The accent dot sits on the dark inked header tab, so its ring is a faint
+       light halo (a dark ring would vanish); accented cards override both. */
+    border: 2px solid color-mix(in oklab, var(--balaur-content-on-dark) 42%, transparent);
     border-radius: 50%;
-    background: var(--balaur-border-default);
+    background: var(--balaur-content-on-dark-muted);
     z-index: 3;
   }
   /* Every content card shares the live-widget chrome: a title-bar header
@@ -178,14 +180,19 @@
     gap: 6px;
     height: 30px;
     margin: 0;
-    border-block-end: 1px solid var(--balaur-border-default);
+    border-block-end: 1px solid var(--balaur-color-outline);
     padding-inline: 13px;
-    /* A raised title bar: lift the card's own surface a step and lay a faint
-       wash of the kicker colour over it, so the header reads as a bar (like the
-       live-widget's oak header) while staying harmonised to every card tone. */
-    background: color-mix(in oklab, white 16%, color-mix(in oklab, currentColor 9%, var(--node-surface)));
-    color: var(--node-muted);
-    font: 500 8px var(--balaur-font-mono);
+    /* An inked title tab: the same dark oak as the live-widget header, tinted
+       with a faint wash of the card accent (currentColor). The old bar lifted
+       the surface toward white, which left both the muted label and the bright
+       accent codes illegible; a dark bar with light text keeps every label
+       readable and makes the header read as a band clearly separate from the
+       parchment body, unifying content cards with the widget chrome. */
+    background:
+      linear-gradient(color-mix(in oklab, currentColor 18%, transparent), color-mix(in oklab, currentColor 6%, transparent)),
+      var(--balaur-surface-oak);
+    color: var(--balaur-content-on-dark-muted);
+    font: 600 8px var(--balaur-font-mono);
     letter-spacing: .12em;
     text-transform: uppercase;
   }
@@ -247,7 +254,13 @@
   .canvas-node[data-color="4"] :where(.node-accent, .node-kicker) { color: var(--balaur-canvas-green); }
   .canvas-node[data-color="5"] :where(.node-accent, .node-kicker) { color: var(--balaur-canvas-cyan); }
   .canvas-node[data-color="6"] :where(.node-accent, .node-kicker) { color: var(--balaur-canvas-purple); }
-  .canvas-node[data-color] .node-accent { background: currentColor; }
+  .canvas-node[data-color] .node-accent,
+  .canvas-node.task-card .node-accent,
+  .canvas-node.ai-card .node-accent,
+  .canvas-node.subcanvas-node .node-accent {
+    background: currentColor;
+    border-color: color-mix(in oklab, currentColor 52%, var(--balaur-color-ink-900));
+  }
 
   .canvas-node.task-card .node-accent,
   .canvas-node.task-card .node-kicker { color: var(--balaur-action-primary); }

@@ -17,17 +17,19 @@ JSON Canvas preset colors remain separate because red, orange, yellow, green, cy
 
 ## Material roles
 
-- **Carved oak:** top bar, library, inspector, controls, dialogs, menus, and the Balaur panel.
-- **Map parchment:** canvas field and node cards.
+- **Carved oak:** top bar, library, inspector, controls, dialogs, menus, the Today ledger backdrop, and the Balaur panel.
+- **Map parchment:** canvas field and node cards. Each content card carries an inked dark title tab above its parchment body (see Signature elements).
 - **Task ledger:** Today sheets and task rows.
 - **Candle gold:** primary actions, active selections, and bearing lines.
 - **River teal:** keyboard focus, links, assistant state, and connective detail.
 
-Texture is CSS-only and subordinate to text contrast. `prefers-reduced-transparency` removes material images. `prefers-contrast: more` strengthens control and panel borders. Forced-colors mode removes textures and maps selection/focus states to system colors.
+The carved-oak surface (`--balaur-texture-oak`) is a single crafted panel: a smooth vertical grain lit by a soft candle-gold sheen at the top-leading corner and deepened by a vignette at the trailing corner. It is deliberately *not* a repeating stripe or comb pattern — hard vertical banding read as visual noise behind text and controls. Texture is CSS-only and subordinate to text contrast: the oak sheen and vignette are kept faint enough that muted labels on the furniture stay legible, `prefers-reduced-transparency` removes material images, `prefers-contrast: more` strengthens control and panel borders, and forced-colors mode removes textures and maps selection/focus states to system colors.
 
 ## Signature elements
 
 Selection turns the card's own border candle gold and frames it with four corner registration brackets set just outside the card — gold on the top-left/bottom-right, river teal on the top-right/bottom-left. There is no enclosing ring and no circular handles on a selected card; the connection dots belong to the connect affordance and appear only on an unselected card or while the connect tool is active. The single familiar control uses the Balaur glyph and opens the assistant; there is no duplicate assistant launcher. These signatures carry identity while ordinary controls stay restrained.
+
+Every content card shares the live-widget chrome: an inked dark title tab (`.node-kicker`, the same oak as the widget header, faintly washed with the card's accent colour) sits above the parchment body, divided by a crisp outline rule. The tab carries the uppercase metadata label and the status dot in *light* ink on the dark bar. An earlier treatment lifted the header toward white, which left both the muted label and the bright accent codes (for example `AREA · 10-19`) illegible on the pale strip; the dark tab fixes that contrast and makes the header read as a band clearly distinct from the document body, so a card's structure is legible at a glance on every card tone. The status dot's ring is a faint light halo on the dark tab (a dark ring would vanish), and accented cards tint both the dot and its ring with the accent colour.
 
 ## CSS organization
 
