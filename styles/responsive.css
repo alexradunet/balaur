@@ -2,11 +2,11 @@
   @container orbit-content (max-width: 760px) { .today-grid{grid-template-columns:1fr}.today-head{align-items:start}.today-task{grid-template-columns:25px minmax(0,1fr)}.task-dates{grid-column:2;justify-content:start} }
   @media (max-width: 850px) {
     :root { --sidebar: 0px; }
-    .brand { display:none; }.topbar{grid-template-columns:0 1fr auto}.save-state,.button.ghost{display:none}.minimap{display:none}
+    .brand{display:none}.topbar{grid-template-columns:0 minmax(0,1fr) auto}.save-state,.button.ghost{display:none}.minimap{display:none}.sidebar{visibility:hidden;padding-inline:0;border-inline-end:0}
     .app-shell.inspector-open{--inspector:250px}.inspector-form,.inspector-head,.inspector-empty{width:250px}.today-grid{grid-template-columns:1fr}.app-views{margin-left:2px}
   }
   @media (max-width: 620px) {
     .app-shell.inspector-open{--inspector:0px}.inspector{display:none}.top-actions{padding-right:8px}.canvas-tools{top:auto;bottom:16px}.zoom-tools{display:none}
-    .button.assistant-button{width:34px;overflow:hidden;white-space:nowrap;padding:8px}.button.assistant-button span{margin-right:15px}.ai-panel{inset:70px 8px 8px;width:auto}.jd-field-row,.task-field-row{grid-template-columns:1fr}.jd-section-heading{display:block}.jd-section-heading small{display:block;margin-top:3px}.today-view{padding:24px 12px 60px}.today-head{display:block}.today-head .button{margin-top:14px}.today-stats span{display:none}.today-quick-add>div{display:grid}.app-views button{padding:0 6px}
+    .familiar-control{position:static;width:44px;min-width:44px;padding:8px;overflow:hidden;white-space:nowrap}.familiar-label{display:none}.familiar-glyph{margin:0}.ai-panel{inset:70px 8px 8px;width:auto}.jd-field-row,.task-field-row{grid-template-columns:1fr}.jd-section-heading{display:block}.jd-section-heading small{display:block;margin-top:3px}.today-view{padding:24px 12px 60px}.today-head{display:block}.today-head .button{margin-top:14px}.today-stats span{display:none}.today-quick-add>div{display:grid}.app-views button{padding:0 6px}
   }
 }

@@ -15,6 +15,18 @@
     transition: grid-template-columns var(--balaur-duration-panel) var(--balaur-ease-standard);
   }
 
+  .topbar {
+    transition: grid-template-columns var(--balaur-duration-panel) var(--balaur-ease-standard);
+  }
+
+  .familiar-control {
+    transition:
+      right var(--balaur-duration-panel) var(--balaur-ease-standard),
+      color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      border-color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      transform var(--balaur-duration-press) var(--balaur-ease-standard);
+  }
+
   .ai-panel {
     transition:
       opacity var(--balaur-duration-panel) var(--balaur-ease-standard),
