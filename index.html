@@ -84,7 +84,7 @@
           <button class="tool active" data-tool="select" title="Select (V)">↖</button>
           <button class="tool" data-tool="pan" title="Pan (H)">✋</button>
           <span></span>
-          <button class="tool" data-tool="connect" title="Connect nodes (C)">⌁</button>
+          <button class="tool" data-tool="connect" title="Connect nodes (C), or drag a card’s side handle">⌁</button>
           <button class="tool" data-tool="note" title="Add note (N)">T</button>
         </div>
 
@@ -157,6 +157,12 @@
     <article class="canvas-node">
       <div class="node-accent"></div>
       <div class="node-content"></div>
+      <div class="connection-handles" role="group" aria-label="Create connection">
+        <button type="button" class="connection-handle top" data-connection-side="top" aria-label="Connect from top"></button>
+        <button type="button" class="connection-handle right" data-connection-side="right" aria-label="Connect from right"></button>
+        <button type="button" class="connection-handle bottom" data-connection-side="bottom" aria-label="Connect from bottom"></button>
+        <button type="button" class="connection-handle left" data-connection-side="left" aria-label="Connect from left"></button>
+      </div>
       <div class="resize-handle" title="Resize"></div>
     </article>
   </template>

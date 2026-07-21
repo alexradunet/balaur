@@ -38,6 +38,7 @@ let camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:.78};
 let selected = null;
 let currentTool = "select";
 let connectSource = null;
+let connectSourceSide = null;
 let activeFilter = "all";
 let spaceDown = false;
 let saveTimer;
@@ -138,7 +139,7 @@ function renderWorkspaceNavigation(){
   $$('[data-canvas-switch]').forEach(button=>button.onclick=()=>switchCanvas(button.dataset.canvasSwitch,{direction:"switch"}));
 }
 function activateCanvas(id,{focusNodeId=null,fit=false}={}){
-  const record=workspace.canvases[id];if(!record)return;currentCanvasId=id;workspace.activeId=id;documentData=record.document;camera=record.camera?{...record.camera}:{x:80,y:55,zoom:1};selected=null;connectSource=null;activeFilter="all";aiCardRuntime.clear();shell.classList.remove("inspector-open");$$('.nav-item[data-filter]').forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"));$("#canvasTitle").value=record.title;render();
+  const record=workspace.canvases[id];if(!record)return;currentCanvasId=id;workspace.activeId=id;documentData=record.document;camera=record.camera?{...record.camera}:{x:80,y:55,zoom:1};selected=null;connectSource=null;connectSourceSide=null;activeFilter="all";aiCardRuntime.clear();shell.classList.remove("inspector-open");$$('.nav-item[data-filter]').forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"));$("#canvasTitle").value=record.title;render();
   if(focusNodeId){const node=documentData.nodes.find(item=>item.id===focusNodeId);if(node)focusNode(node,1.05);else fitView();}
   else if(fit||!record.camera)fitView();
 }
@@ -219,7 +220,7 @@ function renderNodes() {
     if (node.type === "group") {
       element.classList.add("group-node");
       content.innerHTML = `<div class="group-label">${escapeHTML(node.label || "Untitled group")}</div>`;
-      $(".node-accent", element).remove();
+      $(".node-accent", element).remove();$(".connection-handles",element).remove();
     } else if (node.type === "text") {
       if(isAICard(node)){
         const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
@@ -240,8 +241,9 @@ function renderNodes() {
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p>`;
     }
     element.addEventListener("pointerdown", event => nodePointerDown(event, node));
+    $$("[data-connection-side]",element).forEach(handle=>{handle.addEventListener("pointerdown",event=>startConnectionDrag(event,node,handle.dataset.connectionSide));handle.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.stopPropagation();connectSource=node.id;connectSourceSide=handle.dataset.connectionSide;setTool("connect");toast("Choose a destination node");}});});
     const aiRun=$("[data-ai-run]",element);if(aiRun){aiRun.addEventListener("pointerdown",event=>event.stopPropagation());aiRun.addEventListener("click",event=>{event.stopPropagation();runAICard(node.id,{manual:true});});}
-    const portalButton=$("[data-open-subcanvas]",element);if(portalButton){portalButton.addEventListener("pointerdown",event=>event.stopPropagation());portalButton.addEventListener("click",event=>{event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});element.addEventListener("dblclick",event=>{event.preventDefault();event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});}
+    const portalButton=$("[data-open-subcanvas]",element);if(portalButton){portalButton.addEventListener("pointerdown",event=>event.stopPropagation());portalButton.addEventListener("click",event=>{event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});element.addEventListener("dblclick",event=>{if(event.target.closest("button"))return;event.preventDefault();event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});}
     element.addEventListener("click", event => {
       const anchor = event.target.closest("a");
       if (anchor) event.stopPropagation();
@@ -271,6 +273,27 @@ function edgePath(from, to, fromSide, toSide) {
   const vectors = { top:[0,-1], right:[1,0], bottom:[0,1], left:[-1,0] };
   const av=vectors[a.side], bv=vectors[b.side];
   return { d:`M ${x1} ${y1} C ${x1+av[0]*distance} ${y1+av[1]*distance}, ${x2+bv[0]*distance} ${y2+bv[1]*distance}, ${x2} ${y2}`, mid:[(x1+x2)/2,(y1+y2)/2] };
+}
+function pointerEdgePath(node,side,point){
+  const [x1,y1]=getPoint(node,side,{x:point.x,y:point.y,width:0,height:0}).point,vectors={top:[0,-1],right:[1,0],bottom:[0,1],left:[-1,0]},vector=vectors[side],distance=Math.max(45,Math.min(180,Math.hypot(point.x-x1,point.y-y1)*.38));
+  return `M ${x1} ${y1} C ${x1+vector[0]*distance} ${y1+vector[1]*distance}, ${point.x} ${point.y}, ${point.x} ${point.y}`;
+}
+function startConnectionDrag(event,node,fromSide){
+  if(event.button!==0)return;event.preventDefault();event.stopPropagation();
+  const pointerId=event.pointerId,group=document.createElementNS("http://www.w3.org/2000/svg","g"),path=document.createElementNS("http://www.w3.org/2000/svg","path"),sourceElement=$(`.canvas-node[data-id="${CSS.escape(node.id)}"]`);group.classList.add("connection-preview");path.setAttribute("vector-effect","non-scaling-stroke");group.appendChild(path);edgeLayer.appendChild(group);sourceElement?.classList.add("connection-drag-source");document.body.classList.add("connection-dragging");
+  let targetNode=null,targetElement=null,toSide=null;
+  const clearTarget=()=>{targetElement?.classList.remove("connection-target");targetElement=null;targetNode=null;toSide=null;};
+  const move=moveEvent=>{
+    if(moveEvent.pointerId!==pointerId)return;const point=canvasPoint(moveEvent.clientX,moveEvent.clientY),candidateElement=document.elementFromPoint(moveEvent.clientX,moveEvent.clientY)?.closest?.(".canvas-node"),candidate=candidateElement&&candidateElement.dataset.id!==node.id?documentData.nodes.find(item=>item.id===candidateElement.dataset.id&&item.type!=="group"):null;
+    if(candidateElement!==targetElement){clearTarget();if(candidate){targetElement=candidateElement;targetNode=candidate;targetElement.classList.add("connection-target");}}
+    if(targetNode){toSide=getPoint(targetNode,undefined,node).side;path.setAttribute("d",edgePath(node,targetNode,fromSide,toSide).d);}else path.setAttribute("d",pointerEdgePath(node,fromSide,point));
+  };
+  const cleanup=()=>{clearTarget();group.remove();sourceElement?.classList.remove("connection-drag-source");document.body.classList.remove("connection-dragging");window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);window.removeEventListener("pointercancel",cancel);window.removeEventListener("keydown",key);};
+  const finish=(target,side)=>{if(!target)return;const before=aiCardSignatures();documentData.edges ||= [];documentData.edges.push({id:uid("edge"),fromNode:node.id,fromSide,toNode:target.id,toSide:side,toEnd:"arrow"});scheduleSave();scheduleChangedAICards(before);selected=null;shell.classList.remove("inspector-open");render();toast(`Connected to ${nodeTitle(target)}`);};
+  const up=upEvent=>{if(upEvent.pointerId!==pointerId)return;move(upEvent);const completedTarget=targetNode,completedSide=toSide;cleanup();finish(completedTarget,completedSide);};
+  const cancel=cancelEvent=>{if(cancelEvent.pointerId===pointerId)cleanup();};
+  const key=keyEvent=>{if(keyEvent.key==="Escape"){keyEvent.preventDefault();cleanup();}};
+  move(event);window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);window.addEventListener("pointercancel",cancel);window.addEventListener("keydown",key);
 }
 
 function renderEdges() {
@@ -315,11 +338,12 @@ function nodePointerDown(event,node) {
   if (event.button !== 0 || event.target.closest("a,button")) return;
   event.stopPropagation();
   if (currentTool === "connect") {
-    if (!connectSource) { connectSource=node.id; toast("Now choose a destination"); }
+    if (!connectSource) { connectSource=node.id;connectSourceSide=null;toast("Now choose a destination"); }
     else if (connectSource !== node.id) {
       const before=aiCardSignatures();documentData.edges ||= [];
-      documentData.edges.push({id:uid("edge"),fromNode:connectSource,toNode:node.id,toEnd:"arrow"});
-      connectSource=null; setTool("select"); scheduleSave();scheduleChangedAICards(before); toast("Nodes connected");
+      const source=documentData.nodes.find(item=>item.id===connectSource),toSide=source?getPoint(node,undefined,source).side:undefined;
+      documentData.edges.push({id:uid("edge"),fromNode:connectSource,...(connectSourceSide?{fromSide:connectSourceSide}:{}),toNode:node.id,toSide,toEnd:"arrow"});
+      connectSource=null;connectSourceSide=null;setTool("select");scheduleSave();scheduleChangedAICards(before);toast("Nodes connected");
     }
     render(); return;
   }
@@ -351,7 +375,7 @@ canvas.addEventListener("pointerdown", event => {
     window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true}); return;
   }
   if (event.target === canvas || event.target === world || event.target === nodeLayer) {
-    selected=null; connectSource=null; shell.classList.remove("inspector-open"); render();
+    selected=null;connectSource=null;connectSourceSide=null;shell.classList.remove("inspector-open");render();
     if (currentTool === "note") { const p=canvasPoint(event.clientX,event.clientY); addNode("note",p); setTool("select"); }
   }
 });
@@ -373,7 +397,7 @@ function selectItem(kind,id) {
   selected={kind,id}; shell.classList.add("inspector-open"); render();
 }
 function setTool(tool) {
-  currentTool=tool; connectSource=tool==="connect"?connectSource:null;
+  currentTool=tool;if(tool!=="connect"){connectSource=null;connectSourceSide=null;}
   $$(".tool").forEach(b=>b.classList.toggle("active",b.dataset.tool===tool));
   canvas.classList.toggle("tool-pan",tool==="pan"); renderNodes();
 }

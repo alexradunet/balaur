@@ -12,7 +12,7 @@ A small, standalone proof of concept for a life-management app whose primary int
 - Nested sub-canvases with live previews, breadcrumbs, switching, and infinite zoom navigation
 - Draggable and resizable text, link, file, group, and sub-canvas portal nodes
 - Goals, projects, habits, ideas, and notes represented with standard JSON Canvas fields
-- Connect mode with editable edges
+- Obsidian-style side handles for dragging connections directly between cards, plus connect mode
 - Markdown cards and task checkboxes
 - Inspector for content, geometry, colors, and edge routing
 - Sandboxed HTML/CSS/Three.js cards represented as standard file nodes
@@ -45,7 +45,7 @@ Then open <http://localhost:4173>.
 | Return to parent | Zoom all the way out, choose a breadcrumb, or press `Alt + ↑` |
 | Fit view | `0` |
 | Add note | Double-click empty canvas or press `N` and click |
-| Connect | Press `C`, then select two nodes |
+| Connect | Drag any side handle to another card, or press `C` and select two nodes |
 | Select | `V` |
 | Delete | `Delete` / `Backspace` |
 | Export | `Ctrl/Cmd + S` |
