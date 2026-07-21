@@ -294,6 +294,13 @@ export class LifeIndexer {
     return this.stats();
   }
 
+  // Public wrapper: re-derive all canvas placements from the vault's current
+  // .canvas files (plan §9.2/§12.1.8). Called after a placement edit so the index
+  // reflects the canonical canvas documents without a full cold rebuild.
+  async reindexPlacements() {
+    await this._rebuildAllPlacements();
+  }
+
   async _rebuildAllPlacements() {
     const pathToEntity = new Map();
     for (const rec of this.index.allSourceFiles()) {
