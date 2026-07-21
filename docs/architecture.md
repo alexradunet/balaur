@@ -36,12 +36,12 @@ A large space can contain an arbitrary hierarchy of smaller canvases without ext
 
 - every level is an independent, valid JSON Canvas 1.0 document;
 - a parent represents a child with a standard `file` node whose path is `canvases/<id>.canvas`;
-- Orbit renders those resolvable file nodes as portal cards with live miniature previews;
+- Balaur renders those resolvable file nodes as portal cards with live miniature previews;
 - double-clicking, choosing **Open**, or zooming over a portal past 220% enters it;
 - zooming out at the minimum scale returns to the parent, while breadcrumbs and the canvas list allow direct switching;
 - parent ID, portal node ID, title, and camera state live in a workspace sidecar rather than private node fields.
 
-The current static prototype persists that workspace wrapper in `localStorage`. A filesystem-backed application should store the root `.canvas`, child files under `canvases/`, and a small sidecar manifest. This preserves direct interoperability: another JSON Canvas editor can still open every level independently, even if it does not understand Orbit's hierarchy navigation.
+The current static prototype persists that workspace wrapper in `localStorage`. A filesystem-backed application should store the root `.canvas`, child files under `canvases/`, and a small sidecar manifest. This preserves direct interoperability: another JSON Canvas editor can still open every level independently, even if it does not understand Balaur's hierarchy navigation.
 
 ### Johnny Decimal projection
 
@@ -52,16 +52,16 @@ Johnny Decimal is implemented as a constrained projection of the same hierarchy 
 - category records must fall inside their area's range, such as `11`;
 - items use category-scoped IDs from `11.01` through `11.99`;
 - area, category, and complex-item canvases are ordinary file-node portals with readable paths;
-- simple item notes encode their ID in a Markdown heading and an inert `<!-- orbit:jd ... -->` comment;
+- simple item notes encode their ID in a Markdown heading and an inert `<!-- orbit:jd ... -->` compatibility marker;
 - a sidecar index rejects duplicates, provides direct lookup, and orders the canvas tree numerically.
 
-A whole-space `.orbit.json` backup contains that sidecar plus all of the independent JSON Canvas documents. Single `.canvas` import/export remains available for interoperability. New installations seed this model with a fictional age-30 life index (9 areas, 17 categories, and 34 item notes); the template is ordinary workspace data and can be replaced or edited completely.
+A whole-space `.balaur.json` backup contains that sidecar plus all of the independent JSON Canvas documents. Its internal `orbit-workspace` discriminator remains stable for backward compatibility. Single `.canvas` import/export remains available for interoperability. New installations seed this model with a fictional age-30 life index (9 areas, 17 categories, and 34 item notes); the template is ordinary workspace data and can be replaced or edited completely.
 
 ## Suggested source layout
 
 ```text
 src/
-  components/          Custom Elements such as orbit-canvas and orbit-assistant
+  components/          Custom Elements such as balaur-canvas and balaur-assistant
   canvas/              Camera, geometry, hit testing, commands, undo/redo
   json-canvas/         Validation, parse/serialize, migrations
   domain/              Tasks, recurrence, projects, calendar event models

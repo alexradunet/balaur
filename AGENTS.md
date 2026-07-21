@@ -1,10 +1,10 @@
-# AGENTS.md — Orbit repository guide
+# AGENTS.md — Balaur repository guide
 
-This file applies to the entire repository. It is written for coding agents and future maintainers working on Orbit.
+This file applies to the entire repository. It is written for coding agents and future maintainers working on Balaur.
 
 ## 1. Project intent
 
-Orbit is a local-first life-management application built around the open [JSON Canvas 1.0](https://jsoncanvas.org/spec/1.0/) format. Its distinctive constraints are part of the product, not temporary implementation details:
+Balaur is a local-first life-management application built around the open [JSON Canvas 1.0](https://jsoncanvas.org/spec/1.0/) format. Its distinctive constraints are part of the product, not temporary implementation details:
 
 - JSON Canvas is the portable spatial/document layer.
 - Every nested canvas is independently valid JSON Canvas 1.0.
@@ -30,7 +30,7 @@ Before changing a subsystem, read its source and its design document:
 - `docs/life-data.md` — SQLite schema, persistence, task projection, and backup format
 - `docs/offline.md` — Service Worker cache strategy, lifecycle, limits, and validation
 - `docs/generative-canvas.md` — AI operations, live widgets, and security boundaries
-- `docs/design-system.md` — Pixel Loom/BASM tokens and CSS organization
+- `docs/design-system.md` — Balaur tokens, material roles, motion, and CSS organization
 - `vendor/sqlite/README.md` — SQLite provenance and current VFS limitations
 - `vendor/pixel-loom/README.md` — design-system provenance
 
@@ -48,15 +48,17 @@ manifest.webmanifest        Install metadata, scope, colors, and local icons
 icons/                      PWA icons, including a maskable-safe 512px asset
 storage/life-store.js       SQLite Wasm initialization, migrations, repositories, snapshots
 styles/layers.css           Global named cascade-layer order
-styles/foundation.css       Reset, semantic aliases, JSON Canvas colors
-styles/shell.css            Top bar, sidebar, application shell
-styles/canvas.css           Camera, cards, edges, portals, minimap
-styles/components.css       Inspector, Today, assistant, dialogs, shared components
+styles/tokens.css           Balaur primitive, semantic, component, and motion tokens
+styles/foundation.css       Reset, focus, platform preference adaptations
+styles/shell.css            Carved-oak top bar, library, application shell
+styles/canvas.css           Camera, parchment cards, edges, portals, minimap
+styles/components.css       Inspector, Today, Balaur, dialogs, shared components
 styles/themes.css           Validated canvas theme presets
-styles/responsive.css       Narrow-screen adaptations
+styles/responsive.css       Narrow-shell and content-container adaptations
+styles/motion.css           Tokenized transitions, keyframes, View Transitions
 docs/                       Architecture and subsystem documentation
 widgets/                    Sandboxed HTML file-node widgets
-vendor/pixel-loom/          Vendored tokens and self-hosted fonts
+vendor/pixel-loom/          Self-hosted fonts and upstream design-system provenance
 vendor/sqlite/              Official SQLite Wasm module, binary, license, provenance
 .github/workflows/pages.yml Deploys the repository root as a static GitHub Pages artifact
 ```
@@ -83,13 +85,13 @@ Use only standard JSON Canvas node types:
 - `link`
 - `group`
 
-Do not add custom node types such as `task`, `canvas`, `widget`, `ai`, or `habit`. Do not add application-only fields to nodes or edges merely because Orbit can read them. Use standard IDs, geometry, colors, content fields, and edge routing fields.
+Do not add custom node types such as `task`, `canvas`, `widget`, `ai`, or `habit`. Do not add application-only fields to nodes or edges merely because Balaur can read them. Use standard IDs, geometry, colors, content fields, and edge routing fields.
 
 Before accepting imported, restored, or model-generated documents, route them through `isCanvas()` or the stricter operation/workspace validators already in `app.js`. Maintain globally unique node/edge IDs within a document and valid edge endpoints.
 
 ### 4.2 Portable capabilities use standard nodes plus inert markers
 
-Orbit recognizes special behavior without changing the JSON Canvas schema:
+Balaur recognizes special behavior without changing the JSON Canvas schema:
 
 ```md
 <!-- orbit:jd 11.01 -->
@@ -103,7 +105,7 @@ Orbit recognizes special behavior without changing the JSON Canvas schema:
 - Live HTML/Canvas/WebGL widgets are standard `file` nodes pointing to `.html` files.
 - Nested-canvas portals are standard `file` nodes pointing under `canvases/`.
 
-Markers must remain harmless and readable in editors that do not understand Orbit. Markdown rendering intentionally hides `<!-- orbit:... -->` lines.
+Markers must remain harmless and readable in editors that do not understand Balaur. Markdown rendering intentionally hides `<!-- orbit:... -->` compatibility lines.
 
 ### 4.3 The workspace sidecar owns hierarchy and canvas UI state
 
@@ -142,7 +144,7 @@ Date conventions are mandatory:
 
 ### 4.5 Whole-space backups are normalized JSON
 
-`.orbit.json` is the portable workspace backup. It contains the workspace/canvases plus normalized `lifeData` tables. Never embed or export a raw SQLite database binary. Backup data must remain rebuildable across kvvfs, future OPFS, IndexedDB fallback, and native SQLite implementations.
+`.balaur.json` is the portable workspace backup. It contains the workspace/canvases plus normalized `lifeData` tables while retaining the internal `orbit-workspace` discriminator for backward compatibility. Never embed or export a raw SQLite database binary. Backup data must remain rebuildable across kvvfs, future OPFS, IndexedDB fallback, and native SQLite implementations.
 
 Single `.canvas` export/import remains focused on the active standards-compliant document.
 
@@ -350,18 +352,17 @@ Use modern CSS as progressive enhancement rather than rebuilding layout or inter
 
 Check target-browser support before adopting experimental syntax. The baseline must remain usable when a progressive enhancement is unavailable.
 
-The default visual language is Pixel Loom/BASM Linen:
+The default visual language is Balaur Cartographer's Tavern:
 
-- dark earthy brown surfaces
-- peach/madder primary accents
-- ochre details
-- teal secondary details
-- 4px radii
-- crisp outlines and tonal layers instead of large shadows
-- Newsreader headings, Work Sans UI text, JetBrains Mono metadata
-- small corner notches where appropriate
+- carved oak for application furniture
+- parchment for canvas documents and Today ledgers
+- candle gold for primary actions and selection bearings
+- river teal for focus, links, and assistant state
+- crisp borders and shallow, functional shadows
+- Newsreader for identity and canvas titles, Work Sans for text, JetBrains Mono for controls and metadata
+- tokenized motion for press, panel travel, selection entry, and nested-canvas navigation
 
-JSON Canvas preset colors are document semantics and must remain distinct from theme colors. `vendor/pixel-loom/tokens/indigo.css` is an optional palette, not the default.
+JSON Canvas preset colors are document semantics and must remain distinct from application-theme colors. `styles/tokens.css` is the only runtime token source; vendored Pixel Loom color-token stylesheets are not loaded.
 
 Whenever a desktop layout changes, inspect narrow viewport behavior in `styles/responsive.css`. Avoid controls that work only with hover; canvas interactions must remain usable with pointer/touch and keyboard where an established fallback exists.
 
@@ -479,4 +480,4 @@ A change is complete only when all applicable statements are true:
 - Documentation matches the implemented behavior.
 - No unrelated dependencies, build outputs, credentials, or vendor changes were introduced.
 
-When requirements conflict, prefer data portability, user recoverability, and explicit validation over convenience. Orbit should remain useful even when opened by another JSON Canvas editor, when the AI provider is absent, or when the optional life database is temporarily unavailable.
+When requirements conflict, prefer data portability, user recoverability, and explicit validation over convenience. Balaur should remain useful when opened by another JSON Canvas editor, when the AI provider is absent, or when the optional life database is temporarily unavailable.

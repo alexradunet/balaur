@@ -1,6 +1,6 @@
 # Life data: JSON Canvas + SQLite
 
-Orbit separates portable spatial documents from queryable life-management state.
+Balaur separates portable spatial documents from queryable life-management state.
 
 ## Ownership
 
@@ -107,7 +107,7 @@ Task cards carry an inert, portable marker:
 # Review monthly budget
 ```
 
-On database startup, Orbit reconciles every marker with the `tasks` table. New task cards write both layers: the text node is appended to the selected JSON Canvas document and task metadata is committed to SQLite. The inspector updates status, priority, planned date, and due date through `LifeStore.updateTask()`.
+On database startup, Balaur reconciles every marker with the `tasks` table. New task cards write both layers: the text node is appended to the selected JSON Canvas document and task metadata is committed to SQLite. The inspector updates status, priority, planned date, and due date through `LifeStore.updateTask()`.
 
 The Today screen is a live SQL-backed projection grouped into:
 
@@ -120,13 +120,13 @@ Completing a task from either its canvas card or Today writes one database state
 
 ## Index reconciliation
 
-At startup, Orbit scans every workspace canvas into the `canvases` and `canvas_nodes` tables. Normal saves update the active canvas index. The index stores titles and content hashes, not the full document as a second source of truth.
+At startup, Balaur scans every workspace canvas into the `canvases` and `canvas_nodes` tables. Normal saves update the active canvas index. The index stores titles and content hashes, not the full document as a second source of truth.
 
 Task, habit, calendar, journal, and activity tables contain non-rebuildable state and must be backed up.
 
 ## Backup and restore
 
-Whole-space `.orbit.json` exports include:
+Whole-space `.balaur.json` exports include:
 
 ```json
 {

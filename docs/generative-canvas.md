@@ -4,7 +4,7 @@ This is the proposed bridge between JSON Canvas, live HTML/WebGL cards, and the 
 
 ## Keep the host document standard
 
-JSON Canvas 1.0 has no `html`, `widget`, or `webgl` node type. Adding one would make the document an application-specific dialect. Instead, Orbit treats a standard file node whose `file` ends in `.html` as a live card:
+JSON Canvas 1.0 has no `html`, `widget`, or `webgl` node type. Adding one would make the document an application-specific dialect. Instead, Balaur treats a standard file node whose `file` ends in `.html` as a live card:
 
 ```json
 {
@@ -19,7 +19,7 @@ JSON Canvas 1.0 has no `html`, `widget`, or `webgl` node type. Adding one would 
 }
 ```
 
-Other JSON Canvas clients still see a valid file attachment. Orbit renders it in an iframe with `sandbox="allow-scripts"`. HTML, CSS, SVG, Canvas 2D, and direct WebGL can all run inside that boundary. Orbit does not load a third-party rendering engine; `widgets/focus-orbit.html` uses WebGL2 shaders and buffers directly, keeps a CSS fallback, caps device-pixel ratio, honors reduced motion and page visibility, and handles context loss.
+Other JSON Canvas clients still see a valid file attachment. Balaur renders it in an iframe with `sandbox="allow-scripts"`. HTML, CSS, SVG, Canvas 2D, and direct WebGL can all run inside that boundary. Balaur does not load a third-party rendering engine; `widgets/focus-orbit.html` uses WebGL2 shaders and buffers directly, keeps a CSS fallback, caps device-pixel ratio, honors reduced motion and page visibility, and handles context loss.
 
 The sandbox deliberately omits `allow-same-origin`, top navigation, popups, forms, downloads, camera, and microphone permissions. A future desktop build should serve workspace attachments through an app protocol rather than grant widgets direct filesystem access.
 
@@ -63,11 +63,11 @@ All operations are allowlisted and the resulting document is validated before co
 
 ## Prompt-first AI notes
 
-An AI note is a one-shot generation flow. Orbit first opens a native `<dialog>` for the question, calls the configured provider only after submission, and adds the resulting Markdown as an ordinary JSON Canvas text node. No placeholder node is created when the dialog is cancelled or the request fails.
+An AI note is a one-shot generation flow. Balaur first opens a native `<dialog>` for the question, calls the configured provider only after submission, and adds the resulting Markdown as an ordinary JSON Canvas text node. No placeholder node is created when the dialog is cancelled or the request fails.
 
 ## Reactive AI operator cards
 
-An AI operator remains a standard JSON Canvas text node. Orbit recognizes a portable Markdown marker rather than introducing a custom node type:
+An AI operator remains a standard JSON Canvas text node. Balaur recognizes the existing portable Markdown compatibility marker rather than introducing a custom node type:
 
 ```markdown
 <!-- orbit:ai-card -->
@@ -77,9 +77,9 @@ Summarize the connected notes and recommend the next action.
 
 Incoming edges define its context. The operator sends the prompt and connected node content to the configured provider, creates a standard text node for the result, and connects it with an edge labeled `AI output`. Subsequent executions update that same note instead of generating duplicates.
 
-Orbit computes signatures from the prompt, incoming edge set, and input content. Content or connection changes queue a debounced regeneration. Coordinates and card dimensions do not trigger requests. Directed cycles pause automatic execution, and an update arriving during a request queues one follow-up run.
+Balaur computes signatures from the prompt, incoming edge set, and input content. Content or connection changes queue a debounced regeneration. Coordinates and card dimensions do not trigger requests. Directed cycles pause automatic execution, and an update arriving during a request queues one follow-up run.
 
-This representation remains readable in other JSON Canvas clients: they see ordinary text nodes and edges even if they do not understand Orbit's marker.
+This representation remains readable in other JSON Canvas clients: they see ordinary text nodes and edges even if they do not understand the compatibility marker.
 
 ## AI request flow
 

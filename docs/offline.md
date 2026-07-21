@@ -1,6 +1,6 @@
 # Offline-first application shell
 
-Orbit is an installable, progressively enhanced web application. Offline support is implemented with browser standards and does not change the ownership of workspace data.
+Balaur is an installable, progressively enhanced web application. Offline support is implemented with browser standards and does not change the ownership of workspace data.
 
 ## Runtime pieces
 
@@ -24,7 +24,7 @@ The install event atomically precaches the application shell:
 
 Same-origin GET requests are network-first. Successful basic responses refresh the cache, while network failures fall back to the matching cached response. Navigation Preload avoids serializing browser navigation behind Service Worker startup, and navigation can fall back to `index.html`. This favors current source while online and preserves a complete local shell when disconnected.
 
-Orbit deliberately does not intercept:
+Balaur deliberately does not intercept:
 
 - non-GET requests;
 - cross-origin AI-provider calls;
@@ -36,7 +36,7 @@ The Cache API contains deployable application resources, not user data.
 
 ## User data remains separate
 
-Offline shell caching does not replace Orbit persistence:
+Offline shell caching does not replace Balaur persistence:
 
 ```text
 Cache API                 application code and static assets
@@ -45,7 +45,7 @@ SQLite kvvfs              tasks and temporal/queryable life data
 sessionStorage            provider key by default
 ```
 
-A whole-space `.orbit.json` export remains the portable backup. Clearing site data removes both caches and local user data.
+A whole-space `.balaur.json` export remains the portable backup. Its internal `orbit-workspace` discriminator remains compatible with existing exports. Clearing site data removes both caches and local user data.
 
 ## Updates
 
@@ -57,7 +57,7 @@ When a required runtime asset is added, moved, or removed, update `APP_SHELL` in
 
 ## Offline behavior and limits
 
-After one successful online load, Orbit can reload its shell, SQLite Wasm, local fonts, and local widgets without a network connection. Existing workspace and life data remain available in that browser profile.
+After one successful online load, Balaur can reload its shell, SQLite Wasm, local fonts, and local widgets without a network connection. Existing workspace and life data remain available in that browser profile.
 
 Network-dependent behavior remains explicitly unavailable offline:
 
@@ -85,7 +85,7 @@ Useful probes:
 await window.orbitOfflineReady
 await navigator.serviceWorker.ready
 await caches.keys()
-(await caches.open("orbit-shell-v1")).keys()
+(await caches.open("orbit-shell-v4")).keys()
 ```
 
 The production OPFS SQLite adapter is a separate concern. It will require a Worker and appropriate cross-origin-isolation headers; GitHub Pages currently cannot provide those headers.

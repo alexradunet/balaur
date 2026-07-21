@@ -1,6 +1,6 @@
-# Orbit — life on a canvas
+# Balaur — life on a canvas
 
-A small, standalone proof of concept for a life-management app whose primary interface and storage format is an infinite [JSON Canvas](https://jsoncanvas.org/) canvas.
+A small, standalone proof of concept for a local-first life-management app whose primary interface and storage format is an infinite [JSON Canvas](https://jsoncanvas.org/) canvas.
 
 **[Open the live demo](https://alexradunet.github.io/open-canvas-experiment/)**
 
@@ -19,15 +19,15 @@ A small, standalone proof of concept for a life-management app whose primary int
 - Markdown cards and task checkboxes
 - Inspector for content, geometry, colors, and edge routing
 - Sandboxed HTML/CSS/Canvas/WebGL cards represented as standard file nodes
-- Canvas-aware copilot with local tools or a client-side OpenAI-compatible provider
+- Balaur, a canvas-aware familiar with local tools or a client-side OpenAI-compatible provider
 - Prompt-first AI notes that generate Markdown directly onto the canvas
 - Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
 - Library filters
 - Browser-local persistence with an actual SQLite Wasm life database
-- JSON Canvas `.canvas` import/export and whole-space `.orbit.json` backup/restore, including normalized SQLite data
+- JSON Canvas `.canvas` import/export and whole-space `.balaur.json` backup/restore, including normalized SQLite data
 - Installable offline shell with a web app manifest and Service Worker
 - No package install, CDN, or build step; SQLite Wasm is vendored locally
-- Locally vendored BASM / Pixel Loom Linen tokens and self-hosted fonts
+- An application-local Balaur token and motion system with self-hosted fonts
 
 ## Run locally
 
@@ -62,7 +62,7 @@ Then open <http://localhost:4173>. Service Workers are available on localhost, s
 
 A new browser profile opens with a pre-seeded fictional life index for **Alex, a 30-year-old man**. Existing spaces can load it from **JD → Load starter** after exporting a backup; loading the starter replaces the current local workspace.
 
-Select **JD** beside the Canvases heading. Orbit determines the next valid level from the selected parent:
+Select **JD** beside the Canvases heading. Balaur determines the next valid level from the selected parent:
 
 ```text
 Index
@@ -91,7 +91,7 @@ Use the task inspector to edit metadata, or switch to **Today** for four project
 
 ## Local SQLite life database
 
-Orbit combines JSON Canvas documents with a queryable SQLite database. Canvas files own visible notes, geometry, links, and Johnny Decimal structure; SQLite owns task workflow, habit history, journal indexes, calendar events, and activity records.
+Balaur combines JSON Canvas documents with a queryable SQLite database. Canvas files own visible notes, geometry, links, and Johnny Decimal structure; SQLite owns task workflow, habit history, journal indexes, calendar events, and activity records.
 
 The static prototype runs official SQLite Wasm `3.53.0` against SQLite's `:localStorage:` kvvfs backend. The sidebar reports the database status. This is intentionally a starter backend: it works on GitHub Pages but is synchronous and subject to localStorage quota. The planned production adapter uses OPFS in a Worker, while Tauri can use native SQLite with the same schema.
 
@@ -99,7 +99,7 @@ Whole-space export serializes the database as normalized JSON alongside every ca
 
 ## Connect an AI provider
 
-Open **Ask Orbit → ⚙ AI provider settings**. For Mistral, use:
+Open **Ask Balaur → ⚙ AI provider settings**. For Mistral, use:
 
 ```text
 API base URL: https://api.mistral.ai/v1
@@ -111,7 +111,7 @@ The static app calls the provider directly with `fetch()` using its OpenAI-compa
 
 ### AI notes
 
-Select **AI note** in the sidebar. Orbit asks for your prompt before creating anything, sends it directly to the configured provider, and places the Markdown response near the center of the current view as a standard JSON Canvas text node.
+Select **AI note** in the sidebar. Balaur asks for your prompt before creating anything, sends it directly to the configured provider, and places the Markdown response near the center of the current view as a standard JSON Canvas text node.
 
 ### AI operator cards
 
@@ -126,9 +126,9 @@ By default, the key lives in `sessionStorage` for the current tab. Enabling **Re
 
 ## Data model
 
-Each canvas remains a JSON Canvas 1.0 document with only the top-level `nodes` and `edges` arrays. A sub-canvas portal is a standard file node pointing to a child document under `canvases/`; Johnny Decimal portals use readable paths such as `canvases/11-finance.canvas`. Orbit's browser-local workspace sidecar tracks hierarchy, titles, Johnny Decimal identifiers, and camera positions without adding private fields to canvas objects.
+Each canvas remains a JSON Canvas 1.0 document with only the top-level `nodes` and `edges` arrays. A sub-canvas portal is a standard file node pointing to a child document under `canvases/`; Johnny Decimal portals use readable paths such as `canvases/11-finance.canvas`. Balaur's browser-local workspace sidecar tracks hierarchy, titles, Johnny Decimal identifiers, and camera positions without adding private fields to canvas objects.
 
-**Export .canvas** exports the currently open level. **Export whole space** produces an `.orbit.json` backup containing the sidecar and every standards-compliant canvas document; the normal Import action restores either format.
+**Export .canvas** exports the currently open level. **Export whole space** produces a `.balaur.json` backup containing the sidecar and every standards-compliant canvas document; the normal Import action restores either format. The internal `orbit-workspace` format discriminator remains unchanged so existing backups stay importable.
 
 Life-management meaning is encoded portably:
 
@@ -150,7 +150,7 @@ This project is intentionally built with browser standards and no UI framework o
 - **Capacitor** as an optional mobile shell around the same web application
 - `.canvas` files as the portable format while indexed task/calendar projections remain app metadata
 
-See [`docs/architecture.md`](docs/architecture.md) for the standards-first application design, [`docs/life-data.md`](docs/life-data.md) for JSON Canvas + SQLite storage, [`docs/offline.md`](docs/offline.md) for offline-first behavior, [`docs/design-system.md`](docs/design-system.md) for the BASM / Pixel Loom integration, and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
+See [`docs/architecture.md`](docs/architecture.md) for the standards-first application design, [`docs/life-data.md`](docs/life-data.md) for JSON Canvas + SQLite storage, [`docs/offline.md`](docs/offline.md) for offline-first behavior, [`docs/design-system.md`](docs/design-system.md) for the Balaur material and motion system, and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
 
 ## License
 
