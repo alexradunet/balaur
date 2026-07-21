@@ -5,10 +5,8 @@ import { isCanvas } from "./storage/canvas-validate.js";
 import { LifeIndexer } from "./storage/life-indexer.js";
 import { parseEntity } from "./storage/entity-codec.js";
 import { MemoryIndex } from "./storage/memory-index.js";
-import { createLifeQuery } from "./storage/life-query.js";
+import { LifeQuery } from "./storage/life-query.js";
 import { FileTaskRepository } from "./storage/task-repository.js";
-import { FileHabitRepository } from "./storage/habit-repository.js";
-import { FileJournalRepository, FileEventRepository } from "./storage/journal-event-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
 const COLORS = {
@@ -127,9 +125,6 @@ let lifeIndex=null;
 let lifeIndexer=null;
 let lifeQuery=null;
 let taskRepository=null;
-let habitRepository=null;
-let journalRepository=null;
-let eventRepository=null;
 let canonicalWritable=false;
 const aiFileContentCache=new Map();
 const taskUpdateTimers=new Map();
@@ -248,14 +243,11 @@ function canvasIdFromPath(path) {
 function configureLifeRuntime(vault) {
   lifeIndex = new MemoryIndex();
   lifeIndexer = new LifeIndexer({ vault, index: lifeIndex, canvasIdFromPath });
-  lifeQuery = createLifeQuery(lifeIndex);
+  lifeQuery = new LifeQuery(lifeIndex);
   taskRepository = new FileTaskRepository({
     vault, index: lifeIndex, indexer: lifeIndexer,
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
   });
-  habitRepository = new FileHabitRepository({ vault, index: lifeIndex, indexer: lifeIndexer });
-  journalRepository = new FileJournalRepository({ vault, index: lifeIndex, indexer: lifeIndexer });
-  eventRepository = new FileEventRepository({ vault, index: lifeIndex, indexer: lifeIndexer });
 }
 async function seedStarterTasks() {
   for (const [categoryCode, title, notes] of JD_LIFE_STARTER_TASKS) {
@@ -297,7 +289,7 @@ async function bootCanvasApp(){
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
   } catch (error) {
     console.warn("Vault-first boot failed; canonical files are unavailable", error);
-    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; habitRepository = null; journalRepository = null; eventRepository = null;
+    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null;
     setIndexStatus("Files unavailable", error.message);
     setCanonicalWritable(false, "Canonical files are unavailable; export or repair the vault before editing.");
   }

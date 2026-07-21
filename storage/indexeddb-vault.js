@@ -8,7 +8,6 @@
 //   files    path -> { path, mediaType, content, size, hash, modifiedAt, revision }
 //   changes  revision (autoIncrement) -> { revision, path, operation, hash, oldPath? }
 //   folds    fold (case-fold key) -> { fold, path }   (case-fold collision detection)
-//   settings key -> { key, value }                    (adapter-local, non-portable)
 //
 // The Service Worker must never cache these records; IndexedDB is user data.
 
@@ -55,7 +54,6 @@ export class IndexedDbVault extends VaultStore {
         if (!db.objectStoreNames.contains("files")) db.createObjectStore("files", { keyPath: "path" });
         if (!db.objectStoreNames.contains("changes")) db.createObjectStore("changes", { keyPath: "revision", autoIncrement: true });
         if (!db.objectStoreNames.contains("folds")) db.createObjectStore("folds", { keyPath: "fold" });
-        if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings", { keyPath: "key" });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(new StorageError("Could not open vault database", { code: "STORAGE_UNAVAILABLE", cause: req.error }));
@@ -150,7 +148,6 @@ export class IndexedDbVault extends VaultStore {
     files.put(record);
     await txDone(tx);
     this._revision = revision;
-    this.emit({ type: current ? "modify" : "create", path: p, hash });
     return this._meta(record);
   }
 
@@ -167,7 +164,6 @@ export class IndexedDbVault extends VaultStore {
     const revision = await reqP(tx.objectStore("changes").add({ path: p, operation: "remove", hash: current.hash }));
     await txDone(tx);
     this._revision = revision;
-    this.emit({ type: "remove", path: p, hash: current.hash });
     return true;
   }
 
@@ -193,7 +189,6 @@ export class IndexedDbVault extends VaultStore {
     files.put(record);
     await txDone(tx);
     this._revision = revision;
-    this.emit({ type: "move", path: t, oldPath: f, hash: current.hash });
     return this._meta(record);
   }
 
@@ -252,20 +247,6 @@ export class IndexedDbVault extends VaultStore {
     }
     await txDone(tx);
     this._revision = revision;
-    this.emit({ type: "restore", path: "", hash: null });
     return { revision, count };
-  }
-
-  async getSetting(key) {
-    const db = await this._open();
-    const record = await reqP(db.transaction("settings").objectStore("settings").get(key));
-    return record ? record.value : undefined;
-  }
-
-  async setSetting(key, value) {
-    const db = await this._open();
-    const tx = db.transaction("settings", "readwrite");
-    tx.objectStore("settings").put({ key, value });
-    await txDone(tx);
   }
 }

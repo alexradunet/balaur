@@ -233,14 +233,6 @@
     background: rgb(42 32 21 / 12%);
     font-family: var(--balaur-font-mono);
   }
-  .node-footer {
-    position: absolute;
-    inset: auto 18px 12px;
-    display: flex;
-    justify-content: space-between;
-    color: var(--node-muted);
-    font: 9px var(--balaur-font-mono);
-  }
   .progress {
     height: 3px;
     margin-block-start: 12px;

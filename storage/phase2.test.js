@@ -58,17 +58,14 @@ test("optimistic hash preconditions", async () => {
   assert.notEqual(updated.hash, meta.hash);
 });
 
-test("move renames, emits oldPath, and rejects existing destination", async () => {
+test("move renames and rejects existing destination", async () => {
   const vault = new MemoryVault();
   await vault.write("a.md", "x");
   await vault.write("b.md", "y");
-  const events = [];
-  vault.subscribe((c) => events.push(c));
   const moved = await vault.move("a.md", "c.md");
   assert.equal(moved.path, "c.md");
   assert.equal(await vault.exists("a.md"), false);
   assert.equal(await vault.read("c.md"), "x");
-  assert.deepEqual(events.at(-1), { type: "move", path: "c.md", oldPath: "a.md", hash: moved.hash });
   await assert.rejects(() => vault.move("c.md", "b.md"), ConflictError);
 });
 
@@ -122,18 +119,6 @@ test("injected failures leave state intact", async () => {
   vault.failNext("remove");
   await assert.rejects(() => vault.remove("a.md"), (e) => e.code === "INJECTED");
   assert.equal(await vault.exists("a.md"), true); // still present
-});
-
-test("subscribers receive create/modify/remove events", async () => {
-  const vault = new MemoryVault();
-  const events = [];
-  const unsub = vault.subscribe((c) => events.push(c.type));
-  await vault.write("a.md", "1");
-  await vault.write("a.md", "2");
-  await vault.remove("a.md");
-  unsub();
-  await vault.write("b.md", "3"); // not observed after unsubscribe
-  assert.deepEqual(events, ["create", "modify", "remove"]);
 });
 
 test("path safety and case-fold collisions are enforced", async () => {

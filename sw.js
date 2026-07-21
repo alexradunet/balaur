@@ -1,4 +1,4 @@
-const CACHE_NAME = "orbit-shell-v6";
+const CACHE_NAME = "orbit-shell-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -11,8 +11,6 @@ const APP_SHELL = [
   "./storage/life-query.js",
   "./storage/memory-index.js",
   "./storage/task-repository.js",
-  "./storage/habit-repository.js",
-  "./storage/journal-event-repository.js",
   "./storage/workspace-backup.js",
   "./storage/workspace-vault.js",
   "./storage/canvas-validate.js",

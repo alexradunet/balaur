@@ -68,7 +68,6 @@ export class MemoryIndex {
     for (const row of rows) this._placements.set(`${row.canvasId}${SEP}${row.nodeId}`, { ...row });
   }
   placementsForEntity(entityId) { return [...this._placements.values()].filter((p) => p.entityId === entityId).map((p) => ({ ...p })); }
-  removePlacementsForEntity(entityId) { for (const [k, v] of this._placements) if (v.entityId === entityId) this._placements.delete(k); }
   allPlacements() { return [...this._placements.values()].map((p) => ({ ...p })); }
 
   // --- diagnostics -----------------------------------------------------------
@@ -82,7 +81,6 @@ export class MemoryIndex {
       this._diagnostics.set(key, { id: ++this._diagId, sourcePath: d.sourcePath ?? null, errorCode: d.errorCode, message: d.message, detailsJson: d.detailsJson ?? null, firstSeenAt: now, lastSeenAt: now });
     }
   }
-  clearDiagnostics(path) { for (const [k, v] of this._diagnostics) if (v.sourcePath === path) this._diagnostics.delete(k); }
   clearAllDiagnostics() { this._diagnostics.clear(); }
   allDiagnostics() { return [...this._diagnostics.values()].map((d) => ({ ...d })); }
 

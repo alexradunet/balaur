@@ -148,7 +148,7 @@ The module graph rooted at `main.js` is deliberate. The app's intended startup s
 1. open the browser `IndexedDbVault`;
 2. load `.orbit/workspace.json` and each referenced `.canvas` document through `WorkspaceStore`;
 3. use the one-time first-run `localStorage` migration source only when the vault has no sidecar;
-4. construct `MemoryIndex`, repositories, `LifeIndexer`, and `LifeQuery`;
+4. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, and the task repository used by the shipped UI;
 5. rebuild the in-memory index from the vault files;
 6. render the workspace and expose `window.orbitCanvas`; and
 7. progressively register the Service Worker.
@@ -161,7 +161,7 @@ Rendering must use the loaded in-memory working set; it must not perform an asyn
 
 ### 5.1 Offline application-shell rules
 
-`sw.js` precaches the required local modules, styles, fonts, icons, manifest, and sample widget under cache `orbit-shell-v5`. It does not precache database Wasm. Same-origin GET requests use network-first with cache fallback; cross-origin requests, non-GET requests, range requests, provider calls, API keys, generated exports, and arbitrary external resources are not intercepted.
+`sw.js` precaches the required local modules, styles, fonts, icons, manifest, and sample widget under cache `orbit-shell-v7`. It does not precache database Wasm. Same-origin GET requests use network-first with cache fallback; cross-origin requests, non-GET requests, range requests, provider calls, API keys, generated exports, and arbitrary external resources are not intercepted.
 
 Keep `APP_SHELL` synchronized with required assets and increment `CACHE_NAME` when cache semantics or invalidation require it. Keep paths relative for GitHub Pages subpaths. Never call `skipWaiting()` to reload an active editing session without an explicit safe update flow. The Service Worker owns only static shell resources; IndexedDB owns user files.
 
@@ -282,7 +282,7 @@ node --test \
   storage/phase10.test.js storage/phase-query.test.js
 ```
 
-This explicit suite currently passes **165 tests** (the deleted phase6 suite is intentionally excluded). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
+This explicit suite currently passes **164 tests** (the deleted phase6 suite is intentionally excluded). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
 
 Then perform browser-level checks appropriate to the change. **The default way to check the application is the project `browser-check` skill** at `.pi/skills/browser-check/` — a dependency-free headless-Chrome-over-CDP driver that runs the baseline smoke suite below automatically (no WebDriver, no npm install). With the app served on `4173`:
 

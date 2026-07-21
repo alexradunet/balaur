@@ -305,9 +305,6 @@
     border-radius: 50%;
     background: var(--balaur-border-default);
   }
-  .storage-state.ready i { background: var(--balaur-status-success); }
-  .storage-state.error { color: var(--balaur-status-danger); }
-  .storage-state.error i { background: var(--balaur-status-danger); }
   .spec-link {
     display: flex;
     justify-content: space-between;

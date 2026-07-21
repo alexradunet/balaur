@@ -1,6 +1,6 @@
 // App-facing query facade over MemoryIndex. It never owns data; all rows are
 // rebuilt by LifeIndexer from canonical vault files.
-import { localDateForInstant, isValidInstant } from "./frontmatter.js";
+import { isValidInstant } from "./frontmatter.js";
 import { SchemaError } from "./vault-errors.js";
 
 const OPEN = new Set(["done", "cancelled"]);
@@ -18,8 +18,6 @@ export class LifeQuery {
     }).map(({ row }) => copyTask(row));
   }
   today(options = {}) { return this.openTasks(options); }
-  openTasksForToday(options = {}) { return this.openTasks(options); }
-  tasksForToday(options = {}) { return this.openTasks(options); }
   tasksByStatus(status) { const statuses = Array.isArray(status) ? new Set(status) : new Set([status]); return this.index.allTasks().filter((row) => statuses.has(row.status)).map(copyTask).sort((a, b) => compare(a.title, b.title) || compare(a.id, b.id)); }
   tasks(status) { return status === undefined ? this.index.allTasks().map(copyTask) : this.tasksByStatus(status); }
   habits({ throughDate = null, timezone = "UTC" } = {}) {
@@ -39,9 +37,7 @@ export class LifeQuery {
     });
     return result;
   }
-  habitsWithState(options = {}) { return this.habits(options); }
   journalForDate(localDate) { const row = this.index.allJournals().find((j) => j.localDate === localDate); return row ? { ...row } : null; }
-  journal(localDate) { return this.journalForDate(localDate); }
   eventsInRange(from, to) {
     const instant = (value, label) => {
       if (value == null || value === "") return null;
@@ -52,8 +48,4 @@ export class LifeQuery {
     if (fromMs !== null && toMs !== null && fromMs > toMs) throw new SchemaError("Event range start is after its end", { code: "BAD_RANGE" });
     return this.index.allEvents().map((e) => ({ row: e, ms: instant(e.startsAt, "event") })).filter(({ ms }) => (fromMs === null || ms >= fromMs) && (toMs === null || ms < toMs)).map(({ row }) => ({ ...row, allDay: Boolean(row.allDay) })).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || compare(a.id, b.id));
   }
-  events(from, to) { return this.eventsInRange(from, to); }
 }
-
-export function createLifeQuery(index) { return new LifeQuery(index); }
-export { localDateForInstant };

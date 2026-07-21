@@ -116,7 +116,6 @@ export class MemoryVault extends VaultStore {
       revision,
     };
     this._files.set(p, record);
-    this.emit({ type: existing ? "modify" : "create", path: p, hash });
     return this._meta(record);
   }
 
@@ -129,7 +128,6 @@ export class MemoryVault extends VaultStore {
     this._files.delete(p);
     this._folds.delete(caseFoldKey(p));
     this._bump(p, "remove", existing.hash);
-    this.emit({ type: "remove", path: p, hash: existing.hash });
     return true;
   }
 
@@ -147,7 +145,6 @@ export class MemoryVault extends VaultStore {
     const revision = this._bump(t, "move", existing.hash, f);
     const record = { ...existing, path: t, revision };
     this._files.set(t, record);
-    this.emit({ type: "move", path: t, oldPath: f, hash: existing.hash });
     return this._meta(record);
   }
 
@@ -185,7 +182,6 @@ export class MemoryVault extends VaultStore {
         revision,
       });
     }
-    this.emit({ type: "restore", path: "", hash: null });
     return { revision: this._revision, count: this._files.size };
   }
 }

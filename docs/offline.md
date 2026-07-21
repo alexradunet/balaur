@@ -7,18 +7,18 @@ Balaur is an installable, progressively enhanced static web application. Offline
 - `manifest.webmanifest` describes the installable app with relative scope, colors, and local icons.
 - `main.js` is the ordered ES-module entry point.
 - `offline/register.js` registers the Service Worker only in a supported secure context.
-- `sw.js` maintains the versioned `orbit-shell-v6` cache.
+- `sw.js` maintains the versioned `orbit-shell-v7` cache.
 - `IndexedDbVault` stores canonical user files in IndexedDB; the Service Worker does not intercept or cache those records.
 
 Registration failure does not prevent the online application from starting. Service Workers are available on HTTPS and localhost.
 
 ## Cache strategy
 
-The install handler precaches the application shell in `orbit-shell-v6`:
+The install handler precaches the application shell in `orbit-shell-v7`:
 
 - `./`, `./index.html`, `./manifest.webmanifest`, `./main.js`, `./app.js`;
 - `./offline/register.js`;
-- the runtime storage modules: `indexeddb-vault.js`, `life-indexer.js`, `life-query.js`, `memory-index.js`, `task-repository.js`, `habit-repository.js`, `journal-event-repository.js`, `workspace-backup.js`, `workspace-vault.js`, `canvas-validate.js`, `vault-store.js`, `vault-path.js`, `vault-errors.js`, `content-hash.js`, `frontmatter.js`, and `entity-codec.js`;
+- the runtime storage modules: `indexeddb-vault.js`, `life-indexer.js`, `life-query.js`, `memory-index.js`, `task-repository.js`, `workspace-backup.js`, `workspace-vault.js`, `canvas-validate.js`, `vault-store.js`, `vault-path.js`, `vault-errors.js`, `content-hash.js`, `frontmatter.js`, and `entity-codec.js`;
 - all cascade-layer stylesheets under `styles/`;
 - self-hosted Pixel Loom fonts;
 - `widgets/focus-orbit.html`; and
@@ -52,7 +52,7 @@ Whole-space `.orbit.json` export/import is the portable backup for the sidecar a
 
 ## Updates
 
-`CACHE_NAME` is the cache-format version and is currently `orbit-shell-v6`. Increment it when cache semantics change or old entries must be invalidated immediately. The Service Worker removes older `orbit-shell-*` caches during activation. It does not call `skipWaiting()` or reload an active editing session; a future immediate-update flow must ask the user, persist pending work, activate the waiting worker, and reload deliberately.
+`CACHE_NAME` is the cache-format version and is currently `orbit-shell-v7`. Increment it when cache semantics change or old entries must be invalidated immediately. The Service Worker removes older `orbit-shell-*` caches during activation. It does not call `skipWaiting()` or reload an active editing session; a future immediate-update flow must ask the user, persist pending work, activate the waiting worker, and reload deliberately.
 
 When a required runtime asset is added, moved, or removed, update `APP_SHELL` in the same change. Keep every URL relative so localhost and GitHub Pages subpath deployment use the same paths.
 
@@ -73,7 +73,7 @@ Task editing, Today, import, and export are designed to use canonical local file
 
 1. Start from a clean browser profile over localhost or HTTPS.
 2. Wait for `navigator.serviceWorker.ready` and verify the page is controlled.
-3. Confirm the `orbit-shell-v6` cache contains every `APP_SHELL` asset and no database Wasm.
+3. Confirm the `orbit-shell-v7` cache contains every `APP_SHELL` asset and no database Wasm.
 4. Verify IndexedDB vault creation, canonical file writes, and a controlled reload.
 5. Create and complete a task, then verify the Canvas and Today projections after reload.
 6. Export and import a version-2 whole-space file bundle in a disposable profile.
@@ -88,7 +88,7 @@ Useful probes:
 await window.orbitOfflineReady
 await navigator.serviceWorker.ready
 await caches.keys()
-(await caches.open("orbit-shell-v6")).keys()
+(await caches.open("orbit-shell-v7")).keys()
 await window.orbitVaultReady
 window.orbitVaultStore
 window.orbitCanvas.getDocument()

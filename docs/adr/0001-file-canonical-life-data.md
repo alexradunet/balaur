@@ -43,7 +43,7 @@ The browser boot is vault-first and asynchronous:
 1. open `IndexedDbVault`;
 2. load the sidecar and independent canvas files through `WorkspaceStore`;
 3. use legacy localStorage only as a one-time first-run migration input when the vault has no workspace;
-4. construct repositories, `LifeIndexer`, `MemoryIndex`, and `LifeQuery`;
+4. construct `LifeIndexer`, `MemoryIndex`, `LifeQuery`, and the task repository used by the shipped UI;
 5. rebuild the disposable index from canonical files;
 6. render the in-memory working set; and
 7. register the offline shell progressively.
@@ -80,4 +80,4 @@ Accepted costs:
 
 ## Verification boundary
 
-Tasks F and S supplied the shipped storage and application wiring. The explicit Node command covers the phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query suites: **165 tests pass**. Browser-pending verification includes IndexedDB persistence and restore, vault-first boot and reload, task create/complete/Today UI behavior, export/import round-trip, offline reload and Service Worker upgrades, timezone boundaries, and malformed-file repair in the running interface.
+Tasks F and S supplied the shipped storage and application wiring. The explicit Node command covers the phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query suites: **164 tests pass**. Browser-pending verification includes IndexedDB persistence and restore, vault-first boot and reload, task create/complete/Today UI behavior, export/import round-trip, offline reload and Service Worker upgrades, timezone boundaries, and malformed-file repair in the running interface.

@@ -93,10 +93,10 @@ export class FsVault extends VaultStore {
   }
   async _write(p, content, options = {}) {
     const clean = await this._ensureParent(p); const existing = await this._record(clean); this._checkPrecondition(clean, existing, options.expectedHash); if (!existing) await this._checkFoldCollision(clean);
-    const text = String(content), hash = await contentHash(text); await this._atomicWrite(clean, text, existing, options.expectedHash); const revision = this._bump(clean, existing ? "modify" : "create", hash); const meta = { path: clean, mediaType: options.mediaType || mediaTypeFor(clean), size: byteLength(text), hash, modifiedAt: new Date().toISOString(), revision }; this.emit({ type: existing ? "modify" : "create", path: clean, hash }); return meta;
+    const text = String(content), hash = await contentHash(text); await this._atomicWrite(clean, text, existing, options.expectedHash); const revision = this._bump(clean, existing ? "modify" : "create", hash); return { path: clean, mediaType: options.mediaType || mediaTypeFor(clean), size: byteLength(text), hash, modifiedAt: new Date().toISOString(), revision };
   }
   async write(p, content, options = {}) { return this._enqueue(() => this._write(p, content, options)); }
-  async _remove(p, options = {}) { const clean = await this._assertComponents(p), existing = await this._record(clean); if (!existing) throw new VaultError(`Not found: ${clean}`, { code: "NOT_FOUND" }); this._checkPrecondition(clean, existing, options.expectedHash); await fsp.unlink(this._abs(clean)); this._bump(clean, "remove", existing.hash); this.emit({ type: "remove", path: clean, hash: existing.hash }); return true; }
+  async _remove(p, options = {}) { const clean = await this._assertComponents(p), existing = await this._record(clean); if (!existing) throw new VaultError(`Not found: ${clean}`, { code: "NOT_FOUND" }); this._checkPrecondition(clean, existing, options.expectedHash); await fsp.unlink(this._abs(clean)); this._bump(clean, "remove", existing.hash); return true; }
   async remove(p, options = {}) { return this._enqueue(() => this._remove(p, options)); }
   async _move(from, to, options = {}) {
     const f = await this._assertComponents(from), t = await this._assertComponents(to);
@@ -117,8 +117,7 @@ export class FsVault extends VaultStore {
     try { await fsp.unlink(source); }
     catch (error) { try { await fsp.unlink(destination); } catch (_) {} throw error; }
     const revision = this._bump(t, "move", existing.hash, f);
-    const meta = { path: t, mediaType: existing.mediaType, size: existing.size, hash: existing.hash, modifiedAt: new Date().toISOString(), revision };
-    this.emit({ type: "move", path: t, oldPath: f, hash: existing.hash }); return meta;
+    return { path: t, mediaType: existing.mediaType, size: existing.size, hash: existing.hash, modifiedAt: new Date().toISOString(), revision };
   }
   async move(from, to, options = {}) { return this._enqueue(() => this._move(from, to, options)); }
   changesSince(revision) { return this._journal.filter((e) => e.revision > revision); }
@@ -157,6 +156,6 @@ export class FsVault extends VaultStore {
       }
       throw e;
     }
-    this._journal = []; this._revision = 0; for (const file of prepared) this._bump(file.p, "create", file.hash); this.emit({ type: "restore", path: "", hash: null }); return { revision: this._revision, count: prepared.length };
+    this._journal = []; this._revision = 0; for (const file of prepared) this._bump(file.p, "create", file.hash); return { revision: this._revision, count: prepared.length };
   }
 }

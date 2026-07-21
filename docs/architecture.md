@@ -33,7 +33,7 @@ A persistent index, including SQLite, is a deferred future optimization rather t
 1. open `IndexedDbVault`;
 2. load `.orbit/workspace.json` and each referenced `.canvas` file through `WorkspaceStore`;
 3. on a genuinely empty first run, migrate the legacy localStorage workspace once into canonical vault files;
-4. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, and the file repositories;
+4. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, and the task repository used by the shipped UI;
 5. rebuild the in-memory projection from every vault file;
 6. render the active workspace from the loaded working set; and
 7. expose `window.orbitVaultReady`, `window.orbitVaultStore`, and the stable `window.orbitCanvas` integration surface.
@@ -80,11 +80,11 @@ HTML and WebGL cards are standard `.html` file nodes rendered in iframes with `s
 
 ## Offline shell
 
-The Service Worker caches only deployable same-origin shell resources under `orbit-shell-v5`: local modules, styles, fonts, icons, the manifest, and the sample widget. It does not cache IndexedDB records, provider calls, generated exports, or external resources. Network-first requests fall back to the shell cache when offline. See [offline.md](offline.md).
+The Service Worker caches only deployable same-origin shell resources under `orbit-shell-v7`: local modules, styles, fonts, icons, the manifest, and the sample widget. It does not cache IndexedDB records, provider calls, generated exports, or external resources. Network-first requests fall back to the shell cache when offline. See [offline.md](offline.md).
 
 ## Node-verified foundation and browser-pending work
 
-The storage modules and the explicit phase test command pass 165 Node tests. Node verification covers codecs, path safety, vault adapters, workspace persistence, backup validation, repositories, indexing, queries, and integrity auditing. It does not prove browser IndexedDB behavior.
+The storage modules and the explicit phase test command pass 164 Node tests. Node verification covers codecs, path safety, vault adapters, workspace persistence, backup validation, repositories, indexing, queries, and integrity auditing. It does not prove browser IndexedDB behavior.
 
 The following require a real browser profile: IndexedDB persistence and restore, vault-first startup and first-render timing, task create/complete/Today UI flows, export/import round-trip, offline reload and Service Worker upgrades, timezone boundaries in browser locale behavior, and malformed-file repair affordances. Documentation must label these as browser-pending until exercised.
 

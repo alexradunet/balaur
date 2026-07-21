@@ -256,23 +256,20 @@ export class LifeIndexer {
   }
 
   // Full cold rebuild (plan §12.1). Idempotent.
-  async rebuild({ onProgress } = {}) {
+  async rebuild() {
     const files = await this.vault.list();
     const records = [];
-    let n = 0;
     for (const f of files) {
       const content = await this.vault.read(f.path);
       const { record, parsed } = await buildSourceRecord(f.path, content, { mediaType: f.mediaType, modifiedAt: f.modifiedAt });
       record._parsed = parsed;
       records.push(record);
-      if (onProgress) onProgress({ phase: "parse", done: ++n, total: files.length });
     }
 
     this.index.transaction(() => this.index.clearAll());
 
     const wrapped = records.map((record) => ({ record, parsed: record._parsed }));
     await this._reproject(wrapped);
-    if (onProgress) onProgress({ phase: "index", done: records.length, total: records.length });
     await this._rebuildAllPlacements();
 
     this.index.setIndexState("indexedRevision", String(this.vault.revision));
@@ -328,13 +325,6 @@ export class LifeIndexer {
   // TODO(deferred, plan S14): avoid rewriting/reindexing unchanged canvases and
   // prune the in-memory adapter's change journal when a persistent revision
   // checkpoint is available.
-  // Public wrapper: re-derive all canvas placements from the vault's current
-  // .canvas files (plan §9.2/§12.1.8). Called after a placement edit so the index
-  // reflects the canonical canvas documents without a full cold rebuild.
-  async reindexPlacements() {
-    await this._rebuildAllPlacements();
-  }
-
   async _rebuildAllPlacements() {
     const pathToEntity = new Map();
     const byId = new Map();

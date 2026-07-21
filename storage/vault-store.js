@@ -21,27 +21,7 @@ export function mediaTypeFor(path) {
 // and `list` return this metadata (without content).
 //   { path, mediaType, size, hash, modifiedAt, revision }
 
-// Normalized change event (plan §12.3):
-//   { type: "create" | "modify" | "move" | "remove" | "restore", path, oldPath?, hash }
-
 export class VaultStore {
-  constructor() {
-    this._listeners = new Set();
-  }
-
-  // Register a change subscriber. Returns an unsubscribe function.
-  subscribe(callback) {
-    this._listeners.add(callback);
-    return () => this._listeners.delete(callback);
-  }
-
-  emit(change) {
-    for (const cb of [...this._listeners]) {
-      try { cb(change); }
-      catch (err) { console.warn("vault subscriber error", err); }
-    }
-  }
-
   // Monotonic vault revision used for warm reconciliation (plan §12.2).
   get revision() { return 0; }
 

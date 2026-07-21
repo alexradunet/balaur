@@ -133,7 +133,6 @@ export class FileTaskRepository {
     const content = JSON.stringify(doc, null, 2) + "\n";
     await this.vault.write(canvasPath, content, { expectedHash: stat.hash });
     await this.indexer.indexFile(canvasPath, content, {});
-    await this.indexer.reindexPlacements();
     return { canvasId, nodeId: node.id, canvasPath };
   }
 
@@ -154,7 +153,6 @@ export class FileTaskRepository {
     const content = JSON.stringify(doc, null, 2) + "\n";
     await this.vault.write(canvasPath, content, { expectedHash: stat.hash });
     await this.indexer.indexFile(canvasPath, content, {});
-    await this.indexer.reindexPlacements();
     return { removed: true, canvasId, nodeId };
   }
 

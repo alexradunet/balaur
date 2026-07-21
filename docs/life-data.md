@@ -237,6 +237,6 @@ A single `.canvas` export is interoperable JSON Canvas but is not a complete lif
 
 ## Verification status
 
-The explicit storage command in `AGENTS.md` passes **165 Node tests** across phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query. This verifies the platform-neutral codecs, repositories, adapters, indexing, queries, backup validation, and audit logic.
+The explicit storage command in `AGENTS.md` passes **164 Node tests** across phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query. This verifies the platform-neutral codecs, repositories, adapters, indexing, queries, backup validation, and audit logic.
 
 Browser verification is still pending for IndexedDB persistence/restore and quota behavior, vault-first boot and first-render timing, task create/complete/Today interaction, export/import round-trip in a real profile, offline reload and cache upgrades, timezone boundaries in browser locale behavior, and repair affordances for malformed files.
