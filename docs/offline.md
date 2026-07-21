@@ -40,8 +40,8 @@ Offline shell caching does not replace Orbit persistence:
 
 ```text
 Cache API                 application code and static assets
-Workspace localStorage    canvases, hierarchy, cameras, JD metadata (boot source)
-IndexedDB vault           canonical .canvas/.md mirror (Phase 4b bridge; ADR-0001)
+IndexedDB vault           canonical .canvas documents + sidecar (boot source; ADR-0001)
+Workspace localStorage    fallback / migration mirror of canvases + hierarchy
 SQLite kvvfs              tasks and temporal/queryable life data
 sessionStorage            provider key by default
 ```
