@@ -22,6 +22,7 @@ A small, standalone proof of concept for a life-management app whose primary int
 - Browser-local persistence
 - JSON Canvas `.canvas` import and export
 - No runtime dependencies or build step
+- Locally vendored BASM / Pixel Loom Indigo tokens and self-hosted fonts
 
 ## Run locally
 
@@ -95,7 +96,7 @@ This project is intentionally built with browser standards and no UI framework o
 - **Capacitor** as an optional mobile shell around the same web application
 - `.canvas` files as the portable format while indexed task/calendar projections remain app metadata
 
-See [`docs/architecture.md`](docs/architecture.md) for a proposed package design and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
+See [`docs/architecture.md`](docs/architecture.md) for the standards-first application design, [`docs/design-system.md`](docs/design-system.md) for the BASM / Pixel Loom integration, and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
 
 ## License
 
