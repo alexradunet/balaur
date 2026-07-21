@@ -180,8 +180,10 @@
     margin: 0;
     border-block-end: 1px solid var(--balaur-border-default);
     padding-inline: 13px;
-    background: var(--balaur-surface-parchment-raised);
-    background: color-mix(in oklab, currentColor 9%, var(--node-surface));
+    /* A raised title bar: lift the card's own surface a step and lay a faint
+       wash of the kicker colour over it, so the header reads as a bar (like the
+       live-widget's oak header) while staying harmonised to every card tone. */
+    background: color-mix(in oklab, white 16%, color-mix(in oklab, currentColor 9%, var(--node-surface)));
     color: var(--node-muted);
     font: 500 8px var(--balaur-font-mono);
     letter-spacing: .12em;
