@@ -1,4 +1,4 @@
-const CACHE_NAME = "orbit-shell-v1";
+const CACHE_NAME = "orbit-shell-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,12 +8,14 @@ const APP_SHELL = [
   "./offline/register.js",
   "./storage/life-store.js",
   "./styles/layers.css",
+  "./styles/tokens.css",
   "./styles/foundation.css",
   "./styles/shell.css",
   "./styles/canvas.css",
   "./styles/components.css",
   "./styles/themes.css",
   "./styles/responsive.css",
+  "./styles/motion.css",
   "./vendor/pixel-loom/fonts.css",
   "./vendor/pixel-loom/tokens/linen.css",
   "./vendor/pixel-loom/fonts/jetbrainsmono-400-latin-ext.woff2",

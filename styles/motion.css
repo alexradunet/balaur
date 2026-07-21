@@ -1,0 +1,54 @@
+@layer motion {
+  :where(.button, .add-card, .nav-item, .tool, .zoom-tools button, .tiny-btn) {
+    transition:
+      color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      background-color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      border-color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      transform var(--balaur-duration-press) var(--balaur-ease-standard);
+  }
+
+  :where(.button, .add-card, .tool):active {
+    transform: translateY(var(--balaur-distance-press));
+  }
+
+  .app-shell {
+    transition: grid-template-columns var(--balaur-duration-panel) var(--balaur-ease-standard);
+  }
+
+  .ai-panel {
+    transition:
+      opacity var(--balaur-duration-panel) var(--balaur-ease-standard),
+      transform var(--balaur-duration-panel) var(--balaur-ease-enter);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --balaur-duration-press: 0ms;
+      --balaur-duration-focus: 0ms;
+      --balaur-duration-selection: 0ms;
+      --balaur-duration-panel: 0ms;
+      --balaur-duration-travel: 0ms;
+      --balaur-distance-press: 0px;
+      --balaur-distance-panel: 0px;
+      --balaur-scale-travel: 0;
+    }
+
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0s !important;
+      animation-delay: 0s !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+    }
+
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation-duration: 0s !important;
+    }
+
+    :where(.connection-preview path, .ai-card.running .node-accent, .ai-message.loading p::after) {
+      animation: none;
+    }
+  }
+}
