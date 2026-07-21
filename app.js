@@ -450,7 +450,7 @@ function updateAssistantContext() {
   context.innerHTML=`READING <b>${s.nodes} nodes</b> · <b>${s.edges} links</b> · <b>${s.openTasks} open tasks</b> · <b>${s.widgets} widgets</b>`;
 }
 function setAssistantOpen(open) {
-  $("#aiPanel").classList.toggle("open",open);$("#aiPanel").setAttribute("aria-hidden",String(!open));updateAssistantContext();if(open)setTimeout(()=>$("#aiPrompt").focus(),180);
+  const panel=$("#aiPanel");panel.classList.toggle("open",open);panel.setAttribute("aria-hidden",String(!open));panel.inert=!open;updateAssistantContext();if(open)setTimeout(()=>$("#aiPrompt").focus(),180);
 }
 function assistantMessage(text,role="assistant") {
   const message=document.createElement("div");message.className=`ai-message ${role}`;message.innerHTML=role==="assistant"?"<span>✦</span><p></p>":"<p></p>";$("p",message).textContent=text;$("#aiMessages").append(message);message.scrollIntoView({behavior:"smooth",block:"end"});return message;

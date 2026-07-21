@@ -1,0 +1,28 @@
+@layer foundation {
+  /* Orbit application layer. Foundation tokens and fonts come from the locally
+     vendored Pixel Loom / BASM design system. */
+  :root {
+    --bg: var(--background);
+    --panel: var(--surface-container-lowest);
+    --panel-2: var(--surface-container-low);
+    --line: var(--outline-variant);
+    --muted: color-mix(in srgb, var(--on-surface-variant) 72%, var(--surface));
+    --text: var(--on-surface);
+    --accent: var(--primary);
+    /* JSON Canvas preset colors remain distinct semantic data colors. */
+    --green: #7ee0a1;
+    --red: var(--tertiary);
+    --orange: #efa66a;
+    --yellow: var(--secondary);
+    --cyan: #64cbd0;
+    --purple: #a78bfa;
+    --sidebar: 250px;
+    --inspector: 0px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--bg); color: var(--text); font: 13px/1.45 var(--font-body); }
+  button, input, textarea, select { font: inherit; }
+  button { color: inherit; }
+}

@@ -1,0 +1,11 @@
+@layer responsive {
+  @media (max-width: 850px) {
+    :root { --sidebar: 0px; }
+    .brand { display:none; }.topbar{grid-template-columns:0 1fr auto}.save-state,.button.ghost{display:none}.minimap{display:none}
+    .app-shell.inspector-open{--inspector:250px}.inspector-form,.inspector-head,.inspector-empty{width:250px}
+  }
+  @media (max-width: 620px) {
+    .app-shell.inspector-open{--inspector:0px}.inspector{display:none}.top-actions{padding-right:8px}.canvas-tools{top:auto;bottom:16px}.zoom-tools{display:none}
+    .button.assistant-button{width:34px;overflow:hidden;white-space:nowrap;padding:8px}.button.assistant-button span{margin-right:15px}.ai-panel{inset:70px 8px 8px;width:auto}
+  }
+}

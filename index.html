@@ -7,7 +7,13 @@
   <title>Orbit — life on a canvas</title>
   <link rel="stylesheet" href="vendor/pixel-loom/fonts.css" />
   <link rel="stylesheet" href="vendor/pixel-loom/tokens/indigo.css" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles/layers.css" />
+  <link rel="stylesheet" href="styles/foundation.css" />
+  <link rel="stylesheet" href="styles/shell.css" />
+  <link rel="stylesheet" href="styles/canvas.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/themes.css" />
+  <link rel="stylesheet" href="styles/responsive.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -22,17 +28,17 @@
         <div><span class="eyebrow">MY SPACE</span><input id="canvasTitle" value="Life OS — Summer" aria-label="Canvas title" /></div>
       </div>
 
-      <div class="top-actions">
+      <nav class="top-actions" aria-label="Document actions">
         <span class="save-state" id="saveState"><i></i> Saved locally</span>
         <button class="button assistant-button" id="assistantButton"><span>✦</span> Ask Orbit</button>
         <button class="button ghost" id="importButton">Import</button>
         <button class="button primary" id="exportButton">Export .canvas</button>
         <input type="file" id="fileInput" accept=".canvas,.json,application/json" hidden />
-      </div>
+      </nav>
     </header>
 
-    <aside class="sidebar" id="sidebar">
-      <section>
+    <aside class="sidebar" id="sidebar" aria-label="Canvas tools and library">
+      <section aria-label="Add to canvas">
         <p class="section-label">ADD TO CANVAS</p>
         <div class="add-grid">
           <button class="add-card" data-add="note"><span class="add-icon note-icon">✦</span><b>Note</b><small>Thought or idea</small></button>
@@ -45,16 +51,16 @@
         </div>
       </section>
 
-      <section>
+      <nav aria-label="Canvas library">
         <div class="section-heading"><p class="section-label">LIBRARY</p><button class="tiny-btn" id="newGroup" title="Add group">＋</button></div>
         <button class="nav-item active" data-filter="all"><span>◫</span>Everything <em id="allCount">0</em></button>
         <button class="nav-item" data-filter="1"><span class="dot red"></span>Goals <em id="goalCount">0</em></button>
         <button class="nav-item" data-filter="4"><span class="dot green"></span>Habits <em id="habitCount">0</em></button>
         <button class="nav-item" data-filter="6"><span class="dot purple"></span>Projects <em id="projectCount">0</em></button>
         <button class="nav-item" data-filter="2"><span class="dot orange"></span>Ideas <em id="ideaCount">0</em></button>
-      </section>
+      </nav>
 
-      <section class="sidebar-bottom">
+      <section class="sidebar-bottom" aria-label="Help and information">
         <div class="tip"><span>⌘</span><div><b>Quick tip</b><p>Hold space and drag to move around your canvas.</p></div></div>
         <button class="nav-item" id="resetDemo"><span>↺</span>Reset demo</button>
         <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
@@ -91,7 +97,7 @@
       </div>
     </aside>
 
-    <section class="ai-panel" id="aiPanel" aria-hidden="true">
+    <aside class="ai-panel" id="aiPanel" aria-hidden="true" aria-label="Orbit Copilot" inert>
       <header class="ai-head">
         <div><span class="ai-spark">✦</span><div><b>Orbit Copilot</b><small id="aiProviderLabel">Local canvas tools</small></div></div>
         <div class="ai-head-actions"><button id="openAISettings" aria-label="AI provider settings" title="AI provider settings">⚙</button><button id="closeAssistant" aria-label="Close assistant">×</button></div>
@@ -111,7 +117,7 @@
         <button type="submit" aria-label="Send">↑</button>
       </form>
       <footer id="aiProviderStatus"><i></i> Local mode — canvas data stays in this browser</footer>
-    </section>
+    </aside>
   </div>
 
   <dialog class="settings-dialog ai-note-dialog" id="aiNoteDialog">

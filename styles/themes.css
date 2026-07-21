@@ -1,0 +1,8 @@
+@layer themes {
+  body[data-canvas-theme="warm"] { --bg:#120f0d;--panel:#181411;--panel-2:#201a16;--line:#352c25;--muted:#9a897a;--text:#f0e7de;--green:#d9b47c; }
+  body[data-canvas-theme="warm"] .canvas{background-color:#15110e;background-image:radial-gradient(circle,#49392d 1px,transparent 1.2px)}
+  body[data-canvas-theme="calm"] { --bg:#0a1012;--panel:#0e1719;--panel-2:#122025;--line:#20343a;--muted:#789096;--text:#e2eff0;--green:#78d8ce; }
+  body[data-canvas-theme="calm"] .canvas{background-color:#0b1316;background-image:radial-gradient(circle,#28434a 1px,transparent 1.2px)}
+  body[data-canvas-theme="contrast"] { --bg:#050505;--panel:#090909;--panel-2:#111;--line:#454545;--muted:#aaa;--text:#fff;--green:#8cff66; }
+  body[data-canvas-theme="contrast"] .canvas{background-color:#050505;background-image:radial-gradient(circle,#555 1px,transparent 1.2px)}
+}

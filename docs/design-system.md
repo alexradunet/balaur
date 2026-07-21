@@ -41,21 +41,20 @@ Instead, Orbit adopts the system's semantic tokens and principles while applying
 
 This keeps the design system reusable without creating a large override sheet.
 
-## Planned CSS organization
+## CSS organization
 
 ```text
 styles/
-  layers.css             cascade order
-  orbit-tokens.css       Pixel Loom aliases and JSON Canvas colors
-  base.css               small semantic reset and native controls
-  shell.css              header, sidebar, inspector
+  layers.css             explicit cascade order
+  foundation.css         Pixel Loom aliases, JSON Canvas colors, reset
+  shell.css              header and sidebar
   canvas.css             nodes, edges, minimap, camera controls
-  assistant.css          chat and AI operators
-  dialogs.css            native dialog forms
+  components.css         inspector, assistant, native dialogs
   themes.css             AI-selectable canvas themes
+  responsive.css         narrow viewport adaptations
 ```
 
-Each file will use cascade layers. The migration should remain a visual no-op and require no build process.
+Every application file uses a named cascade layer. Files are loaded with standard `<link>` elements, so there is no CSS preprocessor, package dependency, or build process. Native landmarks, forms, labels, buttons, `dialog`, `nav`, `main`, `aside`, and `article` provide the semantic structure; classes identify application components rather than acting as styling utilities.
 
 ## Updating the vendored system
 
