@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Balaur">
+  <rect width="512" height="512" rx="64" fill="#100d0b"/>
+  <circle cx="256" cy="256" r="172" fill="#17100b" stroke="#806438" stroke-width="12"/>
+  <path d="M132 319c37 66 151 79 215 17 55-54 37-142-25-164-50-18-104 10-106 54-2 36 40 57 70 36 19-13 20-39 5-53" fill="none" stroke="#f2c14e" stroke-width="24" stroke-linecap="square"/>
+  <path d="M284 168l48-49 3 49 46-15-24 43 36 27-56 7-27-31z" fill="#5ed0bd" stroke="#090503" stroke-width="10" stroke-linejoin="miter"/>
+  <circle cx="337" cy="188" r="8" fill="#100d0b"/>
+  <path d="M117 351l40-9m194 17 38 14M105 249l41 4" stroke="#806438" stroke-width="10"/>
+</svg>

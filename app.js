@@ -1,4 +1,4 @@
-/* Orbit is dependency-free. Every canvas document follows JSON Canvas 1.0; hierarchy and cameras live in a local workspace sidecar. */
+/* Balaur is dependency-free. Every canvas document follows JSON Canvas 1.0; hierarchy and cameras live in a local workspace sidecar. */
 const COLORS = {
   "1": "#ff7b78", "2": "#efa66a", "3": "#e9d56b",
   "4": "#7ee0a1", "5": "#64cbd0", "6": "#a78bfa"
@@ -657,13 +657,13 @@ function exportCanvas() {
   downloadJSON(documentData,slug($("#canvasTitle").value||"life-canvas")+".canvas");toast("Current canvas exported");
 }
 async function exportWorkspace(){
-  persistWorkspace();const store=await window.orbitLifeReady,lifeData=store?.exportSnapshot?.()||null;downloadJSON({format:"orbit-workspace",version:1,exportedAt:new Date().toISOString(),workspace,lifeData},`${slug(workspace.canvases[workspace.rootId].title)}.orbit.json`);toast(`${Object.keys(workspace.canvases).length} canvases and life data exported`);
+  persistWorkspace();const store=await window.orbitLifeReady,lifeData=store?.exportSnapshot?.()||null;downloadJSON({format:"orbit-workspace",version:1,exportedAt:new Date().toISOString(),workspace,lifeData},`${slug(workspace.canvases[workspace.rootId].title)}.balaur.json`);toast(`${Object.keys(workspace.canvases).length} canvases and life data exported`);
 }
 function validWorkspaceBundle(data){
   const candidate=data?.format==="orbit-workspace"?data.workspace:data;if(candidate?.version!==1||!candidate.canvases||typeof candidate.canvases!=="object")return null;const records=Object.values(candidate.canvases);if(!records.length||!records.every(record=>record&&typeof record.id==="string"&&typeof record.title==="string"&&isCanvas(record.document)))return null;candidate.rootId=candidate.canvases[candidate.rootId]?candidate.rootId:records[0].id;candidate.activeId=candidate.canvases[candidate.activeId]?candidate.activeId:candidate.rootId;return normalizeWorkspace(candidate);
 }
 async function importCanvas(file) {
-  try {const parsed=JSON.parse(await file.text()),importedWorkspace=validWorkspaceBundle(parsed);if(importedWorkspace){if(!confirm(`Import this Orbit space with ${Object.keys(importedWorkspace.canvases).length} canvases? Your current local space will be replaced.`))return;workspace=importedWorkspace;currentCanvasId=workspace.activeId;documentData=workspace.canvases[currentCanvasId].document;camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();const store=await window.orbitLifeReady;if(store){store.importSnapshot(parsed.lifeData||{schemaVersion:1});store.syncWorkspaceIndex(workspace);reconcileTaskMarkers(store);}render();fitView();toast("Whole workspace and life data imported");return;}if(!isCanvas(parsed))throw new Error("Not a valid JSON Canvas document or Orbit workspace");documentData={nodes:parsed.nodes||[],edges:parsed.edges||[]};selected=null;reconcileTaskMarkers();scheduleSave();render();fitView();toast("Canvas imported");}
+  try {const parsed=JSON.parse(await file.text()),importedWorkspace=validWorkspaceBundle(parsed);if(importedWorkspace){if(!confirm(`Import this Balaur space with ${Object.keys(importedWorkspace.canvases).length} canvases? Your current local space will be replaced.`))return;workspace=importedWorkspace;currentCanvasId=workspace.activeId;documentData=workspace.canvases[currentCanvasId].document;camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();const store=await window.orbitLifeReady;if(store){store.importSnapshot(parsed.lifeData||{schemaVersion:1});store.syncWorkspaceIndex(workspace);reconcileTaskMarkers(store);}render();fitView();toast("Whole workspace and life data imported");return;}if(!isCanvas(parsed))throw new Error("Not a valid JSON Canvas document or Orbit workspace");documentData={nodes:parsed.nodes||[],edges:parsed.edges||[]};selected=null;reconcileTaskMarkers();scheduleSave();render();fitView();toast("Canvas imported");}
   catch(error){alert(`Could not import this file.\n\n${error.message}`);}
 }
 
@@ -779,7 +779,7 @@ async function testAIProvider(settings) {
   const response=await providerFetch(settings,"/models",{method:"GET"}),body=await response.json(),models=Array.isArray(body.data)?body.data.length:null;return models===null?"Connected successfully.":`Connected successfully · ${models} models available.`;
 }
 function assistantSystemPrompt() {
-  return `You are Orbit Copilot, an assistant operating a JSON Canvas 1.0 life-management canvas. Respond with exactly one JSON object and no markdown fences: {"message":"Brief response to the user","operations":[]}.
+  return `You are Balaur, an assistant operating a JSON Canvas 1.0 life-management canvas. Respond with exactly one JSON object and no markdown fences: {"message":"Brief response to the user","operations":[]}.
 Allowed operations:
 {"type":"node.add","node":<complete JSON Canvas node with unique id, type, integer x/y/width/height and required type field>}
 {"type":"node.update","id":"existing id","patch":<changed standard fields>}

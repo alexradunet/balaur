@@ -1,4 +1,4 @@
-const CACHE_NAME = "orbit-shell-v2";
+const CACHE_NAME = "orbit-shell-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -33,9 +33,9 @@ const APP_SHELL = [
   "./vendor/sqlite/sqlite3.mjs",
   "./vendor/sqlite/sqlite3.wasm",
   "./widgets/focus-orbit.html",
-  "./icons/orbit.svg",
-  "./icons/orbit-192.png",
-  "./icons/orbit-512.png"
+  "./icons/balaur.svg",
+  "./icons/balaur-192.png",
+  "./icons/balaur-512.png"
 ];
 
 self.addEventListener("install", event => {

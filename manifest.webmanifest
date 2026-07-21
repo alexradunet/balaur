@@ -1,17 +1,17 @@
 {
   "id": "./",
-  "name": "Orbit — life on a canvas",
-  "short_name": "Orbit",
+  "name": "Balaur — life on a canvas",
+  "short_name": "Balaur",
   "description": "A local-first life-management workspace built on JSON Canvas.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1a110f",
-  "theme_color": "#1a110f",
+  "background_color": "#100d0b",
+  "theme_color": "#100d0b",
   "categories": ["productivity", "lifestyle"],
   "icons": [
-    { "src": "icons/orbit-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/orbit-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/orbit.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "icons/balaur-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/balaur-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/balaur.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Orbit">
-  <rect width="512" height="512" rx="96" fill="#1a110f"/>
-  <circle cx="256" cy="256" r="154" fill="none" stroke="#815044" stroke-width="12"/>
-  <ellipse cx="256" cy="256" rx="190" ry="82" fill="none" stroke="#c9674a" stroke-width="15" transform="rotate(-24 256 256)"/>
-  <circle cx="256" cy="256" r="39" fill="#f0aa82"/>
-  <circle cx="400" cy="166" r="23" fill="#d9a441"/>
-  <circle cx="126" cy="326" r="18" fill="#4f9c91"/>
-</svg>

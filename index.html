@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1a110f" />
+  <meta name="theme-color" content="#100d0b" />
   <meta name="description" content="A local-first life-management workspace built on JSON Canvas." />
-  <title>Orbit — life on a canvas</title>
+  <title>Balaur — life on a canvas</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icons/orbit.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="icons/orbit-192.png" />
+  <link rel="icon" href="icons/balaur.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/balaur-192.png" />
   <link rel="stylesheet" href="vendor/pixel-loom/fonts.css" />
   <link rel="stylesheet" href="vendor/pixel-loom/tokens/linen.css" />
   <link rel="stylesheet" href="styles/layers.css" />
@@ -25,8 +25,8 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true"><span></span></div>
-        <div><strong>Orbit</strong><small>life canvas</small></div>
+        <div class="brand-mark" aria-hidden="true"><span class="brand-coil"></span><span class="brand-eye"></span></div>
+        <div><strong>Balaur</strong><small>life atlas</small></div>
       </div>
 
       <div class="view-title">
@@ -37,7 +37,7 @@
 
       <nav class="top-actions" aria-label="Document actions">
         <span class="save-state" id="saveState"><i></i> Saved locally</span>
-        <button class="button assistant-button" id="assistantButton"><span>✦</span> Ask Orbit</button>
+        <button class="button assistant-button familiar-control" id="assistantButton" aria-label="Ask Balaur"><span class="familiar-glyph" aria-hidden="true">◒</span><span class="familiar-label">Ask Balaur</span></button>
         <button class="button ghost" id="importButton">Import</button>
         <button class="button primary" id="exportButton">Export .canvas</button>
         <input type="file" id="fileInput" accept=".canvas,.orbit,.json,application/json" hidden />
@@ -125,9 +125,9 @@
       </div>
     </aside>
 
-    <aside class="ai-panel" id="aiPanel" aria-hidden="true" aria-label="Orbit Copilot" inert>
+    <aside class="ai-panel" id="aiPanel" aria-hidden="true" aria-label="Balaur" inert>
       <header class="ai-head">
-        <div><span class="ai-spark">✦</span><div><b>Orbit Copilot</b><small id="aiProviderLabel">Local canvas tools</small></div></div>
+        <div><span class="ai-spark">◒</span><div><b>Balaur</b><small id="aiProviderLabel">Local canvas tools</small></div></div>
         <div class="ai-head-actions"><button id="openAISettings" aria-label="AI provider settings" title="AI provider settings">⚙</button><button id="closeAssistant" aria-label="Close assistant">×</button></div>
       </header>
       <div class="ai-context" id="aiContext"></div>
@@ -202,7 +202,7 @@
     <form id="aiSettingsForm" autocomplete="off">
       <header><div><span>✦</span><div><b>AI provider</b><small>OpenAI-compatible chat completions</small></div></div><button type="button" id="closeAISettings" aria-label="Close settings">×</button></header>
       <div class="settings-body">
-        <div class="settings-notice"><b>Client-side testing</b><p>Your key is sent directly from this browser to the provider. It is never sent to Orbit or GitHub Pages. Only remember it on a trusted device.</p></div>
+        <div class="settings-notice"><b>Client-side testing</b><p>Your key is sent directly from this browser to the provider. It is never sent to Balaur or GitHub Pages. Only remember it on a trusted device.</p></div>
         <label class="settings-field"><span>API base URL</span><input id="aiBaseURL" type="url" required placeholder="https://api.mistral.ai/v1"></label>
         <label class="settings-field"><span>Model</span><input id="aiModel" required placeholder="mistral-small-latest"></label>
         <label class="settings-field"><span>API key</span><div class="key-input"><input id="aiAPIKey" type="password" autocomplete="new-password" required placeholder="Paste your API key"><button type="button" id="toggleAIKey" aria-label="Show API key">Show</button></div></label>

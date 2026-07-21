@@ -29,7 +29,7 @@ class SqliteLifeStore {
   migrate() {
     this.db.exec("PRAGMA foreign_keys=ON;");
     const version = Number(this.db.selectValue("PRAGMA user_version") || 0);
-    if (version > SCHEMA_VERSION) throw new Error(`Life database schema ${version} is newer than this Orbit build`);
+    if (version > SCHEMA_VERSION) throw new Error(`Life database schema ${version} is newer than this Balaur build`);
     if (version < 1) this.db.transaction(() => {
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS canvases (
@@ -205,7 +205,7 @@ async function initializeLifeStore() {
     window.dispatchEvent(new CustomEvent("orbit:life-store-ready", { detail: store.stats() }));
     return store;
   } catch (error) {
-    console.error("Could not initialize the Orbit life database", error);
+    console.error("Could not initialize the Balaur life database", error);
     if (status) { status.className = "storage-state error"; status.innerHTML = "<i></i> Life database unavailable"; status.title = error.message; }
     window.dispatchEvent(new CustomEvent("orbit:life-store-error", { detail: error }));
     return null;

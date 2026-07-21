@@ -10,7 +10,7 @@ export async function registerOffline() {
     window.dispatchEvent(new CustomEvent("orbit:offline-ready", { detail: { scope: registration.scope } }));
     return registration;
   } catch (error) {
-    console.warn("Orbit could not enable offline mode", error);
+    console.warn("Balaur could not enable offline mode", error);
     window.dispatchEvent(new CustomEvent("orbit:offline-error", { detail: error }));
     return null;
   }
