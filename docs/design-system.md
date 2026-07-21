@@ -25,6 +25,8 @@ JSON Canvas preset colors remain separate because red, orange, yellow, green, cy
 
 The carved-oak surface (`--balaur-texture-oak`) is a single crafted panel: a smooth vertical grain lit by a soft candle-gold sheen at the top-leading corner and deepened by a vignette at the trailing corner. It is deliberately *not* a repeating stripe or comb pattern — hard vertical banding read as visual noise behind text and controls. Texture is CSS-only and subordinate to text contrast: the oak sheen and vignette are kept faint enough that muted labels on the furniture stay legible, `prefers-reduced-transparency` removes material images, `prefers-contrast: more` strengthens control and panel borders, and forced-colors mode removes textures and maps selection/focus states to system colors.
 
+The canvas action bar is carved oak afloat on the map: a centered rail of tool buttons ending in a single ＋ Add control whose menu is an oak-raised panel under the hard overlay shadow. The menu keeps the entity glyph palette — orange note, red goal/task, green habit/AI operator, purple project, cyan widget/AI note, gold sub-canvas — so node kinds stay recognizable at a glance.
+
 ## Signature elements
 
 Selection turns the card's own border candle gold and frames it with four corner registration brackets set just outside the card — gold on the top-left/bottom-right, river teal on the top-right/bottom-left. There is no enclosing ring and no circular handles on a selected card; the connection dots belong to the connect affordance and appear only on an unselected card or while the connect tool is active. The single familiar control uses the Balaur glyph and opens the assistant; there is no duplicate assistant launcher. These signatures carry identity while ordinary controls stay restrained.
@@ -54,6 +56,7 @@ Motion explains state, hierarchy, and spatial travel:
 
 - press and focus use short tokenized feedback;
 - library, inspector, assistant, and dialog surfaces use panel travel;
+- the Add menu drops from the action bar with short tokenized travel (flipped upward in the narrow shell);
 - nested-canvas navigation uses a document View Transition when supported;
 - the selection frame animates once when selection enters;
 - edges and AI activity animate only while processing.

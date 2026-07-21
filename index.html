@@ -43,22 +43,7 @@
       </nav>
     </header>
 
-    <aside class="sidebar" id="sidebar" aria-label="Canvas tools and library">
-      <section aria-label="Add to canvas">
-        <p class="section-label">ADD TO CANVAS</p>
-        <div class="add-grid">
-          <button class="add-card" data-add="note"><span class="add-icon note-icon">✦</span><b>Note</b><small>Thought or idea</small></button>
-          <button class="add-card" data-add="goal"><span class="add-icon goal-icon">◎</span><b>Goal</b><small>Desired outcome</small></button>
-          <button class="add-card" data-add="habit"><span class="add-icon habit-icon">↻</span><b>Habit</b><small>Daily practice</small></button>
-          <button class="add-card" data-add="project"><span class="add-icon project-icon">◇</span><b>Project</b><small>Active work</small></button>
-          <button class="add-card wide" data-add="task"><span class="add-icon task-icon">✓</span><b>Task</b><small>Action with status, schedule, and due date</small></button>
-          <button class="add-card wide" data-add="ai-note"><span class="add-icon ai-note-icon">✎</span><b>AI note</b><small>Ask a question, then create a note</small></button>
-          <button class="add-card wide" data-add="ai"><span class="add-icon ai-icon">✦</span><b>AI operator</b><small>Connected inputs → generated note</small></button>
-          <button class="add-card wide" data-add="widget"><span class="add-icon widget-icon">◉</span><b>Live widget</b><small>Sandboxed HTML, CSS, or WebGL</small></button>
-          <button class="add-card wide subcanvas-add" data-add="subcanvas"><span class="add-icon subcanvas-icon">↘</span><b>Sub-canvas</b><small>Enter by opening or zooming into it</small></button>
-        </div>
-      </section>
-
+    <aside class="sidebar" id="sidebar" aria-label="Canvas library">
       <nav aria-label="Canvas hierarchy">
         <div class="section-heading"><p class="section-label">CANVASES</p><span class="section-actions"><button class="tiny-btn jd-button" id="johnnyDecimalState" title="Johnny Decimal index" aria-label="Open Johnny Decimal index">JD</button><button class="tiny-btn" id="newCanvas" title="Add sub-canvas" aria-label="Add sub-canvas">＋</button></span></div>
         <div id="canvasList"></div>
@@ -95,6 +80,21 @@
           <span></span>
           <button class="tool" data-tool="connect" title="Connect nodes (C), or drag a card’s side handle">⌁</button>
           <button class="tool" data-tool="note" title="Add note (N)">T</button>
+          <span></span>
+          <div class="add-menu">
+            <button class="tool add-menu-toggle" id="addMenuToggle" aria-haspopup="menu" aria-expanded="false" aria-controls="addMenu" title="Add to canvas">＋</button>
+            <div class="add-menu-panel" id="addMenu" role="menu" aria-label="Add to canvas" hidden>
+              <button class="add-menu-item" role="menuitem" data-add="note"><span class="add-icon note-icon" aria-hidden="true">✦</span><span class="add-menu-text"><b>Note</b><small>Thought or idea</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="goal"><span class="add-icon goal-icon" aria-hidden="true">◎</span><span class="add-menu-text"><b>Goal</b><small>Desired outcome</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="habit"><span class="add-icon habit-icon" aria-hidden="true">↻</span><span class="add-menu-text"><b>Habit</b><small>Daily practice</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="project"><span class="add-icon project-icon" aria-hidden="true">◇</span><span class="add-menu-text"><b>Project</b><small>Active work</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="task"><span class="add-icon task-icon" aria-hidden="true">✓</span><span class="add-menu-text"><b>Task</b><small>Action with status, schedule, and due date</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="ai-note"><span class="add-icon ai-note-icon" aria-hidden="true">✎</span><span class="add-menu-text"><b>AI note</b><small>Ask a question, then create a note</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="ai"><span class="add-icon ai-icon" aria-hidden="true">✦</span><span class="add-menu-text"><b>AI operator</b><small>Connected inputs → generated note</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="widget"><span class="add-icon widget-icon" aria-hidden="true">◉</span><span class="add-menu-text"><b>Live widget</b><small>Sandboxed HTML, CSS, or WebGL</small></span></button>
+              <button class="add-menu-item" role="menuitem" data-add="subcanvas"><span class="add-icon subcanvas-icon" aria-hidden="true">↘</span><span class="add-menu-text"><b>Sub-canvas</b><small>Enter by opening or zooming into it</small></span></button>
+            </div>
+          </div>
         </div>
 
         <div class="zoom-tools">

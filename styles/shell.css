@@ -217,45 +217,6 @@
     font: 500 9px var(--balaur-font-mono);
     letter-spacing: .12em;
   }
-  .add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .add-card {
-    position: relative;
-    min-height: 58px;
-    border: 1px solid var(--balaur-border-default);
-    border-radius: var(--balaur-radius-control);
-    padding: 9px;
-    background: var(--balaur-surface-oak-raised);
-    box-shadow: inset 1px 1px rgb(255 255 255 / 11%);
-    color: var(--balaur-content-on-dark);
-    text-align: start;
-    cursor: pointer;
-  }
-  .add-card:hover { border-color: var(--balaur-action-primary); }
-  .add-card b, .add-card small { display: block; }
-  .add-card b { margin-block-start: 3px; font-size: 10px; }
-  .add-card small {
-    color: var(--balaur-content-on-dark-muted);
-    font-size: 8px;
-    line-height: 1.25;
-  }
-  .add-card.wide {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 26px 1fr;
-    grid-template-rows: auto auto;
-    min-height: 48px;
-    align-items: end;
-  }
-  .add-card.wide .add-icon { grid-row: 1 / 3; align-self: center; }
-  .add-card.wide b { margin: 0; }
-  .add-card.wide small { align-self: start; }
-  .add-icon { font: 500 17px var(--balaur-font-mono); }
-  .note-icon { color: var(--balaur-canvas-orange); }
-  .goal-icon, .task-icon { color: var(--balaur-canvas-red); }
-  .habit-icon, .ai-icon { color: var(--balaur-canvas-green); }
-  .project-icon { color: var(--balaur-canvas-purple); }
-  .widget-icon, .ai-note-icon { color: var(--balaur-canvas-cyan); }
-  .subcanvas-icon { color: var(--balaur-action-primary); }
   .section-heading { display: flex; align-items: start; justify-content: space-between; }
   .section-actions { display: flex; align-items: center; gap: 4px; }
   .tiny-btn {

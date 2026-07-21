@@ -1,5 +1,5 @@
 @layer motion {
-  :where(.button, .add-card, .nav-item, .tool, .zoom-tools button, .tiny-btn) {
+  :where(.button, .add-menu-item, .nav-item, .tool, .zoom-tools button, .tiny-btn) {
     transition:
       color var(--balaur-duration-focus) var(--balaur-ease-standard),
       background-color var(--balaur-duration-focus) var(--balaur-ease-standard),
@@ -7,7 +7,7 @@
       transform var(--balaur-duration-press) var(--balaur-ease-standard);
   }
 
-  :where(.button, .add-card, .tool):active {
+  :where(.button, .add-menu-item, .tool):active {
     transform: translateY(var(--balaur-distance-press));
   }
 
@@ -35,6 +35,12 @@
   }
 
   .ai-panel {
+    transition:
+      opacity var(--balaur-duration-panel) var(--balaur-ease-standard),
+      transform var(--balaur-duration-panel) var(--balaur-ease-enter);
+  }
+
+  .add-menu-panel {
     transition:
       opacity var(--balaur-duration-panel) var(--balaur-ease-standard),
       transform var(--balaur-duration-panel) var(--balaur-ease-enter);
@@ -94,6 +100,10 @@
     dialog[open] {
       opacity: 0;
       transform: translateY(var(--balaur-distance-panel));
+    }
+    .add-menu-panel:not([hidden]) {
+      opacity: 0;
+      transform: translateY(calc(-1 * var(--balaur-distance-panel)));
     }
   }
 

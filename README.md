@@ -53,7 +53,7 @@ Then open <http://localhost:4173>. Set `PORT` or `HOST` to override the defaults
 | Select | `V` |
 | Delete | `Delete` / `Backspace` |
 | Switch workspace view | Select **Canvas** or **Today** in the header |
-| Add task | Select **Task** in the sidebar or **Add task** in Today |
+| Add task | Select **＋ Add → Task** on the canvas action bar, or **Add task** in Today |
 | Open Johnny Decimal index | Select **JD** beside Canvases or press `Ctrl/Cmd + K` |
 | Export current canvas | `Ctrl/Cmd + S` |
 | Export all canvases | Select **Export whole space** in the sidebar |
@@ -111,11 +111,11 @@ The static app calls the provider directly with `fetch()` using its OpenAI-compa
 
 ### AI notes
 
-Select **AI note** in the sidebar. Balaur asks for your prompt before creating anything, sends it directly to the configured provider, and places the Markdown response near the center of the current view as a standard JSON Canvas text node.
+Select **＋ Add → AI note** on the canvas action bar. Balaur asks for your prompt before creating anything, sends it directly to the configured provider, and places the Markdown response near the center of the current view as a standard JSON Canvas text node.
 
 ### AI operator cards
 
-1. Add an **AI operator** from the left sidebar.
+1. Add an **AI operator** via **＋ Add** on the canvas action bar.
 2. Edit its instructions in the inspector.
 3. Connect input notes into the operator: select the connect tool, click an input, then click the AI card.
 4. It runs after the connection is added; use **Run now** whenever you want a manual refresh.

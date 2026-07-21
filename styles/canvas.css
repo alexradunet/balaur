@@ -459,7 +459,7 @@
     box-shadow: inset 1px 1px var(--balaur-border-default);
     transform: translateX(-50%);
   }
-  .canvas-tools span { width: 1px; margin: 5px 3px; background: var(--balaur-border-default); }
+  .canvas-tools > span { width: 1px; margin: 5px 3px; background: var(--balaur-border-default); }
   .tool {
     width: var(--balaur-target-min);
     height: var(--balaur-target-min);
@@ -471,6 +471,46 @@
     cursor: pointer;
   }
   .tool:hover, .tool.active { background: var(--balaur-surface-oak); color: var(--balaur-action-primary); }
+  .add-menu { position: relative; }
+  .add-menu-toggle[aria-expanded="true"] { background: var(--balaur-surface-oak); color: var(--balaur-action-primary); }
+  .add-menu-panel {
+    position: absolute;
+    top: calc(100% + 9px);
+    right: 0;
+    z-index: 30;
+    display: grid;
+    gap: 2px;
+    min-width: 250px;
+    border: 2px solid var(--balaur-color-outline);
+    border-radius: var(--balaur-radius-control);
+    padding: 5px;
+    background: var(--balaur-surface-oak-raised);
+    box-shadow: inset 1px 1px var(--balaur-border-default), var(--balaur-shadow-overlay);
+  }
+  .add-menu-panel[hidden] { display: none; }
+  .add-menu-item {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 10px;
+    align-items: center;
+    border: 0;
+    border-radius: 1px;
+    padding: 7px 9px;
+    background: transparent;
+    color: var(--balaur-content-on-dark);
+    text-align: start;
+    cursor: pointer;
+  }
+  .add-menu-item:hover, .add-menu-item:focus-visible { background: var(--balaur-surface-oak); }
+  .add-menu-item b { display: block; font-size: 11px; }
+  .add-menu-item small { display: block; margin-block-start: 1px; color: var(--balaur-content-on-dark-muted); font-size: 9px; line-height: 1.25; }
+  .add-icon { font: 500 17px var(--balaur-font-mono); }
+  .note-icon { color: var(--balaur-canvas-orange); }
+  .goal-icon, .task-icon { color: var(--balaur-canvas-red); }
+  .habit-icon, .ai-icon { color: var(--balaur-canvas-green); }
+  .project-icon { color: var(--balaur-canvas-purple); }
+  .widget-icon, .ai-note-icon { color: var(--balaur-canvas-cyan); }
+  .subcanvas-icon { color: var(--balaur-action-primary); }
   .zoom-tools {
     position: absolute;
     left: 17px;

@@ -547,6 +547,7 @@ function render() {
   applyCamera(); renderEdges(); renderNodes(); renderInspector(); renderWorkspaceNavigation(); updateAssistantContext();
 }
 function setAppView(view){
+  closeAddMenu();
   activeAppView=view==="today"?"today":"canvas";if(activeAppView==="today")shell.classList.remove("inspector-open");$("#canvas").hidden=activeAppView!=="canvas";$("#todayView").hidden=activeAppView!=="today";$$('[data-app-view]').forEach(button=>button.classList.toggle("active",button.dataset.appView===activeAppView));if(activeAppView==="today")renderToday();else applyCamera();
 }
 function applyCamera() {
@@ -648,6 +649,12 @@ function setTool(tool) {
   $$(".tool").forEach(b=>b.classList.toggle("active",b.dataset.tool===tool));
   canvas.classList.toggle("tool-pan",tool==="pan"); canvas.classList.toggle("tool-connect",tool==="connect"); renderNodes();
 }
+
+const addMenuToggle=$("#addMenuToggle"),addMenuPanel=$("#addMenu");
+function addMenuItems(){return $$(".add-menu-item",addMenuPanel);}
+function openAddMenu(){addMenuPanel.hidden=false;addMenuToggle.setAttribute("aria-expanded","true");addMenuItems()[0]?.focus();}
+function closeAddMenu(refocus=false){if(addMenuPanel.hidden)return;addMenuPanel.hidden=true;addMenuToggle.setAttribute("aria-expanded","false");if(refocus)addMenuToggle.focus();}
+function toggleAddMenu(){addMenuPanel.hidden?openAddMenu():closeAddMenu();}
 
 function addNode(kind, point) {
   if(kind==="subcanvas")return createSubcanvas(point);if(kind==="task"){openTaskDialog();return;}
@@ -940,10 +947,20 @@ async function runAICard(cardId,{manual=false}={}) {
 window.orbitCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createJDEntry,createTask,goToJD,loadJohnnyDecimalStarter,setView:setAppView,switchCanvas,exportWorkspace};
 applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
 
-$$("[data-add]").forEach(button=>button.onclick=()=>button.dataset.add==="ai-note"?openAINoteDialog():addNode(button.dataset.add));$$('[data-app-view]').forEach(button=>button.onclick=()=>setAppView(button.dataset.appView));
+$$("[data-add]").forEach(button=>button.onclick=()=>{closeAddMenu();button.dataset.add==="ai-note"?openAINoteDialog():addNode(button.dataset.add);});
+addMenuToggle.onclick=toggleAddMenu;
+document.addEventListener("pointerdown",event=>{if(!addMenuPanel.hidden&&!event.target.closest?.(".add-menu"))closeAddMenu();});
+addMenuPanel.addEventListener("keydown",event=>{const items=addMenuItems(),index=items.indexOf(document.activeElement);
+  if(event.key==="Escape"){event.preventDefault();closeAddMenu(true);return;}
+  if(event.key==="ArrowDown"){event.preventDefault();items[(index+1)%items.length].focus();}
+  if(event.key==="ArrowUp"){event.preventDefault();items[(index-1+items.length)%items.length].focus();}
+  if(event.key==="Home"){event.preventDefault();items[0].focus();}
+  if(event.key==="End"){event.preventDefault();items[items.length-1].focus();}});
+addMenuToggle.addEventListener("keydown",event=>{if(event.key==="Escape")closeAddMenu(true);if(event.key==="ArrowDown"&&addMenuPanel.hidden){event.preventDefault();openAddMenu();}});
+$$('[data-app-view]').forEach(button=>button.onclick=()=>setAppView(button.dataset.appView));
 $("#newGroup").onclick=()=>addNode("group");$("#newCanvas").onclick=()=>createSubcanvas();$("#johnnyDecimalState").onclick=openJohnnyDecimalDialog;
 $$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=button.dataset.filter;$$(".nav-item[data-filter]").forEach(b=>b.classList.toggle("active",b===button));renderNodes();renderEdges();});
-$$(".tool").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;if(tool==="note")setTool("note");else setTool(tool);});
+$$(".tool:not(.add-menu-toggle)").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;if(tool==="note")setTool("note");else setTool(tool);});
 $("#zoomIn").onclick=()=>setZoom(camera.zoom*1.2);$("#zoomOut").onclick=()=>setZoom(camera.zoom/1.2);$("#zoomLabel").onclick=()=>setZoom(1);$("#fitView").onclick=fitView;
 $("#exportButton").onclick=exportCanvas;$("#exportWorkspaceButton").onclick=exportWorkspace;$("#importButton").onclick=()=>$("#fileInput").click();$("#fileInput").onchange=e=>{if(e.target.files[0])importCanvas(e.target.files[0]);e.target.value="";};
 $("#sidebarToggle").onclick=()=>shell.classList.toggle("sidebar-closed");$("#sidebar").addEventListener("click",event=>{if(narrowShell.matches&&event.target.closest("button"))shell.classList.add("sidebar-closed");});

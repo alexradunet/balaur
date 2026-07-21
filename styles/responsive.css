@@ -74,6 +74,8 @@
     .familiar-glyph { margin: 0; }
 
     .canvas-tools { top: auto; bottom: 16px; }
+    .add-menu-panel { top: auto; bottom: calc(100% + 9px); }
+    @starting-style { .add-menu-panel:not([hidden]) { transform: translateY(var(--balaur-distance-panel)); } }
     .zoom-tools { display: none; }
     .ai-panel { inset: 70px 8px 8px; width: auto; }
     .jd-field-row, .task-field-row { grid-template-columns: 1fr; }
