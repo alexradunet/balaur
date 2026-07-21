@@ -38,6 +38,7 @@ let connectSource = null;
 let activeFilter = "all";
 let spaceDown = false;
 let saveTimer;
+const aiCardRuntime=new Map();
 
 const canvas = $("#canvas");
 const world = $("#world");
@@ -95,6 +96,21 @@ function safeFileURL(value="") {
   return encodeURI(path).replace(/#/g,"%23");
 }
 
+const AI_CARD_MARKER="<!-- orbit:ai-card -->";
+function isAICard(node){return node?.type==="text"&&node.text.includes(AI_CARD_MARKER);}
+function parseAICard(node){
+  const lines=(node.text||"").split(/\r?\n/).filter(line=>line.trim()!==AI_CARD_MARKER),heading=lines.findIndex(line=>line.startsWith("# ")),title=heading>=0?lines[heading].slice(2).trim():"AI operator";
+  if(heading>=0)lines.splice(heading,1);return {title,prompt:lines.join("\n").trim()||"Summarize the connected notes."};
+}
+function buildAICardText(title,prompt){return `${AI_CARD_MARKER}\n# ${title.trim()||"AI operator"}\n${prompt.trim()||"Summarize the connected notes."}`;}
+function nodeTitle(node){
+  if(isAICard(node))return parseAICard(node).title;if(node.type==="text"){const heading=node.text.match(/^#{1,2}\s+(.+)$/m);return heading?heading[1]:"Text note";}if(node.type==="group")return node.label||"Group";if(node.type==="link")try{return new URL(node.url).hostname;}catch(_){return "Link";}if(node.type==="file")return node.file.split("/").pop();return node.id;
+}
+function inputNodesForAICard(cardId,data=documentData){const byId=Object.fromEntries((data.nodes||[]).map(node=>[node.id,node]));return (data.edges||[]).filter(edge=>edge.toNode===cardId&&edge.label!=="AI output").map(edge=>byId[edge.fromNode]).filter(Boolean);}
+function nodeAIContent(node){if(node.type==="text")return node.text;if(node.type==="link")return node.url;if(node.type==="file")return [node.file,node.subpath].filter(Boolean).join(" ");if(node.type==="group")return node.label||"";return "";}
+function aiCardSignature(card,data=documentData){return JSON.stringify([card.text,inputNodesForAICard(card.id,data).map(node=>[node.id,nodeAIContent(node)])]);}
+function aiCardSignatures(data=documentData){return new Map((data.nodes||[]).filter(isAICard).map(card=>[card.id,aiCardSignature(card,data)]));}
+
 function textMeta(node) {
   const map = {"1":"GOAL", "2":"IDEA", "3":"NOTE", "4":"HABIT", "5":"RESOURCE", "6":"PROJECT"};
   return map[node.color] || node.type.toUpperCase();
@@ -116,7 +132,7 @@ function markdownToHTML(source="") {
       continue;
     }
     if (inList) { html += "</ul>"; inList = false; }
-    if (!line.trim()) continue;
+    if (!line.trim() || /^<!--\s*orbit:/.test(line.trim())) continue;
     if (line.startsWith("# ")) html += `<h2>${inline(line.slice(2))}</h2>`;
     else if (line.startsWith("## ")) html += `<h3>${inline(line.slice(3))}</h3>`;
     else if (/^Progress:\s*\d+%/i.test(line)) {
@@ -145,7 +161,10 @@ function renderNodes() {
       content.innerHTML = `<div class="group-label">${escapeHTML(node.label || "Untitled group")}</div>`;
       $(".node-accent", element).remove();
     } else if (node.type === "text") {
-      content.innerHTML = `<div class="node-kicker">${textMeta(node)}</div>${markdownToHTML(node.text)}`;
+      if(isAICard(node)){
+        const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
+        content.innerHTML=`<div class="node-kicker">AI OPERATOR</div><h3 class="ai-card-title">${escapeHTML(config.title)}</h3><p class="ai-card-prompt">${escapeHTML(config.prompt)}</p><div class="ai-inputs">${inputs.length?inputs.map(input=>`<span class="ai-input-chip">← ${escapeHTML(nodeTitle(input))}</span>`).join(""):"<span class=\"ai-input-chip\">No inputs connected</span>"}</div><div class="ai-run-row"><span class="ai-run-status">${escapeHTML(runtime.status||"Ready")}</span><button class="ai-run-button" data-ai-run ${runtime.running?"disabled":""}>${runtime.running?"Running…":"Run now"}</button></div>`;
+      } else content.innerHTML = `<div class="node-kicker">${textMeta(node)}</div>${markdownToHTML(node.text)}`;
     } else if (node.type === "link") {
       let linkTitle = "Saved link";
       try { linkTitle = new URL(node.url).hostname.replace(/^www\./, ""); } catch (_) {}
@@ -157,6 +176,7 @@ function renderNodes() {
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p>`;
     }
     element.addEventListener("pointerdown", event => nodePointerDown(event, node));
+    const aiRun=$("[data-ai-run]",element);if(aiRun){aiRun.addEventListener("pointerdown",event=>event.stopPropagation());aiRun.addEventListener("click",event=>{event.stopPropagation();runAICard(node.id,{manual:true});});}
     element.addEventListener("click", event => {
       const anchor = event.target.closest("a");
       if (anchor) event.stopPropagation();
@@ -232,9 +252,9 @@ function nodePointerDown(event,node) {
   if (currentTool === "connect") {
     if (!connectSource) { connectSource=node.id; toast("Now choose a destination"); }
     else if (connectSource !== node.id) {
-      documentData.edges ||= [];
+      const before=aiCardSignatures();documentData.edges ||= [];
       documentData.edges.push({id:uid("edge"),fromNode:connectSource,toNode:node.id,toEnd:"arrow"});
-      connectSource=null; setTool("select"); scheduleSave(); toast("Nodes connected");
+      connectSource=null; setTool("select"); scheduleSave();scheduleChangedAICards(before); toast("Nodes connected");
     }
     render(); return;
   }
@@ -297,6 +317,7 @@ function addNode(kind, point) {
     goal:{type:"text",color:"1",width:300,height:190,text:"# A meaningful goal\nWhat would make this worth doing?\n\n- [ ] Define the first step\n\nProgress: 0%"},
     habit:{type:"text",color:"4",width:280,height:145,text:"# New daily practice\nMake it small enough to begin today."},
     project:{type:"text",color:"6",width:300,height:210,text:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
+    ai:{type:"text",color:"5",width:330,height:210,text:`${AI_CARD_MARKER}\n# Weekly synthesis\nSummarize the connected notes. Highlight progress, blockers, and the most useful next action.`},
     widget:{type:"file",color:"5",width:480,height:290,file:"widgets/focus-orbit.html"},
     group:{type:"group",color:"5",width:620,height:430,label:"New area"}
   };
@@ -316,7 +337,8 @@ function renderInspector() {
   const colorButtons=Object.entries(COLORS).map(([key,value])=>`<button type="button" class="color-choice ${item.color===key?"active":""}" data-color="${key}" style="background:${value}" aria-label="Color ${key}"></button>`).join("");
   if (selected.kind==="node") {
     let contentField="";
-    if (item.type==="text") contentField=`<label class="field"><span>Markdown</span><textarea data-key="text">${escapeHTML(item.text)}</textarea></label>`;
+    if (item.type==="text"&&isAICard(item)){const config=parseAICard(item);contentField=`<label class="field"><span>Operator name</span><input data-key="aiTitle" value="${escapeHTML(config.title)}"></label><label class="field"><span>AI instructions</span><textarea data-key="aiPrompt">${escapeHTML(config.prompt)}</textarea></label><div class="field-hint">Incoming connections become context. The generated note updates automatically when that context changes.</div>`;}
+    else if (item.type==="text") contentField=`<label class="field"><span>Markdown</span><textarea data-key="text">${escapeHTML(item.text)}</textarea></label>`;
     if (item.type==="link") contentField=`<label class="field"><span>URL</span><input data-key="url" value="${escapeHTML(item.url)}"></label>`;
     if (item.type==="file") contentField=`<label class="field"><span>File path</span><input data-key="file" value="${escapeHTML(item.file)}"></label><label class="field"><span>Subpath</span><input data-key="subpath" value="${escapeHTML(item.subpath||"")}"></label>`;
     if (item.type==="group") contentField=`<label class="field"><span>Label</span><input data-key="label" value="${escapeHTML(item.label||"")}"></label><label class="field"><span>Background path</span><input data-key="background" value="${escapeHTML(item.background||"")}"></label>`;
@@ -326,21 +348,23 @@ function renderInspector() {
   }
   $(".close-inspector",panel).onclick=()=>{selected=null;shell.classList.remove("inspector-open");render();};
   $$("[data-key]",panel).forEach(input=>input.addEventListener("input",()=>{
-    const key=input.dataset.key; item[key]=input.type==="number"?Math.round(Number(input.value)):input.value;
+    const before=aiCardSignatures(),key=input.dataset.key;
+    if(key==="aiTitle"||key==="aiPrompt"){const config=parseAICard(item);item.text=buildAICardText(key==="aiTitle"?input.value:config.title,key==="aiPrompt"?input.value:config.prompt);}
+    else item[key]=input.type==="number"?Math.round(Number(input.value)):input.value;
     if (input.tagName==="SELECT" && !input.value) delete item[key];
-    scheduleSave(); renderNodes(); renderEdges(); renderMinimap();
+    scheduleSave(); renderNodes(); renderEdges(); renderMinimap(); scheduleChangedAICards(before);
   }));
   $$(".color-choice",panel).forEach(button=>button.onclick=()=>{item.color=button.dataset.color;scheduleSave();render();});
   $(".danger-btn",panel).onclick=deleteSelection;
 }
 function sideOptions(value) { return ["","top","right","bottom","left"].map(s=>`<option value="${s}" ${value===s?"selected":""}>${s||"Auto"}</option>`).join(""); }
 function deleteSelection() {
-  if (!selected) return;
+  if (!selected) return;const before=aiCardSignatures();
   if (selected.kind==="node") {
     documentData.nodes=documentData.nodes.filter(n=>n.id!==selected.id);
     documentData.edges=(documentData.edges||[]).filter(e=>e.fromNode!==selected.id&&e.toNode!==selected.id);
   } else documentData.edges=documentData.edges.filter(e=>e.id!==selected.id);
-  selected=null;shell.classList.remove("inspector-open");scheduleSave();render();toast("Deleted");
+  selected=null;shell.classList.remove("inspector-open");scheduleSave();render();scheduleChangedAICards(before);toast("Deleted");
 }
 
 function updateCounts() {
@@ -406,8 +430,8 @@ function validateCanvasOperations(operations) {
   return {draft,themes};
 }
 function applyCanvasOperations(operations) {
-  const {draft,themes}=validateCanvasOperations(operations);documentData=draft;themes.forEach(applyCanvasTheme);
-  selected=null;shell.classList.remove("inspector-open");scheduleSave();render();updateAssistantContext();
+  const before=aiCardSignatures(),{draft,themes}=validateCanvasOperations(operations);documentData=draft;themes.forEach(applyCanvasTheme);
+  selected=null;shell.classList.remove("inspector-open");scheduleSave();render();updateAssistantContext();scheduleChangedAICards(before);
 }
 
 function applyCanvasTheme(theme) {
@@ -518,7 +542,37 @@ async function runRemoteAssistant(prompt) {
 }
 function runAssistant(prompt) {if(!prompt.trim())return;if(aiSettings.apiKey&&aiSettings.baseURL&&aiSettings.model)runRemoteAssistant(prompt);else runLocalAssistant(prompt);}
 
-window.orbitCanvas={getDocument:()=>clone(documentData),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations};
+function aiCardHasCycle(cardId){
+  const next=new Map();for(const edge of documentData.edges||[]){if(!next.has(edge.fromNode))next.set(edge.fromNode,[]);next.get(edge.fromNode).push(edge.toNode);}const seen=new Set();
+  function visit(id){if(seen.has(id))return false;seen.add(id);for(const child of next.get(id)||[]){if(child===cardId||visit(child))return true;}return false;}return visit(cardId);
+}
+function scheduleAICard(cardId,delay=1200){
+  const card=documentData.nodes.find(node=>node.id===cardId&&isAICard(node));if(!card)return;const state=aiCardRuntime.get(cardId)||{};clearTimeout(state.timer);
+  if(aiCardHasCycle(cardId)){state.status="Paused · connection cycle";aiCardRuntime.set(cardId,state);renderNodes();return;}
+  state.status="Inputs changed · queued";state.timer=setTimeout(()=>runAICard(cardId),delay);aiCardRuntime.set(cardId,state);renderNodes();
+}
+function scheduleChangedAICards(before) {
+  const after=aiCardSignatures();for(const [id,signature] of after){if(before.get(id)!==signature&&(before.has(id)||inputNodesForAICard(id).length))scheduleAICard(id);}
+}
+function providerMessageContent(content){if(Array.isArray(content))content=content.map(part=>part.text||part.content||"").join("");if(typeof content!=="string"||!content.trim())throw new Error("Provider returned an empty note");return content.trim().replace(/^```(?:markdown|md)?\s*/i,"").replace(/\s*```$/,"").replaceAll(AI_CARD_MARKER,"").trim();}
+async function runAICard(cardId,{manual=false}={}) {
+  const card=documentData.nodes.find(node=>node.id===cardId&&isAICard(node));if(!card)return;const state=aiCardRuntime.get(cardId)||{};clearTimeout(state.timer);
+  if(state.running){state.pending=true;aiCardRuntime.set(cardId,state);return;}if(!aiSettings.apiKey){state.status="Configure an AI provider";aiCardRuntime.set(cardId,state);renderNodes();setAssistantOpen(true);openAISettings();return;}
+  if(aiCardHasCycle(cardId)&&!manual){state.status="Paused · connection cycle";aiCardRuntime.set(cardId,state);renderNodes();return;}
+  const signature=aiCardSignature(card);if(!manual&&state.lastSignature===signature){state.status="Up to date";aiCardRuntime.set(cardId,state);renderNodes();return;}
+  const config=parseAICard(card),inputs=inputNodesForAICard(card.id);state.running=true;state.pending=false;state.status=`Reading ${inputs.length} input${inputs.length===1?"":"s"}…`;aiCardRuntime.set(cardId,state);renderNodes();
+  try{
+    const inputText=inputs.length?inputs.map((node,index)=>`## Input ${index+1}: ${nodeTitle(node)}\nType: ${node.type}\n${nodeAIContent(node).slice(0,30000)}`).join("\n\n---\n\n"):"No connected inputs.";
+    const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages:[{role:"system",content:"You generate one useful Markdown note from connected JSON Canvas inputs. Follow the operator instructions. Return only the note Markdown, without code fences, commentary, or JSON. Do not include HTML or scripts."},{role:"user",content:`Operator: ${config.title}\nInstructions:\n${config.prompt}\n\nConnected inputs:\n${inputText}`}],temperature:.3,max_tokens:2200})}),body=await response.json();
+    let generated=providerMessageContent(body.choices?.[0]?.message?.content);if(!/^#\s/m.test(generated))generated=`# ${config.title} — output\n\n${generated}`;
+    const before=aiCardSignatures();let outputEdge=(documentData.edges||[]).find(edge=>edge.fromNode===card.id&&edge.label==="AI output"),output=outputEdge&&documentData.nodes.find(node=>node.id===outputEdge.toNode&&node.type==="text");
+    if(!output){output={id:uid("node"),type:"text",x:card.x+card.width+90,y:card.y,width:380,height:240,color:"5",text:generated};documentData.nodes.push(output);outputEdge={id:uid("edge"),fromNode:card.id,fromSide:"right",toNode:output.id,toSide:"left",toEnd:"arrow",color:"5",label:"AI output"};documentData.edges.push(outputEdge);}else output.text=generated;
+    state.lastSignature=signature;state.status=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;scheduleSave();render();scheduleChangedAICards(before);toast(`${config.title} updated its output`);
+  }catch(error){state.status=`Error · ${error.message.slice(0,55)}`;toast("AI operator failed");}
+  finally{state.running=false;const pending=state.pending;state.pending=false;aiCardRuntime.set(cardId,state);renderNodes();if(pending)scheduleAICard(cardId,250);}
+}
+
+window.orbitCanvas={getDocument:()=>clone(documentData),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard};
 applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
 
 $$("[data-add]").forEach(button=>button.onclick=()=>addNode(button.dataset.add));

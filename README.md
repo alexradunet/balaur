@@ -16,6 +16,7 @@ A small, standalone proof of concept for a life-management app whose primary int
 - Inspector for content, geometry, colors, and edge routing
 - Sandboxed HTML/CSS/Three.js cards represented as standard file nodes
 - Canvas-aware copilot with local tools or a client-side OpenAI-compatible provider
+- Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
 - Library filters
 - Browser-local persistence
 - JSON Canvas `.canvas` import and export
@@ -55,6 +56,15 @@ API key:      your Mistral API key
 ```
 
 The static app calls the provider directly with `fetch()` using its OpenAI-compatible `/chat/completions` endpoint. The model receives the current canvas and proposes typed operations; changes are validated and require confirmation before being applied.
+
+### AI operator cards
+
+1. Add an **AI operator** from the left sidebar.
+2. Edit its instructions in the inspector.
+3. Connect input notes into the operator: select the connect tool, click an input, then click the AI card.
+4. It runs after the connection is added; use **Run now** whenever you want a manual refresh.
+
+The operator creates a standard text note and a labeled `AI output` connection. Changes to an input note are debounced and regenerate the same output note automatically. Connection cycles pause automatic execution to prevent request loops.
 
 By default, the key lives in `sessionStorage` for the current tab. Enabling **Remember API key** places it in `localStorage`. This client-only mode is intended for personal testing on a trusted device.
 

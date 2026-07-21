@@ -61,6 +61,22 @@ window.orbitCanvas.applyOperations(operations)
 
 All operations are allowlisted and the resulting document is validated before commit.
 
+## Reactive AI operator cards
+
+An AI operator remains a standard JSON Canvas text node. Orbit recognizes a portable Markdown marker rather than introducing a custom node type:
+
+```markdown
+<!-- orbit:ai-card -->
+# Weekly synthesis
+Summarize the connected notes and recommend the next action.
+```
+
+Incoming edges define its context. The operator sends the prompt and connected node content to the configured provider, creates a standard text node for the result, and connects it with an edge labeled `AI output`. Subsequent executions update that same note instead of generating duplicates.
+
+Orbit computes signatures from the prompt, incoming edge set, and input content. Content or connection changes queue a debounced regeneration. Coordinates and card dimensions do not trigger requests. Directed cycles pause automatic execution, and an update arriving during a request queues one follow-up run.
+
+This representation remains readable in other JSON Canvas clients: they see ordinary text nodes and edges even if they do not understand Orbit's marker.
+
 ## AI request flow
 
 1. The app derives a compact context: visible nodes, selected nodes, nearby relationships, open tasks, and available widget regions.
