@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0d12" />
+  <title>Orbit — life on a canvas</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div><strong>Orbit</strong><small>life canvas</small></div>
+      </div>
+
+      <div class="view-title">
+        <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Toggle library">☰</button>
+        <div><span class="eyebrow">MY SPACE</span><input id="canvasTitle" value="Life OS — Summer" aria-label="Canvas title" /></div>
+      </div>
+
+      <div class="top-actions">
+        <span class="save-state" id="saveState"><i></i> Saved locally</span>
+        <button class="button ghost" id="importButton">Import</button>
+        <button class="button primary" id="exportButton">Export .canvas</button>
+        <input type="file" id="fileInput" accept=".canvas,.json,application/json" hidden />
+      </div>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+      <section>
+        <p class="section-label">ADD TO CANVAS</p>
+        <div class="add-grid">
+          <button class="add-card" data-add="note"><span class="add-icon note-icon">✦</span><b>Note</b><small>Thought or idea</small></button>
+          <button class="add-card" data-add="goal"><span class="add-icon goal-icon">◎</span><b>Goal</b><small>Desired outcome</small></button>
+          <button class="add-card" data-add="habit"><span class="add-icon habit-icon">↻</span><b>Habit</b><small>Daily practice</small></button>
+          <button class="add-card" data-add="project"><span class="add-icon project-icon">◇</span><b>Project</b><small>Active work</small></button>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading"><p class="section-label">LIBRARY</p><button class="tiny-btn" id="newGroup" title="Add group">＋</button></div>
+        <button class="nav-item active" data-filter="all"><span>◫</span>Everything <em id="allCount">0</em></button>
+        <button class="nav-item" data-filter="1"><span class="dot red"></span>Goals <em id="goalCount">0</em></button>
+        <button class="nav-item" data-filter="4"><span class="dot green"></span>Habits <em id="habitCount">0</em></button>
+        <button class="nav-item" data-filter="6"><span class="dot purple"></span>Projects <em id="projectCount">0</em></button>
+        <button class="nav-item" data-filter="2"><span class="dot orange"></span>Ideas <em id="ideaCount">0</em></button>
+      </section>
+
+      <section class="sidebar-bottom">
+        <div class="tip"><span>⌘</span><div><b>Quick tip</b><p>Hold space and drag to move around your canvas.</p></div></div>
+        <button class="nav-item" id="resetDemo"><span>↺</span>Reset demo</button>
+        <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
+      </section>
+    </aside>
+
+    <main class="canvas-wrap">
+      <div class="canvas" id="canvas" tabindex="0">
+        <div class="world" id="world">
+          <svg class="edges" id="edges" overflow="visible" aria-hidden="true"></svg>
+          <div id="nodes"></div>
+        </div>
+
+        <div class="canvas-tools" role="toolbar" aria-label="Canvas tools">
+          <button class="tool active" data-tool="select" title="Select (V)">↖</button>
+          <button class="tool" data-tool="pan" title="Pan (H)">✋</button>
+          <span></span>
+          <button class="tool" data-tool="connect" title="Connect nodes (C)">⌁</button>
+          <button class="tool" data-tool="note" title="Add note (N)">T</button>
+        </div>
+
+        <div class="zoom-tools">
+          <button id="zoomOut" aria-label="Zoom out">−</button><button id="zoomLabel" title="Reset zoom">100%</button><button id="zoomIn" aria-label="Zoom in">＋</button><button id="fitView" title="Fit canvas">⌗</button>
+        </div>
+
+        <div class="minimap" id="minimap"><div class="mini-world" id="miniWorld"></div><div class="mini-viewport" id="miniViewport"></div></div>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+    </main>
+
+    <aside class="inspector" id="inspector">
+      <div class="inspector-empty">
+        <span>↖</span><h3>Nothing selected</h3><p>Select a card or connection to edit its details.</p>
+      </div>
+    </aside>
+  </div>
+
+  <template id="nodeTemplate">
+    <article class="canvas-node">
+      <div class="node-accent"></div>
+      <div class="node-content"></div>
+      <div class="resize-handle" title="Resize"></div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
