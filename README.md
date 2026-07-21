@@ -55,6 +55,8 @@ Then open <http://localhost:4173>.
 
 ## Johnny Decimal spaces
 
+A new browser profile opens with a pre-seeded fictional life index for **Alex, a 30-year-old man**. Existing spaces can load it from **JD → Load starter** after exporting a backup; loading the starter replaces the current local workspace.
+
 Select **JD** beside the Canvases heading. Orbit determines the next valid level from the selected parent:
 
 ```text
@@ -64,6 +66,8 @@ Index
         ├── 11.01 — Budget    item note
         └── 11.02 — Taxes     item canvas
 ```
+
+The starter includes 9 areas, 17 categories, and 34 practical item notes covering life admin, health and fitness, career, money, home systems, relationships, learning, hobbies, travel, and archives. It is an editable example rather than personal, financial, or medical advice.
 
 Area, category, and canvas-item portals remain standard JSON Canvas file nodes. Item notes store their identifier in a harmless Markdown comment and heading. IDs are checked for the correct parent range, duplicates are rejected, and the canvas hierarchy is sorted numerically. The same dialog provides direct **Go to ID** navigation.
 

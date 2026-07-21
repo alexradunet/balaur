@@ -25,6 +25,44 @@ const demoCanvas = {
   ]
 };
 
+const JD_LIFE_STARTER = [
+  ["10-19","Life admin",[
+    ["11","Identity & documents",[["11.01","Key documents","Keep the essentials findable and current.\n\n- [ ] Scan passport and driving licence\n- [ ] Record renewal dates"],["11.02","Insurance & renewals","One place for policies, memberships, and annual renewals.\n\n- [ ] Review coverage\n- [ ] Cancel anything unused"]]],
+    ["12","Planning & reviews",[["12.01","Annual direction","A practical plan for work, health, money, and relationships at age 30.\n\n- [ ] Choose three outcomes\n- [ ] Define what to stop doing"],["12.02","Weekly review","Clear loose ends and choose the next important actions.\n\n- [ ] Empty inboxes\n- [ ] Review calendar\n- [ ] Plan the week"]]]
+  ]],
+  ["20-29","Health & fitness",[
+    ["21","Training",[["21.01","Strength routine","Three simple full-body sessions each week.\n\n- [ ] Monday\n- [ ] Wednesday\n- [ ] Friday"],["21.02","Comfortable 10K","Build an aerobic base without turning every run into a test.\n\n- [ ] Two easy runs\n- [ ] One longer run"]]],
+    ["22","Care & recovery",[["22.01","Preventive appointments","A personal reminder list, not medical advice.\n\n- [ ] Book routine checkup\n- [ ] Book dental cleaning"],["22.02","Sleep system","Protect a consistent wind-down and wake time.\n\n- [ ] Screens away by 22:30\n- [ ] Prepare tomorrow before bed"]]]
+  ]],
+  ["30-39","Career",[
+    ["31","Current role",[["31.01","Quarterly outcomes","Make the valuable work visible and finish fewer things better.\n\n- [ ] Confirm priorities with manager\n- [ ] Ship the main project"],["31.02","Wins & evidence log","Capture outcomes, feedback, and measurable impact for future reviews."]]],
+    ["32","Development",[["32.01","Skill roadmap","Build deeper technical judgment and clearer leadership communication.\n\n- [ ] Pick one course\n- [ ] Practice through a real project"],["32.02","Professional network","Maintain a small, genuine network.\n\n- [ ] Reconnect with two peers\n- [ ] Attend one local event"]]]
+  ]],
+  ["40-49","Money",[
+    ["41","Cash flow",[["41.01","Monthly budget","Give fixed costs, everyday spending, and fun their own limits.\n\n- [ ] Reconcile accounts\n- [ ] Set next month's targets"],["41.02","Subscriptions","Review recurring costs before they become invisible.\n\n- [ ] Audit quarterly"]]],
+    ["42","Safety & investing",[["42.01","Emergency fund","Build a calm cash buffer for unexpected changes.\n\nProgress: 55%"],["42.02","Long-term investing","Keep a simple record of retirement contributions and long-term allocation.\n\n- [ ] Review annually"]]]
+  ]],
+  ["50-59","Home & systems",[
+    ["51","Apartment",[["51.01","Maintenance","Small recurring jobs that keep the home pleasant.\n\n- [ ] Replace filters\n- [ ] Test smoke alarm\n- [ ] Deep-clean kitchen"],["51.02","Household inventory","Record important purchases, warranties, and replacement dates."]]],
+    ["52","Digital & mobility",[["52.01","Digital security","Keep accounts recoverable and devices protected.\n\n- [ ] Review password manager\n- [ ] Verify backups"],["52.02","Getting around","Track bicycle, public-transport, or car maintenance in one place."]]]
+  ]],
+  ["60-69","People",[
+    ["61","Family",[["61.01","Family rhythm","Make regular calls and visits intentional rather than accidental.\n\n- [ ] Plan next visit"],["61.02","Dates & gifts","Birthdays, celebrations, and gift ideas without last-minute stress."]]],
+    ["62","Friends & community",[["62.01","Friend circles","Keep a lightweight list of people to invite, call, or check in with."],["62.02","Community","Find a recurring place to contribute and meet people locally.\n\n- [ ] Try one volunteer event"]]]
+  ]],
+  ["70-79","Learning & fun",[
+    ["71","Learning",[["71.01","Reading queue","Books worth reading next, with a sentence about why each matters."],["71.02","Course roadmap","Finish one structured course before collecting another.\n\n- [ ] Schedule two weekly sessions"]]],
+    ["72","Hobbies",[["72.01","Guitar practice","A small repertoire and a sustainable practice rhythm.\n\n- [ ] Practice 20 minutes twice weekly"],["72.02","Outdoor weekends","Hikes, rides, and screen-light weekends to plan with friends."]]]
+  ]],
+  ["80-89","Travel",[
+    ["81","Upcoming",[["81.01","Autumn city break","Choose dates, set a budget, and leave space for unplanned wandering.\n\n- [ ] Book transport\n- [ ] Reserve accommodation"],["81.02","Travel checklist","Reusable packing, document, and home-shutdown checklist."]]],
+    ["82","Someday",[["82.01","Japan","A long-range trip idea: seasons, regions, rough budget, and experiences."],["82.02","Long weekends","Nearby places suitable for a low-friction three-day break."]]]
+  ]],
+  ["90-99","Archive",[
+    ["91","Completed & learned",[["91.01","Completed projects","Move finished commitments here with links back to their outcomes."],["91.02","Lessons learned","Short reflections worth carrying into the next season of life."]]]
+  ]]
+];
+
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -75,7 +113,7 @@ function loadWorkspace(){
       parsed.rootId=canvases[parsed.rootId]?parsed.rootId:Object.keys(canvases)[0];parsed.activeId=canvases[parsed.activeId]?parsed.activeId:parsed.rootId;return normalizeWorkspace(parsed);
     }
   }catch(_){}
-  return freshWorkspace();
+  return localStorage.getItem("orbit-canvas-v1")?freshWorkspace():createJohnnyDecimalStarterWorkspace();
 }
 
 function isCanvas(data) {
@@ -157,6 +195,21 @@ function suggestJDCode(parentCanvasId){
   const parent=jdEntryForCanvas(parentCanvasId);if(kind==="category"){const [start,end]=canonicalJDCode(parent.code).split("-").map(Number);for(let number=start;number<=end;number++){const code=String(number).padStart(2,"0");if(!used.has(code))return code;}}
   if(kind==="item")for(let number=1;number<=99;number++){const code=`${parent.code}.${String(number).padStart(2,"0")}`;if(!used.has(code))return code;}
   return "";
+}
+function starterId(prefix,code){return `${prefix}-${canonicalJDCode(code).replace(/[^0-9]+/g,"-").replace(/-$/g,"")}`;}
+function createJohnnyDecimalStarterWorkspace(){
+  const rootDocument={nodes:[{id:"jd-starter-guide",type:"text",x:0,y:-210,width:1180,height:150,color:"3",text:"# Alex’s life index — age 30\nA fictional 30-year-old man’s Johnny Decimal system covering administration, health, career, money, home, people, interests, travel, and archives. Replace anything that does not fit your life."}],edges:[]},result=freshWorkspace(rootDocument),root=result.canvases[result.rootId];root.title="Life Index — Alex, age 30";root.document=rootDocument;root.camera=null;result.johnnyDecimal={enabled:true,entries:{}};
+  JD_LIFE_STARTER.forEach(([areaCode,areaTitle,categories],areaIndex)=>{
+    const areaCanvasId=starterId("jd-canvas",areaCode),areaNodeId=starterId("jd-portal",areaCode),areaPath=`canvases/${slug(`${areaCode}-${areaTitle}`)}.canvas`,areaDocument={nodes:[],edges:[]};rootDocument.nodes.push({id:areaNodeId,type:"file",x:(areaIndex%3)*410,y:Math.floor(areaIndex/3)*290,width:360,height:240,color:"5",file:areaPath});result.canvases[areaCanvasId]={id:areaCanvasId,title:jdDisplayTitle(areaCode,areaTitle),parentId:result.rootId,portalNodeId:areaNodeId,path:areaPath,document:areaDocument,camera:null,jdCode:areaCode,jdTitle:areaTitle,jdKind:"area"};result.johnnyDecimal.entries[areaCode]={code:areaCode,title:areaTitle,kind:"area",parentCanvasId:result.rootId,nodeId:areaNodeId,canvasId:areaCanvasId,itemFormat:"canvas"};
+    categories.forEach(([categoryCode,categoryTitle,items],categoryIndex)=>{
+      const categoryCanvasId=starterId("jd-canvas",categoryCode),categoryNodeId=starterId("jd-portal",categoryCode),categoryPath=`canvases/${slug(`${categoryCode}-${categoryTitle}`)}.canvas`,categoryDocument={nodes:[],edges:[]};areaDocument.nodes.push({id:categoryNodeId,type:"file",x:categoryIndex*410,y:0,width:360,height:240,color:"5",file:categoryPath});result.canvases[categoryCanvasId]={id:categoryCanvasId,title:jdDisplayTitle(categoryCode,categoryTitle),parentId:areaCanvasId,portalNodeId:categoryNodeId,path:categoryPath,document:categoryDocument,camera:null,jdCode:categoryCode,jdTitle:categoryTitle,jdKind:"category"};result.johnnyDecimal.entries[categoryCode]={code:categoryCode,title:categoryTitle,kind:"category",parentCanvasId:areaCanvasId,nodeId:categoryNodeId,canvasId:categoryCanvasId,itemFormat:"canvas"};
+      items.forEach(([itemCode,itemTitle,itemBody],itemIndex)=>{const itemNodeId=starterId("jd-item",itemCode);categoryDocument.nodes.push({id:itemNodeId,type:"text",x:itemIndex*350,y:0,width:310,height:190,color:"3",text:`<!-- orbit:jd ${itemCode} -->\n# ${jdDisplayTitle(itemCode,itemTitle)}\n${itemBody}`});result.johnnyDecimal.entries[itemCode]={code:itemCode,title:itemTitle,kind:"item",parentCanvasId:categoryCanvasId,nodeId:itemNodeId,canvasId:null,itemFormat:"note"};});
+    });
+  });
+  return normalizeWorkspace(result);
+}
+function loadJohnnyDecimalStarter(){
+  if(!confirm("Replace your current local space with the fictional age-30 Johnny Decimal starter? Export your space first if you want a backup."))return;workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#johnnyDecimalDialog")?.close();$("#canvasTitle").value=canvasRecord().title;persistWorkspace();render();fitView();toast("Johnny Decimal starter space loaded");
 }
 function portalPreview(document){
   const nodes=(document.nodes||[]).slice(0,28);if(!nodes.length)return '<span class="portal-empty">Empty canvas · open to begin</span>';
@@ -747,7 +800,7 @@ async function runAICard(cardId,{manual=false}={}) {
   finally{state.running=false;const pending=state.pending;state.pending=false;aiCardRuntime.set(cardId,state);renderNodes();if(pending)scheduleAICard(cardId,250);}
 }
 
-window.orbitCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createJDEntry,goToJD,switchCanvas,exportWorkspace};
+window.orbitCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createJDEntry,goToJD,loadJohnnyDecimalStarter,switchCanvas,exportWorkspace};
 applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
 
 $$("[data-add]").forEach(button=>button.onclick=()=>button.dataset.add==="ai-note"?openAINoteDialog():addNode(button.dataset.add));
@@ -761,7 +814,7 @@ $("#assistantButton").onclick=()=>setAssistantOpen(!$("#aiPanel").classList.cont
 $("#aiForm").onsubmit=event=>{event.preventDefault();const input=$("#aiPrompt"),prompt=input.value;input.value="";runAssistant(prompt);};
 $("#aiPrompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("#aiForm").requestSubmit();}};
 $$(".ai-suggestions button").forEach(button=>button.onclick=()=>runAssistant(button.textContent));
-$("#closeJohnnyDecimal").onclick=$("#cancelJohnnyDecimal").onclick=()=>$("#johnnyDecimalDialog").close();$("#jdParent").onchange=updateJDDialog;$("#goToJD").onclick=()=>goToJD($("#jdLookup").value);$("#jdLookup").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();goToJD(event.currentTarget.value);}};$("#exportJDWorkspace").onclick=exportWorkspace;$("#johnnyDecimalForm").onsubmit=event=>{event.preventDefault();const result=$("#jdCreateResult");try{if(!event.currentTarget.reportValidity())return;createJDEntry({parentCanvasId:$("#jdParent").value,code:$("#jdCode").value,title:$("#jdTitle").value,itemFormat:$("#jdItemFormat").value});}catch(error){result.className="settings-test error";result.textContent=error.message;}};
+$("#closeJohnnyDecimal").onclick=$("#cancelJohnnyDecimal").onclick=()=>$("#johnnyDecimalDialog").close();$("#loadJDStarter").onclick=loadJohnnyDecimalStarter;$("#jdParent").onchange=updateJDDialog;$("#goToJD").onclick=()=>goToJD($("#jdLookup").value);$("#jdLookup").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();goToJD(event.currentTarget.value);}};$("#exportJDWorkspace").onclick=exportWorkspace;$("#johnnyDecimalForm").onsubmit=event=>{event.preventDefault();const result=$("#jdCreateResult");try{if(!event.currentTarget.reportValidity())return;createJDEntry({parentCanvasId:$("#jdParent").value,code:$("#jdCode").value,title:$("#jdTitle").value,itemFormat:$("#jdItemFormat").value});}catch(error){result.className="settings-test error";result.textContent=error.message;}};
 $("#closeAINote").onclick=$("#cancelAINote").onclick=()=>$("#aiNoteDialog").close();
 $("#aiNoteForm").onsubmit=event=>{event.preventDefault();const prompt=$("#aiNotePrompt").value.trim();if(prompt)createAINote(prompt);};
 $("#closeAISettings").onclick=$("#cancelAISettings").onclick=()=>$("#aiSettingsDialog").close();
@@ -770,7 +823,7 @@ $("#aiSettingsForm").onsubmit=event=>{event.preventDefault();if(!event.currentTa
 $("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.reportValidity())return;const button=$("#testAIProvider");try{const settings=settingsFromForm();button.disabled=true;setSettingsResult("Testing direct browser connection…");setSettingsResult(await testAIProvider(settings),"success");}catch(error){setSettingsResult(error.message,"error");}finally{button.disabled=false;}};
 $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
 $("#canvasTitle").value=canvasRecord().title;$("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
-$("#resetDemo").onclick=()=>{if(confirm("Reset the whole space to the demo? Every nested canvas and local change will be replaced.")){workspace=freshWorkspace(clone(demoCanvas));currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;$("#canvasTitle").value=canvasRecord().title;scheduleSave();render();fitView();toast("Demo space restored");}};
+$("#resetDemo").onclick=()=>{if(confirm("Reset the whole space to the age-30 Johnny Decimal starter? Every nested canvas and local change will be replaced.")){workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();render();fitView();toast("Johnny Decimal starter restored");}};
 $("#minimap").onclick=fitView;
 
 window.addEventListener("keydown",event=>{

@@ -69,7 +69,7 @@
       <section class="sidebar-bottom" aria-label="Help and information">
         <div class="tip"><span>↘</span><div><b>Infinite zoom</b><p>Double-click a sub-canvas, or zoom into it past 220%. Zoom all the way out to return.</p></div></div>
         <button class="nav-item" id="exportWorkspaceButton"><span>⇩</span>Export whole space</button>
-        <button class="nav-item" id="resetDemo"><span>↺</span>Reset demo</button>
+        <button class="nav-item" id="resetDemo"><span>↺</span>Reset starter</button>
         <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
       </section>
     </aside>
@@ -131,6 +131,7 @@
     <form id="johnnyDecimalForm">
       <header><div><span>#</span><div><b>Johnny Decimal index</b><small>Areas → categories → numbered items</small></div></div><button type="button" id="closeJohnnyDecimal" aria-label="Close">×</button></header>
       <div class="settings-body">
+        <div class="settings-notice jd-starter"><div><b>Starter space: life at 30</b><p>Load a fictional male life index with 9 areas, practical categories, projects, routines, and example tasks.</p></div><button type="button" class="button ghost" id="loadJDStarter">Load starter</button></div>
         <section class="jd-lookup" aria-labelledby="jdLookupHeading">
           <b id="jdLookupHeading">Go to an ID</b>
           <div class="jd-lookup-row"><input id="jdLookup" list="jdLookupList" placeholder="11.03" autocomplete="off"><datalist id="jdLookupList"></datalist><button type="button" class="button ghost" id="goToJD">Go</button></div>

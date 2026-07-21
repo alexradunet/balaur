@@ -47,7 +47,7 @@ Johnny Decimal is implemented as a constrained projection of the same hierarchy 
 - simple item notes encode their ID in a Markdown heading and an inert `<!-- orbit:jd ... -->` comment;
 - a sidecar index rejects duplicates, provides direct lookup, and orders the canvas tree numerically.
 
-A whole-space `.orbit.json` backup contains that sidecar plus all of the independent JSON Canvas documents. Single `.canvas` import/export remains available for interoperability.
+A whole-space `.orbit.json` backup contains that sidecar plus all of the independent JSON Canvas documents. Single `.canvas` import/export remains available for interoperability. New installations seed this model with a fictional age-30 life index (9 areas, 17 categories, and 34 item notes); the template is ordinary workspace data and can be replaced or edited completely.
 
 ## Suggested source layout
 
