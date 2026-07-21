@@ -571,3 +571,17 @@ A change is complete only when all applicable statements are true:
 - No unrelated dependencies, build outputs, credentials, or vendor changes were introduced.
 
 When requirements conflict, prefer data portability, user recoverability, and explicit validation over convenience. Balaur should remain useful when opened by another JSON Canvas editor, when the AI provider is absent, or when the optional life database is temporarily unavailable.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues on `alexradunet/balaur` (uses the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
