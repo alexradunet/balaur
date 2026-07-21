@@ -72,6 +72,12 @@
   }
   .canvas-node:hover { border-color: var(--balaur-action-primary); }
   .canvas-node.selected:not(.group-node) { overflow: visible; border-color: var(--balaur-action-primary); }
+  .group-node.selected {
+    border-width: 2px;
+    border-color: var(--balaur-action-primary);
+    outline: 1px solid var(--balaur-action-primary);
+    outline-offset: 2px;
+  }
   .canvas-node.connect-source {
     border-color: var(--balaur-action-assistant);
     box-shadow: 0 0 0 2px var(--balaur-action-assistant), var(--balaur-shadow-paper);
