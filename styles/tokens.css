@@ -74,11 +74,15 @@
     --balaur-duration-selection: 160ms;
     --balaur-duration-panel: 220ms;
     --balaur-duration-travel: 280ms;
+    --balaur-duration-flow: 450ms;
+    --balaur-duration-process: 1200ms;
     --balaur-ease-standard: cubic-bezier(.2, .8, .2, 1);
     --balaur-ease-enter: cubic-bezier(.16, 1, .3, 1);
     --balaur-ease-exit: cubic-bezier(.4, 0, 1, 1);
+    --balaur-ease-linear: linear;
     --balaur-distance-press: 2px;
     --balaur-distance-panel: 16px;
+    --balaur-distance-blur: 3px;
     --balaur-scale-travel: .06;
 
     --balaur-canvas-red: #ff7b78;

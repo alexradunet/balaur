@@ -33,6 +33,66 @@
       transform var(--balaur-duration-panel) var(--balaur-ease-enter);
   }
 
+  .canvas-node {
+    transition:
+      border-color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      opacity var(--balaur-duration-focus) var(--balaur-ease-standard);
+  }
+  .connection-handles {
+    transition: opacity var(--balaur-duration-focus) var(--balaur-ease-standard);
+  }
+  .connection-preview path {
+    animation: connection-flow var(--balaur-duration-flow) var(--balaur-ease-linear) infinite;
+  }
+  .canvas-node.ai-card.running .node-accent {
+    animation: ai-run var(--balaur-duration-process) var(--balaur-ease-linear) infinite;
+  }
+  .selection-entering .selection-bearing i {
+    animation: balaur-bearing-primary var(--balaur-duration-selection) var(--balaur-ease-enter) both;
+  }
+  .selection-entering .selection-bearing i + i {
+    animation-name: balaur-bearing-secondary;
+  }
+  .toast {
+    transition:
+      opacity var(--balaur-duration-focus) var(--balaur-ease-standard),
+      transform var(--balaur-duration-focus) var(--balaur-ease-enter);
+  }
+
+  .canvas { view-transition-name: balaur-canvas; }
+  ::view-transition-old(balaur-canvas),
+  ::view-transition-new(balaur-canvas) {
+    animation-duration: var(--balaur-duration-travel);
+    animation-timing-function: var(--balaur-ease-standard);
+  }
+  body[data-canvas-navigation="in"]::view-transition-old(balaur-canvas) { animation-name: portal-out; }
+  body[data-canvas-navigation="in"]::view-transition-new(balaur-canvas) { animation-name: portal-in; }
+  body[data-canvas-navigation="out"]::view-transition-old(balaur-canvas) {
+    animation-name: portal-in;
+    animation-direction: reverse;
+  }
+  body[data-canvas-navigation="out"]::view-transition-new(balaur-canvas) {
+    animation-name: portal-out;
+    animation-direction: reverse;
+  }
+
+  @keyframes connection-flow { to { stroke-dashoffset: -10; } }
+  @keyframes ai-run { to { background-position: -200% 0; } }
+  @keyframes balaur-bearing-primary {
+    from { opacity: 0; transform: rotate(-7deg) scale(.94); }
+    to { opacity: 1; transform: rotate(-7deg) scale(1); }
+  }
+  @keyframes balaur-bearing-secondary {
+    from { opacity: 0; transform: rotate(9deg) scale(.94); }
+    to { opacity: 1; transform: rotate(9deg) scale(1); }
+  }
+  @keyframes portal-out {
+    to { opacity: 0; transform: scale(calc(1 + var(--balaur-scale-travel))); filter: blur(var(--balaur-distance-blur)); }
+  }
+  @keyframes portal-in {
+    from { opacity: 0; transform: scale(calc(1 - var(--balaur-scale-travel))); filter: blur(var(--balaur-distance-blur)); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     :root {
       --balaur-duration-press: 0ms;
@@ -40,8 +100,11 @@
       --balaur-duration-selection: 0ms;
       --balaur-duration-panel: 0ms;
       --balaur-duration-travel: 0ms;
+      --balaur-duration-flow: 0ms;
+      --balaur-duration-process: 0ms;
       --balaur-distance-press: 0px;
       --balaur-distance-panel: 0px;
+      --balaur-distance-blur: 0px;
       --balaur-scale-travel: 0;
     }
 

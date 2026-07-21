@@ -93,6 +93,16 @@ let activeAppView = "canvas";
 let spaceDown = false;
 let saveTimer;
 const aiCardRuntime=new Map();
+let renderedSelectionKey = null;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
+function updateWithViewTransition(update) {
+  if (reducedMotion.matches || !document.startViewTransition) {
+    update();
+    return null;
+  }
+  return document.startViewTransition(update);
+}
 
 const canvas = $("#canvas");
 const world = $("#world");
@@ -246,7 +256,14 @@ function activateCanvas(id,{focusNodeId=null,fit=false}={}){
   else if(fit||!record.camera)fitView();
 }
 function switchCanvas(id,{direction="in",focusNodeId=null,fit=false}={}){
-  if(!workspace.canvases[id]||id===currentCanvasId)return;saveCurrentCanvasState();document.body.dataset.canvasNavigation=direction;const update=()=>activateCanvas(id,{focusNodeId,fit}),transition=document.startViewTransition?.(update);if(!transition)update();else transition.finished.finally(()=>delete document.body.dataset.canvasNavigation);scheduleSave();
+  if(!workspace.canvases[id]||id===currentCanvasId)return;
+  saveCurrentCanvasState();
+  document.body.dataset.canvasNavigation=direction;
+  const update=()=>activateCanvas(id,{focusNodeId,fit});
+  const transition=updateWithViewTransition(update);
+  if(transition)transition.finished.finally(()=>delete document.body.dataset.canvasNavigation);
+  else delete document.body.dataset.canvasNavigation;
+  scheduleSave();
 }
 function enterSubcanvas(id){if(workspace.canvases[id])switchCanvas(id,{direction:"in",fit:!workspace.canvases[id].camera});}
 function leaveSubcanvas(){
@@ -357,13 +374,17 @@ function markdownToHTML(source="") {
 }
 
 function renderNodes() {
+  const selectionKey = selected?.kind === "node" ? selected.id : null;
+  const selectionEntering = selectionKey !== null && selectionKey !== renderedSelectionKey;
   nodeLayer.innerHTML = "";
   (documentData.nodes || []).forEach(node => {
     const element = $("#nodeTemplate").content.firstElementChild.cloneNode(true);
     element.dataset.id = node.id;
     element.dataset.color = node.color || "";
     element.style.cssText = `left:${node.x}px;top:${node.y}px;width:${node.width}px;height:${node.height}px;`;
-    element.classList.toggle("selected", selected?.kind === "node" && selected.id === node.id);
+    const isSelected = selectionKey === node.id;
+    element.classList.toggle("selected", isSelected);
+    element.classList.toggle("selection-entering", isSelected && selectionEntering);
     element.classList.toggle("connect-source", connectSource === node.id);
     element.classList.toggle("filtered", activeFilter !== "all" && node.type !== "group" && node.color !== activeFilter);
     const content = $(".node-content", element);
@@ -403,6 +424,7 @@ function renderNodes() {
     });
     nodeLayer.appendChild(element);
   });
+  renderedSelectionKey = selectionKey;
   updateCounts();
   renderMinimap();
 }
