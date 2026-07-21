@@ -40,7 +40,8 @@ Offline shell caching does not replace Balaur persistence:
 
 ```text
 Cache API                 application code and static assets
-Workspace localStorage    canvases, hierarchy, cameras, JD metadata
+IndexedDB vault           canonical .canvas documents + sidecar (boot source; ADR-0001)
+Workspace localStorage    fallback / migration mirror of canvases + hierarchy
 SQLite kvvfs              tasks and temporal/queryable life data
 sessionStorage            provider key by default
 ```
@@ -86,6 +87,8 @@ await window.orbitOfflineReady
 await navigator.serviceWorker.ready
 await caches.keys()
 (await caches.open("orbit-shell-v4")).keys()
+await window.orbitVaultReady // Phase 4b canonical vault bridge
+window.orbitVaultStore
 ```
 
 The production OPFS SQLite adapter is a separate concern. It will require a Worker and appropriate cross-origin-isolation headers; GitHub Pages currently cannot provide those headers.

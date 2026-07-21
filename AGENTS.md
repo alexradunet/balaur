@@ -6,9 +6,10 @@ This file applies to the entire repository. It is written for coding agents and 
 
 Balaur is a local-first life-management application built around the open [JSON Canvas 1.0](https://jsoncanvas.org/spec/1.0/) format. Its distinctive constraints are part of the product, not temporary implementation details:
 
-- JSON Canvas is the portable spatial/document layer.
+- JSON Canvas files are the canonical portable spatial/document layer.
 - Every nested canvas is independently valid JSON Canvas 1.0.
-- SQLite is the queryable temporal/operational layer.
+- Markdown files are the canonical human-readable life entities (tasks, habits, journals, events).
+- SQLite is a disposable, rebuildable query/search index over those files, not the owner of visible content.
 - A small workspace sidecar owns hierarchy and application-only canvas state.
 - The browser application uses platform standards, strict ES modules, and vanilla JavaScript.
 - The application shell is installable and offline-capable through a web app manifest and Service Worker.
@@ -16,6 +17,8 @@ Balaur is a local-first life-management application built around the open [JSON 
 - Generated or user-authored code runs only in sandboxed file-node widgets, never in the host application.
 
 Preserve these constraints unless a task explicitly changes the architecture. Do not solve a local problem by silently creating a proprietary Canvas dialect, introducing a framework, or making SQLite the owner of visible canvas content.
+
+The ownership model is being migrated toward file-canonical storage: canonical `.md` life entities and `.canvas` documents, with SQLite demoted to a rebuildable index. This direction was explicitly adopted by [`docs/adr/0001-file-canonical-life-data.md`](docs/adr/0001-file-canonical-life-data.md). Read that ADR and `plans/markdown-canonical-sqlite-index.md` before changing storage, tasks, or persistence, and keep the current prototype working while moving toward the target.
 
 The live site is deployed from `main` to:
 
@@ -33,8 +36,13 @@ Before changing a subsystem, read its source and its design document:
 - `docs/design-system.md` — Balaur tokens, material roles, motion, and CSS organization
 - `vendor/sqlite/README.md` — SQLite provenance and current VFS limitations
 - `vendor/pixel-loom/README.md` — design-system provenance
+- `docs/adr/0001-file-canonical-life-data.md` — accepted decision to move to file-canonical storage
+- `plans/markdown-canonical-sqlite-index.md` — the file-canonical migration plan and phasing
+- `plans/markdown-canonical-sqlite-index.review.md` — review of that plan with open issues
 
 Some sections of `docs/architecture.md` describe a future modular source tree and command system. Do not mistake proposed architecture for code that already exists. The current application is a static prototype centered on `app.js`.
+
+The file-canonical storage model (ADR-0001) is the adopted direction but is not yet implemented. Where `AGENTS.md` states a **Direction (ADR-0001)** that differs from **Currently**, treat the current text as what the code does today and the direction as what new work must move toward. Do not describe unshipped migration phases as shipped.
 
 ## 3. Repository map
 
@@ -47,6 +55,19 @@ sw.js                       Versioned same-origin application-shell cache
 manifest.webmanifest        Install metadata, scope, colors, and local icons
 icons/                      PWA icons, including a maskable-safe 512px asset
 storage/life-store.js       SQLite Wasm initialization, migrations, repositories, snapshots
+storage/vault-errors.js     Typed vault errors (path, parse, schema, conflict, storage)
+storage/content-hash.js     Stable async SHA-256 content hashing
+storage/vault-path.js       Cross-platform vault path normalization and entity paths
+storage/frontmatter.js      Preservation-first frontmatter scan/parse/patch codec
+storage/entity-codec.js     Canonical task/habit/journal/event Markdown codecs
+storage/vault-store.js      VaultStore adapter contract and media-type inference
+storage/memory-vault.js     In-memory vault adapter (tests): conflicts, journal, snapshot
+storage/indexeddb-vault.js  IndexedDB vault adapter (browser default; browser-verified)
+storage/life-indexer.js     Projects canonical vault files into the index (rebuild/reconcile)
+storage/memory-index.js     In-memory index port (reference implementation + tests)
+storage/canvas-validate.js  Shared JSON Canvas 1.0 structural validator (isCanvas)
+storage/workspace-vault.js  Canonical sidecar + per-canvas .canvas persistence on a vault
+storage/workspace-backup.js Version-2 whole-space .orbit.json export/import (plan §15)
 styles/layers.css           Global named cascade-layer order
 styles/tokens.css           Balaur primitive, semantic, component, and motion tokens
 styles/foundation.css       Reset, focus, platform preference adaptations
@@ -65,7 +86,22 @@ vendor/sqlite/              Official SQLite Wasm module, binary, license, proven
 
 Do not edit vendored `.wasm`, `.mjs`, or font binaries as if they were application source. When intentionally updating a vendor, update its version, license/provenance, file list, and checksums together.
 
+`plans/` holds implementation plans and reviews; `docs/adr/` holds architecture decision records. Phases 1–4 (foundation) of the file-canonical migration (ADR-0001) are implemented as the `storage/vault-*.js`, `storage/frontmatter.js`, `storage/entity-codec.js`, `storage/content-hash.js`, `storage/canvas-validate.js`, `storage/life-indexer.js`, `storage/memory-index.js`, `storage/workspace-vault.js`, and `storage/workspace-backup.js` library modules, with Node test suites `storage/phase1.test.js`, `storage/phase2.test.js`, `storage/phase3.test.js`, `storage/phase4.test.js`, and `storage/phase4-backup.test.js` (run via `node --test`). `storage/life-store.js` carries schema version 2 (the rebuildable index tables).
+
+Phase 4b is wired into `app.js`: the canvas application now boots **vault-first** through an asynchronous `bootCanvasApp()` (plan §14.1). On load it reads the workspace sidecar and canvas documents from the canonical IndexedDB vault (`storage/indexeddb-vault.js`), migrating the legacy localStorage workspace on first run, and every save is written back to the vault. If the vault is unavailable or unreadable the boot falls back to the synchronous localStorage load, so the app still starts (progressive enhancement). localStorage is now a fallback/migration mirror pending retirement. `storage/indexeddb-vault.js`, the life-store index port, and the vault-first boot require browser verification (including the §18 first-render budget); the Node tests exercise the same persistence logic against `MemoryVault`.
+
 ## 4. Non-negotiable data boundaries
+
+The target ownership model (ADR-0001) is:
+
+```text
+JSON Canvas files (.canvas)   canonical spatial documents
+Markdown files (.md)          canonical human-readable life entities
+.orbit/workspace.json         application-only hierarchy and UI metadata
+SQLite                        disposable, rebuildable query/search index
+```
+
+These boundaries remain non-negotiable; the migration changes *where* life state is canonical (Markdown files) and demotes SQLite to a rebuildable projection. Sections below mark **Direction (ADR-0001)** versus **Currently** where they differ.
 
 ### 4.1 JSON Canvas owns portable spatial content
 
@@ -85,25 +121,29 @@ Use only standard JSON Canvas node types:
 - `link`
 - `group`
 
-Do not add custom node types such as `task`, `canvas`, `widget`, `ai`, or `habit`. Do not add application-only fields to nodes or edges merely because Balaur can read them. Use standard IDs, geometry, colors, content fields, and edge routing fields.
+Do not add custom node types such as `task`, `canvas`, `widget`, `ai`, or `habit`. Do not add application-only fields to nodes or edges merely because Balaur can read them. Use standard IDs, geometry, colors, content fields, and edge routing fields. Life entities are placed through standard `file` nodes that reference their canonical `.md` files (Direction, ADR-0001); a canvas node ID is placement, not entity identity.
 
 Before accepting imported, restored, or model-generated documents, route them through `isCanvas()` or the stricter operation/workspace validators already in `app.js`. Maintain globally unique node/edge IDs within a document and valid edge endpoints.
 
 ### 4.2 Portable capabilities use standard nodes plus inert markers
 
-Balaur recognizes special behavior without changing the JSON Canvas schema:
+Balaur recognizes special behavior without changing the JSON Canvas schema.
+
+**Direction (ADR-0001):** life entities are canonical Markdown files, each carrying an immutable `orbit-id` in constrained frontmatter, placed on canvases through standard `file` nodes:
 
 ```md
 <!-- orbit:jd 11.01 -->
-<!-- orbit:task task-id -->
 <!-- orbit:ai-card -->
+<!-- orbit:habit-entry id=... habit=... status=done value=1 at=... -->
 ```
 
 - Johnny Decimal item notes are standard text nodes.
-- Tasks are standard text nodes linked to SQLite by a stable marker ID.
-- AI operators are standard text nodes whose incoming edges provide context.
+- Tasks, habits, journals, and calendar events are canonical `.md` files under `tasks/`, `habits/`, `habit-logs/`, `journal/`, and `events/`, each with an immutable `orbit-id`. One entity may have zero, one, or many `file`-node placements; a canvas node ID is placement, not entity identity.
+- AI operators are standard text nodes whose incoming edges provide context. When an input is a `file` node, AI context assembly resolves the referenced canonical file's body, not its path.
 - Live HTML/Canvas/WebGL widgets are standard `file` nodes pointing to `.html` files.
 - Nested-canvas portals are standard `file` nodes pointing under `canvases/`.
+
+**Currently:** tasks are marker-bearing text nodes (`<!-- orbit:task task-id -->`) linked to SQLite by a stable marker ID. Legacy markers remain accepted during migration but are not generated for new file-canonical entities.
 
 Markers must remain harmless and readable in editors that do not understand Balaur. Markdown rendering intentionally hides `<!-- orbit:... -->` compatibility lines.
 
@@ -116,24 +156,26 @@ The browser workspace is stored under `orbit-workspace-v1`. Its canvas records o
 - active canvas
 - per-canvas cameras
 - Johnny Decimal index metadata
-- independent JSON Canvas documents
+- independent JSON Canvas documents (**currently** embedded in the record; **Direction (ADR-0001):** stored as separate `.canvas` files, with the sidecar holding metadata only)
 
 Do not put hierarchy, camera position, active filters, selection, or Johnny Decimal indexes into exported `.canvas` documents. The legacy `orbit-canvas-v1` and `orbit-title` keys are retained for migration/root compatibility; do not make them a new source of truth.
 
 Every non-root canvas must still be reachable through a standard parent file node and remain independently exportable.
 
-### 4.4 SQLite owns queryable life state
+**Direction (ADR-0001):** each canvas document becomes an independently valid `.canvas` file under `canvases/`, and the sidecar (`.orbit/workspace.json`) keeps only metadata — not full documents. A single-canvas `.canvas` export remains valid JSON Canvas 1.0, but `file` nodes that reference canonical entity files may dangle outside a whole-space export; never claim a bare `.canvas` is a complete entity backup.
 
-SQLite owns operational fields that JSON Canvas 1.0 does not define:
+### 4.4 Canonical files own life state; SQLite is a rebuildable index
+
+**Direction (ADR-0001):** canonical Markdown files own the operational fields that JSON Canvas 1.0 does not define:
 
 - task status, priority, scheduling, due dates, completion, recurrence, estimates
-- habit definitions and append-like daily check-ins
+- habit definitions and immutable daily check-in events
 - journal date indexes
 - calendar event times and timezones
-- canvas/node search indexes
-- activity history
 
-Rows link back through `canvas_id + node_id`; SQLite must not become a second owner of full visible documents or node geometry. A task title/marker can be reconciled from its text node, but task workflow state is not encoded as custom node fields.
+SQLite is a disposable projection over those files. It continues to power Today, calendar ranges, habit streaks, search, sorting, and filtering, but deleting it must not delete meaningful user data: every portable row is rebuildable from `.md` and `.canvas` files. Projected rows link back through `source_path` + `entity_id`; canvas placement is a derived `entity_placements(canvas_id, node_id, entity_id)` table, not identity. SQLite must not become a second owner of full visible documents or node geometry, and task workflow state lives in frontmatter, never in custom canvas node fields.
+
+**Currently:** SQLite (schema version 1) is the authoritative owner of this state and rows link back through `canvas_id + node_id`. Migration 2 introduces the source-file/index tables and demotes SQLite to a projection; migration 1 must remain byte-for-byte compatible.
 
 Date conventions are mandatory:
 
@@ -146,15 +188,31 @@ Date conventions are mandatory:
 
 `.balaur.json` is the portable workspace backup. It contains the workspace/canvases plus normalized `lifeData` tables while retaining the internal `orbit-workspace` discriminator for backward compatibility. Never embed or export a raw SQLite database binary. Backup data must remain rebuildable across kvvfs, future OPFS, IndexedDB fallback, and native SQLite implementations.
 
+**Direction (ADR-0001):** the version-2 backup contains the sidecar plus the logical vault files (`.canvas` and `.md`) rather than a SQLite snapshot; version-1 bundles remain importable and are migrated on import.
+
 Single `.canvas` export/import remains focused on the active standards-compliant document.
 
 ## 5. Runtime and initialization model
 
-The module graph rooted at `main.js` is deliberate:
+The module graph rooted at `main.js` is deliberate.
 
-1. `app.js` evaluates first as a strict ES module, loads/normalizes the workspace, renders the UI, and exposes `window.orbitCanvas`.
+**Currently:**
+
+1. `app.js` evaluates first as a strict ES module, loads/normalizes the workspace synchronously from `localStorage`, renders the UI, and exposes `window.orbitCanvas`.
 2. `storage/life-store.js` loads SQLite Wasm, indexes the workspace, exposes the store, and dispatches a readiness event.
 3. `offline/register.js` progressively registers the same-origin Service Worker and exposes `window.orbitOfflineReady`.
+
+**Direction (ADR-0001):** startup becomes asynchronous and vault-first:
+
+1. initialize the `VaultStore` (IndexedDB default adapter);
+2. load and normalize the workspace sidecar;
+3. preload the active canvas document and metadata for its visible file nodes;
+4. initialize the canvas application and render from an in-memory working set;
+5. initialize SQLite LifeStore as a derived index;
+6. reconcile the file index by vault revision (warm) or bounded-batch rebuild (cold);
+7. progressively register the offline Service Worker.
+
+Rendering must not perform per-card asynchronous file reads: preload visible file-node content when switching canvases and render from the in-memory cache, refreshing nodes as reads finish. This async refactor is the largest cross-cutting cost of the migration (see the plan and review); do not land it implicitly inside an unrelated feature.
 
 Life-store initialization is asynchronous:
 
@@ -173,7 +231,7 @@ Relevant integration points are:
 - `reconcileTaskMarkers()`
 - `refreshLifeViews()`
 
-Do not split this into independently ordered script tags or make `app.js` depend synchronously on SQLite without replacing this startup contract.
+Do not split this into independently ordered script tags, and do not reintroduce a synchronous whole-workspace `localStorage` read as the startup source of truth, without replacing this startup contract. Until the vault-first startup ships, preserve the current ordered synchronous contract above.
 
 ### 5.1 Offline application-shell rules
 
@@ -237,21 +295,33 @@ Activity entries should describe meaningful state transitions. Avoid logging ren
 
 ## 8. Task and temporal feature rules
 
-Task creation is a two-layer operation:
+**Direction (ADR-0001):** task creation is a file-first operation:
 
-1. append a standard marker-bearing text node to a chosen canvas;
-2. upsert its operational metadata into SQLite;
-3. sync that canvas index;
-4. refresh Canvas/Today projections;
-5. persist the workspace.
+1. generate an immutable `orbit-id` and a safe, stable path;
+2. write the canonical task Markdown file with an expected-content-hash precondition;
+3. add a standard `file` node placement to the chosen canvas;
+4. persist the affected canvas;
+5. index the task and its placement into SQLite;
+6. refresh Canvas/Today projections.
 
-A portable task currently looks like:
+A portable task looks like:
 
 ```md
-<!-- orbit:task task-123 -->
-# A readable task title
+---
+orbit-schema: 1
+orbit-type: task
+orbit-id: "task-a1b2c3"
+title: "A readable task title"
+status: next
+scheduled-on: "2026-07-22"
+due-on: "2026-07-25"
+---
 Optional context remains ordinary Markdown.
 ```
+
+Deleting a canvas `file` node removes only that placement; the entity and its other placements survive. Deleting the entity everywhere is a separate confirmed action that removes every placement, then the canonical file, then reindexes. A task with no placement remains available in Inbox/search.
+
+**Currently:** task creation is a two-layer operation — append a marker-bearing text node (`<!-- orbit:task task-123 -->`) to a canvas and upsert its metadata into SQLite, then sync the canvas index, refresh projections, and persist the workspace. This remains the implemented behavior until the file-canonical task slice (plan Phase 5) and migration (Phase 6) ship.
 
 Do not treat Markdown checklist items and marker-backed task cards as interchangeable without an explicit reconciliation design. Do not infer a due date from a scheduled date or vice versa.
 
@@ -385,6 +455,8 @@ The current prototype intentionally has no transpilation or formatter. Applicati
 
 `app.js` currently exposes a small test/integration surface through `window.orbitCanvas`, including document/workspace getters, operation validation/application, AI-card execution, nested-canvas/JD navigation, task creation, view switching, and export. Extend this API only when browser integration or external embedding benefits from a stable command; do not expose raw mutable internals.
 
+**Direction (ADR-0001):** as repositories become file-first and asynchronous, this surface gains placement commands (for example `addPlacement`, `removePlacement`) and its mutation methods become async; raw SQLite mutation must not be used by components once file-canonical mode is enabled.
+
 ## 13. Running and validating changes
 
 There is currently no package manifest and no automated test runner. Do not add `npm install` as a prerequisite just to run the static app.
@@ -452,8 +524,9 @@ Update documentation in the same change when behavior or architecture changes:
 - AI operations, widgets, provider/security model → `docs/generative-canvas.md`
 - tokens, typography, layers, component visual rules → `docs/design-system.md`
 - vendored asset/version update → the relevant `vendor/*/README.md` and licenses
+- an architecture decision → a new record in `docs/adr/` (see `docs/adr/0001-file-canonical-life-data.md`)
 
-Keep documentation explicit about what is implemented versus proposed. Do not describe future OPFS, Tauri, command-stack, recurrence, calendar, or sync work as shipped.
+Keep documentation explicit about what is implemented versus proposed. Do not describe future OPFS, Tauri, command-stack, recurrence, calendar, or sync work as shipped. The file-canonical migration (ADR-0001) is the adopted direction but is not yet implemented; mark its stages as Direction/Currently until each phase ships, and update `docs/architecture.md` and `docs/life-data.md` in the same change as the behavior.
 
 ## 15. Git and deployment hygiene
 
@@ -470,6 +543,7 @@ A change is complete only when all applicable statements are true:
 
 - JSON Canvas documents remain standards-compliant and independently portable.
 - Workspace, Canvas, and SQLite ownership boundaries remain clear.
+- File-canonical work follows ADR-0001: canonical files are written before the derived index, migrations are staged and reversible, and Direction/Currently documentation stays accurate.
 - Existing profiles migrate or degrade safely.
 - Imports, exports, reset, and reload do not orphan related state.
 - Dynamic content is escaped and security boundaries are preserved.

@@ -30,6 +30,17 @@ The browser prototype now vendors official SQLite Wasm and initializes a version
 
 Whole-workspace backup serializes those tables as normalized JSON rather than coupling exports to a particular SQLite binary/VFS. The same store contract can move to Worker + OPFS or native Tauri SQLite. Details are in [life-data.md](life-data.md).
 
+### Canonical vault boot (Phase 4b)
+
+ADR-0001 makes canonical files the source of truth and SQLite a rebuildable index. The persistence foundation is implemented and Node-tested in `storage/`:
+
+- `storage/workspace-vault.js` writes the metadata-only sidecar (`.orbit/workspace.json`) plus one independently-valid `.canvas` file per canvas, with optimistic-concurrency saves, a serialized write queue, and missing/invalid-file diagnostics;
+- `storage/workspace-backup.js` produces and restores the version-2 whole-space `.orbit.json` bundle (sidecar + raw files, never a SQLite snapshot);
+- `storage/indexeddb-vault.js` is the browser vault adapter; `storage/memory-vault.js` is the test adapter;
+- `storage/life-indexer.js` projects canonical files into the schema-version-2 index tables.
+
+`app.js` imports the vault modules and boots **vault-first** through an asynchronous `bootCanvasApp()` (plan §14.1): it reads the sidecar and canvas documents from the IndexedDB vault, migrating the legacy `localStorage` workspace on first run, and writes every save back to the vault. If the vault is unavailable or unreadable, boot falls back to the synchronous `localStorage` load, so the app still starts. `localStorage` is now a fallback/migration mirror pending retirement; removing it entirely is a later cleanup once the vault boot is browser-verified (including the §18 first-render budget). The persistence logic is exercised against `MemoryVault` by `storage/phase4.test.js` and `storage/phase4-backup.test.js`.
+
 ## Nested canvases and infinite zoom
 
 A large space can contain an arbitrary hierarchy of smaller canvases without extending JSON Canvas:

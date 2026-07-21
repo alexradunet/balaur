@@ -318,6 +318,8 @@ It should:
 
 A malformed external file must remain untouched and receive an index diagnostic.
 
+External-edit robustness bar (first delivery): Orbit-written files edited externally must remain readable when the editor only makes compatible changes — reordering known flat keys, re-quoting known string values, and converting a known flow array to a block array (or back) for known array fields. The constrained parser must tolerate these without marking the file read-only. Editors that introduce unsupported structures (nested mappings under Orbit keys, anchors/aliases, custom tags) produce a read-only diagnostic, not a silent rewrite. Add a validation-matrix case (§19.1) for "Obsidian-reflowed frontmatter". A full YAML parser is reconsidered only if this bar proves insufficient in practice (§24.3). This resolves review S4.
+
 ### 8.4 Schema evolution
 
 `orbit-schema` versions the entity-file contract independently of SQLite `PRAGMA user_version` and workspace bundle versions.
@@ -655,6 +657,8 @@ CREATE TABLE index_state (
 );
 ```
 
+`.canvas` files are indexed with `entity_type='canvas'` and `entity_id=NULL`; SQLite permits multiple NULLs in a `UNIQUE` column, so many canvases coexist while entity files keep a unique non-null `orbit-id`. Canvas placements are recorded in `entity_placements`, not as `source_files` entity IDs (resolves review M4).
+
 ### 11.3 Typed table changes
 
 The exact migration should rebuild typed tables where ownership assumptions changed.
@@ -678,6 +682,10 @@ source_hash
 ```
 
 Placements move to `entity_placements`.
+
+The version-1 `tasks` table also carries `block_key` (with `UNIQUE(canvas_id, node_id, block_key)`) anticipating multiple blocks per node. Migration 2 drops `canvas_id`, `node_id`, and `block_key` from the task row; any multi-block content is split into separate canonical task files (each with its own `orbit-id`) before the columns are removed, and the repository's camelCase `mapTask` boundary is updated to match (resolves review M1).
+
+`recurrence_json` already exists in migration 1 as an opaque value. Until the flat portable recurrence representation (§9.1) is defined, migration 2 carries the existing value forward unchanged (or stores `null` when absent); it must not be silently reinterpreted, and recurrence UI does not ship before the flat representation exists (resolves review M2).
 
 Habits similarly gain `source_path` and `source_hash` rather than treating canvas location as identity.
 
@@ -731,6 +739,8 @@ Rename:
 - never interpret copy-plus-delete with duplicate IDs as a harmless rename without confirmation.
 
 ## 12. Index lifecycle
+
+**Default indexing runs on the main thread in bounded batches.** GitHub Pages cannot provide the COOP/COEP headers a Worker-based SQLite/OPFS setup would want, and SQLite Wasm currently loads on the main thread, so the shipped default keeps cold and warm indexing on the main thread in bounded work that yields between batches and never freezes pointer interaction. Worker-based indexing is an explicit optional optimization (§18, Phase 10), not a prerequisite for any budget below; do not let a budget implicitly force a Worker into the critical path (resolves review S5).
 
 ### 12.1 Cold rebuild
 
@@ -824,6 +834,8 @@ Crash outcomes are recoverable:
 - after step 4, startup can rebuild both task and placement;
 - after step 5, all layers agree.
 
+These outcomes assume the task file and the canvas placement live in the same canonical vault. That is guaranteed by sequencing canvas vault persistence (Phase 4) before the task slice (Phase 5); see §17 and §27 (resolves review C2).
+
 ### 13.3 Remove placement
 
 Deleting a canvas file node removes only that placement. The entity file and other placements survive.
@@ -865,7 +877,7 @@ main.js
   └─ register offline shell
 ```
 
-The current synchronous `app.js` side-effect startup will need a controlled refactor. Do not make rendering perform asynchronous file reads per card.
+The current synchronous `app.js` side-effect startup will need a controlled refactor, delivered as the named, benchmarked Phase 4 effort (§17). Do not make rendering perform asynchronous file reads per card, and do not land this refactor implicitly inside an unrelated feature (resolves review C3).
 
 ### 14.2 In-memory working set
 
@@ -903,6 +915,28 @@ await life.removePlacement(canvasId, nodeId)
 ```
 
 Raw SQLite mutation methods should not be used by components once file-canonical mode is enabled.
+
+The `window.orbitCanvas` integration surface (`AGENTS.md` §12) gains the placement commands above and becomes async for mutations; update it and `AGENTS.md` §12 in the same change (resolves review M6).
+
+### 14.5 AI context resolution for file nodes
+
+Today `nodeAIContent()` returns only a file node's path. Once entities are canonical files, an AI operator with an edge into a task/habit/journal/event `file` node must receive the referenced entity's resolved Markdown body, not the path string (resolves review S1).
+
+Requirements:
+
+- AI context assembly resolves `file` nodes to their canonical body from the in-memory working set (loading it if necessary) before building operator context.
+- `aiCardSignature` incorporates the resolved body so change detection and debounced reruns still fire when an entity changes externally and is reindexed.
+- Unresolvable or invalid file nodes contribute a safe placeholder and a diagnostic, never a raw path masquerading as content.
+- Typed AI life operations (§23) write canonical files through repositories; they never edit host storage or generate raw paths without validation.
+
+### 14.6 Multi-placement presentation
+
+An entity may have zero, one, or many placements (§9.2). Projections that previously assumed a single `canvas_id + node_id` must define behavior for the many case (resolves review S2):
+
+- Today and search list the entity once, not once per placement.
+- The context label summarizes placements (for example the first canvas title plus a count such as "Planning +1") rather than a single hard-coded canvas title.
+- "Open" navigates to a deterministic primary placement: the most recently updated placement, with a chooser offered when there is more than one.
+- Removing one placement never removes the entity; "Delete everywhere" (§13.3) is the only entity-deleting path.
 
 ## 15. Backup and restore version 2
 
@@ -962,7 +996,7 @@ Version-1 bundles remain importable. Import should:
 4. build a new index;
 5. activate only when verified.
 
-Single active-level `.canvas` import/export remains unchanged.
+Single active-level `.canvas` import/export remains valid JSON Canvas 1.0, but its semantics change: task/entity content now lives in separate `.md` files, so a lone exported `.canvas` may contain `file` nodes whose targets are not bundled. Orbit must either bundle referenced entity files alongside a single-canvas export or visibly mark dangling `file` references, and must never claim a bare `.canvas` is a complete entity backup. Whole-space export (§15.1) remains the only complete backup (resolves review S3).
 
 ## 16. Migration of existing profiles
 
@@ -1050,7 +1084,7 @@ Deliverables:
 - frontmatter envelope scanner;
 - known-field parser and patcher;
 - serializers/validators for task, habit, habit-log, journal, and event files;
-- stable content hashing utility;
+- stable content hashing utility (async in-browser via `crypto.subtle.digest`, sync in Node; expose an async API) (resolves review M5);
 - typed parse, conflict, path, and schema errors.
 
 Testing:
@@ -1126,7 +1160,32 @@ Exit criteria:
 - one invalid file does not corrupt unrelated projections;
 - upgrade from a persisted schema-1 profile succeeds.
 
-### Phase 4 — File-canonical task vertical slice
+### Phase 4 — Canonical `.canvas` vault files and async vault-first startup
+
+This phase makes the vault the single canonical store for canvases **before** any entity depends on it (resolves review C2), and lands the asynchronous startup refactor as its own named, benchmarked effort (resolves review C3). Moving canvas documents to async vault reads and the async startup refactor are the same change, so they ship together.
+
+Deliverables:
+
+- move `record.document` content into logical `.canvas` paths in the vault;
+- keep metadata-only records in `.orbit/workspace.json`;
+- replace the synchronous `localStorage` workspace load with the async vault-first startup graph (§14.1): VaultStore → sidecar → preload active canvas → canvas app → LifeStore index → reconcile → offline;
+- in-memory working set and active-canvas preloading; serialized save queue;
+- nested-canvas portal path validation;
+- index canvas file nodes from canonical `.canvas` files;
+- version-2 whole-space export/import.
+
+Exit criteria:
+
+- every nested canvas is independently readable and valid;
+- workspace sidecar no longer duplicates full documents;
+- interrupted canvas save recovers without hierarchy loss;
+- direct active-level `.canvas` export still passes `isCanvas()`;
+- **Active canvas first render stays within the §18 budget on a warm profile**, measured before and after the async refactor;
+- no render path performs a per-card asynchronous file read.
+
+### Phase 5 — File-canonical task vertical slice
+
+Because canvases already live in the vault (Phase 4), task files and their placements share one canonical store, so the §13.2 crash-recovery argument holds without a transitional split-store.
 
 Deliverables:
 
@@ -1138,7 +1197,8 @@ Deliverables:
 - unplaced task Inbox/search support;
 - placement deletion semantics;
 - explicit whole-task deletion preview;
-- missing/invalid source cards.
+- missing/invalid source cards;
+- AI context resolves task file-node bodies, not paths (§14.5).
 
 Exit criteria:
 
@@ -1148,7 +1208,7 @@ Exit criteria:
 - query latency remains within budget;
 - no new task uses a custom Canvas field or node type.
 
-### Phase 5 — Existing-task migration
+### Phase 6 — Existing-task migration
 
 Deliverables:
 
@@ -1167,26 +1227,9 @@ Exit criteria:
 - migrated task/file/placement counts reconcile afterward;
 - failed migration leaves the legacy profile usable.
 
-### Phase 6 — Canonical `.canvas` vault files
-
-Deliverables:
-
-- move `record.document` content into logical `.canvas` paths;
-- keep metadata-only records in `.orbit/workspace.json`;
-- asynchronous startup refactor;
-- active-canvas preloading and save queue;
-- nested-canvas portal path validation;
-- index canvas file nodes from canonical files;
-- version-2 whole-space export/import.
-
-Exit criteria:
-
-- every nested canvas is independently readable and valid;
-- workspace sidecar no longer duplicates full documents;
-- interrupted canvas save recovers without hierarchy loss;
-- direct active-level `.canvas` export still passes `isCanvas()`.
-
 ### Phase 7 — Habits
+
+Habits, journals, and calendars have no complete user-facing integration yet (only tasks and Today are wired up), so migrating them carries little real-data risk; this is why they follow the task slice rather than blocking it (resolves review M8).
 
 Deliverables:
 
@@ -1266,7 +1309,7 @@ Initial targets, to be validated on representative desktop and mobile hardware:
 | Patch and persist one task file | p95 under 100 ms excluding slow external media |
 | Warm IndexedDB reconciliation with no changes | under 250 ms |
 | Active canvas first render | under 500 ms on warm profile |
-| Cold rebuild of 10,000 small entity files | under 5 s in worker/background flow |
+| Cold rebuild of 10,000 small entity files | under 5 s in bounded background batches |
 | Reindex after external single-file edit | visible within 500 ms |
 
 Benchmarks must separately measure:
@@ -1279,9 +1322,11 @@ Benchmarks must separately measure:
 - DOM rendering;
 - filesystem adapter latency.
 
+The 10,000-file cold-rebuild budget is aggressive for the IndexedDB default backend, where reads are per-transaction; measure it specifically in Phase 0 and keep a bulk-read / cursor fallback ready. Report the browser-default number separately from any Worker number (resolves review M7).
+
 Do not hide a slow full scan behind a fast SQLite query measurement.
 
-Large rebuilds need progress and must not freeze pointer interaction. Use bounded batches or a Worker when the current hosting/storage backend permits it.
+Large rebuilds need progress and must not freeze pointer interaction. The shipped default is bounded main-thread batches that yield between batches; a Worker is an optional optimization only where the hosting/storage backend permits it, never a requirement for meeting these budgets on GitHub Pages (resolves review S5).
 
 ## 19. Validation matrix
 
@@ -1390,6 +1435,8 @@ Diagnostics should include:
 
 Avoid one toast per watcher event. Aggregate persistent problems in a diagnostics panel.
 
+Diagnostics are derived state. Because SQLite is rebuildable, `index_diagnostics` rows (including first/most-recent timestamps) are re-derived on a full rebuild rather than treated as durable history; if a diagnostic must survive a rebuild, persist it in the sidecar, not the index (resolves review M3).
+
 ## 22. Documentation updates required during implementation
 
 - `AGENTS.md`: replace the current SQLite-authoritative life-data rule only when file-canonical behavior ships.
@@ -1439,7 +1486,7 @@ Reason: stable identity, safe field patching, multiple canvas placements, simple
 
 **Recommendation:** no unrestricted YAML library in the static prototype. Implement a small preservation-oriented scanner for known flat Orbit properties.
 
-Reconsider only if real external-edit compatibility proves that a full parser is necessary. Any parser must be vendored with provenance and must preserve comments/formatting or use surgical source edits.
+The first delivery targets the compatible-edit robustness bar defined in §8.3; the trigger for reconsidering a full parser is that bar proving insufficient in practice. Any parser must be vendored with provenance and must preserve comments/formatting or use surgical source edits (resolves review S4).
 
 ### 24.4 Automatic title-based rename
 
@@ -1507,10 +1554,11 @@ The first coding delivery should include only:
 2. Phase 1 codecs;
 3. Phase 2 VaultStore with memory and IndexedDB adapters;
 4. Phase 3 SQLite migration/indexer;
-5. Phase 4 new file-canonical task behavior;
-6. Phase 5 safe migration of existing tasks.
+5. Phase 4 canonical `.canvas` vault files and the async vault-first startup refactor;
+6. Phase 5 new file-canonical task behavior;
+7. Phase 6 safe migration of existing tasks.
 
-Do not simultaneously migrate canvas persistence, habits, journals, and calendars. The first release must prove this complete recovery loop:
+Canvas persistence (Phase 4) must precede the task slice (Phase 5) so task files and their placements share one canonical vault store; this is what makes the recovery loop below crash-safe (resolves review C2). The async startup refactor lives inside Phase 4 as a named, benchmarked effort (resolves review C3). Do not simultaneously migrate habits, journals, or calendars. The first release must prove this complete recovery loop:
 
 ```text
 Markdown task

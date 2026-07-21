@@ -13,16 +13,16 @@ JSON Canvas remains authoritative for visible content and structure:
 - nested-canvas portals
 - Johnny Decimal hierarchy
 
-SQLite owns operational and temporal state:
+**Direction (ADR-0001):** canonical Markdown files own operational and temporal state, and SQLite is a disposable, rebuildable projection over those files:
 
 - task workflow, priority, due dates, and scheduling
-- habit definitions and completion history
+- habit definitions and immutable daily check-in events
 - journal date indexes
 - calendar events
-- canvas/node search indexes
-- append-only activity records
+- canvas/node search indexes (derived from `.canvas` files)
+- activity history
 
-Database rows reference document content by the composite identity `(canvas_id, node_id)`. No SQLite-only field is added to a JSON Canvas node.
+**Currently:** SQLite (schema version 1) is still the authoritative owner of this state, and database rows reference document content by the composite identity `(canvas_id, node_id)`. Migration 2 adds the rebuildable index infrastructure below; the typed-table ownership flip ships with the task slice (plan Phase 5). No SQLite-only field is ever added to a JSON Canvas node.
 
 ## Current browser backend
 
@@ -52,6 +52,16 @@ Schema migrations use `PRAGMA user_version`. Version 1 contains:
 - `journal_entries`
 - `calendar_events`
 - `activity_log`
+
+Version 2 (ADR-0001, plan §11.2) is additive and retains migration 1 byte-for-byte. It adds the rebuildable index infrastructure:
+
+- `source_files` — one row per canonical file (path, media type, entity type/id, content hash, size, parse status/error)
+- `entity_placements` — derived `(canvas_id, node_id) -> entity_id` from canvas file nodes
+- `index_diagnostics` — parse, duplicate-ID, and missing-reference problems (re-derived on rebuild)
+- `index_state` — index generation and last-indexed vault revision
+- `habit_events` — immutable habit check-in events (latest per `(habit_id, local_date)` is a projection)
+
+Version 2 also adds nullable `source_path`/`source_hash` columns (and `journal_entries.orbit_id`) so file-canonical rows can coexist with legacy rows during the transition; file-canonical rows are identified by `source_path IS NOT NULL`. The destructive typed-table rebuild (dropping `canvas_id`/`node_id`/`block_key`) ships in a later migration with the task slice.
 
 Dates without times use `YYYY-MM-DD`. Instants use ISO 8601 strings and calendar records retain an IANA timezone.
 
@@ -123,6 +133,18 @@ Completing a task from either its canvas card or Today writes one database state
 At startup, Balaur scans every workspace canvas into the `canvases` and `canvas_nodes` tables. Normal saves update the active canvas index. The index stores titles and content hashes, not the full document as a second source of truth.
 
 Task, habit, calendar, journal, and activity tables contain non-rebuildable state and must be backed up.
+
+## Rebuildable file-canonical index (ADR-0001)
+
+`storage/life-indexer.js` projects canonical `.md` and `.canvas` files from a `VaultStore` into the version-2 index tables. It is infrastructure for the file-canonical migration; the running app does not use it yet (UI integration lands in a later phase).
+
+- `buildSourceRecord()` parses one file into a `source_files` record (entity type/id, content hash, parse status). Untyped Markdown notes are valid; only malformed Orbit-marked files are errors.
+- `LifeIndexer.indexFile()` applies one file's projection atomically: clear the prior projection for the path, upsert `source_files`, insert the typed row(s), and record/clear diagnostics (plan §11.4).
+- `LifeIndexer.rebuild()` does a full cold rebuild: parse all files, replace derived tables, detect duplicate `orbit-id`s, derive placements by scanning canvas file nodes, flag missing references, and mark the index generation complete (plan §12.1). It is idempotent.
+- `LifeIndexer.reconcileWarm(fromRevision)` reindexes only paths changed since a vault revision (plan §12.2).
+- Deleting an entity removes its projection and dangling placements and records a missing-reference diagnostic (plan §11.5).
+
+The indexer depends on an injectable index port. `storage/memory-index.js` is the reference implementation used by the Node tests (`storage/phase3.test.js`); `SqliteLifeStore` implements the same port for the browser (browser-verified). Deleting the SQLite index and rebuilding from files must reproduce the same projected rows.
 
 ## Backup and restore
 

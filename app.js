@@ -1,4 +1,6 @@
 /* Balaur is dependency-free. Every canvas document follows JSON Canvas 1.0; hierarchy and cameras live in a local workspace sidecar. */
+import { IndexedDbVault } from "./storage/indexeddb-vault.js";
+import { WorkspaceStore } from "./storage/workspace-vault.js";
 const COLORS = {
   "1": "#ff7b78", "2": "#efa66a", "3": "#e9d56b",
   "4": "#7ee0a1", "5": "#64cbd0", "6": "#a78bfa"
@@ -80,10 +82,14 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
 
 const WORKSPACE_KEY="orbit-workspace-v1",ROOT_CANVAS_ID="canvas-root";
-let workspace=loadWorkspace();
-let currentCanvasId=workspace.activeId;
-let documentData=workspace.canvases[currentCanvasId].document;
-let camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:.78};
+// Workspace globals are populated by the asynchronous vault-first boot
+// (bootCanvasApp). They begin as a valid placeholder workspace so module-eval
+// event wiring (closures) can attach safely before boot completes; real reads
+// happen at call-time, after boot reassigns these bindings.
+let workspace={version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,johnnyDecimal:{enabled:false,entries:{}},canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Loading…",parentId:null,portalNodeId:null,path:null,document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
+let currentCanvasId=ROOT_CANVAS_ID;
+let documentData=workspace.canvases[ROOT_CANVAS_ID].document;
+let camera={x:80,y:55,zoom:.78};
 let selected = null;
 let currentTool = "select";
 let connectSource = null;
@@ -103,6 +109,8 @@ function updateWithViewTransition(update) {
   }
   return document.startViewTransition(update);
 }
+let vaultStore=null;
+let vaultReady=null;
 
 const canvas = $("#canvas");
 const world = $("#world");
@@ -163,6 +171,7 @@ function saveCurrentCanvasState(){
 }
 function persistWorkspace(){
   saveCurrentCanvasState();workspace.activeId=currentCanvasId;localStorage.setItem(WORKSPACE_KEY,JSON.stringify(workspace));localStorage.setItem("orbit-canvas-v1",JSON.stringify(workspace.canvases[workspace.rootId].document));localStorage.setItem("orbit-title",workspace.canvases[workspace.rootId].title);try{window.orbitLifeStore?.syncCanvasRecord(workspace.canvases[currentCanvasId]);}catch(error){console.warn("Could not update the life database index",error);}
+  if(vaultStore){vaultStore.save(workspace).catch(error=>console.warn("Could not persist the canonical vault workspace",error));}
 }
 function scheduleSave() {
   $("#saveState").innerHTML = "<i></i> Saving…";
@@ -171,6 +180,42 @@ function scheduleSave() {
     persistWorkspace();
     $("#saveState").innerHTML = "<i></i> Saved locally";
   }, 350);
+}
+
+// Vault-first asynchronous boot (ADR-0001, plan §14.1). The canonical IndexedDB
+// vault is the source of truth: load the workspace sidecar and canvas documents
+// from it, migrating the legacy local-storage workspace on first run. If the
+// vault is unavailable or cannot be read, fall back to the synchronous
+// local-storage load so the app still starts (progressive enhancement, mirroring
+// how the life store resolves to null on failure). Finally sets the workspace
+// globals and performs the first render.
+async function bootCanvasApp(){
+  let booted=null;
+  try{
+    const vault=new IndexedDbVault("orbit-vault");
+    const store=new WorkspaceStore(vault);
+    let result=await store.load();
+    if(!result){
+      await store.migrate(loadWorkspace());
+      result=await store.load();
+    }
+    if(result?.workspace?.canvases&&Object.keys(result.workspace.canvases).length){
+      booted=result.workspace;
+      vaultStore=store;
+      window.orbitVaultStore=store;
+      for(const diagnostic of result.diagnostics)console.warn("Vault workspace diagnostic",diagnostic);
+    }
+  }catch(error){
+    console.warn("Vault-first boot failed; falling back to local storage",error);
+  }
+  workspace=booted||loadWorkspace();
+  currentCanvasId=workspace.canvases[workspace.activeId]?workspace.activeId:workspace.rootId;
+  documentData=workspace.canvases[currentCanvasId].document;
+  camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:.78};
+  $("#canvasTitle").value=canvasRecord().title;
+  renderWorkspaceNavigation();
+  render();
+  setTimeout(fitView,50);
 }
 
 function colorValue(color) { return COLORS[color] || color || "#737b87"; }
@@ -895,7 +940,7 @@ $("#toggleAIKey").onclick=()=>{const input=$("#aiAPIKey"),show=input.type==="pas
 $("#aiSettingsForm").onsubmit=event=>{event.preventDefault();if(!event.currentTarget.reportValidity())return;try{const settings=settingsFromForm();if(!settings.model||!settings.apiKey)throw new Error("Model and API key are required");persistAISettings(settings);$("#aiSettingsDialog").close();toast(`Connected to ${settings.model}`);}catch(error){setSettingsResult(error.message,"error");}};
 $("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.reportValidity())return;const button=$("#testAIProvider");try{const settings=settingsFromForm();button.disabled=true;setSettingsResult("Testing direct browser connection…");setSettingsResult(await testAIProvider(settings),"success");}catch(error){setSettingsResult(error.message,"error");}finally{button.disabled=false;}};
 $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
-$("#canvasTitle").value=canvasRecord().title;$("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
+$("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
 $("#resetDemo").onclick=()=>{if(confirm("Reset the whole space to the age-30 Johnny Decimal starter? Every nested canvas and local change will be replaced.")){workspace=createJohnnyDecimalStarterWorkspace();currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;$("#canvasTitle").value=canvasRecord().title;persistWorkspace();resetLifeDatabase();render();fitView();toast("Johnny Decimal starter restored");}};
 $("#minimap").onclick=fitView;
 
@@ -915,5 +960,5 @@ window.addEventListener("resize",()=>{applyCamera();});
 window.addEventListener("beforeunload",persistWorkspace);
 window.addEventListener("orbit:life-store-ready",refreshLifeViews);
 
-render();
-setTimeout(fitView,50);
+vaultReady=bootCanvasApp();
+window.orbitVaultReady=vaultReady;
