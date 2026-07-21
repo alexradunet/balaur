@@ -92,9 +92,16 @@ Theme state is not part of JSON Canvas 1.0. Store it in optional workspace metad
 
 Models should update validated design tokens. Do not let a model inject arbitrary CSS into the host app. Arbitrary CSS is acceptable only inside a sandboxed live card.
 
-## Backend requirement
+## Provider modes
 
-The GitHub Pages demo has a local intent parser and does not call a model. Production AI needs a trusted backend or local model service so API credentials never ship to the browser. The Cloudflare Worker and Durable Object architecture in `partialupdate` is a good reference for streaming and multi-user sessions, but Orbit should initially use a simpler authenticated request/stream endpoint with rate limits and per-workspace authorization.
+The GitHub Pages demo supports two dependency-free modes:
+
+1. local canvas commands with no network access;
+2. direct browser calls to an OpenAI-compatible `/chat/completions` endpoint.
+
+Mistral can be configured with `https://api.mistral.ai/v1` and a model such as `mistral-small-latest`. Provider metadata is saved locally. The secret remains in `sessionStorage` by default, or in `localStorage` only when the user explicitly enables **Remember API key**.
+
+Direct client access is useful for a personal proof of concept, but any script running under the application's origin can potentially read a browser-stored key. A distributed multi-user product should use a trusted backend or local model service. The Cloudflare Worker and Durable Object architecture in `partialupdate` remains a useful reference for streaming, authorization, rate limits, and multi-user sessions.
 
 ## Required hardening
 

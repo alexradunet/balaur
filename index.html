@@ -89,12 +89,12 @@
 
     <section class="ai-panel" id="aiPanel" aria-hidden="true">
       <header class="ai-head">
-        <div><span class="ai-spark">✦</span><div><b>Orbit Copilot</b><small>Canvas-aware prototype</small></div></div>
-        <button id="closeAssistant" aria-label="Close assistant">×</button>
+        <div><span class="ai-spark">✦</span><div><b>Orbit Copilot</b><small id="aiProviderLabel">Local canvas tools</small></div></div>
+        <div class="ai-head-actions"><button id="openAISettings" aria-label="AI provider settings" title="AI provider settings">⚙</button><button id="closeAssistant" aria-label="Close assistant">×</button></div>
       </header>
       <div class="ai-context" id="aiContext"></div>
       <div class="ai-messages" id="aiMessages">
-        <div class="ai-message assistant"><span>✦</span><p>I can read this canvas, create cards, filter your view, and safely change its visual theme. Try one of the ideas below.</p></div>
+        <div class="ai-message assistant"><span>✦</span><p>I can read this canvas and propose safe changes. Use the ⚙ settings to connect Mistral or another OpenAI-compatible provider directly from your browser.</p></div>
       </div>
       <div class="ai-suggestions">
         <button>Make the canvas warmer</button>
@@ -106,9 +106,24 @@
         <textarea id="aiPrompt" rows="2" placeholder="Ask about or change this canvas…"></textarea>
         <button type="submit" aria-label="Send">↑</button>
       </form>
-      <footer><i></i> Local prototype — canvas data stays in this browser</footer>
+      <footer id="aiProviderStatus"><i></i> Local mode — canvas data stays in this browser</footer>
     </section>
   </div>
+
+  <dialog class="settings-dialog" id="aiSettingsDialog">
+    <form id="aiSettingsForm" autocomplete="off">
+      <header><div><span>✦</span><div><b>AI provider</b><small>OpenAI-compatible chat completions</small></div></div><button type="button" id="closeAISettings" aria-label="Close settings">×</button></header>
+      <div class="settings-body">
+        <div class="settings-notice"><b>Client-side testing</b><p>Your key is sent directly from this browser to the provider. It is never sent to Orbit or GitHub Pages. Only remember it on a trusted device.</p></div>
+        <label class="settings-field"><span>API base URL</span><input id="aiBaseURL" type="url" required placeholder="https://api.mistral.ai/v1"></label>
+        <label class="settings-field"><span>Model</span><input id="aiModel" required placeholder="mistral-small-latest"></label>
+        <label class="settings-field"><span>API key</span><div class="key-input"><input id="aiAPIKey" type="password" autocomplete="new-password" required placeholder="Paste your API key"><button type="button" id="toggleAIKey" aria-label="Show API key">Show</button></div></label>
+        <label class="settings-check"><input id="rememberAIKey" type="checkbox"><span><b>Remember API key</b><small>Stores the key in this browser's localStorage.</small></span></label>
+        <div class="settings-test" id="aiSettingsResult" role="status"></div>
+      </div>
+      <footer><button type="button" class="button ghost" id="testAIProvider">Test connection</button><button type="button" class="button ghost" id="clearAIProvider">Use local</button><span></span><button type="button" class="button ghost" id="cancelAISettings">Cancel</button><button type="submit" class="button primary">Save provider</button></footer>
+    </form>
+  </dialog>
 
   <template id="nodeTemplate">
     <article class="canvas-node">

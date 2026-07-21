@@ -15,7 +15,7 @@ A small, standalone proof of concept for a life-management app whose primary int
 - Markdown cards and task checkboxes
 - Inspector for content, geometry, colors, and edge routing
 - Sandboxed HTML/CSS/Three.js cards represented as standard file nodes
-- Canvas-aware local copilot prototype with validated operations and themes
+- Canvas-aware copilot with local tools or a client-side OpenAI-compatible provider
 - Library filters
 - Browser-local persistence
 - JSON Canvas `.canvas` import and export
@@ -44,6 +44,20 @@ Then open <http://localhost:4173>.
 | Delete | `Delete` / `Backspace` |
 | Export | `Ctrl/Cmd + S` |
 
+## Connect an AI provider
+
+Open **Ask Orbit → ⚙ AI provider settings**. For Mistral, use:
+
+```text
+API base URL: https://api.mistral.ai/v1
+Model:        mistral-small-latest
+API key:      your Mistral API key
+```
+
+The static app calls the provider directly with `fetch()` using its OpenAI-compatible `/chat/completions` endpoint. The model receives the current canvas and proposes typed operations; changes are validated and require confirmation before being applied.
+
+By default, the key lives in `sessionStorage` for the current tab. Enabling **Remember API key** places it in `localStorage`. This client-only mode is intended for personal testing on a trusted device.
+
 ## Data model
 
 Exported files use only the JSON Canvas 1.0 top-level `nodes` and `edges` arrays. Life-management meaning is encoded portably:
@@ -57,13 +71,14 @@ App-specific state such as viewport, filters, and UI selection is not added to e
 
 ## Direction for a full application
 
-This prototype is intentionally plain JavaScript to validate interaction and the portable data model. A production app could use:
+This project is intentionally built with browser standards and no UI framework or runtime dependencies. A production app can continue in that direction with:
 
-- **React + TypeScript** for the shared editor and feature UI
-- a framework-independent canvas engine package for camera, selection, geometry, and JSON Canvas commands
-- **Tauri 2** for a small desktop app with filesystem access
-- **Capacitor** for mobile if a web-first UI is sufficient, or React Native with a shared domain package if native mobile interaction is central
-- SQLite for indexed tasks/calendar views while keeping `.canvas` files as the portable source format
+- ES modules, Custom Elements, DOM templates, CSS custom properties, Pointer Events, SVG, Canvas, and WebGL
+- a command-based canvas engine for selection, geometry, JSON Canvas updates, undo, and sync
+- IndexedDB and the File System Access API in the browser
+- **Tauri 2** for a small desktop app with filesystem and SQLite access
+- **Capacitor** as an optional mobile shell around the same web application
+- `.canvas` files as the portable format while indexed task/calendar projections remain app metadata
 
 See [`docs/architecture.md`](docs/architecture.md) for a proposed package design and [`docs/generative-canvas.md`](docs/generative-canvas.md) for the live-card, partial-update, AI-operation, and security model.
 

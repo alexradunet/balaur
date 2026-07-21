@@ -2,9 +2,9 @@
 
 ## Recommendation
 
-Use a **web-first React + TypeScript core**, package it with **Tauri 2** for desktop, and keep the option to package the same UI with Capacitor on mobile. Do not begin with React Native unless native mobile is the product's primary experience.
+Use a **standards-first web application with no UI framework**, package the same static application with **Tauri 2** for desktop, and optionally use Capacitor on mobile.
 
-An infinite canvas is highly custom, pointer-heavy UI. The DOM, Canvas 2D, SVG, and browser text/Markdown ecosystem make the web stack the shortest path. Tauri adds desktop filesystem, menus, notifications, and local database access without requiring a second renderer.
+The platform already provides the important primitives: ES modules, Custom Elements, DOM templates, CSS custom properties, Pointer Events, SVG, Canvas 2D, WebGL, IndexedDB, Service Workers, Web Workers, `dialog`, `popover`, and `EventTarget`. An infinite canvas benefits from direct control over these APIs rather than a virtual DOM. Tauri adds filesystem access, menus, notifications, and SQLite without replacing the browser renderer.
 
 ## Core principle: separate document truth from indexed views
 
@@ -22,25 +22,24 @@ A practical model is:
 
 For sync, use immutable operations and a document revision rather than writing whole files from several clients concurrently.
 
-## Suggested monorepo
+## Suggested source layout
 
 ```text
-apps/
-  web/                 React PWA and GitHub Pages demo
-  desktop/             Tauri shell
-  mobile/              Capacitor shell (later)
-packages/
-  canvas-core/         Camera, geometry, hit testing, commands, undo/redo
-  json-canvas/         Types, validation, parse/serialize, migrations
+src/
+  components/          Custom Elements such as orbit-canvas and orbit-assistant
+  canvas/              Camera, geometry, hit testing, commands, undo/redo
+  json-canvas/         Validation, parse/serialize, migrations
   domain/              Tasks, recurrence, projects, calendar event models
-  editor-react/        React components and interaction adapters
-  storage/             Filesystem, SQLite, browser storage interfaces
+  storage/             File System Access API, IndexedDB, SQLite adapters
   sync/                Operation log and sync adapters
   widget-runtime/      Sandboxed HTML cards and addressable partial updates
-  ai-operations/       Context builder, schemas, validation, plan previews
+  ai-operations/       Context builder, validation, and plan previews
+  workers/             Search, indexing, and expensive layout work
+app/                    HTML entry point, global styles, icons, manifest
+desktop/                Optional Tauri shell
 ```
 
-`canvas-core`, `json-canvas`, and `domain` should have no React or platform dependency. This is what preserves the option to build a React Native renderer later.
+Modules communicate through explicit commands and `EventTarget`/`CustomEvent`, not through framework state. Custom Elements should be used where lifecycle encapsulation is useful, not as a requirement for every small DOM fragment. The current prototype intentionally runs directly as static files with no package install or build step.
 
 ## Renderer choice
 
@@ -66,13 +65,13 @@ type CanvasCommand =
   | { type: "task.complete"; taskId: string; completedAt: string };
 ```
 
-Commands provide one place for validation, autosave, undo/redo, activity history, and eventual sync. Model output must compile into the same commands rather than directly manipulating React state or the host DOM.
+Commands provide one place for validation, autosave, undo/redo, activity history, and eventual sync. Model output must compile into the same commands rather than directly manipulating component state or the host DOM.
 
 Live HTML/Three.js cards and the adaptation of `partialupdate` are described in [generative-canvas.md](generative-canvas.md).
 
 ## Delivery phases
 
-1. **Canvas foundation** — React editor, JSON Canvas import/export, command stack, local files.
+1. **Canvas foundation** — standards-based editor, JSON Canvas import/export, command stack, local files.
 2. **Life layer** — task extraction, Today view, projects, recurring tasks, SQLite index.
 3. **Time layer** — calendar projection, drag-to-schedule, reminders, ICS/CalDAV adapter.
 4. **Desktop** — Tauri packaging, filesystem watcher, deep links, system notifications.

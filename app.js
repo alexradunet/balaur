@@ -57,10 +57,19 @@ function loadDocument() {
 }
 
 function isCanvas(data) {
-  return data && typeof data === "object" &&
-    (!data.nodes || Array.isArray(data.nodes)) && (!data.edges || Array.isArray(data.edges)) &&
-    (data.nodes || []).every(n => n && typeof n.id === "string" && ["text","file","link","group"].includes(n.type) && [n.x,n.y,n.width,n.height].every(Number.isInteger)) &&
-    (data.edges || []).every(e => e && typeof e.id === "string" && typeof e.fromNode === "string" && typeof e.toNode === "string");
+  if (!data || typeof data!=="object" || data.nodes&&!Array.isArray(data.nodes) || data.edges&&!Array.isArray(data.edges)) return false;
+  const nodes=data.nodes||[],edges=data.edges||[],nodeIds=new Set(),itemIds=new Set(),sides=new Set(["top","right","bottom","left"]),ends=new Set(["none","arrow"]);
+  const validColor=color=>color===undefined || typeof color==="string" && (/^[1-6]$/.test(color)||/^#[0-9a-f]{6}$/i.test(color));
+  for(const node of nodes){
+    if(!node||typeof node.id!=="string"||!node.id||itemIds.has(node.id)||!["text","file","link","group"].includes(node.type)||![node.x,node.y,node.width,node.height].every(Number.isInteger)||node.width<=0||node.height<=0||!validColor(node.color))return false;
+    if(node.type==="text"&&typeof node.text!=="string"||node.type==="file"&&typeof node.file!=="string"||node.type==="link"&&typeof node.url!=="string"||node.type==="group"&&node.backgroundStyle!==undefined&&!["cover","ratio","repeat"].includes(node.backgroundStyle))return false;
+    nodeIds.add(node.id);itemIds.add(node.id);
+  }
+  for(const edge of edges){
+    if(!edge||typeof edge.id!=="string"||!edge.id||itemIds.has(edge.id)||typeof edge.fromNode!=="string"||typeof edge.toNode!=="string"||!nodeIds.has(edge.fromNode)||!nodeIds.has(edge.toNode)||edge.fromSide!==undefined&&!sides.has(edge.fromSide)||edge.toSide!==undefined&&!sides.has(edge.toSide)||edge.fromEnd!==undefined&&!ends.has(edge.fromEnd)||edge.toEnd!==undefined&&!ends.has(edge.toEnd)||!validColor(edge.color))return false;
+    itemIds.add(edge.id);
+  }
+  return true;
 }
 
 function scheduleSave() {
@@ -373,26 +382,32 @@ async function importCanvas(file) {
 
 // Canvas-aware assistant prototype. A remote model should produce these operations,
 // never arbitrary host-page JavaScript. Each operation is checked before commit.
-function applyCanvasOperations(operations) {
-  const draft=clone(documentData), nodeKeys=new Set(["text","file","subpath","url","label","background","backgroundStyle","x","y","width","height","color"]);
+function validateCanvasOperations(operations) {
+  if(!Array.isArray(operations)||operations.length>50||JSON.stringify(operations).length>100000)throw new Error("The operation plan is too large or malformed");
+  const draft=clone(documentData),themes=[],nodeKeys=new Set(["text","file","subpath","url","label","background","backgroundStyle","x","y","width","height","color"]),edgeKeys=new Set(["fromSide","fromEnd","toSide","toEnd","color","label"]);
   for (const operation of operations) {
     if (!operation || typeof operation.type!=="string") throw new Error("Malformed canvas operation");
-    if (operation.type==="node.add") {
-      if (!isCanvas({nodes:[operation.node],edges:[]})) throw new Error("Invalid node");
-      draft.nodes.push(clone(operation.node));
-    } else if (operation.type==="node.update") {
+    if (operation.type==="node.add") draft.nodes.push(clone(operation.node));
+    else if (operation.type==="node.update") {
       const node=draft.nodes.find(item=>item.id===operation.id);if(!node)throw new Error(`Unknown node ${operation.id}`);
       for(const [key,value] of Object.entries(operation.patch||{})){if(!nodeKeys.has(key))throw new Error(`Field ${key} cannot be changed`);node[key]=value;}
     } else if (operation.type==="node.remove") {
       draft.nodes=draft.nodes.filter(item=>item.id!==operation.id);draft.edges=draft.edges.filter(edge=>edge.fromNode!==operation.id&&edge.toNode!==operation.id);
-    } else if (operation.type==="edge.add") {
-      if (!isCanvas({nodes:[],edges:[operation.edge]}))throw new Error("Invalid edge");draft.edges.push(clone(operation.edge));
-    } else if (operation.type==="theme.set") {
-      applyCanvasTheme(operation.theme);
+    } else if (operation.type==="edge.add") draft.edges.push(clone(operation.edge));
+    else if (operation.type==="edge.update") {
+      const edge=draft.edges.find(item=>item.id===operation.id);if(!edge)throw new Error(`Unknown edge ${operation.id}`);
+      for(const [key,value] of Object.entries(operation.patch||{})){if(!edgeKeys.has(key))throw new Error(`Field ${key} cannot be changed`);edge[key]=value;}
+    } else if(operation.type==="edge.remove")draft.edges=draft.edges.filter(item=>item.id!==operation.id);
+    else if (operation.type==="theme.set") {
+      if(!["default","warm","calm","contrast"].includes(operation.theme))throw new Error("Unknown theme");themes.push(operation.theme);
     } else throw new Error(`Unsupported operation ${operation.type}`);
   }
-  if(!isCanvas(draft))throw new Error("The resulting canvas is invalid");
-  documentData=draft;selected=null;shell.classList.remove("inspector-open");scheduleSave();render();updateAssistantContext();
+  if(!isCanvas(draft))throw new Error("The resulting canvas is not valid JSON Canvas 1.0");
+  return {draft,themes};
+}
+function applyCanvasOperations(operations) {
+  const {draft,themes}=validateCanvasOperations(operations);documentData=draft;themes.forEach(applyCanvasTheme);
+  selected=null;shell.classList.remove("inspector-open");scheduleSave();render();updateAssistantContext();
 }
 
 function applyCanvasTheme(theme) {
@@ -414,9 +429,18 @@ function setAssistantOpen(open) {
   $("#aiPanel").classList.toggle("open",open);$("#aiPanel").setAttribute("aria-hidden",String(!open));updateAssistantContext();if(open)setTimeout(()=>$("#aiPrompt").focus(),180);
 }
 function assistantMessage(text,role="assistant") {
-  const message=document.createElement("div");message.className=`ai-message ${role}`;message.innerHTML=role==="assistant"?"<span>✦</span><p></p>":"<p></p>";$("p",message).textContent=text;$("#aiMessages").append(message);message.scrollIntoView({behavior:"smooth",block:"end"});
+  const message=document.createElement("div");message.className=`ai-message ${role}`;message.innerHTML=role==="assistant"?"<span>✦</span><p></p>":"<p></p>";$("p",message).textContent=text;$("#aiMessages").append(message);message.scrollIntoView({behavior:"smooth",block:"end"});return message;
 }
-function runAssistant(prompt) {
+function operationDescription(operation) {
+  const names={"node.add":"Add node","node.update":"Update node","node.remove":"Delete node","edge.add":"Add connection","edge.update":"Update connection","edge.remove":"Delete connection","theme.set":"Set theme"};
+  const target=operation.id||operation.node?.id||operation.edge?.id||operation.theme||"";return `<div><b>${escapeHTML(names[operation.type]||operation.type)}</b>${target?` · ${escapeHTML(target)}`:""}</div>`;
+}
+function assistantProposal(text,operations) {
+  validateCanvasOperations(operations);const message=document.createElement("div");message.className="ai-message assistant";message.innerHTML=`<span>✦</span><div class="ai-proposal"><p></p>${operations.length?`<div class="ai-operation-list">${operations.map(operationDescription).join("")}</div><div class="ai-proposal-actions"><button class="apply">Apply ${operations.length} change${operations.length===1?"":"s"}</button><button class="discard">Discard</button></div>`:""}</div>`;$("p",message).textContent=text||"I reviewed the canvas.";$("#aiMessages").append(message);
+  if(operations.length){const apply=$(".apply",message),discard=$(".discard",message);apply.onclick=()=>{try{applyCanvasOperations(operations);apply.textContent="Applied";apply.disabled=true;discard.remove();toast("AI changes applied");}catch(error){assistantMessage(`I could not apply that plan: ${error.message}`);}};discard.onclick=()=>{apply.disabled=true;discard.textContent="Discarded";discard.disabled=true;};}
+  message.scrollIntoView({behavior:"smooth",block:"end"});
+}
+function runLocalAssistant(prompt) {
   const request=prompt.trim();if(!request)return;assistantMessage(request,"user");const lower=request.toLowerCase();let response="";
   try {
     if(/summar|what(?:'s| is) (?:on|in)|parse/.test(lower)) {
@@ -436,8 +460,66 @@ function runAssistant(prompt) {
   setTimeout(()=>assistantMessage(response),180);
 }
 
-window.orbitCanvas={getDocument:()=>clone(documentData),getSummary:canvasSummary,applyOperations:applyCanvasOperations};
-applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");
+const AI_SETTINGS_KEY="orbit-ai-provider-v1",AI_SECRET_KEY="orbit-ai-secret-v1";
+let aiConversation=[];
+function loadAISettings() {
+  let saved={};try{saved=JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)||"{}");}catch(_){}
+  return {baseURL:saved.baseURL||"https://api.mistral.ai/v1",model:saved.model||"mistral-small-latest",rememberKey:Boolean(saved.rememberKey),apiKey:(saved.rememberKey?localStorage:sessionStorage).getItem(AI_SECRET_KEY)||""};
+}
+let aiSettings=loadAISettings();
+function checkedProviderURL(value) {
+  const url=new URL(value);if(url.protocol!=="https:"&&!(url.protocol==="http:"&&["localhost","127.0.0.1"].includes(url.hostname)))throw new Error("Use HTTPS, or HTTP only for a localhost provider");
+  url.pathname=url.pathname.replace(/\/$/,"");url.search="";url.hash="";return url.toString().replace(/\/$/,"");
+}
+function settingsFromForm() {return {baseURL:checkedProviderURL($("#aiBaseURL").value.trim()),model:$("#aiModel").value.trim(),apiKey:$("#aiAPIKey").value.trim(),rememberKey:$("#rememberAIKey").checked};}
+function persistAISettings(settings) {
+  localStorage.setItem(AI_SETTINGS_KEY,JSON.stringify({baseURL:settings.baseURL,model:settings.model,rememberKey:settings.rememberKey}));localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);(settings.rememberKey?localStorage:sessionStorage).setItem(AI_SECRET_KEY,settings.apiKey);aiSettings=settings;aiConversation=[];updateProviderUI();
+}
+function updateProviderUI() {
+  const remote=Boolean(aiSettings.apiKey&&aiSettings.baseURL&&aiSettings.model),label=$("#aiProviderLabel"),status=$("#aiProviderStatus");
+  label.textContent=remote?aiSettings.model:"Local canvas tools";status.classList.toggle("remote",remote);status.innerHTML=remote?`<i></i> Direct connection · ${escapeHTML(new URL(aiSettings.baseURL).hostname)}`:"<i></i> Local mode — canvas data stays in this browser";
+}
+function openAISettings() {
+  $("#aiBaseURL").value=aiSettings.baseURL;$("#aiModel").value=aiSettings.model;$("#aiAPIKey").value=aiSettings.apiKey;$("#rememberAIKey").checked=aiSettings.rememberKey;setSettingsResult("");$("#aiSettingsDialog").showModal();
+}
+function setSettingsResult(message,type="") {const result=$("#aiSettingsResult");result.textContent=message;result.className=`settings-test ${type}`;}
+async function providerFetch(settings,path,options={}) {
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000),headers={Authorization:`Bearer ${settings.apiKey}`,...options.headers};
+  try{const response=await fetch(`${settings.baseURL}${path}`,{...options,headers,signal:controller.signal});if(!response.ok){let detail="";try{const body=await response.json();detail=body.error?.message||body.message||"";}catch(_){detail=await response.text();}throw new Error(`${response.status} ${response.statusText}${detail?`: ${detail.slice(0,240)}`:""}`);}return response;}catch(error){if(error.name==="AbortError")throw new Error("The provider request timed out");if(error instanceof TypeError)throw new Error("Network or CORS error. Check that this provider permits browser requests.");throw error;}finally{clearTimeout(timer);}
+}
+async function testAIProvider(settings) {
+  const response=await providerFetch(settings,"/models",{method:"GET"}),body=await response.json(),models=Array.isArray(body.data)?body.data.length:null;return models===null?"Connected successfully.":`Connected successfully · ${models} models available.`;
+}
+function assistantSystemPrompt() {
+  return `You are Orbit Copilot, an assistant operating a JSON Canvas 1.0 life-management canvas. Respond with exactly one JSON object and no markdown fences: {"message":"Brief response to the user","operations":[]}.
+Allowed operations:
+{"type":"node.add","node":<complete JSON Canvas node with unique id, type, integer x/y/width/height and required type field>}
+{"type":"node.update","id":"existing id","patch":<changed standard fields>}
+{"type":"node.remove","id":"existing id"}
+{"type":"edge.add","edge":<complete JSON Canvas edge with unique id>}
+{"type":"edge.update","id":"existing id","patch":<changed edge fields>}
+{"type":"edge.remove","id":"existing id"}
+{"type":"theme.set","theme":"default|warm|calm|contrast"}
+Use only standard JSON Canvas fields. Use Markdown checkboxes in text nodes for tasks. Colors: 1 red/goals, 2 orange/ideas, 3 yellow/notes, 4 green/habits, 5 cyan/resources, 6 purple/projects. Preserve user data unless explicitly asked to remove it. Ask a question with an empty operations array if intent is ambiguous. Never put executable HTML or JavaScript in a text node. A live widget is a file node pointing to widgets/focus-orbit.html. Keep responses concise.`;
+}
+function parseProviderJSON(content) {
+  if(Array.isArray(content))content=content.map(part=>part.text||part.content||"").join("");if(typeof content!=="string")throw new Error("Provider returned no text content");
+  const cleaned=content.trim().replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");const start=cleaned.indexOf("{"),end=cleaned.lastIndexOf("}");if(start<0||end<start)throw new Error("Provider did not return the requested JSON plan");
+  const parsed=JSON.parse(cleaned.slice(start,end+1));if(typeof parsed.message!=="string"||!Array.isArray(parsed.operations))throw new Error("Provider response is missing message or operations");return parsed;
+}
+async function runRemoteAssistant(prompt) {
+  assistantMessage(prompt,"user");const loading=assistantMessage("Thinking…");loading.classList.add("loading");const send=$("#aiForm button");send.disabled=true;
+  try{
+    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),context=`Current viewport center: ${Math.round(center.x)}, ${Math.round(center.y)}.\nCurrent JSON Canvas:\n${JSON.stringify(documentData)}`;
+    const messages=[{role:"system",content:assistantSystemPrompt()},...aiConversation.slice(-8),{role:"user",content:`${prompt}\n\n${context}`}];
+    const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages,temperature:.2,max_tokens:1800})}),body=await response.json(),content=body.choices?.[0]?.message?.content,plan=parseProviderJSON(content);
+    validateCanvasOperations(plan.operations);loading.remove();assistantProposal(plan.message,plan.operations);aiConversation.push({role:"user",content:prompt},{role:"assistant",content:JSON.stringify(plan)});
+  }catch(error){loading.remove();assistantMessage(`Provider error: ${error.message}`);}finally{send.disabled=false;$("#aiPrompt").focus();}
+}
+function runAssistant(prompt) {if(!prompt.trim())return;if(aiSettings.apiKey&&aiSettings.baseURL&&aiSettings.model)runRemoteAssistant(prompt);else runLocalAssistant(prompt);}
+
+window.orbitCanvas={getDocument:()=>clone(documentData),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations};
+applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
 
 $$("[data-add]").forEach(button=>button.onclick=()=>addNode(button.dataset.add));
 $("#newGroup").onclick=()=>addNode("group");
@@ -446,9 +528,15 @@ $$(".tool").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;i
 $("#zoomIn").onclick=()=>setZoom(camera.zoom*1.2);$("#zoomOut").onclick=()=>setZoom(camera.zoom/1.2);$("#zoomLabel").onclick=()=>setZoom(1);$("#fitView").onclick=fitView;
 $("#exportButton").onclick=exportCanvas;$("#importButton").onclick=()=>$("#fileInput").click();$("#fileInput").onchange=e=>{if(e.target.files[0])importCanvas(e.target.files[0]);e.target.value="";};
 $("#sidebarToggle").onclick=()=>shell.classList.toggle("sidebar-closed");
-$("#assistantButton").onclick=()=>setAssistantOpen(!$("#aiPanel").classList.contains("open"));$("#closeAssistant").onclick=()=>setAssistantOpen(false);
+$("#assistantButton").onclick=()=>setAssistantOpen(!$("#aiPanel").classList.contains("open"));$("#closeAssistant").onclick=()=>setAssistantOpen(false);$("#openAISettings").onclick=openAISettings;
 $("#aiForm").onsubmit=event=>{event.preventDefault();const input=$("#aiPrompt"),prompt=input.value;input.value="";runAssistant(prompt);};
+$("#aiPrompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("#aiForm").requestSubmit();}};
 $$(".ai-suggestions button").forEach(button=>button.onclick=()=>runAssistant(button.textContent));
+$("#closeAISettings").onclick=$("#cancelAISettings").onclick=()=>$("#aiSettingsDialog").close();
+$("#toggleAIKey").onclick=()=>{const input=$("#aiAPIKey"),show=input.type==="password";input.type=show?"text":"password";$("#toggleAIKey").textContent=show?"Hide":"Show";};
+$("#aiSettingsForm").onsubmit=event=>{event.preventDefault();if(!event.currentTarget.reportValidity())return;try{const settings=settingsFromForm();if(!settings.model||!settings.apiKey)throw new Error("Model and API key are required");persistAISettings(settings);$("#aiSettingsDialog").close();toast(`Connected to ${settings.model}`);}catch(error){setSettingsResult(error.message,"error");}};
+$("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.reportValidity())return;const button=$("#testAIProvider");try{const settings=settingsFromForm();button.disabled=true;setSettingsResult("Testing direct browser connection…");setSettingsResult(await testAIProvider(settings),"success");}catch(error){setSettingsResult(error.message,"error");}finally{button.disabled=false;}};
+$("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
 $("#canvasTitle").value=localStorage.getItem("orbit-title")||"Life OS — Summer";$("#canvasTitle").oninput=e=>localStorage.setItem("orbit-title",e.target.value);
 $("#resetDemo").onclick=()=>{if(confirm("Reset the canvas to the demo? Your local changes will be replaced.")){documentData=clone(demoCanvas);selected=null;scheduleSave();render();fitView();toast("Demo restored");}};
 $("#minimap").onclick=fitView;
