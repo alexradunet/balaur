@@ -76,8 +76,26 @@
     animation-direction: reverse;
   }
 
+  .settings-dialog {
+    transition:
+      opacity var(--balaur-duration-panel) var(--balaur-ease-enter),
+      transform var(--balaur-duration-panel) var(--balaur-ease-enter);
+  }
+  .ai-message.loading p::after {
+    animation: thinking var(--balaur-duration-flow) var(--balaur-ease-linear) infinite;
+  }
+
+  @starting-style {
+    .ai-panel[aria-hidden="false"],
+    dialog[open] {
+      opacity: 0;
+      transform: translateY(var(--balaur-distance-panel));
+    }
+  }
+
   @keyframes connection-flow { to { stroke-dashoffset: -10; } }
   @keyframes ai-run { to { background-position: -200% 0; } }
+  @keyframes thinking { to { background-position: 6px 0; } }
   @keyframes balaur-bearing-primary {
     from { opacity: 0; transform: rotate(-7deg) scale(.94); }
     to { opacity: 1; transform: rotate(-7deg) scale(1); }
