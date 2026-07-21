@@ -14,17 +14,25 @@
   ::selection { background: var(--balaur-action-primary); color: var(--balaur-content-on-paper); }
 
   @media (prefers-reduced-transparency: reduce) {
-    :where(.topbar, .ai-panel) { backdrop-filter: none; }
+    :where(.topbar, .sidebar, .inspector, .today-view, .ai-panel) {
+      background-image: none;
+      backdrop-filter: none;
+    }
   }
   @media (prefers-contrast: more) {
-    :where(button, input, textarea, select, .canvas-node) { border-width: 2px; }
+    :where(button, input, textarea, select, .canvas-node, .today-section, .settings-dialog, .ai-panel) {
+      border-width: 2px;
+    }
   }
   @media (forced-colors: active) {
     :focus-visible { outline-color: Highlight; }
-    :where(.canvas-node, .settings-dialog, .ai-panel) {
+    :where(.topbar, .sidebar, .inspector, .today-view, .ai-panel) { background-image: none; }
+    :where(.canvas-node, .settings-dialog, .ai-panel, .today-section) {
       border-color: CanvasText;
       background: Canvas;
       color: CanvasText;
     }
+    :where(.canvas-node.selected, .connection-handle, .task-check) { border-color: Highlight; }
+    :where(.selection-bearing i, .edge.selected .edge-line) { border-color: Highlight; stroke: Highlight; }
   }
 }

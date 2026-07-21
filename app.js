@@ -109,6 +109,10 @@ const world = $("#world");
 const nodeLayer = $("#nodes");
 const edgeLayer = $("#edges");
 const shell = $(".app-shell");
+const narrowShell = matchMedia("(max-width: 850px)");
+const syncNarrowShell = event => shell.classList.toggle("sidebar-closed", event.matches);
+syncNarrowShell(narrowShell);
+narrowShell.addEventListener("change", syncNarrowShell);
 
 function loadDocument() {
   try {
@@ -877,7 +881,7 @@ $$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=bu
 $$(".tool").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;if(tool==="note")setTool("note");else setTool(tool);});
 $("#zoomIn").onclick=()=>setZoom(camera.zoom*1.2);$("#zoomOut").onclick=()=>setZoom(camera.zoom/1.2);$("#zoomLabel").onclick=()=>setZoom(1);$("#fitView").onclick=fitView;
 $("#exportButton").onclick=exportCanvas;$("#exportWorkspaceButton").onclick=exportWorkspace;$("#importButton").onclick=()=>$("#fileInput").click();$("#fileInput").onchange=e=>{if(e.target.files[0])importCanvas(e.target.files[0]);e.target.value="";};
-$("#sidebarToggle").onclick=()=>shell.classList.toggle("sidebar-closed");
+$("#sidebarToggle").onclick=()=>shell.classList.toggle("sidebar-closed");$("#sidebar").addEventListener("click",event=>{if(narrowShell.matches&&event.target.closest("button"))shell.classList.add("sidebar-closed");});
 $("#assistantButton").onclick=()=>setAssistantOpen(!$("#aiPanel").classList.contains("open"));$("#closeAssistant").onclick=()=>setAssistantOpen(false);$("#openAISettings").onclick=openAISettings;
 $("#aiForm").onsubmit=event=>{event.preventDefault();const input=$("#aiPrompt"),prompt=input.value;input.value="";runAssistant(prompt);};
 $("#aiPrompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("#aiForm").requestSubmit();}};

@@ -92,14 +92,6 @@
     --balaur-canvas-cyan: #64cbd0;
     --balaur-canvas-purple: #a78bfa;
 
-    /* Transitional aliases removed after all component styles migrate. */
-    --bg: var(--balaur-surface-page);
-    --panel: var(--balaur-surface-oak);
-    --panel-2: var(--balaur-surface-oak-raised);
-    --line: var(--balaur-border-subtle);
-    --muted: var(--balaur-content-on-dark-muted);
-    --text: var(--balaur-content-on-dark);
-    --accent: var(--balaur-action-primary);
     --sidebar: 250px;
     --inspector: 0px;
   }

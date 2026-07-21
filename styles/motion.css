@@ -19,6 +19,13 @@
     transition: grid-template-columns var(--balaur-duration-panel) var(--balaur-ease-standard);
   }
 
+  .sidebar,
+  .inspector {
+    transition:
+      transform var(--balaur-duration-panel) var(--balaur-ease-enter),
+      visibility var(--balaur-duration-instant) var(--balaur-ease-linear);
+  }
+
   .familiar-control {
     transition:
       right var(--balaur-duration-panel) var(--balaur-ease-standard),
