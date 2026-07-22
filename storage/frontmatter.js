@@ -280,11 +280,11 @@ export function readFields(text, spec) {
 // Patch one or more known fields, replacing only their lines. Unknown content,
 // comments, ordering, indentation, line endings, BOM, and body are preserved.
 // Throws (refusing to write) when the block is absent or a key is duplicated.
-export function patchFields(text, patch, spec) {
+export function patchFields(text, patch, spec, { readSpec = spec } = {}) {
   const fm = splitFrontmatter(text);
   if (!fm) throw new ParseError("Missing or unterminated frontmatter; refusing to write", { code: "FM_NO_DELIMITER" });
   const fmLines = fm.lines.slice(fm.openIdx + 1, fm.closeIdx);
-  collectKnownFields(fmLines, spec); // throws on duplicate known keys
+  collectKnownFields(fmLines, readSpec); // throws on duplicate known keys using the file's current schema
 
   const next = fmLines.slice();
   for (const [key, value] of Object.entries(patch)) {

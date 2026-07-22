@@ -160,3 +160,9 @@ export function entityPath(dir, title, id, ext = "md") {
   assertComponentBounds(component);
   return `${base}/${component}`;
 }
+
+// Canonical declarative component-card path. Cards are Markdown data files and
+// use the same readable-slug plus stable-id suffix convention as life entities.
+export function componentCardPath(title, id) {
+  return entityPath("cards", title, id, "md");
+}

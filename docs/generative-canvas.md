@@ -1,6 +1,6 @@
 # Generative canvas and live cards
 
-Balaur's shipped security boundary connects standard JSON Canvas file nodes, sandboxed HTML/WebGL cards, and structured AI operations. The addressable-region ideas in Phil Holden's MIT-licensed [`partialupdate`](https://github.com/philholden/partialupdate) experiment are reference material, not a permission to execute generated host-page code.
+Balaur keeps generated presentation in two standard JSON Canvas file-node forms: declarative component-card Markdown and explicitly activated sandboxed HTML widgets. Models produce reviewed typed operations; they never execute generated code in the host page. The addressable-region ideas in Phil Holden's MIT-licensed [`partialupdate`](https://github.com/philholden/partialupdate) experiment remain reference material, not a shipped host-DOM or template-mutation API.
 
 ## Canonical life data and AI context
 
@@ -10,62 +10,51 @@ When an incoming AI context edge targets a canonical entity `file` node, Balaur 
 
 ## Keep the host document standard
 
-JSON Canvas 1.0 has no `html`, `widget`, or `webgl` node type. Adding one would make the document an application-specific dialect. Instead, Balaur treats a standard file node whose `file` ends in `.html` as a live card:
+JSON Canvas 1.0 has no `component`, `html`, `widget`, or `webgl` node type. Balaur does not add one. A declarative card is a standard file node pointing to `cards/*.md`; a live widget is a standard file node pointing to `widgets/*.html`:
 
 ```json
 {
-  "id": "focus-orbit",
+  "id": "weekly-focus-placement",
   "type": "file",
-  "file": "widgets/focus-orbit.html",
+  "file": "cards/weekly-focus--y-focus.md",
   "x": 100,
   "y": 100,
-  "width": 480,
-  "height": 290,
+  "width": 360,
+  "height": 220,
   "color": "5"
 }
 ```
 
-Other JSON Canvas clients still see a valid file attachment. Balaur renders it in an iframe with `sandbox="allow-scripts"`. HTML, CSS, SVG, Canvas 2D, and direct WebGL can all run inside that boundary. Balaur does not load a third-party rendering engine; `widgets/focus-orbit.html` uses WebGL2 shaders and buffers directly, keeps a CSS fallback, caps device-pixel ratio, honors reduced motion and page visibility, and handles context loss.
+Other JSON Canvas clients still see valid file attachments. The immutable Orbit ID inside a component-card file is its identity; the safe widget path identifies widget source; the Canvas node ID is only a placement. One canonical file may be placed on multiple canvases. Component-card and widget catalogs preload parsed content, source, placements, and repair diagnostics so render does not read the vault once per card.
 
-The sandbox deliberately omits `allow-same-origin`, top navigation, popups, forms, downloads, camera, and microphone permissions. A future desktop build should serve workspace attachments through an app protocol rather than grant widgets direct filesystem access.
+## Declarative component cards
 
-## Partial updates
+Canonical `cards/*.md` files contain constrained frontmatter plus ordinary Markdown. The five recipes are metric, progress, callout, list, and timeline. `<balaur-component-card>` receives a parsed view model and renders only native declarative DOM—no source field, HTML injection, event handler, repository call, or executable host code is part of the schema. Invalid files render a readable raw fallback and diagnostic rather than disappearing or being overwritten.
 
-The useful idea from `partialupdate` is addressable UI regions, not unrestricted access to the application DOM. A live card can expose regions such as:
+Generated component-card operations are:
 
-```text
-/nodes/focus-orbit/style
-/nodes/focus-orbit/content
-/nodes/focus-orbit/data/progress
-```
+- `component-card.create`: allocate the immutable ID, safe canonical path, target Canvas, and standard file-node placement before review;
+- `component-card.update`: patch allowlisted fields, optionally rename/rewrite placement paths, and optionally add a placement; and
+- no generated delete operation—deletion remains a separate confirmed user action.
 
-The AI can return a `<template for="…">` update for one region without regenerating the card or canvas. The card runtime receives updates over `postMessage`; only the sandbox applies generated HTML/CSS/JS.
+Validation rejects unknown/prototype-bearing data, unsupported operations, unsafe paths, unknown IDs/canvases, duplicate node IDs, invalid recipes and fields, bad colors/geometry, excessive operation counts/payloads, and an invalid resulting canvas. A recipe transition explicitly clears fields that no longer belong. Application calls go through `FileComponentCardRepository` with expected-hash checks. If a canonical create or update succeeds but its Canvas placement fails, the proposal reports the durable file and retries only the unfinished placement and untouched later operations.
 
-For canvas data, use structured operations rather than HTML templates:
+## Typed AI operations
 
-```json
-[
-  {
-    "type": "node.update",
-    "id": "goal-1",
-    "patch": { "text": "# Run 10K\n\n- [x] Choose a plan" }
-  },
-  {
-    "type": "theme.set",
-    "theme": "warm"
-  }
-]
-```
+Canvas edits remain structured operations such as `node.add`, `node.update`, and `theme.set`. Shipped generated file operations add `component-card.create`, `component-card.update`, `widget.create`, and `widget.place`. The provider receives their closed schema. The app validates the complete evolving plan, provides a deterministic human-readable description including IDs, paths, fields, geometry, colors, and target Canvas, and requires approval.
 
-The current demo exposes this boundary as:
+`widget.create` discloses the complete self-contained HTML source and capability limits. Approval writes and places the canonical file but deliberately leaves it inactive. `widget.place` adds another standard file-node placement for an existing canonical source file. Widget deletion is not a generated operation.
+
+The stable browser integration surface includes:
 
 ```js
 window.orbitCanvas.getDocument()
 window.orbitCanvas.getSummary()
+window.orbitCanvas.validateOperations(operations)
 window.orbitCanvas.applyOperations(operations)
 ```
 
-All operations are allowlisted and the resulting document is validated before commit.
+Validation and confirmation are controls around canonical repository writes; provider output never receives direct repository, vault, DOM, or host-code execution access.
 
 ## Prompt-first AI notes
 
@@ -89,16 +78,35 @@ This representation remains readable in other JSON Canvas clients: they see ordi
 
 ## AI request flow
 
-1. The app derives a compact context: visible nodes, selected nodes, nearby relationships, canonical file bodies, open tasks, and available widget regions.
-2. The model returns a typed plan, not executable host-page code.
-3. The app validates the plan and shows a human-readable preview.
-4. The user approves changes.
-5. Canvas changes apply through validated operations; life changes call the canonical file repositories, which reindex after writing.
-6. Widget-region changes are sent to the relevant sandbox through `postMessage`.
+1. The app derives a bounded context from the current canvas, selected and related nodes, canonical file bodies, open tasks, known component cards, and safe widget metadata.
+2. The model returns a typed plain-data plan, not executable host-page code.
+3. The app validates the complete evolving plan and resulting canvas and shows a deterministic review.
+4. The user approves or discards it.
+5. Canvas-only changes use validated canvas operations. Component cards and widgets use their file-first repositories.
+6. Successful canonical writes reconcile catalogs and canvas placements; partial placement failure remains recoverable without repeating the durable write.
 
-The operation and repository wiring is present in the static application. Browser verification of file-node context resolution, AI-assisted task flows, and failure handling remains pending.
+Browser checks cover the local component-card and widget proposal/apply flows, canonical create/update/place, controlled reload, multiple card placements, whole-space export/import, and file-first recovery after forced placement failures. Remote provider correctness and provider-specific failure behavior remain dependent on the configured external service.
 
 The model should receive only the relevant canvas slice by default, not every attachment in a workspace.
+
+## Widget review, sandbox, and lifecycle
+
+Generated widget source passes a conservative dependency-free scanner before it can be written or executed. The scanner rejects external resource/navigation/form/worker/frame channels, oversized or ambiguous markup/script/style, and animation without reduced-motion handling. This is review-time validation, not the security boundary.
+
+After explicit **Run**, the host builds a trusted document in this order: restrictive CSP and referrer metadata, trusted bootstrap, reviewed generated source, then the trusted diagnostic boundary. The CSP is:
+
+```text
+default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';
+img-src data: blob:; media-src data: blob:; font-src 'none';
+connect-src 'none'; frame-src 'none'; worker-src 'none'; object-src 'none';
+base-uri 'none'; form-action 'none'
+```
+
+The document is loaded from a Blob URL into an opaque-origin iframe with exactly `sandbox="allow-scripts"`, `referrerpolicy="no-referrer"`, `loading="lazy"`, and no Permissions Policy capabilities. Omitting `allow-same-origin` prevents access to the host origin, cookies, storage, or DOM. A transferred private `MessageChannel` accepts only closed version-1 host/widget schemas. The host sends bounded theme tokens, reduced-motion/transparency/contrast preferences, visibility, and pause; the widget may send ready, heartbeat, bounded status/diagnostic/resize messages. Canonical content, secrets, mutation commands, repositories, callbacks, and host objects are never projected.
+
+Limits are exact: 128 KiB source, 500 static elements, 64 KiB aggregate script, 64 KiB aggregate style, 64 KiB serialized message, six active widgets, 30 messages/second sustained with burst 60, and three missed five-second heartbeats. Pause removes the iframe, closes the channel, and revokes the Blob URL. Reload creates a fresh document/channel. Source, path, or title changes; disconnect; policy/schema/rate failures; missed heartbeats; and unexpected post-initialization loads all tear down execution. Widgets never auto-restart.
+
+These are least-capability and lifecycle controls, not hard CPU isolation. The CSP and scanner cover the supported request/resource channels, while hostile browser probes confirm that tested parent DOM/storage/cookie/fetch/image/font/form/popup/navigation/worker/frame attempts fail. Unexpected self-navigation is detected and paused; Balaur does not claim that the attempted request was suppressed. A malicious script can still consume its frame's main-thread time until lifecycle controls or the browser intervene.
 
 ## Canvas styling
 
@@ -131,15 +139,14 @@ Mistral can be configured with `https://api.mistral.ai/v1` and a model such as `
 
 Direct client access is useful for a personal proof of concept, but any script running under the application's origin can potentially read a browser-stored key. A distributed multi-user product should use a trusted backend or local model service. The Cloudflare Worker and Durable Object architecture in `partialupdate` remains a useful reference for streaming, authorization, rate limits, and multi-user sessions.
 
-## Required hardening
+## Security boundary summary
 
-- Content Security Policy for host and widget documents
-- strict `postMessage` schema and source checks
-- operation count and payload-size limits
-- model/tool rate limits and spending limits
-- no implicit network permission for generated widgets
-- user confirmation for deletions, bulk updates, and external requests
-- transaction log, undo, and recovery after interrupted writes
-- sanitize generated HTML even inside the sandbox to reduce phishing and resource abuse
-
-`partialupdate` itself warns that generated scripts can submit prompts or requests in loops. Isolation and budgets are product requirements, not later polish.
+- Generated host-page code is never an operation.
+- Declarative component cards render allowlisted data through native DOM.
+- Widget source is fully disclosed, saved inactive, and runs only after explicit review and Run.
+- The opaque-origin sandbox omits same-origin, navigation, popup, form, download, device, and filesystem permissions.
+- CSP, conservative source validation, closed private-channel schemas, message/source/element caps, rate limits, active-instance caps, heartbeats, visibility handling, and teardown are all enforced.
+- Generated widgets receive no canonical/user data, provider key, repository, host object, callback, or mutation command.
+- Provider calls remain outside the Service Worker and are unavailable offline.
+- Provider keys remain in `sessionStorage` unless the user explicitly enables **Remember API key**.
+- Self-navigation is detected and torn down; hard request suppression and hard CPU isolation are explicitly not claimed.

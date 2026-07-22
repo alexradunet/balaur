@@ -42,13 +42,20 @@ styles/
   foundation.css         reset, focus, contrast, and platform preferences
   shell.css              carved-oak header and responsive library
   canvas.css             parchment field, nodes, edges, and bearing selection
-  components.css         Today, inspector, assistant, dialogs, and menus
+  components.css         Today, assistant, dialogs, and application component surfaces
+  elements.css           light-DOM Custom Element hosts, component cards, and Add menu
   themes.css             AI-selectable canvas-field themes
   responsive.css         viewport and content-container adaptations
   motion.css             transitions, keyframes, View Transitions, reduced motion
 ```
 
 Every author rule belongs to a named cascade layer. Files load through standard `<link>` elements; there is no preprocessor, package dependency, or build process. Native landmarks, forms, labels, buttons, `dialog`, `nav`, `main`, `aside`, and `article` provide structure. Classes name application components rather than styling utilities.
+
+## Component presentation boundaries
+
+`<balaur-add-menu>`, `<balaur-component-card>`, `<balaur-task-list>`, `<balaur-workspace-nav>`, and `<balaur-inspector>` use meaningful light DOM so native controls, landmarks, focus, and application CSS keep working before and after upgrade. If registration fails entirely, controller-side feature detection supplies a minimal semantic light-DOM fallback rather than leaving undefined hosts blank: navigation and Today/inspector actions remain usable, Add clicks remain delegated, cards remain readable, and widgets remain visibly inactive and non-executing. The canvas list keeps `aria-current="page"` on exactly the active keyed button as the current canvas changes. `styles/elements.css` belongs to `@layer components` and consumes the Balaur token vocabulary. View-model assignment updates existing keyed or stable descendants where focus preservation matters; components emit intent and do not style controller state into canonical files.
+
+`<balaur-dialog-frame>` and `<balaur-widget-frame>` use small open Shadow DOM boundaries where framing and security-runtime controls must stay local. Their host-facing size, visibility, focus, forced-colors, reduced-motion, and narrow-layout behavior still follow the application contract. Component-card placement colors feed component accent tokens without redefining the semantic meaning of JSON Canvas preset colors.
 
 ## Motion contract
 
@@ -67,16 +74,17 @@ All duration, easing, distance, and scale values come from `styles/tokens.css`; 
 
 Desktop keeps the library in normal grid flow. The inspector is a fixed left-docked overlay that floats over a full-bleed canvas, flush to the library's trailing edge: selecting a card opens the node-details panel on the left *without* resizing the canvas track, so the spatial world never shifts when a selection changes. The deliberate trade-off is that the panel covers the leading cards while it is open, and the bottom tool rail recentres into the uncovered canvas so it never tucks beneath the panel. At narrow widths both the library and the inspector become off-canvas sheets — the library on the left, the inspector on the right — so the canvas retains the viewport majority. Today uses a named content-container query, because its available width changes when either sheet opens. Touch controls expose at least a 44 × 44 CSS-pixel target or an equivalent expanded hit area.
 
-## Modern CSS policy
+## CSS Baseline policy
 
-Use broadly available platform CSS as progressive enhancement:
+CSS features classified as **Baseline Widely Available** may be used unconditionally. A newer or unevenly implemented feature must be a progressive enhancement with an immediate functional fallback in the same component. Unsupported enhancement syntax may change polish, never access to content, native controls, focus, navigation, or canonical mutation.
 
-- semantic custom properties and `color-mix()` for related states;
-- named container queries for component composition and media queries for shell changes;
-- logical properties for direction-agnostic layout;
-- `:focus-visible`, native `accent-color`, contrast preferences, and forced-colors support;
-- `prefers-reduced-motion` and `prefers-reduced-transparency`;
-- low-specificity `:where()` selectors for reusable control families;
-- feature queries or immediate functional fallbacks for optional platform features.
+Current examples are:
 
-Do not introduce a framework, runtime token dependency, experimental syntax without a fallback, or a second design vocabulary beside the Balaur tokens.
+- logical properties, semantic custom properties, `:focus-visible`, native `accent-color`, and media queries form the unconditional foundation;
+- named container queries refine component-card composition; the base block layout remains complete without them;
+- the Popover API improves Add-menu modality and placement; `[hidden]`, explicit positioning, keyboard handling, outside dismissal, and focus return remain the fallback;
+- View Transitions enhance nested-canvas travel only when supported and motion is allowed;
+- `color-mix()` and low-specificity `:where()` selectors provide related visual states without becoming behavioral dependencies;
+- `prefers-reduced-motion`, `prefers-reduced-transparency`, contrast preferences, and forced colors retain explicit accessible adaptations.
+
+Do not introduce a framework, runtime token dependency, experimental syntax without a functional fallback, or a second design vocabulary beside the Balaur tokens. Test every component at wide and narrow widths and exercise any forced fallback path rather than inferring it from feature detection.

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Balaur widget-frame fixture</title>
+  <link rel="stylesheet" href="../../../../styles/layers.css">
+  <link rel="stylesheet" href="../../../../styles/tokens.css">
+  <link rel="stylesheet" href="../../../../styles/foundation.css">
+  <link rel="stylesheet" href="../../../../styles/elements.css">
+  <script type="module" src="../../../../elements/register.js"></script>
+  <style>
+    body { margin: 0; padding: 24px; background: var(--surface-canvas); color: var(--content-primary); }
+    main { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+    balaur-widget-frame { min-block-size: 260px; }
+  </style>
+</head>
+<body>
+  <h1>Sandboxed widget-frame fixture</h1>
+  <main id="fixture"></main>
+  <script type="module">
+    await Promise.race([
+      customElements.whenDefined("balaur-widget-frame"),
+      new Promise(resolve => setTimeout(resolve, 1200)),
+    ]);
+    window.widgetFixtureReady = true;
+  </script>
+</body>
+</html>

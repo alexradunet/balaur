@@ -12,6 +12,7 @@ import { SchemaError, ParseError, PathError } from "./vault-errors.js";
 import { mediaTypeFor } from "./vault-store.js";
 import { SIDECAR_PATH, SIDECAR_FORMAT, SIDECAR_VERSION, parseSidecar } from "./workspace-vault.js";
 import { buildSourceRecord } from "./life-indexer.js";
+import { inspectComponentCardIdentity, parseComponentCard } from "./component-card-codec.js";
 
 export const BACKUP_FORMAT = SIDECAR_FORMAT; // "orbit-workspace"
 export const BACKUP_VERSION = SIDECAR_VERSION; // 2
@@ -84,6 +85,10 @@ export function parseBundle(text) {
 // canvas, and entity duplicate-ID / malformed-entity detection (plan §15.3).
 // Throws on any hard error; returns soft diagnostics (missing references,
 // malformed/duplicate entities) for the caller to summarize. No vault writes.
+function isComponentCardPath(path) {
+  return path.startsWith("cards/") && path.endsWith(".md");
+}
+
 export async function validateBundle(data) {
   const sidecar = parseSidecar(JSON.stringify(data.workspace));
   const seen = new Set();
@@ -101,13 +106,30 @@ export async function validateBundle(data) {
     seen.add(fold);
     paths.add(p);
 
-    const { record } = await buildSourceRecord(p, file.text, { mediaType: file.mediaType });
+    let record;
+    if (isComponentCardPath(p)) {
+      let entityId = null;
+      try {
+        entityId = inspectComponentCardIdentity(file.text).id;
+      } catch {
+        // The strict parse below records the useful malformed-file diagnostic.
+      }
+      try {
+        const card = parseComponentCard(file.text, { path: p });
+        record = { parseStatus: "ok", entityId: card.id };
+      } catch (error) {
+        record = { parseStatus: "error", parseError: `${error.code || error.name}: ${error.message}`, entityId };
+      }
+    } else {
+      ({ record } = await buildSourceRecord(p, file.text, { mediaType: file.mediaType }));
+    }
     if (p.endsWith(".canvas") && record.parseStatus === "error") {
       throw new SchemaError(`Canvas failed validation: ${p}`, { code: "CANVAS_INVALID" });
     }
     if (record.parseStatus === "error") {
       diagnostics.push({ path: p, code: "ENTITY_MALFORMED", message: `Malformed entity: ${record.parseError}` });
-    } else if (record.entityId) {
+    }
+    if (record.entityId) {
       if (!entityIds.has(record.entityId)) entityIds.set(record.entityId, []);
       entityIds.get(record.entityId).push(p);
     }

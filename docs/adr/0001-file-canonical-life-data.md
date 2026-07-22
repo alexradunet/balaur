@@ -80,4 +80,4 @@ Accepted costs:
 
 ## Verification boundary
 
-Tasks F and S supplied the shipped storage and application wiring. The explicit Node command covers the phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query suites: **164 tests pass**. Browser-pending verification includes IndexedDB persistence and restore, vault-first boot and reload, task create/complete/Today UI behavior, export/import round-trip, offline reload and Service Worker upgrades, timezone boundaries, and malformed-file repair in the running interface.
+Tasks F and S supplied the shipped storage and application wiring. The explicit Node command covers the phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query suites: **168 tests pass**, comprising the prior 164-test suite plus four component-card backup-boundary regressions. Browser-pending verification includes IndexedDB quota/failure behavior, timezone boundaries, malformed-file repair in the running interface, and upgrade from a previously deployed Service Worker.
