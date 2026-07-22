@@ -31,13 +31,14 @@ function resultOf(response, type, field) {
 }
 function requirePane(value, label = 'pane') {
   const pane = expectObject(value, label);
-  for (const key of ['pane_id', 'workspace_id', 'tab_id']) requireString(pane[key], `${label}.${key}`);
+  for (const key of ['pane_id', 'workspace_id', 'tab_id', 'terminal_id']) requireString(pane[key], `${label}.${key}`);
   return pane;
 }
 function requireAgent(value, label = 'agent', requireName = true) {
   const agent = expectObject(value, label);
   if (requireName) requireString(agent.name, `${label}.name`);
   requireString(agent.pane_id, `${label}.pane_id`);
+  requireString(agent.terminal_id, `${label}.terminal_id`);
   if (typeof agent.agent_status !== 'string') throw new Error(`${label}.agent_status is missing`);
   // Protocol-17 omits false booleans through serde skip_serializing_if.
   agent.interactive_ready = agent.interactive_ready === true;
@@ -65,7 +66,8 @@ export async function startAgent(client, opts, signal) {
     const response = await client.request('agent.start', { name: opts.agentName, kind: 'pi', pane_id: opts.paneId, args, timeout_ms: opts.timeoutMs || 30000 }, undefined, signal);
     const result = resultOf(response, 'agent_started', 'agent');
     const agent = requireAgent(result);
-    return { agent_name: agent.name, pane_id: agent.pane_id, promptFile };
+    if (agent.pane_id !== opts.paneId || agent.terminal_id !== opts.terminalId) throw new Error('agent.start identity does not match the split pane');
+    return { agent_name: agent.name, pane_id: agent.pane_id, terminal_id: agent.terminal_id, promptFile };
   } catch (error) {
     await removeRolePromptFile(promptFile);
     throw error;
@@ -131,7 +133,7 @@ export async function waitForAgent(client, opts, signal) {
 
 export async function promptAgent(client, opts, signal) {
   const params = { target: opts.target, text: opts.text };
-  if (opts.wait) params.wait = { until: ['idle', 'done'], timeout_ms: opts.timeoutMs || 120000 };
+  if (opts.wait) params.wait = { until: opts.until || ['working', 'idle', 'blocked', 'done', 'unknown'], timeout_ms: opts.timeoutMs || 120000 };
   const response = await client.request('agent.prompt', params, opts.wait ? (opts.timeoutMs || 120000) + 5000 : undefined, signal);
   const agent = requireAgent(resultOf(response, 'agent_prompted', 'agent'));
   return { status: agent.agent_status, agent };
@@ -154,7 +156,7 @@ export async function listAgents(client, signal) {
 
 export function assertAgentIdentity(handle, agent) {
   if (!handle.agentName) throw new Error('worker has no agent name');
-  if (agent.name !== handle.agentName || agent.pane_id !== handle.paneId) {
+  if (agent.name !== handle.agentName || agent.pane_id !== handle.paneId || agent.terminal_id !== handle.terminalId) {
     handle.status = 'replaced';
     throw new Error(`worker occupant was replaced for pane ${handle.paneId}`);
   }
@@ -179,7 +181,7 @@ export function makeAgentLabel(roleName, now = Date.now(), nonce = randomUUID().
 
 export function captureAgentIdentity(agent) {
   const identity = requireSessionIdentity(agent);
-  return { agentName: agent.name, paneId: agent.pane_id, sessionKind: identity.kind, sessionValue: identity.value };
+  return { agentName: agent.name, paneId: agent.pane_id, terminalId: agent.terminal_id, sessionKind: identity.kind, sessionValue: identity.value };
 }
 
 export async function waitForSessionIdentity(client, agentName, timeoutMs = 10000, signal) {

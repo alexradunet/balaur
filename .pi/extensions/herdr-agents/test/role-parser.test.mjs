@@ -40,4 +40,14 @@ describe('role compatibility', () => {
   it('retains a path-specific malformed-role error', () => {
     assert.throws(() => parseRoleFile('---\ndescription: bad\ntools: ext:bad tool\n---\nPrompt', '/roles/bad.md'), /\/roles\/bad\.md: unsafe characters/);
   });
+
+  it('requires delimiter-only opening and closing frontmatter lines', () => {
+    for (const content of [
+      '---trailing\ndescription: bad\n---\nPrompt',
+      '----\ndescription: bad\n---\nPrompt',
+      '---\ndescription: bad\n---trailing\nPrompt',
+      '---\ndescription: bad\n----\nPrompt',
+    ]) assert.throws(() => parseRoleFile(content, '/roles/delimiter.md'), /frontmatter delimiter|unterminated frontmatter/);
+    assert.equal(parseRoleFile('\uFEFF---\r\ndescription: valid\r\n---\r\nPrompt', '/roles/crlf.md').description, 'valid');
+  });
 });

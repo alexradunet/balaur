@@ -17,10 +17,13 @@ import { randomUUID } from 'node:crypto';
  * @property {string} role           - Role name from .pi/agents/*.md.
  * @property {string} [workspaceId]  - Herdr workspace ID.
  * @property {string} [worktreePath] - Working directory / worktree path.
- * @property {string} [agentName]    - Herdr agent name (if started).
+ * @property {string} [agentName]    - Herdr agent name (generated before launch).
+ * @property {string} terminalId     - Exact terminal created by pane.split.
  * @property {'id'|'path'} [sessionKind] - Herdr agent session reference kind.
  * @property {string} [sessionValue] - Exact Herdr agent session reference value.
- * @property {'starting'|'ready'|'working'|'idle'|'done'|'error'|'replaced'|'missing'} status
+ * @property {'starting'|'ready'|'working'|'idle'|'blocked'|'done'|'unknown'|'error'|'replaced'|'missing'} status
+ * @property {'submitting'|'accepted'|'uncertain'} [promptPhase]
+ * @property {{sessionId:string,anchorId:string}} [promptBoundary]
  * @property {string} createdAt      - ISO 8601 creation timestamp.
  * @property {string} [updatedAt]    - ISO 8601 last update timestamp.
  * @property {string} [error]        - Error message if status is 'error'.
@@ -48,6 +51,7 @@ export function createHandleStore() {
  * @param {Object} opts
  * @param {string} opts.paneId
  * @param {string} opts.role
+ * @param {string} opts.terminalId
  * @param {string} [opts.workspaceId]
  * @param {string} [opts.worktreePath]
  * @param {string} [opts.agentName]
@@ -58,6 +62,7 @@ export function createHandleStore() {
 export function createHandle(opts) {
   if (!opts.paneId) throw new Error('paneId is required');
   if (!opts.role) throw new Error('role is required');
+  if (!opts.terminalId) throw new Error('terminalId is required');
 
   const now = new Date().toISOString();
   return {
@@ -67,6 +72,7 @@ export function createHandle(opts) {
     workspaceId: opts.workspaceId,
     worktreePath: opts.worktreePath,
     agentName: opts.agentName,
+    terminalId: opts.terminalId,
     sessionKind: opts.sessionKind,
     sessionValue: opts.sessionValue,
     status: 'starting',
@@ -177,7 +183,7 @@ export function reconcileHandles(store, currentPanes) {
   let updated = store;
   for (const handle of Object.values(store.handles)) {
     const samePane = currentPanes.filter((agent) => agent.pane_id === handle.paneId);
-    const exact = samePane.find((agent) => agent.name === handle.agentName && agent.agent_session?.kind === handle.sessionKind && agent.agent_session?.value === handle.sessionValue);
+    const exact = samePane.find((agent) => agent.name === handle.agentName && agent.terminal_id === handle.terminalId && (!handle.sessionKind || (agent.agent_session?.kind === handle.sessionKind && agent.agent_session?.value === handle.sessionValue)));
     if (exact) continue;
     const replacement = samePane.length > 0 || currentPanes.some((agent) => agent.name === handle.agentName);
     updated = updateHandle(updated, handle.handleId, { status: replacement ? 'replaced' : 'missing' });
@@ -209,7 +215,7 @@ export function deserializeStore(json) {
     // Validate each handle has required fields
     const handles = {};
     for (const [id, handle] of Object.entries(parsed.handles)) {
-      if (handle && typeof handle === 'object' && handle.handleId && handle.paneId && handle.role) {
+      if (handle && typeof handle === 'object' && handle.handleId && handle.paneId && handle.role && handle.terminalId) {
         handles[id] = handle;
       }
     }

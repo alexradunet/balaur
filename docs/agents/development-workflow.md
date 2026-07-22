@@ -81,13 +81,13 @@ The project-local Pi extension at `.pi/extensions/herdr-agents/` starts and cont
 
 | Action | Purpose |
 |---|---|
-| `start` | Split the lead pane, start an interactive Pi worker using a `.pi/agents/*.md` role, and return a stable handle immediately. Does not wait for task completion. |
+| `start` | Split the lead pane, durably record a provisional handle before launch completion, start an interactive Pi worker using a `.pi/agents/*.md` role, and return a stable handle immediately. Does not wait for task completion; uncertain launch recovery is through `status`. |
 | `list` | List active worker handles. |
 | `status` | Inspect a worker; detects replaced occupants. |
-| `wait` | Block until the worker reaches `idle` or `done`. Timeouts report a blocked/timeout result and never kill the worker. |
+| `wait` | Block until the worker reaches `idle`, `done`, or `blocked`. `blocked` is a settled actionable result; timeouts report a timeout and never kill the worker. |
 | `read` | Diagnostic terminal output. This is **not** the finalized result. |
-| `prompt` | Send a prompt to a worker. Returns immediately; use `wait` then `collect`. |
-| `collect` | Authoritative finalized Pi result parsed from the session JSONL. Ignores partial assistant output. |
+| `prompt` | Send one prompt only from `idle` or `blocked`, using Herdr's protocol-17 activity acknowledgement. It returns after post-submission lifecycle activity, not task completion; use `wait` then `collect`. |
+| `collect` | Authoritative finalized Pi result parsed after the latest accepted bridge-prompt JSONL boundary. It ignores partial assistant output and never falls back to an older turn. |
 | `close` | Human-confirmed pane cleanup. Requires interactive UI; fails when no UI is available. |
 
 ### Role registry
@@ -96,11 +96,11 @@ The project-local Pi extension at `.pi/extensions/herdr-agents/` starts and cont
 
 ### Session result collection
 
-`collect` parses Pi v3 persisted `type: "message"` entries and returns only the last terminal assistant message. A `stopReason: "toolUse"` assistant message is intermediate and remains incomplete until a later terminal message; tool results are retained and associated by `toolCallId`, never tool name. Handles retain Herdr's exact session `kind` (`path` or `id`) and `value`; session IDs are resolved only beneath Pi's session root. It briefly retries when Herdr reports a path before Pi creates or flushes that file; it never signals or kills the worker.
+Before each bridge prompt, `collect` records the Pi v3 session header and last complete newline-terminated JSONL entry ID. It accepts only a terminal assistant message after exactly one new user message beyond that boundary; a changed header, missing/duplicate anchor, second user message, truncation, partial output, or uncertain submission fails closed rather than returning an old turn. A `stopReason: "toolUse"` assistant message is intermediate; post-boundary tool results are retained and associated by `toolCallId`, never tool name. Handles retain Herdr's exact pane, generated name, terminal, and session `kind` (`path` or `id`) and `value`; session IDs are resolved only beneath Pi's session root. It briefly retries when Herdr reports a path before Pi creates or flushes that file; it never signals or kills the worker.
 
 ### Handle persistence and reconciliation
 
-Worker handles are persisted as full-store snapshots in tool result `details`. On `session_start`, the bridge restores only the latest snapshot in current-branch order, then reconciles exact pane ID, agent name, and session kind/value. Missing panes are marked `missing`; same-pane or session replacements are marked `replaced`. Before `prompt`, `wait`, `read`, `collect`, or `close`, the bridge verifies the full identity; it also validates the identity returned by `wait` and `prompt`, and close verifies again after human confirmation. Protocol 17 cannot make preflight plus prompt one atomic operation, so a replacement immediately after a successful prompt response is reported by the next pinned action rather than silently rebound.
+Worker handles are persisted as full-store snapshots in versioned `balaur-herdr-agent-store` custom session entries, with tool-result `details` retained for legacy compatibility. On `session_start`, the bridge restores only the latest valid snapshot in current-branch order; it never unions history. Immediately after `pane.split`, it persists a provisional `starting` handle containing the pane, generated name, and terminal identity. That handle may pin a session exactly once only when pane/name/terminal all match; launch identity-polling failure leaves its recoverable error handle in place, and metadata reporting failure is a non-fatal warning. Missing panes are marked `missing`; same-pane, terminal, name, or session replacements are marked `replaced`. Before `prompt`, `wait`, `read`, `collect`, or `close`, the bridge verifies the full identity; it also validates the identity returned by `wait` and `prompt`, and close verifies again after human confirmation. Protocol 17 cannot make preflight plus prompt one atomic operation, so a replacement immediately after a successful prompt response is reported by the next pinned action rather than silently rebound.
 
 ### Output bounding
 
@@ -118,10 +118,10 @@ This covers role parsing, session collection, handle persistence, and a register
 
 ### Live smoke test
 
-The opt-in live smoke script starts a harmless visible Pi worker, prompts it, waits, collects its finalized result, and does **not** auto-close its pane:
+The opt-in live smoke script starts a harmless visible Pi worker, submits two nonce-distinct prompts in the same session, proves each activity acknowledgement precedes a settled wait, collects only its matching post-prompt result, and does **not** auto-close its pane:
 
 ```bash
 node .pi/extensions/herdr-agents/scripts/live-smoke.mjs
 ```
 
-Run this from inside a Herdr pane (the lead session). It creates a visible sibling pane that remains open for manual inspection afterward. The script exits 0 only when the worker reaches a valid final stop reason and returns exactly `SMOKE_TEST_OK`; timeout, missing session identity, collection failure, or other text exits nonzero.
+Run this from inside a Herdr pane (the lead session). It creates a visible sibling pane that remains open for manual inspection afterward. The script exits 0 only when both prompts return their exact matching nonces after acknowledgement and settled wait; timeout, blocked status, missing session identity, collection failure, or other text exits nonzero. Failed smoke panes are also retained for human cleanup.

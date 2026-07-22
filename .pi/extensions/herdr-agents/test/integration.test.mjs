@@ -5,11 +5,11 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { resolve } from 'node:path';
 import { HerdrClient, EXPECTED_PROTOCOL } from '../herdr-client.js';
-import { assertPinnedAgent, captureAgentIdentity, closePane, listAgents, makeAgentLabel, reportPaneMetadata, requestCloseConfirmation, resolveRoleSkillArgs, startAgent } from '../pane-manager.js';
+import { assertPinnedAgent, captureAgentIdentity, closePane, listAgents, makeAgentLabel, promptAgent, reportPaneMetadata, requestCloseConfirmation, resolveRoleSkillArgs, startAgent, waitForAgent } from '../pane-manager.js';
 import { parseRoleFile } from '../role-parser.js';
 
 const session = { source: 'herdr:pi', agent: 'pi', kind: 'id', value: '33333333-3333-3333-3333-333333333333' };
-const agent = (name = 'worker', pane = 'w1:p2') => ({ name, pane_id: pane, workspace_id: 'w1', tab_id: 'w1:t1', agent_status: 'idle', launch_pending: false, interactive_ready: true, agent_session: session });
+const agent = (name = 'worker', pane = 'w1:p2') => ({ name, pane_id: pane, workspace_id: 'w1', tab_id: 'w1:t1', terminal_id: 'term-2', agent_status: 'idle', launch_pending: false, interactive_ready: true, agent_session: session });
 class FakeHerdr {
   constructor(handler = {}) { this.path = `${os.tmpdir()}/herdr-${process.pid}-${Date.now()}-${Math.random()}.sock`; this.requests = []; this.handler = handler; }
   async start() { this.server = net.createServer((socket) => { let buffer = ''; socket.on('data', (chunk) => { buffer += chunk; const lines = buffer.split('\n'); buffer = lines.pop() || ''; for (const line of lines) if (line) { const request = JSON.parse(line); this.requests.push(request); const result = this.handler[request.method]?.(request) ?? defaults(request); if (result?.error) socket.write(JSON.stringify({ id: result.id ?? request.id, error: result.error }) + '\n'); else if (result !== null) socket.write(JSON.stringify({ id: result?.id ?? request.id, result }) + '\n'); } }); }); await new Promise((resolvePromise) => this.server.listen(this.path, resolvePromise)); }
@@ -18,7 +18,7 @@ class FakeHerdr {
 function defaults(request) {
   switch (request.method) {
     case 'ping': return { type: 'pong', version: '0.7.5', protocol: EXPECTED_PROTOCOL, capabilities: { live_handoff: true, detached_server_daemon: true } };
-    case 'pane.split': return { type: 'pane_info', pane: { pane_id: 'w1:p2', workspace_id: 'w1', tab_id: 'w1:t1' } };
+    case 'pane.split': return { type: 'pane_info', pane: { pane_id: 'w1:p2', workspace_id: 'w1', tab_id: 'w1:t1', terminal_id: 'term-2' } };
     case 'agent.start': return { type: 'agent_started', agent: agent(request.params.name), argv: request.params.args };
     case 'agent.get': return { type: 'agent_info', agent: agent(request.params.target) };
     case 'agent.list': return { type: 'agent_list', agents: [agent()] };
@@ -44,7 +44,7 @@ describe('protocol-17 socket and lifecycle validation', () => {
     const cwd = fs.mkdtempSync(`${os.tmpdir()}/roles-`); fs.mkdirSync(resolve(cwd, '.agents/skills/custom'), { recursive: true }); fs.writeFileSync(resolve(cwd, '.agents/skills/custom/SKILL.md'), '# custom');
     const role = parseRoleFile('---\ndescription: test\nskills: custom\ntools: read, ext:pi-web-access/web_search\n---\nPrompt body', '/test.md');
     await withServer({}, async (client, server) => {
-      const started = await startAgent(client, { paneId: 'w1:p2', agentName: 'worker', role, cwd });
+      const started = await startAgent(client, { paneId: 'w1:p2', agentName: 'worker', terminalId: 'term-2', role, cwd });
       try {
         const args = server.requests.find((request) => request.method === 'agent.start').params.args;
         assert.ok(args.some((arg) => String(arg).includes('ext:pi-web-access/web_search')));
@@ -63,7 +63,7 @@ describe('protocol-17 socket and lifecycle validation', () => {
     assert.deepEqual(resolveRoleSkillArgs(role, cwd), ['--skill', resolve(cwd, '.pi/skills/project/SKILL.md'), '--skill', resolve(cwd, '.agents/skills/agents/SKILL.md')]);
   });
   it('accepts a real unnamed lead row in agent.list without rejecting workers', async () => {
-    await withServer({ 'agent.list': () => ({ type: 'agent_list', agents: [{ pane_id: 'w1:p1', agent_status: 'idle' }, agent()] }) }, async (client) => {
+    await withServer({ 'agent.list': () => ({ type: 'agent_list', agents: [{ pane_id: 'w1:p1', terminal_id: 'term-1', agent_status: 'idle' }, agent()] }) }, async (client) => {
       const rows = await listAgents(client);
       assert.equal(rows.length, 2);
       assert.equal(rows[0].name, undefined);
@@ -77,6 +77,17 @@ describe('protocol-17 socket and lifecycle validation', () => {
     assert.ok(one.length <= 32);
     assert.notEqual(one, two);
   });
+  it('uses a prompt activity wait and accepts blocked as a settled standalone wait outcome', async () => {
+    await withServer({
+      'agent.prompt': (request) => ({ type: 'agent_prompted', agent: { ...agent(request.params.target), agent_status: 'idle' } }),
+      'agent.wait': (request) => ({ type: 'agent_info', agent: { ...agent(request.params.target), agent_status: 'blocked' } }),
+    }, async (client, server) => {
+      await promptAgent(client, { target: 'worker', text: 'next', wait: true, timeoutMs: 3000 });
+      await waitForAgent(client, { target: 'worker', until: ['idle', 'done', 'blocked'], timeoutMs: 3000 });
+      assert.deepEqual(server.requests.find((request) => request.method === 'agent.prompt').params.wait.until, ['working', 'idle', 'blocked', 'done', 'unknown']);
+      assert.deepEqual(server.requests.find((request) => request.method === 'agent.wait').params.until, ['idle', 'done', 'blocked']);
+    });
+  });
   it('uses protocol-valid metadata source and token fields', async () => {
     await withServer({}, async (client, server) => {
       await reportPaneMetadata(client, 'w1:p2', { role: 'executor', bridge: 'herdr-agent', state: 'ready' });
@@ -87,7 +98,7 @@ describe('protocol-17 socket and lifecycle validation', () => {
     });
   });
   it('marks same-pane session replacement and blocks close', async () => {
-    const handle = { agentName: 'worker', paneId: 'w1:p2', sessionKind: 'id', sessionValue: session.value, status: 'ready' };
+    const handle = { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value, status: 'ready' };
     await withServer({ 'agent.get': () => ({ type: 'agent_info', agent: { ...agent('worker', 'w1:p2'), agent_session: { ...session, value: '44444444-4444-4444-4444-444444444444' } } }) }, async (client, server) => {
       await assert.rejects(assertPinnedAgent(client, handle), /session identity was replaced/);
       assert.equal(handle.status, 'replaced');
@@ -96,12 +107,12 @@ describe('protocol-17 socket and lifecycle validation', () => {
     });
   });
   it('denies close without UI or when the human declines', async () => {
-    const handle = { paneId: 'w1:p2', role: 'executor' };
+    const handle = { paneId: 'w1:p2', terminalId: 'term-2', role: 'executor' };
     await assert.rejects(requestCloseConfirmation({ hasUI: false }, handle), /no UI available/);
     assert.equal(await requestCloseConfirmation({ hasUI: true, ui: { confirm: async () => false } }, handle), false);
   });
-  it('accepts exact agent/pane/session identity and protocol close response', async () => {
-    const handle = { agentName: 'worker', paneId: 'w1:p2', sessionKind: 'id', sessionValue: session.value, status: 'ready' };
-    await withServer({}, async (client) => { assert.deepEqual(captureAgentIdentity(await assertPinnedAgent(client, handle)), { agentName: 'worker', paneId: 'w1:p2', sessionKind: 'id', sessionValue: session.value }); await closePane(client, 'w1:p2'); });
+  it('accepts exact agent/pane/terminal/session identity and protocol close response', async () => {
+    const handle = { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value, status: 'ready' };
+    await withServer({}, async (client) => { assert.deepEqual(captureAgentIdentity(await assertPinnedAgent(client, handle)), { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value }); await closePane(client, 'w1:p2'); });
   });
 });

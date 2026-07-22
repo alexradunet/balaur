@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { collectSessionResult, extractFinalizedResult, resolvePiSessionReference, waitForFinalizedSessionResult, waitForPiSessionReference } from '../session-collector.js';
+import { captureSessionBoundary, collectSessionResult, collectSessionResultAfterBoundary, extractFinalizedResult, resolvePiSessionReference, waitForFinalizedSessionResult, waitForPiSessionReference } from '../session-collector.js';
 
 const fixture = resolve('.pi/extensions/herdr-agents/test/fixtures/session.jsonl');
 const usage = { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
@@ -17,6 +17,38 @@ describe('Pi v3 session collection', () => {
     assert.equal(result.toolCalls[0].id, 'call_1');
     assert.equal(result.toolCalls[0].result.text, 'ok');
     assert.equal(result.turns, 2);
+  });
+
+  it('binds collection to a post-boundary user turn instead of returning an old terminal result', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pi-boundary-'));
+    const path = join(dir, 'session.jsonl');
+    const header = { type: 'session', id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
+    const oldUser = { type: 'message', id: 'u-old', message: { role: 'user', content: 'old' } };
+    const oldAnswer = { type: 'message', id: 'a-old', message: { role: 'assistant', content: [{ type: 'text', text: 'old answer' }], stopReason: 'stop', usage } };
+    await writeFile(path, [header, oldUser, oldAnswer].map(JSON.stringify).join('\n') + '\n');
+    try {
+      const boundary = await captureSessionBoundary(path);
+      await writeFile(path, JSON.stringify({ type: 'message', id: 'u-new', message: { role: 'user', content: 'new' } }) + '\n', { flag: 'a' });
+      const partial = await collectSessionResultAfterBoundary(path, boundary);
+      assert.equal(partial.stopReason, 'incomplete');
+      await writeFile(path, JSON.stringify({ type: 'message', id: 'a-new', message: { role: 'assistant', content: [{ type: 'text', text: 'new answer' }], stopReason: 'stop', usage } }) + '\n', { flag: 'a' });
+      assert.equal((await collectSessionResultAfterBoundary(path, boundary)).text, 'new answer');
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it('fails closed for a changed header, ambiguous anchor, second user, and incomplete trailing record', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pi-boundary-invalid-')); const path = join(dir, 'session.jsonl');
+    const header = { type: 'session', id: 'cccccccc-cccc-cccc-cccc-cccccccccccc' };
+    await writeFile(path, [header, { type: 'message', id: 'anchor', message: { role: 'user', content: 'old' } }, { type: 'message', id: 'anchor', message: { role: 'assistant', content: [], stopReason: 'stop' } }].map(JSON.stringify).join('\n') + '\n');
+    try {
+      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor' }), /anchor is missing or ambiguous/);
+      await writeFile(path, [header, { type: 'message', id: 'one', message: { role: 'user', content: 'one' } }, { type: 'message', id: 'two', message: { role: 'user', content: 'two' } }].map(JSON.stringify).join('\n') + '\n');
+      assert.equal((await collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: header.id })).stopReason, 'incomplete');
+      await writeFile(path, JSON.stringify({ type: 'session', id: 'different' }) + '\n' + JSON.stringify({ type: 'message', id: 'anchor', message: { role: 'user' } }) + '\n');
+      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor' }), /header changed/);
+      await writeFile(path, [header, { type: 'message', id: 'anchor', message: { role: 'user' } }].map(JSON.stringify).join('\n') + '\n' + JSON.stringify({ type: 'message', id: 'partial', message: { role: 'assistant', stopReason: 'stop' } }));
+      assert.equal((await collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor' })).stopReason, 'incomplete');
+    } finally { await rm(dir, { recursive: true, force: true }); }
   });
 
   it('does not associate same-name tools without matching toolCallId', () => {

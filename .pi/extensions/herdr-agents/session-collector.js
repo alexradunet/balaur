@@ -12,8 +12,6 @@ export async function resolvePiSessionReference(session, sessionRoot = join(home
   if (!session || (session.kind !== 'path' && session.kind !== 'id') || typeof session.value !== 'string') throw new Error('invalid Pi session reference');
   if (session.kind === 'path') {
     if (!session.value.startsWith('/') || !session.value.endsWith('.jsonl') || /[\x00\n\r]/.test(session.value)) throw new Error('unsafe Pi session path reference');
-    // Herdr can report the absolute path just before Pi creates it; the
-    // bounded collector retry owns that creation/flush race.
     return session.value;
   }
   if (!SESSION_ID_RE.test(session.value)) throw new Error('invalid Pi session ID reference');
@@ -50,23 +48,43 @@ export async function waitForPiSessionReference(session, timeoutMs = 10000, sign
   throw lastError || new Error('Pi session reference was not resolved');
 }
 
+/** Capture a durable, complete-record boundary before bridge prompt submission. */
+export async function captureSessionBoundary(filePath) {
+  const entries = await readJsonlEntries(filePath);
+  const header = entries.find((entry) => entry?.type === 'session' && typeof entry.id === 'string' && entry.id);
+  if (!header) throw new Error('Pi session header is missing or invalid');
+  const last = entries.at(-1);
+  if (!last || typeof last.id !== 'string' || !last.id) throw new Error('Pi session has no complete entry ID for prompt boundary');
+  return { sessionId: header.id, anchorId: last.id };
+}
+
 export async function collectSessionResult(filePath) {
   return extractFinalizedResult(await readJsonlEntries(filePath));
 }
 
-export async function waitForFinalizedSessionResult(filePath, timeoutMs = 10000, signal) {
+export async function collectSessionResultAfterBoundary(filePath, boundary) {
+  if (!boundary?.sessionId || !boundary?.anchorId) throw new Error('invalid prompt boundary');
+  const entries = await readJsonlEntries(filePath);
+  const headers = entries.filter((entry) => entry?.type === 'session' && typeof entry.id === 'string');
+  if (headers.length !== 1 || headers[0].id !== boundary.sessionId) throw new Error('Pi session header changed or is invalid');
+  const anchors = entries.reduce((found, entry, index) => entry?.id === boundary.anchorId ? [...found, index] : found, []);
+  if (anchors.length !== 1) throw new Error('Pi prompt boundary anchor is missing or ambiguous');
+  return extractPostBoundaryResult(entries.slice(anchors[0] + 1));
+}
+
+export async function waitForFinalizedSessionResult(filePath, timeoutMs = 10000, signal, boundary) {
   const deadline = Date.now() + timeoutMs;
   let lastError;
   while (Date.now() < deadline) {
     if (signal?.aborted) throw new Error('collection aborted');
     try {
-      const result = await collectSessionResult(filePath);
+      const result = boundary ? await collectSessionResultAfterBoundary(filePath, boundary) : await collectSessionResult(filePath);
       if (result.stopReason !== 'incomplete') return result;
     } catch (error) { lastError = error; }
     await sleep(250, signal);
   }
   if (lastError) throw lastError;
-  return collectSessionResult(filePath);
+  return boundary ? collectSessionResultAfterBoundary(filePath, boundary) : collectSessionResult(filePath);
 }
 
 function sleep(ms, signal) {
@@ -84,6 +102,7 @@ function sleep(ms, signal) {
   });
 }
 
+/** Reads only complete newline-terminated JSONL records. */
 export async function readJsonlEntries(filePath) {
   const entries = [];
   let bytes = 0;
@@ -105,12 +124,28 @@ export async function readJsonlEntries(filePath) {
       buffer = parts.pop() || '';
       for (const line of parts) parse(line);
     });
-    stream.on('end', () => { if (buffer.trim()) parse(buffer); resolvePromise(entries); });
+    // A non-newline-terminated trailing record may be in flight: never make it
+    // a prompt anchor or finalized result.
+    stream.on('end', () => resolvePromise(entries));
     stream.on('error', (error) => reject(new Error(`failed to read session file: ${error.message}`)));
   });
 }
 
 export function extractFinalizedResult(entries) {
+  return extractTurnResult(entries, false);
+}
+
+function extractPostBoundaryResult(entries) {
+  const userIndexes = [];
+  for (let index = 0; index < entries.length; index++) {
+    if (entries[index]?.type === 'message' && entries[index].message?.role === 'user') userIndexes.push(index);
+  }
+  if (!userIndexes.length) return incomplete([]);
+  if (userIndexes.length > 1) return incomplete([]);
+  return extractTurnResult(entries.slice(userIndexes[0] + 1), true);
+}
+
+function extractTurnResult(entries, requireTerminal) {
   if (!Array.isArray(entries)) return incomplete([]);
   const calls = new Map();
   let terminalAssistant;
@@ -123,8 +158,6 @@ export function extractFinalizedResult(entries) {
       for (const part of Array.isArray(message.content) ? message.content : []) {
         if (part?.type === 'toolCall' && typeof part.id === 'string') calls.set(part.id, { id: part.id, name: String(part.name || 'unknown'), arguments: part.arguments || {} });
       }
-      // Pi persists an assistant toolUse turn before its tool result(s) and
-      // later terminal assistant turn. toolUse is not a finalized outcome.
       if (message.stopReason !== 'toolUse') terminalAssistant = message;
     }
     if (message.role === 'toolResult' && typeof message.toolCallId === 'string') {

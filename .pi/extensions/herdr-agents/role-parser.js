@@ -33,13 +33,13 @@ export function roleNameFromFilename(filename) {
 
 function splitFrontmatter(content, filePath) {
   const text = content.replace(/^\uFEFF/, '');
-  if (!text.startsWith('---')) throw new Error(`${filePath}: missing frontmatter delimiter`);
-  const endIdx = text.indexOf('\n---', 3);
-  if (endIdx === -1) throw new Error(`${filePath}: unterminated frontmatter`);
-  const fmBlock = text.slice(3, endIdx).trim();
-  const body = text.slice(endIdx + 4).replace(/^\r?\n/, '');
+  const lines = text.split('\n');
+  const delimiter = (line) => line.replace(/\r$/, '') === '---';
+  if (!delimiter(lines[0] || '')) throw new Error(`${filePath}: missing frontmatter delimiter`);
+  const closingLine = lines.findIndex((line, index) => index > 0 && delimiter(line));
+  if (closingLine === -1) throw new Error(`${filePath}: unterminated frontmatter`);
   const frontmatter = {};
-  for (const rawLine of fmBlock.split('\n')) {
+  for (const rawLine of lines.slice(1, closingLine)) {
     const line = rawLine.trim();
     if (!line || line.startsWith('#')) continue;
     const colonIdx = line.indexOf(':');
@@ -49,7 +49,7 @@ function splitFrontmatter(content, filePath) {
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
     frontmatter[key] = value;
   }
-  return { frontmatter, body };
+  return { frontmatter, body: lines.slice(closingLine + 1).join('\n').replace(/^\r?\n/, '') };
 }
 
 function buildRoleConfig(fm, body, filePath) {

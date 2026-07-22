@@ -15,15 +15,17 @@ honor its STOP conditions, and update your row when done.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | Move "Add to canvas" out of the sidebar into an Add menu on the canvas action bar | P1 | M | — | DONE |
+| 002  | Make Herdr prompting, collection, and launch recovery race-safe | P1 | M | Stage 1 through `e3f23f6` | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
 ## Dependency notes
 
-- None yet — plan 001 is self-contained. It is pure presentation/interaction:
-  it does not touch storage, the Service Worker, or the file-canonical
-  migration in `plans/`, so it can land before, after, or alongside those
-  phases without coordination.
+- Plan 001 is self-contained. It is pure presentation/interaction and does not
+  interact with the Herdr bridge.
+- Plan 002 is a corrective continuation of GitHub issue #2 after both final
+  reviewers rejected Stage 1 at `e3f23f6`. It must land before the Stage 1 PR
+  can open and before Stage 2 begins.
 
 ## Execution record
 
@@ -37,6 +39,10 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   `pi-agent-bbab15b0-714d-452` (contains both commits). Verified: 149/149
   storage tests, full browser-check smoke incl. offline and 380px width,
   functional eval probes, and geometry probes in both directions.
+- **002** — executed 2026-07-22 in `/tmp/balaur-workers/2-herdr-agent-bridge`
+  from `e3f23f6`. Focused Herdr bridge suite (43 tests), syntax checks, and
+  `git diff --check` passed. The real visible-pane two-prompt race smoke remains
+  for the lead to run; it intentionally leaves all smoke panes open.
 
 ## Findings considered and rejected
 
