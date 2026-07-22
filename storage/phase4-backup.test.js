@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { MemoryVault } from "./memory-vault.js";
 import { WorkspaceStore, SIDECAR_PATH, loadWorkspace } from "./workspace-vault.js";
 import { serializeTask } from "./entity-codec.js";
+import { serializeComponentCard } from "./component-card-codec.js";
 import {
   exportBundle, serializeBundle, parseBundle, validateBundle, importBundle, assertCompleteExport,
   BACKUP_FORMAT, BACKUP_VERSION,
@@ -21,6 +22,12 @@ const sampleTask = {
   body: "Collect the outstanding numbers and prepare the summary.",
 };
 const TASK_PATH = "tasks/finish-quarterly-review--a1b2c3.md";
+const CARD_PATH = "cards/weekly-focus--d4e5f6.md";
+const sampleCard = {
+  id: "card-d4e5f6", title: "Weekly focus", recipe: "metric",
+  value: "72%", label: "Deep-work target", progress: 0.72, trend: "up",
+  body: "Up from 64% last week.",
+};
 
 function textNode(id, text, x = 0, y = 0) {
   return { id, type: "text", x, y, width: 200, height: 100, text };
@@ -47,6 +54,7 @@ async function populatedVault() {
   const vault = new MemoryVault();
   await new WorkspaceStore(vault).migrate(legacyWorkspace());
   await vault.write(TASK_PATH, serializeTask(sampleTask));
+  await vault.write(CARD_PATH, serializeComponentCard(sampleCard));
   await vault.write("notes/idea.md", "# Just a note\n\nNo frontmatter here.");
   return vault;
 }
@@ -65,6 +73,7 @@ test("exportBundle produces a sorted, sidecar-separated bundle", async () => {
   assert.ok(paths.includes("canvases/planning.canvas"));
   assert.ok(paths.includes(TASK_PATH));
   assert.ok(paths.includes("notes/idea.md"));
+  assert.ok(paths.includes(CARD_PATH));
 });
 
 test("export preserves entity bytes exactly", async () => {
@@ -73,6 +82,9 @@ test("export preserves entity bytes exactly", async () => {
   const taskFile = bundle.files.find((f) => f.path === TASK_PATH);
   assert.equal(taskFile.text, serializeTask(sampleTask));
   assert.equal(taskFile.mediaType, "text/markdown");
+  const cardFile = bundle.files.find((f) => f.path === CARD_PATH);
+  assert.equal(cardFile.text, serializeComponentCard(sampleCard));
+  assert.equal(cardFile.mediaType, "text/markdown");
 });
 
 test("export -> import round-trips into a fresh staging vault", async () => {
@@ -83,12 +95,13 @@ test("export -> import round-trips into a fresh staging vault", async () => {
   const staging = new MemoryVault();
   const summary = await importBundle(staging, text);
   assert.deepEqual(summary.diagnostics, []);
-  assert.equal(summary.entityCount, 1);
+  assert.equal(summary.entityCount, 2);
 
   const restored = (await loadWorkspace(staging)).workspace;
   assert.equal(restored.canvases["canvas-root"].title, "Life OS");
   assert.deepEqual(restored.canvases["canvas-planning"].document.nodes, [textNode("p1", "# Planning")]);
   assert.equal(await staging.read(TASK_PATH), serializeTask(sampleTask));
+  assert.equal(await staging.read(CARD_PATH), serializeComponentCard(sampleCard));
 });
 
 test("export refuses a vault with an invalid canvas", async () => {
@@ -148,6 +161,68 @@ test("validateBundle flags duplicate orbit-ids in staging", async () => {
   assert.ok(diag, "expected a DUPLICATE_ID diagnostic");
   assert.equal(diag.details.orbitId, "task-a1b2c3");
   assert.equal(diag.details.paths.length, 2);
+});
+
+test("validateBundle detects an orbit-id collision between a component card and a life entity", async () => {
+  const vault = await populatedVault();
+  const { bundle } = await exportBundle(vault);
+  const duplicate = structuredClone(bundle);
+  duplicate.files.push({
+    path: "cards/task-id-copy.md",
+    mediaType: "text/markdown",
+    text: serializeComponentCard({ ...sampleCard, id: sampleTask.orbitId }),
+  });
+
+  const summary = await validateBundle(duplicate);
+  const diagnostic = summary.diagnostics.find((item) => item.code === "DUPLICATE_ID" && item.details.orbitId === sampleTask.orbitId);
+  assert.deepEqual(diagnostic.details.paths, [TASK_PATH, "cards/task-id-copy.md"]);
+});
+
+test("validateBundle diagnoses malformed component cards", async () => {
+  const vault = await populatedVault();
+  const { bundle } = await exportBundle(vault);
+  const malformed = structuredClone(bundle);
+  malformed.files.find((file) => file.path === CARD_PATH).text =
+    "---\norbit-schema: 1\norbit-type: component-card\norbit-id: card-broken\ntitle: \"Broken\"\nrecipe: progress\nvalue: 12\nmaximum: 10\n---\n";
+
+  const summary = await validateBundle(malformed);
+  assert.ok(summary.diagnostics.some((item) => item.path === CARD_PATH && item.code === "ENTITY_MALFORMED"));
+});
+
+test("validateBundle detects duplicate orbit-ids claimed by malformed component cards", async () => {
+  const vault = await populatedVault();
+  const { bundle } = await exportBundle(vault);
+  const malformedDuplicate = structuredClone(bundle);
+  malformedDuplicate.files.push({
+    path: "cards/malformed-duplicate.md",
+    mediaType: "text/markdown",
+    text: serializeComponentCard({
+      ...sampleCard,
+      recipe: "progress",
+      value: 5,
+      maximum: 10,
+      label: undefined,
+      progress: undefined,
+      trend: undefined,
+    }).replace("value: 5", "value: 11"),
+  });
+
+  const summary = await validateBundle(malformedDuplicate);
+  const duplicate = summary.diagnostics.find((item) => item.code === "DUPLICATE_ID" && item.details.orbitId === sampleCard.id);
+  assert.deepEqual(duplicate.details.paths, [CARD_PATH, "cards/malformed-duplicate.md"]);
+  assert.ok(summary.diagnostics.some((item) => item.path === "cards/malformed-duplicate.md" && item.code === "ENTITY_MALFORMED"));
+});
+
+test("validateBundle rejects a canvas reference to a missing component card", async () => {
+  const vault = await populatedVault();
+  const { bundle } = await exportBundle(vault);
+  const missing = structuredClone(bundle);
+  const root = missing.files.find((file) => file.path === "canvases/root.canvas");
+  const document = JSON.parse(root.text);
+  document.nodes.push({ id: "missing-card", type: "file", file: "cards/missing.md", x: 0, y: 200, width: 360, height: 220 });
+  root.text = JSON.stringify(document, null, 2) + "\n";
+
+  await assert.rejects(() => validateBundle(missing), (error) => error.code === "CANVAS_FILE_REFERENCE");
 });
 
 test("validateBundle flags malformed entities without throwing", async () => {

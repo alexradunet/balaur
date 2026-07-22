@@ -282,7 +282,7 @@ node --test \
   storage/phase10.test.js storage/phase-query.test.js
 ```
 
-This explicit suite currently passes **164 tests** (the deleted phase6 suite is intentionally excluded). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
+This explicit suite currently passes **168 tests**: the prior 164-test suite plus four component-card backup-boundary tests in `phase4-backup.test.js` (the deleted phase6 suite is intentionally excluded). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
 
 Then perform browser-level checks appropriate to the change. **The default way to check the application is the project `browser-check` skill** at `.pi/skills/browser-check/` — a dependency-free headless-Chrome-over-CDP driver that runs the baseline smoke suite below automatically (no WebDriver, no npm install). With the app served on `4173`:
 

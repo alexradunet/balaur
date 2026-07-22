@@ -2,6 +2,11 @@
 import { IndexedDbVault } from "./storage/indexeddb-vault.js";
 import { WorkspaceStore, hasWorkspace, canvasPathFor } from "./storage/workspace-vault.js";
 import { isCanvas } from "./storage/canvas-validate.js";
+import { ComponentCardCatalog } from "./storage/component-card-catalog.js";
+import { FileComponentCardRepository } from "./storage/component-card-repository.js";
+import { WidgetCatalog } from "./storage/widget-catalog.js";
+import { FileWidgetRepository } from "./storage/widget-repository.js";
+import { componentCardPath, slugify } from "./storage/vault-path.js";
 import { LifeIndexer } from "./storage/life-indexer.js";
 import { parseEntity } from "./storage/entity-codec.js";
 import { MemoryIndex } from "./storage/memory-index.js";
@@ -9,6 +14,7 @@ import { LifeQuery } from "./storage/life-query.js";
 import { FileTaskRepository } from "./storage/task-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
+import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacementFailure, validateGeneratedOperation } from "./ai/generated-operations.js";
 const COLORS = {
   "1": "#ff7b78", "2": "#efa66a", "3": "#e9d56b",
   "4": "#7ee0a1", "5": "#64cbd0", "6": "#a78bfa"
@@ -125,6 +131,10 @@ let lifeIndex=null;
 let lifeIndexer=null;
 let lifeQuery=null;
 let taskRepository=null;
+let componentCardCatalog=null;
+let componentCardRepository=null;
+let widgetCatalog=null;
+let widgetRepository=null;
 let canonicalWritable=false;
 const aiFileContentCache=new Map();
 const taskUpdateTimers=new Map();
@@ -191,6 +201,7 @@ async function saveWorkspaceNow(){
 function persistWorkspace(){
   const operation=enqueueMutation(saveWorkspaceNow);
   pendingSave=operation;
+  operation.then(()=>{},()=>{}).then(()=>{if(pendingSave===operation)pendingSave=Promise.resolve();});
   return operation;
 }
 function markSaveResult(promise){
@@ -240,10 +251,36 @@ function canvasIdFromPath(path) {
   const record = Object.values(workspace.canvases).find(item => canvasPathFor(item, workspace.rootId) === path);
   return record?.id || String(path).split("/").pop().replace(/\.canvas$/, "");
 }
+async function seedBundledWidget(vault) {
+  const path = "widgets/focus-orbit.html";
+  if (await vault.stat(path)) return;
+  const response = await fetch(new URL(path, document.baseURI));
+  if (!response.ok) throw new Error(`Could not load bundled widget source: ${response.status}`);
+  await vault.write(path, await response.text(), { expectedHash: null, mediaType: "text/html" });
+}
+
 function configureLifeRuntime(vault) {
   lifeIndex = new MemoryIndex();
   lifeIndexer = new LifeIndexer({ vault, index: lifeIndex, canvasIdFromPath });
   lifeQuery = new LifeQuery(lifeIndex);
+  componentCardCatalog = new ComponentCardCatalog({ vault });
+  componentCardRepository = new FileComponentCardRepository({
+    vault,
+    catalog: componentCardCatalog,
+    canvasPathFromId: id => {
+      const record = workspace.canvases[id];
+      return record ? canvasPathFor(record, workspace.rootId) : null;
+    },
+  });
+  widgetCatalog = new WidgetCatalog({ vault });
+  widgetRepository = new FileWidgetRepository({
+    vault,
+    catalog: widgetCatalog,
+    canvasPathFromId: id => {
+      const record = workspace.canvases[id];
+      return record ? canvasPathFor(record, workspace.rootId) : null;
+    },
+  });
   taskRepository = new FileTaskRepository({
     vault, index: lifeIndex, indexer: lifeIndexer,
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
@@ -279,17 +316,18 @@ async function bootCanvasApp(){
     window.orbitVaultStore = store;
     setCanonicalWritable(!result.diagnostics.some((diagnostic) => diagnostic.code === "CANVAS_MISSING" || diagnostic.code === "CANVAS_INVALID" || diagnostic.code === "CANVAS_PARSE"), result.diagnostics.map((diagnostic) => diagnostic.message).join("; "));
     configureLifeRuntime(vault);
+    await seedBundledWidget(vault);
     for (const diagnostic of result.diagnostics) console.warn("Vault workspace diagnostic", diagnostic);
     if (firstRun) {
       await seedStarterTasks();
       workspace = (await store.load()).workspace;
     }
-    await lifeIndexer.rebuild();
+    await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild()]);
     const stats = lifeIndexer.stats();
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
   } catch (error) {
     console.warn("Vault-first boot failed; canonical files are unavailable", error);
-    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null;
+    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null;
     setIndexStatus("Files unavailable", error.message);
     setCanonicalWritable(false, "Canonical files are unavailable; export or repair the vault before editing.");
   }
@@ -364,7 +402,7 @@ function createJohnnyDecimalStarterWorkspace(){
 }
 async function rebuildLifeIndex(){
   if (!lifeIndexer) return;
-  await lifeIndexer.rebuild();
+  await Promise.all([lifeIndexer.rebuild(), componentCardCatalog?.rebuild(), widgetCatalog?.rebuild()]);
   const stats = lifeIndexer.stats();
   setIndexStatus(`Files · ${stats.sourceFiles} indexed`, `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);
   renderToday(); renderNodes();
@@ -377,12 +415,13 @@ async function loadJohnnyDecimalStarter(){
     const starter=createJohnnyDecimalStarterWorkspace();
     const stagingVault=new IndexedDbVault(`orbit-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
     await stagingStore.migrate(starter);
+    await seedBundledWidget(stagingVault);
     workspace=starter;configureLifeRuntime(stagingVault);await seedStarterTasks();
     const snapshot=await stagingVault.snapshot(), canonicalVault=vaultStore.vault;
     await canonicalVault.restore(snapshot);
     const nextStore=new WorkspaceStore(canonicalVault), result=await nextStore.load();
     if(!result?.workspace)throw new Error("Starter activation did not produce a workspace");
-    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await lifeIndexer.rebuild();
+    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
     currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#johnnyDecimalDialog")?.close();$("#canvasTitle").value=canvasRecord().title;renderWorkspaceNavigation();render();fitView();toast("Johnny Decimal starter space loaded");
   } catch(error) { console.warn("Could not reset the canonical vault",error); toast(`Could not load starter: ${error.message}`); }
 }
@@ -391,15 +430,54 @@ function portalPreview(document){
   const minX=Math.min(...nodes.map(node=>node.x)),minY=Math.min(...nodes.map(node=>node.y)),maxX=Math.max(...nodes.map(node=>node.x+node.width)),maxY=Math.max(...nodes.map(node=>node.y+node.height)),width=Math.max(1,maxX-minX),height=Math.max(1,maxY-minY),scale=Math.min(210/width,82/height);
   return nodes.map(node=>`<i class="${node.type==="group"?"group":""}" style="left:${(node.x-minX)*scale}px;top:${(node.y-minY)*scale}px;width:${Math.max(2,node.width*scale)}px;height:${Math.max(2,node.height*scale)}px;${node.type==="group"?"":`background:${colorValue(node.color)}`}" ></i>`).join("");
 }
+function componentDefined(name){return Boolean(customElements.get(name));}
+function fallbackButton(label,className=""){
+  const button=document.createElement("button");button.type="button";button.textContent=label;if(className)button.className=className;return button;
+}
+function renderFallbackWorkspaceNavigation(host,trail,canvases){
+  host.dataset.nativeFallback="";
+  const mode=host.getAttribute("mode")==="trail"?"trail":"canvases",items=mode==="trail"?trail:canvases,fragment=document.createDocumentFragment();
+  items.forEach((item,index)=>{
+    const button=fallbackButton(item.title||"Untitled canvas",mode==="canvases"?"nav-item canvas-list-item":"");
+    button.dataset.fallbackCanvasId=item.id;
+    if(item.id===currentCanvasId){button.classList.add("active");button.setAttribute("aria-current","page");}
+    if(mode==="canvases"){
+      button.textContent="";
+      const icon=document.createElement("span"),title=document.createElement("b"),count=document.createElement("em");
+      icon.setAttribute("aria-hidden","true");icon.textContent=item.icon||"↳";title.textContent=item.title||"Untitled canvas";count.textContent=String(item.count||0);
+      button.style.setProperty("--canvas-depth",String(item.depth||0));button.append(icon,title,count);
+    }
+    fragment.append(button);
+    if(mode==="trail"&&index<items.length-1){const separator=document.createElement("span");separator.setAttribute("aria-hidden","true");separator.textContent="›";fragment.append(separator);}
+  });
+  host.replaceChildren(fragment);
+  host.onclick=event=>{
+    const button=event.target.closest?.("[data-fallback-canvas-id]");if(!button||!host.contains(button))return;
+    host.dispatchEvent(new CustomEvent("balaur-canvas-open",{bubbles:true,composed:true,detail:{canvasId:button.dataset.fallbackCanvasId}}));
+  };
+}
 function orderedCanvasRecords(){
   const records=Object.values(workspace.canvases),result=[],seen=new Set(),compare=(a,b)=>(jdSortValue(a.jdCode)-jdSortValue(b.jdCode))||a.title.localeCompare(b.title),visit=record=>{if(!record||seen.has(record.id))return;seen.add(record.id);result.push(record);records.filter(item=>item.parentId===record.id).sort(compare).forEach(visit);};visit(workspace.canvases[workspace.rootId]);records.sort(compare).forEach(visit);return result;
 }
 function renderWorkspaceNavigation(){
+  const trail=canvasTrail().map(record=>({id:record.id,title:record.title}));
+  const canvases=orderedCanvasRecords().map(record=>({
+    id:record.id,
+    title:record.title,
+    depth:canvasDepth(record.id),
+    count:(record.document.nodes||[]).length,
+    icon:record.id===workspace.rootId?"◫":record.jdCode?"#":"↳",
+  }));
   const breadcrumbs=$("#canvasBreadcrumbs"),list=$("#canvasList");
-  if(breadcrumbs)breadcrumbs.innerHTML=canvasTrail().map((record,index,trail)=>`<button data-canvas-switch="${escapeHTML(record.id)}" ${index===trail.length-1?'aria-current="page"':''}>${escapeHTML(record.title)}</button>${index<trail.length-1?"<span>›</span>":""}`).join("");
-  if(list)list.innerHTML=orderedCanvasRecords().map(record=>`<button class="nav-item canvas-list-item ${record.id===currentCanvasId?"active":""}" data-canvas-switch="${escapeHTML(record.id)}" style="--canvas-depth:${canvasDepth(record.id)}"><span>${record.id===workspace.rootId?"◫":record.jdCode?"#":"↳"}</span><b>${escapeHTML(record.title)}</b><em>${(record.document.nodes||[]).length}</em></button>`).join("");
+  if(breadcrumbs){
+    if(componentDefined("balaur-workspace-nav")){breadcrumbs.trail=trail;breadcrumbs.canvases=canvases;breadcrumbs.activeId=currentCanvasId;}
+    else renderFallbackWorkspaceNavigation(breadcrumbs,trail,canvases);
+  }
+  if(list){
+    if(componentDefined("balaur-workspace-nav")){list.trail=trail;list.canvases=canvases;list.activeId=currentCanvasId;}
+    else renderFallbackWorkspaceNavigation(list,trail,canvases);
+  }
   $("#johnnyDecimalState")?.classList.toggle("active",Boolean(workspace.johnnyDecimal.enabled));
-  $$('[data-canvas-switch]').forEach(button=>button.onclick=()=>switchCanvas(button.dataset.canvasSwitch,{direction:"switch"}));
 }
 function activateCanvas(id,{focusNodeId=null,fit=false}={}){
   const record=workspace.canvases[id];if(!record)return;currentCanvasId=id;workspace.activeId=id;documentData=record.document;camera=record.camera?{...record.camera}:{x:80,y:55,zoom:1};selected=null;connectSource=null;connectSourceSide=null;activeFilter="all";aiCardRuntime.clear();shell.classList.remove("inspector-open");$$('.nav-item[data-filter]').forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"));$("#canvasTitle").value=record.title;render();
@@ -485,14 +563,43 @@ function openTaskDialog({today=false}={}){
   const dialog=$("#taskDialog"),select=$("#taskCanvas");select.innerHTML=orderedCanvasRecords().map(record=>`<option value="${escapeHTML(record.id)}">${escapeHTML(record.title)}</option>`).join("");select.value=currentCanvasId;$("#taskTitle").value="";$("#taskNotes").value="";$("#taskStatus").value=today?"scheduled":"inbox";$("#taskScheduledOn").value=today?localDateISO():"";$("#taskDueOn").value="";$("#taskPriority").value="";$("#taskResult").textContent="";dialog.showModal();setTimeout(()=>$("#taskTitle").focus(),60);
 }
 function taskContext(task){const placement=taskPlacement(task);return workspace.canvases[placement?.canvasId]?.title||"Inbox";}
-function taskListHTML(tasks,empty){
-  if(!tasks.length)return `<div class="today-empty">${escapeHTML(empty)}</div>`;return tasks.map(task=>`<article class="today-task ${task.status==="done"?"done":""}" data-task-id="${escapeHTML(task.id)}"><button type="button" class="task-check" data-complete-task aria-label="Complete ${escapeHTML(task.title)}">${task.status==="done"?"✓":""}</button><button type="button" class="task-copy" data-open-task><b>${escapeHTML(task.title)}</b><small>${escapeHTML(taskContext(task))}</small></button><div class="task-dates">${task.scheduledOn?`<time datetime="${task.scheduledOn}">Plan ${escapeHTML(task.scheduledOn.slice(5))}</time>`:""}${task.dueOn?`<time class="due" datetime="${task.dueOn}">Due ${escapeHTML(task.dueOn.slice(5))}</time>`:""}</div></article>`).join("");
-}
-function bindTaskList(root){
-  $$('[data-task-id]',root).forEach(row=>{const id=row.dataset.taskId;$("[data-complete-task]",row).onclick=async()=>{try{await completeTask(id);toast("Task completed");}catch(error){toast(error.message);}};$("[data-open-task]",row).onclick=()=>{const task=lifeQuery?.tasks().find(item=>item.id===id),placement=taskPlacement(task);if(!placement)return;setAppView("canvas");revealWorkspaceNode(placement.canvasId,placement.nodeId);};});
+function renderFallbackTaskList(list,tasks,emptyMessage){
+  list.dataset.nativeFallback="";
+  if(!tasks.length){const empty=document.createElement("p");empty.className="task-list-empty";empty.textContent=emptyMessage;list.replaceChildren(empty);return;}
+  const rows=document.createElement("ul");rows.className="task-list";
+  for(const task of tasks){
+    const row=document.createElement("li");row.dataset.fallbackTaskId=task.id;
+    const open=fallbackButton(task.title||"Untitled task");open.dataset.fallbackTaskOpen=task.id;
+    const context=document.createElement("small");context.textContent=task.context||"Inbox";row.append(open,context);
+    if(task.status!=="done"){const complete=fallbackButton("Mark done");complete.dataset.fallbackTaskComplete=task.id;row.append(complete);}
+    rows.append(row);
+  }
+  list.replaceChildren(rows);
+  list.onclick=event=>{
+    const open=event.target.closest?.("[data-fallback-task-open]"),complete=event.target.closest?.("[data-fallback-task-complete]");
+    if(open&&list.contains(open))list.dispatchEvent(new CustomEvent("balaur-task-open",{bubbles:true,composed:true,detail:{taskId:open.dataset.fallbackTaskOpen}}));
+    else if(complete&&list.contains(complete))list.dispatchEvent(new CustomEvent("balaur-task-complete",{bubbles:true,composed:true,detail:{taskId:complete.dataset.fallbackTaskComplete}}));
+  };
 }
 function renderToday(){
-  const root=$("#todayView");if(!root||!lifeQuery)return;const today=localDateISO(),all=lifeQuery.tasks(),active=task=>!["done","cancelled"].includes(task.status),scheduled=all.filter(task=>active(task)&&task.scheduledOn===today),overdue=all.filter(task=>active(task)&&task.dueOn&&task.dueOn<today&&task.scheduledOn!==today),queue=all.filter(task=>active(task)&&["inbox","next"].includes(task.status)&&task.scheduledOn!==today&&!overdue.includes(task)),completed=all.filter(task=>task.status==="done"&&task.completedAt&&localDateISO(new Date(task.completedAt))===today);$("#todayDate").textContent=new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(new Date());$("#todayPlannedCount").textContent=scheduled.length;$("#todayDueCount").textContent=overdue.length;$("#todayDoneCount").textContent=completed.length;$("#todayScheduled").innerHTML=taskListHTML(scheduled,"Nothing scheduled yet. Choose deliberately rather than carrying everything forward.");$("#todayOverdue").innerHTML=taskListHTML(overdue,"No overdue tasks.");$("#todayQueue").innerHTML=taskListHTML(queue,"The task inbox is clear.");$("#todayCompleted").innerHTML=taskListHTML(completed,"Completed tasks will appear here.");bindTaskList(root);
+  const root=$("#todayView");if(!root||!lifeQuery)return;
+  const today=localDateISO(),all=lifeQuery.tasks(),active=task=>!["done","cancelled"].includes(task.status);
+  const scheduled=all.filter(task=>active(task)&&task.scheduledOn===today);
+  const overdue=all.filter(task=>active(task)&&task.dueOn&&task.dueOn<today&&task.scheduledOn!==today);
+  const queue=all.filter(task=>active(task)&&["inbox","next"].includes(task.status)&&task.scheduledOn!==today&&!overdue.includes(task));
+  const completed=all.filter(task=>task.status==="done"&&task.completedAt&&localDateISO(new Date(task.completedAt))===today);
+  $("#todayDate").textContent=new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(new Date());
+  $("#todayPlannedCount").textContent=scheduled.length;$("#todayDueCount").textContent=overdue.length;$("#todayDoneCount").textContent=completed.length;
+  const assign=(selector,tasks,empty)=>{
+    const list=$(selector);if(!list)return;
+    const items=tasks.map(task=>({...task,context:taskContext(task)}));
+    if(componentDefined("balaur-task-list")){list.emptyMessage=empty;list.items=items;}
+    else renderFallbackTaskList(list,items,empty);
+  };
+  assign("#todayScheduled",scheduled,"Nothing scheduled yet. Choose deliberately rather than carrying everything forward.");
+  assign("#todayOverdue",overdue,"No overdue tasks.");
+  assign("#todayQueue",queue,"The task inbox is clear.");
+  assign("#todayCompleted",completed,"Completed tasks will appear here.");
 }
 function deleteJDEntriesForCanvas(id){for(const [code,entry] of Object.entries(jdEntries()))if(entry.canvasId===id||entry.parentCanvasId===id)delete workspace.johnnyDecimal.entries[code];}
 function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);deleteJDEntriesForCanvas(id);delete workspace.canvases[id];}
@@ -580,12 +687,62 @@ function markdownToHTML(source="") {
   return html;
 }
 
+function widgetThemeSnapshot() {
+  const style=getComputedStyle(document.documentElement),read=name=>style.getPropertyValue(name).trim();
+  return {
+    surface:read("--balaur-surface-oak"),surfaceRaised:read("--balaur-surface-oak-raised"),
+    content:read("--balaur-content-on-dark"),contentMuted:read("--balaur-content-on-dark-muted"),
+    paper:read("--balaur-surface-parchment"),ink:read("--balaur-content-on-paper"),
+    primary:read("--balaur-action-primary"),focus:read("--balaur-border-focus"),
+    danger:read("--balaur-status-danger"),radius:read("--balaur-radius-panel"),
+    fontBody:read("--balaur-font-body"),fontMono:read("--balaur-font-mono"),
+  };
+}
+function widgetPreferences(){return {reducedMotion:matchMedia("(prefers-reduced-motion: reduce)").matches,reducedTransparency:matchMedia("(prefers-reduced-transparency: reduce)").matches,contrast:matchMedia("(prefers-contrast: more)").matches?"more":matchMedia("(prefers-contrast: less)").matches?"less":"no-preference"};}
+function showWidgetSourceReview({title="Live widget",path="",source=""}={}) {
+  let dialog=$("#widgetSourceDialog");
+  if(!dialog){
+    dialog=document.createElement("dialog");dialog.id="widgetSourceDialog";dialog.className="widget-source-dialog";
+    dialog.innerHTML='<article><header><div><small>REVIEWED CANONICAL SOURCE</small><h2></h2></div><button type="button" data-close-widget-source aria-label="Close source review">Close</button></header><p class="widget-capability-summary">Sandboxed scripts and inline styles only. No host data or mutation, storage, network, forms, popups, workers, or nested frames. Self-navigation pauses the widget; hard request suppression is not claimed.</p><code></code><pre></pre></article>';
+    document.body.append(dialog);$("[data-close-widget-source]",dialog).onclick=()=>dialog.close();
+  }
+  $("h2",dialog).textContent=title;$("code",dialog).textContent=path;$("pre",dialog).textContent=source;dialog.showModal();
+}
+document.addEventListener("balaur-widget-view-source",event=>{event.stopPropagation();showWidgetSourceReview(event.detail);});
+
+function renderFallbackFileContent(content,kind,model){
+  const article=document.createElement("article");
+  article.dataset[kind==="component"?"fallbackComponentCard":"fallbackWidget"]="";
+  const kicker=document.createElement("small"),title=document.createElement("h3"),identity=document.createElement("p");
+  kicker.textContent=kind==="component"?"COMPONENT CARD · STATIC FALLBACK":"LIVE WIDGET · INACTIVE FALLBACK";
+  title.textContent=model.title||model.path||"Unavailable file";
+  identity.textContent=kind==="component"
+    ? `${model.recipe?`Recipe: ${model.recipe} · `:""}${model.path||""}`
+    : `${model.path||""} · Source is not executed while component registration is unavailable.`;
+  article.append(kicker,title,identity);
+  const detail=kind==="component"?(model.diagnostic||model.body):(model.diagnostic||"Reviewed canonical source remains inactive.");
+  if(detail){const description=document.createElement("p");description.textContent=String(detail).slice(0,600);article.append(description);}
+  content.replaceChildren(article);
+}
 function renderNodes() {
   const selectionKey = selected?.kind === "node" ? selected.id : null;
   const selectionEntering = selectionKey !== null && selectionKey !== renderedSelectionKey;
-  nodeLayer.innerHTML = "";
-  (documentData.nodes || []).forEach(node => {
-    const element = $("#nodeTemplate").content.firstElementChild.cloneNode(true);
+  const retainedElements = new Map();
+  for (const element of [...nodeLayer.children]) {
+    const stableContent = element.querySelector("balaur-component-card, balaur-widget-frame");
+    if (stableContent) retainedElements.set(element.dataset.id, element);
+    else element.remove();
+  }
+  const renderedElements = new Set();
+  (documentData.nodes || []).forEach((node, index) => {
+    const retained = retainedElements.get(node.id);
+    const componentPath = node.type === "file" && /^cards\/.+\.md$/i.test(node.file || "");
+    const widgetPath = node.type === "file" && /\.html?$/i.test(node.file || "") && !subcanvasIdFromNode(node);
+    const canRetain = retained
+      && retained.dataset.filePath === (node.file || "")
+      && ((componentPath && retained.dataset.renderKind === "component-card")
+        || (widgetPath && retained.dataset.renderKind === "html-widget"));
+    const element = canRetain ? retained : $("#nodeTemplate").content.firstElementChild.cloneNode(true);
     element.dataset.id = node.id;
     element.dataset.color = node.color || "";
     element.style.cssText = `left:${node.x}px;top:${node.y}px;width:${node.width}px;height:${node.height}px;`;
@@ -605,6 +762,36 @@ function renderNodes() {
         const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
         content.innerHTML=`<div class="node-kicker">AI OPERATOR</div><div class="node-body"><h3 class="ai-card-title">${escapeHTML(config.title)}</h3><p class="ai-card-prompt">${escapeHTML(config.prompt)}</p><div class="ai-inputs">${inputs.length?inputs.map(input=>`<span class="ai-input-chip">← ${escapeHTML(nodeTitle(input))}</span>`).join(""):"<span class=\"ai-input-chip\">No inputs connected</span>"}</div></div><div class="ai-run-row"><span class="ai-run-status">${escapeHTML(runtime.status||"Ready")}</span><button class="ai-run-button" data-ai-run ${runtime.running?"disabled":""}>${runtime.running?"Running…":"Run now"}</button></div>`;
       } else {const jdCode=jdCodeFromNode(node);content.innerHTML = `<div class="node-kicker">${jdCode?`ITEM · ${escapeHTML(formatJDCode(jdCode))}`:textMeta(node)}</div><div class="node-body">${markdownToHTML(node.text)}</div>`;}
+    } else if (componentPath) {
+      element.classList.add("component-card-node");
+      element.dataset.renderKind = "component-card";
+      element.dataset.filePath = node.file;
+      const model = componentCardCatalog?.getByPath(node.file)
+        || componentCardCatalog?.getFallbackByPath(node.file)
+        || Object.freeze({
+          id: null,
+          title: node.file.split("/").pop() || "Component card",
+          recipe: null,
+          body: "",
+          path: node.file,
+          diagnostic: `Component-card file is unavailable: ${node.file}`,
+        });
+      if(!componentDefined("balaur-component-card"))renderFallbackFileContent(content,"component",model);
+      else{
+        let host = $("balaur-component-card", content);
+        if (!host) {
+          host = document.createElement("balaur-component-card");
+          host.addEventListener("balaur-card-open", event => {
+            event.stopPropagation();
+            const nodeId = event.detail?.nodeId;
+            if (nodeId && documentData.nodes.some(item => item.id === nodeId)) selectItem("node", nodeId);
+          });
+          content.replaceChildren(host);
+        }
+        host.dataset.nodeId = node.id;
+        host.placementColor = node.color || null;
+        host.model = model;
+      }
     } else if (node.type === "file" && taskIdFromNode(node)) {
       const task=taskForNode(node),taskId=task.id,status=task.status||"inbox";element.classList.add("task-card");element.classList.toggle("task-complete",status==="done");element.dataset.taskId=taskId;content.innerHTML=`<div class="node-kicker">TASK · ${escapeHTML(status.toUpperCase())}</div><div class="node-body">${markdownToHTML(`# ${task.title}`)}</div><div class="task-node-footer"><span>${task.scheduledOn?`Plan ${escapeHTML(task.scheduledOn)}`:task.dueOn?`Due ${escapeHTML(task.dueOn)}`:"Not scheduled"}</span><button type="button" data-node-complete-task ${status==="done"?"disabled":""}>${status==="done"?"Completed":"Mark done"}</button></div>`;
     } else if (node.type === "link") {
@@ -616,22 +803,40 @@ function renderNodes() {
       if(subcanvas){
         const children=Object.values(workspace.canvases).filter(record=>record.parentId===subcanvasId).length;element.classList.add("subcanvas-node");element.dataset.subcanvasId=subcanvasId;
         content.innerHTML=`<div class="node-kicker">${subcanvas.jdCode?`${escapeHTML((subcanvas.jdKind||jdEntries()[subcanvas.jdCode]?.kind||"canvas").toUpperCase())} · ${escapeHTML(formatJDCode(subcanvas.jdCode))}`:"SUB-CANVAS · ZOOM PORTAL"}</div><div class="node-body"><h3>${escapeHTML(subcanvas.jdTitle||subcanvas.title)}</h3><p>${subcanvas.document.nodes.length} item${subcanvas.document.nodes.length===1?"":"s"}${children?` · ${children} nested`:""}</p><div class="portal-preview">${portalPreview(subcanvas.document)}</div><div class="portal-actions"><span>Double-click or zoom to 220%</span><button type="button" data-open-subcanvas>Open ↘</button></div></div>`;
-      } else if (/\.html?$/i.test(node.file)) {
+      } else if (widgetPath) {
         element.classList.add("html-widget");
-        content.innerHTML = `<div class="node-kicker">LIVE HTML · SANDBOXED</div><div class="node-body"><iframe class="widget-frame" src="${safeFileURL(node.file)}" sandbox="allow-scripts" loading="lazy" referrerpolicy="no-referrer" title="${escapeHTML(node.file.split("/").pop())}"></iframe></div><div class="widget-shield"></div>`;
+        element.dataset.renderKind = "html-widget";
+        element.dataset.filePath = node.file;
+        const model=widgetCatalog?.getByPath(node.file)||widgetCatalog?.getFallbackByPath(node.file)||{path:node.file,title:node.file.split("/").pop()||"Live widget",source:"",diagnostic:`Widget file is unavailable: ${node.file}`};
+        if(!componentDefined("balaur-widget-frame"))renderFallbackFileContent(content,"widget",model);
+        else{
+          let host=$("balaur-widget-frame",content);
+          if(!host){
+            content.innerHTML='<div class="node-kicker">LIVE HTML · REVIEWED SANDBOX</div><div class="node-body widget-node-body"></div><div class="widget-shield"></div>';
+            host=document.createElement("balaur-widget-frame");
+            $(".widget-node-body",content).append(host);
+          }
+          host.path=model.path;host.title=model.title;host.source=model.source;host.diagnostic=model.diagnostic||"";host.themeSnapshot=widgetThemeSnapshot();host.preferences=widgetPreferences();
+        }
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="node-body"><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p></div>`;
     }
-    element.addEventListener("pointerdown", event => nodePointerDown(event, node));
-    $$("[data-connection-side]",element).forEach(handle=>{handle.addEventListener("pointerdown",event=>startConnectionDrag(event,node,handle.dataset.connectionSide));handle.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.stopPropagation();connectSource=node.id;connectSourceSide=handle.dataset.connectionSide;setTool("connect");toast("Choose a destination node");}});});
-    const aiRun=$("[data-ai-run]",element);if(aiRun){aiRun.addEventListener("pointerdown",event=>event.stopPropagation());aiRun.addEventListener("click",event=>{event.stopPropagation();runAICard(node.id,{manual:true});});}
-    const taskComplete=$("[data-node-complete-task]",element);if(taskComplete){taskComplete.addEventListener("pointerdown",event=>event.stopPropagation());taskComplete.addEventListener("click",async event=>{event.stopPropagation();try{await completeTask(element.dataset.taskId);toast("Task completed");}catch(error){toast(error.message);}});}
-    const portalButton=$("[data-open-subcanvas]",element);if(portalButton){portalButton.addEventListener("pointerdown",event=>event.stopPropagation());portalButton.addEventListener("click",event=>{event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});element.addEventListener("dblclick",event=>{if(event.target.closest("button"))return;event.preventDefault();event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});}
-    element.addEventListener("click", event => {
-      const anchor = event.target.closest("a");
-      if (anchor) event.stopPropagation();
-    });
-    nodeLayer.appendChild(element);
+    if (!canRetain) {
+      const liveNode = () => documentData.nodes.find(item => item.id === element.dataset.id);
+      element.addEventListener("pointerdown", event => { const item=liveNode();if(item)nodePointerDown(event,item); });
+      $$("[data-connection-side]",element).forEach(handle=>{handle.addEventListener("pointerdown",event=>{const item=liveNode();if(item)startConnectionDrag(event,item,handle.dataset.connectionSide);});handle.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.stopPropagation();connectSource=element.dataset.id;connectSourceSide=handle.dataset.connectionSide;setTool("connect");toast("Choose a destination node");}});});
+      const aiRun=$("[data-ai-run]",element);if(aiRun){aiRun.addEventListener("pointerdown",event=>event.stopPropagation());aiRun.addEventListener("click",event=>{event.stopPropagation();runAICard(element.dataset.id,{manual:true});});}
+      const taskComplete=$("[data-node-complete-task]",element);if(taskComplete){taskComplete.addEventListener("pointerdown",event=>event.stopPropagation());taskComplete.addEventListener("click",async event=>{event.stopPropagation();try{await completeTask(element.dataset.taskId);toast("Task completed");}catch(error){toast(error.message);}});}
+      const portalButton=$("[data-open-subcanvas]",element);if(portalButton){portalButton.addEventListener("pointerdown",event=>event.stopPropagation());portalButton.addEventListener("click",event=>{event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});element.addEventListener("dblclick",event=>{if(event.target.closest("button"))return;event.preventDefault();event.stopPropagation();enterSubcanvas(element.dataset.subcanvasId);});}
+      element.addEventListener("click", event => {
+        const anchor = event.target.closest("a");
+        if (anchor) event.stopPropagation();
+      });
+    }
+    const currentAtIndex = nodeLayer.children[index];
+    if (currentAtIndex !== element) nodeLayer.insertBefore(element, currentAtIndex || null);
+    renderedElements.add(element);
   });
+  for (const element of [...nodeLayer.children]) if (!renderedElements.has(element)) element.remove();
   renderedSelectionKey = selectionKey;
   updateCounts();
   renderMinimap();
@@ -706,7 +911,7 @@ function render() {
   applyCamera(); renderEdges(); renderNodes(); renderInspector(); renderWorkspaceNavigation(); updateAssistantContext();
 }
 function setAppView(view){
-  closeAddMenu();
+  $("balaur-add-menu")?.close?.();
   activeAppView=view==="today"?"today":"canvas";if(activeAppView==="today")shell.classList.remove("inspector-open");$("#canvas").hidden=activeAppView!=="canvas";$("#todayView").hidden=activeAppView!=="today";$$('[data-app-view]').forEach(button=>button.classList.toggle("active",button.dataset.appView===activeAppView));if(activeAppView==="today")renderToday();else applyCamera();
 }
 function applyCamera() {
@@ -809,11 +1014,6 @@ function setTool(tool) {
   canvas.classList.toggle("tool-pan",tool==="pan"); canvas.classList.toggle("tool-connect",tool==="connect"); renderNodes();
 }
 
-const addMenuToggle=$("#addMenuToggle"),addMenuPanel=$("#addMenu");
-function addMenuItems(){return $$(".add-menu-item",addMenuPanel);}
-function openAddMenu(){addMenuPanel.hidden=false;addMenuToggle.setAttribute("aria-expanded","true");addMenuItems()[0]?.focus();}
-function closeAddMenu(refocus=false){if(addMenuPanel.hidden)return;addMenuPanel.hidden=true;addMenuToggle.setAttribute("aria-expanded","false");if(refocus)addMenuToggle.focus();}
-function toggleAddMenu(){addMenuPanel.hidden?openAddMenu():closeAddMenu();}
 
 function addNode(kind, point) {
   if(!canonicalWritable){toast("Canonical files are read-only until repaired or restored");return null;}
@@ -836,47 +1036,184 @@ function addNode(kind, point) {
   return node;
 }
 
+function renderFallbackInspector(panel,model){
+  panel.dataset.fallbackInspector="";
+  if(!model){const empty=document.createElement("p");empty.textContent="Select a node or connection to inspect it.";panel.replaceChildren(empty);return;}
+  const header=document.createElement("header"),title=document.createElement("h2"),close=fallbackButton("Close");
+  title.textContent=model.title||"Inspector";close.dataset.inspectorClose="";header.append(title,close);
+  const fields=document.createElement("div");
+  for(const field of model.fields||[]){
+    const label=document.createElement("label"),caption=document.createElement("span");
+    caption.textContent=field.label||field.key;
+    let control;
+    if(field.control==="textarea")control=document.createElement("textarea");
+    else if(field.control==="select"){
+      control=document.createElement("select");
+      for(const option of field.options||[]){const node=document.createElement("option");node.value=option.value;node.textContent=option.label;control.append(node);}
+    }else{control=document.createElement("input");control.type=field.control||"text";}
+    control.dataset.fieldKey=field.key;control.value=field.value??"";control.disabled=Boolean(model.readonly);label.append(caption,control);fields.append(label);
+  }
+  const notes=document.createElement("div");for(const note of model.notes||[]){const text=document.createElement("p");text.textContent=note.text||"";notes.append(text);}
+  const colors=document.createElement("div");for(const color of model.colors||[]){const button=fallbackButton(`Color ${color.value}`);button.dataset.color=color.value;button.disabled=Boolean(model.readonly);colors.append(button);}
+  const actions=document.createElement("div");for(const action of model.actions||[]){const button=fallbackButton(action.label||action.intent);button.dataset.intent=action.intent;button.disabled=Boolean(model.readonly)&&action.requiresWrite!==false;actions.append(button);}
+  panel.replaceChildren(header,fields,notes,colors,actions);
+  const fieldDetail=control=>{const field=model.fields.find(candidate=>candidate.key===control.dataset.fieldKey);return field?{key:field.key,value:field.control==="number"?Math.round(Number(control.value)):control.value,scope:field.scope||"item",modelKey:String(model.key||""),taskId:field.taskId||null,canvasId:field.canvasId||null}:null;};
+  const fieldEvent=(event,phase)=>{const control=event.target.closest?.("[data-field-key]"),detail=control&&fieldDetail(control);if(detail)panel.dispatchEvent(new CustomEvent(`balaur-inspector-field-${phase}`,{bubbles:true,composed:true,detail}));};
+  panel.oninput=event=>fieldEvent(event,"input");panel.onchange=event=>fieldEvent(event,"change");panel.onfocusout=event=>fieldEvent(event,"blur");
+  panel.onclick=event=>{
+    const closeButton=event.target.closest?.("[data-inspector-close]"),color=event.target.closest?.("[data-color]"),action=event.target.closest?.("[data-intent]");
+    if(closeButton)panel.dispatchEvent(new CustomEvent("balaur-inspector-close",{bubbles:true,composed:true}));
+    else if(color&&!color.disabled)panel.dispatchEvent(new CustomEvent("balaur-inspector-color",{bubbles:true,composed:true,detail:{value:color.dataset.color,modelKey:String(model.key||"")}}));
+    else if(action&&!action.disabled){const configured=model.actions.find(candidate=>candidate.intent===action.dataset.intent);if(configured)panel.dispatchEvent(new CustomEvent("balaur-inspector-action",{bubbles:true,composed:true,detail:{intent:configured.intent,modelKey:String(model.key||""),taskId:configured.taskId||null,cardId:configured.cardId||null,canvasId:configured.canvasId||null}}));}
+  };
+}
+function setInspectorModel(panel,model){
+  if(componentDefined("balaur-inspector"))panel.model=model;
+  else renderFallbackInspector(panel,model);
+}
 function renderInspector() {
   const panel=$("#inspector");
-  if (!selected) { panel.innerHTML='<div class="inspector-empty"><span>↖</span><h3>Nothing selected</h3><p>Select a card or connection to edit its details.</p></div>'; return; }
-  const item = selected.kind==="node" ? documentData.nodes.find(n=>n.id===selected.id) : documentData.edges.find(e=>e.id===selected.id);
-  if (!item) { selected=null; shell.classList.remove("inspector-open"); renderInspector(); return; }
-  const colorButtons=Object.entries(COLORS).map(([key,value])=>`<button type="button" class="color-choice ${item.color===key?"active":""}" data-color="${key}" style="background:${value}" aria-label="Color ${key}"></button>`).join("");
-  if (selected.kind==="node") {
-    let contentField="";
-    if (item.type==="text"&&isAICard(item)){const config=parseAICard(item);contentField=`<label class="field"><span>Operator name</span><input data-key="aiTitle" value="${escapeHTML(config.title)}"></label><label class="field"><span>AI instructions</span><textarea data-key="aiPrompt">${escapeHTML(config.prompt)}</textarea></label><div class="field-hint">Incoming connections become context. The generated note updates automatically when that context changes.</div>`;}
-    else if(item.type==="file"&&taskIdFromNode(item)){const task=taskForNode(item),statuses=["inbox","next","scheduled","waiting","done","cancelled"];contentField=`<label class="field"><span>Task title</span><input data-task-key="title" value="${escapeHTML(task.title)}"></label><label class="field"><span>Task status</span><select data-task-key="status">${statuses.map(status=>`<option value="${status}" ${task.status===status?"selected":""}>${status[0].toUpperCase()+status.slice(1)}</option>`).join("")}</select></label><div class="field-row"><label class="field"><span>Scheduled</span><input type="date" data-task-key="scheduledOn" value="${escapeHTML(task.scheduledOn||"")}"></label><label class="field"><span>Due</span><input type="date" data-task-key="dueOn" value="${escapeHTML(task.dueOn||"")}"></label></div><label class="field"><span>Priority</span><select data-task-key="priority"><option value="" ${task.priority==null?"selected":""}>None</option><option value="1" ${task.priority===1?"selected":""}>High</option><option value="2" ${task.priority===2?"selected":""}>Medium</option><option value="3" ${task.priority===3?"selected":""}>Low</option></select></label><button type="button" class="button ghost delete-task-everywhere">Delete task everywhere</button>`;}
-    else if (item.type==="text") contentField=`<label class="field"><span>Markdown</span><textarea data-key="text">${escapeHTML(item.text)}</textarea></label>`;
-    if (item.type==="link") contentField=`<label class="field"><span>URL</span><input data-key="url" value="${escapeHTML(item.url)}"></label>`;
-    if (item.type==="file"&&!taskIdFromNode(item)) {const subcanvasId=subcanvasIdFromNode(item),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];contentField=subcanvas?`<label class="field"><span>${subcanvas.jdCode?`${escapeHTML(formatJDCode(subcanvas.jdCode))} title`:"Canvas title"}</span><input data-canvas-title="${escapeHTML(subcanvasId)}" value="${escapeHTML(subcanvas.jdTitle||subcanvas.title)}"></label><div class="field-hint">This portal is a standard JSON Canvas file node. Double-click it or zoom in to enter the nested canvas.</div><button type="button" class="button open-subcanvas-inspector" data-open-canvas="${escapeHTML(subcanvasId)}">Open sub-canvas ↘</button>`:`<label class="field"><span>File path</span><input data-key="file" value="${escapeHTML(item.file)}"></label><label class="field"><span>Subpath</span><input data-key="subpath" value="${escapeHTML(item.subpath||"")}"></label>`;}
-    if (item.type==="group") contentField=`<label class="field"><span>Label</span><input data-key="label" value="${escapeHTML(item.label||"")}"></label><label class="field"><span>Background path</span><input data-key="background" value="${escapeHTML(item.background||"")}"></label>`;
-    panel.innerHTML=`<div class="inspector-head"><h3>${taskIdFromNode(item)?"Task":item.type[0].toUpperCase()+item.type.slice(1)+" node"}</h3><button class="close-inspector">×</button></div><form class="inspector-form">${contentField}<div class="field-row"><label class="field"><span>X</span><input type="number" data-key="x" value="${item.x}"></label><label class="field"><span>Y</span><input type="number" data-key="y" value="${item.y}"></label></div><div class="field-row"><label class="field"><span>Width</span><input type="number" data-key="width" value="${item.width}"></label><label class="field"><span>Height</span><input type="number" data-key="height" value="${item.height}"></label></div><label class="field"><span>Color preset</span><div class="color-list">${colorButtons}</div></label><button type="button" class="danger-btn">Delete node</button></form>`;
-  } else {
-    panel.innerHTML=`<div class="inspector-head"><h3>Connection</h3><button class="close-inspector">×</button></div><form class="inspector-form"><label class="field"><span>Label</span><input data-key="label" value="${escapeHTML(item.label||"")}"></label><div class="field-row"><label class="field"><span>From side</span><select data-key="fromSide">${sideOptions(item.fromSide)}</select></label><label class="field"><span>To side</span><select data-key="toSide">${sideOptions(item.toSide)}</select></label></div><label class="field"><span>Color preset</span><div class="color-list">${colorButtons}</div></label><button type="button" class="danger-btn">Delete connection</button></form>`;
+  if(!selected){setInspectorModel(panel,null);return;}
+  const item=selected.kind==="node"?documentData.nodes.find(node=>node.id===selected.id):documentData.edges.find(edge=>edge.id===selected.id);
+  if(!item){selected=null;shell.classList.remove("inspector-open");setInspectorModel(panel,null);return;}
+  const fields=[],notes=[],actions=[];
+  let title="Connection";
+  if(selected.kind==="node"){
+    const task=taskForNode(item),componentCard=item.type==="file"&&!task?componentCardCatalog?.getByPath(item.file):null;
+    title=task?"Task":componentCard?"Component card":`${item.type[0].toUpperCase()+item.type.slice(1)} node`;
+    if(item.type==="text"&&isAICard(item)){
+      const config=parseAICard(item);
+      fields.push({key:"aiTitle",label:"Operator name",control:"text",value:config.title},{key:"aiPrompt",label:"AI instructions",control:"textarea",value:config.prompt});
+      notes.push({text:"Incoming connections become context. The generated note updates automatically when that context changes."});
+    }else if(task){
+      const statuses=["inbox","next","scheduled","waiting","done","cancelled"];
+      fields.push(
+        {key:"title",label:"Task title",control:"text",value:task.title,scope:"task",taskId:task.id},
+        {key:"status",label:"Task status",control:"select",value:task.status,scope:"task",taskId:task.id,options:statuses.map(status=>({value:status,label:status[0].toUpperCase()+status.slice(1)}))},
+        {key:"scheduledOn",label:"Scheduled",control:"date",value:task.scheduledOn||"",scope:"task",taskId:task.id,row:"task-dates"},
+        {key:"dueOn",label:"Due",control:"date",value:task.dueOn||"",scope:"task",taskId:task.id,row:"task-dates"},
+        {key:"priority",label:"Priority",control:"select",value:task.priority??"",scope:"task",taskId:task.id,options:[{value:"",label:"None"},{value:"1",label:"High"},{value:"2",label:"Medium"},{value:"3",label:"Low"}]},
+      );
+      actions.push({intent:"delete-task",label:"Delete task everywhere",taskId:task.id});
+    }else if(item.type==="text")fields.push({key:"text",label:"Markdown",control:"textarea",value:item.text});
+    if(item.type==="link")fields.push({key:"url",label:"URL",control:"url",value:item.url});
+    if(item.type==="file"&&!task){
+      const subcanvasId=subcanvasIdFromNode(item),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
+      if(subcanvas){
+        fields.push({key:"title",label:subcanvas.jdCode?`${formatJDCode(subcanvas.jdCode)} title`:"Canvas title",control:"text",value:subcanvas.jdTitle||subcanvas.title,scope:"canvas",canvasId:subcanvasId});
+        notes.push({text:"This portal is a standard JSON Canvas file node. Double-click it or zoom in to enter the nested canvas."});
+        actions.push({intent:"open-canvas",label:"Open sub-canvas ↘",canvasId:subcanvasId,requiresWrite:false,className:"button open-subcanvas-inspector"});
+      }else{
+        fields.push({key:"file",label:"File path",control:"text",value:item.file},{key:"subpath",label:"Subpath",control:"text",value:item.subpath||""});
+        if(componentCard){
+          notes.push({text:"This node is one placement of a canonical component card. Delete node removes only this placement."});
+          actions.push({intent:"delete-card",label:"Delete card everywhere",cardId:componentCard.id,danger:true});
+        }
+      }
+    }
+    if(item.type==="group")fields.push({key:"label",label:"Label",control:"text",value:item.label||""},{key:"background",label:"Background path",control:"text",value:item.background||""});
+    fields.push(
+      {key:"x",label:"X",control:"number",value:item.x,row:"position"},
+      {key:"y",label:"Y",control:"number",value:item.y,row:"position"},
+      {key:"width",label:"Width",control:"number",value:item.width,row:"size"},
+      {key:"height",label:"Height",control:"number",value:item.height,row:"size"},
+    );
+  }else{
+    const sideOptions=["","top","right","bottom","left"].map(value=>({value,label:value||"Auto"}));
+    fields.push(
+      {key:"label",label:"Label",control:"text",value:item.label||""},
+      {key:"fromSide",label:"From side",control:"select",value:item.fromSide||"",options:sideOptions,row:"sides"},
+      {key:"toSide",label:"To side",control:"select",value:item.toSide||"",options:sideOptions,row:"sides"},
+    );
   }
-  $(".close-inspector",panel).onclick=()=>{selected=null;shell.classList.remove("inspector-open");render();};
-  if(!canonicalWritable) $$('input,select,textarea,button:not(.close-inspector)',panel).forEach(control=>{control.disabled=true;control.title="Canonical files are read-only until repaired or restored.";});
-  $$("[data-key]",panel).forEach(input=>input.addEventListener("input",()=>{
-    const before=aiCardSignatures(),key=input.dataset.key;
-    if(key==="aiTitle"||key==="aiPrompt"){const config=parseAICard(item);item.text=buildAICardText(key==="aiTitle"?input.value:config.title,key==="aiPrompt"?input.value:config.prompt);}
-    else item[key]=input.type==="number"?Math.round(Number(input.value)):input.value;
-    if(key==="text"){const code=jdCodeFromNode(item),entry=jdEntries()[code],heading=item.text.match(/^#\s+(.+)$/m)?.[1];if(entry&&heading){const formatted=formatJDCode(code),title=(heading.startsWith(formatted)?heading.slice(formatted.length).replace(/^\s*(?:—|-)\s*/,""):heading).trim();if(title)entry.title=title;}}
-    if (input.tagName==="SELECT" && !input.value) delete item[key];
-    scheduleSave(); renderNodes(); renderEdges(); renderMinimap(); scheduleChangedAICards(before);
-  }));
-  $$('[data-task-key]',panel).forEach(input=>{
-    const readPatch=()=>{const id=taskIdFromNode(item),key=input.dataset.taskKey,value=key==="priority"?(input.value?Number(input.value):null):input.value||null;if(!id)return null;const patch={[key]:value};if(key==="status")patch.completedAt=value==="done"?new Date().toISOString():null;return {id,patch};};
-    input.addEventListener("input",()=>{const next=readPatch();if(next)scheduleTaskFieldUpdate(next.id,next.patch);});
-    input.addEventListener("change",()=>{const next=readPatch();if(next)flushTaskFieldUpdate(next.id,next.patch);});
-    input.addEventListener("blur",()=>{const next=readPatch();if(next&&taskUpdateTimers.has(next.id))flushTaskFieldUpdate(next.id,next.patch);});
+  actions.push({intent:"delete-selection",label:selected.kind==="node"?"Delete node":"Delete connection",danger:true});
+  setInspectorModel(panel,{
+    key:`${selected.kind}:${selected.id}`,
+    kind:selected.kind,
+    title,
+    readonly:!canonicalWritable,
+    readonlyMessage:"Canonical files are read-only until repaired or restored.",
+    fields,
+    notes,
+    colors:Object.entries(COLORS).map(([value,color])=>({value,color,active:item.color===value})),
+    actions,
   });
-  const canvasTitleField=$("[data-canvas-title]",panel);if(canvasTitleField)canvasTitleField.addEventListener("input",()=>{const record=workspace.canvases[canvasTitleField.dataset.canvasTitle];if(!record)return;const title=canvasTitleField.value||"Untitled";if(record.jdCode){record.jdTitle=title;record.title=jdDisplayTitle(record.jdCode,title);const entry=jdEntries()[record.jdCode];if(entry)entry.title=title;}else record.title=title;scheduleSave();renderNodes();renderWorkspaceNavigation();});
-  const openCanvas=$("[data-open-canvas]",panel);if(openCanvas)openCanvas.onclick=()=>enterSubcanvas(openCanvas.dataset.openCanvas);
-  $$(".color-choice",panel).forEach(button=>button.onclick=()=>{item.color=button.dataset.color;scheduleSave();render();});
-  const deleteEverywhere=$(".delete-task-everywhere",panel);if(deleteEverywhere)deleteEverywhere.onclick=()=>deleteTaskEverywhere(taskIdFromNode(item));
-  $(".danger-btn",panel).onclick=deleteSelection;
 }
-function sideOptions(value) { return ["","top","right","bottom","left"].map(s=>`<option value="${s}" ${value===s?"selected":""}>${s||"Auto"}</option>`).join(""); }
+function inspectorSelection(detail){
+  if(!selected||detail?.modelKey!==`${selected.kind}:${selected.id}`)return null;
+  return selected.kind==="node"?documentData.nodes.find(node=>node.id===selected.id):documentData.edges.find(edge=>edge.id===selected.id);
+}
+function taskPatchFromInspector(detail){
+  if(!detail.taskId)return null;
+  const value=detail.key==="priority"?(detail.value?Number(detail.value):null):detail.value||null;
+  const patch={[detail.key]:value};
+  if(detail.key==="status")patch.completedAt=value==="done"?new Date().toISOString():null;
+  return {id:detail.taskId,patch};
+}
+function applyInspectorField(detail,phase){
+  const item=inspectorSelection(detail);if(!item)return;
+  if(detail.scope==="task"){
+    const next=taskPatchFromInspector(detail);if(!next)return;
+    if(phase==="input")scheduleTaskFieldUpdate(next.id,next.patch);
+    else if(phase==="change")flushTaskFieldUpdate(next.id,next.patch);
+    else if(taskUpdateTimers.has(next.id))flushTaskFieldUpdate(next.id,next.patch);
+    return;
+  }
+  if(detail.scope==="canvas"){
+    if(phase!=="input")return;
+    const record=workspace.canvases[detail.canvasId];if(!record)return;
+    const value=detail.value||"Untitled";
+    if(record.jdCode){record.jdTitle=value;record.title=jdDisplayTitle(record.jdCode,value);const entry=jdEntries()[record.jdCode];if(entry)entry.title=value;}
+    else record.title=value;
+    scheduleSave();renderNodes();renderWorkspaceNavigation();return;
+  }
+  if(phase!=="input")return;
+  const before=aiCardSignatures(),key=detail.key;
+  if(key==="aiTitle"||key==="aiPrompt"){const config=parseAICard(item);item.text=buildAICardText(key==="aiTitle"?detail.value:config.title,key==="aiPrompt"?detail.value:config.prompt);}
+  else if((key==="fromSide"||key==="toSide")&&!detail.value)delete item[key];
+  else item[key]=detail.value;
+  if(key==="text"){const code=jdCodeFromNode(item),entry=jdEntries()[code],heading=item.text.match(/^#\s+(.+)$/m)?.[1];if(entry&&heading){const formatted=formatJDCode(code),title=(heading.startsWith(formatted)?heading.slice(formatted.length).replace(/^\s*(?:—|-)\s*/,""):heading).trim();if(title)entry.title=title;}}
+  scheduleSave();renderNodes();renderEdges();renderMinimap();scheduleChangedAICards(before);
+}
+document.addEventListener("balaur-inspector-field-input",event=>applyInspectorField(event.detail,"input"));
+document.addEventListener("balaur-inspector-field-change",event=>applyInspectorField(event.detail,"change"));
+document.addEventListener("balaur-inspector-field-blur",event=>applyInspectorField(event.detail,"blur"));
+document.addEventListener("balaur-inspector-close",event=>{if(event.target!==$("#inspector"))return;selected=null;shell.classList.remove("inspector-open");render();});
+document.addEventListener("balaur-inspector-color",event=>{const item=inspectorSelection(event.detail);if(!item)return;item.color=event.detail.value;scheduleSave();render();});
+document.addEventListener("balaur-inspector-action",event=>{
+  const item=inspectorSelection(event.detail);if(!item)return;
+  if(event.detail.intent==="open-canvas"&&event.detail.canvasId)enterSubcanvas(event.detail.canvasId);
+  else if(event.detail.intent==="delete-task")deleteTaskEverywhere(event.detail.taskId);
+  else if(event.detail.intent==="delete-card")deleteComponentCardEverywhere(event.detail.cardId);
+  else if(event.detail.intent==="delete-selection")deleteSelection();
+});
+document.addEventListener("balaur-task-complete",async event=>{
+  const host=event.target;if(!(host instanceof HTMLElement)||!host.matches("balaur-task-list")||!host.isConnected)return;
+  const id=event.detail?.taskId;if(!lifeQuery?.tasks().some(task=>task.id===id))return;
+  try{await completeTask(id);toast("Task completed");}catch(error){toast(error.message);}
+});
+document.addEventListener("balaur-task-open",event=>{
+  const host=event.target;if(!(host instanceof HTMLElement)||!host.matches("balaur-task-list")||!host.isConnected)return;
+  const task=lifeQuery?.tasks().find(item=>item.id===event.detail?.taskId),placement=taskPlacement(task);if(!placement)return;
+  setAppView("canvas");revealWorkspaceNode(placement.canvasId,placement.nodeId);
+});
+document.addEventListener("balaur-canvas-open",event=>{
+  const host=event.target;if(!(host instanceof HTMLElement)||!host.matches("balaur-workspace-nav")||!host.isConnected)return;
+  const id=event.detail?.canvasId;if(!workspace.canvases[id])return;
+  switchCanvas(id,{direction:"switch"});
+});
+async function deleteComponentCardEverywhere(cardId){
+  if(!cardId||!componentCardRepository)return;
+  if(!confirm("Delete this component card, its canonical file, and every canvas placement? This cannot be undone."))return;
+  const card=componentCardCatalog?.getById(cardId);
+  const affected=[...new Set((card?.placements||[]).map(placement=>Object.values(workspace.canvases).find(record=>record.path===placement.canvasPath)?.id).filter(Boolean))];
+  try{
+    await flushPendingWorkspaceEdits();
+    await enqueueMutation(async()=>{await componentCardRepository.deleteCard(cardId);await reloadCanvasDocuments(affected);});
+    selected=null;shell.classList.remove("inspector-open");render();toast("Component card deleted everywhere");
+  }catch(error){toast(error.message);}
+}
+
 async function deleteTaskEverywhere(taskId){
   if(!taskId||!taskRepository)return;
   if(!confirm("Delete this task, its canonical file, and every canvas placement? This cannot be undone."))return;
@@ -974,7 +1311,7 @@ async function importCanvas(file) {
       if(!result?.workspace)throw new Error("Canonical vault activation did not produce a workspace");
       // Switch application globals only after canonical activation and reload
       // have both succeeded.
-      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await lifeIndexer.rebuild();
+      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
       currentCanvasId=workspace.activeId; documentData=workspace.canvases[currentCanvasId].document; camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1}; selected=null; $("#canvasTitle").value=canvasRecord().title; render(); fitView();
       const stats=lifeIndexer.stats();setIndexStatus(`Files · ${stats.sourceFiles} indexed`,`${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);toast("Whole workspace and canonical files imported");return;
     }
@@ -985,33 +1322,135 @@ async function importCanvas(file) {
 
 // Canvas-aware assistant prototype. A remote model should produce these operations,
 // never arbitrary host-page JavaScript. Each operation is checked before commit.
+function idsForDraft(draft) {
+  return new Set([...(draft?.nodes||[]),...(draft?.edges||[])].map(item=>item.id));
+}
+function prepareGeneratedOperation(operation, context) {
+  const normalized=validateGeneratedOperation(operation,context);
+  const prepared=normalized.type==="component-card.create"?{...normalized,card:{...normalized.card},placement:{...normalized.placement}}
+    :normalized.type==="component-card.update"?{...normalized,patch:{...normalized.patch,...(normalized.patch.fields?{fields:{...normalized.patch.fields}}:{})},...(normalized.placement?{placement:{...normalized.placement}}:{})}
+    :normalized.type==="widget.create"?{...normalized,widget:{...normalized.widget},placement:{...normalized.placement}}
+    :{...normalized,placement:{...normalized.placement}};
+  if(prepared.type==="component-card.create"){prepared.card.id ||= uid("card");prepared.placement.id ||= uid("node");}
+  else if(prepared.placement)prepared.placement.id ||= uid("node");
+  return validateGeneratedOperation(prepared,context);
+}
+function generatedOperationContext(operation, plannedCards, plannedDrafts) {
+  const canvasId=operation.canvasId||currentCanvasId;
+  if(operation.type==="component-card.update"&&!plannedCards.has(operation.id)){
+    const card=componentCardCatalog?.getById(operation.id);if(card)plannedCards.set(card.id,card);
+  }
+  return {canvasId,canvasIds:new Set(Object.keys(workspace.canvases)),cards:plannedCards,cardIds:new Set(plannedCards.keys()),widgetPaths:new Set((widgetCatalog?.widgets()||[]).map(widget=>widget.path)),nodeIds:idsForDraft(plannedDrafts.get(canvasId))};
+}
+function evolvePlannedCard(operation, plannedCards) {
+  if(operation.type==="component-card.create"){
+    plannedCards.set(operation.card.id,{id:operation.card.id,path:operation.card.path,title:operation.card.title,recipe:operation.card.recipe,...operation.card.fields,body:operation.card.body});
+    return;
+  }
+  if(operation.type!=="component-card.update")return;
+  const current=plannedCards.get(operation.id),patch=operation.patch,next={...current,...patch,...(patch.fields||{})};
+  if(patch.title)next.path=componentCardPath(patch.title,operation.id);
+  plannedCards.set(operation.id,next);
+}
 function validateCanvasOperations(operations) {
-  if(!Array.isArray(operations)||operations.length>50||JSON.stringify(operations).length>100000)throw new Error("The operation plan is too large or malformed");
-  const draft=clone(documentData),themes=[],nodeKeys=new Set(["text","file","subpath","url","label","background","backgroundStyle","x","y","width","height","color"]),edgeKeys=new Set(["fromSide","fromEnd","toSide","toEnd","color","label"]);
-  for (const operation of operations) {
-    if (!operation || typeof operation.type!=="string") throw new Error("Malformed canvas operation");
-    if (operation.type==="node.add") draft.nodes.push(clone(operation.node));
-    else if (operation.type==="node.update") {
+  assertPlainDataTree(operations,"Generated operation plan");
+  if(!Array.isArray(operations)||operations.length>50||JSON.stringify(operations).length>160*1024)throw new Error("The operation plan is too large or malformed");
+  const themes=[],generatedOperations=[],normalizedOperations=[],nodeKeys=new Set(["text","file","subpath","url","label","background","backgroundStyle","x","y","width","height","color"]),edgeKeys=new Set(["fromSide","fromEnd","toSide","toEnd","color","label"]),plannedCards=new Map((componentCardCatalog?.cards()||[]).map(card=>[card.id,card])),plannedDrafts=new Map(Object.entries(workspace.canvases).map(([id,record])=>[id,clone(record.document)])),affectedCanvasIds=new Set(),draft=plannedDrafts.get(currentCanvasId);
+  for (const sourceOperation of operations) {
+    if (!sourceOperation || typeof sourceOperation.type!=="string") throw new Error("Malformed canvas operation");
+    if(sourceOperation.type==="component-card.create"||sourceOperation.type==="component-card.update"||sourceOperation.type==="widget.create"||sourceOperation.type==="widget.place"){
+      const context=generatedOperationContext(sourceOperation,plannedCards,plannedDrafts),normalized=prepareGeneratedOperation(sourceOperation,context);generatedOperations.push(normalized);normalizedOperations.push(normalized);evolvePlannedCard(normalized,plannedCards);
+      if(normalized.placement){
+        const targetDraft=plannedDrafts.get(normalized.canvasId),path=normalized.type==="widget.create"?normalized.widget.path:normalized.type==="widget.place"?normalized.path:plannedCards.get(normalized.type==="component-card.create"?normalized.card.id:normalized.id).path;
+        targetDraft.nodes.push({id:normalized.placement.id,type:"file",file:path,x:normalized.placement.x,y:normalized.placement.y,width:normalized.placement.width,height:normalized.placement.height,...(normalized.placement.color?{color:normalized.placement.color}:{})});
+        affectedCanvasIds.add(normalized.canvasId);
+      }
+      continue;
+    }
+    const operation=clone(sourceOperation);normalizedOperations.push(operation);
+    if (operation.type==="node.add") {
+      if(idsForDraft(draft).has(operation.node?.id))throw new Error(`Canvas id already exists: ${operation.node?.id}`);draft.nodes.push(clone(operation.node));affectedCanvasIds.add(currentCanvasId);
+    } else if (operation.type==="node.update") {
       const node=draft.nodes.find(item=>item.id===operation.id);if(!node)throw new Error(`Unknown node ${operation.id}`);
-      for(const [key,value] of Object.entries(operation.patch||{})){if(!nodeKeys.has(key))throw new Error(`Field ${key} cannot be changed`);node[key]=value;}
+      for(const [key,value] of Object.entries(operation.patch||{})){if(!nodeKeys.has(key))throw new Error(`Field ${key} cannot be changed`);node[key]=value;}affectedCanvasIds.add(currentCanvasId);
     } else if (operation.type==="node.remove") {
-      draft.nodes=draft.nodes.filter(item=>item.id!==operation.id);draft.edges=draft.edges.filter(edge=>edge.fromNode!==operation.id&&edge.toNode!==operation.id);
-    } else if (operation.type==="edge.add") draft.edges.push(clone(operation.edge));
-    else if (operation.type==="edge.update") {
+      if(!draft.nodes.some(item=>item.id===operation.id))throw new Error(`Unknown node ${operation.id}`);
+      draft.nodes=draft.nodes.filter(item=>item.id!==operation.id);draft.edges=draft.edges.filter(edge=>edge.fromNode!==operation.id&&edge.toNode!==operation.id);affectedCanvasIds.add(currentCanvasId);
+    } else if (operation.type==="edge.add") {
+      if(idsForDraft(draft).has(operation.edge?.id))throw new Error(`Canvas id already exists: ${operation.edge?.id}`);draft.edges.push(clone(operation.edge));affectedCanvasIds.add(currentCanvasId);
+    } else if (operation.type==="edge.update") {
       const edge=draft.edges.find(item=>item.id===operation.id);if(!edge)throw new Error(`Unknown edge ${operation.id}`);
-      for(const [key,value] of Object.entries(operation.patch||{})){if(!edgeKeys.has(key))throw new Error(`Field ${key} cannot be changed`);edge[key]=value;}
-    } else if(operation.type==="edge.remove")draft.edges=draft.edges.filter(item=>item.id!==operation.id);
-    else if (operation.type==="theme.set") {
+      for(const [key,value] of Object.entries(operation.patch||{})){if(!edgeKeys.has(key))throw new Error(`Field ${key} cannot be changed`);edge[key]=value;}affectedCanvasIds.add(currentCanvasId);
+    } else if(operation.type==="edge.remove"){
+      if(!draft.edges.some(item=>item.id===operation.id))throw new Error(`Unknown edge ${operation.id}`);
+      draft.edges=draft.edges.filter(item=>item.id!==operation.id);affectedCanvasIds.add(currentCanvasId);
+    } else if (operation.type==="theme.set") {
       if(!["default","warm","calm","contrast"].includes(operation.theme))throw new Error("Unknown theme");themes.push(operation.theme);
     } else throw new Error(`Unsupported operation ${operation.type}`);
   }
-  if(!isCanvas(draft))throw new Error("The resulting canvas is not valid JSON Canvas 1.0");
-  return {draft,themes};
+  for(const canvasId of affectedCanvasIds)if(!isCanvas(plannedDrafts.get(canvasId)))throw new Error(`The resulting canvas ${canvasId} is not valid JSON Canvas 1.0`);
+  return {draft,themes,generatedOperations,normalizedOperations};
 }
-function applyCanvasOperations(operations) {
+function repositoryPatch(patch) {
+  const result={...patch,...(patch.fields||{})};delete result.fields;return result;
+}
+async function applyGeneratedOperation(operation) {
+  if(operation.type==="widget.create"||operation.type==="widget.place"){
+    if(!widgetRepository)throw new Error("Widget files are unavailable.");
+    if(operation.type==="widget.create")return widgetRepository.createWidget({...operation.widget,canvasId:operation.canvasId,geometry:operation.placement});
+    return widgetRepository.addPlacement(operation.path,operation.canvasId,operation.placement);
+  }
+  if(!componentCardRepository)throw new Error("Component-card files are unavailable.");
+  if(operation.type==="component-card.create")return componentCardRepository.createCard({...operation.card,canvasId:operation.canvasId,geometry:operation.placement});
+  const patch=repositoryPatch(operation.patch);
+  if(operation.placement)return componentCardRepository.updateCardAndPlace(operation.id,patch,operation.canvasId,operation.placement);
+  return Object.keys(patch).length?componentCardRepository.updateCard(operation.id,patch):componentCardCatalog.getById(operation.id);
+}
+function applyValidatedCanvasOperation(operation) {
+  if(operation.type==="theme.set"){applyCanvasTheme(operation.theme);return false;}
+  if(operation.type==="node.add")documentData.nodes.push(clone(operation.node));
+  else if(operation.type==="node.update"){const node=documentData.nodes.find(item=>item.id===operation.id);Object.assign(node,operation.patch);}
+  else if(operation.type==="node.remove"){documentData.nodes=documentData.nodes.filter(item=>item.id!==operation.id);documentData.edges=documentData.edges.filter(edge=>edge.fromNode!==operation.id&&edge.toNode!==operation.id);}
+  else if(operation.type==="edge.add")documentData.edges.push(clone(operation.edge));
+  else if(operation.type==="edge.update"){const edge=documentData.edges.find(item=>item.id===operation.id);Object.assign(edge,operation.patch);}
+  else if(operation.type==="edge.remove")documentData.edges=documentData.edges.filter(item=>item.id!==operation.id);
+  workspace.canvases[currentCanvasId].document=documentData;return true;
+}
+async function applyCanvasOperations(operations) {
   if(!canonicalWritable)throw new Error("Canonical files are read-only until repaired or restored.");
-  const before=aiCardSignatures(),{draft,themes}=validateCanvasOperations(operations);documentData=draft;workspace.canvases[currentCanvasId].document=documentData;themes.forEach(applyCanvasTheme);
-  selected=null;shell.classList.remove("inspector-open");scheduleSave();render();updateAssistantContext();scheduleChangedAICards(before);
+  const before=aiCardSignatures(),plan=validateCanvasOperations(operations);
+  await flushPendingWorkspaceEdits();
+  let failure=null,dirty=false,dirtyStart=null;
+  const saveDirty=async()=>{
+    if(!dirty)return;
+    try{await markSaveResult(persistWorkspace());dirty=false;dirtyStart=null;}
+    catch(error){error.operationState={operations:plan.normalizedOperations,retryIndex:dirtyStart,appliedCount:dirtyStart,reload:true};throw error;}
+  };
+  try{
+    for(let operationIndex=0;operationIndex<plan.normalizedOperations.length;operationIndex+=1){
+      const operation=plan.normalizedOperations[operationIndex];
+      if(operation.type.startsWith("component-card.")||operation.type==="widget.create"||operation.type==="widget.place"){
+        await saveDirty();
+        try{await enqueueMutation(()=>applyGeneratedOperation(operation));}
+        catch(error){error.operationState={operations:plan.normalizedOperations,failedIndex:operationIndex,retryIndex:operationIndex,appliedCount:operationIndex};throw error;}
+        await reloadCanvasDocuments(Object.keys(workspace.canvases));
+      }else{
+        const changed=applyValidatedCanvasOperation(operation);
+        if(changed&&!dirty)dirtyStart=operationIndex;
+        dirty=changed||dirty;
+      }
+    }
+    await saveDirty();
+  }catch(error){failure=error;}
+  finally{
+    if(plan.generatedOperations.length||failure?.operationState?.reload){
+      try{await Promise.all([componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);await reloadCanvasDocuments(Object.keys(workspace.canvases));}
+      catch(error){if(!failure)failure=error;else console.warn("Could not reconcile a partially applied component-card plan",error);}
+    }
+    selected=null;shell.classList.remove("inspector-open");render();updateAssistantContext();scheduleChangedAICards(before);
+  }
+  if(failure)throw failure;
+  return plan.normalizedOperations;
 }
 
 function applyCanvasTheme(theme) {
@@ -1036,30 +1475,73 @@ function assistantMessage(text,role="assistant") {
   const message=document.createElement("div");message.className=`ai-message ${role}`;message.innerHTML=role==="assistant"?"<span>✦</span><p></p>":"<p></p>";$("p",message).textContent=text;$("#aiMessages").append(message);message.scrollIntoView({behavior:"smooth",block:"end"});return message;
 }
 function operationDescription(operation) {
+  if(operation.type==="component-card.create"||operation.type==="component-card.update"||operation.type==="widget.create"){
+    const description=describeGeneratedOperation(operation),source=description.source;
+    return `<div class="${source?"widget-operation-review":""}"><b>${escapeHTML(description.title)}</b> · ${escapeHTML(description.summary)}${description.details.length?`<small>${description.details.map(escapeHTML).join(" · ")}</small>`:""}${source?`<details><summary>Review complete source (${source.length} characters)</summary><pre>${escapeHTML(source)}</pre></details>`:""}</div>`;
+  }
   const names={"node.add":"Add node","node.update":"Update node","node.remove":"Delete node","edge.add":"Add connection","edge.update":"Update connection","edge.remove":"Delete connection","theme.set":"Set theme"};
   const target=operation.id||operation.node?.id||operation.edge?.id||operation.theme||"";return `<div><b>${escapeHTML(names[operation.type]||operation.type)}</b>${target?` · ${escapeHTML(target)}`:""}</div>`;
 }
 function assistantProposal(text,operations) {
-  validateCanvasOperations(operations);const message=document.createElement("div");message.className="ai-message assistant";message.innerHTML=`<span>✦</span><div class="ai-proposal"><p></p>${operations.length?`<div class="ai-operation-list">${operations.map(operationDescription).join("")}</div><div class="ai-proposal-actions"><button class="apply">Apply ${operations.length} change${operations.length===1?"":"s"}</button><button class="discard">Discard</button></div>`:""}</div>`;$("p",message).textContent=text||"I reviewed the canvas.";$("#aiMessages").append(message);
-  if(operations.length){const apply=$(".apply",message),discard=$(".discard",message);apply.onclick=()=>{try{applyCanvasOperations(operations);apply.textContent="Applied";apply.disabled=true;discard.remove();toast("AI changes applied");}catch(error){assistantMessage(`I could not apply that plan: ${error.message}`);}};discard.onclick=()=>{apply.disabled=true;discard.textContent="Discarded";discard.disabled=true;};}
-  message.scrollIntoView({behavior:"smooth",block:"end"});
+  const plan=validateCanvasOperations(operations),normalized=plan.normalizedOperations,message=document.createElement("div");
+  let pendingOperations=normalized,appliedCount=0,durablePartial=null;
+  message.className="ai-message assistant";message.innerHTML=`<span>✦</span><div class="ai-proposal"><p></p>${normalized.length?`<div class="ai-operation-list">${normalized.map(operationDescription).join("")}</div><div class="ai-proposal-actions"><button class="apply">Apply ${normalized.length} change${normalized.length===1?"":"s"}</button><button class="discard">Discard</button></div>`:""}</div>`;$("p",message).textContent=text||"I reviewed the canvas.";$("#aiMessages").append(message);
+  if(normalized.length){
+    const apply=$(".apply",message),discard=$(".discard",message),list=$(".ai-operation-list",message),renderPending=()=>{list.innerHTML=`${appliedCount?`<div><b>${appliedCount} earlier change${appliedCount===1?"":"s"} applied</b></div>`:""}${pendingOperations.map(operationDescription).join("")}`;};
+    apply.onclick=async()=>{
+      apply.disabled=true;discard.disabled=true;apply.textContent="Applying…";
+      try{await applyCanvasOperations(pendingOperations);appliedCount+=pendingOperations.length;pendingOperations=[];durablePartial=null;apply.textContent="Applied";discard.remove();renderPending();toast("AI changes applied");}
+      catch(error){
+        const state=error.operationState,recoverable=error.details?.recoverable;
+        if(state)appliedCount+=state.appliedCount??state.failedIndex??0;
+        if(recoverable&&Number.isInteger(state?.failedIndex)){
+          const widgetFailure=state.operations[state.failedIndex]?.type==="widget.create",savedLabel=widgetFailure?"widget":"card";
+          pendingOperations=recoverGeneratedPlacementFailure(state.operations,state.failedIndex,recoverable);renderPending();durablePartial=recoverable.updated?"saved update":`saved ${savedLabel}`;discard.textContent=`Keep ${durablePartial}`;
+          const suffix=pendingOperations.length-1,subject=recoverable.updated?"The canonical card update":`The ${savedLabel} file`;
+          assistantMessage(`${subject} was saved at ${recoverable.path}, but its Canvas placement failed. ${appliedCount?`${appliedCount} earlier change${appliedCount===1?" was":"s were"} already applied. `:""}Choose “Place saved ${savedLabel}${suffix?" + continue":""}” to retry only the unfinished placement${suffix?` and then apply ${suffix} untouched remaining change${suffix===1?"":"s"}`:""}; the durable ${recoverable.updated?"patch will not run again":"file will not be recreated"}.`);apply.textContent=`Place saved ${savedLabel}${suffix?" + continue":""}`;
+        }else{
+          if(state){pendingOperations=state.operations.slice(state.retryIndex??state.failedIndex);renderPending();}
+          assistantMessage(`I could not apply that plan: ${error.message}`);apply.textContent="Try again";
+        }
+        apply.disabled=false;discard.disabled=false;
+      }
+    };
+    discard.onclick=()=>{apply.disabled=true;discard.textContent=durablePartial?`${durablePartial[0].toUpperCase()}${durablePartial.slice(1)} kept`:"Discarded";discard.disabled=true;};
+  }
+  message.scrollIntoView({behavior:"smooth",block:"end"});return message;
 }
-function runLocalAssistant(prompt) {
+function proposeLocalWidget() {
+  const title="Canvas focus dial",id=uid("widget"),box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2);
+  const source=`<!doctype html>
+<title>${title}</title>
+<style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--balaur-surface,#24150c);color:var(--balaur-content,#f1e7d4);font-family:var(--balaur-fontBody,system-ui)}focus-dial{display:grid;place-items:center;inline-size:12rem;aspect-ratio:1;border:3px solid var(--balaur-primary,#f2c14e);border-radius:50%;box-shadow:inset 0 0 0 1rem color-mix(in srgb,var(--balaur-primary,#f2c14e) 14%,transparent)}strong{font-size:2rem}</style>
+<focus-dial><strong>72%</strong><span>Focused</span></focus-dial>
+<script>customElements.define(\"focus-dial\",class extends HTMLElement{});<\/script>`;
+  const operation={type:"widget.create",widget:{path:`widgets/${slugify(title)}--${id}.html`,title,source},canvasId:currentCanvasId,placement:{id:uid("node"),x:Math.round(center.x-210),y:Math.round(center.y-130),width:420,height:260,color:"5"}};
+  setAssistantOpen(true);assistantProposal("I prepared a self-contained live widget. Review the complete source and capability disclosure. It will not be written or executed until you approve it.",[operation]);
+}
+
+async function runLocalAssistant(prompt) {
   const request=prompt.trim();if(!request)return;assistantMessage(request,"user");const lower=request.toLowerCase();let response="";
   try {
     if(/summar|what(?:'s| is) (?:on|in)|parse/.test(lower)) {
       const s=canvasSummary();response=`I parsed the current JSON Canvas: ${s.nodes} content nodes and ${s.edges} connections. I found ${s.goals} goals, ${s.projects} projects, ${s.habits} habits, ${s.ideas} ideas, ${s.widgets} live widgets, and ${s.openTasks} unchecked tasks.`;
-    } else if(/warm|cozy|earth/.test(lower)) {applyCanvasOperations([{type:"theme.set",theme:"warm"}]);response="Applied a warmer, earth-toned canvas theme. This visual preference stays separate from the portable .canvas document.";
-    } else if(/calm|ocean|cool|teal/.test(lower)) {applyCanvasOperations([{type:"theme.set",theme:"calm"}]);response="Applied the calm teal canvas theme.";
-    } else if(/contrast|accessible/.test(lower)) {applyCanvasOperations([{type:"theme.set",theme:"contrast"}]);response="Applied the high-contrast canvas theme.";
-    } else if(/reset.*(?:theme|style)|default (?:theme|style)/.test(lower)) {applyCanvasOperations([{type:"theme.set",theme:"default"}]);response="Reset the canvas styling to its default theme.";
+    } else if(/(?:add|create).*(?:metric card|metric)/.test(lower)){
+      const named=request.match(/(?:called|named)\s+(.+?)(?:\s+and\s+(?:set|use|make).*)?$/i)?.[1]?.replace(/[.!]$/,"")||"Weekly metric",box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),operations=[{type:"component-card.create",card:{id:uid("card"),title:named,recipe:"metric",fields:{value:"72%",label:"Current progress",progress:.72,trend:"up"},body:"Created locally without contacting an AI provider."},canvasId:currentCanvasId,placement:{id:uid("node"),x:Math.round(center.x-180),y:Math.round(center.y-110),width:360,height:220,color:"5"}}],theme=/warm|cozy|earth/.test(lower)?"warm":/calm|ocean|cool|teal/.test(lower)?"calm":/contrast|accessible/.test(lower)?"contrast":null;
+      if(theme)operations.push({type:"theme.set",theme});assistantProposal("I prepared a local declarative metric card. Review every change before writing the canonical file.",operations);return;
+    } else if(/(?:add|create).*(?:3d|live )?widget/.test(lower)){
+      proposeLocalWidget();return;
+    } else if(/warm|cozy|earth/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"warm"}]);response="Applied a warmer, earth-toned canvas theme. This visual preference stays separate from the portable .canvas document.";
+    } else if(/calm|ocean|cool|teal/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"calm"}]);response="Applied the calm teal canvas theme.";
+    } else if(/contrast|accessible/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"contrast"}]);response="Applied the high-contrast canvas theme.";
+    } else if(/reset.*(?:theme|style)|default (?:theme|style)/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"default"}]);response="Reset the canvas styling to its default theme.";
     } else if(/(?:add|create).*(?:sub.?canvas|nested canvas)/.test(lower)){createSubcanvas();response="Created a nested canvas portal. Double-click it or zoom into it to enter.";
     } else if(/(?:add|create).*(?:3d|webgl|html|widget)/.test(lower)) {
-      const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-orbit.html"};applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
+      const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-orbit.html"};await applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
     } else {
       const match=request.match(/(?:add|create)\s+(?:a |an )?(goal|habit|project|note)(?:\s+(?:called|named|to))?\s+(.+)/i);
-      if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"text",x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150,color:preset[0],text:preset[1]};applyCanvasOperations([{type:"node.add",node}]);response=`Added “${title}” as a ${kind} near the center of your current view.`;}
-      else response="I understand this canvas, but the GitHub Pages demo uses a local intent parser rather than a remote model. Try asking me to summarize it, add a goal/habit/project, add a 3D widget, or change the theme to warm, calm, or high contrast.";
+      if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"text",x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150,color:preset[0],text:preset[1]};await applyCanvasOperations([{type:"node.add",node}]);response=`Added a ${kind} card using standard JSON Canvas fields.`;}
+      else response="I understand this canvas, but the GitHub Pages demo uses a local intent parser rather than a remote model. Try asking me to summarize it, create a metric card, add a goal/habit/project, add a 3D widget, or change the theme.";
     }
   } catch(error){response=`I did not apply that change: ${error.message}`;}
   setTimeout(()=>assistantMessage(response),180);
@@ -1105,7 +1587,11 @@ Allowed operations:
 {"type":"edge.update","id":"existing id","patch":<changed edge fields>}
 {"type":"edge.remove","id":"existing id"}
 {"type":"theme.set","theme":"default|warm|calm|contrast"}
-Use only standard JSON Canvas fields. Use Markdown checkboxes in text nodes for tasks. Colors: 1 red/goals, 2 orange/ideas, 3 yellow/notes, 4 green/habits, 5 cyan/resources, 6 purple/projects. Preserve user data unless explicitly asked to remove it. Ask a question with an empty operations array if intent is ambiguous. Never put executable HTML or JavaScript in a text node. A live widget is a file node pointing to widgets/focus-orbit.html. Keep responses concise.`;
+{"type":"component-card.create","card":{"title":"title","recipe":"metric|progress|callout|list|timeline","fields":<recipe fields>,"body":"optional Markdown"},"canvasId":"target canvas id","placement":{"x":0,"y":0,"width":360,"height":220,"color":"1-6 or #rrggbb"}}
+{"type":"component-card.update","id":"existing component-card id","patch":{"title":"optional","recipe":"optional","fields":<changed recipe fields>,"body":"optional"},"canvasId":"optional target canvas id","placement":{"id":"optional unique placement id","x":0,"y":0,"width":360,"height":220,"color":"optional 1-6 or #rrggbb"}}
+{"type":"widget.create","widget":{"path":"widgets/safe-stable-name.html","title":"title exactly matching the HTML title","source":"complete self-contained reviewed HTML"},"canvasId":"target canvas id","placement":{"x":0,"y":0,"width":420,"height":260,"color":"1-6 or #rrggbb"}}
+An update may contain only canvasId plus placement to add another placement without changing the canonical card fields.
+Component-card deletion is not a generated operation; it remains a separate confirmed action. Component cards are declarative data only: never return HTML, JavaScript, event handlers, host code, repository calls, or source fields. A widget.create source must be self-contained, include a matching non-empty title, use no external resources/network/navigation/forms/workers/nested frames, and handle reduced motion when animated. Widget code executes only after complete source review, explicit approval, and a second explicit Run action inside sandbox="allow-scripts"; it never receives host data or mutation access. Use only standard JSON Canvas fields for Canvas nodes. Use Markdown checkboxes in text nodes for tasks. Colors: 1 red/goals, 2 orange/ideas, 3 yellow/notes, 4 green/habits, 5 cyan/resources, 6 purple/projects. Preserve user data unless explicitly asked to remove it. Ask a question with an empty operations array if intent is ambiguous. Never put executable HTML or JavaScript in a text node. Keep responses concise.`;
 }
 function parseProviderJSON(content) {
   if(Array.isArray(content))content=content.map(part=>part.text||part.content||"").join("");if(typeof content!=="string")throw new Error("Provider returned no text content");
@@ -1115,10 +1601,10 @@ function parseProviderJSON(content) {
 async function runRemoteAssistant(prompt) {
   assistantMessage(prompt,"user");const loading=assistantMessage("Thinking…");loading.classList.add("loading");const send=$("#aiForm button");send.disabled=true;
   try{
-    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),context=`Current canvas: ${canvasTrail().map(record=>record.title).join(" / ")}\nCurrent viewport center: ${Math.round(center.x)}, ${Math.round(center.y)}.\nCurrent JSON Canvas:\n${JSON.stringify(documentData)}`;
+    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),cards=[...new Map((documentData.nodes||[]).map(node=>[node.file,componentCardCatalog?.getByPath(node.file)]).filter(([,card])=>card).map(([,card])=>[card.id,card])).values()].map(card=>({id:card.id,title:card.title,recipe:card.recipe,value:card.value,label:card.label,progress:card.progress,trend:card.trend,maximum:card.maximum,unit:card.unit,tone:card.tone,path:card.path})),context=`Current canvas: ${canvasTrail().map(record=>record.title).join(" / ")}\nCurrent canvas id: ${currentCanvasId}\nCurrent viewport center: ${Math.round(center.x)}, ${Math.round(center.y)}.\nCurrent component cards:\n${JSON.stringify(cards)}\nCurrent JSON Canvas:\n${JSON.stringify(documentData)}`;
     const messages=[{role:"system",content:assistantSystemPrompt()},...aiConversation.slice(-8),{role:"user",content:`${prompt}\n\n${context}`}];
     const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages,temperature:.2,max_tokens:1800})}),body=await response.json(),content=body.choices?.[0]?.message?.content,plan=parseProviderJSON(content);
-    validateCanvasOperations(plan.operations);loading.remove();assistantProposal(plan.message,plan.operations);aiConversation.push({role:"user",content:prompt},{role:"assistant",content:JSON.stringify(plan)});
+    loading.remove();assistantProposal(plan.message,plan.operations);aiConversation.push({role:"user",content:prompt},{role:"assistant",content:JSON.stringify(plan)});
   }catch(error){loading.remove();assistantMessage(`Provider error: ${error.message}`);}finally{send.disabled=false;$("#aiPrompt").focus();}
 }
 function runAssistant(prompt) {if(!prompt.trim())return;if(aiSettings.apiKey&&aiSettings.baseURL&&aiSettings.model)runRemoteAssistant(prompt);else runLocalAssistant(prompt);}
@@ -1167,16 +1653,21 @@ async function runAICard(cardId,{manual=false}={}) {
 
 applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
 
-$$("[data-add]").forEach(button=>button.onclick=()=>{closeAddMenu();button.dataset.add==="ai-note"?openAINoteDialog():addNode(button.dataset.add);});
-addMenuToggle.onclick=toggleAddMenu;
-document.addEventListener("pointerdown",event=>{if(!addMenuPanel.hidden&&!event.target.closest?.(".add-menu"))closeAddMenu();});
-addMenuPanel.addEventListener("keydown",event=>{const items=addMenuItems(),index=items.indexOf(document.activeElement);
-  if(event.key==="Escape"){event.preventDefault();closeAddMenu(true);return;}
-  if(event.key==="ArrowDown"){event.preventDefault();items[(index+1)%items.length].focus();}
-  if(event.key==="ArrowUp"){event.preventDefault();items[(index-1+items.length)%items.length].focus();}
-  if(event.key==="Home"){event.preventDefault();items[0].focus();}
-  if(event.key==="End"){event.preventDefault();items[items.length-1].focus();}});
-addMenuToggle.addEventListener("keydown",event=>{if(event.key==="Escape")closeAddMenu(true);if(event.key==="ArrowDown"&&addMenuPanel.hidden){event.preventDefault();openAddMenu();}});
+const ADD_KINDS=new Set(["note","goal","habit","project","task","ai-note","ai","widget","subcanvas"]);
+function runAddKind(kind){if(kind==="ai-note")openAINoteDialog();else if(kind==="widget")proposeLocalWidget();else addNode(kind);}
+document.addEventListener("balaur-add",event=>{
+  const menu=event.target,kind=event.detail?.kind;
+  if(!(menu instanceof HTMLElement)||!menu.matches("balaur-add-menu")||!menu.isConnected||!ADD_KINDS.has(kind))return;
+  runAddKind(kind);
+});
+document.addEventListener("click",event=>{
+  if(componentDefined("balaur-add-menu"))return;
+  const menu=event.target.closest?.("balaur-add-menu");if(!menu||!menu.isConnected)return;
+  const toggle=event.target.closest?.("#addMenuToggle"),item=event.target.closest?.("[data-add]"),panel=$("#addMenu");
+  if(toggle){const open=panel.hidden;panel.hidden=!open;toggle.setAttribute("aria-expanded",String(open));return;}
+  const kind=item?.dataset.add;if(!item||!menu.contains(item)||!ADD_KINDS.has(kind))return;
+  panel.hidden=true;$("#addMenuToggle")?.setAttribute("aria-expanded","false");runAddKind(kind);
+});
 $$('[data-app-view]').forEach(button=>button.onclick=()=>setAppView(button.dataset.appView));
 $("#newGroup").onclick=()=>addNode("group");$("#newCanvas").onclick=()=>createSubcanvas();$("#johnnyDecimalState").onclick=openJohnnyDecimalDialog;
 $$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=button.dataset.filter;$$(".nav-item[data-filter]").forEach(b=>b.classList.toggle("active",b===button));renderNodes();renderEdges();});

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balaur component-card fixture</title>
+  <link rel="stylesheet" href="../../../../vendor/pixel-loom/fonts.css" />
+  <link rel="stylesheet" href="../../../../styles/layers.css" />
+  <link rel="stylesheet" href="../../../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../../../styles/foundation.css" />
+  <link rel="stylesheet" href="../../../../styles/elements.css" />
+  <style>
+    body { margin: 0; padding: 24px; background: var(--balaur-surface-canvas); color: var(--balaur-content-on-dark); }
+    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 18px; align-items: start; }
+    .fixture-narrow { container: component-card / inline-size; inline-size: 210px; }
+    .host-fixtures { display: grid; gap: 18px; margin-block-start: 24px; }
+    .host-fixture { border: 1px solid var(--balaur-border-default); padding: 14px; }
+    #dialogFixture { inline-size: min(420px, calc(100% - 24px)); }
+  </style>
+</head>
+<body>
+  <main aria-label="Component card recipes">
+    <balaur-component-card id="metric" data-node-id="node-metric"></balaur-component-card>
+    <balaur-component-card id="progress" data-node-id="node-progress"></balaur-component-card>
+    <balaur-component-card id="callout" data-node-id="node-callout"></balaur-component-card>
+    <balaur-component-card id="list" data-node-id="node-list"></balaur-component-card>
+    <balaur-component-card id="timeline" data-node-id="node-timeline"></balaur-component-card>
+    <div class="fixture-narrow"><balaur-component-card id="empty" data-node-id="node-empty"></balaur-component-card></div>
+    <balaur-component-card id="invalid" data-node-id="node-invalid"></balaur-component-card>
+    <balaur-component-card id="unknown" data-node-id="node-unknown"></balaur-component-card>
+  </main>
+  <section class="host-fixtures" aria-label="Application host components">
+    <div class="host-fixture">
+      <balaur-task-list id="taskListFixture"></balaur-task-list>
+    </div>
+    <div class="host-fixture">
+      <balaur-workspace-nav id="trailFixture" mode="trail"></balaur-workspace-nav>
+      <balaur-workspace-nav id="navFixture" mode="canvases"></balaur-workspace-nav>
+    </div>
+    <div class="host-fixture">
+      <balaur-inspector id="inspectorFixture"></balaur-inspector>
+    </div>
+    <dialog class="settings-dialog" id="dialogFixture">
+      <balaur-dialog-frame>
+        <form method="dialog" id="dialogFixtureForm">
+          <header><div><span>✓</span><div><b>Fixture dialog</b><small>Native form behavior</small></div></div><button type="submit" value="close" aria-label="Close fixture">×</button></header>
+          <div class="settings-body"><label class="settings-field"><span>Title</span><input id="dialogFixtureInput" required></label></div>
+          <footer><span></span><button type="submit" value="cancel">Cancel</button><button type="submit" value="submit">Submit</button></footer>
+        </form>
+      </balaur-dialog-frame>
+    </dialog>
+  </section>
+  <script type="module">
+    import "../../../../elements/register.js";
+
+    const card = (id, recipe, values = {}) => Object.freeze({
+      schema: 1,
+      type: "component-card",
+      id,
+      title: values.title || id.replace("card-", ""),
+      recipe,
+      value: null,
+      label: null,
+      progress: null,
+      trend: null,
+      maximum: null,
+      unit: null,
+      tone: null,
+      body: "",
+      path: `cards/${id}.md`,
+      ...values,
+    });
+    const models = {
+      metric: card("card-metric", "metric", { title: "Weekly focus", value: "72%", label: "Deep-work target", progress: 0.72, trend: "up", body: "Up from **64%** last week." }),
+      progress: card("card-progress", "progress", { title: "Reading goal", value: 7, maximum: 12, unit: "books", body: "A steady year of reading." }),
+      callout: card("card-callout", "callout", { title: "Leave space", tone: "warning", body: "Keep Friday open for **deep work**.\n\n<scr" + "ipt>window.fixtureInjected = true</scr" + "ipt>\n[unsafe](javascript:alert(1)) [safe](https://example.com)." }),
+      list: card("card-list", "list", { title: "Packing list", body: ["- [x] Passport", "- [ ] Notebook", "- Camera", "", "Everything else stays visible.", ...Array.from({ length: 40 }, (_, index) => `- Long item ${index + 1}`)].join("\n") }),
+      timeline: card("card-timeline", "timeline", { title: "Launch path", body: "## 2026-07-22\n- 2026-07-22 Draft complete\n- 2026-07-25 Review\nNotes remain in source order." }),
+      empty: card("card-empty", "callout", { title: "Empty context", body: "" }),
+      invalid: Object.freeze({ id: "card-invalid", title: "Damaged card", recipe: "progress", value: 12, maximum: 10, body: "Retained readable context.", path: "cards/invalid.md", diagnostic: "Progress exceeds maximum" }),
+      unknown: Object.freeze({ id: "card-unknown", title: "Future recipe", recipe: "constellation", body: "Readable **fallback** body.", path: "cards/unknown.md", diagnostic: "Unknown recipe: constellation" }),
+    };
+    for (const [id, model] of Object.entries(models)) document.getElementById(id).model = model;
+    document.getElementById("metric").placementColor = "5";
+    const taskList = document.getElementById("taskListFixture");
+    taskList.items = [
+      { id: "task-alpha", title: "Alpha task", context: "Root", status: "next", scheduledOn: "2026-07-22", dueOn: null },
+      { id: "task-beta", title: "Beta task", context: "Projects", status: "done", scheduledOn: null, dueOn: "2026-07-21" },
+    ];
+    const trail = [
+      { id: "root", title: "Root" },
+      { id: "project", title: "Project" },
+    ];
+    const canvases = [
+      { id: "root", title: "Root", depth: 0, count: 2, icon: "◫" },
+      { id: "project", title: "Project", depth: 1, count: 1, icon: "↳" },
+    ];
+    const trailFixture = document.getElementById("trailFixture");
+    trailFixture.trail = trail;
+    trailFixture.canvases = canvases;
+    trailFixture.activeId = "project";
+    const navFixture = document.getElementById("navFixture");
+    navFixture.trail = trail;
+    navFixture.canvases = canvases;
+    navFixture.activeId = "project";
+    document.getElementById("inspectorFixture").model = {
+      key: "node:fixture",
+      kind: "node",
+      title: "Text node",
+      readonly: false,
+      fields: [
+        { key: "text", label: "Markdown", control: "textarea", value: "# Fixture" },
+        { key: "x", label: "X", control: "number", value: 10 },
+      ],
+      colors: [
+        { value: "1", color: "#c65f55", active: false },
+        { value: "2", color: "#ca7548", active: true },
+      ],
+      actions: [{ intent: "delete", label: "Delete node", danger: true }],
+    };
+    window.componentFixtureModels = models;
+    window.componentFixtureReady = true;
+  </script>
+</body>
+</html>

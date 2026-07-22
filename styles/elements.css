@@ -1,0 +1,350 @@
+@layer components {
+  :host([hidden]),
+  balaur-add-menu[hidden] {
+    display: none !important;
+  }
+
+  balaur-add-menu {
+    position: relative;
+    display: block;
+  }
+
+  balaur-add-menu .add-menu-toggle:focus-visible,
+  balaur-add-menu .add-menu-item:focus-visible {
+    outline: 2px solid var(--balaur-border-focus);
+    outline-offset: 2px;
+  }
+
+  balaur-add-menu .add-menu-panel[popover] {
+    position: fixed;
+    margin: 0;
+  }
+
+  @media (max-width: 620px) {
+    balaur-add-menu .add-menu-panel:not([popover]) {
+      top: auto;
+      bottom: calc(100% + 9px);
+      max-height: calc(100dvh - 96px);
+    }
+  }
+
+  @media (forced-colors: active) {
+    balaur-add-menu .add-menu-panel {
+      border-color: CanvasText;
+      background: Canvas;
+      box-shadow: none;
+    }
+
+    balaur-add-menu .add-menu-toggle:focus-visible,
+    balaur-add-menu .add-menu-item:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    balaur-add-menu .add-menu-panel,
+    balaur-add-menu .add-menu-item,
+    balaur-add-menu .add-menu-toggle {
+      transition-duration: 0s;
+      animation: none;
+    }
+  }
+
+  balaur-component-card {
+    --component-card-accent: var(--balaur-action-assistant);
+    display: block;
+    min-inline-size: 0;
+    color: var(--balaur-content-on-paper);
+    container: component-card / inline-size;
+  }
+
+  balaur-component-card[data-placement-color="1"] { --component-card-accent: var(--balaur-canvas-red); }
+  balaur-component-card[data-placement-color="2"] { --component-card-accent: var(--balaur-canvas-orange); }
+  balaur-component-card[data-placement-color="3"] { --component-card-accent: var(--balaur-canvas-yellow); }
+  balaur-component-card[data-placement-color="4"] { --component-card-accent: var(--balaur-canvas-green); }
+  balaur-component-card[data-placement-color="5"] { --component-card-accent: var(--balaur-canvas-cyan); }
+  balaur-component-card[data-placement-color="6"] { --component-card-accent: var(--balaur-canvas-purple); }
+
+  balaur-component-card .component-card-frame {
+    overflow: hidden;
+    border: 1px solid var(--balaur-border-default);
+    border-block-start: 4px solid var(--component-card-accent);
+    border-radius: var(--balaur-radius-panel);
+    background: var(--balaur-surface-parchment);
+    box-shadow: var(--balaur-shadow-paper);
+    transition:
+      border-color var(--balaur-duration-focus) var(--balaur-ease-standard),
+      transform var(--balaur-duration-press) var(--balaur-ease-standard);
+  }
+
+  balaur-component-card .component-card-header,
+  balaur-component-card .component-card-layout,
+  balaur-component-card .component-card-footer {
+    padding-inline: 16px;
+  }
+
+  balaur-component-card .component-card-header {
+    padding-block: 14px 10px;
+    border-block-end: 1px solid color-mix(in oklab, var(--balaur-border-default) 45%, transparent);
+  }
+
+  balaur-component-card .component-card-kicker {
+    margin: 0 0 5px;
+    color: var(--component-card-accent);
+    font: 600 0.68rem/1.2 var(--balaur-font-mono);
+    letter-spacing: 0.12em;
+  }
+
+  balaur-component-card .component-card-title {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--balaur-content-on-paper);
+    font: 600 1.25rem/1.15 var(--balaur-font-display);
+  }
+
+  balaur-component-card .component-card-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    min-inline-size: 0;
+    padding-block: 14px;
+  }
+
+  balaur-component-card .component-card-recipe {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
+  }
+
+  balaur-component-card .component-card-metric-value,
+  balaur-component-card .component-card-progress-value {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--balaur-content-on-paper);
+    font: 600 1.75rem/1 var(--balaur-font-display);
+  }
+
+  balaur-component-card .component-card-metric-label {
+    margin: 6px 0 0;
+    color: var(--balaur-content-on-paper-muted);
+    font: 0.8rem/1.4 var(--balaur-font-body);
+  }
+
+  balaur-component-card .component-card-trend {
+    display: inline-block;
+    margin-block-start: 8px;
+    color: var(--component-card-accent);
+    font: 600 0.72rem/1.3 var(--balaur-font-mono);
+  }
+
+  balaur-component-card .component-card-meter {
+    display: block;
+    inline-size: 100%;
+    block-size: 8px;
+    margin-block-start: 12px;
+    accent-color: var(--component-card-accent);
+  }
+
+  balaur-component-card .component-card-callout {
+    border-inline-start: 3px solid var(--component-card-accent);
+    padding-inline-start: 12px;
+  }
+
+  balaur-component-card .component-card-frame[data-tone="success"] { --component-card-accent: var(--balaur-status-success); }
+  balaur-component-card .component-card-frame[data-tone="danger"] { --component-card-accent: var(--balaur-status-danger); }
+  balaur-component-card .component-card-frame[data-tone="warning"] { --component-card-accent: var(--balaur-canvas-orange); }
+
+  balaur-component-card .component-card-markdown {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    color: var(--balaur-content-on-paper-muted);
+    font: 0.78rem/1.5 var(--balaur-font-body);
+  }
+
+  balaur-component-card .component-card-markdown :where(p, h3, ul, ol) { margin: 0; }
+  balaur-component-card .component-card-markdown :where(p, h3, ul, ol) + :where(p, h3, ul, ol) { margin-block-start: 8px; }
+  balaur-component-card .component-card-markdown :where(ul, ol) { padding-inline-start: 20px; }
+  balaur-component-card .component-card-markdown li + li { margin-block-start: 5px; }
+  balaur-component-card .component-card-markdown a { color: var(--balaur-content-on-paper); text-decoration-thickness: 1px; }
+  balaur-component-card .component-card-markdown code { font-family: var(--balaur-font-mono); }
+
+  balaur-component-card .component-card-check {
+    display: inline-block;
+    inline-size: 0.7rem;
+    block-size: 0.7rem;
+    margin-inline: -1rem 0.35rem;
+    border: 1px solid var(--balaur-border-default);
+  }
+
+  balaur-component-card li[data-checked="true"] .component-card-check { background: var(--component-card-accent); }
+
+  balaur-component-card .component-card-timeline-list { list-style: none; padding: 0; }
+  balaur-component-card .component-card-timeline-entry {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr);
+    gap: 10px;
+    border-inline-start: 1px solid var(--component-card-accent);
+    padding-inline-start: 10px;
+  }
+
+  balaur-component-card .component-card-timeline-entry time {
+    color: var(--component-card-accent);
+    font-family: var(--balaur-font-mono);
+  }
+
+  balaur-component-card .component-card-diagnostic {
+    margin: 12px 0 0;
+    border: 1px solid var(--balaur-status-danger);
+    padding: 8px;
+    color: var(--balaur-content-on-paper);
+    font: 0.72rem/1.35 var(--balaur-font-mono);
+  }
+
+  balaur-component-card .component-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-block: 0 14px;
+  }
+
+  balaur-component-card .component-card-open {
+    min-block-size: var(--balaur-target-min);
+    border: 1px solid var(--balaur-border-default);
+    border-radius: var(--balaur-radius-control);
+    padding-inline: 14px;
+    background: transparent;
+    color: var(--balaur-content-on-paper);
+    font: 600 0.75rem/1 var(--balaur-font-body);
+    cursor: pointer;
+  }
+
+  balaur-component-card .component-card-open:focus-visible {
+    outline: 2px solid var(--balaur-border-focus);
+    outline-offset: 2px;
+  }
+
+  .canvas-node.component-card-node > .node-accent { display: none; }
+  .canvas-node.component-card-node .node-content > balaur-component-card {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    block-size: 100%;
+  }
+  .canvas-node.component-card-node balaur-component-card .component-card-frame {
+    box-sizing: border-box;
+    block-size: 100%;
+    overflow: auto;
+  }
+
+  @container component-card (max-width: 240px) {
+    balaur-component-card .component-card-layout { grid-template-columns: minmax(0, 1fr); }
+    balaur-component-card .component-card-timeline-entry { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+    balaur-component-card .component-card-header,
+    balaur-component-card .component-card-layout,
+    balaur-component-card .component-card-footer { padding-inline: 11px; }
+  }
+
+  @media (forced-colors: active) {
+    balaur-component-card .component-card-frame {
+      border-color: CanvasText;
+      background: Canvas;
+      color: CanvasText;
+      box-shadow: none;
+    }
+
+    balaur-component-card .component-card-open { border-color: ButtonText; color: ButtonText; }
+    balaur-component-card .component-card-open:focus-visible { outline-color: Highlight; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    balaur-component-card .component-card-frame,
+    balaur-component-card .component-card-open {
+      transition-duration: 0s;
+      animation: none;
+    }
+  }
+
+  balaur-widget-frame {
+    display: block;
+    min-inline-size: 0;
+    block-size: 100%;
+  }
+
+  .canvas-node.html-widget .widget-node-body {
+    min-block-size: 0;
+    padding: 0;
+  }
+
+  .canvas-node.html-widget .widget-node-body > balaur-widget-frame {
+    min-block-size: 0;
+    block-size: 100%;
+  }
+
+  .widget-operation-review details {
+    margin-block-start: 8px;
+  }
+
+  .widget-operation-review pre,
+  .widget-source-dialog pre {
+    max-block-size: min(55dvh, 32rem);
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--balaur-border-default);
+    padding: 12px;
+    background: var(--balaur-surface-page);
+    color: var(--balaur-content-on-dark);
+    font: .72rem/1.45 var(--balaur-font-mono);
+  }
+
+  .widget-source-dialog {
+    inline-size: min(56rem, calc(100% - 24px));
+    max-block-size: calc(100dvh - 24px);
+    border: 1px solid var(--balaur-border-default);
+    padding: 0;
+    background: var(--balaur-surface-oak);
+    color: var(--balaur-content-on-dark);
+  }
+
+  .widget-source-dialog article { padding: 18px; }
+  .widget-source-dialog header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+  .widget-source-dialog h2 { margin: 4px 0; }
+  .widget-source-dialog .widget-capability-summary { color: var(--balaur-content-on-dark-muted); }
+  balaur-task-list,
+  balaur-workspace-nav,
+  balaur-inspector {
+    display: block;
+    min-inline-size: 0;
+  }
+
+  balaur-task-list[hidden],
+  balaur-workspace-nav[hidden],
+  balaur-inspector[hidden],
+  balaur-dialog-frame[hidden] {
+    display: none !important;
+  }
+
+  balaur-inspector .inspector-notes:empty,
+  balaur-inspector .inspector-actions:empty {
+    display: none;
+  }
+
+  balaur-inspector .inspector-colors {
+    margin-block-end: 15px;
+  }
+
+  balaur-inspector .inspector-colors > span {
+    display: block;
+    margin-block-end: 6px;
+    color: var(--balaur-content-on-dark-muted);
+    font: 9px var(--balaur-font-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  balaur-inspector .inspector-actions {
+    display: grid;
+    gap: 8px;
+  }
+
+  balaur-inspector .inspector-actions .button {
+    inline-size: 100%;
+  }
+}

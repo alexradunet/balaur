@@ -14,11 +14,12 @@ A small, standalone proof of concept for a local-first life-management app whose
 - Draggable and resizable text, link, file, group, and sub-canvas portal nodes
 - Goals, projects, habits, ideas, and notes represented with standard JSON Canvas fields
 - Portable task cards backed by canonical Markdown files for status, scheduling, due dates, and priority
+- Declarative component cards backed by canonical `cards/*.md` files, with metric, progress, callout, list, and timeline recipes
 - A Today dashboard for planned, overdue, inbox/next, and completed work
 - Obsidian-style side handles for dragging connections directly between cards, plus connect mode
 - Markdown cards and task checkboxes
 - Inspector for content, geometry, colors, and edge routing
-- Sandboxed HTML/CSS/Canvas/WebGL cards represented as standard file nodes
+- Reviewed live HTML/CSS/Canvas/WebGL widgets backed by canonical `widgets/*.html` files and run only on explicit request in sandboxed frames
 - Balaur, a canvas-aware familiar with local tools or a client-side OpenAI-compatible provider
 - Prompt-first AI notes that generate Markdown directly onto the canvas
 - Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
@@ -97,13 +98,21 @@ The Markdown file owns workflow status, priority, planned date, due date, estima
 
 Use the task inspector to edit metadata, or switch to **Today** for planned today, overdue, inbox/next, and completed work. Quick capture schedules a task for the current date while the full task dialog can place it in any nested canvas.
 
+## Component cards and live widgets
+
+Component cards are declarative data, not generated host code. A canonical `cards/*.md` file owns an immutable Orbit ID, title, recipe, recipe fields, and ordinary Markdown body. Standard JSON Canvas `file` nodes place that card on one or more canvases; patch-only updates refresh every placement without creating a new one. In the inspector, **Delete node** removes only the selected placement, while the separately confirmed **Delete card everywhere** removes the canonical file and all placements. Ask Balaur to **create a metric card** to exercise the local, offline proposal flow. Every typed create or update is validated, described with its target file and canvas, and written only after approval.
+
+Live widgets are different: their canonical source is a self-contained `widgets/*.html` file. **＋ Add → Live widget** prepares a complete source proposal and capability disclosure. Approval saves and places the file but does not execute it. Review **View source**, then choose **Run** on the card. Pause destroys the iframe and private message channel; Reload creates a fresh runtime. Widgets do not receive canvas files, user data, provider keys, repositories, or host mutation commands.
+
+The runtime uses an opaque-origin iframe with exactly `sandbox="allow-scripts"`, a restrictive widget-document CSP, a private `MessageChannel`, closed message schemas, size/rate limits, a six-active-widget cap, heartbeats, visibility/preferences projection, and cleanup on pause, identity change, disconnect, or navigation. These controls reduce capability and resource exposure; they are not hard CPU isolation or proof that every browser request mechanism is suppressible. See [`docs/generative-canvas.md`](docs/generative-canvas.md).
+
 ## Canonical files and queries
 
-Balaur stores `.canvas` documents, `.md` life entities, and the `.orbit/workspace.json` sidecar in an IndexedDB vault in the browser. At boot, `LifeIndexer` projects those files into a disposable in-memory index and `LifeQuery` serves Today, calendar, habits, journals, and task filtering. Deleting or rebuilding the index loses no user data. Upgrading a legacy localStorage profile is a clean break: its old task workflow state is not migrated.
+Balaur stores `.canvas` documents, canonical `.md` life entities and component cards, `widgets/*.html`, and the `.orbit/workspace.json` sidecar in an IndexedDB vault in the browser. At boot, `LifeIndexer` projects life files into a disposable in-memory index while the component-card and widget catalogs preload renderable file records. Rendering uses those in-memory working sets rather than reading the vault for every card. Deleting or rebuilding the query index loses no user data. Upgrading a legacy localStorage profile is a clean break: its old task workflow state is not migrated.
 
-A persistent index is a deferred optimization, not a v1 dependency. OPFS-backed SQLite Wasm requires COOP/COEP headers that GitHub Pages cannot provide, so the static app uses the pure-JavaScript in-memory projection. Whole-space version-2 export/import preserves the sidecar and raw logical vault files rather than a database snapshot.
+A persistent index is a deferred optimization, not a v1 dependency. OPFS-backed SQLite Wasm requires COOP/COEP headers that GitHub Pages cannot provide, so the static app uses the pure-JavaScript in-memory projection. Whole-space version-2 export/import preserves the sidecar and raw logical vault files—including cards and widgets—rather than a database snapshot.
 
-The vault-first wiring is implemented but browser-pending verification covers IndexedDB persistence, vault-first reload, task create/complete/Today UI behavior, export/import round-trip, offline reload, and timezone boundaries. See [`docs/life-data.md`](docs/life-data.md) for file contracts and repositories, [`docs/architecture.md`](docs/architecture.md) for ownership, and [`docs/offline.md`](docs/offline.md) for shell caching and validation.
+Browser checks cover fresh and retained IndexedDB profiles, task create/complete/Today flows, component-card and widget persistence, whole-space export/import restoration, and Service Worker offline reload. IndexedDB quota/failure behavior, browser timezone boundaries, cache upgrades from an older deployed worker, and malformed-file repair affordances remain browser-pending. See [`docs/life-data.md`](docs/life-data.md) for file contracts and repositories, [`docs/architecture.md`](docs/architecture.md) for ownership, and [`docs/offline.md`](docs/offline.md) for shell caching and validation.
 
 ## Connect an AI provider
 
@@ -115,7 +124,7 @@ Model:        mistral-small-latest
 API key:      your Mistral API key
 ```
 
-The static app calls the provider directly with `fetch()` using its OpenAI-compatible `/chat/completions` endpoint. The model receives the current canvas and proposes typed operations; changes are validated and require confirmation before being applied.
+The static app calls the provider directly with `fetch()` using its OpenAI-compatible `/chat/completions` endpoint. The model receives a bounded canvas context and proposes allowlisted typed operations. Canvas operations and the resulting document are validated; component-card and widget operations go through their canonical file repositories. Every proposal is described for review and requires confirmation before it is applied. Generated host-page JavaScript is never an operation.
 
 ### AI notes
 
@@ -136,7 +145,7 @@ By default, the key lives in `sessionStorage` for the current tab. Enabling **Re
 
 Each canvas remains a JSON Canvas 1.0 document with only the top-level `nodes` and `edges` arrays. A sub-canvas portal is a standard file node pointing to a child document under `canvases/`; Johnny Decimal portals use readable paths such as `canvases/11-finance.canvas`. Balaur's browser-local workspace sidecar tracks hierarchy, titles, Johnny Decimal identifiers, and camera positions without adding private fields to canvas objects.
 
-**Export .canvas** exports the currently open level. **Export whole space** produces a version-2 `.orbit.json` file bundle containing the sidecar, every standards-compliant canvas document, and canonical Markdown/attachment files; the normal Import action restores either format. Version-1 bundles are intentionally rejected in canonical-files-only v1.
+**Export .canvas** exports the currently open level. **Export whole space** produces a version-2 `.orbit.json` file bundle containing the sidecar, every standards-compliant canvas document, canonical Markdown files (including component cards), and widget/attachment files; the normal Import action restores either format. Version-1 bundles are intentionally rejected in canonical-files-only v1.
 
 Life-management meaning is encoded portably:
 

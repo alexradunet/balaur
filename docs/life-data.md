@@ -12,8 +12,9 @@ habits/*.md             habit definitions
 habit-logs/YYYY/*.md    append-only daily habit check-in events
 journal/YYYY/*.md       journal entries by local date
 events/*.md             calendar events
-widgets/*.html          sandboxed file-node attachments
-MemoryIndex             disposable runtime projection
+cards/*.md              canonical declarative component cards
+widgets/*.html          canonical reviewed widget source
+MemoryIndex             disposable life-query projection
 ```
 
 The vault adapters share the same logical layout:
@@ -69,7 +70,7 @@ orbit-type: <type>
 Markdown body remains ordinary user content.
 ```
 
-`orbit-schema` must be `1`; newer schemas are read-only and unsupported schemas are rejected. Required identity and timestamps are validated rather than inferred.
+`orbit-schema` must be `1`; newer schemas are read-only and unsupported schemas are rejected. Required identity and timestamps are validated rather than inferred. Component cards use the same preservation-first frontmatter machinery but their own schema and catalog; widgets are retained as reviewed raw HTML rather than parsed as life entities.
 
 ### Tasks: `tasks/*.md`
 
@@ -95,6 +96,33 @@ Optional context and Markdown body.
 Required fields are `orbit-id`, `title`, `status`, `created-at`, and `updated-at`. Task statuses are `inbox`, `next`, `scheduled`, `waiting`, `done`, and `cancelled`. `scheduled-on` expresses scheduling intent; `due-on` is a separate deadline. `completed-at`, priority, estimate, recurrence, and dates may be null when allowed by the contract.
 
 `FileTaskRepository` creates, updates, completes, reopens, and deletes task files. It writes a standard `file` node for each requested placement and uses content-hash preconditions for edits and removals. Removing a placement does not remove the task; deleting everywhere removes all placements before the canonical file.
+
+### Component cards: `cards/*.md`
+
+A component card is declarative canonical data placed through one or more standard JSON Canvas `file` nodes:
+
+```md
+---
+orbit-schema: 1
+orbit-type: component-card
+orbit-id: "card-weekly-focus"
+title: "Weekly focus"
+recipe: metric
+value: "72%"
+label: "Current progress"
+progress: 0.72
+trend: up
+---
+Ordinary Markdown context.
+```
+
+Recipes are `metric`, `progress`, `callout`, `list`, and `timeline`. Recipe-specific fields are validated: metric uses a string value with optional label, normalized progress, and `up`/`down`/`flat` trend; progress uses finite non-negative value, positive maximum, and optional unit; callout accepts `info`, `success`, `warning`, or `danger`; list and timeline derive their display from the Markdown body. Titles and short fields are limited to 160 Unicode code points, units to 32, the body to 32 KiB, and the complete file to 64 KiB.
+
+`FileComponentCardRepository` creates, patches, renames, places, unplaces, and deletes these files with expected-hash preconditions. `orbit-id` is immutable. A title change may move the canonical safe path and rewrites every placement; a failed move or placement is failure-safe. A patch-only update changes canonical data and refreshes all existing placements without simulating a new placement. Removing a Canvas node deletes only that placement; the separate confirmed delete-everywhere action removes every placement before removing the canonical file. `ComponentCardCatalog` retains valid parsed cards and readable raw diagnostics for malformed files so rendering remains synchronous and never replaces a damaged file.
+
+### Widgets: `widgets/*.html`
+
+A widget's reviewed self-contained source is the canonical file. `FileWidgetRepository` writes the safe `widgets/*.html` path before adding a standard file-node placement, and `WidgetCatalog` preloads source or repair diagnostics for rendering. Approval saves the file but does not execute it. Widget source is included byte-for-byte in whole-space backups; execution policy and sandbox lifecycle are described in [generative-canvas.md](generative-canvas.md).
 
 ### Habits: `habits/*.md`
 
@@ -181,22 +209,22 @@ These conventions apply to every repository and projection:
 
 `localDateForInstant()` uses `Intl.DateTimeFormat` with the intended IANA timezone. Tests cover invalid dates, invalid instants, invalid zones, and timezone-boundary behavior; the browser boundary still needs browser verification.
 
-## Runtime index
+## Runtime projections
 
 `LifeIndexer` builds source records for every vault file. It records media type, path, content hash, byte size, entity type/id, parse status, and diagnostics. Untyped Markdown and opaque attachments can remain valid source files; malformed Orbit entities and invalid canvases are diagnostics.
 
-Typed projections include:
+Typed life projections include:
 
-- tasks with workflow and temporal fields;
-- habits with definition fields;
-- journals keyed by local date;
-- calendar events keyed by `orbit-id`;
-- immutable habit-entry rows from daily log markers; and
-- placements derived by scanning canvas `file` nodes that reference entity files.
+- tasks and task placements;
+- habit definitions and immutable check-in events;
+- journal entries; and
+- calendar events.
 
-Duplicate `orbit-id` files never produce a winner: every conflicting typed projection and placement is suppressed and each conflicting path receives a `DUPLICATE_ID` diagnostic. Missing file-node targets, parse failures, and index drift are diagnostics. `index-integrity.js` compares canonical files, hashes, typed rows, placements, and diagnostics and can purge/rebuild the index.
+Duplicate `orbit-id` life files never produce a winner: every conflicting typed projection and placement is suppressed and each conflicting path receives a `DUPLICATE_ID` diagnostic. Missing file-node targets, parse failures, and index drift are diagnostics. `index-integrity.js` compares canonical files, hashes, typed rows, placements, and diagnostics and can purge/rebuild the index.
 
 Cold rebuild uses `LifeIndexer.rebuild()`. Warm updates use vault revisions and `LifeIndexer.reconcileWarm()`, preserving old-path ancestry for moves and applying each projection through `MemoryIndex.transaction()`. `MemoryIndex.transaction()` rolls back the complete projection, diagnostics, and state for that projection on failure. The browser exposes `window.orbitCanvas.rebuildIndex()` as a recovery command.
+
+ComponentCardCatalog and `WidgetCatalog` are separate disposable rendering projections over `cards/*.md` and `widgets/*.html`. They retain placements and parse/repair status and rebuild at boot or after repository writes. They are not query indexes and never own canonical content.
 
 `LifeQuery` is the application-facing facade. It returns consistent camelCase objects for:
 
@@ -231,12 +259,12 @@ Frontmatter and body updates are preservation-first. If an external edit changes
 }
 ```
 
-The sidecar is in `workspace`; files are raw text so frontmatter and line endings remain inspectable. Export validates every canvas and reports unreadable files. Import rejects version-1 bundles, requires an empty staging vault, validates every path/canvas/file-node reference/entity before the first write, writes files with `expectedHash: null`, and leaves activation to the caller after indexing succeeds.
+The sidecar is in `workspace`; files are raw text so frontmatter, line endings, component-card Markdown, and widget source remain inspectable. Export validates every canvas and reports unreadable files. Import rejects version-1 bundles, requires an empty staging vault, validates every path, canvas, file-node reference, supported entity, component card, and duplicate Orbit ID before the first write, writes files with `expectedHash: null`, and leaves activation to the caller after all projections rebuild successfully.
 
-A single `.canvas` export is interoperable JSON Canvas but is not a complete life backup when its file references are not bundled. A version-2 whole-space bundle is the portable recovery format.
+A single `.canvas` export is interoperable JSON Canvas but is not a complete backup when its file references are not bundled. A version-2 whole-space bundle is the portable recovery format for sidecar metadata and raw canonical canvas, life, card, widget, and attachment files.
 
 ## Verification status
 
-The explicit storage command in `AGENTS.md` passes **164 Node tests** across phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query. This verifies the platform-neutral codecs, repositories, adapters, indexing, queries, backup validation, and audit logic.
+The explicit storage command in `AGENTS.md` passes **168 Node tests** across phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query. This is the prior 164-test suite plus four component-card backup-boundary regressions in `phase4-backup.test.js`. Focused tests additionally cover component-card codec/catalog/repository behavior, generated card/widget operations, widget catalog/repository behavior, and widget source/envelope/protocol limits.
 
-Browser verification is still pending for IndexedDB persistence/restore and quota behavior, vault-first boot and first-render timing, task create/complete/Today interaction, export/import round-trip in a real profile, offline reload and cache upgrades, timezone boundaries in browser locale behavior, and repair affordances for malformed files.
+Fresh and retained real-browser profiles verify vault-first boot, IndexedDB persistence across reload, task create/complete/Today interaction, component-card and widget persistence, version-2 export/import into a staging IndexedDB vault, and offline reload. IndexedDB quota/failure behavior, timezone boundaries in browser locale behavior, malformed-file repair affordances, and Service Worker upgrade from a previously deployed cache remain browser-pending.
