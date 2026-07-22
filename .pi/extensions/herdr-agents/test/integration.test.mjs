@@ -4,8 +4,8 @@ import net from 'node:net';
 import os from 'node:os';
 import fs from 'node:fs';
 import { resolve } from 'node:path';
-import { HerdrClient, EXPECTED_PROTOCOL } from '../herdr-client.js';
-import { assertPinnedAgent, captureAgentIdentity, closePane, listAgents, makeAgentLabel, promptAgent, reportPaneMetadata, requestCloseConfirmation, resolveRoleSkillArgs, startAgent, waitForAgent } from '../pane-manager.js';
+import { HerdrClient, HerdrRemoteError, EXPECTED_PROTOCOL } from '../herdr-client.js';
+import { assertPinnedAgent, captureAgentIdentity, closePane, HERDR_AGENT_STATUSES, listAgents, makeAgentLabel, promptAgent, reportPaneMetadata, requestCloseConfirmation, resolveRoleSkillArgs, startAgent, waitForAgent } from '../pane-manager.js';
 import { parseRoleFile } from '../role-parser.js';
 
 const session = { source: 'herdr:pi', agent: 'pi', kind: 'id', value: '33333333-3333-3333-3333-333333333333' };
@@ -35,6 +35,38 @@ describe('protocol-17 socket and lifecycle validation', () => {
       await assert.rejects(client.ping(), /response ID mismatch/);
     });
   });
+  it('classifies only well-formed remote errors as typed bounded remote failures', async () => {
+    const oversized = new HerdrRemoteError('x'.repeat(500), '💥'.repeat(5000));
+    assert.ok(Buffer.byteLength(oversized.code) <= 128);
+    assert.ok(Buffer.byteLength(oversized.message) <= 4000);
+    await withServer({ ping: () => ({ error: { code: 'agent_not_found', message: 'missing worker' } }) }, async (client) => {
+      await assert.rejects(client.ping(), (error) => error instanceof HerdrRemoteError && error.code === 'agent_not_found' && error.message === 'missing worker');
+    });
+    await withServer({ ping: () => ({ error: { code: 17, message: 'bad shape' } }) }, async (client) => {
+      await assert.rejects(client.ping(), (error) => !(error instanceof HerdrRemoteError) && /error code/.test(error.message));
+    });
+  });
+
+  it('accepts exactly protocol-17 statuses and rejects invalid agent status shapes', async () => {
+    assert.deepEqual([...HERDR_AGENT_STATUSES], ['idle', 'working', 'blocked', 'done', 'unknown']);
+    await withServer({ 'agent.get': () => ({ type: 'agent_info', agent: { ...agent(), agent_status: 'paused' } }) }, async (client) => {
+      await assert.rejects(assertPinnedAgent(client, { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value, status: 'idle' }), /agent_status.*invalid/);
+    });
+  });
+
+  it('requires agent.wait to return one of the requested statuses', async () => {
+    await withServer({ 'agent.wait': (request) => ({ type: 'agent_info', agent: { ...agent(request.params.target), agent_status: 'working' } }) }, async (client) => {
+      await assert.rejects(waitForAgent(client, { target: 'worker', until: ['idle', 'done'], timeoutMs: 3000 }), /not in requested until set/);
+    });
+  });
+
+  it('distinguishes remote wait timeout from transport timeout text', async () => {
+    const remote = { request: async () => { throw new HerdrRemoteError('timeout', 'settled wait timeout'); } };
+    assert.deepEqual(await waitForAgent(remote, { target: 'worker', until: ['idle'], timeoutMs: 3000 }), { status: 'timeout', timedOut: true });
+    const transport = { request: async () => { throw new Error('Herdr request timed out after 10ms'); } };
+    await assert.rejects(waitForAgent(transport, { target: 'worker', until: ['idle'], timeoutMs: 3000 }), /request timed out/);
+  });
+
   it('fails closed for missing ping capability fields', async () => {
     await withServer({ ping: () => ({ type: 'pong', version: '0.7.5', protocol: 17, capabilities: {} }) }, async (client) => {
       await assert.rejects(client.ping(), /capabilities are incomplete/);

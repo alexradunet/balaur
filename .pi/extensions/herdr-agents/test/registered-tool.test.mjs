@@ -6,33 +6,43 @@ import { appendFile, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/pro
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createHandle, addHandle, createHandleStore, serializeStore } from '../handle-store.js';
+import { createHandle, addHandle, createHandleStore, deserializeStore, serializeStore } from '../handle-store.js';
 
 const extensionDir = resolve('.pi/extensions/herdr-agents');
 const sessionPath = resolve('.pi/extensions/herdr-agents/test/fixtures/session.jsonl');
 const originalEnv = { HERDR_ENV: process.env.HERDR_ENV, HERDR_SOCKET_PATH: process.env.HERDR_SOCKET_PATH, HERDR_PANE_ID: process.env.HERDR_PANE_ID, BALAUR_WORKER: process.env.BALAUR_WORKER };
 let stubDir;
 
+function deferred() {
+  let resolvePromise;
+  let rejectPromise;
+  const promise = new Promise((resolve, reject) => { resolvePromise = resolve; rejectPromise = reject; });
+  return { promise, resolve: resolvePromise, reject: rejectPromise };
+}
+
 class FakeHerdr {
-  constructor(options = {}) { this.options = options; this.requests = []; this.name = ''; this.getCount = 0; this.path = `${tmpdir()}/herdr-registered-${process.pid}-${Date.now()}-${Math.random()}.sock`; }
-  agent(name = this.name, session = this.options.session ?? { kind: 'id', value: '11111111-1111-1111-1111-111111111111' }) { return { name, pane_id: 'w1:p2', workspace_id: 'w1', tab_id: 'w1:t1', terminal_id: 'term-2', agent_status: this.options.agentStatus ?? 'idle', interactive_ready: true, launch_pending: false, agent_session: { source: 'herdr:pi', agent: 'pi', ...session } }; }
+  constructor(options = {}) { this.options = options; this.requests = []; this.name = ''; this.getCount = 0; this.status = options.agentStatus ?? 'idle'; this.removed = false; this.path = `${tmpdir()}/herdr-registered-${process.pid}-${Date.now()}-${Math.random()}.sock`; }
+  agent(name = this.name, session = this.options.session ?? { kind: 'id', value: '11111111-1111-1111-1111-111111111111' }) { return { name, pane_id: 'w1:p2', workspace_id: 'w1', tab_id: 'w1:t1', terminal_id: 'term-2', agent_status: this.status, interactive_ready: true, launch_pending: false, agent_session: { source: 'herdr:pi', agent: 'pi', ...session } }; }
   response(request) {
     const custom = this.options.handlers?.[request.method]; if (custom) return custom(request, this);
     switch (request.method) {
       case 'ping': return { type: 'pong', version: '0.7.5', protocol: this.options.protocol ?? 17, capabilities: { live_handoff: true, detached_server_daemon: true } };
       case 'pane.split': return { type: 'pane_info', pane: { pane_id: 'w1:p2', workspace_id: 'w1', tab_id: 'w1:t1', terminal_id: 'term-2' } };
-      case 'agent.start': this.name = request.params.name; return { type: 'agent_started', agent: this.agent() };
-      case 'agent.get': this.getCount++; return { type: 'agent_info', agent: this.agent(request.params.target) };
-      case 'agent.list': return { type: 'agent_list', agents: [{ pane_id: 'w1:p1', terminal_id: 'term-1', agent_status: 'idle' }, this.agent()] };
-      case 'agent.wait': return { type: 'agent_info', agent: this.agent(request.params.target) };
-      case 'agent.prompt': return { type: 'agent_prompted', agent: this.agent(request.params.target) };
+      case 'agent.start': this.name = request.params.name; this.removed = false; return { type: 'agent_started', agent: this.agent() };
+      case 'agent.get': this.getCount++; return this.removed ? { error: { code: 'agent_not_found', message: 'agent was removed' } } : { type: 'agent_info', agent: this.agent(request.params.target) };
+      case 'agent.list': return { type: 'agent_list', agents: [{ pane_id: 'w1:p1', terminal_id: 'term-1', agent_status: 'idle' }, ...(this.removed ? [] : [this.agent()])] };
+      case 'agent.wait': return request.params.until.includes(this.status) ? { type: 'agent_info', agent: this.agent(request.params.target) } : { error: { code: 'timeout', message: `timed out waiting for ${request.params.until.join(',')}` } };
+      case 'agent.prompt':
+        if (this.status === 'working') return { error: { code: 'agent_busy', message: 'agent is already working' } };
+        this.status = 'working';
+        return { type: 'agent_prompted', agent: this.agent(request.params.target) };
       case 'agent.read': return { type: 'pane_read', read: { text: 'diagnostic', truncated: false } };
       case 'pane.report_metadata': return { type: 'ok' };
-      case 'pane.close': return { type: 'ok' };
+      case 'pane.close': this.removed = true; return { type: 'ok' };
       default: throw new Error(`unhandled ${request.method}`);
     }
   }
-  async start() { this.server = net.createServer((socket) => { let buffer = ''; socket.on('data', (chunk) => { buffer += chunk; const lines = buffer.split('\n'); buffer = lines.pop() || ''; for (const line of lines) { if (!line) continue; const request = JSON.parse(line); this.requests.push(request); try { const result = this.response(request); if (result?.error) socket.write(JSON.stringify({ id: request.id, error: result.error }) + '\n'); else socket.write(JSON.stringify({ id: request.id, result }) + '\n'); } catch (error) { socket.write(JSON.stringify({ id: request.id, error: { code: 'fake_error', message: error.message } }) + '\n'); } } }); }); await new Promise((ok) => this.server.listen(this.path, ok)); }
+  async start() { this.server = net.createServer((socket) => { let buffer = ''; socket.on('data', (chunk) => { buffer += chunk; const lines = buffer.split('\n'); buffer = lines.pop() || ''; for (const line of lines) { if (!line) continue; const request = JSON.parse(line); this.requests.push(request); void Promise.resolve().then(() => this.response(request)).then((result) => { if (result === null) socket.end(); else if (result?.error) socket.write(JSON.stringify({ id: request.id, error: result.error }) + '\n'); else socket.write(JSON.stringify({ id: request.id, result }) + '\n'); }, (error) => { socket.write(JSON.stringify({ id: request.id, error: { code: 'fake_error', message: error.message } }) + '\n'); }); } }); }); await new Promise((ok) => this.server.listen(this.path, ok)); }
   async stop() { await new Promise((ok) => this.server.close(ok)); }
 }
 
@@ -58,7 +68,11 @@ async function loadRegisteredTool(server, branch = []) {
   return { tool: registered[0], ctx, branch };
 }
 
-async function startWorker(tool, ctx) { const result = await tool.execute('start', { action: 'start', role: 'executor' }, undefined, undefined, ctx); return result.details.handle; }
+async function startWorker(tool, ctx) { const result = await tool.execute('start', { action: 'start', role: 'implementer-openai' }, undefined, undefined, ctx); return result.details.handle; }
+function latestPersistedHandle(branch, handleId) {
+  const entry = [...branch].reverse().find((candidate) => candidate.type === 'custom' && candidate.customType === 'balaur-herdr-agent-store');
+  return deserializeStore(entry.data.store).handles[handleId];
+}
 
 describe('registered herdr_agent extension acceptance matrix', { concurrency: false }, () => {
   it('invokes registered start and every handle action against fake Herdr', async () => {
@@ -77,6 +91,137 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
       await tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx);
       for (const method of ['pane.split', 'agent.start', 'agent.wait', 'agent.read', 'agent.prompt', 'pane.close']) assert.ok(server.requests.some((request) => request.method === method), `${method} was invoked`);
     } finally { await server.stop(); await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it('rejects a concurrent same-handle prompt before a second Herdr request', async () => {
+    const gate = deferred();
+    const firstPrompted = deferred();
+    let promptCount = 0;
+    const server = new FakeHerdr({ handlers: { 'agent.prompt': async (request, fake) => {
+      promptCount++;
+      firstPrompted.resolve();
+      await gate.promise;
+      return { type: 'agent_prompted', agent: fake.agent(request.params.target) };
+    } } });
+    await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      const handle = await startWorker(tool, ctx);
+      const first = tool.execute('prompt-1', { action: 'prompt', handle, prompt: 'first' }, undefined, undefined, ctx);
+      await firstPrompted.promise;
+      await assert.rejects(tool.execute('prompt-2', { action: 'prompt', handle, prompt: 'second' }, undefined, undefined, ctx), new RegExp(`${handle}.*prompt`));
+      assert.equal(promptCount, 1);
+      gate.resolve();
+      await first;
+    } finally { gate.resolve(); await server.stop(); }
+  });
+
+  it('keeps prompt and close mutually exclusive before confirmation or pane closure', async () => {
+    const promptGate = deferred();
+    const promptEntered = deferred();
+    const server = new FakeHerdr({ handlers: { 'agent.prompt': async (request, fake) => { promptEntered.resolve(); await promptGate.promise; return { type: 'agent_prompted', agent: fake.agent(request.params.target) }; } } });
+    await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      const handle = await startWorker(tool, ctx);
+      let confirmations = 0;
+      ctx.ui.confirm = async () => { confirmations++; return true; };
+      const prompting = tool.execute('prompt', { action: 'prompt', handle, prompt: 'hold' }, undefined, undefined, ctx);
+      await promptEntered.promise;
+      await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), /busy with prompt/);
+      assert.equal(confirmations, 0);
+      assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
+      promptGate.resolve();
+      await prompting;
+    } finally { promptGate.resolve(); await server.stop(); }
+  });
+
+  it('keeps close and prompt mutually exclusive while confirmation is deferred', async () => {
+    const confirmGate = deferred();
+    const confirmEntered = deferred();
+    const server = new FakeHerdr();
+    await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      const handle = await startWorker(tool, ctx);
+      ctx.ui.confirm = async () => { confirmEntered.resolve(); return confirmGate.promise; };
+      const closing = tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx);
+      await confirmEntered.promise;
+      const promptsBefore = server.requests.filter((request) => request.method === 'agent.prompt').length;
+      await assert.rejects(tool.execute('prompt', { action: 'prompt', handle, prompt: 'blocked by close' }, undefined, undefined, ctx), /busy with close/);
+      assert.equal(server.requests.filter((request) => request.method === 'agent.prompt').length, promptsBefore);
+      confirmGate.resolve(false);
+      await closing;
+    } finally { confirmGate.resolve(false); await server.stop(); }
+  });
+
+  it('rejects status, wait, read, and collect while prompt owns the handle lease', async () => {
+    const gate = deferred();
+    const entered = deferred();
+    const server = new FakeHerdr({ handlers: { 'agent.prompt': async (request, fake) => { entered.resolve(); await gate.promise; return { type: 'agent_prompted', agent: fake.agent(request.params.target) }; } } });
+    await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      const handle = await startWorker(tool, ctx);
+      const prompting = tool.execute('prompt', { action: 'prompt', handle, prompt: 'hold' }, undefined, undefined, ctx);
+      await entered.promise;
+      const requestsBefore = server.requests.length;
+      for (const action of ['status', 'wait', 'read', 'collect']) {
+        await assert.rejects(tool.execute(action, { action, handle, timeout_ms: 3000 }, undefined, undefined, ctx), /busy with prompt/);
+      }
+      assert.equal(server.requests.length, requestsBefore, 'rejected actions make no Herdr request');
+      gate.resolve();
+      await prompting;
+    } finally { gate.resolve(); await server.stop(); }
+  });
+
+  it('allows unrelated handles to prompt concurrently', async () => {
+    const gate = deferred();
+    const bothEntered = deferred();
+    let entered = 0;
+    const server = new FakeHerdr({ handlers: { 'agent.prompt': async (request, fake) => { if (++entered === 2) bothEntered.resolve(); await gate.promise; return { type: 'agent_prompted', agent: fake.agent(request.params.target) }; } } });
+    await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      const firstHandle = await startWorker(tool, ctx);
+      const secondHandle = await startWorker(tool, ctx);
+      const first = tool.execute('first', { action: 'prompt', handle: firstHandle, prompt: 'first' }, undefined, undefined, ctx);
+      const second = tool.execute('second', { action: 'prompt', handle: secondHandle, prompt: 'second' }, undefined, undefined, ctx);
+      await bothEntered.promise;
+      assert.equal(entered, 2);
+      gate.resolve();
+      await Promise.all([first, second]);
+    } finally { gate.resolve(); await server.stop(); }
+  });
+
+  it('releases a handle lease after errors, aborts, remote timeout, and cancelled close', async () => {
+    let readFails = true;
+    const server = new FakeHerdr({ handlers: { 'agent.read': () => {
+      if (readFails) { readFails = false; return { error: { code: 'read_failed', message: 'read failed' } }; }
+      return { type: 'pane_read', read: { text: 'diagnostic', truncated: false } };
+    } } });
+    await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      const handle = await startWorker(tool, ctx);
+      await assert.rejects(tool.execute('read-error', { action: 'read', handle }, undefined, undefined, ctx), /read failed/);
+      await tool.execute('read-after-error', { action: 'read', handle }, undefined, undefined, ctx);
+
+      const controller = new AbortController();
+      controller.abort();
+      await assert.rejects(tool.execute('status-abort', { action: 'status', handle }, controller.signal, undefined, ctx), /aborted/);
+      await tool.execute('status-after-abort', { action: 'status', handle }, undefined, undefined, ctx);
+
+      server.status = 'working';
+      const timedOut = await tool.execute('wait-timeout', { action: 'wait', handle, timeout_ms: 3000 }, undefined, undefined, ctx);
+      assert.match(timedOut.content[0].text, /timed out/);
+      server.status = 'idle';
+      await tool.execute('status-after-timeout', { action: 'status', handle }, undefined, undefined, ctx);
+
+      ctx.ui.confirm = async () => false;
+      await tool.execute('close-cancel', { action: 'close', handle }, undefined, undefined, ctx);
+      await tool.execute('prompt-after-cancel', { action: 'prompt', handle, prompt: 'still open' }, undefined, undefined, ctx);
+    } finally { await server.stop(); }
   });
 
   it('fails closed when no Herdr environment is present', async () => {
@@ -99,7 +244,7 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
   it('retains a provisional error handle when launch identity polling fails', async () => {
     const server = new FakeHerdr({ handlers: { 'agent.get': () => ({ error: { code: 'not_ready', message: 'not ready' } }) } }); await server.start();
     try {
-      const { tool, ctx } = await loadRegisteredTool(server); const controller = new AbortController(); setTimeout(() => controller.abort(), 25); const result = await tool.execute('start', { action: 'start', role: 'executor' }, controller.signal, undefined, ctx);
+      const { tool, ctx } = await loadRegisteredTool(server); const controller = new AbortController(); setTimeout(() => controller.abort(), 25); const result = await tool.execute('start', { action: 'start', role: 'implementer-openai' }, controller.signal, undefined, ctx);
       assert.match(result.content[0].text, /launch completion is uncertain/);
       assert.equal(result.details.handles[0].status, 'error');
       assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
@@ -110,7 +255,7 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     const server = new FakeHerdr({ handlers: { 'agent.get': (request, fake) => { fake.getCount++; const agent = fake.agent(request.params.target); if (fake.getCount <= 2) delete agent.agent_session; return { type: 'agent_info', agent }; } } }); await server.start();
     try {
       const { tool, ctx } = await loadRegisteredTool(server); const controller = new AbortController(); setTimeout(() => controller.abort(), 25);
-      const started = await tool.execute('start', { action: 'start', role: 'executor' }, controller.signal, undefined, ctx);
+      const started = await tool.execute('start', { action: 'start', role: 'implementer-openai' }, controller.signal, undefined, ctx);
       const handle = started.details.handle;
       const recovered = await tool.execute('status', { action: 'status', handle }, undefined, undefined, ctx);
       assert.equal(recovered.details.handles[0].status, 'idle');
@@ -123,16 +268,113 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     const server = new FakeHerdr({ handlers: { 'agent.get': (request, fake) => { fake.getCount++; const agent = fake.agent(request.params.target); if (fake.getCount <= 2) delete agent.agent_session; else agent.terminal_id = 'other-terminal'; return { type: 'agent_info', agent }; } } }); await server.start();
     try {
       const { tool, ctx } = await loadRegisteredTool(server); const controller = new AbortController(); setTimeout(() => controller.abort(), 25);
-      const started = await tool.execute('start', { action: 'start', role: 'executor' }, controller.signal, undefined, ctx);
-      const recovered = await tool.execute('status', { action: 'status', handle: started.details.handle }, undefined, undefined, ctx);
+      const started = await tool.execute('start', { action: 'start', role: 'implementer-openai' }, controller.signal, undefined, ctx);
+      await assert.rejects(tool.execute('status', { action: 'status', handle: started.details.handle }, undefined, undefined, ctx), /occupant was replaced/);
+      const recovered = await tool.execute('list', { action: 'list' }, undefined, undefined, ctx);
       assert.equal(recovered.details.handles[0].status, 'replaced');
       assert.equal(recovered.details.handles[0].sessionKind, undefined);
+    } finally { await server.stop(); }
+  });
+
+  it('rejects unsupported executor isolation before splitting a pane', async () => {
+    const server = new FakeHerdr(); await server.start();
+    try {
+      const { tool, ctx } = await loadRegisteredTool(server);
+      await assert.rejects(tool.execute('start', { action: 'start', role: 'executor' }, undefined, undefined, ctx), /executor\.md: unsupported role key 'isolation'/);
+      assert.equal(server.requests.some((request) => request.method === 'pane.split'), false);
     } finally { await server.stop(); }
   });
 
   it('rejects a numeric protocol mismatch through registered start', async () => {
     const server = new FakeHerdr({ protocol: 16 }); await server.start();
     try { const { tool, ctx } = await loadRegisteredTool(server); await assert.rejects(startWorker(tool, ctx), /protocol\/capability mismatch \(protocol 16\)/); } finally { await server.stop(); }
+  });
+
+  it('persists wait-returned identity replacement before propagating it', async () => {
+    const server = new FakeHerdr({ handlers: { 'agent.wait': (request, fake) => ({ type: 'agent_info', agent: fake.agent(request.params.target, { kind: 'id', value: '99999999-9999-9999-9999-999999999999' }) }) } });
+    await server.start();
+    try {
+      const loaded = await loadRegisteredTool(server);
+      const handle = await startWorker(loaded.tool, loaded.ctx);
+      await assert.rejects(loaded.tool.execute('wait', { action: 'wait', handle, timeout_ms: 3000 }, undefined, undefined, loaded.ctx), /session identity was replaced/);
+      assert.equal(latestPersistedHandle(loaded.branch, handle).status, 'replaced');
+      delete server.options.handlers['agent.wait'];
+      const status = await loaded.tool.execute('status-after-replacement', { action: 'status', handle }, undefined, undefined, loaded.ctx);
+      assert.equal(status.details.handles.find((candidate) => candidate.handleId === handle).status, 'replaced');
+    } finally { await server.stop(); }
+  });
+
+  it('persists prompt-returned replacement as replaced with an uncertain retained boundary', async () => {
+    const server = new FakeHerdr({ handlers: { 'agent.prompt': (request, fake) => ({ type: 'agent_prompted', agent: fake.agent(request.params.target, { kind: 'id', value: '99999999-9999-9999-9999-999999999999' }) }) } });
+    await server.start();
+    try {
+      const loaded = await loadRegisteredTool(server);
+      const handle = await startWorker(loaded.tool, loaded.ctx);
+      await assert.rejects(loaded.tool.execute('prompt', { action: 'prompt', handle, prompt: 'mismatch' }, undefined, undefined, loaded.ctx), /session identity was replaced/);
+      const persisted = latestPersistedHandle(loaded.branch, handle);
+      assert.equal(persisted.status, 'replaced');
+      assert.equal(persisted.promptPhase, 'uncertain');
+      assert.equal(persisted.promptBoundary.sessionId, '11111111-1111-1111-1111-111111111111');
+    } finally { await server.stop(); }
+  });
+
+  it('classifies agent_not_found only after successful inventory reconciliation', async () => {
+    for (const [inventory, expected] of [
+      [[{ name: 'other', pane_id: 'w1:p2', terminal_id: 'term-other', agent_status: 'idle' }], 'replaced'],
+      [[], 'missing'],
+    ]) {
+      const server = new FakeHerdr({ handlers: {
+        'agent.get': () => ({ error: { code: 'agent_not_found', message: 'gone' } }),
+        'agent.list': () => ({ type: 'agent_list', agents: inventory }),
+      } });
+      await server.start();
+      try {
+        const loaded = await loadRegisteredTool(server);
+        // Start needs normal get responses before status exercises not-found.
+        delete server.options.handlers['agent.get'];
+        const handle = await startWorker(loaded.tool, loaded.ctx);
+        server.options.handlers['agent.get'] = () => ({ error: { code: 'agent_not_found', message: 'gone' } });
+        const result = await loaded.tool.execute('status', { action: 'status', handle }, undefined, undefined, loaded.ctx);
+        assert.equal(result.details.handles.find((candidate) => candidate.handleId === handle).status, expected);
+      } finally { await server.stop(); }
+    }
+  });
+
+  it('preserves prior status and throws on transient, malformed, invalid, oversized, aborted, and inventory failures', async () => {
+    const cases = [
+      ['transport', () => null],
+      ['malformed', () => ({ type: 'agent_info', agent: null })],
+      ['invalid status', (request, fake) => ({ type: 'agent_info', agent: { ...fake.agent(request.params.target), agent_status: 'paused' } })],
+      ['oversized status', (request, fake) => ({ type: 'agent_info', agent: { ...fake.agent(request.params.target), agent_status: 'x'.repeat(10000) } })],
+    ];
+    for (const [label, handler] of cases) {
+      const server = new FakeHerdr(); await server.start();
+      try {
+        const loaded = await loadRegisteredTool(server); const handle = await startWorker(loaded.tool, loaded.ctx);
+        server.options.handlers = { 'agent.get': handler };
+        await assert.rejects(loaded.tool.execute(label, { action: 'status', handle }, undefined, undefined, loaded.ctx));
+        assert.equal(latestPersistedHandle(loaded.branch, handle).status, 'idle', label);
+      } finally { await server.stop(); }
+    }
+
+    const abortServer = new FakeHerdr(); await abortServer.start();
+    try {
+      const loaded = await loadRegisteredTool(abortServer); const handle = await startWorker(loaded.tool, loaded.ctx);
+      const controller = new AbortController(); controller.abort();
+      await assert.rejects(loaded.tool.execute('abort', { action: 'status', handle }, controller.signal, undefined, loaded.ctx), /aborted/);
+      assert.equal(latestPersistedHandle(loaded.branch, handle).status, 'idle');
+    } finally { await abortServer.stop(); }
+
+    const inventoryServer = new FakeHerdr(); await inventoryServer.start();
+    try {
+      const loaded = await loadRegisteredTool(inventoryServer); const handle = await startWorker(loaded.tool, loaded.ctx);
+      inventoryServer.options.handlers = {
+        'agent.get': () => ({ error: { code: 'agent_not_found', message: 'gone' } }),
+        'agent.list': () => null,
+      };
+      await assert.rejects(loaded.tool.execute('inventory', { action: 'status', handle }, undefined, undefined, loaded.ctx));
+      assert.equal(latestPersistedHandle(loaded.branch, handle).status, 'idle');
+    } finally { await inventoryServer.stop(); }
   });
 
   it('reports an event-driven timeout without killing the worker', async () => {
@@ -167,6 +409,26 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
       const { tool, ctx } = await loadRegisteredTool(server); const handle = await startWorker(tool, ctx);
       ctx.ui.confirm = async () => false; await tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx); assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
       ctx.ui.confirm = async () => true; await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), /session identity was replaced/); assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
+    } finally { await server.stop(); }
+  });
+
+  it('falls back to the latest fully valid snapshot and validates custom-entry versions', async () => {
+    const old = { ...createHandle({ paneId: 'w1:p2', terminalId: 'term-2', role: 'implementer-openai', agentName: 'worker', sessionKind: 'path', sessionValue: sessionPath }), status: 'ready' };
+    const oldStore = addHandle(createHandleStore(), old);
+    const corruptStore = JSON.stringify({ version: 1, handles: { [old.handleId]: { ...old, status: 'paused' } } });
+    const server = new FakeHerdr(); await server.start();
+    try {
+      let loaded = await loadRegisteredTool(server, [
+        { type: 'custom', customType: 'balaur-herdr-agent-store', data: { version: 1, store: serializeStore(oldStore) } },
+        { type: 'custom', customType: 'balaur-herdr-agent-store', data: { version: 1, store: corruptStore } },
+      ]);
+      assert.equal((await loaded.tool.execute('list', { action: 'list' }, undefined, undefined, loaded.ctx)).details.handles.length, 1);
+
+      loaded = await loadRegisteredTool(server, [
+        { type: 'custom', customType: 'balaur-herdr-agent-store', data: { version: 1, store: serializeStore(oldStore) } },
+        { type: 'custom', customType: 'balaur-herdr-agent-store', data: { version: 2, store: serializeStore(createHandleStore()) } },
+      ]);
+      assert.equal((await loaded.tool.execute('list', { action: 'list' }, undefined, undefined, loaded.ctx)).details.handles.length, 1);
     } finally { await server.stop(); }
   });
 

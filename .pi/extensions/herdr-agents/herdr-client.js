@@ -5,6 +5,32 @@ import { randomUUID } from 'node:crypto';
 export const EXPECTED_PROTOCOL = 17;
 export const DEFAULT_TIMEOUT_MS = 5000;
 export const MAX_RESPONSE_BYTES = 1024 * 1024;
+const MAX_REMOTE_CODE_BYTES = 128;
+const MAX_REMOTE_MESSAGE_BYTES = 4000;
+
+function boundUtf8(value, maxBytes) {
+  const text = String(value);
+  if (Buffer.byteLength(text) <= maxBytes) return text;
+  let low = 0;
+  let high = text.length;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (Buffer.byteLength(text.slice(0, middle)) <= maxBytes) low = middle;
+    else high = middle - 1;
+  }
+  if (low > 0 && /[\uD800-\uDBFF]/.test(text[low - 1])) low--;
+  return text.slice(0, low);
+}
+
+export class HerdrRemoteError extends Error {
+  constructor(code, message) {
+    const boundedCode = boundUtf8(code, MAX_REMOTE_CODE_BYTES);
+    const boundedMessage = boundUtf8(message, MAX_REMOTE_MESSAGE_BYTES);
+    super(boundedMessage);
+    this.name = 'HerdrRemoteError';
+    this.code = boundedCode;
+  }
+}
 
 export class HerdrClient {
   #socketPath;
@@ -74,8 +100,12 @@ export class HerdrClient {
         try { response = JSON.parse(line); } catch (error) { return finish(new Error(`failed to parse Herdr response: ${error.message}`)); }
         if (!response || typeof response !== 'object' || response.id !== request.id) return finish(new Error(`Herdr response ID mismatch: expected ${request.id}, got ${response?.id ?? '(missing)'}`));
         if (response.error) {
-          const error = expectObject(response.error, 'Herdr error');
-          return finish(new Error(`Herdr error [${requireString(error.code, 'Herdr error code')}]: ${requireString(error.message, 'Herdr error message')}`));
+          try {
+            const error = expectObject(response.error, 'Herdr error');
+            const code = requireString(error.code, 'Herdr error code');
+            const message = requireString(error.message, 'Herdr error message');
+            return finish(new HerdrRemoteError(code, message));
+          } catch (error) { return finish(error); }
         }
         if (!Object.prototype.hasOwnProperty.call(response, 'result')) return finish(new Error('Herdr response missing result'));
         finish(null, response);

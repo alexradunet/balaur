@@ -6,7 +6,7 @@ import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { truncateHead, formatSize, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { HerdrClient, EXPECTED_PROTOCOL } from "./herdr-client.js";
+import { HerdrClient, HerdrRemoteError, EXPECTED_PROTOCOL } from "./herdr-client.js";
 import { parseRoleFile, roleNameFromFilename, type RoleConfig } from "./role-parser.js";
 import { assertAgentIdentity, assertPinnedAgent, buildWorkerEnv, captureAgentIdentity, closePane, createPane, listAgents, makeAgentLabel, promptAgent, readAgent, removeRolePromptFile, reportPaneMetadata, requestCloseConfirmation, startAgent, waitForAgent, waitForInteractiveReady, waitForSessionIdentity } from "./pane-manager.js";
 import { captureSessionBoundary, resolvePiSessionReference, waitForFinalizedSessionResult, waitForPiSessionReference } from "./session-collector.js";
@@ -24,6 +24,7 @@ export default function (pi: ExtensionAPI) {
   const herdrEnv = HerdrClient.getHerdrEnv();
   if (!herdrEnv) return;
   const makeClient = () => new HerdrClient({ socketPath: herdrEnv.socketPath, timeoutMs: 10000 });
+  const handleLeases = new Map<string, { action: string; token: symbol }>();
   const createStore = () => { const store = createHandleStore(); for (const handle of handleMap.values()) store.handles[handle.handleId] = handle; return store; };
   const setStore = (store: ReturnType<typeof createHandleStore>) => { handleMap.clear(); for (const handle of listHandles(store)) handleMap.set(handle.handleId, handle); };
   const persistStore = () => pi.appendEntry(CUSTOM_STORE_TYPE, { version: 1, store: serializeStore(createStore()) });
@@ -37,9 +38,13 @@ export default function (pi: ExtensionAPI) {
     const entries = ctx?.sessionManager?.getBranch?.() || [];
     let restored: ReturnType<typeof createHandleStore> | undefined;
     for (const entry of entries) {
-      const raw = entry?.type === "custom" && entry.customType === CUSTOM_STORE_TYPE ? entry.data?.store : entry?.type === "message" && entry.message?.role === "toolResult" && entry.message.toolName === "herdr_agent" ? entry.message.details?.store : undefined;
+      let raw: unknown;
+      if (entry?.type === "custom" && entry.customType === CUSTOM_STORE_TYPE) {
+        if (entry.data?.version !== 1) continue;
+        raw = entry.data?.store;
+      } else if (entry?.type === "message" && entry.message?.role === "toolResult" && entry.message.toolName === "herdr_agent") raw = entry.message.details?.store;
       if (typeof raw !== "string") continue;
-      try { const parsed = JSON.parse(raw); if (parsed && typeof parsed === "object" && parsed.handles && typeof parsed.handles === "object") restored = deserializeStore(raw); } catch { /* retain the last valid snapshot only */ }
+      try { restored = deserializeStore(raw); } catch { /* retain the latest fully valid snapshot only */ }
     }
     if (!restored) return;
     setStore(restored);
@@ -47,7 +52,15 @@ export default function (pi: ExtensionAPI) {
   });
 
   function requireHandle(id: string | undefined) { if (!id) throw new Error("handle is required for this action"); const handle = handleMap.get(id); if (!handle) throw new Error(`Unknown handle: ${id}`); return handle; }
-  async function pinned(handle: WorkerHandle, signal?: AbortSignal) { try { return await assertPinnedAgent(makeClient(), handle, signal); } catch (error) { save(handle); throw error; } }
+  function validateReturnedIdentity(handle: WorkerHandle, agent: any) {
+    try { return assertAgentIdentity(handle, agent); }
+    catch (error) { if (handle.status === "replaced") save(handle); throw error; }
+  }
+  async function pinned(handle: WorkerHandle, signal?: AbortSignal) {
+    const priorStatus = handle.status;
+    try { return await assertPinnedAgent(makeClient(), handle, signal); }
+    catch (error) { if (handle.status === "replaced" && priorStatus !== "replaced") save(handle); throw error; }
+  }
   function operational(handle: WorkerHandle) { if (!handle.sessionKind || !handle.sessionValue || ["starting", "error", "missing", "replaced"].includes(handle.status)) throw new Error(`worker ${handle.handleId} is not ready for operational actions`); }
 
   async function discoverRoles(cwd: string) {
@@ -57,9 +70,19 @@ export default function (pi: ExtensionAPI) {
     return { roles, errors };
   }
 
+  async function withHandleLease<T>(handleId: string | undefined, action: string, callback: () => Promise<T>): Promise<T> {
+    if (!handleId) throw new Error("handle is required for this action");
+    const active = handleLeases.get(handleId);
+    if (active) throw new Error(`worker ${handleId} is busy with ${active.action}; cannot run ${action}`);
+    const token = Symbol(action);
+    handleLeases.set(handleId, { action, token });
+    try { return await callback(); }
+    finally { if (handleLeases.get(handleId)?.token === token) handleLeases.delete(handleId); }
+  }
+
   pi.registerTool({
     name: "herdr_agent", label: "Herdr Agent", description: "Start and control visible interactive Pi workers in Herdr panes. read is diagnostic; collect is the authoritative latest bridge-prompt Pi JSONL result.", promptSnippet: "Start and control visible Herdr Pi workers", promptGuidelines: ["Use herdr_agent for visible Herdr workers.", "Use herdr_agent collect, not read, for the authoritative finalized result."], parameters: HerdrAgentParams,
-    async execute(_id, params, signal, _update, ctx) { if (!HerdrClient.isInHerdrPane()) throw new Error("herdr_agent is only available inside a Herdr pane"); try { switch (params.action) { case "start": return await start(params, ctx, signal); case "list": return { content: [{ type: "text", text: bounded(renderList()) }], details: details() }; case "status": return await status(params, signal); case "wait": return await wait(params, signal); case "read": return await read(params, signal); case "prompt": return await prompt(params, signal); case "collect": return await collect(params, signal); case "close": return await close(params, ctx, signal); } } catch (error) { throw new Error(boundedError(error)); } },
+    async execute(_id, params, signal, _update, ctx) { if (!HerdrClient.isInHerdrPane()) throw new Error("herdr_agent is only available inside a Herdr pane"); try { switch (params.action) { case "start": return await start(params, ctx, signal); case "list": return { content: [{ type: "text", text: bounded(renderList()) }], details: details() }; case "status": return await withHandleLease(params.handle, "status", () => status(params, signal)); case "wait": return await withHandleLease(params.handle, "wait", () => wait(params, signal)); case "read": return await withHandleLease(params.handle, "read", () => read(params, signal)); case "prompt": return await withHandleLease(params.handle, "prompt", () => prompt(params, signal)); case "collect": return await withHandleLease(params.handle, "collect", () => collect(params, signal)); case "close": return await withHandleLease(params.handle, "close", () => close(params, ctx, signal)); } } catch (error) { throw new Error(boundedError(error)); } },
     renderCall(args, theme) { const suffix = args.role || args.handle || ""; return new Text(theme.fg("toolTitle", theme.bold("herdr_agent ")) + theme.fg("accent", `${args.action} ${suffix}`.trim()), 0, 0); },
     renderResult(result, { expanded }, theme) { const text = result.content[0]?.type === "text" ? result.content[0].text : "(no output)"; const handles = (result.details as any)?.handles || []; const extra = expanded && handles.length ? `\n${handles.map((h: WorkerHandle) => `${h.handleId} ${h.status} ${h.role} @ ${h.paneId}`).join("\n")}` : ""; return new Text(text + extra, 0, 0); },
   });
@@ -87,10 +110,27 @@ export default function (pi: ExtensionAPI) {
     return { content: [{ type: "text", text: bounded(`Started ${params.role}: handle ${handle.handleId}, pane ${pane.pane_id}, session ${handle.sessionKind}:${handle.sessionValue}.${metadataWarning ? ` Metadata warning: ${metadataWarning}` : ""}`) }], details: details({ handle: handle.handleId, session: { kind: handle.sessionKind, value: handle.sessionValue }, metadataWarning }) };
   }
   const renderList = () => handleMap.size ? [...handleMap.values()].map((h) => `${h.handleId}: ${h.role} @ ${h.paneId} [${h.status}]`).join("\n") : "No active workers.";
-  async function status(params: any, signal?: AbortSignal) { const handle = requireHandle(params.handle); try { const agent = await pinned(handle, signal); if (!handle.sessionKind || !handle.sessionValue) Object.assign(handle, captureAgentIdentity(agent), { error: undefined }); handle.status = agent.agent_status; save(handle); } catch { if (handle.status !== "replaced" && handle.sessionKind) { handle.status = "missing"; save(handle); } else if (!handle.sessionKind) save(handle); } return { content: [{ type: "text", text: bounded(`${handle.handleId}: ${handle.status}\nagent=${handle.agentName}\npane=${handle.paneId}\nsession=${handle.sessionKind}:${handle.sessionValue}`) }], details: details({ handle: handle.handleId }) }; }
-  async function wait(params: any, signal?: AbortSignal) { const handle = requireHandle(params.handle); operational(handle); await pinned(handle, signal); const result = await waitForAgent(makeClient(), { target: handle.agentName, until: ["idle", "done", "blocked"], timeoutMs: params.timeout_ms || 120000 }, signal); if (result.timedOut) return { content: [{ type: "text", text: bounded(`Worker ${handle.handleId} timed out; it was not killed.`) }], details: details({ handle: handle.handleId, timedOut: true }) }; assertAgentIdentity(handle, result.agent); handle.status = result.status; save(handle); return { content: [{ type: "text", text: bounded(`Worker ${handle.handleId} reached ${result.status}.`) }], details: details({ handle: handle.handleId }) }; }
+  const statusResult = (handle: WorkerHandle) => ({ content: [{ type: "text", text: bounded(`${handle.handleId}: ${handle.status}\nagent=${handle.agentName}\npane=${handle.paneId}\nsession=${handle.sessionKind}:${handle.sessionValue}`) }], details: details({ handle: handle.handleId }) });
+  async function status(params: any, signal?: AbortSignal) {
+    const handle = requireHandle(params.handle);
+    if (handle.status === "replaced") return statusResult(handle);
+    try {
+      const agent = await pinned(handle, signal);
+      if (!handle.sessionKind || !handle.sessionValue) Object.assign(handle, captureAgentIdentity(agent), { error: undefined });
+      handle.status = agent.agent_status;
+      save(handle);
+    } catch (error) {
+      if (!(error instanceof HerdrRemoteError) || error.code !== "agent_not_found") throw error;
+      const inventory = await listAgents(makeClient(), signal);
+      const conflict = inventory.some((agent) => agent.pane_id === handle.paneId || (handle.agentName && agent.name === handle.agentName));
+      handle.status = conflict ? "replaced" : "missing";
+      save(handle);
+    }
+    return statusResult(handle);
+  }
+  async function wait(params: any, signal?: AbortSignal) { const handle = requireHandle(params.handle); operational(handle); await pinned(handle, signal); const result = await waitForAgent(makeClient(), { target: handle.agentName, until: ["idle", "done", "blocked"], timeoutMs: params.timeout_ms || 120000 }, signal); if (result.timedOut) return { content: [{ type: "text", text: bounded(`Worker ${handle.handleId} timed out; it was not killed.`) }], details: details({ handle: handle.handleId, timedOut: true }) }; validateReturnedIdentity(handle, result.agent); handle.status = result.status; save(handle); return { content: [{ type: "text", text: bounded(`Worker ${handle.handleId} reached ${result.status}.`) }], details: details({ handle: handle.handleId }) }; }
   async function read(params: any, signal?: AbortSignal) { const handle = requireHandle(params.handle); operational(handle); await pinned(handle, signal); const output = await readAgent(makeClient(), { target: handle.agentName, lines: params.lines || 200 }, signal); return { content: [{ type: "text", text: bounded(`[Diagnostic terminal output; use collect for the finalized result]\n${output.text}`) }], details: details({ handle: handle.handleId, rawOutput: output.text, truncated: output.truncated }) }; }
-  async function prompt(params: any, signal?: AbortSignal) { if (!params.prompt) throw new Error("prompt is required for prompt"); const handle = requireHandle(params.handle); operational(handle); if (handle.status !== "idle" && handle.status !== "blocked") throw new Error(`worker ${handle.handleId} must be idle or blocked before prompting`); await pinned(handle, signal); const session = { kind: handle.sessionKind, value: handle.sessionValue }; let existingPath; if (session.kind === "id") { try { existingPath = await resolvePiSessionReference(session); } catch (error) { if (!String(error?.message).includes("Pi session ID not found")) throw error; /* fresh id-backed session */ } } handle.promptBoundary = await captureSessionBoundary(session, existingPath); handle.promptPhase = "submitting"; save(handle); try { const prompted = await promptAgent(makeClient(), { target: handle.agentName, text: params.prompt, wait: true, timeoutMs: params.timeout_ms || 30000 }, signal); assertAgentIdentity(handle, prompted.agent); handle.promptPhase = "accepted"; handle.status = prompted.status; save(handle); return { content: [{ type: "text", text: `Prompted ${handle.handleId}; Herdr observed ${prompted.status} after submission.` }], details: details({ handle: handle.handleId }) }; } catch (error) { handle.promptPhase = "uncertain"; handle.status = "unknown"; handle.error = boundedError(error); save(handle); throw error; } }
+  async function prompt(params: any, signal?: AbortSignal) { if (!params.prompt) throw new Error("prompt is required for prompt"); const handle = requireHandle(params.handle); operational(handle); if (handle.status !== "idle" && handle.status !== "blocked") throw new Error(`worker ${handle.handleId} must be idle or blocked before prompting`); await pinned(handle, signal); const session = { kind: handle.sessionKind, value: handle.sessionValue }; let existingPath; if (session.kind === "id") { try { existingPath = await resolvePiSessionReference(session); } catch (error) { if (!String(error?.message).includes("Pi session ID not found")) throw error; /* fresh id-backed session */ } } handle.promptBoundary = await captureSessionBoundary(session, existingPath); handle.promptPhase = "submitting"; save(handle); try { const prompted = await promptAgent(makeClient(), { target: handle.agentName, text: params.prompt, wait: true, timeoutMs: params.timeout_ms || 30000 }, signal); validateReturnedIdentity(handle, prompted.agent); handle.promptPhase = "accepted"; handle.status = prompted.status; save(handle); return { content: [{ type: "text", text: bounded(`Prompted ${handle.handleId}; Herdr observed ${prompted.status} after submission.`) }], details: details({ handle: handle.handleId }) }; } catch (error) { handle.promptPhase = "uncertain"; if (handle.status !== "replaced") handle.status = "unknown"; handle.error = boundedError(error); save(handle); throw error; } }
   async function collect(params: any, signal?: AbortSignal) { const handle = requireHandle(params.handle); operational(handle); await pinned(handle, signal); if (handle.promptPhase === "uncertain") return { content: [{ type: "text", text: "Latest bridge prompt submission is uncertain; inspect the visible worker before collecting." }], details: details({ handle: handle.handleId, stopReason: "uncertain" }) }; if (handle.promptPhase !== "accepted" || !handle.promptBoundary) return { content: [{ type: "text", text: "No bridge prompt recorded for this worker." }], details: details({ handle: handle.handleId, stopReason: "no bridge prompt recorded" }) }; const filePath = await waitForPiSessionReference({ kind: handle.sessionKind, value: handle.sessionValue }, 10000, signal); const result = await waitForFinalizedSessionResult(filePath, 10000, signal, handle.promptBoundary); if (result.stopReason === "incomplete") return { content: [{ type: "text", text: "Worker latest bridge prompt has no finalized result yet." }], details: details({ handle: handle.handleId, stopReason: result.stopReason }) }; return { content: [{ type: "text", text: bounded(result.text) }], details: details({ handle: handle.handleId, sessionPath: filePath, stopReason: result.stopReason, toolCalls: result.toolCalls, usage: result.usage, fullText: result.text }) }; }
   async function close(params: any, ctx: any, signal?: AbortSignal) { const handle = requireHandle(params.handle); operational(handle); await pinned(handle, signal); if (!await requestCloseConfirmation(ctx, handle)) return { content: [{ type: "text", text: "Close cancelled by user." }], details: details({ handle: handle.handleId, cancelled: true }) }; await pinned(handle, signal); await closePane(makeClient(), handle.paneId, signal); handleMap.delete(handle.handleId); persistStore(); return { content: [{ type: "text", text: `Closed ${handle.handleId}.` }], details: details({ closed: handle.handleId }) }; }
 }

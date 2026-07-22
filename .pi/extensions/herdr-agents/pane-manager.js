@@ -4,10 +4,11 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
-import { expectObject, requireString } from './herdr-client.js';
+import { expectObject, HerdrRemoteError, requireString } from './herdr-client.js';
 import { roleToPiArgs } from './role-parser.js';
 
 export const METADATA_SOURCE = 'balaur-herdr-agent';
+export const HERDR_AGENT_STATUSES = new Set(['idle', 'working', 'blocked', 'done', 'unknown']);
 const SOURCE_RE = /^[A-Za-z0-9_-]{1,32}$/;
 
 function sleep(ms, signal) {
@@ -39,7 +40,7 @@ function requireAgent(value, label = 'agent', requireName = true) {
   if (requireName) requireString(agent.name, `${label}.name`);
   requireString(agent.pane_id, `${label}.pane_id`);
   requireString(agent.terminal_id, `${label}.terminal_id`);
-  if (typeof agent.agent_status !== 'string') throw new Error(`${label}.agent_status is missing`);
+  if (!HERDR_AGENT_STATUSES.has(agent.agent_status)) throw new Error(`${label}.agent_status is missing or invalid`);
   // Protocol-17 omits false booleans through serde skip_serializing_if.
   agent.interactive_ready = agent.interactive_ready === true;
   agent.launch_pending = agent.launch_pending === true;
@@ -121,12 +122,14 @@ export async function waitForInteractiveReady(client, agentName, timeoutMs = 600
 }
 
 export async function waitForAgent(client, opts, signal) {
+  if (!Array.isArray(opts.until) || !opts.until.length || opts.until.some((status) => !HERDR_AGENT_STATUSES.has(status))) throw new Error('agent.wait until contains an invalid Herdr status');
   try {
     const response = await client.request('agent.wait', { target: opts.target, until: opts.until, timeout_ms: opts.timeoutMs || 60000 }, (opts.timeoutMs || 60000) + 5000, signal);
     const agent = requireAgent(resultOf(response, 'agent_info', 'agent'));
+    if (!opts.until.includes(agent.agent_status)) throw new Error(`agent.wait returned ${agent.agent_status}, which is not in requested until set`);
     return { status: agent.agent_status, agent, timedOut: false };
   } catch (error) {
-    if (error.message?.includes('timed out')) return { status: 'timeout', timedOut: true };
+    if (error instanceof HerdrRemoteError && error.code === 'timeout') return { status: 'timeout', timedOut: true };
     throw error;
   }
 }

@@ -2,6 +2,7 @@
 
 const ALLOWED_THINKING = new Set(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 const ALLOWED_PROMPT_MODE = new Set(['replace', 'append']);
+const SUPPORTED_ROLE_KEYS = new Set(['description', 'model', 'thinking', 'tools', 'skills', 'prompt_mode']);
 const TOOL_WILDCARD = '*';
 export const ORCHESTRATION_TOOLS = Object.freeze([
   'herdr_agent',
@@ -53,6 +54,7 @@ function splitFrontmatter(content, filePath) {
 }
 
 function buildRoleConfig(fm, body, filePath) {
+  for (const key of Object.keys(fm)) if (!SUPPORTED_ROLE_KEYS.has(key)) throw new Error(`${filePath}: unsupported role key '${key}'`);
   if (!fm.description) throw new Error(`${filePath}: missing or empty 'description'`);
   if (!body.trim()) throw new Error(`${filePath}: missing role prompt body`);
   const config = { filePath, description: fm.description, prompt: body };

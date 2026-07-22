@@ -6,17 +6,33 @@ import { filteredRoleTools, ORCHESTRATION_TOOLS, parseRoleFile, roleNameFromFile
 
 const agentsDir = resolve('.pi/agents');
 describe('role compatibility', () => {
-  it('parses and prepares every current project role without dropping any', async () => {
+  it('parses supported project roles and explicitly rejects worktree-isolated executors', async () => {
     const files = (await readdir(agentsDir)).filter((file) => file.endsWith('.md'));
     assert.ok(files.length >= 1);
+    const unsupported = new Map([
+      ['advisor-qwen.md', 'run_in_background'], ['advisor-sol.md', 'run_in_background'],
+      ['executor.md', 'isolation'], ['executor-qwen.md', 'isolation'],
+      ['reviewer-glm.md', 'run_in_background'], ['reviewer-qwen.md', 'run_in_background'],
+      ['reviewer-sol.md', 'run_in_background'], ['reviewer-terra.md', 'run_in_background'],
+    ]);
     for (const file of files) {
       const path = resolve(agentsDir, file);
-      const role = parseRoleFile(await readFile(path, 'utf8'), path);
-      const args = roleToPiArgs(role);
+      const content = await readFile(path, 'utf8');
       assert.equal(roleNameFromFilename(file), file.slice(0, -3));
+      if (unsupported.has(file)) {
+        assert.throws(() => parseRoleFile(content, path), new RegExp(`${file.replace('.', '\\.')}.*unsupported role key '${unsupported.get(file)}'`));
+        continue;
+      }
+      const role = parseRoleFile(content, path);
+      const args = roleToPiArgs(role);
       assert.ok(args.includes('--system-prompt') || args.includes('--append-system-prompt'));
       for (const forbidden of ORCHESTRATION_TOOLS) assert.ok(!filteredRoleTools(role).includes(forbidden), `${file} leaked ${forbidden}`);
     }
+  });
+
+  it('rejects every unsupported role key with its path and key name', () => {
+    assert.throws(() => parseRoleFile('---\ndescription: isolated\nisolation: worktree\n---\nPrompt', '/roles/executor.md'), /\/roles\/executor\.md: unsupported role key 'isolation'/);
+    assert.throws(() => parseRoleFile('---\ndescription: unknown\nretry_count: 3\n---\nPrompt', '/roles/unknown.md'), /\/roles\/unknown\.md: unsupported role key 'retry_count'/);
   });
 
   it('accepts installed extension tool identifiers while excluding only orchestration', () => {

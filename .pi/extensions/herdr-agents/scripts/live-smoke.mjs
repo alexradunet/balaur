@@ -9,9 +9,9 @@ import { buildWorkerEnv, createPane, promptAgent, removeRolePromptFile, reportPa
 import { captureSessionBoundary, waitForFinalizedSessionResult, waitForPiSessionReference } from "../session-collector.js";
 
 async function role(cwd) {
-  const filePath = join(cwd, ".pi", "agents", "executor.md");
+  const filePath = join(cwd, ".pi", "agents", "herdr-smoke.md");
   if (!existsSync(filePath)) throw new Error(`missing smoke role: ${filePath}`);
-  return { name: roleNameFromFilename("executor.md"), role: parseRoleFile(await readFile(filePath, "utf8"), filePath) };
+  return { name: roleNameFromFilename("herdr-smoke.md"), role: parseRoleFile(await readFile(filePath, "utf8"), filePath) };
 }
 
 async function promptAndCollect(client, agentName, session, nonce) {

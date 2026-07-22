@@ -23,7 +23,7 @@ import { randomUUID } from 'node:crypto';
  * @property {string} [sessionValue] - Exact Herdr agent session reference value.
  * @property {'starting'|'ready'|'working'|'idle'|'blocked'|'done'|'unknown'|'error'|'replaced'|'missing'} status
  * @property {'submitting'|'accepted'|'uncertain'} [promptPhase]
- * @property {{sessionId:string,anchorId:string}} [promptBoundary]
+ * @property {{sessionId:string,anchorId:string|null,lineCount:number}} [promptBoundary]
  * @property {string} createdAt      - ISO 8601 creation timestamp.
  * @property {string} [updatedAt]    - ISO 8601 last update timestamp.
  * @property {string} [error]        - Error message if status is 'error'.
@@ -36,6 +36,65 @@ import { randomUUID } from 'node:crypto';
  */
 
 const STORE_VERSION = 1;
+const HANDLE_STATUSES = new Set(['starting', 'ready', 'working', 'idle', 'blocked', 'done', 'unknown', 'error', 'replaced', 'missing']);
+const PROMPT_PHASES = new Set(['submitting', 'accepted', 'uncertain']);
+const HANDLE_KEYS = new Set(['handleId', 'paneId', 'role', 'workspaceId', 'worktreePath', 'agentName', 'terminalId', 'sessionKind', 'sessionValue', 'status', 'promptPhase', 'promptBoundary', 'createdAt', 'updatedAt', 'error']);
+const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+function requireNonEmptyString(value, label) {
+  if (typeof value !== 'string' || !value) throw new Error(`handle snapshot ${label} must be a non-empty string`);
+}
+function requireOptionalString(value, label) {
+  if (value !== undefined) requireNonEmptyString(value, label);
+}
+function requireTimestamp(value, label) {
+  requireNonEmptyString(value, label);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value) || Number.isNaN(Date.parse(value))) throw new Error(`handle snapshot ${label} must be an ISO 8601 instant`);
+}
+function validateBoundary(boundary, label) {
+  if (!isPlainObject(boundary) || Object.keys(boundary).some((key) => !['sessionId', 'anchorId', 'lineCount'].includes(key))) throw new Error(`handle snapshot ${label} is invalid`);
+  if (!SESSION_ID_RE.test(boundary.sessionId)) throw new Error(`handle snapshot ${label}.sessionId is invalid`);
+  if (boundary.anchorId !== null) requireNonEmptyString(boundary.anchorId, `${label}.anchorId`);
+  if (!Number.isSafeInteger(boundary.lineCount) || boundary.lineCount < 0) throw new Error(`handle snapshot ${label}.lineCount is invalid`);
+  if (boundary.lineCount === 0 && boundary.anchorId !== null) throw new Error(`handle snapshot ${label} has an anchor without complete lines`);
+}
+function validateHandle(handle, mapKey) {
+  if (!isPlainObject(handle)) throw new Error(`handle snapshot ${mapKey} must be a plain object`);
+  for (const key of Object.keys(handle)) if (!HANDLE_KEYS.has(key)) throw new Error(`handle snapshot ${mapKey} has unsupported field '${key}'`);
+  for (const key of ['handleId', 'paneId', 'role', 'terminalId']) requireNonEmptyString(handle[key], `${mapKey}.${key}`);
+  if (!/^bh-[0-9a-f]{8}$/.test(handle.handleId)) throw new Error(`handle snapshot ${mapKey}.handleId is invalid`);
+  if (handle.handleId !== mapKey) throw new Error(`handle snapshot map key ${mapKey} does not match handleId ${handle.handleId}`);
+  for (const key of ['workspaceId', 'worktreePath', 'agentName', 'error']) requireOptionalString(handle[key], `${mapKey}.${key}`);
+  if (!HANDLE_STATUSES.has(handle.status)) throw new Error(`handle snapshot ${mapKey}.status is invalid`);
+  requireTimestamp(handle.createdAt, `${mapKey}.createdAt`);
+  if (handle.updatedAt !== undefined) requireTimestamp(handle.updatedAt, `${mapKey}.updatedAt`);
+  const hasSessionKind = handle.sessionKind !== undefined;
+  const hasSessionValue = handle.sessionValue !== undefined;
+  if (hasSessionKind !== hasSessionValue) throw new Error(`handle snapshot ${mapKey} sessionKind and sessionValue must be paired`);
+  if (hasSessionKind) {
+    if (handle.sessionKind !== 'id' && handle.sessionKind !== 'path') throw new Error(`handle snapshot ${mapKey}.sessionKind is invalid`);
+    requireNonEmptyString(handle.sessionValue, `${mapKey}.sessionValue`);
+  }
+  const hasPhase = handle.promptPhase !== undefined;
+  const hasBoundary = handle.promptBoundary !== undefined;
+  if (hasPhase !== hasBoundary) throw new Error(`handle snapshot ${mapKey} promptPhase and promptBoundary must be paired`);
+  if (hasPhase) {
+    if (!PROMPT_PHASES.has(handle.promptPhase)) throw new Error(`handle snapshot ${mapKey}.promptPhase is invalid`);
+    validateBoundary(handle.promptBoundary, `${mapKey}.promptBoundary`);
+  }
+}
+function validateStore(store) {
+  if (!isPlainObject(store) || Object.keys(store).some((key) => key !== 'version' && key !== 'handles')) throw new Error('handle store snapshot must be a plain versioned object');
+  if (store.version !== STORE_VERSION) throw new Error(`handle store snapshot version must be ${STORE_VERSION}`);
+  if (!isPlainObject(store.handles)) throw new Error('handle store snapshot handles must be a plain object');
+  for (const [key, handle] of Object.entries(store.handles)) validateHandle(handle, key);
+  return store;
+}
 
 /**
  * Create a new empty handle store.
@@ -198,6 +257,7 @@ export function reconcileHandles(store, currentPanes) {
  * @returns {string}
  */
 export function serializeStore(store) {
+  validateStore(store);
   return JSON.stringify(store);
 }
 
@@ -208,19 +268,9 @@ export function serializeStore(store) {
  * @returns {HandleStoreState}
  */
 export function deserializeStore(json) {
-  try {
-    const parsed = JSON.parse(json);
-    if (!parsed || typeof parsed !== 'object') return createHandleStore();
-    if (!parsed.handles || typeof parsed.handles !== 'object') return createHandleStore();
-    // Validate each handle has required fields
-    const handles = {};
-    for (const [id, handle] of Object.entries(parsed.handles)) {
-      if (handle && typeof handle === 'object' && handle.handleId && handle.paneId && handle.role && handle.terminalId) {
-        handles[id] = handle;
-      }
-    }
-    return { handles, version: parsed.version ?? STORE_VERSION };
-  } catch {
-    return createHandleStore();
-  }
+  let parsed;
+  try { parsed = JSON.parse(json); }
+  catch (error) { throw new Error(`handle store snapshot is not valid JSON: ${error.message}`); }
+  validateStore(parsed);
+  return parsed;
 }
