@@ -131,7 +131,31 @@
   };
 
   environment.systemPackages = with pkgs; [
-    nodejs_24
+    # Languages
+    nodejs_24 # latest Node.js LTS (24.x); also pinned by balaur-dev
+    go_1_26 # latest Go (1.26.x)
+    # Latest Python 3 (3.14.x) with pip bundled, so both `python3 -m pip`
+    # and the `pip`/`pip3` commands work out of the box.
+    (python314.withPackages (p: [ p.pip ]))
+
+    # Rust SDK (nixpkgs stable toolchain — works with zero configuration).
+    # NOTE: do not add `rustup` here alongside these; its rustc/rustdoc
+    # proxy shims win the profile symlink collision and break `rustc` until a
+    # default toolchain is configured. Add `rustup` on its own if you need to
+    # manage nightly/multiple toolchains, then run `rustup default stable`.
+    rustc # compiler
+    cargo # build tool and package manager
+    clippy # linter
+    rustfmt # formatter
+    rust-analyzer # language server
+
+    # Native build helpers for Rust crates and Python C extensions
+    gcc
+    gnumake
+    pkg-config
+    openssl
+
+    # Tooling
     nixd
     nixfmt
     git
