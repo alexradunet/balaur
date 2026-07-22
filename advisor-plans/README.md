@@ -65,9 +65,12 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   fresh pinned-status prompt admission, `--no-tools` empty-list denial, calendar
   timestamps, exact physical boundaries, complete identity-conflict
   classification, strict post-boundary AgentMessage validation, and resolved
-  ID-backed smoke boundaries. The focused suite passed five consecutive runs at
-  **83/83**; syntax and fixed-base diff checks passed. Prompt identity/status and
-  submission remain non-atomic under Herdr protocol 17.
+  ID-backed smoke boundaries. Implementation commits `00c12e2` and `cf8aac1`.
+  The focused suite passed five consecutive runs at **83/83**; syntax and
+  fixed-base diff checks passed; a visible two-prompt smoke returned distinct
+  nonce results with an exact second boundary. Independent Sol and Qwen final
+  reviews both approved `cf8aac1`. Prompt identity/status and submission remain
+  non-atomic under Herdr protocol 17.
 
 ## Findings considered and rejected
 
