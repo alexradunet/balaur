@@ -339,13 +339,16 @@ This is a single-context repository: use the root `CONTEXT.md` glossary and the 
 
 ## 15. Self-hosted development (NetBird)
 
-Pi is a system-installed terminal CLI, not a network service. Connect through NetBird SSH and start it in the repository:
+Pi and Herdr are system-installed terminal CLIs, not network services. Connect through NetBird SSH, start Herdr in the repository, and run Pi inside a Herdr pane:
 
 ```bash
 cd /home/balaur/projects/balaur
+herdr
 pi
-pi -c  # resume the latest session
+pi -c  # resume the latest Pi session
 ```
+
+Herdr is pinned by `nixos_dev_env/flake.nix`. NixOS user activation installs its Pi lifecycle/session integration and creates an SSH-oriented `~/.config/herdr/config.toml` only when that file is absent, so later user customization is preserved. Detach from Herdr with `Ctrl+B`, then `Q`; its panes and agents continue running.
 
 The machine runs two Balaur systemd services:
 
@@ -365,10 +368,10 @@ sudo nixos-rebuild switch --flake ./nixos_dev_env
 
 Agents may run this rebuild automatically after changing `nixos_dev_env/`; passwordless `sudo` is configured. Verify the NixOS closure builds first when practical.
 
-Pi comes from the independently pinned `llm-agents` flake. Update it with:
+Pi and Herdr come from independently pinned flakes. Update them with:
 
 ```bash
-nix flake update llm-agents --flake ./nixos_dev_env
+nix flake update llm-agents herdr --flake ./nixos_dev_env
 sudo nixos-rebuild switch --flake ./nixos_dev_env
 ```
 
