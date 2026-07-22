@@ -351,11 +351,12 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
       [[{ name: 'other', pane_id: 'w1:p2', terminal_id: 'term-other', agent_status: 'idle' }], 'replaced'],
       [[{ name: 'other', pane_id: 'other', terminal_id: 'term-2', agent_status: 'idle' }], 'replaced'],
       [[{ name: 'other', pane_id: 'other', terminal_id: 'other', agent_status: 'idle', agent_session: { kind: 'id', value: '11111111-1111-1111-1111-111111111111' } }], 'replaced'],
+      [null, 'idle'],
       [[], 'missing'],
     ]) {
       const server = new FakeHerdr({ handlers: {
         'agent.get': () => ({ error: { code: 'agent_not_found', message: 'gone' } }),
-        'agent.list': () => ({ type: 'agent_list', agents: inventory }),
+        'agent.list': (_request, fake) => ({ type: 'agent_list', agents: inventory ?? [fake.agent()] }),
       } });
       await server.start();
       try {

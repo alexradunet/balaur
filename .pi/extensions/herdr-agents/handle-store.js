@@ -57,7 +57,8 @@ function requireTimestamp(value, label) {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$/.exec(value);
   if (!match) throw new Error(`handle snapshot ${label} must be an ISO 8601 instant`);
   const [, year, month, day, hour, minute, second] = match.map(Number);
-  const daysInMonth = month >= 1 && month <= 12 ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 0;
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [0, 31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month] || 0;
   if (day < 1 || day > daysInMonth || hour > 23 || minute > 59 || second > 59) throw new Error(`handle snapshot ${label} must be an ISO 8601 instant`);
 }
 function sessionIdForHandle(handle) {

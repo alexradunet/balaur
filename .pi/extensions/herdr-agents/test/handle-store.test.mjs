@@ -60,6 +60,8 @@ describe('handle persistence and exact reconciliation', () => {
     store.handles[handle.handleId].createdAt = '2024-02-29T23:59:59.123Z';
     store.handles[handle.handleId].updatedAt = new Date().toISOString();
     assert.doesNotThrow(() => deserializeStore(serializeStore(store)));
+    store.handles[handle.handleId].createdAt = '0000-02-29T00:00:00.000Z';
+    assert.doesNotThrow(() => deserializeStore(serializeStore(store)), 'accepts a four-digit leap year emitted by Date#toISOString');
   });
 
   it('enforces exact prompt-boundary shape, relationships, and paired session agreement', () => {

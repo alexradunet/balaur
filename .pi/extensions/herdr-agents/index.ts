@@ -122,7 +122,8 @@ export default function (pi: ExtensionAPI) {
     } catch (error) {
       if (!(error instanceof HerdrRemoteError) || error.code !== "agent_not_found") throw error;
       const inventory = await listAgents(makeClient(), signal);
-      handle.status = classifyHandleInventory(handle, inventory) === "replaced" ? "replaced" : "missing";
+      const classification = classifyHandleInventory(handle, inventory);
+      if (classification !== "exact") handle.status = classification;
       save(handle);
     }
     return statusResult(handle);
