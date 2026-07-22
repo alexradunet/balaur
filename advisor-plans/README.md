@@ -17,6 +17,7 @@ honor its STOP conditions, and update your row when done.
 | 001  | Move "Add to canvas" out of the sidebar into an Add menu on the canvas action bar | P1 | M | — | DONE |
 | 002  | Make Herdr prompting, collection, and launch recovery race-safe | P1 | M | Stage 1 through `e3f23f6` | BLOCKED — superseded by plan 003 lifecycle hardening |
 | 003  | Close Issue #2’s Herdr bridge concurrency and recovery gaps | P1 | M–L | 002 through `1960f8a` | BLOCKED — final reviews found remaining safety and semantic-validation gaps |
+| 004  | Resolve Herdr bridge final-review safety gaps | P1 | M–L | 003 through `485900a` | IN PROGRESS |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
