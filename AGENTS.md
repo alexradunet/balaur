@@ -323,6 +323,20 @@ Update documentation in the same change as behavior changes:
 
 Distinguish implementation from browser verification. Do not describe future persistent indexing, Tauri, sync, recurrence, or calendar-provider work as shipped.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live in GitHub Issues; eligible issues may use the reviewed issue-to-PR workflow. See `docs/agents/issue-tracker.md` and `docs/agents/development-workflow.md`.
+
+### Triage labels
+
+Triage uses the canonical `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix` states. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository: use the root `CONTEXT.md` glossary and the accepted decisions under `docs/adr/`. See `docs/agents/domain.md`.
+
 ## 15. Self-hosted deployment (NetBird)
 
 The development machine runs two Balaur instances as systemd services, accessible over NetBird:
@@ -352,7 +366,7 @@ Each port is a separate browser origin, so IndexedDB vaults are isolated between
 
 ## 16. Git and deployment hygiene
 
-Keep changes scoped. Do not commit generated browser profiles, screenshots, logs, API keys, local databases, or temporary exports. Do not amend, reset, commit, or push unless explicitly asked. Every push to `main` deploys the repository root through GitHub Pages.
+Keep changes scoped. Do not commit generated browser profiles, screenshots, logs, API keys, local databases, or temporary exports. Do not amend or reset. Do not commit or push unless explicitly asked, except while executing the user-approved issue-to-PR workflow in `docs/agents/development-workflow.md`; that workflow authorizes an isolated worktree, a non-main branch, commits, pushing that branch, and opening a pull request. Never force-push, merge, or push directly to `main`. Every push to `main` deploys the repository root through GitHub Pages.
 
 ## 17. Definition of done
 
