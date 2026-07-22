@@ -47,6 +47,7 @@ export function toSidecar(workspace) {
       portalNodeId: record.portalNodeId ?? null,
       camera: record.camera || { ...DEFAULT_CAMERA },
     };
+    if (record.icon) entry.icon = record.icon;
     if (record.jdCode) entry.jdCode = record.jdCode;
     if (record.jdTitle) entry.jdTitle = record.jdTitle;
     const jdKind = record.jdKind || workspace.johnnyDecimal?.entries?.[record.jdCode]?.kind;
@@ -89,6 +90,13 @@ export function parseSidecar(text) {
   for (const [key, record] of Object.entries(canvases)) {
     if (!record || typeof record.id !== "string" || !record.id || key !== record.id || typeof record.title !== "string" || typeof record.path !== "string") {
       throw new SchemaError("Sidecar canvas record is malformed or key/id mismatch", { code: "SIDECAR_SCHEMA" });
+    }
+    // Navigator glyph is cosmetic sidecar metadata: sanitize rather than reject
+    // so a hand-edited icon can never make the workspace unloadable.
+    if (record.icon !== undefined) {
+      const icon = typeof record.icon === "string" ? record.icon.trim() : "";
+      if (!icon || [...icon].length > 16) delete record.icon;
+      else record.icon = icon;
     }
     const path = assertSafePath(record.path);
     if (!/^canvases\/[^/]+\.canvas$/.test(path)) throw new SchemaError(`Canvas path is outside canvases/: ${path}`, { code: "SIDECAR_CANVAS_PATH" });

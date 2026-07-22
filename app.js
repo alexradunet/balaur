@@ -464,6 +464,8 @@ function renderFallbackWorkspaceNavigation(host,trail,canvases){
 function orderedCanvasRecords(){
   const records=Object.values(workspace.canvases),result=[],seen=new Set(),compare=(a,b)=>(jdSortValue(a.jdCode)-jdSortValue(b.jdCode))||a.title.localeCompare(b.title),visit=record=>{if(!record||seen.has(record.id))return;seen.add(record.id);result.push(record);records.filter(item=>item.parentId===record.id).sort(compare).forEach(visit);};visit(workspace.canvases[workspace.rootId]);records.sort(compare).forEach(visit);return result;
 }
+function defaultCanvasIcon(record){return record.id===workspace.rootId?"◫":record.jdCode?"#":"↳";}
+function canvasIconFor(record){return record?.icon||defaultCanvasIcon(record);}
 function renderWorkspaceNavigation(){
   const trail=canvasTrail().map(record=>({id:record.id,title:record.title}));
   const canvases=orderedCanvasRecords().map(record=>({
@@ -471,8 +473,9 @@ function renderWorkspaceNavigation(){
     title:record.title,
     depth:canvasDepth(record.id),
     count:(record.document.nodes||[]).length,
-    icon:record.id===workspace.rootId?"◫":record.jdCode?"#":"↳",
+    icon:canvasIconFor(record),
   }));
+  const glyph=$("#canvasIconGlyph");if(glyph)glyph.textContent=canvasIconFor(canvasRecord());
   const breadcrumbs=$("#canvasBreadcrumbs"),list=$("#canvasList");
   if(breadcrumbs){
     if(componentDefined("balaur-workspace-nav")){breadcrumbs.trail=trail;breadcrumbs.canvases=canvases;breadcrumbs.activeId=currentCanvasId;}
@@ -483,6 +486,48 @@ function renderWorkspaceNavigation(){
     else renderFallbackWorkspaceNavigation(list,trail,canvases);
   }
   $("#johnnyDecimalState")?.classList.toggle("active",Boolean(workspace.johnnyDecimal.enabled));
+}
+const CANVAS_ICON_SETS=[
+  ["Atlas","🗺️ 🧭 🌍 🏔️ 🌊 🌲 🏠 🏛️ ✈️ 🧳"],
+  ["Hoard","💰 🪙 💎 🏦 📈 🧾 🔑 🗝️ 📦 🧰"],
+  ["Craft","💼 📁 📝 💡 🎯 🧠 🔬 📚 ⚙️ 🛠️"],
+  ["Body","❤️ 🌱 🍎 🏃 😴 🧘 💊 🔥 ⭐ 🐉"],
+  ["Kin","👤 👥 🤝 👪 🎁 🎉 💬 📞 🐾 🕯️"],
+  ["Marks","◫ # ↳ ⚑ ◆ ✦ ☾ ☀ ♻ ⚡"],
+];
+function firstGrapheme(value){
+  const text=String(value||"").trim();if(!text)return "";
+  if(Intl.Segmenter){const segment=new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(text)[Symbol.iterator]().next();if(!segment.done)return segment.value.segment;}
+  return Array.from(text)[0]||"";
+}
+function setCanvasIcon(value){
+  const record=canvasRecord();if(!record)return;
+  if(value)record.icon=value;else delete record.icon;
+  scheduleSave();renderWorkspaceNavigation();
+}
+function initCanvasIconPicker(){
+  const toggle=$("#canvasIconToggle"),panel=$("#canvasIconPanel");if(!toggle||!panel)return;
+  const grid=panel.querySelector("[data-icon-grid]"),input=panel.querySelector("input"),fragment=document.createDocumentFragment();
+  for(const [label,icons] of CANVAS_ICON_SETS){
+    const group=document.createElement("div");group.className="canvas-icon-group";
+    const heading=document.createElement("p");heading.textContent=label;
+    const row=document.createElement("div");row.className="canvas-icon-grid";
+    for(const icon of icons.split(" ")){const button=document.createElement("button");button.type="button";button.textContent=icon;button.dataset.icon=icon;button.setAttribute("aria-label",`Use ${icon} for this canvas`);row.append(button);}
+    group.append(heading,row);fragment.append(group);
+  }
+  grid.append(fragment);
+  const isOpen=()=>!panel.hidden;
+  const open=()=>{panel.hidden=false;toggle.setAttribute("aria-expanded","true");};
+  const close=()=>{panel.hidden=true;toggle.setAttribute("aria-expanded","false");};
+  toggle.addEventListener("click",()=>{isOpen()?close():open();});
+  panel.addEventListener("click",event=>{
+    const choice=event.target.closest("[data-icon]");
+    if(choice){setCanvasIcon(choice.dataset.icon);close();return;}
+    if(event.target.closest("[data-icon-reset]")){input.value="";setCanvasIcon("");close();}
+  });
+  input.addEventListener("input",()=>{const grapheme=firstGrapheme(input.value);if(grapheme)setCanvasIcon(grapheme);});
+  panel.addEventListener("keydown",event=>{if(event.key==="Escape"){event.stopPropagation();close();toggle.focus();}});
+  document.addEventListener("pointerdown",event=>{const path=event.composedPath();if(isOpen()&&!path.includes(panel)&&!path.includes(toggle))close();});
 }
 function activateCanvas(id,{focusNodeId=null,fit=false}={}){
   const record=workspace.canvases[id];if(!record)return;currentCanvasId=id;workspace.activeId=id;documentData=record.document;camera=record.camera?{...record.camera}:{x:80,y:55,zoom:1};selected=null;connectSource=null;connectSourceSide=null;activeFilter="all";aiCardRuntime.clear();shell.classList.remove("inspector-open");$$('.nav-item[data-filter]').forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"));$("#canvasTitle").value=record.title;render();
@@ -1694,6 +1739,7 @@ $("#aiSettingsForm").onsubmit=event=>{event.preventDefault();if(!event.currentTa
 $("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.reportValidity())return;const button=$("#testAIProvider");try{const settings=settingsFromForm();button.disabled=true;setSettingsResult("Testing direct browser connection…");setSettingsResult(await testAIProvider(settings),"success");}catch(error){setSettingsResult(error.message,"error");}finally{button.disabled=false;}};
 $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
 $("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
+initCanvasIconPicker();
 $("#resetDemo").onclick=loadJohnnyDecimalStarter;
 $("#minimap").onclick=fitView;
 

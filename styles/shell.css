@@ -117,6 +117,130 @@
     color: var(--balaur-content-on-dark);
     font: 600 15px/1.2 var(--balaur-font-display);
   }
+  .canvas-title-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  .canvas-icon-picker { position: relative; display: inline-flex; flex: 0 0 auto; }
+  .canvas-icon-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--balaur-border-default);
+    border-radius: var(--balaur-radius-control);
+    background: var(--balaur-color-soot-900);
+    box-shadow: inset 1px 1px rgb(255 255 255 / 8%);
+    color: var(--balaur-content-on-dark);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .canvas-icon-toggle:hover { border-color: var(--balaur-action-primary); transform: translateY(-1px); }
+  .canvas-icon-toggle[aria-expanded="true"] { border-color: var(--balaur-action-primary); box-shadow: inset 0 0 0 1px var(--balaur-action-primary); }
+  .canvas-icon-panel {
+    position: absolute;
+    top: calc(100% + 9px);
+    inset-inline-start: 0;
+    z-index: 40;
+    width: 322px;
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    border: 2px solid var(--balaur-color-outline);
+    border-radius: var(--balaur-radius-panel);
+    padding: 10px;
+    background: var(--balaur-surface-oak-raised);
+    box-shadow: inset 1px 1px var(--balaur-border-default), var(--balaur-shadow-overlay);
+    scrollbar-width: thin;
+    scrollbar-color: var(--balaur-color-leather-800) transparent;
+  }
+  .canvas-icon-panel[hidden] { display: none; }
+  .canvas-icon-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-block-end: 9px;
+  }
+  .canvas-icon-head span {
+    color: var(--balaur-content-on-dark-muted);
+    font: 500 9px var(--balaur-font-mono);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .canvas-icon-reset {
+    border: 1px solid var(--balaur-border-default);
+    border-radius: var(--balaur-radius-control);
+    padding: 3px 8px;
+    background: transparent;
+    color: var(--balaur-content-on-dark-muted);
+    font: 500 9px var(--balaur-font-mono);
+    letter-spacing: .06em;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .canvas-icon-reset:hover { color: var(--balaur-action-primary); border-color: var(--balaur-action-primary); }
+  .canvas-icon-group { margin-block-end: 9px; }
+  .canvas-icon-group p {
+    margin: 0 0 3px;
+    color: var(--balaur-content-on-dark-muted);
+    font: 500 8px var(--balaur-font-mono);
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .canvas-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .canvas-icon-grid button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    border: 0;
+    border-radius: 1px;
+    padding: 0;
+    background: transparent;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .12s ease, background-color .12s ease;
+  }
+  .canvas-icon-grid button:hover,
+  .canvas-icon-grid button:focus-visible {
+    background: var(--balaur-surface-oak);
+    transform: scale(1.25);
+  }
+  .canvas-icon-custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-block-start: 10px;
+    padding-block-start: 9px;
+    border-block-start: 1px solid var(--balaur-border-subtle);
+  }
+  .canvas-icon-custom span {
+    color: var(--balaur-content-on-dark-muted);
+    font: 500 8px var(--balaur-font-mono);
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .canvas-icon-custom input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--balaur-border-default);
+    border-radius: var(--balaur-radius-control);
+    padding: 5px 8px;
+    background: var(--balaur-color-soot-900);
+    color: var(--balaur-content-on-dark);
+    font-size: 13px;
+  }
+  .canvas-icon-custom input:focus-visible { outline: 0; border-color: var(--balaur-border-focus); }
   .app-views {
     display: flex;
     align-items: center;
