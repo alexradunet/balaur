@@ -15,8 +15,8 @@ export class BalaurAddMenuElement extends HTMLElement {
     this.#supportsPopover = typeof this.#panel.showPopover === "function"
       && typeof this.#panel.hidePopover === "function";
     if (this.#supportsPopover) {
-      this.#panel.hidden = false;
       this.#panel.setAttribute("popover", "manual");
+      this.#panel.hidden = false;
     } else {
       this.#panel.removeAttribute("popover");
       this.#panel.hidden = true;

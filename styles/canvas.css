@@ -486,7 +486,8 @@
     background: var(--balaur-surface-oak-raised);
     box-shadow: inset 1px 1px var(--balaur-border-default), var(--balaur-shadow-overlay);
   }
-  .add-menu-panel[hidden] { display: none; }
+  .add-menu-panel[hidden],
+  .add-menu-panel[popover]:not(:popover-open) { display: none; }
   .add-menu-item {
     display: grid;
     grid-template-columns: 26px 1fr;
