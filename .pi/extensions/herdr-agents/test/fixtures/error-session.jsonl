@@ -1,0 +1,4 @@
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Error occurred"}]}}
+{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"Failed to complete."}],"stopReason":"error","model":"test-model","errorMessage":"something broke"}}
+this is not valid json
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"After error"}]}}

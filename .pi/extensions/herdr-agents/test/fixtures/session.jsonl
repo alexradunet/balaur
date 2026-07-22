@@ -1,0 +1,3 @@
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Starting work on the task."}]}}
+{"type":"message","message":{"role":"toolResult","toolName":"bash","content":[{"type":"text","text":"$ echo hello\nhello"}]}}
+{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"Task completed successfully."},{"type":"toolCall","name":"bash","arguments":{"command":"echo done"}}],"stopReason":"end","model":"test-model","usage":{"input":100,"output":50,"cacheRead":0,"cacheWrite":0,"cost":0.001,"totalTokens":150}}}

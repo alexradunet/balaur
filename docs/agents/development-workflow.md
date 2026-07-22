@@ -65,3 +65,62 @@ pi
 On first use, approve the repository with `/trust`, restart Pi, and let it install the reviewed project packages from `.pi/settings.json`. Authenticate with `/login openai-codex` and `/login qwen-token-plan`; Pi stores credentials in `~/.pi/agent/auth.json` with mode `0600`. Never commit, print, or expose that file. Use `/model` to confirm configured models and `/agents` to confirm agent definitions. Use `/reload` after resource changes, or restart if required. `/share` is opt-in and must not be used for sensitive sessions.
 
 Pi runs as the `balaur` user without a built-in sandbox and the account has passwordless `sudo`; treat every loaded package and agent command as trusted code. Disconnecting ends an in-flight terminal process, but completed session history can be resumed with `pi -c`.
+
+## Herdr agent bridge
+
+The project-local Pi extension at `.pi/extensions/herdr-agents/` starts and controls interactive Pi workers in visible, persistent Herdr panes. It is distinct from and does not remove `npm:@tintinweb/pi-subagents`, which remains installed until the final cutover.
+
+### Activation and safety
+
+- The `herdr_agent` tool is **inactive inside worker sessions**. The extension returns early when `BALAUR_WORKER=1` is set, so delegated workers cannot spawn orchestration tools or recurse.
+- The tool **fails closed** outside a Herdr pane: it registers only when `HERDR_ENV=1`, `HERDR_SOCKET_PATH`, and `HERDR_PANE_ID` are all present.
+- It checks the Herdr protocol version on `start` and rejects on mismatch.
+
+### Actions
+
+| Action | Purpose |
+|---|---|
+| `start` | Split the lead pane, start an interactive Pi worker using a `.pi/agents/*.md` role, and return a stable handle immediately. Does not wait for task completion. |
+| `list` | List active worker handles. |
+| `status` | Inspect a worker; detects replaced occupants. |
+| `wait` | Block until the worker reaches `idle` or `done`. Timeouts report a blocked/timeout result and never kill the worker. |
+| `read` | Diagnostic terminal output. This is **not** the finalized result. |
+| `prompt` | Send a prompt to a worker. Returns immediately; use `wait` then `collect`. |
+| `collect` | Authoritative finalized Pi result parsed from the session JSONL. Ignores partial assistant output. |
+| `close` | Human-confirmed pane cleanup. Requires interactive UI; fails when no UI is available. |
+
+### Role registry
+
+`.pi/agents/*.md` is the canonical role registry. The bridge supports the currently used frontmatter fields: `description`, `model`, `thinking`, `tools`, `skills`, and `prompt_mode`. Malformed or unsafe values (shell metacharacters, invalid enums) are rejected with path-specific errors. The bridge never shell-concatenates prompts or arguments; it passes argv arrays to the Herdr socket protocol.
+
+### Session result collection
+
+`collect` parses the finalized Pi session JSONL and returns only the last finalized assistant message with `stopReason !== "error"`. It includes tool-call evidence, usage, model, and turn count. Partial or streaming assistant output is ignored.
+
+### Handle persistence and reconciliation
+
+Worker handles are persisted in tool result `details` for session branching and reload/resume. On `session_start`, the bridge reconstructs handles from the session branch and reconciles them against the current Herdr pane list. Missing panes are marked `missing`; replaced occupants are marked `replaced`. The bridge does not silently rebind a handle to a different pane.
+
+### Output bounding
+
+All model-visible output is truncated to 50 KB / 2000 lines. Full structured evidence (raw terminal output, full session text, tool calls, usage) is preserved in tool result `details`.
+
+### Running tests
+
+The pure modules and a fake-Herdr socket server have dependency-free Node tests:
+
+```bash
+node --test ".pi/extensions/herdr-agents/test/*.test.mjs"
+```
+
+This covers role parsing, the Herdr client, session collection, handle persistence, and fake-server integration for success, malformed roles, unavailable Herdr, protocol mismatch, timeout, replaced occupant, and malformed session JSONL.
+
+### Live smoke test
+
+The opt-in live smoke script starts a harmless visible Pi worker, prompts it, waits, collects its finalized result, and does **not** auto-close its pane:
+
+```bash
+node .pi/extensions/herdr-agents/scripts/live-smoke.mjs
+```
+
+Run this from inside a Herdr pane (the lead session). It creates a visible sibling pane that remains open for manual inspection afterward. The script exits 0 on success or timeout (pane left open) and 1 on failure.

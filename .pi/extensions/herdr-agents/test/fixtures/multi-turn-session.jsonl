@@ -1,0 +1,4 @@
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"First turn"}]}}
+{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"First result"}],"stopReason":"end","model":"test-model","usage":{"input":50,"output":25}}}
+{"type":"message","message":{"role":"user","content":[{"type":"text","text":"Continue"}]}}
+{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"Final result with more detail."}],"stopReason":"end","model":"test-model","usage":{"input":200,"output":100}}}
