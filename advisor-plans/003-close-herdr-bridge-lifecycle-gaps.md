@@ -1,10 +1,14 @@
 # Corrective Plan: Close Issue #2’s Herdr Bridge Concurrency and Recovery Gaps
 
-**Status:** DONE — all non-live criteria passed; live Herdr scenarios remain for the lead.  
-**Planned at:** `1960f8a2b8737f0f9bfeab190ec759242582c724`  
-**Fixed review base:** `620da3f`  
-**Priority / effort / risk:** P1 / M–L / HIGH  
-**Issue:** GitHub #2, additional cycle explicitly authorized  
+**Status:** DONE — all non-live criteria passed; live Herdr scenarios remain for the lead.
+
+**Planned at:** `1960f8a2b8737f0f9bfeab190ec759242582c724`
+
+**Fixed review base:** `620da3f`
+
+**Priority / effort / risk:** P1 / M–L / HIGH
+
+**Issue:** GitHub #2, additional cycle explicitly authorized
 **Execution style:** strict TDD; no push, PR, pane cleanup, Stage 2 work, or removal of `pi-subagents`.
 
 ## 1. Confirmed current state
