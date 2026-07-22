@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { HerdrClient, EXPECTED_PROTOCOL } from "../herdr-client.js";
 import { parseRoleFile, roleNameFromFilename } from "../role-parser.js";
 import { buildWorkerEnv, createPane, promptAgent, removeRolePromptFile, reportPaneMetadata, startAgent, waitForAgent, waitForInteractiveReady, waitForSessionIdentity } from "../pane-manager.js";
-import { captureSessionBoundary, waitForFinalizedSessionResult, waitForPiSessionReference } from "../session-collector.js";
+import { captureResolvedSessionBoundary, waitForFinalizedSessionResult, waitForPiSessionReference } from "../session-collector.js";
 
 async function role(cwd) {
   const filePath = join(cwd, ".pi", "agents", "herdr-smoke.md");
@@ -15,7 +15,7 @@ async function role(cwd) {
 }
 
 async function promptAndCollect(client, agentName, session, nonce) {
-  const boundary = await captureSessionBoundary(session);
+  const boundary = await captureResolvedSessionBoundary(session);
   const acknowledgement = await promptAgent(client, { target: agentName, text: `Reply with exactly: ${nonce}`, wait: true, timeoutMs: 30000 });
   if (!['working', 'idle', 'blocked', 'done', 'unknown'].includes(acknowledgement.status)) throw new Error(`invalid prompt acknowledgement: ${acknowledgement.status}`);
   const waited = await waitForAgent(client, { target: agentName, until: ["idle", "done", "blocked"], timeoutMs: 120000 });
@@ -24,7 +24,7 @@ async function promptAndCollect(client, agentName, session, nonce) {
   const filePath = await waitForPiSessionReference(session, 10000);
   const result = await waitForFinalizedSessionResult(filePath, 10000, undefined, boundary);
   if (result.stopReason !== "stop" || result.text !== nonce) throw new Error(`wrong result for ${nonce}: ${JSON.stringify(result.text)}`);
-  return acknowledgement.status;
+  return { acknowledgement: acknowledgement.status, boundary };
 }
 
 async function main() {
@@ -40,9 +40,10 @@ async function main() {
   try { await reportPaneMetadata(client, pane.pane_id, { role: selected.name, bridge: "herdr-agent", state: "smoke" }); } catch (error) { console.warn(`Metadata warning (non-fatal): ${error.message}`); }
   const first = `SMOKE_ONE_${Date.now().toString(36)}`; const second = `SMOKE_TWO_${Date.now().toString(36)}`;
   const session = { kind: identity.sessionKind, value: identity.sessionValue };
-  const firstAck = await promptAndCollect(client, started.agent_name, session, first);
-  const secondAck = await promptAndCollect(client, started.agent_name, session, second);
-  console.log(`SUCCESS pane=${pane.pane_id} agent=${started.agent_name} session=${identity.sessionKind}:${identity.sessionValue} acknowledgements=${firstAck},${secondAck} results=${first},${second}`);
+  const firstResult = await promptAndCollect(client, started.agent_name, session, first);
+  const secondResult = await promptAndCollect(client, started.agent_name, session, second);
+  if (session.kind === 'id' && secondResult.boundary.lineCount === 0) throw new Error('second ID-backed prompt captured a header-only boundary');
+  console.log(`SUCCESS pane=${pane.pane_id} agent=${started.agent_name} session=${identity.sessionKind}:${identity.sessionValue} acknowledgements=${firstResult.acknowledgement},${secondResult.acknowledgement} secondBoundaryLine=${secondResult.boundary.anchorLine} results=${first},${second}`);
   console.log(`Pane ${pane.pane_id} remains OPEN for inspection.`);
 }
 main().catch((error) => { console.error(`SMOKE FAILED: ${error.message}`); process.exitCode = 1; });

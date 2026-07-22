@@ -23,7 +23,7 @@ import { randomUUID } from 'node:crypto';
  * @property {string} [sessionValue] - Exact Herdr agent session reference value.
  * @property {'starting'|'ready'|'working'|'idle'|'blocked'|'done'|'unknown'|'error'|'replaced'|'missing'} status
  * @property {'submitting'|'accepted'|'uncertain'} [promptPhase]
- * @property {{sessionId:string,anchorId:string|null,lineCount:number}} [promptBoundary]
+ * @property {{sessionId:string,anchorId:string|null,anchorLine:number|null,lineCount:number}} [promptBoundary]
  * @property {string} createdAt      - ISO 8601 creation timestamp.
  * @property {string} [updatedAt]    - ISO 8601 last update timestamp.
  * @property {string} [error]        - Error message if status is 'error'.
@@ -54,14 +54,28 @@ function requireOptionalString(value, label) {
 }
 function requireTimestamp(value, label) {
   requireNonEmptyString(value, label);
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value) || Number.isNaN(Date.parse(value))) throw new Error(`handle snapshot ${label} must be an ISO 8601 instant`);
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$/.exec(value);
+  if (!match) throw new Error(`handle snapshot ${label} must be an ISO 8601 instant`);
+  const [, year, month, day, hour, minute, second] = match.map(Number);
+  const daysInMonth = month >= 1 && month <= 12 ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 0;
+  if (day < 1 || day > daysInMonth || hour > 23 || minute > 59 || second > 59) throw new Error(`handle snapshot ${label} must be an ISO 8601 instant`);
 }
-function validateBoundary(boundary, label) {
-  if (!isPlainObject(boundary) || Object.keys(boundary).some((key) => !['sessionId', 'anchorId', 'lineCount'].includes(key))) throw new Error(`handle snapshot ${label} is invalid`);
+function sessionIdForHandle(handle) {
+  if (handle.sessionKind === 'id') return handle.sessionValue;
+  const suffix = handle.sessionKind === 'path' && handle.sessionValue?.match(new RegExp(`(${SESSION_ID_RE.source.slice(1, -1)})\\.jsonl$`, 'i'));
+  return suffix?.[1];
+}
+function validateBoundary(boundary, label, handle) {
+  if (!isPlainObject(boundary) || Object.keys(boundary).some((key) => !['sessionId', 'anchorId', 'anchorLine', 'lineCount'].includes(key))) throw new Error(`handle snapshot ${label} is invalid`);
   if (!SESSION_ID_RE.test(boundary.sessionId)) throw new Error(`handle snapshot ${label}.sessionId is invalid`);
-  if (boundary.anchorId !== null) requireNonEmptyString(boundary.anchorId, `${label}.anchorId`);
   if (!Number.isSafeInteger(boundary.lineCount) || boundary.lineCount < 0) throw new Error(`handle snapshot ${label}.lineCount is invalid`);
-  if (boundary.lineCount === 0 && boundary.anchorId !== null) throw new Error(`handle snapshot ${label} has an anchor without complete lines`);
+  if (boundary.lineCount === 0) {
+    if (boundary.anchorId !== null || boundary.anchorLine !== null) throw new Error(`handle snapshot ${label} has an invalid header-only boundary`);
+  } else {
+    requireNonEmptyString(boundary.anchorId, `${label}.anchorId`);
+    if (!Number.isSafeInteger(boundary.anchorLine) || boundary.anchorLine < 1 || boundary.anchorLine > boundary.lineCount) throw new Error(`handle snapshot ${label}.anchorLine is invalid`);
+  }
+  if (!handle.sessionKind || boundary.sessionId !== sessionIdForHandle(handle)) throw new Error(`handle snapshot ${label}.sessionId does not agree with handle session identity`);
 }
 function validateHandle(handle, mapKey) {
   if (!isPlainObject(handle)) throw new Error(`handle snapshot ${mapKey} must be a plain object`);
@@ -85,7 +99,7 @@ function validateHandle(handle, mapKey) {
   if (hasPhase !== hasBoundary) throw new Error(`handle snapshot ${mapKey} promptPhase and promptBoundary must be paired`);
   if (hasPhase) {
     if (!PROMPT_PHASES.has(handle.promptPhase)) throw new Error(`handle snapshot ${mapKey}.promptPhase is invalid`);
-    validateBoundary(handle.promptBoundary, `${mapKey}.promptBoundary`);
+    validateBoundary(handle.promptBoundary, `${mapKey}.promptBoundary`, handle);
   }
 }
 function validateStore(store) {
@@ -238,14 +252,21 @@ export function listHandles(store) {
  * @param {Array<{ pane_id: string, name?: string, agent_session?: { kind: string, value: string } }>} currentPanes
  * @returns {HandleStoreState}
  */
+export function classifyHandleInventory(handle, currentPanes) {
+  const exact = currentPanes.some((agent) => agent.pane_id === handle.paneId && agent.name === handle.agentName && agent.terminal_id === handle.terminalId && (!handle.sessionKind || (agent.agent_session?.kind === handle.sessionKind && agent.agent_session?.value === handle.sessionValue)));
+  if (exact) return 'exact';
+  const conflict = currentPanes.some((agent) => agent.pane_id === handle.paneId
+    || (handle.agentName && agent.name === handle.agentName)
+    || agent.terminal_id === handle.terminalId
+    || (handle.sessionKind && agent.agent_session?.kind === handle.sessionKind && agent.agent_session?.value === handle.sessionValue));
+  return conflict ? 'replaced' : 'missing';
+}
+
 export function reconcileHandles(store, currentPanes) {
   let updated = store;
   for (const handle of Object.values(store.handles)) {
-    const samePane = currentPanes.filter((agent) => agent.pane_id === handle.paneId);
-    const exact = samePane.find((agent) => agent.name === handle.agentName && agent.terminal_id === handle.terminalId && (!handle.sessionKind || (agent.agent_session?.kind === handle.sessionKind && agent.agent_session?.value === handle.sessionValue)));
-    if (exact) continue;
-    const replacement = samePane.length > 0 || currentPanes.some((agent) => agent.name === handle.agentName);
-    updated = updateHandle(updated, handle.handleId, { status: replacement ? 'replaced' : 'missing' });
+    const status = classifyHandleInventory(handle, currentPanes);
+    if (status !== 'exact') updated = updateHandle(updated, handle.handleId, { status });
   }
   return updated;
 }

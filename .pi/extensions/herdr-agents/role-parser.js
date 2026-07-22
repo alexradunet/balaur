@@ -103,6 +103,7 @@ export function roleToPiArgs(role) {
   const tools = filteredRoleTools(role);
   if (tools[0] === TOOL_WILDCARD) args.push('--exclude-tools', ORCHESTRATION_TOOLS.join(','));
   else if (tools.length) args.push('--tools', tools.join(','));
+  else args.push('--no-tools');
   // Pi changelog #287 documents that --system-prompt accepts a file path;
   // pane-manager replaces this value with a mode-0600 prompt file for
   // protocol-17-safe argv transport while retaining replace/append semantics.

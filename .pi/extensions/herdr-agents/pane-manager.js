@@ -197,17 +197,6 @@ export async function waitForSessionIdentity(client, agentName, timeoutMs = 1000
   throw lastError || new Error(`agent ${agentName} did not report a session identity`);
 }
 
-export async function requestCloseConfirmation(ctx, handle) {
-  if (!ctx?.hasUI || !ctx.ui?.confirm) throw new Error('close requires interactive confirmation — no UI available');
-  return ctx.ui.confirm('Close worker pane?', `Close ${handle.paneId} for ${handle.role}?`);
-}
-
-export async function closePane(client, paneId, signal) {
-  const response = await client.request('pane.close', { pane_id: paneId }, undefined, signal);
-  const result = expectObject(response.result, 'pane.close result');
-  if (result.type !== 'ok') throw new Error('Herdr pane.close response shape is invalid');
-}
-
 export async function reportPaneMetadata(client, paneId, tokens, signal) {
   if (!SOURCE_RE.test(METADATA_SOURCE)) throw new Error('invalid bridge metadata source');
   for (const key of Object.keys(tokens)) if (!SOURCE_RE.test(key)) throw new Error(`invalid metadata token key: ${key}`);

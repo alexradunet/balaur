@@ -5,7 +5,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import { resolve } from 'node:path';
 import { HerdrClient, HerdrRemoteError, EXPECTED_PROTOCOL } from '../herdr-client.js';
-import { assertPinnedAgent, captureAgentIdentity, closePane, HERDR_AGENT_STATUSES, listAgents, makeAgentLabel, promptAgent, reportPaneMetadata, requestCloseConfirmation, resolveRoleSkillArgs, startAgent, waitForAgent } from '../pane-manager.js';
+import { assertPinnedAgent, buildWorkerEnv, captureAgentIdentity, createPane, HERDR_AGENT_STATUSES, listAgents, makeAgentLabel, promptAgent, reportPaneMetadata, resolveRoleSkillArgs, startAgent, waitForAgent } from '../pane-manager.js';
 import { parseRoleFile } from '../role-parser.js';
 
 const session = { source: 'herdr:pi', agent: 'pi', kind: 'id', value: '33333333-3333-3333-3333-333333333333' };
@@ -72,6 +72,21 @@ describe('protocol-17 socket and lifecycle validation', () => {
       await assert.rejects(client.ping(), /capabilities are incomplete/);
     });
   });
+  it('launches omitted-tool roles with no tools and marks split panes as workers', async () => {
+    const role = parseRoleFile('---\ndescription: no tools\n---\nPrompt body', '/no-tools.md');
+    await withServer({}, async (client, server) => {
+      const pane = await createPane(client, { currentPaneId: 'w1:p1', cwd: process.cwd(), env: buildWorkerEnv() });
+      const started = await startAgent(client, { paneId: pane.pane_id, agentName: 'worker', terminalId: pane.terminal_id, role, cwd: process.cwd() });
+      try {
+        const split = server.requests.find((request) => request.method === 'pane.split');
+        const args = server.requests.find((request) => request.method === 'agent.start').params.args;
+        assert.equal(split.params.env.BALAUR_WORKER, '1');
+        assert.ok(args.includes('--no-tools'));
+        assert.ok(!args.includes('--tools'));
+      } finally { await import('../pane-manager.js').then(({ removeRolePromptFile }) => removeRolePromptFile(started.promptFile)); }
+    });
+  });
+
   it('prepares a role launch as argv plus explicit skill paths', async () => {
     const cwd = fs.mkdtempSync(`${os.tmpdir()}/roles-`); fs.mkdirSync(resolve(cwd, '.agents/skills/custom'), { recursive: true }); fs.writeFileSync(resolve(cwd, '.agents/skills/custom/SKILL.md'), '# custom');
     const role = parseRoleFile('---\ndescription: test\nskills: custom\ntools: read, ext:pi-web-access/web_search\n---\nPrompt body', '/test.md');
@@ -138,13 +153,8 @@ describe('protocol-17 socket and lifecycle validation', () => {
       assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
     });
   });
-  it('denies close without UI or when the human declines', async () => {
-    const handle = { paneId: 'w1:p2', terminalId: 'term-2', role: 'executor' };
-    await assert.rejects(requestCloseConfirmation({ hasUI: false }, handle), /no UI available/);
-    assert.equal(await requestCloseConfirmation({ hasUI: true, ui: { confirm: async () => false } }, handle), false);
-  });
-  it('accepts exact agent/pane/terminal/session identity and protocol close response', async () => {
+  it('accepts exact agent/pane/terminal/session identity', async () => {
     const handle = { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value, status: 'ready' };
-    await withServer({}, async (client) => { assert.deepEqual(captureAgentIdentity(await assertPinnedAgent(client, handle)), { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value }); await closePane(client, 'w1:p2'); });
+    await withServer({}, async (client) => { assert.deepEqual(captureAgentIdentity(await assertPinnedAgent(client, handle)), { agentName: 'worker', paneId: 'w1:p2', terminalId: 'term-2', sessionKind: 'id', sessionValue: session.value }); });
   });
 });

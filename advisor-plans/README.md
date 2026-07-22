@@ -17,7 +17,7 @@ honor its STOP conditions, and update your row when done.
 | 001  | Move "Add to canvas" out of the sidebar into an Add menu on the canvas action bar | P1 | M | — | DONE |
 | 002  | Make Herdr prompting, collection, and launch recovery race-safe | P1 | M | Stage 1 through `e3f23f6` | BLOCKED — superseded by plan 003 lifecycle hardening |
 | 003  | Close Issue #2’s Herdr bridge concurrency and recovery gaps | P1 | M–L | 002 through `1960f8a` | BLOCKED — final reviews found remaining safety and semantic-validation gaps |
-| 004  | Resolve Herdr bridge final-review safety gaps | P1 | M–L | 003 through `485900a` | IN PROGRESS |
+| 004  | Resolve Herdr bridge final-review safety gaps | P1 | M–L | 003 through `485900a` | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -59,6 +59,15 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   unavoidable close TOCTOU, live-status prompting, empty-tool recursion denial,
   snapshot/date and boundary-position semantics, replacement classification,
   and malformed post-boundary message validation.
+- **004** — executed 2026-07-22 in the same issue worktree from `485900a`.
+  Automated bridge close is fail-closed under protocol 17; handles and panes
+  remain for operator inspection and manual closure. The corrective changes add
+  fresh pinned-status prompt admission, `--no-tools` empty-list denial, calendar
+  timestamps, exact physical boundaries, complete identity-conflict
+  classification, strict post-boundary AgentMessage validation, and resolved
+  ID-backed smoke boundaries. The focused suite passed five consecutive runs at
+  **83/83**; syntax and fixed-base diff checks passed. Prompt identity/status and
+  submission remain non-atomic under Herdr protocol 17.
 
 ## Findings considered and rejected
 

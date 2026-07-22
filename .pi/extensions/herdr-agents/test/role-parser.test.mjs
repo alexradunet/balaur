@@ -53,6 +53,18 @@ describe('role compatibility', () => {
     assert.deepEqual(roleToPiArgs(role).slice(0, 2), ['--tools', 'read,bash']);
   });
 
+  it('denies all tools when tools are omitted or orchestration filtering empties the allowlist', () => {
+    for (const content of [
+      '---\ndescription: omitted\n---\nPrompt',
+      '---\ndescription: one orchestrator\ntools: Agent\n---\nPrompt',
+      '---\ndescription: orchestrators\ntools: herdr_agent, Agent, ext:pi-subagents/Agent\n---\nPrompt',
+    ]) {
+      const args = roleToPiArgs(parseRoleFile(content, '/roles/no-tools.md'));
+      assert.ok(args.includes('--no-tools'));
+      assert.ok(!args.includes('--tools'));
+    }
+  });
+
   it('retains a path-specific malformed-role error', () => {
     assert.throws(() => parseRoleFile('---\ndescription: bad\ntools: ext:bad tool\n---\nPrompt', '/roles/bad.md'), /\/roles\/bad\.md: unsafe characters/);
   });

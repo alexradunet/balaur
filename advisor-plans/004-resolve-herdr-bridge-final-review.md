@@ -1,8 +1,8 @@
 # Plan 004 — Resolve Herdr Bridge Final-Review Safety Gaps
 
-**Planning HEAD:** `485900af1304f0d0c1029bbc89c2d7074d57d7d9`  
-**Fixed review base:** `620da3f`  
-**Baseline:** 73/73 focused tests pass; syntax and `git diff --check 620da3f..485900a` pass.  
+**Planning HEAD:** `485900af1304f0d0c1029bbc89c2d7074d57d7d9`
+**Fixed review base:** `620da3f`
+**Baseline:** 73/73 focused tests pass; syntax and `git diff --check 620da3f..485900a` pass.
 **Execution:** strict TDD, minimal corrective scope. Do not push, open a PR, auto-close panes, or begin Stage 2.
 
 ## 1. Confirmed gaps

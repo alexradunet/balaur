@@ -93,25 +93,35 @@ export async function waitForPiSessionReference(session, timeoutMs = 10000, sign
   throw lastError || new Error('Pi session reference was not resolved');
 }
 
+/** Resolve an ID-backed session before capture, accepting only an absent fresh file. */
+export async function captureResolvedSessionBoundary(session, sessionRoot, discoveryOptions) {
+  let filePath;
+  try { filePath = await resolvePiSessionReference(session, sessionRoot, discoveryOptions); }
+  catch (error) {
+    if (session?.kind !== 'id' || !String(error?.message).startsWith('Pi session ID not found:')) throw error;
+  }
+  return captureSessionBoundary(session, filePath);
+}
+
 /** Capture a durable complete-physical-line boundary before bridge prompt submission. */
 export async function captureSessionBoundary(session, filePath) {
   const sessionId = sessionUuid(session);
   const path = filePath || (session.kind === 'path' ? session.value : undefined);
-  if (!path) return { sessionId, anchorId: null, lineCount: 0 };
+  if (!path) return { sessionId, anchorId: null, anchorLine: null, lineCount: 0 };
   let data;
   try { data = await readJsonlRecords(path); } catch (error) {
     // A fresh idle Pi worker may not create its JSONL file until this first
     // prompt. The pinned session UUID is a safe header-only boundary.
-    if (error?.code === 'ENOENT' || /ENOENT/.test(String(error?.message))) return { sessionId, anchorId: null, lineCount: 0 };
+    if (error?.code === 'ENOENT' || /ENOENT/.test(String(error?.message))) return { sessionId, anchorId: null, anchorLine: null, lineCount: 0 };
     throw error;
   }
   if (data.trailingFragment.length) throw new Error('Pi session has a trailing fragment before prompt boundary capture');
-  const validEntries = data.records.filter((record) => isPlainObject(record.value)).map((record) => record.value);
-  const headers = validEntries.filter((entry) => entry.type === 'session' && typeof entry.id === 'string');
-  if (headers.length !== 1 || headers[0].id !== sessionId) throw new Error('Pi session header changed or is invalid');
-  const anchor = [...validEntries].reverse().find((entry) => typeof entry.id === 'string' && entry.id);
+  const validRecords = data.records.filter((record) => isPlainObject(record.value));
+  const headers = validRecords.filter((record) => record.value.type === 'session' && typeof record.value.id === 'string');
+  if (headers.length !== 1 || headers[0].value.id !== sessionId) throw new Error('Pi session header changed or is invalid');
+  const anchor = [...validRecords].reverse().find((record) => typeof record.value.id === 'string' && record.value.id);
   if (!anchor) throw new Error('Pi session has no complete entry ID for prompt boundary');
-  return { sessionId, anchorId: anchor.id, lineCount: data.completeLineCount };
+  return { sessionId, anchorId: anchor.value.id, anchorLine: anchor.lineNumber, lineCount: data.completeLineCount };
 }
 
 function sessionUuid(session) {
@@ -139,10 +149,10 @@ async function collectSessionResultAfterBoundaryData(filePath, boundary) {
   if (data.completeLineCount < boundary.lineCount) throw new Error('Pi prompt boundary line count was truncated');
 
   if (boundary.anchorId === null) {
-    if (boundary.lineCount !== 0) throw new Error('Pi prompt boundary anchor is missing');
+    if (boundary.lineCount !== 0 || boundary.anchorLine !== null) throw new Error('Pi prompt boundary anchor is missing');
   } else {
-    const anchors = data.records.reduce((found, record, index) => record.value?.id === boundary.anchorId ? [...found, index] : found, []);
-    if (anchors.length !== 1 || anchors[0] >= boundary.lineCount) throw new Error('Pi prompt boundary anchor is missing or ambiguous, or moved from its original boundary');
+    const anchors = data.records.filter((record) => record.value?.id === boundary.anchorId);
+    if (anchors.length !== 1 || anchors[0].lineNumber !== boundary.anchorLine || boundary.anchorLine > boundary.lineCount) throw new Error('Pi prompt boundary anchor is missing or ambiguous, or moved from its original boundary');
   }
 
   const postBoundaryRecords = data.records.slice(boundary.lineCount);
@@ -152,11 +162,15 @@ async function collectSessionResultAfterBoundaryData(filePath, boundary) {
   }
   if (data.trailingFragment.length) throw new RetryableSessionError('Pi session has a trailing post-boundary fragment', data.completeLineCount);
   const entries = postBoundaryRecords.map((record) => record.value).filter((entry) => entry.type !== 'session');
+  for (const entry of entries) validatePostBoundaryMessage(entry);
   return { result: extractPostBoundaryResult(entries), completeLineCount: data.completeLineCount };
 }
 
 function validateBoundary(boundary) {
-  if (!boundary || !SESSION_ID_RE.test(boundary.sessionId) || (boundary.anchorId !== null && (typeof boundary.anchorId !== 'string' || !boundary.anchorId)) || !Number.isSafeInteger(boundary.lineCount) || boundary.lineCount < 0) throw new Error('invalid prompt boundary');
+  if (!isPlainObject(boundary) || Object.keys(boundary).some((key) => !['sessionId', 'anchorId', 'anchorLine', 'lineCount'].includes(key)) || !SESSION_ID_RE.test(boundary.sessionId) || !Number.isSafeInteger(boundary.lineCount) || boundary.lineCount < 0) throw new Error('invalid prompt boundary');
+  if (boundary.lineCount === 0) {
+    if (boundary.anchorId !== null || boundary.anchorLine !== null) throw new Error('invalid prompt boundary');
+  } else if (typeof boundary.anchorId !== 'string' || !boundary.anchorId || !Number.isSafeInteger(boundary.anchorLine) || boundary.anchorLine < 1 || boundary.anchorLine > boundary.lineCount) throw new Error('invalid prompt boundary');
 }
 
 export async function waitForFinalizedSessionResult(filePath, timeoutMs = 10000, signal, boundary) {
@@ -252,6 +266,43 @@ async function readJsonlRecords(filePath) {
 export async function readJsonlEntries(filePath) {
   const data = await readJsonlRecords(filePath);
   return data.records.filter((record) => record.value !== undefined).map((record) => record.value);
+}
+
+const STOP_REASONS = new Set(['stop', 'length', 'toolUse', 'error', 'aborted']);
+const EXTENDED_ROLES = new Set(['bashExecution', 'custom', 'branchSummary', 'compactionSummary']);
+
+function validContentArray(content, allowedParts) {
+  return Array.isArray(content) && content.every((part) => isPlainObject(part) && allowedParts(part));
+}
+function validUserPart(part) {
+  return (part.type === 'text' && typeof part.text === 'string') || (part.type === 'image' && typeof part.data === 'string' && typeof part.mimeType === 'string');
+}
+function validAssistantPart(part) {
+  return (part.type === 'text' && typeof part.text === 'string')
+    || (part.type === 'thinking' && typeof part.thinking === 'string')
+    || (part.type === 'toolCall' && typeof part.id === 'string' && !!part.id && typeof part.name === 'string' && !!part.name && isPlainObject(part.arguments));
+}
+function postBoundaryMessageError(reason) { throw new Error(`post-boundary message is invalid: ${reason}`); }
+function validatePostBoundaryMessage(entry) {
+  if (entry.type !== 'message') return;
+  const message = entry.message;
+  if (!isPlainObject(message)) postBoundaryMessageError('message must be an object');
+  if (typeof message.role !== 'string') postBoundaryMessageError('role is missing');
+  if (message.role === 'user') {
+    if (typeof message.content !== 'string' && !validContentArray(message.content, validUserPart)) postBoundaryMessageError('user content');
+  } else if (message.role === 'assistant') {
+    if (!validContentArray(message.content, validAssistantPart) || !STOP_REASONS.has(message.stopReason)) postBoundaryMessageError('assistant content or stop reason');
+  } else if (message.role === 'toolResult') {
+    if (typeof message.toolCallId !== 'string' || !message.toolCallId || typeof message.toolName !== 'string' || !message.toolName || !validContentArray(message.content, validUserPart) || typeof message.isError !== 'boolean') postBoundaryMessageError('tool result');
+  } else if (message.role === 'bashExecution') {
+    if (typeof message.command !== 'string' || typeof message.output !== 'string' || (message.exitCode !== undefined && !Number.isSafeInteger(message.exitCode)) || typeof message.cancelled !== 'boolean' || typeof message.truncated !== 'boolean') postBoundaryMessageError('bash execution');
+  } else if (message.role === 'custom') {
+    if (typeof message.customType !== 'string' || !message.customType || (typeof message.content !== 'string' && !validContentArray(message.content, validUserPart)) || typeof message.display !== 'boolean') postBoundaryMessageError('custom message');
+  } else if (message.role === 'branchSummary') {
+    if (typeof message.summary !== 'string' || typeof message.fromId !== 'string' || !message.fromId) postBoundaryMessageError('branch summary');
+  } else if (message.role === 'compactionSummary') {
+    if (typeof message.summary !== 'string' || !Number.isSafeInteger(message.tokensBefore)) postBoundaryMessageError('compaction summary');
+  } else if (!EXTENDED_ROLES.has(message.role)) postBoundaryMessageError('unknown role');
 }
 
 export function extractFinalizedResult(entries) {

@@ -88,8 +88,9 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
       await appendFile(currentSession, `${JSON.stringify({ type: 'message', id: 'u-bridge', message: { role: 'user', content: 'continue' } })}\n${JSON.stringify({ type: 'message', id: 'a-bridge', message: { role: 'assistant', content: [{ type: 'text', text: 'Task completed successfully.' }], stopReason: 'stop', usage: {} } })}\n`);
       const collected = await tool.execute('collect', { action: 'collect', handle }, undefined, undefined, ctx);
       assert.match(collected.content[0].text, /Task completed successfully/);
-      await tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx);
-      for (const method of ['pane.split', 'agent.start', 'agent.wait', 'agent.read', 'agent.prompt', 'pane.close']) assert.ok(server.requests.some((request) => request.method === method), `${method} was invoked`);
+      await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), /automated close is disabled.*protocol 17/i);
+      for (const method of ['pane.split', 'agent.start', 'agent.wait', 'agent.read', 'agent.prompt']) assert.ok(server.requests.some((request) => request.method === method), `${method} was invoked`);
+      assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
     } finally { await server.stop(); await rm(dir, { recursive: true, force: true }); }
   });
 
@@ -116,43 +117,71 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     } finally { gate.resolve(); await server.stop(); }
   });
 
-  it('keeps prompt and close mutually exclusive before confirmation or pane closure', async () => {
-    const promptGate = deferred();
-    const promptEntered = deferred();
-    const server = new FakeHerdr({ handlers: { 'agent.prompt': async (request, fake) => { promptEntered.resolve(); await promptGate.promise; return { type: 'agent_prompted', agent: fake.agent(request.params.target) }; } } });
-    await server.start();
-    try {
-      const { tool, ctx } = await loadRegisteredTool(server);
-      const handle = await startWorker(tool, ctx);
-      let confirmations = 0;
-      ctx.ui.confirm = async () => { confirmations++; return true; };
-      const prompting = tool.execute('prompt', { action: 'prompt', handle, prompt: 'hold' }, undefined, undefined, ctx);
-      await promptEntered.promise;
-      await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), /busy with prompt/);
-      assert.equal(confirmations, 0);
-      assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
-      promptGate.resolve();
-      await prompting;
-    } finally { promptGate.resolve(); await server.stop(); }
+  it('always disables close without touching the handle, UI, or Herdr', async () => {
+    for (const hasUI of [true, false]) {
+      const server = new FakeHerdr(); await server.start();
+      try {
+        const { tool, ctx, branch } = await loadRegisteredTool(server); const handle = await startWorker(tool, ctx);
+        const before = latestPersistedHandle(branch, handle);
+        const requestsBefore = server.requests.length;
+        let confirmations = 0; ctx.hasUI = hasUI; ctx.ui.confirm = async () => { confirmations++; return true; };
+        await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), new RegExp(`automated close is disabled.*${handle}.*w1:p2`, 'i'));
+        assert.equal(confirmations, 0);
+        assert.equal(server.requests.length, requestsBefore);
+        assert.deepEqual(latestPersistedHandle(branch, handle), before);
+      } finally { await server.stop(); }
+    }
   });
 
-  it('keeps close and prompt mutually exclusive while confirmation is deferred', async () => {
-    const confirmGate = deferred();
-    const confirmEntered = deferred();
-    const server = new FakeHerdr();
-    await server.start();
+  it('allows manually closed panes to reconcile as missing after disabled close guidance', async () => {
+    const server = new FakeHerdr(); await server.start();
     try {
-      const { tool, ctx } = await loadRegisteredTool(server);
-      const handle = await startWorker(tool, ctx);
-      ctx.ui.confirm = async () => { confirmEntered.resolve(); return confirmGate.promise; };
-      const closing = tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx);
-      await confirmEntered.promise;
-      const promptsBefore = server.requests.filter((request) => request.method === 'agent.prompt').length;
-      await assert.rejects(tool.execute('prompt', { action: 'prompt', handle, prompt: 'blocked by close' }, undefined, undefined, ctx), /busy with close/);
-      assert.equal(server.requests.filter((request) => request.method === 'agent.prompt').length, promptsBefore);
-      confirmGate.resolve(false);
-      await closing;
-    } finally { confirmGate.resolve(false); await server.stop(); }
+      const { tool, ctx } = await loadRegisteredTool(server); const handle = await startWorker(tool, ctx);
+      await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), /automated close is disabled/i);
+      server.removed = true;
+      const status = await tool.execute('status', { action: 'status', handle }, undefined, undefined, ctx);
+      assert.equal(status.details.handles.find((candidate) => candidate.handleId === handle).status, 'missing');
+    } finally { await server.stop(); }
+  });
+
+  it('rejects stale operational status from fresh pinned prompt admission before boundary persistence or submission', async () => {
+    const cases = [
+      ['idle', 'working'],
+      ['blocked', 'done'],
+      ['blocked', 'unknown'],
+    ];
+    for (const [persisted, live] of cases) {
+      const server = new FakeHerdr(); await server.start();
+      try {
+        const { tool, ctx, branch } = await loadRegisteredTool(server); const handle = await startWorker(tool, ctx);
+        server.status = persisted;
+        await tool.execute('status', { action: 'status', handle }, undefined, undefined, ctx);
+        const before = latestPersistedHandle(branch, handle);
+        server.status = live;
+        await assert.rejects(tool.execute('prompt', { action: 'prompt', handle, prompt: 'must not submit' }, undefined, undefined, ctx), /must be idle or blocked/);
+        const after = latestPersistedHandle(branch, handle);
+        assert.equal(after.status, live);
+        assert.equal(after.promptBoundary, before.promptBoundary);
+        assert.equal(server.requests.some((request) => request.method === 'agent.prompt'), false);
+      } finally { await server.stop(); }
+    }
+  });
+
+  it('admits a fresh idle worker despite persisted working status and persists fresh-pin replacement', async () => {
+    const server = new FakeHerdr(); await server.start();
+    try {
+      const loaded = await loadRegisteredTool(server); const handle = await startWorker(loaded.tool, loaded.ctx);
+      server.status = 'working';
+      await loaded.tool.execute('status', { action: 'status', handle }, undefined, undefined, loaded.ctx);
+      server.status = 'idle';
+      await loaded.tool.execute('prompt', { action: 'prompt', handle, prompt: 'fresh is authoritative' }, undefined, undefined, loaded.ctx);
+      assert.equal(server.requests.filter((request) => request.method === 'agent.prompt').length, 1);
+
+      const second = await startWorker(loaded.tool, loaded.ctx);
+      (server.options.handlers ||= {})['agent.get'] = (request, fake) => ({ type: 'agent_info', agent: fake.agent(request.params.target, { kind: 'id', value: '99999999-9999-9999-9999-999999999999' }) });
+      await assert.rejects(loaded.tool.execute('prompt', { action: 'prompt', handle: second, prompt: 'mismatch' }, undefined, undefined, loaded.ctx), /session identity was replaced/);
+      assert.equal(latestPersistedHandle(loaded.branch, second).status, 'replaced');
+    } finally { await server.stop(); }
   });
 
   it('rejects status, wait, read, and collect while prompt owns the handle lease', async () => {
@@ -194,7 +223,7 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     } finally { gate.resolve(); await server.stop(); }
   });
 
-  it('releases a handle lease after errors, aborts, remote timeout, and cancelled close', async () => {
+  it('releases a handle lease after errors, aborts, remote timeout, and disabled close guidance', async () => {
     let readFails = true;
     const server = new FakeHerdr({ handlers: { 'agent.read': () => {
       if (readFails) { readFails = false; return { error: { code: 'read_failed', message: 'read failed' } }; }
@@ -218,9 +247,8 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
       server.status = 'idle';
       await tool.execute('status-after-timeout', { action: 'status', handle }, undefined, undefined, ctx);
 
-      ctx.ui.confirm = async () => false;
-      await tool.execute('close-cancel', { action: 'close', handle }, undefined, undefined, ctx);
-      await tool.execute('prompt-after-cancel', { action: 'prompt', handle, prompt: 'still open' }, undefined, undefined, ctx);
+      await assert.rejects(tool.execute('close-disabled', { action: 'close', handle }, undefined, undefined, ctx), /automated close is disabled/i);
+      await tool.execute('prompt-after-disabled-close', { action: 'prompt', handle, prompt: 'still open' }, undefined, undefined, ctx);
     } finally { await server.stop(); }
   });
 
@@ -321,6 +349,8 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
   it('classifies agent_not_found only after successful inventory reconciliation', async () => {
     for (const [inventory, expected] of [
       [[{ name: 'other', pane_id: 'w1:p2', terminal_id: 'term-other', agent_status: 'idle' }], 'replaced'],
+      [[{ name: 'other', pane_id: 'other', terminal_id: 'term-2', agent_status: 'idle' }], 'replaced'],
+      [[{ name: 'other', pane_id: 'other', terminal_id: 'other', agent_status: 'idle', agent_session: { kind: 'id', value: '11111111-1111-1111-1111-111111111111' } }], 'replaced'],
       [[], 'missing'],
     ]) {
       const server = new FakeHerdr({ handlers: {
@@ -336,6 +366,7 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
         server.options.handlers['agent.get'] = () => ({ error: { code: 'agent_not_found', message: 'gone' } });
         const result = await loaded.tool.execute('status', { action: 'status', handle }, undefined, undefined, loaded.ctx);
         assert.equal(result.details.handles.find((candidate) => candidate.handleId === handle).status, expected);
+        assert.equal(latestPersistedHandle(loaded.branch, handle).status, expected);
       } finally { await server.stop(); }
     }
   });
@@ -403,13 +434,20 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     try { const { tool, ctx } = await loadRegisteredTool(server); const handle = await startWorker(tool, ctx); await tool.execute('prompt', { action: 'prompt', handle, prompt: 'recover' }, undefined, undefined, ctx); await appendFile(bad, JSON.stringify({ type: 'message', id: 'u-new', message: { role: 'user', content: 'recover' } }) + '\n' + JSON.stringify({ type: 'message', id: 'a-new', message: { role: 'assistant', content: [{ type: 'text', text: 'recovered' }], stopReason: 'stop', usage: {} } }) + '\n'); const result = await tool.execute('collect', { action: 'collect', handle }, undefined, undefined, ctx); assert.equal(result.content[0].text, 'recovered'); } finally { await server.stop(); await rm(dir, { recursive: true, force: true }); }
   });
 
-  it('blocks close on confirmation denial and on a replacement during confirmation', async () => {
-    const server = new FakeHerdr({ handlers: { 'agent.get': (request, fake) => { fake.getCount++; const replacement = fake.getCount > 3; return { type: 'agent_info', agent: fake.agent(request.params.target, replacement ? { kind: 'path', value: '/tmp/replaced.jsonl' } : undefined) }; } } }); await server.start();
-    try {
-      const { tool, ctx } = await loadRegisteredTool(server); const handle = await startWorker(tool, ctx);
-      ctx.ui.confirm = async () => false; await tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx); assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
-      ctx.ui.confirm = async () => true; await assert.rejects(tool.execute('close', { action: 'close', handle }, undefined, undefined, ctx), /session identity was replaced/); assert.equal(server.requests.some((request) => request.method === 'pane.close'), false);
-    } finally { await server.stop(); }
+
+  it('persists terminal-only and paired-session-only conflicts while restoring a handle', async () => {
+    for (const inventory of [
+      [{ name: 'other', pane_id: 'other', terminal_id: 'term-2', agent_status: 'idle' }],
+      [{ name: 'other', pane_id: 'other', terminal_id: 'other', agent_status: 'idle', agent_session: { kind: 'id', value: '11111111-1111-1111-1111-111111111111' } }],
+    ]) {
+      const handle = { ...createHandle({ paneId: 'w1:p2', terminalId: 'term-2', role: 'implementer-openai', agentName: 'worker', sessionKind: 'id', sessionValue: '11111111-1111-1111-1111-111111111111' }), status: 'idle' };
+      const store = addHandle(createHandleStore(), handle);
+      const server = new FakeHerdr({ handlers: { 'agent.list': () => ({ type: 'agent_list', agents: inventory }) } }); await server.start();
+      try {
+        const loaded = await loadRegisteredTool(server, [{ type: 'custom', customType: 'balaur-herdr-agent-store', data: { version: 1, store: serializeStore(store) } }]);
+        assert.equal(latestPersistedHandle(loaded.branch, handle.handleId).status, 'replaced');
+      } finally { await server.stop(); }
+    }
   });
 
   it('falls back to the latest fully valid snapshot and validates custom-entry versions', async () => {

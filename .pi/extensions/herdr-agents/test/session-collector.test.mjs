@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { appendFile, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { captureSessionBoundary, collectSessionResult, collectSessionResultAfterBoundary, extractFinalizedResult, resolvePiSessionReference, waitForFinalizedSessionResult, waitForPiSessionReference } from '../session-collector.js';
+import { captureResolvedSessionBoundary, captureSessionBoundary, collectSessionResult, collectSessionResultAfterBoundary, extractFinalizedResult, resolvePiSessionReference, waitForFinalizedSessionResult, waitForPiSessionReference } from '../session-collector.js';
 
 const fixture = resolve('.pi/extensions/herdr-agents/test/fixtures/session.jsonl');
 const usage = { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
@@ -41,13 +41,13 @@ describe('Pi v3 session collection', () => {
     const header = { type: 'session', id: 'cccccccc-cccc-cccc-cccc-cccccccccccc' };
     await writeFile(path, [header, { type: 'message', id: 'anchor', message: { role: 'user', content: 'old' } }, { type: 'message', id: 'anchor', message: { role: 'assistant', content: [], stopReason: 'stop' } }].map(JSON.stringify).join('\n') + '\n');
     try {
-      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor', lineCount: 3 }), /anchor is missing or ambiguous/);
+      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor', anchorLine: 2, lineCount: 3 }), /anchor is missing or ambiguous/);
       await writeFile(path, [header, { type: 'message', id: 'one', message: { role: 'user', content: 'one' } }, { type: 'message', id: 'two', message: { role: 'user', content: 'two' } }].map(JSON.stringify).join('\n') + '\n');
-      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: header.id, lineCount: 1 }), /second post-boundary user message/);
+      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: header.id, anchorLine: 1, lineCount: 1 }), /second post-boundary user message/);
       await writeFile(path, JSON.stringify({ type: 'session', id: 'different' }) + '\n' + JSON.stringify({ type: 'message', id: 'anchor', message: { role: 'user' } }) + '\n');
-      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor', lineCount: 2 }), /header changed/);
+      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor', anchorLine: 2, lineCount: 2 }), /header changed/);
       await writeFile(path, [header, { type: 'message', id: 'anchor', message: { role: 'user' } }].map(JSON.stringify).join('\n') + '\n' + JSON.stringify({ type: 'message', id: 'partial', message: { role: 'assistant', stopReason: 'stop' } }));
-      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor', lineCount: 2 }), /trailing post-boundary fragment/);
+      await assert.rejects(collectSessionResultAfterBoundary(path, { sessionId: header.id, anchorId: 'anchor', anchorLine: 2, lineCount: 2 }), /trailing post-boundary fragment/);
     } finally { await rm(dir, { recursive: true, force: true }); }
   });
 
@@ -57,7 +57,7 @@ describe('Pi v3 session collection', () => {
     await writeFile(path, `${JSON.stringify(header)}\n${JSON.stringify({ type: 'message', id: 'old', message: { role: 'assistant', content: [], stopReason: 'stop' } })}\n{bad historical json}\n`);
     try {
       const boundary = await captureSessionBoundary({ kind: 'path', value: path });
-      assert.deepEqual(boundary, { sessionId: header.id, anchorId: 'old', lineCount: 3 });
+      assert.deepEqual(boundary, { sessionId: header.id, anchorId: 'old', anchorLine: 2, lineCount: 3 });
       await appendFile(path, `${JSON.stringify({ type: 'message', id: 'new-user', message: { role: 'user', content: 'new' } })}\n${JSON.stringify({ type: 'message', id: 'new-answer', message: { role: 'assistant', content: [{ type: 'text', text: 'safe' }], stopReason: 'stop', usage } })}\n`);
       assert.equal((await collectSessionResultAfterBoundary(path, boundary)).text, 'safe');
     } finally { await rm(dir, { recursive: true, force: true }); }
@@ -73,7 +73,7 @@ describe('Pi v3 session collection', () => {
   it('fails closed across malformed or non-object post-boundary records and later terminal output', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'pi-post-corruption-')); const path = join(dir, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jsonl');
     const header = { type: 'session', id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
-    const boundary = { sessionId: header.id, anchorId: header.id, lineCount: 1 };
+    const boundary = { sessionId: header.id, anchorId: header.id, anchorLine: 1, lineCount: 1 };
     try {
       for (const corruptLine of ['{bad json}', '17', '[]']) {
         await writeFile(path, `${JSON.stringify(header)}\n${JSON.stringify({ type: 'message', id: 'user', message: { role: 'user', content: 'new' } })}\n${corruptLine}\n${JSON.stringify({ type: 'message', id: 'answer', message: { role: 'assistant', content: [{ type: 'text', text: 'must not escape' }], stopReason: 'stop', usage } })}\n`);
@@ -85,7 +85,7 @@ describe('Pi v3 session collection', () => {
   it('treats trailing post-boundary data as retryable but throws if it remains at timeout', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'pi-post-fragment-')); const path = join(dir, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jsonl');
     const header = { type: 'session', id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
-    const boundary = { sessionId: header.id, anchorId: header.id, lineCount: 1 };
+    const boundary = { sessionId: header.id, anchorId: header.id, anchorLine: 1, lineCount: 1 };
     await writeFile(path, `${JSON.stringify(header)}\n${JSON.stringify({ type: 'message', id: 'user', message: { role: 'user', content: 'new' } })}\n{"type":"message"`);
     try {
       await assert.rejects(collectSessionResultAfterBoundary(path, boundary), /trailing post-boundary fragment/);
@@ -98,7 +98,7 @@ describe('Pi v3 session collection', () => {
   it('allows valid non-message entries with IDs but rejects missing IDs', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'pi-post-metadata-')); const path = join(dir, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jsonl');
     const header = { type: 'session', id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
-    const boundary = { sessionId: header.id, anchorId: header.id, lineCount: 1 };
+    const boundary = { sessionId: header.id, anchorId: header.id, anchorLine: 1, lineCount: 1 };
     try {
       await writeFile(path, [header, { type: 'message', id: 'user', message: { role: 'user', content: 'new' } }, { type: 'model_change', id: 'model-1', model: 'test' }, { type: 'message', id: 'answer', message: { role: 'assistant', content: [{ type: 'text', text: 'okay' }], stopReason: 'stop', usage } }].map(JSON.stringify).join('\n') + '\n');
       assert.equal((await collectSessionResultAfterBoundary(path, boundary)).text, 'okay');
@@ -112,7 +112,7 @@ describe('Pi v3 session collection', () => {
     const session = { kind: 'path', value: path };
     try {
       const boundary = await captureSessionBoundary(session);
-      assert.deepEqual(boundary, { sessionId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', anchorId: null, lineCount: 0 });
+      assert.deepEqual(boundary, { sessionId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', anchorId: null, anchorLine: null, lineCount: 0 });
       await writeFile(path, [
         { type: 'session', id: boundary.sessionId },
         { type: 'message', id: 'u-first', message: { role: 'user', content: 'first' } },
@@ -120,6 +120,54 @@ describe('Pi v3 session collection', () => {
       ].map(JSON.stringify).join('\n') + '\n');
       assert.equal((await collectSessionResultAfterBoundary(path, boundary)).text, 'fresh result');
     } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it('rejects a captured anchor moved to a different physical line', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pi-anchor-line-')); const path = join(dir, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jsonl');
+    const header = { type: 'session', id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
+    try {
+      await writeFile(path, [header, { type: 'message', id: 'anchor', message: { role: 'user', content: 'old' } }, { type: 'model_change', id: 'model', model: 'one' }].map(JSON.stringify).join('\n') + '\n');
+      const boundary = await captureSessionBoundary({ kind: 'path', value: path });
+      assert.deepEqual(boundary, { sessionId: header.id, anchorId: 'model', anchorLine: 3, lineCount: 3 });
+      await writeFile(path, [header, { type: 'model_change', id: 'model', model: 'one' }, { type: 'message', id: 'anchor', message: { role: 'user', content: 'old' } }, { type: 'message', id: 'new', message: { role: 'user', content: 'new' } }].map(JSON.stringify).join('\n') + '\n');
+      await assert.rejects(collectSessionResultAfterBoundary(path, boundary), /anchor.*moved/);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it('fails closed for malformed recognized post-boundary messages before a later terminal answer', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'pi-message-shape-')); const path = join(dir, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jsonl');
+    const header = { type: 'session', id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' };
+    const boundary = { sessionId: header.id, anchorId: header.id, anchorLine: 1, lineCount: 1 };
+    const answer = { type: 'message', id: 'answer', message: { role: 'assistant', content: [{ type: 'text', text: 'must not escape' }], stopReason: 'stop', usage } };
+    const malformed = [
+      { type: 'message', id: 'bad', message: null },
+      { type: 'message', id: 'bad', message: {} },
+      { type: 'message', id: 'bad', message: { role: 'unknown' } },
+      { type: 'message', id: 'bad', message: { role: 'user', content: 7 } },
+      { type: 'message', id: 'bad', message: { role: 'assistant', content: 'bad', stopReason: 'stop' } },
+      { type: 'message', id: 'bad', message: { role: 'assistant', content: [], stopReason: 'wat' } },
+      { type: 'message', id: 'bad', message: { role: 'toolResult', toolCallId: '', content: [], isError: false } },
+      { type: 'message', id: 'bad', message: { role: 'toolResult', toolCallId: 'call', content: [], isError: 'false' } },
+    ];
+    try {
+      for (const bad of malformed) {
+        await writeFile(path, [header, { type: 'message', id: 'user', message: { role: 'user', content: 'new' } }, bad, answer].map(JSON.stringify).join('\n') + '\n');
+        await assert.rejects(collectSessionResultAfterBoundary(path, boundary), /post-boundary message/);
+      }
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it('resolves an ID-backed session before each capture so its second boundary is exact', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pi-id-boundary-')); const id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'; const path = join(root, 'session.jsonl');
+    const session = { kind: 'id', value: id };
+    try {
+      assert.deepEqual(await captureResolvedSessionBoundary(session, root), { sessionId: id, anchorId: null, anchorLine: null, lineCount: 0 });
+      await writeFile(path, [{ type: 'session', id }, { type: 'message', id: 'u-one', message: { role: 'user', content: 'one' } }, { type: 'message', id: 'a-one', message: { role: 'assistant', content: [{ type: 'text', text: 'one' }], stopReason: 'stop', usage } }].map(JSON.stringify).join('\n') + '\n');
+      const boundary = await captureResolvedSessionBoundary(session, root);
+      assert.deepEqual(boundary, { sessionId: id, anchorId: 'a-one', anchorLine: 3, lineCount: 3 });
+      await appendFile(path, [{ type: 'message', id: 'u-two', message: { role: 'user', content: 'two' } }, { type: 'message', id: 'a-two', message: { role: 'assistant', content: [{ type: 'text', text: 'two' }], stopReason: 'stop', usage } }].map(JSON.stringify).join('\n') + '\n');
+      assert.equal((await collectSessionResultAfterBoundary(path, boundary)).text, 'two');
+    } finally { await rm(root, { recursive: true, force: true }); }
   });
 
   it('does not associate same-name tools without matching toolCallId', () => {
