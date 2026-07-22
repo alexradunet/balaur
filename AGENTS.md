@@ -73,6 +73,7 @@ docs/                       Architecture and subsystem documentation
 widgets/                    Sandboxed HTML file-node widgets
 vendor/pixel-loom/          Self-hosted fonts and upstream design-system provenance
 .github/workflows/pages.yml Deploys the repository root as a static GitHub Pages artifact
+nixos_dev_env/              NixOS configuration for self-hosted deployment (NetBird, systemd services)
 ```
 
 The storage foundation is Node-verified by the phase suites listed in §13. `MemoryVault`, `FsVault`, `MemoryIndex`, `LifeIndexer`, repositories, backup validation, and integrity auditing are reference/test/tooling surfaces. `IndexedDbVault` and the app's vault-first wiring require browser verification.
@@ -322,11 +323,38 @@ Update documentation in the same change as behavior changes:
 
 Distinguish implementation from browser verification. Do not describe future persistent indexing, Tauri, sync, recurrence, or calendar-provider work as shipped.
 
-## 15. Git and deployment hygiene
+## 15. Self-hosted deployment (NetBird)
+
+The development machine runs two Balaur instances as systemd services, accessible over NetBird:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| `balaur-main` | 8080 | Main driver / production-like |
+| `balaur-dev` | 8081 | Development instance |
+
+Both services are defined in `nixos_dev_env/configuration.nix` and bind to `0.0.0.0`. Firewall rules expose ports 8080 and 8081 on the `netbird0` interface only.
+
+Manage services:
+
+```bash
+sudo systemctl status balaur-main balaur-dev
+sudo systemctl restart balaur-main balaur-dev
+journalctl -u balaur-main -f
+```
+
+After changing `configuration.nix`, rebuild with:
+
+```bash
+sudo nixos-rebuild switch --flake ./nixos_dev_env
+```
+
+Each port is a separate browser origin, so IndexedDB vaults are isolated between instances.
+
+## 16. Git and deployment hygiene
 
 Keep changes scoped. Do not commit generated browser profiles, screenshots, logs, API keys, local databases, or temporary exports. Do not amend, reset, commit, or push unless explicitly asked. Every push to `main` deploys the repository root through GitHub Pages.
 
-## 16. Definition of done
+## 17. Definition of done
 
 A change is complete when applicable:
 

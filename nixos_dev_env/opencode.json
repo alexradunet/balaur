@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "qwencloud/qwen3.8-max-preview",
+  "small_model": "qwencloud/qwen3.8-max-preview",
+  "share": "disabled",
+  "autoupdate": false,
+  "lsp": true,
+  "formatter": true,
+  "permission": "allow",
+  "enabled_providers": [
+    "openai",
+    "qwencloud"
+  ],
+  "provider": {
+    "qwencloud": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "QwenCloud",
+      "options": {
+        "apiKey": "{env:DASHSCOPE_API_KEY}",
+        "baseURL": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
+      },
+      "models": {
+        "qwen3.8-max-preview": {
+          "name": "Qwen3.8 Max Preview"
+        }
+      }
+    }
+  },
+  "server": {
+    "port": 4096,
+    "hostname": "0.0.0.0"
+  }
+}
