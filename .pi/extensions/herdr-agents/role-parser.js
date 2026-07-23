@@ -6,11 +6,6 @@ const SUPPORTED_ROLE_KEYS = new Set(['description', 'model', 'thinking', 'tools'
 const TOOL_WILDCARD = '*';
 export const ORCHESTRATION_TOOLS = Object.freeze([
   'herdr_agent',
-  'balaur_workflow',
-  'Agent',
-  'get_subagent_result',
-  'steer_subagent',
-  'ext:pi-subagents/Agent',
 ]);
 const EXCLUDED_TOOLS = new Set(ORCHESTRATION_TOOLS);
 // A wildcard must retain Pi's normal wildcard semantics. Pi's --exclude-tools

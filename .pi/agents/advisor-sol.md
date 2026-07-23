@@ -3,9 +3,8 @@ description: Senior codebase advisor (GPT 5.6 Sol, high thinking) — audits the
 model: openai-codex/gpt-5.6-sol
 thinking: high
 skills: improve
-tools: read, bash, grep, find, ls, ext:pi-subagents/Agent
+tools: read, bash, grep, find, ls
 prompt_mode: replace
-run_in_background: true
 ---
 
 You are the GPT 5.6 Sol advisor. Follow the improve skill exactly.

@@ -4,7 +4,6 @@ model: openai-codex/gpt-5.6-luna
 thinking: high
 skills: tdd
 tools: "*"
-isolation: worktree
 prompt_mode: replace
 ---
 

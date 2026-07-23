@@ -3,7 +3,6 @@ description: Plan executor (Qwen3-Coder-Flash, high thinking) — implements a s
 model: qwen-token-plan/qwen3-coder-flash
 thinking: high
 tools: "*"
-isolation: worktree
 prompt_mode: replace
 ---
 

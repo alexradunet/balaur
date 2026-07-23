@@ -304,15 +304,6 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     } finally { await server.stop(); }
   });
 
-  it('rejects unsupported executor isolation before splitting a pane', async () => {
-    const server = new FakeHerdr(); await server.start();
-    try {
-      const { tool, ctx } = await loadRegisteredTool(server);
-      await assert.rejects(tool.execute('start', { action: 'start', role: 'executor' }, undefined, undefined, ctx), /executor\.md: unsupported role key 'isolation'/);
-      assert.equal(server.requests.some((request) => request.method === 'pane.split'), false);
-    } finally { await server.stop(); }
-  });
-
   it('rejects a numeric protocol mismatch through registered start', async () => {
     const server = new FakeHerdr({ protocol: 16 }); await server.start();
     try { const { tool, ctx } = await loadRegisteredTool(server); await assert.rejects(startWorker(tool, ctx), /protocol\/capability mismatch \(protocol 16\)/); } finally { await server.stop(); }

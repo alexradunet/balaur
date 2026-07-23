@@ -4,7 +4,6 @@ model: qwen-token-plan/glm-5.2
 thinking: max
 tools: read, bash, grep, find, ls
 prompt_mode: replace
-run_in_background: true
 ---
 
 Perform an independent, read-only review of the complete fixed-base-to-branch diff against the supplied issue, spec, or plan. Do not read another review. Read `AGENTS.md`, `CONTEXT.md`, relevant docs and ADRs, then trace callers, persistence boundaries, and failure paths. Never edit or commit.

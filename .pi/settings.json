@@ -12,7 +12,6 @@
     "qwen-token-plan/glm-5.2"
   ],
   "packages": [
-    "npm:@tintinweb/pi-subagents",
     "npm:pi-web-access"
   ]
 }

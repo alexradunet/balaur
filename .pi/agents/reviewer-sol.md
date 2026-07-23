@@ -4,7 +4,6 @@ model: openai-codex/gpt-5.6-sol
 thinking: high
 tools: read, bash, grep, find, ls
 prompt_mode: replace
-run_in_background: true
 ---
 
 You are the GPT 5.6 Sol reviewer. You review an executor's implementation against its plan.

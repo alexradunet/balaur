@@ -6,23 +6,13 @@ import { filteredRoleTools, ORCHESTRATION_TOOLS, parseRoleFile, roleNameFromFile
 
 const agentsDir = resolve('.pi/agents');
 describe('role compatibility', () => {
-  it('parses supported project roles and explicitly rejects worktree-isolated executors', async () => {
+  it('parses all supported project roles without orchestration leakage', async () => {
     const files = (await readdir(agentsDir)).filter((file) => file.endsWith('.md'));
     assert.ok(files.length >= 1);
-    const unsupported = new Map([
-      ['advisor-qwen.md', 'run_in_background'], ['advisor-sol.md', 'run_in_background'],
-      ['executor.md', 'isolation'], ['executor-qwen.md', 'isolation'],
-      ['reviewer-glm.md', 'run_in_background'], ['reviewer-qwen.md', 'run_in_background'],
-      ['reviewer-sol.md', 'run_in_background'], ['reviewer-terra.md', 'run_in_background'],
-    ]);
     for (const file of files) {
       const path = resolve(agentsDir, file);
       const content = await readFile(path, 'utf8');
       assert.equal(roleNameFromFilename(file), file.slice(0, -3));
-      if (unsupported.has(file)) {
-        assert.throws(() => parseRoleFile(content, path), new RegExp(`${file.replace('.', '\\.')}.*unsupported role key '${unsupported.get(file)}'`));
-        continue;
-      }
       const role = parseRoleFile(content, path);
       const args = roleToPiArgs(role);
       assert.ok(args.includes('--system-prompt') || args.includes('--append-system-prompt'));
@@ -31,12 +21,12 @@ describe('role compatibility', () => {
   });
 
   it('rejects every unsupported role key with its path and key name', () => {
-    assert.throws(() => parseRoleFile('---\ndescription: isolated\nisolation: worktree\n---\nPrompt', '/roles/executor.md'), /\/roles\/executor\.md: unsupported role key 'isolation'/);
     assert.throws(() => parseRoleFile('---\ndescription: unknown\nretry_count: 3\n---\nPrompt', '/roles/unknown.md'), /\/roles\/unknown\.md: unsupported role key 'retry_count'/);
+    assert.throws(() => parseRoleFile('---\ndescription: background\nrun_in_background: true\n---\nPrompt', '/roles/bg.md'), /\/roles\/bg\.md: unsupported role key 'run_in_background'/);
   });
 
-  it('accepts installed extension tool identifiers while excluding only orchestration', () => {
-    const role = parseRoleFile('---\ndescription: extension tools\ntools: read, ext:pi-web-access/web_search, ext:pi-subagents/Agent\n---\nPrompt', '/roles/ext.md');
+  it('accepts installed extension tool identifiers while excluding only herdr_agent', () => {
+    const role = parseRoleFile('---\ndescription: extension tools\ntools: read, ext:pi-web-access/web_search, herdr_agent\n---\nPrompt', '/roles/ext.md');
     assert.deepEqual(filteredRoleTools(role), ['read', 'ext:pi-web-access/web_search']);
   });
 
@@ -48,16 +38,15 @@ describe('role compatibility', () => {
     assert.deepEqual(args.slice(args.indexOf('--exclude-tools') + 1, args.indexOf('--exclude-tools') + 2), [ORCHESTRATION_TOOLS.join(',')]);
   });
 
-  it('uses an allowlist for explicit roles while removing orchestration entries', () => {
-    const role = parseRoleFile('---\ndescription: explicit\ntools: read, Agent, ext:pi-subagents/Agent, bash\n---\nPrompt', '/roles/explicit.md');
+  it('uses an allowlist for explicit roles while removing herdr_agent', () => {
+    const role = parseRoleFile('---\ndescription: explicit\ntools: read, herdr_agent, bash\n---\nPrompt', '/roles/explicit.md');
     assert.deepEqual(roleToPiArgs(role).slice(0, 2), ['--tools', 'read,bash']);
   });
 
   it('denies all tools when tools are omitted or orchestration filtering empties the allowlist', () => {
     for (const content of [
       '---\ndescription: omitted\n---\nPrompt',
-      '---\ndescription: one orchestrator\ntools: Agent\n---\nPrompt',
-      '---\ndescription: orchestrators\ntools: herdr_agent, Agent, ext:pi-subagents/Agent\n---\nPrompt',
+      '---\ndescription: one orchestrator\ntools: herdr_agent\n---\nPrompt',
     ]) {
       const args = roleToPiArgs(parseRoleFile(content, '/roles/no-tools.md'));
       assert.ok(args.includes('--no-tools'));
