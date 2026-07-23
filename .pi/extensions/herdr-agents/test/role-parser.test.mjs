@@ -72,6 +72,21 @@ describe('role compatibility', () => {
     assert.throws(() => parseRoleFile('---\ndescription: bad\ntools: ext:bad tool\n---\nPrompt', '/roles/bad.md'), /\/roles\/bad\.md: unsafe characters/);
   });
 
+  it('executor roles do not claim automatic isolation and require manual worktree verification', async () => {
+    const executorFiles = ['executor.md', 'executor-qwen.md'];
+    for (const file of executorFiles) {
+      const content = await readFile(resolve(agentsDir, file), 'utf8');
+      const role = parseRoleFile(content, resolve(agentsDir, file));
+      const fullText = role.description + ' ' + role.prompt;
+      assert.ok(!/isolated\s+(git\s+)?worktree/i.test(fullText), `${file} claims automatic isolated worktree`);
+      assert.ok(!/automatic(ally)?\s+(creat|isolat)/i.test(fullText), `${file} claims automatic isolation or creation`);
+      assert.ok(/git worktree list/i.test(role.prompt), `${file} missing git worktree list verification`);
+      assert.ok(/git branch --show-current/i.test(role.prompt), `${file} missing branch identity check`);
+      assert.ok(/never create or remove worktrees/i.test(role.prompt), `${file} missing worktree creation/removal prohibition`);
+      assert.ok(/never.*push/i.test(role.prompt), `${file} missing push prohibition`);
+    }
+  });
+
   it('requires delimiter-only opening and closing frontmatter lines', () => {
     for (const content of [
       '---trailing\ndescription: bad\n---\nPrompt',
