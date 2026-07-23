@@ -11,7 +11,5 @@
     "qwen-token-plan/qwen3.6-flash",
     "qwen-token-plan/glm-5.2"
   ],
-  "packages": [
-    "npm:pi-web-access"
-  ]
+  "packages": []
 }

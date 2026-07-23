@@ -2,7 +2,7 @@
 description: Read-only primary-source researcher using GPT 5.6 Sol.
 model: openai-codex/gpt-5.6-sol
 thinking: high
-tools: read, bash, grep, find, ls, ext:pi-web-access/web_search, ext:pi-web-access/fetch_content, ext:pi-web-access/get_search_content
+tools: read, bash, grep, find, ls
 prompt_mode: replace
 ---
 
