@@ -20,6 +20,20 @@ describe('role compatibility', () => {
     }
   });
 
+  it('resolves every declared role skill to an installed skill directory', async () => {
+    const skillsDir = resolve('.pi/skills');
+    const entries = await readdir(skillsDir, { withFileTypes: true });
+    const installedSet = new Set(entries.filter((e) => e.isDirectory()).map((e) => e.name));
+    const files = (await readdir(agentsDir)).filter((file) => file.endsWith('.md'));
+    for (const file of files) {
+      const content = await readFile(resolve(agentsDir, file), 'utf8');
+      const role = parseRoleFile(content, resolve(agentsDir, file));
+      for (const skill of role.skills || []) {
+        assert.ok(installedSet.has(skill), `${file} declares skill '${skill}' which is not installed in .pi/skills/`);
+      }
+    }
+  });
+
   it('rejects every unsupported role key with its path and key name', () => {
     assert.throws(() => parseRoleFile('---\ndescription: unknown\nretry_count: 3\n---\nPrompt', '/roles/unknown.md'), /\/roles\/unknown\.md: unsupported role key 'retry_count'/);
     assert.throws(() => parseRoleFile('---\ndescription: background\nrun_in_background: true\n---\nPrompt', '/roles/bg.md'), /\/roles\/bg\.md: unsupported role key 'run_in_background'/);

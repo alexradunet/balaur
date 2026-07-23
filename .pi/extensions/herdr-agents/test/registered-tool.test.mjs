@@ -258,6 +258,12 @@ describe('registered herdr_agent extension acceptance matrix', { concurrency: fa
     assert.equal(tools.length, 0);
   });
 
+  it('suppresses tool registration when BALAUR_WORKER=1 in a full Herdr environment', async () => {
+    process.env.HERDR_ENV = '1'; process.env.HERDR_SOCKET_PATH = '/tmp/fake.sock'; process.env.HERDR_PANE_ID = 'w1:p1'; process.env.BALAUR_WORKER = '1';
+    const tools = []; const mod = await import(`${pathToFileURL(resolve(extensionDir, 'index.ts')).href}?worker-suppressed=${Date.now()}`); mod.default({ registerTool: (tool) => tools.push(tool), on: () => {} });
+    assert.equal(tools.length, 0, 'BALAUR_WORKER=1 must prevent herdr_agent registration even with full Herdr env');
+  });
+
   it('keeps a ready handle when auxiliary metadata reporting fails and persists custom snapshots', async () => {
     const server = new FakeHerdr({ handlers: { 'pane.report_metadata': () => ({ error: { code: 'metadata_failed', message: 'metadata unavailable' } }) } }); await server.start();
     try {

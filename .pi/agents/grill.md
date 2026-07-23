@@ -2,7 +2,6 @@
 description: Exploratory grilling agent (GPT 5.6 Sol, high thinking) — pressure-tests a feature idea or plan before the advisors run. Asks one question at a time, looks up facts from the codebase, waits for your decisions. Use as Phase 0 before advisor-sol/advisor-qwen.
 model: openai-codex/gpt-5.6-sol
 thinking: high
-skills: grilling
 tools: read, bash, grep, find, ls
 prompt_mode: replace
 ---

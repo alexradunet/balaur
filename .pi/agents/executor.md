@@ -2,7 +2,6 @@
 description: "Plan executor (GPT 5.6 Luna, high thinking) — implements a self-contained plan from plans/ in an isolated git worktree. Fast, cheap, follows the plan literally. Swap model to openai/gpt-5.6-terra + thinking: medium for harder plans."
 model: openai-codex/gpt-5.6-luna
 thinking: high
-skills: tdd
 tools: "*"
 prompt_mode: replace
 ---
