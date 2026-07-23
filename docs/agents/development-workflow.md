@@ -85,12 +85,12 @@ Pi runs as the `balaur` user without a built-in sandbox and the account has pass
 
 ### NetBird Cloud extension credential
 
-The project-local `.pi/extensions/balaur-netbird/` extension uses a dedicated NetBird **service user** with the **Network Admin** role. A human operator must create that service user and its Personal Access Token in the NetBird dashboard. Never use an account-owner or human-user token.
+The NetBird Cloud extension (in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository at `extensions/balaur-netbird/`) uses a dedicated NetBird **service user** with the **Network Admin** role. A human operator must create that service user and its Personal Access Token in the NetBird dashboard. Never use an account-owner or human-user token.
 
 Apply the NixOS configuration to create the protected group, directory, and empty credential file, then edit it without placing the token in shell history:
 
 ```bash
-sudo nixos-rebuild switch --flake ./nixos_dev_env
+sudo nixos-rebuild switch --flake ~/projects/balaur-dev-os/nixos_dev_env
 # Disconnect and reconnect NetBird SSH so balaur receives the new group.
 sudoedit /etc/balaur/netbird.env
 sudo chown root:balaur-secrets /etc/balaur/netbird.env
@@ -99,11 +99,11 @@ sudo chmod 0640 /etc/balaur/netbird.env
 
 The file contains only the `NETBIRD_API_TOKEN` assignment. Never print, source, copy, or inspect it through Pi, logs, issues, chat, command arguments, Nix expressions, or systemd environment settings. A fresh login is required after the group is first created; restarting Pi or `/reload` cannot refresh supplementary groups. After reconnecting, start Pi and use `/netbird doctor` to verify local readiness and Cloud access without exposing the credential.
 
-To rotate, create a replacement PAT for the same service user, replace the file contents with `sudoedit`, verify with `/netbird doctor`, and only then revoke the old PAT in NetBird. Do not print either token. See [ADR 0003](../adr/0003-netbird-pi-extension.md) and the [extension README](../../.pi/extensions/balaur-netbird/README.md).
+To rotate, create a replacement PAT for the same service user, replace the file contents with `sudoedit`, verify with `/netbird doctor`, and only then revoke the old PAT in NetBird. Do not print either token. See the [ADR](https://github.com/alexradunet/balaur-dev-os/blob/main/docs/adr/0003-netbird-pi-extension.md) and [extension README](https://github.com/alexradunet/balaur-dev-os/blob/main/extensions/balaur-netbird/README.md) in the balaur-dev-os environment repository.
 
 ## Herdr agent bridge
 
-The project-local Pi extension at `.pi/extensions/herdr-agents/` starts and controls interactive Pi workers in visible, persistent Herdr panes. It is the only active worker orchestration mechanism.
+The Herdr agent bridge extension (in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository at `extensions/herdr-agents/`) starts and controls interactive Pi workers in visible, persistent Herdr panes. It is the only active worker orchestration mechanism.
 
 ### Activation and safety
 
@@ -156,7 +156,8 @@ All model-visible output is truncated to 50 KB / 2000 lines. Full structured evi
 The pure modules and a fake-Herdr socket server have dependency-free Node tests:
 
 ```bash
-node --test ".pi/extensions/herdr-agents/test/*.test.mjs"
+cd ~/projects/balaur-dev-os
+node --test extensions/herdr-agents/test/*.test.mjs
 ```
 
 This covers role parsing, strict/latest-valid handle persistence, calendar timestamps, exact physical boundaries, malformed post-boundary AgentMessages, bounded discovery, typed protocol/status failures, and a registered-extension fake-Herdr harness. The harness uses deterministic deferred responses to exercise same-handle leases, unrelated-handle concurrency, fresh-status prompt admission, identity mismatch persistence, terminal/session conflict reconciliation, disabled close, timeout/abort release, and reload recovery without arbitrary sleeps.
@@ -166,7 +167,7 @@ This covers role parsing, strict/latest-valid handle persistence, calendar times
 The opt-in live smoke script starts the dedicated read-only `herdr-smoke` role in a harmless visible Pi worker, submits two nonce-distinct prompts in the same session, resolves the ID-backed JSONL before each boundary capture, proves each activity acknowledgement precedes a settled wait, collects only its matching post-prompt result, and does **not** auto-close its pane:
 
 ```bash
-node .pi/extensions/herdr-agents/scripts/live-smoke.mjs
+node ~/projects/balaur-dev-os/extensions/herdr-agents/scripts/live-smoke.mjs
 ```
 
 Run this from inside a Herdr pane (the lead session). It creates a visible sibling pane that remains open for manual inspection afterward. The script exits 0 only when both prompts return their exact matching nonces after acknowledgement and settled wait; timeout, blocked status, missing session identity, collection failure, or other text exits nonzero. Failed smoke panes are also retained for human cleanup.

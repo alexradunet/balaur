@@ -73,8 +73,9 @@ docs/                       Architecture and subsystem documentation
 widgets/                    Sandboxed HTML file-node widgets
 vendor/pixel-loom/          Self-hosted fonts and upstream design-system provenance
 .github/workflows/pages.yml Deploys the repository root as a static GitHub Pages artifact
-nixos_dev_env/              NixOS configuration for self-hosted deployment (NetBird, systemd services)
 ```
+
+The NixOS configuration and Pi custom extensions (NetBird Cloud extension, Herdr agent bridge) now live in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository, separate from this application repository. Install them into this checkout with `pi install -l git:github.com/alexradunet/balaur-dev-os@<ref>`.
 
 The storage foundation is Node-verified by the phase suites listed in §13. `MemoryVault`, `FsVault`, `MemoryIndex`, `LifeIndexer`, repositories, backup validation, and integrity auditing are reference/test/tooling surfaces. `IndexedDbVault` and the app's vault-first wiring require browser verification.
 
@@ -348,7 +349,13 @@ pi
 pi -c  # resume the latest Pi session
 ```
 
-Herdr is pinned by `nixos_dev_env/flake.nix`. NixOS user activation installs its Pi lifecycle/session integration and creates an SSH-oriented `~/.config/herdr/config.toml` only when that file is absent, so later user customization is preserved. Detach from Herdr with `Ctrl+B`, then `Q`; its panes and agents continue running.
+The NixOS configuration and Pi custom extensions now live in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository, checked out at `~/projects/balaur-dev-os`. Install the extensions into this checkout once so Pi can load them after the project is trusted:
+
+```bash
+pi install -l git:github.com/alexradunet/balaur-dev-os@<ref>
+```
+
+Herdr is pinned by the NixOS flake in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository. NixOS user activation installs its Pi lifecycle/session integration and creates an SSH-oriented `~/.config/herdr/config.toml` only when that file is absent, so later user customization is preserved. Detach from Herdr with `Ctrl+B`, then `Q`; its panes and agents continue running.
 
 The machine runs one Balaur development service:
 
@@ -363,10 +370,10 @@ Open <https://nixos.netbird.cloud>. Plain NetBird HTTP is intentionally unavaila
 sudo systemctl status balaur-dev caddy
 sudo systemctl restart balaur-dev caddy
 journalctl -u balaur-dev -u caddy -f
-sudo nixos-rebuild switch --flake ./nixos_dev_env
+sudo nixos-rebuild switch --flake ~/projects/balaur-dev-os/nixos_dev_env
 ```
 
-The project-local NetBird Pi extension requires a manually created NetBird service user with the **Network Admin** role and a Personal Access Token. NixOS creates `/etc/balaur/netbird.env` as `root:balaur-secrets` mode `0640`; it never places the token in the Nix store or a systemd environment. A human operator installs the token with `sudoedit`, then verifies without printing it:
+The NetBird Pi extension (in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository) requires a manually created NetBird service user with the **Network Admin** role and a Personal Access Token. NixOS creates `/etc/balaur/netbird.env` as `root:balaur-secrets` mode `0640`; it never places the token in the Nix store or a systemd environment. A human operator installs the token with `sudoedit`, then verifies without printing it:
 
 ```bash
 sudoedit /etc/balaur/netbird.env
@@ -376,15 +383,15 @@ sudo chmod 0640 /etc/balaur/netbird.env
 # Then run /netbird doctor inside Pi.
 ```
 
-For rotation, create the replacement PAT first, replace the file contents using `sudoedit`, run `/netbird doctor`, and only then revoke the old PAT in NetBird. Never print, source, log, commit, or pass either token through a command argument, Nix expression, systemd environment, issue, chat, or Pi session. See `docs/adr/0003-netbird-pi-extension.md` and `.pi/extensions/balaur-netbird/README.md`.
+For rotation, create the replacement PAT first, replace the file contents using `sudoedit`, run `/netbird doctor`, and only then revoke the old PAT in NetBird. Never print, source, log, commit, or pass either token through a command argument, Nix expression, systemd environment, issue, chat, or Pi session. See the ADR and extension README in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository (`docs/adr/0003-netbird-pi-extension.md` and `extensions/balaur-netbird/README.md`).
 
-Agents may run this rebuild automatically after changing `nixos_dev_env/`; passwordless `sudo` is configured. Verify the NixOS closure builds first when practical.
+Agents may run this rebuild automatically after changing the NixOS configuration in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository; passwordless `sudo` is configured. Verify the NixOS closure builds first when practical.
 
 Pi and Herdr come from independently pinned flakes. Update them with:
 
 ```bash
-nix flake update llm-agents herdr --flake ./nixos_dev_env
-sudo nixos-rebuild switch --flake ./nixos_dev_env
+nix flake update llm-agents herdr --flake ~/projects/balaur-dev-os/nixos_dev_env
+sudo nixos-rebuild switch --flake ~/projects/balaur-dev-os/nixos_dev_env
 ```
 
 Pi runs as `balaur`, has normal host access, and can elevate through passwordless `sudo`; it has no built-in sandbox. Review project packages before trusting them. A network disconnect terminates an in-flight request, but completed session history remains resumable with `pi -c`.

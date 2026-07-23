@@ -56,7 +56,7 @@ pkg install openssh
 ssh -p 2222 balaur@100.124.236.195
 ```
 
-The corresponding public key must be declared under `users.users.balaur.openssh.authorizedKeys` in `nixos_dev_env/configuration.nix`. Native OpenSSH password, keyboard-interactive, and root logins remain disabled.
+The corresponding public key must be declared under `users.users.balaur.openssh.authorizedKeys` in the NixOS configuration in the [balaur-dev-os](https://github.com/alexradunet/balaur-dev-os) environment repository. Native OpenSSH password, keyboard-interactive, and root logins remain disabled.
 
 Caddy uses a development CA that each client device must trust once. While connected to the expected NetBird peer, download its public root certificate (the initial `--insecure` is only for this bootstrap request), install it in the operating system or browser trust store, then restart the browser:
 
