@@ -110,13 +110,15 @@ Finish by writing `plans/README.md` with the recommended execution order, depend
 
 This skill produces plans; it does not execute them. When a plan is ready for implementation, the human lead uses visible Herdr workers through `herdr_agent`:
 
-1. **Start** a fresh implementer worker: `herdr_agent start` with the appropriate role (e.g. `implementer`). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
-2. **Prompt** with `herdr_agent prompt` using the handle, the full plan text, and the worktree path. Prompt admission requires exact `idle` or `blocked` status. One focused plan per worker.
-3. **Monitor** with `herdr_agent status` and `herdr_agent wait`. While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
-4. **Collect** the authoritative result with `herdr_agent collect`. Terminal reads via `herdr_agent read` are diagnostic only.
-5. **Inspect** the collected diff and verification evidence.
-6. **Start** a separate reviewer worker for independent review. One focused review per worker.
-7. **Close** each worker pane manually after retaining evidence.
+1. **Set worktree context.** Launch or focus a lead Pi session whose `ctx.cwd` is the exact assigned non-main worktree. Verify branch, worktree path, and clean status. `herdr_agent start` inherits the lead `ctx.cwd`.
+2. **Start** a fresh implementer worker: `herdr_agent start` with the appropriate role (e.g. `implementer`). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
+3. **Prompt** with `herdr_agent prompt` using the handle, the full plan text, and the worktree path. Prompt admission requires exact `idle` or `blocked` status. One focused plan per worker.
+4. **Monitor** with `herdr_agent status` and `herdr_agent wait`. While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
+5. **Collect** the authoritative result with `herdr_agent collect`. Terminal reads via `herdr_agent read` are diagnostic only.
+6. **Inspect** the collected diff and verification evidence.
+7. **Set worktree context for review.** Confirm the lead Pi session `ctx.cwd` is still the exact assigned non-main worktree. Verify branch, worktree path, and clean status. `herdr_agent start` inherits the lead `ctx.cwd`.
+8. **Start** a separate reviewer worker for independent review. One focused review per worker.
+9. **Close** each worker pane manually after retaining evidence.
 
 Parallel workers are allowed only for independent read-only work or separate worktrees. Workers never edit the same checkout concurrently. See [references/closing-the-loop.md](references/closing-the-loop.md) for the full handoff checklist.
 

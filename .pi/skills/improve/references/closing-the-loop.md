@@ -17,9 +17,10 @@ The founding rule survives unchanged: **the advisor never edits source code.** I
 ### Start an implementer worker
 
 1. Create or confirm the worktree at the absolute path.
-2. Start a fresh visible implementer: `herdr_agent start` with the `implementer` role (or `implementer-openai` as fallback). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
-3. Send the task with `herdr_agent prompt` using the handle, the full plan file text inlined, the absolute worktree path, and the executor preamble from the plan template. Prompt admission requires exact `idle` or `blocked` status.
-4. One focused plan per worker. Never give an implementer multiple plans or mixed tasks.
+2. Launch or focus a lead Pi session whose `ctx.cwd` is that exact assigned non-main worktree. Verify branch, worktree path, and clean status. `herdr_agent start` inherits the lead `ctx.cwd`.
+3. Start a fresh visible implementer: `herdr_agent start` with the `implementer` role (or `implementer-openai` as fallback). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
+4. Send the task with `herdr_agent prompt` using the handle, the full plan file text inlined, the absolute worktree path, and the executor preamble from the plan template. Prompt admission requires exact `idle` or `blocked` status.
+5. One focused plan per worker. Never give an implementer multiple plans or mixed tasks.
 
 ### Monitor and steer
 
@@ -36,10 +37,11 @@ The founding rule survives unchanged: **the advisor never edits source code.** I
 
 ### Start a reviewer worker
 
-1. Start a separate visible reviewer: `herdr_agent start` with the appropriate reviewer role (e.g. `reviewer-sol` for Review A, `reviewer-glm` for Review B). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
-2. Send the review task with `herdr_agent prompt` using the handle, the full plan text, the worktree path or branch name, and the implementer's collected report. Prompt admission requires exact `idle` or `blocked` status.
-3. One focused review per worker. Reviewers do not see each other's output.
-4. Collect and inspect each review independently.
+1. Launch or focus a lead Pi session whose `ctx.cwd` is the exact assigned non-main worktree. Verify branch, worktree path, and clean status. `herdr_agent start` inherits the lead `ctx.cwd`.
+2. Start a separate visible reviewer: `herdr_agent start` with the appropriate reviewer role (e.g. `reviewer-sol` for Review A, `reviewer-glm` for Review B). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
+3. Send the review task with `herdr_agent prompt` using the handle, the full plan text, the worktree path or branch name, and the implementer's collected report. Prompt admission requires exact `idle` or `blocked` status.
+4. One focused review per worker. Reviewers do not see each other's output.
+5. Collect and inspect each review independently.
 
 ### Revision cycles
 
