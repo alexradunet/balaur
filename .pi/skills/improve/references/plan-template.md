@@ -110,8 +110,7 @@ executor's environment. Skip the section otherwise.)
 - The human lead maintains `plans/README.md` status and assignment; the worker does not edit it.
 - Branch: `agent/<issue>-<slug>` (or the repo's branch-naming convention if one is evident)
 - Commit per step or per logical unit; message style: <match repo, e.g. conventional commits — include an example from `git log`>
-- The worker commits and reports; the lead owns push and pull-request decisions.
-- Do NOT push or open a PR unless the operator instructed it.
+- The worker commits and reports only; the lead owns push and pull-request decisions. Workers never push or open PRs.
 
 ## Steps
 

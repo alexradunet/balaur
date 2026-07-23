@@ -27,7 +27,7 @@ Read `README`, `AGENTS.md`, root config files, CI config, and directory structur
 
 ### Audit
 
-Audit across: correctness/bugs, security, performance, test coverage, tech debt & architecture, dependencies & migrations, DX & tooling, docs, direction (features & roadmap). Audit directly without dispatching subagents.
+Audit across: correctness/bugs, security, performance, test coverage, tech debt & architecture, dependencies & migrations, DX & tooling, docs, direction (features & roadmap). Audit directly without dispatching other workers or delegates.
 
 Every finding needs: evidence (`file:line`), impact, effort (S/M/L), risk of the fix, and confidence. No vibes-only findings. Vet each finding by opening the cited code yourself before including it.
 

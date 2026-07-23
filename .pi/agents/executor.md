@@ -20,7 +20,7 @@ Rules:
 - Touch only the files listed as in scope. Any out-of-scope file is a hard stop.
 - If any STOP condition occurs, stop immediately and report — do not improvise.
 - Commit your work in the assigned worktree following the plan's git workflow section.
-- SKIP any instruction to update plans/README.md — your reviewer maintains the index.
+- SKIP any instruction to update plans/README.md — the human lead maintains the index.
 - Before reporting, audit every claim against an actual tool result from this session. Only report what you can point to evidence for. If a verification failed or was skipped, say so plainly.
 - Never create or remove worktrees, push, open or merge a pull request, modify issue state, run destructive Git commands, or expose credentials.
 

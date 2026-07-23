@@ -25,7 +25,6 @@ The top-level Pi session is the lead. Change its model with `/model` when requir
 | Review A | `reviewer-sol`: GPT-5.6 Sol | `reviewer-qwen`: Qwen3.8 Max Preview |
 | Review B | `reviewer-glm`: GLM-5.2 | `reviewer-terra`: GPT-5.6 Terra |
 | Research | `researcher-sol`: GPT-5.6 Sol | `researcher-qwen`: Qwen3.8 Max Preview |
-| Exploration | built-in `Explore`: Qwen3.6 Flash | lead |
 
 Fallbacks are only for provider failure, rate limiting, exhausted quota, or a failed GLM tool-call probe. Correct poor output in the same lane. Report every provider switch.
 
@@ -38,20 +37,30 @@ When directed to implement an eligible issue, the human-steered lead:
 1. Reads the complete issue, comments, labels, linked specs, glossary, relevant ADRs, and code.
 2. Confirms `ready-for-agent`, unless the user explicitly overrides the gate.
 3. Records the base SHA and creates `agent/<issue>-<slug>` at `/tmp/balaur-workers/<issue>-<slug>` with `git worktree add`.
-4. Starts a visible implementer worker: `herdr_agent start` with the `implementer` role. The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
-5. Sends the task with `herdr_agent prompt` using the handle, the absolute worktree path, acceptance criteria, constraints, and required checks. Prompt admission requires exact `idle` or `blocked` status.
-6. Monitors with `herdr_agent status` and `herdr_agent wait`. While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
-7. Collects the authoritative result with `herdr_agent collect`; terminal reads via `herdr_agent read` are diagnostic only.
-8. Inspects the actual diff and command evidence from the collected result.
-9. Starts Review A and Review B as separate visible workers in parallel against the complete base-to-branch diff; neither receives the other's output.
-10. Collects both reviews. If material findings remain, starts a fresh implementer worker with the full issue, worktree path, findings, and current diff. At most two revision cycles are allowed.
-11. Stops and reports a blocked state if material findings remain after revision cycles; never weakens the gate.
-12. Runs final checks, pushes only the non-main branch, and opens—but never merges—a pull request linking the issue.
-13. Inspects retained pane output, then closes each worker pane manually.
+4. Launches or focuses a lead Pi session whose `ctx.cwd` is that exact assigned worktree before starting any worker. `herdr_agent start` inherits the lead's `ctx.cwd`, so the worker spawns inside the correct worktree only when the lead session is already focused there.
+5. Starts a visible implementer worker: `herdr_agent start` with the `implementer` role. The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
+6. Sends the task with `herdr_agent prompt` using the handle, the absolute worktree path, acceptance criteria, constraints, and required checks. Prompt admission requires exact `idle` or `blocked` status.
+7. Monitors with `herdr_agent status` and `herdr_agent wait`. While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
+8. Collects the authoritative result with `herdr_agent collect`; terminal reads via `herdr_agent read` are diagnostic only.
+9. Inspects the actual diff and command evidence from the collected result.
+10. Starts Review A and Review B as separate visible workers in parallel against the complete base-to-branch diff; neither receives the other's output.
+11. Collects both reviews. If material findings remain, starts a fresh implementer worker with the full issue, worktree path, findings, and current diff. At most two revision cycles are allowed.
+12. Stops and reports a blocked state if material findings remain after revision cycles; never weakens the gate.
+13. Runs final checks, pushes only the non-main branch, and opens—but never merges—a pull request linking the issue.
+14. Inspects retained pane output, then closes each worker pane manually.
 
 One focused task per worker prompt. A fresh visible implementer handles correction work; a separate visible reviewer handles review. Parallel workers are allowed only for independent read-only work or separate worktrees; workers never edit the same checkout concurrently. If a worker can no longer be resumed, start a fresh one with the full context. Never continue implementation in the main checkout.
 
 Pi tool allowlists guide workers but are not an OS sandbox. The human lead must inspect commands and diffs. Never force-push, push to `main`, reset/clean unrelated work, expose credentials, or let implementation/review workers push.
+
+## Rollback guidance
+
+If `herdr_agent` cannot operate after a `/reload` or restart:
+
+1. **Retain evidence.** Keep pane output, session transcripts, and handle-store entries for diagnosis.
+2. **Stop new workers.** Do not start additional `herdr_agent start` calls until the cause is identified.
+3. **Revert through normal Git review.** If the cutover change or its PR is the cause, revert it via a standard revert commit and PR — do not silently reinstall hidden compatibility shims or mutate `main` outside the reviewed workflow.
+4. **Restart or reload.** After the revert lands (or the root cause is otherwise resolved), restart Pi or `/reload` and verify the bridge registers cleanly before resuming work.
 
 ## Pull request content
 
