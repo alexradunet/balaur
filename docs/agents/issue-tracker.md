@@ -23,7 +23,7 @@ GitHub shares one number space across issues and pull requests. Resolve an ambig
 
 When a skill says to publish to the issue tracker, create a GitHub issue. When a skill says to fetch a ticket, read the full issue body, labels, author, and comments rather than relying on its title.
 
-## Agent implementation
+## Visible-worker implementation
 
 An issue labelled `ready-for-agent` is eligible for the visible-worker issue-to-PR workflow in `docs/agents/development-workflow.md`. User direction may explicitly override the label gate for one issue.
 

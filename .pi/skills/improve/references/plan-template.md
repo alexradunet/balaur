@@ -23,6 +23,15 @@ File naming: `plans/NNN-short-slug.md`, numbered in recommended execution order.
 > report — do not improvise. When done, report your results to the lead:
 > diff summary, verification evidence, and any STOP conditions encountered.
 > The human-steered lead maintains `plans/README.md` status and assignment.
+> The worker commits and reports only — the lead owns push and pull-request
+> decisions.
+>
+> **Pre-edit identity check (mandatory before any file edit)**:
+> 1. `pwd` matches the assigned worktree path.
+> 2. `git branch --show-current` is non-main.
+> 3. `git worktree list` confirms this worktree's identity.
+> 4. `git status --short` is clean (no unexpected modifications).
+> Stop and report if any check fails.
 >
 > **Drift check (run first)**: `git diff --stat <planned-at SHA>..HEAD -- <in-scope paths>`
 > If any in-scope file changed since this plan was written, compare the
@@ -97,8 +106,11 @@ executor's environment. Skip the section otherwise.)
 
 (Filled from recon — match the repo's observed conventions.)
 
-- Branch: `advisor/NNN-<slug>` (or the repo's branch-naming convention if one is evident)
+- The human lead creates the worktree and branch before assigning work; the worker never creates, removes, or switches worktrees.
+- The human lead maintains `plans/README.md` status and assignment; the worker does not edit it.
+- Branch: `agent/<issue>-<slug>` (or the repo's branch-naming convention if one is evident)
 - Commit per step or per logical unit; message style: <match repo, e.g. conventional commits — include an example from `git log`>
+- The worker commits and reports; the lead owns push and pull-request decisions.
 - Do NOT push or open a PR unless the operator instructed it.
 
 ## Steps
@@ -143,6 +155,10 @@ Stop and report back (do not improvise) if:
 - A step's verification fails twice after a reasonable fix attempt.
 - The fix appears to require touching an out-of-scope file.
 - You discover the assumption "<key assumption>" is false.
+- `pwd` does not match the assigned worktree path.
+- `git branch --show-current` is `main` or the default branch.
+- `git worktree list` does not confirm the expected worktree identity.
+- `git status --short` shows unexpected modifications before edits begin.
 
 ## Maintenance notes
 

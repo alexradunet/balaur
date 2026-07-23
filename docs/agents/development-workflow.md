@@ -1,6 +1,6 @@
 # Pi development workflow
 
-Balaur uses Pi interactively; there is no background issue poller, unattended scheduler, or automatic workflow controller.
+Balaur uses Pi interactively; there is no background issue poller or unattended scheduler.
 
 ## Product definition
 
@@ -55,7 +55,7 @@ Pi tool allowlists guide workers but are not an OS sandbox. The human lead must 
 
 ## Pull request content
 
-Include the linked issue and result, architectural/domain decisions, checks actually run, browser verification and pending gaps, both review outcomes and fallbacks, and residual risks. Opening the pull request ends agent autonomy; merge is a human decision.
+Include the linked issue and result, architectural/domain decisions, checks actually run, browser verification and pending gaps, both review outcomes and fallbacks, and residual risks. Opening the pull request ends the worker's role; merge is a human decision.
 
 ## Credentials and startup
 
