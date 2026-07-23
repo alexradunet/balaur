@@ -40,7 +40,7 @@ When directed to implement an eligible issue, the human-steered lead:
 3. Records the base SHA and creates `agent/<issue>-<slug>` at `/tmp/balaur-workers/<issue>-<slug>` with `git worktree add`.
 4. Starts a visible implementer worker: `herdr_agent start` with the `implementer` role. The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
 5. Sends the task with `herdr_agent prompt` using the handle, the absolute worktree path, acceptance criteria, constraints, and required checks. Prompt admission requires exact `idle` or `blocked` status.
-6. Monitors with `herdr_agent status` and `herdr_agent wait`; the human may focus the pane, steer with `herdr_agent prompt`, change model or settings, or interrupt at any time.
+6. Monitors with `herdr_agent status` and `herdr_agent wait`. While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
 7. Collects the authoritative result with `herdr_agent collect`; terminal reads via `herdr_agent read` are diagnostic only.
 8. Inspects the actual diff and command evidence from the collected result.
 9. Starts Review A and Review B as separate visible workers in parallel against the complete base-to-branch diff; neither receives the other's output.

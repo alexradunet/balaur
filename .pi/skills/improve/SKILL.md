@@ -112,7 +112,7 @@ This skill produces plans; it does not execute them. When a plan is ready for im
 
 1. **Start** a fresh implementer worker: `herdr_agent start` with the appropriate role (e.g. `implementer`). The call waits for interactive readiness and session identity, then returns a stable handle in `idle` state.
 2. **Prompt** with `herdr_agent prompt` using the handle, the full plan text, and the worktree path. Prompt admission requires exact `idle` or `blocked` status. One focused plan per worker.
-3. **Monitor** with `herdr_agent status` and `herdr_agent wait`. The human may focus the pane, steer with `herdr_agent prompt`, change model or settings, or interrupt at any time.
+3. **Monitor** with `herdr_agent status` and `herdr_agent wait`. While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
 4. **Collect** the authoritative result with `herdr_agent collect`. Terminal reads via `herdr_agent read` are diagnostic only.
 5. **Inspect** the collected diff and verification evidence.
 6. **Start** a separate reviewer worker for independent review. One focused review per worker.

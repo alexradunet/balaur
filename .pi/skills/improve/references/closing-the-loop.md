@@ -25,7 +25,7 @@ The founding rule survives unchanged: **the advisor never edits source code.** I
 
 - Use `herdr_agent status` to check progress.
 - Use `herdr_agent wait` to block until the worker reaches `idle`, `done`, or `blocked`.
-- The human may focus the pane, send corrective prompts with `herdr_agent prompt`, change the model with `/model`, or interrupt at any time.
+- While the worker is working, the human focuses the visible pane and steers or intervenes through the Pi UI (interrupt, corrective input when idle, `/model` and `/settings` as supported). `herdr_agent prompt` is admitted only from exact `idle` or `blocked` status; use `status`, `wait`, then `collect` for the result.
 - `blocked` is a settled actionable result — inspect it and decide whether to steer, retry, or abandon.
 
 ### Collect and inspect
