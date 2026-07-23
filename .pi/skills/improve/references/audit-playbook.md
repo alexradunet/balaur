@@ -1,6 +1,6 @@
 # Audit Playbook
 
-What to look for, per category. Each subagent (or direct audit pass) gets the relevant section plus the **Finding format** at the bottom. Adapt depth to repo size — a 2K-line CLI gets a lighter pass than a 500K-line monorepo.
+What to look for, per category. Each audit pass covers the relevant section plus the **Finding format** at the bottom. Adapt depth to repo size — a 2K-line CLI gets a lighter pass than a 500K-line monorepo.
 
 A finding is only a finding with evidence. "Probably has N+1 queries somewhere" is not a finding; `orders/api.ts:142 issues one query per order item inside a loop` is.
 
@@ -107,7 +107,7 @@ Direction findings use the standard format with two adaptations: **Impact** is p
 
 ## Finding format
 
-Every finding, from every category and every subagent, comes back in this shape:
+Every finding, from every category, comes back in this shape:
 
 ```markdown
 ### [CATEGORY-NN] Short imperative title

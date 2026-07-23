@@ -25,15 +25,6 @@ When a skill says to publish to the issue tracker, create a GitHub issue. When a
 
 ## Agent implementation
 
-An issue labelled `ready-for-agent` is eligible for the autonomous issue-to-PR workflow in `docs/agents/development-workflow.md`. User direction may explicitly override the label gate for one issue.
+An issue labelled `ready-for-agent` is eligible for the visible-worker issue-to-PR workflow in `docs/agents/development-workflow.md`. User direction may explicitly override the label gate for one issue.
 
-The agent may create an isolated worktree, branch, commits, push that non-main branch, and open a pull request. It must never merge the pull request or push directly to `main`.
-
-## Wayfinding operations
-
-The `wayfinder` skill uses one map issue with child issues as tickets:
-
-- Label maps `wayfinder:map` and children `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`, or `wayfinder:task`.
-- Prefer GitHub sub-issues and native issue dependencies. If unavailable, use `Part of #<map>` and `Blocked by: #<issue>` lines.
-- Claim a frontier issue with `gh issue edit <number> --add-assignee @me` only when beginning work.
-- Resolve a research child by posting its durable conclusion and closing it; do not close or rewrite the parent map unless requested.
+The human-steered lead starts visible workers that create an isolated worktree, branch, commits, push that non-main branch, and open a pull request. Workers must never merge the pull request or push directly to `main`.

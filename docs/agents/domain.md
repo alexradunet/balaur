@@ -10,7 +10,7 @@ Read `CONTEXT.md`, then read the ADRs relevant to the subsystem. Also read the s
 
 Use the glossary's exact terms in issue titles, specs, implementation plans, APIs, and tests. Avoid synonyms that collapse important distinctions such as entity versus placement, schedule versus deadline, or canonical data versus projection.
 
-When a necessary term is missing or ambiguous, use `domain-modeling` through `grill-with-docs` to resolve it and update `CONTEXT.md`. Record a decision in `docs/adr/` when it establishes or changes an architectural boundary.
+When a necessary term is missing or ambiguous, resolve it through direct investigation and discussion, then update `CONTEXT.md`. Record a decision in `docs/adr/` when it establishes or changes an architectural boundary.
 
 ## Conflicts
 

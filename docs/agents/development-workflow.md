@@ -1,13 +1,13 @@
 # Pi development workflow
 
-Balaur uses Pi interactively; there is no background issue poller or unattended scheduler. `.pi/subagents.json` disables scheduled subagents.
+Balaur uses Pi interactively; there is no background issue poller, unattended scheduler, or automatic workflow controller.
 
 ## Product definition
 
 For unclear or substantial product work:
 
-1. Use the `grilling` skill to resolve requirements, vocabulary, and architectural decisions.
-2. Use `prototype` only when a risky interaction or technical seam needs evidence.
+1. Resolve requirements, vocabulary, and architectural decisions through direct investigation and discussion.
+2. Build a prototype only when a risky interaction or technical seam needs evidence.
 3. Publish the agreed behavior and testing decisions in the issue or spec.
 4. Split large work into dependency-aware tracer-bullet issues.
 5. Implement only after an issue is `ready-for-agent`.
@@ -33,21 +33,24 @@ Before relying on Review B, run a harmless GLM-5.2 probe that searches and reads
 
 ## Issue to pull request
 
-When directed to implement an eligible issue, the lead:
+When directed to implement an eligible issue, the human-steered lead:
 
 1. Reads the complete issue, comments, labels, linked specs, glossary, relevant ADRs, and code.
 2. Confirms `ready-for-agent`, unless the user explicitly overrides the gate.
 3. Records the base SHA and creates `agent/<issue>-<slug>` at `/tmp/balaur-workers/<issue>-<slug>` with `git worktree add`.
-4. Launches `implementer` with the absolute worktree path, acceptance criteria, constraints, and required checks.
-5. Inspects the actual diff and command evidence.
-6. Launches Review A and Review B independently and in parallel against the complete base-to-branch diff; neither receives the other's output.
-7. Resumes the implementer with actionable findings, then reruns both complete reviews. At most two revision cycles are allowed.
-8. Stops and reports a blocked state if material findings remain; never weakens the gate.
-9. Runs final checks, pushes only the non-main branch, and opens—but never merges—a pull request linking the issue.
+4. Starts a visible implementer worker: `herdr_agent start` with the `implementer` role and the absolute worktree path, acceptance criteria, constraints, and required checks in the prompt.
+5. Monitors with `herdr_agent status` and `herdr_agent wait`; the human may focus the pane, steer with `herdr_agent prompt`, change model or settings, or interrupt at any time.
+6. Collects the authoritative result with `herdr_agent collect`; terminal reads via `herdr_agent read` are diagnostic only.
+7. Inspects the actual diff and command evidence from the collected result.
+8. Starts Review A and Review B as separate visible workers in parallel against the complete base-to-branch diff; neither receives the other's output.
+9. Collects both reviews. If material findings remain, starts a fresh implementer worker with the full issue, worktree path, findings, and current diff. At most two revision cycles are allowed.
+10. Stops and reports a blocked state if material findings remain after revision cycles; never weakens the gate.
+11. Runs final checks, pushes only the non-main branch, and opens—but never merges—a pull request linking the issue.
+12. Inspects retained pane output, then closes each worker pane manually.
 
-If an implementer can no longer be resumed, launch a fresh one with the full issue, worktree path, findings, and current diff. Never continue implementation in the main checkout.
+One focused task per worker prompt. A fresh visible implementer handles correction work; a separate visible reviewer handles review. Parallel workers are allowed only for independent read-only work or separate worktrees; workers never edit the same checkout concurrently. If a worker can no longer be resumed, start a fresh one with the full context. Never continue implementation in the main checkout.
 
-Pi tool allowlists guide agents but are not an OS sandbox. The lead must inspect commands and diffs. Never force-push, push to `main`, reset/clean unrelated work, expose credentials, or let implementation/review agents push.
+Pi tool allowlists guide workers but are not an OS sandbox. The human lead must inspect commands and diffs. Never force-push, push to `main`, reset/clean unrelated work, expose credentials, or let implementation/review workers push.
 
 ## Pull request content
 
@@ -86,7 +89,7 @@ To rotate, create a replacement PAT for the same service user, replace the file 
 
 ## Herdr agent bridge
 
-The project-local Pi extension at `.pi/extensions/herdr-agents/` starts and controls interactive Pi workers in visible, persistent Herdr panes. It is distinct from and does not remove `npm:@tintinweb/pi-subagents`, which remains installed until the final cutover.
+The project-local Pi extension at `.pi/extensions/herdr-agents/` starts and controls interactive Pi workers in visible, persistent Herdr panes. It is the only active worker orchestration mechanism.
 
 ### Activation and safety
 
