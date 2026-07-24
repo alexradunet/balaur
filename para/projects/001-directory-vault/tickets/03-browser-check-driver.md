@@ -1,6 +1,6 @@
 ---
 phase: ticket
-status: in-progress
+status: review
 project: 001-directory-vault
 ticket: 03
 blocked-by: [02]
