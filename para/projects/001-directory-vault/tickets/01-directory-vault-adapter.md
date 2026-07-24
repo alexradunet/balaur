@@ -1,11 +1,11 @@
 ---
 phase: ticket
-status: ready
+status: review
 project: 001-directory-vault
 ticket: 01
 blocked-by: []
-worker: ""
-branch: ""
+worker: "9481fd6"
+branch: "001-directory-vault"
 shared-blast-radius: false
 ---
 
