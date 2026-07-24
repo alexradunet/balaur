@@ -376,16 +376,6 @@
   }
   .tiny-btn:hover { color: var(--balaur-action-primary); }
   #newCanvas:hover, #newGroup:hover { transform: rotate(90deg); }
-  .jd-button {
-    border: 1px solid var(--balaur-border-default);
-    border-radius: var(--balaur-radius-control);
-    font: 700 8px var(--balaur-font-mono);
-    letter-spacing: .04em;
-  }
-  .jd-button:hover, .jd-button.active {
-    border-color: var(--balaur-action-assistant);
-    color: var(--balaur-action-assistant);
-  }
   .nav-item {
     position: relative;
     display: flex;

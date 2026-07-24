@@ -46,7 +46,7 @@
 
     <aside class="sidebar" id="sidebar" aria-label="Canvas library">
       <nav aria-label="Canvas hierarchy">
-        <div class="section-heading"><p class="section-label">CANVASES</p><span class="section-actions"><button class="tiny-btn jd-button" id="johnnyDecimalState" title="Johnny Decimal index" aria-label="Open Johnny Decimal index">JD</button><button class="tiny-btn" id="newCanvas" title="Add sub-canvas" aria-label="Add sub-canvas">＋</button></span></div>
+        <div class="section-heading"><p class="section-label">CANVASES</p><span class="section-actions"><button class="tiny-btn" id="newCanvas" title="Add sub-canvas" aria-label="Add sub-canvas">＋</button></span></div>
         <balaur-workspace-nav id="canvasList" mode="canvases"></balaur-workspace-nav>
       </nav>
 
@@ -157,31 +157,6 @@
         <div class="settings-test" id="taskResult" role="status"></div>
       </div>
       <footer><span></span><button type="button" class="button ghost" id="cancelTaskDialog">Cancel</button><button type="submit" class="button primary" id="createTaskButton">Create task</button></footer>
-    </form>
-    </balaur-dialog-frame>
-  </dialog>
-
-  <dialog class="settings-dialog jd-dialog" id="johnnyDecimalDialog">
-    <balaur-dialog-frame>
-    <form id="johnnyDecimalForm">
-      <header><div><span>#</span><div><b>Johnny Decimal index</b><small>Areas → categories → numbered items</small></div></div><button type="button" id="closeJohnnyDecimal" aria-label="Close">×</button></header>
-      <div class="settings-body">
-        <div class="settings-notice jd-starter"><div><b>Starter space: life at 30</b><p>Load a fictional male life index with 9 areas, practical categories, projects, routines, and example tasks.</p></div><button type="button" class="button ghost" id="loadJDStarter">Load starter</button></div>
-        <section class="jd-lookup" aria-labelledby="jdLookupHeading">
-          <b id="jdLookupHeading">Go to an ID</b>
-          <div class="jd-lookup-row"><input id="jdLookup" list="jdLookupList" placeholder="11.03" autocomplete="off"><datalist id="jdLookupList"></datalist><button type="button" class="button ghost" id="goToJD">Go</button></div>
-          <div class="settings-test" id="jdLookupResult" role="status"></div>
-        </section>
-        <hr>
-        <section aria-labelledby="jdCreateHeading">
-          <div class="jd-section-heading"><b id="jdCreateHeading">Create <span id="jdKindLabel">entry</span></b><small>IDs are validated and sorted automatically.</small></div>
-          <label class="settings-field"><span>Parent canvas</span><select id="jdParent" required></select></label>
-          <div class="jd-field-row"><label class="settings-field"><span>Johnny Decimal ID</span><input id="jdCode" required></label><label class="settings-field"><span>Title</span><input id="jdTitle" required placeholder="Finance"></label></div>
-          <label class="settings-field" id="jdItemFormatField" hidden><span>Item format</span><select id="jdItemFormat"><option value="canvas">Nested canvas</option><option value="note">Text note</option></select></label>
-          <div class="settings-test" id="jdCreateResult" role="status"></div>
-        </section>
-      </div>
-      <footer><button type="button" class="button ghost" id="exportJDWorkspace">Export whole space</button><span></span><button type="button" class="button ghost" id="cancelJohnnyDecimal">Cancel</button><button type="submit" class="button primary" id="createJDEntry">Create entry</button></footer>
     </form>
     </balaur-dialog-frame>
   </dialog>

@@ -84,9 +84,7 @@
 
     .zoom-tools { display: none; }
     .ai-panel { inset: 70px 8px 8px; width: auto; }
-    .jd-field-row, .task-field-row { grid-template-columns: 1fr; }
-    .jd-section-heading { display: block; }
-    .jd-section-heading small { display: block; margin-block-start: 3px; }
+    .task-field-row { grid-template-columns: 1fr; }
     .settings-dialog { max-height: calc(100dvh - 16px); }
     .settings-dialog form > footer { flex-wrap: wrap; }
     .settings-dialog form > footer .button { min-height: var(--balaur-target-min); }

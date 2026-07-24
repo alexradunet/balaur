@@ -330,7 +330,7 @@
     letter-spacing: .08em;
     text-transform: uppercase;
   }
-  .settings-field :where(input, textarea, select), .jd-lookup-row input {
+  .settings-field :where(input, textarea, select) {
     width: 100%;
     border: 1px solid var(--balaur-border-default);
     border-radius: var(--balaur-radius-control);
@@ -342,7 +342,7 @@
   }
   .settings-field :where(input, select) { height: 38px; padding-block: 0; }
   .settings-field textarea { height: 145px; resize: vertical; line-height: 1.55; }
-  .settings-field :where(input, textarea, select):focus-visible, .jd-lookup-row input:focus-visible { border-color: var(--balaur-border-focus); }
+  .settings-field :where(input, textarea, select):focus-visible { border-color: var(--balaur-border-focus); }
   .key-input { display: flex; }
   .key-input input { border-radius: var(--balaur-radius-control) 0 0 var(--balaur-radius-control); }
   .key-input button {
@@ -490,22 +490,4 @@
   .task-dialog { width: min(520px, calc(100vw - 24px)); }
   .task-dialog textarea { height: 82px; }
   .task-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-
-  .jd-dialog { width: min(540px, calc(100vw - 24px)); }
-  .jd-dialog [hidden] { display: none !important; }
-  .jd-dialog header span { background: var(--balaur-color-leather-600); color: var(--balaur-color-bone-100); font: 700 13px var(--balaur-font-mono); }
-  .jd-dialog .settings-body { display: grid; gap: 18px; }
-  .jd-starter { display: flex; align-items: center; gap: 14px; margin: 0; }
-  .jd-starter > div { flex: 1; min-width: 0; }
-  .jd-starter .button { flex: 0 0 auto; font-size: 9px; }
-  .jd-dialog hr { width: 100%; height: 1px; margin: 0; border: 0; background: var(--balaur-border-default); }
-  .jd-lookup > b, .jd-section-heading > b { display: block; font-size: 11px; }
-  .jd-lookup-row { display: grid; grid-template-columns: 1fr auto; gap: 7px; margin-block-start: 9px; }
-  .jd-lookup-row input { min-width: 0; height: 38px; }
-  .jd-lookup .settings-test { margin-block-start: 5px; }
-  .jd-section-heading { display: flex; align-items: baseline; justify-content: space-between; margin-block-end: 14px; }
-  .jd-section-heading small { color: var(--balaur-content-on-paper-muted); font-size: 9px; }
-  .jd-field-row { display: grid; grid-template-columns: 160px 1fr; gap: 9px; }
-  .jd-dialog .settings-field { margin-block-end: 10px; }
-  .jd-dialog .settings-test { margin-block-start: 2px; }
 }

@@ -41,55 +41,6 @@ const demoCanvas = {
   ]
 };
 
-const JD_LIFE_STARTER = [
-  ["10-19","Life admin",[
-    ["11","Identity & documents",[["11.01","Key documents","Keep the essentials findable and current.\n\n- [ ] Scan passport and driving licence\n- [ ] Record renewal dates"],["11.02","Insurance & renewals","One place for policies, memberships, and annual renewals.\n\n- [ ] Review coverage\n- [ ] Cancel anything unused"]]],
-    ["12","Planning & reviews",[["12.01","Annual direction","A practical plan for work, health, money, and relationships at age 30.\n\n- [ ] Choose three outcomes\n- [ ] Define what to stop doing"],["12.02","Weekly review","Clear loose ends and choose the next important actions.\n\n- [ ] Empty inboxes\n- [ ] Review calendar\n- [ ] Plan the week"]]]
-  ]],
-  ["20-29","Health & fitness",[
-    ["21","Training",[["21.01","Strength routine","Three simple full-body sessions each week.\n\n- [ ] Monday\n- [ ] Wednesday\n- [ ] Friday"],["21.02","Comfortable 10K","Build an aerobic base without turning every run into a test.\n\n- [ ] Two easy runs\n- [ ] One longer run"]]],
-    ["22","Care & recovery",[["22.01","Preventive appointments","A personal reminder list, not medical advice.\n\n- [ ] Book routine checkup\n- [ ] Book dental cleaning"],["22.02","Sleep system","Protect a consistent wind-down and wake time.\n\n- [ ] Screens away by 22:30\n- [ ] Prepare tomorrow before bed"]]]
-  ]],
-  ["30-39","Career",[
-    ["31","Current role",[["31.01","Quarterly outcomes","Make the valuable work visible and finish fewer things better.\n\n- [ ] Confirm priorities with manager\n- [ ] Ship the main project"],["31.02","Wins & evidence log","Capture outcomes, feedback, and measurable impact for future reviews."]]],
-    ["32","Development",[["32.01","Skill roadmap","Build deeper technical judgment and clearer leadership communication.\n\n- [ ] Pick one course\n- [ ] Practice through a real project"],["32.02","Professional network","Maintain a small, genuine network.\n\n- [ ] Reconnect with two peers\n- [ ] Attend one local event"]]]
-  ]],
-  ["40-49","Money",[
-    ["41","Cash flow",[["41.01","Monthly budget","Give fixed costs, everyday spending, and fun their own limits.\n\n- [ ] Reconcile accounts\n- [ ] Set next month's targets"],["41.02","Subscriptions","Review recurring costs before they become invisible.\n\n- [ ] Audit quarterly"]]],
-    ["42","Safety & investing",[["42.01","Emergency fund","Build a calm cash buffer for unexpected changes.\n\nProgress: 55%"],["42.02","Long-term investing","Keep a simple record of retirement contributions and long-term allocation.\n\n- [ ] Review annually"]]]
-  ]],
-  ["50-59","Home & systems",[
-    ["51","Apartment",[["51.01","Maintenance","Small recurring jobs that keep the home pleasant.\n\n- [ ] Replace filters\n- [ ] Test smoke alarm\n- [ ] Deep-clean kitchen"],["51.02","Household inventory","Record important purchases, warranties, and replacement dates."]]],
-    ["52","Digital & mobility",[["52.01","Digital security","Keep accounts recoverable and devices protected.\n\n- [ ] Review password manager\n- [ ] Verify backups"],["52.02","Getting around","Track bicycle, public-transport, or car maintenance in one place."]]]
-  ]],
-  ["60-69","People",[
-    ["61","Family",[["61.01","Family rhythm","Make regular calls and visits intentional rather than accidental.\n\n- [ ] Plan next visit"],["61.02","Dates & gifts","Birthdays, celebrations, and gift ideas without last-minute stress."]]],
-    ["62","Friends & community",[["62.01","Friend circles","Keep a lightweight list of people to invite, call, or check in with."],["62.02","Community","Find a recurring place to contribute and meet people locally.\n\n- [ ] Try one volunteer event"]]]
-  ]],
-  ["70-79","Learning & fun",[
-    ["71","Learning",[["71.01","Reading queue","Books worth reading next, with a sentence about why each matters."],["71.02","Course roadmap","Finish one structured course before collecting another.\n\n- [ ] Schedule two weekly sessions"]]],
-    ["72","Hobbies",[["72.01","Guitar practice","A small repertoire and a sustainable practice rhythm.\n\n- [ ] Practice 20 minutes twice weekly"],["72.02","Outdoor weekends","Hikes, rides, and screen-light weekends to plan with friends."]]]
-  ]],
-  ["80-89","Travel",[
-    ["81","Upcoming",[["81.01","Autumn city break","Choose dates, set a budget, and leave space for unplanned wandering.\n\n- [ ] Book transport\n- [ ] Reserve accommodation"],["81.02","Travel checklist","Reusable packing, document, and home-shutdown checklist."]]],
-    ["82","Someday",[["82.01","Japan","A long-range trip idea: seasons, regions, rough budget, and experiences."],["82.02","Long weekends","Nearby places suitable for a low-friction three-day break."]]]
-  ]],
-  ["90-99","Archive",[
-    ["91","Completed & learned",[["91.01","Completed projects","Move finished commitments here with links back to their outcomes."],["91.02","Lessons learned","Short reflections worth carrying into the next season of life."]]]
-  ]]
-];
-const JD_LIFE_STARTER_TASKS = [
-  ["12","Complete the weekly review","Clear inboxes, review the calendar, and choose three outcomes."],
-  ["21","Schedule three training sessions","Place realistic strength sessions on this week’s calendar."],
-  ["22","Book the routine checkup","Choose a provider and reserve a suitable appointment."],
-  ["31","Confirm quarterly priorities","Align the next outcomes with the manager before doing more work."],
-  ["41","Reconcile this month’s accounts","Compare transactions with the monthly budget."],
-  ["51","Replace apartment filters","Check the maintenance list and order replacements if needed."],
-  ["61","Plan the next family visit","Offer two dates and agree on the next visit."],
-  ["71","Choose the next book","Pick one book from the queue before adding another."],
-  ["81","Choose dates for the autumn trip","Check the calendar and agree on a realistic budget window."]
-];
-
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -100,7 +51,7 @@ const WORKSPACE_KEY="orbit-workspace-v1",ROOT_CANVAS_ID="canvas-root";
 // (bootCanvasApp). They begin as a valid placeholder workspace so module-eval
 // event wiring (closures) can attach safely before boot completes; real reads
 // happen at call-time, after boot reassigns these bindings.
-let workspace={version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,johnnyDecimal:{enabled:false,entries:{}},canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Loading…",parentId:null,portalNodeId:null,path:null,document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
+let workspace={version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Loading…",parentId:null,portalNodeId:null,path:null,document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
 let currentCanvasId=ROOT_CANVAS_ID;
 let documentData=workspace.canvases[ROOT_CANVAS_ID].document;
 let camera={x:80,y:55,zoom:.78};
@@ -160,12 +111,13 @@ function loadDocument() {
   return clone(demoCanvas);
 }
 function freshWorkspace(document=loadDocument()){
-  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,johnnyDecimal:{enabled:false,entries:{}},canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:localStorage.getItem("orbit-title")||"Life OS — Summer",parentId:null,portalNodeId:null,path:null,document,camera:{x:80,y:55,zoom:.78}}}};
+  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:localStorage.getItem("orbit-title")||"Life OS — Summer",parentId:null,portalNodeId:null,path:null,document,camera:{x:80,y:55,zoom:.78}}}};
 }
 function normalizeWorkspace(parsed){
-  parsed.johnnyDecimal ||= {enabled:false,entries:{}};parsed.johnnyDecimal.entries ||= {};
+  delete parsed.johnnyDecimal; // legacy JD index (ADR-0003)
   for(const record of Object.values(parsed.canvases)){
-    if(record.jdCode&&!record.jdKind)record.jdKind=parsed.johnnyDecimal.entries[record.jdCode]?.kind;
+    delete record.jdCode; delete record.jdTitle; delete record.jdKind;
+    if(record.kind!=="hub"&&record.kind!=="project")delete record.kind;
     if(record.id===parsed.rootId){record.path=null;continue;}
     if(!record.path){const parent=parsed.canvases[record.parentId],portal=parent?.document.nodes?.find(node=>node.id===record.portalNodeId);record.path=portal?.file||`canvases/${record.id}.canvas`;}
   }
@@ -178,12 +130,12 @@ function loadWorkspace(){
       parsed.rootId=canvases[parsed.rootId]?parsed.rootId:Object.keys(canvases)[0];parsed.activeId=canvases[parsed.activeId]?parsed.activeId:parsed.rootId;return normalizeWorkspace(parsed);
     }
   }catch(_){}
-  return localStorage.getItem("orbit-canvas-v1")?freshWorkspace():createJohnnyDecimalStarterWorkspace();
+  return freshWorkspace();
 }
 
 
 function saveCurrentCanvasState(){
-  const record=workspace.canvases[currentCanvasId];if(!record)return;record.document=documentData;record.camera={...camera};const value=$("#canvasTitle")?.value.trim();if(value){if(record.jdCode){const formatted=formatJDCode(record.jdCode),title=(value.startsWith(formatted)?value.slice(formatted.length).replace(/^\s*(?:—|-)\s*/,""):value)||record.jdTitle||"Untitled";record.jdTitle=title;record.title=jdDisplayTitle(record.jdCode,title);const entry=jdEntries()[record.jdCode];if(entry)entry.title=title;}else record.title=value;}
+  const record=workspace.canvases[currentCanvasId];if(!record)return;record.document=documentData;record.camera={...camera};const value=$("#canvasTitle")?.value.trim();if(value)record.title=value;
 }
 function enqueueMutation(task){
   const run=mutationQueue.then(task,task);
@@ -248,7 +200,7 @@ function setIndexStatus(message, detail = message) {
 function setCanonicalWritable(writable, message = "") {
   canonicalWritable = writable;
   document.documentElement.toggleAttribute("data-canonical-read-only", !writable);
-  const selectors = ["[data-add]", "#newGroup", "#newCanvas", "#loadJDStarter", "#createTaskButton", "#newTodayTask", "#todayQuickAdd input", "#todayQuickAdd button", "#resetDemo", "#importButton"];
+  const selectors = ["[data-add]", "#newGroup", "#newCanvas", "#createTaskButton", "#newTodayTask", "#todayQuickAdd input", "#todayQuickAdd button", "#resetDemo", "#importButton"];
   for (const selector of selectors) $$(selector).forEach((control) => { control.disabled = !writable; control.title = writable ? "" : (message || "Canonical files are read-only until repaired or restored."); });
   if(!writable&&message)setIndexStatus("Files read-only · repair/export required",message);
 }
@@ -291,20 +243,6 @@ function configureLifeRuntime(vault) {
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
   });
 }
-async function seedStarterTasks() {
-  for (const [categoryCode, title, notes] of JD_LIFE_STARTER_TASKS) {
-    const canvasId = workspace.johnnyDecimal.entries[categoryCode]?.canvasId;
-    if (canvasId) {
-      await taskRepository.createTask({
-        title,
-        body: notes,
-        canvasId,
-        status: "inbox",
-        geometry: { x: 0, y: 240, width: 310, height: 180, color: "5", id: `starter-task-node-${categoryCode}` },
-      });
-    }
-  }
-}
 // Vault-first asynchronous boot. The only post-migration source of truth is the
 // IndexedDB vault; the MemoryIndex is rebuilt from its files for every session.
 async function bootCanvasApp(){
@@ -323,10 +261,6 @@ async function bootCanvasApp(){
     configureLifeRuntime(vault);
     await seedBundledWidget(vault);
     for (const diagnostic of result.diagnostics) console.warn("Vault workspace diagnostic", diagnostic);
-    if (firstRun) {
-      await seedStarterTasks();
-      workspace = (await store.load()).workspace;
-    }
     await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild()]);
     const stats = lifeIndexer.stats();
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
@@ -367,44 +301,7 @@ function canvasDepth(id){
 function canvasTrail(id=currentCanvasId){
   const trail=[],seen=new Set();while(workspace.canvases[id]&&!seen.has(id)){seen.add(id);trail.unshift(workspace.canvases[id]);id=workspace.canvases[id].parentId;}return trail;
 }
-function canonicalJDCode(value=""){return String(value).trim().replace(/[–—]/g,"-");}
-function formatJDCode(code=""){return canonicalJDCode(code).replace(/^(\d{2})-(\d{2})$/,"$1–$2");}
-function jdDisplayTitle(code,title){return `${formatJDCode(code)} — ${String(title).trim()}`;}
 function slug(value){return String(value).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,54)||"canvas";}
-function jdEntries(){return workspace.johnnyDecimal?.entries||{};}
-function jdCodeFromNode(node){return node?.type==="text"?canonicalJDCode(node.text.match(/<!--\s*orbit:jd\s+([^\s]+)\s*-->/i)?.[1]||""):"";}
-function jdEntryForCanvas(canvasId){return Object.values(jdEntries()).find(entry=>entry.canvasId===canvasId)||null;}
-function jdContainerKind(canvasId){if(canvasId===workspace.rootId)return "root";return jdEntryForCanvas(canvasId)?.kind||null;}
-function jdChildKind(canvasId){return {root:"area",area:"category",category:"item"}[jdContainerKind(canvasId)]||null;}
-function jdSortValue(code=""){const value=canonicalJDCode(code);if(/^\d{2}-\d{2}$/.test(value))return Number(value.slice(0,2))*1000;if(/^\d{2}$/.test(value))return Number(value)*1000+1;if(/^\d{2}\.\d{2}$/.test(value))return Number(value.slice(0,2))*1000+Number(value.slice(3))+2;return 999999;}
-function validateJDCode(code,parentCanvasId){
-  code=canonicalJDCode(code);const kind=jdChildKind(parentCanvasId),parent=jdEntryForCanvas(parentCanvasId);
-  if(!kind)throw new Error("Choose the root index, an area, or a category as the parent.");
-  if(jdEntries()[code])throw new Error(`${formatJDCode(code)} is already in use.`);
-  if(kind==="area"){const match=code.match(/^(\d{2})-(\d{2})$/),start=match&&Number(match[1]),end=match&&Number(match[2]);if(!match||start%10||end!==start+9)throw new Error("Area IDs must be ranges such as 10-19.");}
-  if(kind==="category"){const number=Number(code),range=canonicalJDCode(parent.code).split("-").map(Number);if(!/^\d{2}$/.test(code)||number<range[0]||number>range[1])throw new Error(`Choose a category from ${formatJDCode(parent.code)}.`);}
-  if(kind==="item"&&!new RegExp(`^${parent.code.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\.(?:0[1-9]|[1-9]\\d)$`).test(code))throw new Error(`Item IDs must run from ${parent.code}.01 to ${parent.code}.99.`);
-  return {code,kind};
-}
-function suggestJDCode(parentCanvasId){
-  const kind=jdChildKind(parentCanvasId),used=new Set(Object.keys(jdEntries()).map(canonicalJDCode));
-  if(kind==="area"){for(const start of [10,20,30,40,50,60,70,80,90,0]){const code=`${String(start).padStart(2,"0")}-${String(start+9).padStart(2,"0")}`;if(!used.has(code))return code;}}
-  const parent=jdEntryForCanvas(parentCanvasId);if(kind==="category"){const [start,end]=canonicalJDCode(parent.code).split("-").map(Number);for(let number=start;number<=end;number++){const code=String(number).padStart(2,"0");if(!used.has(code))return code;}}
-  if(kind==="item")for(let number=1;number<=99;number++){const code=`${parent.code}.${String(number).padStart(2,"0")}`;if(!used.has(code))return code;}
-  return "";
-}
-function starterId(prefix,code){return `${prefix}-${canonicalJDCode(code).replace(/[^0-9]+/g,"-").replace(/-$/g,"")}`;}
-function createJohnnyDecimalStarterWorkspace(){
-  const rootDocument={nodes:[{id:"jd-starter-guide",type:"text",x:0,y:-210,width:1180,height:150,color:"3",text:"# Alex’s life index — age 30\nA fictional 30-year-old man’s Johnny Decimal system covering administration, health, career, money, home, people, interests, travel, and archives. Replace anything that does not fit your life."}],edges:[]},result=freshWorkspace(rootDocument),root=result.canvases[result.rootId];root.title="Life Index — Alex, age 30";root.document=rootDocument;root.camera=null;result.johnnyDecimal={enabled:true,entries:{}};
-  JD_LIFE_STARTER.forEach(([areaCode,areaTitle,categories],areaIndex)=>{
-    const areaCanvasId=starterId("jd-canvas",areaCode),areaNodeId=starterId("jd-portal",areaCode),areaPath=`canvases/${slug(`${areaCode}-${areaTitle}`)}.canvas`,areaDocument={nodes:[],edges:[]};rootDocument.nodes.push({id:areaNodeId,type:"file",x:(areaIndex%3)*410,y:Math.floor(areaIndex/3)*290,width:360,height:240,color:"5",file:areaPath});result.canvases[areaCanvasId]={id:areaCanvasId,title:jdDisplayTitle(areaCode,areaTitle),parentId:result.rootId,portalNodeId:areaNodeId,path:areaPath,document:areaDocument,camera:null,jdCode:areaCode,jdTitle:areaTitle,jdKind:"area"};result.johnnyDecimal.entries[areaCode]={code:areaCode,title:areaTitle,kind:"area",parentCanvasId:result.rootId,nodeId:areaNodeId,canvasId:areaCanvasId,itemFormat:"canvas"};
-    categories.forEach(([categoryCode,categoryTitle,items],categoryIndex)=>{
-      const categoryCanvasId=starterId("jd-canvas",categoryCode),categoryNodeId=starterId("jd-portal",categoryCode),categoryPath=`canvases/${slug(`${categoryCode}-${categoryTitle}`)}.canvas`,categoryDocument={nodes:[],edges:[]};areaDocument.nodes.push({id:categoryNodeId,type:"file",x:categoryIndex*410,y:0,width:360,height:240,color:"5",file:categoryPath});result.canvases[categoryCanvasId]={id:categoryCanvasId,title:jdDisplayTitle(categoryCode,categoryTitle),parentId:areaCanvasId,portalNodeId:categoryNodeId,path:categoryPath,document:categoryDocument,camera:null,jdCode:categoryCode,jdTitle:categoryTitle,jdKind:"category"};result.johnnyDecimal.entries[categoryCode]={code:categoryCode,title:categoryTitle,kind:"category",parentCanvasId:areaCanvasId,nodeId:categoryNodeId,canvasId:categoryCanvasId,itemFormat:"canvas"};
-      items.forEach(([itemCode,itemTitle,itemBody],itemIndex)=>{const itemNodeId=starterId("jd-item",itemCode);categoryDocument.nodes.push({id:itemNodeId,type:"text",x:itemIndex*350,y:0,width:310,height:190,color:"3",text:`<!-- orbit:jd ${itemCode} -->\n# ${jdDisplayTitle(itemCode,itemTitle)}\n${itemBody}`});result.johnnyDecimal.entries[itemCode]={code:itemCode,title:itemTitle,kind:"item",parentCanvasId:categoryCanvasId,nodeId:itemNodeId,canvasId:null,itemFormat:"note"};});
-    });
-  });
-  return normalizeWorkspace(result);
-}
 async function rebuildLifeIndex(){
   if (!lifeIndexer) return;
   await Promise.all([lifeIndexer.rebuild(), componentCardCatalog?.rebuild(), widgetCatalog?.rebuild()]);
@@ -412,24 +309,7 @@ async function rebuildLifeIndex(){
   setIndexStatus(`Files · ${stats.sourceFiles} indexed`, `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);
   renderToday(); renderNodes();
 }
-async function loadJohnnyDecimalStarter(){
-  if(!canonicalWritable||!vaultStore) { toast("Canonical files are unavailable or read-only"); return; }
-  if(!confirm("Replace your current local space with the fictional age-30 Johnny Decimal starter? Export your space first if you want a backup."))return;
-  try {
-    await flushPendingWorkspaceEdits();
-    const starter=createJohnnyDecimalStarterWorkspace();
-    const stagingVault=new IndexedDbVault(`orbit-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
-    await stagingStore.migrate(starter);
-    await seedBundledWidget(stagingVault);
-    workspace=starter;configureLifeRuntime(stagingVault);await seedStarterTasks();
-    const snapshot=await stagingVault.snapshot(), canonicalVault=vaultStore.vault;
-    await canonicalVault.restore(snapshot);
-    const nextStore=new WorkspaceStore(canonicalVault), result=await nextStore.load();
-    if(!result?.workspace)throw new Error("Starter activation did not produce a workspace");
-    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
-    currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#johnnyDecimalDialog")?.close();$("#canvasTitle").value=canvasRecord().title;renderWorkspaceNavigation();render();fitView();toast("Johnny Decimal starter space loaded");
-  } catch(error) { console.warn("Could not reset the canonical vault",error); toast(`Could not load starter: ${error.message}`); }
-}
+function loadGraphStarter(){toast("Graph starter arrives in Step 4");}
 function portalPreview(document){
   const nodes=(document.nodes||[]).slice(0,28);if(!nodes.length)return '<span class="portal-empty">Empty canvas · open to begin</span>';
   const minX=Math.min(...nodes.map(node=>node.x)),minY=Math.min(...nodes.map(node=>node.y)),maxX=Math.max(...nodes.map(node=>node.x+node.width)),maxY=Math.max(...nodes.map(node=>node.y+node.height)),width=Math.max(1,maxX-minX),height=Math.max(1,maxY-minY),scale=Math.min(210/width,82/height);
@@ -462,9 +342,9 @@ function renderFallbackWorkspaceNavigation(host,trail,canvases){
   };
 }
 function orderedCanvasRecords(){
-  const records=Object.values(workspace.canvases),result=[],seen=new Set(),compare=(a,b)=>(jdSortValue(a.jdCode)-jdSortValue(b.jdCode))||a.title.localeCompare(b.title),visit=record=>{if(!record||seen.has(record.id))return;seen.add(record.id);result.push(record);records.filter(item=>item.parentId===record.id).sort(compare).forEach(visit);};visit(workspace.canvases[workspace.rootId]);records.sort(compare).forEach(visit);return result;
+  const records=Object.values(workspace.canvases),result=[],seen=new Set(),compare=(a,b)=>a.title.localeCompare(b.title),visit=record=>{if(!record||seen.has(record.id))return;seen.add(record.id);result.push(record);records.filter(item=>item.parentId===record.id).sort(compare).forEach(visit);};visit(workspace.canvases[workspace.rootId]);records.sort(compare).forEach(visit);return result;
 }
-function defaultCanvasIcon(record){return record.id===workspace.rootId?"◫":record.jdCode?"#":"↳";}
+function defaultCanvasIcon(record){return record.id===workspace.rootId?"◫":record.kind==="hub"?"▦":record.kind==="project"?"◆":"↳";}
 function canvasIconFor(record){return record?.icon||defaultCanvasIcon(record);}
 function renderWorkspaceNavigation(){
   const trail=canvasTrail().map(record=>({id:record.id,title:record.title}));
@@ -485,7 +365,6 @@ function renderWorkspaceNavigation(){
     if(componentDefined("balaur-workspace-nav")){list.trail=trail;list.canvases=canvases;list.activeId=currentCanvasId;}
     else renderFallbackWorkspaceNavigation(list,trail,canvases);
   }
-  $("#johnnyDecimalState")?.classList.toggle("active",Boolean(workspace.johnnyDecimal.enabled));
 }
 const CANVAS_ICON_SETS=[
   ["Atlas","🗺️ 🧭 🌍 🏔️ 🌊 🌲 🏠 🏛️ ✈️ 🧳"],
@@ -559,14 +438,6 @@ function nextNodePosition(document,width,height){
 }
 function revealWorkspaceNode(canvasId,nodeId){
   const reveal=()=>{if(currentCanvasId!==canvasId)return;const node=documentData.nodes.find(item=>item.id===nodeId);if(!node)return;selected={kind:"node",id:nodeId};shell.classList.add("inspector-open");render();focusNode(node,1.05);};if(currentCanvasId===canvasId)reveal();else{switchCanvas(canvasId,{direction:"switch",focusNodeId:nodeId});setTimeout(reveal,320);}
-}
-function createJDEntry({parentCanvasId,code,title,itemFormat="canvas"}){
-  if(!canonicalWritable)throw new Error("Canonical files are read-only until repaired or restored.");
-  const checked=validateJDCode(code,parentCanvasId);code=checked.code;title=String(title).trim();if(!title)throw new Error("Add a short title.");const parent=workspace.canvases[parentCanvasId];if(!parent)throw new Error("The parent canvas no longer exists.");workspace.johnnyDecimal.enabled=true;
-  const nodeId=uid("node"),isCanvasEntry=checked.kind!=="item"||itemFormat==="canvas",size=isCanvasEntry?[360,250]:[300,160],position=nextNodePosition(parent.document,...size),displayTitle=jdDisplayTitle(code,title);let canvasId=null,node;
-  if(isCanvasEntry){canvasId=uid("canvas");const path=`canvases/${slug(`${canonicalJDCode(code)}-${title}`)}.canvas`;node={id:nodeId,type:"file",...position,width:size[0],height:size[1],color:"5",file:path};workspace.canvases[canvasId]={id:canvasId,title:displayTitle,parentId:parentCanvasId,portalNodeId:nodeId,path,document:{nodes:[],edges:[]},camera:null,jdCode:code,jdTitle:title,jdKind:checked.kind};}
-  else node={id:nodeId,type:"text",...position,width:size[0],height:size[1],color:"3",text:`<!-- orbit:jd ${code} -->\n# ${displayTitle}\nAdd the context, outcome, or reference for this item.`};
-  parent.document.nodes ||= [];parent.document.nodes.push(node);workspace.johnnyDecimal.entries[code]={code,title,kind:checked.kind,parentCanvasId,nodeId,canvasId,itemFormat:isCanvasEntry?"canvas":"note"};scheduleSave();$("#johnnyDecimalDialog")?.close();revealWorkspaceNode(parentCanvasId,nodeId);toast(`${formatJDCode(code)} added to the index`);return node;
 }
 function localDateISO(date=new Date()){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;}
 function taskForNode(node){
@@ -651,18 +522,7 @@ function renderToday(){
   assign("#todayQueue",queue,"The task inbox is clear.");
   assign("#todayCompleted",completed,"Completed tasks will appear here.");
 }
-function deleteJDEntriesForCanvas(id){for(const [code,entry] of Object.entries(jdEntries()))if(entry.canvasId===id||entry.parentCanvasId===id)delete workspace.johnnyDecimal.entries[code];}
-function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);deleteJDEntriesForCanvas(id);delete workspace.canvases[id];}
-function jdParentOptions(){return orderedCanvasRecords().filter(record=>record.id===workspace.rootId||["area","category"].includes(jdContainerKind(record.id)));}
-function updateJDDialog(){
-  const parentId=$("#jdParent").value,kind=jdChildKind(parentId),code=suggestJDCode(parentId),label={area:"Area",category:"Category",item:"Item"}[kind]||"Entry";$("#jdKindLabel").textContent=label;$("#jdCode").value=code;$("#jdCode").placeholder=kind==="area"?"10-19":kind==="category"?"11":"11.01";$("#jdTitle").placeholder=kind==="area"?"Personal":kind==="category"?"Finance":"Monthly budget";$("#jdItemFormatField").hidden=kind!=="item";$("#createJDEntry").disabled=!kind||!code;$("#jdCreateResult").textContent=kind?`Next available ${label.toLowerCase()} ID suggested automatically.`:"This canvas cannot contain another Johnny Decimal level.";
-}
-function openJohnnyDecimalDialog(){
-  const dialog=$("#johnnyDecimalDialog"),parent=$("#jdParent"),options=jdParentOptions();parent.innerHTML=options.map(record=>`<option value="${escapeHTML(record.id)}">${escapeHTML(record.id===workspace.rootId?`Index — ${record.title}`:record.title)}</option>`).join("");const preferred=options.some(record=>record.id===currentCanvasId)?currentCanvasId:options.some(record=>record.id===canvasRecord().parentId)?canvasRecord().parentId:workspace.rootId;parent.value=preferred;$("#jdTitle").value="";$("#jdLookup").value="";$("#jdLookupList").innerHTML=Object.values(jdEntries()).sort((a,b)=>jdSortValue(a.code)-jdSortValue(b.code)).map(entry=>`<option value="${escapeHTML(formatJDCode(entry.code))}">${escapeHTML(entry.title)}</option>`).join("");$("#jdLookupResult").textContent="";updateJDDialog();dialog.showModal();setTimeout(()=>$("#jdTitle").focus(),80);
-}
-function goToJD(value){
-  const code=canonicalJDCode(value),entry=jdEntries()[code],result=$("#jdLookupResult");if(!entry){result.className="settings-test error";result.textContent=`No entry found for ${formatJDCode(code)||"that ID"}.`;return;}result.className="settings-test success";result.textContent=`Opening ${formatJDCode(code)} — ${entry.title}`;setTimeout(()=>{$("#johnnyDecimalDialog").close();if(entry.canvasId)switchCanvas(entry.canvasId,{direction:"switch",fit:!workspace.canvases[entry.canvasId].camera});else revealWorkspaceNode(entry.parentCanvasId,entry.nodeId);},100);
-}
+function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);delete workspace.canvases[id];}
 
 const AI_CARD_MARKER="<!-- orbit:ai-card -->";
 function isAICard(node){return node?.type==="text"&&node.text.includes(AI_CARD_MARKER);}
@@ -811,7 +671,7 @@ function renderNodes() {
       if(isAICard(node)){
         const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
         content.innerHTML=`<div class="node-kicker">AI OPERATOR</div><div class="node-body"><h3 class="ai-card-title">${escapeHTML(config.title)}</h3><p class="ai-card-prompt">${escapeHTML(config.prompt)}</p><div class="ai-inputs">${inputs.length?inputs.map(input=>`<span class="ai-input-chip">← ${escapeHTML(nodeTitle(input))}</span>`).join(""):"<span class=\"ai-input-chip\">No inputs connected</span>"}</div></div><div class="ai-run-row"><span class="ai-run-status">${escapeHTML(runtime.status||"Ready")}</span><button class="ai-run-button" data-ai-run ${runtime.running?"disabled":""}>${runtime.running?"Running…":"Run now"}</button></div>`;
-      } else {const jdCode=jdCodeFromNode(node);content.innerHTML = `<div class="node-kicker">${jdCode?`ITEM · ${escapeHTML(formatJDCode(jdCode))}`:textMeta(node)}</div><div class="node-body">${markdownToHTML(node.text)}</div>`;}
+      } else {content.innerHTML = `<div class="node-kicker">${textMeta(node)}</div><div class="node-body">${markdownToHTML(node.text)}</div>`;}
     } else if (componentPath) {
       element.classList.add("component-card-node");
       element.dataset.renderKind = "component-card";
@@ -852,7 +712,7 @@ function renderNodes() {
       const subcanvasId=subcanvasIdFromNode(node),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
       if(subcanvas){
         const children=Object.values(workspace.canvases).filter(record=>record.parentId===subcanvasId).length;element.classList.add("subcanvas-node");element.dataset.subcanvasId=subcanvasId;
-        content.innerHTML=`<div class="node-kicker">${subcanvas.jdCode?`${escapeHTML((subcanvas.jdKind||jdEntries()[subcanvas.jdCode]?.kind||"canvas").toUpperCase())} · ${escapeHTML(formatJDCode(subcanvas.jdCode))}`:"SUB-CANVAS · ZOOM PORTAL"}</div><div class="node-body"><h3>${escapeHTML(subcanvas.jdTitle||subcanvas.title)}</h3><p>${subcanvas.document.nodes.length} item${subcanvas.document.nodes.length===1?"":"s"}${children?` · ${children} nested`:""}</p><div class="portal-preview">${portalPreview(subcanvas.document)}</div><div class="portal-actions"><span>Double-click or zoom to 220%</span><button type="button" data-open-subcanvas>Open ↘</button></div></div>`;
+        content.innerHTML=`<div class="node-kicker">${subcanvas.kind==="hub"?"HUB · PORTAL":subcanvas.kind==="project"?"PROJECT · PORTAL":"SUB-CANVAS · ZOOM PORTAL"}</div><div class="node-body"><h3>${escapeHTML(subcanvas.title)}</h3><p>${subcanvas.document.nodes.length} item${subcanvas.document.nodes.length===1?"":"s"}${children?` · ${children} nested`:""}</p><div class="portal-preview">${portalPreview(subcanvas.document)}</div><div class="portal-actions"><span>Double-click or zoom to 220%</span><button type="button" data-open-subcanvas>Open ↘</button></div></div>`;
       } else if (widgetPath) {
         element.classList.add("html-widget");
         element.dataset.renderKind = "html-widget";
@@ -1150,7 +1010,7 @@ function renderInspector() {
     if(item.type==="file"&&!task){
       const subcanvasId=subcanvasIdFromNode(item),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
       if(subcanvas){
-        fields.push({key:"title",label:subcanvas.jdCode?`${formatJDCode(subcanvas.jdCode)} title`:"Canvas title",control:"text",value:subcanvas.jdTitle||subcanvas.title,scope:"canvas",canvasId:subcanvasId});
+        fields.push({key:"title",label:"Canvas title",control:"text",value:subcanvas.title,scope:"canvas",canvasId:subcanvasId});
         notes.push({text:"This portal is a standard JSON Canvas file node. Double-click it or zoom in to enter the nested canvas."});
         actions.push({intent:"open-canvas",label:"Open sub-canvas ↘",canvasId:subcanvasId,requiresWrite:false,className:"button open-subcanvas-inspector"});
       }else{
@@ -1213,8 +1073,7 @@ function applyInspectorField(detail,phase){
     if(phase!=="input")return;
     const record=workspace.canvases[detail.canvasId];if(!record)return;
     const value=detail.value||"Untitled";
-    if(record.jdCode){record.jdTitle=value;record.title=jdDisplayTitle(record.jdCode,value);const entry=jdEntries()[record.jdCode];if(entry)entry.title=value;}
-    else record.title=value;
+    record.title=value;
     scheduleSave();renderNodes();renderWorkspaceNavigation();return;
   }
   if(phase!=="input")return;
@@ -1222,7 +1081,6 @@ function applyInspectorField(detail,phase){
   if(key==="aiTitle"||key==="aiPrompt"){const config=parseAICard(item);item.text=buildAICardText(key==="aiTitle"?detail.value:config.title,key==="aiPrompt"?detail.value:config.prompt);}
   else if((key==="fromSide"||key==="toSide")&&!detail.value)delete item[key];
   else item[key]=detail.value;
-  if(key==="text"){const code=jdCodeFromNode(item),entry=jdEntries()[code],heading=item.text.match(/^#\s+(.+)$/m)?.[1];if(entry&&heading){const formatted=formatJDCode(code),title=(heading.startsWith(formatted)?heading.slice(formatted.length).replace(/^\s*(?:—|-)\s*/,""):heading).trim();if(title)entry.title=title;}}
   scheduleSave();renderNodes();renderEdges();renderMinimap();scheduleChangedAICards(before);
 }
 document.addEventListener("balaur-inspector-field-input",event=>applyInspectorField(event.detail,"input"));
@@ -1278,9 +1136,9 @@ async function deleteSelection() {
   if (!canonicalWritable) { toast("Canonical files are read-only until repaired or restored"); return; }
   if (!selected) return;const before=aiCardSignatures();let canonicalMutation=false;
   if (selected.kind==="node") {
-    const node=documentData.nodes.find(item=>item.id===selected.id),subcanvasId=subcanvasIdFromNode(node),taskId=taskIdFromNode(node),jdPair=Object.entries(jdEntries()).find(([,entry])=>entry.parentCanvasId===currentCanvasId&&entry.nodeId===selected.id);
+    const node=documentData.nodes.find(item=>item.id===selected.id),subcanvasId=subcanvasIdFromNode(node),taskId=taskIdFromNode(node);
     if(subcanvasId&&!confirm(`Delete “${workspace.canvases[subcanvasId].title}” and every canvas nested inside it?`))return;
-    if(subcanvasId)deleteCanvasTree(subcanvasId);else if(jdPair)delete workspace.johnnyDecimal.entries[jdPair[0]];
+    if(subcanvasId)deleteCanvasTree(subcanvasId);
     if(taskId){
       canonicalMutation=true;
       try{
@@ -1719,7 +1577,7 @@ document.addEventListener("click",event=>{
   panel.hidden=true;$("#addMenuToggle")?.setAttribute("aria-expanded","false");runAddKind(kind);
 });
 $$('[data-app-view]').forEach(button=>button.onclick=()=>setAppView(button.dataset.appView));
-$("#newGroup").onclick=()=>addNode("group");$("#newCanvas").onclick=()=>createSubcanvas();$("#johnnyDecimalState").onclick=openJohnnyDecimalDialog;
+$("#newGroup").onclick=()=>addNode("group");$("#newCanvas").onclick=()=>createSubcanvas();
 $$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=button.dataset.filter;$$(".nav-item[data-filter]").forEach(b=>b.classList.toggle("active",b===button));renderNodes();renderEdges();});
 $$(".tool:not(.add-menu-toggle)").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;if(tool==="note")setTool("note");else setTool(tool);});
 $("#zoomIn").onclick=()=>setZoom(camera.zoom*1.2);$("#zoomOut").onclick=()=>setZoom(camera.zoom/1.2);$("#zoomLabel").onclick=()=>setZoom(1);$("#fitView").onclick=fitView;
@@ -1730,7 +1588,6 @@ $("#aiForm").onsubmit=event=>{event.preventDefault();const input=$("#aiPrompt"),
 $("#aiPrompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("#aiForm").requestSubmit();}};
 $$(".ai-suggestions button").forEach(button=>button.onclick=()=>runAssistant(button.textContent));
 $("#newTodayTask").onclick=()=>openTaskDialog({today:true});$("#closeTaskDialog").onclick=$("#cancelTaskDialog").onclick=()=>$("#taskDialog").close();$("#taskForm").onsubmit=async event=>{event.preventDefault();const result=$("#taskResult"),button=$("#createTaskButton");try{if(!event.currentTarget.reportValidity())return;button.disabled=true;await createTask({title:$("#taskTitle").value,notes:$("#taskNotes").value,canvasId:$("#taskCanvas").value,status:$("#taskStatus").value,scheduledOn:$("#taskScheduledOn").value,dueOn:$("#taskDueOn").value,priority:$("#taskPriority").value});$("#taskDialog").close();}catch(error){result.className="settings-test error";result.textContent=error.message;}finally{button.disabled=false;}};$("#todayQuickAdd").onsubmit=async event=>{event.preventDefault();const input=$("#todayTaskTitle"),title=input.value.trim();if(!title)return;const button=$("button",event.currentTarget);button.disabled=true;try{await createTask({title,status:"scheduled",scheduledOn:localDateISO(),canvasId:currentCanvasId});input.value="";renderToday();}catch(error){toast(error.message);}finally{button.disabled=false;}};
-$("#closeJohnnyDecimal").onclick=$("#cancelJohnnyDecimal").onclick=()=>$("#johnnyDecimalDialog").close();$("#loadJDStarter").onclick=loadJohnnyDecimalStarter;$("#jdParent").onchange=updateJDDialog;$("#goToJD").onclick=()=>goToJD($("#jdLookup").value);$("#jdLookup").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();goToJD(event.currentTarget.value);}};$("#exportJDWorkspace").onclick=()=>exportWorkspace().catch(error=>{alert(`Could not export a complete backup.\n\n${error.message}`);});$("#johnnyDecimalForm").onsubmit=event=>{event.preventDefault();const result=$("#jdCreateResult");try{if(!event.currentTarget.reportValidity())return;createJDEntry({parentCanvasId:$("#jdParent").value,code:$("#jdCode").value,title:$("#jdTitle").value,itemFormat:$("#jdItemFormat").value});}catch(error){result.className="settings-test error";result.textContent=error.message;}};
 $("#closeAINote").onclick=$("#cancelAINote").onclick=()=>$("#aiNoteDialog").close();
 $("#aiNoteForm").onsubmit=event=>{event.preventDefault();const prompt=$("#aiNotePrompt").value.trim();if(prompt)createAINote(prompt);};
 $("#closeAISettings").onclick=$("#cancelAISettings").onclick=()=>$("#aiSettingsDialog").close();
@@ -1740,14 +1597,13 @@ $("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.
 $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
 $("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
 initCanvasIconPicker();
-$("#resetDemo").onclick=loadJohnnyDecimalStarter;
+$("#resetDemo").onclick=loadGraphStarter;
 $("#minimap").onclick=fitView;
 
 window.addEventListener("keydown",event=>{
   if (["INPUT","TEXTAREA","SELECT"].includes(event.target.tagName)) return;
   if(event.key==="Escape"){if(!document.querySelector("dialog[open]")&&!document.body.classList.contains("connection-dragging")&&$("#addMenuToggle")?.getAttribute("aria-expanded")!=="true"&&selected){event.preventDefault();selected=null;connectSource=null;connectSourceSide=null;shell.classList.remove("inspector-open");render();}return;}
   if(event.code==="Space"){spaceDown=true;event.preventDefault();}
-  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==="k"){event.preventDefault();openJohnnyDecimalDialog();setTimeout(()=>$("#jdLookup").focus(),80);return;}
   if(event.altKey&&event.key==="ArrowUp"&&canvasRecord().parentId){event.preventDefault();leaveSubcanvas();return;}
   if(event.key==="Enter"&&selected?.kind==="node"){const node=documentData.nodes.find(item=>item.id===selected.id),subcanvasId=subcanvasIdFromNode(node);if(subcanvasId){event.preventDefault();enterSubcanvas(subcanvasId);return;}}
   if((event.key==="Delete"||event.key==="Backspace")&&selected)deleteSelection();
@@ -1763,4 +1619,4 @@ window.addEventListener("resize",()=>{applyCamera();});
 vaultReady=bootCanvasApp();
 window.orbitVaultReady=vaultReady;
 await vaultReady;
-window.orbitCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createJDEntry,createTask,goToJD,loadJohnnyDecimalStarter,rebuildIndex:rebuildLifeIndex,setView:setAppView,switchCanvas,exportWorkspace};
+window.orbitCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createTask,loadGraphStarter,rebuildIndex:rebuildLifeIndex,setView:setAppView,switchCanvas,exportWorkspace};
