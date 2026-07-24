@@ -569,6 +569,27 @@ function textMeta(node) {
   return map[node.color] || node.type.toUpperCase();
 }
 
+const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference -->"};
+const DORMANT_NODE_COLOR="#6c757d";
+const RELATION_LABELS=["part-of","relates-to","filed-to"]; // convention only; never enforced
+function noteKind(node){
+  if(node?.type!=="text")return null;
+  if(node.text.includes(NOTE_MARKERS.inbox))return "inbox";
+  if(node.text.includes(NOTE_MARKERS.reference))return "reference";
+  return null;
+}
+function canvasKind(record){return record?.kind==="hub"||record?.kind==="project"?record.kind:null;}
+// One-line summary convention (ADR-0003): heading/title first, else first body line.
+function nodeSummary(node){
+  const title=nodeTitle(node);
+  if(node?.type==="text"){
+    const bodyLine=(node.text||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*orbit:/.test(line));
+    const summary=(bodyLine||"").trim().slice(0,120);
+    return summary&&summary!==title?`${title} — ${summary}`:title;
+  }
+  return title;
+}
+
 function markdownToHTML(source="") {
   const lines = source.split(/\r?\n/);
   let html = "", inList = false;
@@ -671,7 +692,11 @@ function renderNodes() {
       if(isAICard(node)){
         const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
         content.innerHTML=`<div class="node-kicker">AI OPERATOR</div><div class="node-body"><h3 class="ai-card-title">${escapeHTML(config.title)}</h3><p class="ai-card-prompt">${escapeHTML(config.prompt)}</p><div class="ai-inputs">${inputs.length?inputs.map(input=>`<span class="ai-input-chip">← ${escapeHTML(nodeTitle(input))}</span>`).join(""):"<span class=\"ai-input-chip\">No inputs connected</span>"}</div></div><div class="ai-run-row"><span class="ai-run-status">${escapeHTML(runtime.status||"Ready")}</span><button class="ai-run-button" data-ai-run ${runtime.running?"disabled":""}>${runtime.running?"Running…":"Run now"}</button></div>`;
-      } else {content.innerHTML = `<div class="node-kicker">${textMeta(node)}</div><div class="node-body">${markdownToHTML(node.text)}</div>`;}
+      } else {
+        const kind=noteKind(node);
+        const kicker=kind==="inbox"?"INBOX · capture":kind==="reference"?"REFERENCE · wiki":textMeta(node);
+        content.innerHTML=`<div class="node-kicker">${kicker}</div><div class="node-body">${markdownToHTML(node.text)}</div>`;
+      }
     } else if (componentPath) {
       element.classList.add("component-card-node");
       element.dataset.renderKind = "component-card";
@@ -728,6 +753,10 @@ function renderNodes() {
           }
           host.path=model.path;host.title=model.title;host.source=model.source;host.diagnostic=model.diagnostic||"";host.themeSnapshot=widgetThemeSnapshot();host.preferences=widgetPreferences();
         }
+      } else if (node.type==="file" && indexedEntityForPath(node.file)?.source?.entityType==="journal") {
+        const row=indexedEntityForPath(node.file).row;
+        element.classList.add("journal-card");
+        content.innerHTML=`<div class="node-kicker">JOURNAL · ${escapeHTML(row.localDate)}</div><div class="node-body"><h3>${escapeHTML(row.localDate)}</h3><p>Daily note. Open in Today to edit, or place it on a canvas.</p></div>`;
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="node-body"><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p></div>`;
     }
     if (!canRetain) {
@@ -931,6 +960,8 @@ function addNode(kind, point) {
   const center = point || canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);
   const presets={
     note:{type:"text",color:"2",width:260,height:150,text:"# New thought\nStart writing here…"},
+    inbox:{type:"text",color:"2",width:280,height:160,text:`${NOTE_MARKERS.inbox}\n# New capture\nWrite it down now; process it later.`},
+    reference:{type:"text",color:"5",width:300,height:190,text:`${NOTE_MARKERS.reference}\n# New reference\nDurable knowledge worth keeping.`},
     goal:{type:"text",color:"1",width:300,height:190,text:"# A meaningful goal\nWhat would make this worth doing?\n\n- [ ] Define the first step\n\nProgress: 0%"},
     habit:{type:"text",color:"4",width:280,height:145,text:"# New daily practice\nMake it small enough to begin today."},
     project:{type:"text",color:"6",width:300,height:210,text:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
@@ -1561,7 +1592,7 @@ async function runAICard(cardId,{manual=false}={}) {
 
 applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
 
-const ADD_KINDS=new Set(["note","goal","habit","project","task","ai-note","ai","widget","subcanvas"]);
+const ADD_KINDS=new Set(["note","goal","habit","project","inbox","reference","task","ai-note","ai","widget","subcanvas"]);
 function runAddKind(kind){if(kind==="ai-note")openAINoteDialog();else if(kind==="widget")proposeLocalWidget();else addNode(kind);}
 document.addEventListener("balaur-add",event=>{
   const menu=event.target,kind=event.detail?.kind;
