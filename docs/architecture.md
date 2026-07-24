@@ -1,13 +1,13 @@
 # Balaur architecture
 
-Balaur is a standards-first, local-first web application with no UI framework, build step, package install, or runtime dependency. Native ES modules, the DOM, CSS, Pointer Events, SVG, Canvas, WebGL, IndexedDB, and Service Workers provide the platform. The static site can run on GitHub Pages and is also structured around adapters that can support Node tooling and a future desktop shell.
+Balaur is a standards-first, local-first web application with no UI framework, build step, package install, or runtime dependency. Native ES modules, the DOM, CSS, Pointer Events, SVG, Canvas, WebGL, the File System Access API, and Service Workers provide the platform. The static site can run on GitHub Pages and is also structured around adapters that can support Node tooling and a future desktop shell.
 
 ## Ownership model
 
 The vault is the source of truth:
 
 ```text
-IndexedDbVault (browser) / FsVault (Node) / MemoryVault (tests)
+DirectoryVault (browser) / FsVault (Node) / MemoryVault (tests)
   ├─ .orbit/workspace.json      hierarchy, cameras, canvas kind metadata
   ├─ canvases/*.canvas           independent JSON Canvas 1.0 documents
   ├─ tasks/*.md                  canonical task entities
@@ -33,15 +33,15 @@ A persistent index, including SQLite, is a deferred future optimization rather t
 `main.js` starts guarded Custom Element registration, waits for that boundary to settle, and then imports the application module; Service Worker registration remains progressive. A component-definition fetch or evaluation failure is reported as a warning but does not block `app.js`, vault boot, canvas render, or canonical saves. In that failure mode, `app.js` feature-detects the missing definitions and supplies minimal native fallbacks: canvas and breadcrumb navigation, Today task content/actions, inspector fields/actions, delegated Add buttons, readable static component-card content, and explicitly inactive widget content with no iframe or source execution. The normal registered-component path is unchanged. The app's asynchronous vault-first boot is:
 
 1. register the `balaur-*` presentation/runtime hosts, or continue after the guarded failure boundary;
-2. open `IndexedDbVault`;
-3. load `.orbit/workspace.json` and each referenced `.canvas` file through `WorkspaceStore`;
-4. on a genuinely empty first run, migrate the legacy localStorage workspace once into canonical vault files;
+2. incompatibility gate: verify `showDirectoryPicker` and `crypto.subtle` are available, or show a full-screen gate message;
+3. Vault gate: wait for the user to pick a folder via `showDirectoryPicker({ mode: "readwrite" })`;
+4. `DirectoryVault` opens the picked folder; `WorkspaceStore` loads or migrates (create if empty, Adopt if files but no sidecar, open if sidecar present);
 5. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, canonical repositories, and the component-card/widget/note catalogs;
 6. rebuild the in-memory query and rendering projections from vault files;
-7. render the active workspace from the loaded working set; and
-8. expose `window.orbitVaultReady`, `window.orbitVaultStore`, and the stable `window.orbitCanvas` integration surface.
+7. render the active workspace from the loaded working set and expose `window.orbitVaultReady`, `window.orbitVaultStore`, and the stable `window.orbitCanvas` integration surface; and
+8. progressively register the Service Worker.
 
-After that one-time migration source is consumed, localStorage is not a source of truth or a persistence mirror. A vault failure is reported as unavailable canonical files; the application must not silently promote a localStorage workspace back to authority. Fresh- and retained-profile browser checks exercise vault-first render, IndexedDB writes, controlled reload, canonical card/widget persistence, and whole-space restore. Quota/failure behavior and malformed-file repair affordances remain browser-pending.
+No handle is persisted; the folder is re-picked every launch. localStorage is limited to theme and AI settings and is not a source of truth or persistence mirror. A vault failure is reported as unavailable canonical files. Browser checks exercise vault-first render via the picker stub, the headless OPFS contract suite, controlled reload, canonical card/widget persistence, and whole-space restore. Malformed-file repair affordances remain browser-pending.
 
 ## Modules and boundaries
 
@@ -73,7 +73,7 @@ The exception is the security runtime boundary: `<balaur-widget-frame>` owns onl
 
 ### Adapters
 
-`VaultStore` defines asynchronous list/read/write/remove/move/stat/exists/snapshot/restore operations with hashes and revision changes. `IndexedDbVault` is the browser default; `MemoryVault` supplies deterministic tests; `FsVault` is the Node filesystem reference adapter with path, symlink, serialization, and atomic-write protections. Retained-profile and staging-vault browser checks exercise IndexedDB persistence and whole-space restore; quota/failure behavior remains browser-pending.
+`VaultStore` defines asynchronous list/read/write/remove/move/stat/exists/snapshot/restore operations with hashes and revision changes. `DirectoryVault` is the browser default: folder-backed over a user-picked `FileSystemDirectoryHandle`, with no content cache and non-atomic `createWritable` writes guarded by the `expectedHash` precondition. `MemoryVault` supplies deterministic tests and doubles as the browser staging adapter for import and Reset. `FsVault` is the Node filesystem reference adapter with path, symlink, serialization, and atomic-write protections. Retained-profile browser checks exercise folder persistence and whole-space restore; permission-loss and quota behavior remain browser-pending.
 
 ## JSON Canvas and nested canvases
 
@@ -95,12 +95,12 @@ These controls are capability reduction and lifecycle containment, not hard CPU 
 
 ## Offline shell
 
-The Service Worker caches only deployable same-origin shell resources under `orbit-shell-v12`: local element/storage/AI/widget modules, styles, fonts, icons, the manifest, and the sample widget. It does not cache IndexedDB records, provider calls, generated exports, or external resources. Network-first requests fall back to the shell cache when offline. See [offline.md](offline.md).
+The Service Worker caches only deployable same-origin shell resources under `orbit-shell-v13`: local element/storage/AI/widget modules, styles, fonts, icons, the manifest, and the sample widget. It does not cache vault files (the user-picked folder owns them), provider calls, generated exports, or external resources. Network-first requests fall back to the shell cache when offline. See [offline.md](offline.md).
 
 ## Verification boundary
 
-The explicit storage foundation/query command passes 168 Node tests: the prior 164-test suite plus four component-card backup-boundary regressions. Focused suites cover component-card storage, generated operations, widget policy/protocol, and widget repositories. Real-browser checks cover fresh and retained vault-first profiles, task/Today and component boundaries, canonical card/widget reload persistence, whole-space staging restore, offline shell reload, wide/narrow layouts, hostile widget probes, and the retained imperative canvas invariants. IndexedDB quota/failure behavior, timezone boundaries in browser locale behavior, malformed-file repair affordances, and upgrade from a previously deployed Service Worker remain browser-pending.
+The explicit storage foundation/query command passes 197 Node tests. Focused suites cover component-card storage, generated operations, widget policy/protocol, widget repositories, and note repository behavior. Real-browser checks cover the vault gate, the headless OPFS contract suite, picker-stub full-app smoke, fresh and retained folder-backed profiles, task/Today and component boundaries, canonical card/widget reload persistence, whole-space staging restore, offline shell reload, wide/narrow layouts, hostile widget probes, and the retained imperative canvas invariants. Timezone boundaries in browser locale behavior, malformed-file repair affordances, and upgrade from a previously deployed Service Worker remain browser-pending.
 
 ## Future packaging, not v1 dependencies
 
-The same adapter boundaries leave room for a Tauri shell, browser directory access, sync, workerized indexing, or a persistent index later. These are future options, not shipped runtime requirements. Any future index must remain rebuildable from canonical vault files and must not become a second owner of life state.
+Browser directory access is now shipped via `DirectoryVault`. The same adapter boundaries leave room for a Tauri or other desktop shell that adds its own fs-kind adapter under the same `VaultStore` contract, sync, workerized indexing, or a persistent index later. These are future options, not shipped runtime requirements. Any future index must remain rebuildable from canonical vault files and must not become a second owner of life state.

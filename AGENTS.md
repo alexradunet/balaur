@@ -56,8 +56,8 @@ storage/vault-path.js       Cross-platform vault path normalization and entity p
 storage/frontmatter.js     Preservation-first frontmatter scan/parse/patch codec
 storage/entity-codec.js    Canonical task/habit/journal/event Markdown codecs
 storage/vault-store.js      VaultStore contract and media-type inference
-storage/memory-vault.js     In-memory vault adapter for tests
-storage/indexeddb-vault.js IndexedDB browser vault adapter; browser verification pending
+storage/memory-vault.js     In-memory vault adapter for tests; doubles as the browser staging adapter
+storage/directory-vault.js File System Access browser vault adapter over a user-picked folder
 storage/fs-vault.js         Node filesystem reference adapter and tooling
 storage/life-indexer.js     Projects vault files into the runtime index
 storage/life-query.js       App-facing query facade over MemoryIndex
@@ -80,7 +80,7 @@ vendor/pixel-loom/          Self-hosted fonts and upstream design-system provena
 
 The NixOS configuration and Pi custom extensions (NetBird Cloud extension, Herdr agent bridge) now live in the [`balaur-dev-os`](https://github.com/alexradunet/balaur-dev-os) environment repository, separate from this application repository. Install them into this checkout with `pi install -l git:github.com/alexradunet/balaur-dev-os@<ref>`.
 
-The storage foundation is Node-verified by the phase suites listed in §13. `MemoryVault`, `FsVault`, `MemoryIndex`, `LifeIndexer`, repositories, backup validation, and integrity auditing are reference/test/tooling surfaces. `IndexedDbVault` and the app's vault-first wiring require browser verification.
+The storage foundation is Node-verified by the phase suites listed in §13. `MemoryVault`, `FsVault`, `MemoryIndex`, `LifeIndexer`, repositories, backup validation, and integrity auditing are reference/test/tooling surfaces. `DirectoryVault` and the app's vault-first wiring require browser verification.
 
 Do not edit vendored binaries as application source. If a vendor is intentionally updated, update its version, license/provenance, file list, and checksums together.
 
@@ -152,15 +152,15 @@ A version-2 `.orbit.json` backup contains the metadata-only sidecar and raw logi
 
 The module graph rooted at `main.js` is deliberate. The app's intended startup sequence is:
 
-1. open the browser `IndexedDbVault`;
-2. load `.orbit/workspace.json` and each referenced `.canvas` document through `WorkspaceStore`;
-3. use the one-time first-run `localStorage` migration source only when the vault has no sidecar;
+1. incompatibility gate: verify `showDirectoryPicker` and `crypto.subtle` are available;
+2. Vault gate: wait for the user to pick a folder via `showDirectoryPicker({ mode: "readwrite" })`;
+3. `DirectoryVault` opens the picked folder; `WorkspaceStore` loads or migrates (create if empty, Adopt if files but no sidecar, open if sidecar present);
 4. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, and the task repository used by the shipped UI;
 5. rebuild the in-memory index from the vault files;
 6. render the workspace and expose `window.orbitCanvas`; and
 7. progressively register the Service Worker.
 
-The vault is the post-migration source of truth. `localStorage` is not a workspace fallback or persistence mirror. Vault-first boot, IndexedDB persistence, first-render timing, and graceful behavior in a real browser are browser-pending even though the wiring is present and the Node storage logic is tested. If the vault cannot be opened, the UI reports that canonical files are unavailable rather than treating a localStorage workspace as authoritative.
+No handle is persisted; the folder is re-picked every launch. `localStorage` is limited to theme and AI settings and is not a workspace fallback or persistence mirror. Vault-first boot, folder persistence, first-render timing, and graceful behavior in a real browser are browser-pending even though the wiring is present and the Node storage logic is tested. If the vault cannot be opened, the UI reports that canonical files are unavailable.
 
 Rendering must use the loaded in-memory working set; it must not perform an asynchronous file read for every card during rendering. On writes, save the canonical file or canvas with an expected-content-hash precondition, then reindex and refresh projections. Warm reconciliation honors vault revisions and move old paths.
 
@@ -168,9 +168,9 @@ Rendering must use the loaded in-memory working set; it must not perform an asyn
 
 ### 5.1 Offline application-shell rules
 
-`sw.js` precaches the required local modules, styles, fonts, icons, manifest, and sample widget under cache `orbit-shell-v7`. It does not precache database Wasm. Same-origin GET requests use network-first with cache fallback; cross-origin requests, non-GET requests, range requests, provider calls, API keys, generated exports, and arbitrary external resources are not intercepted.
+`sw.js` precaches the required local modules, styles, fonts, icons, manifest, and sample widget under cache `orbit-shell-v13`. It does not precache database Wasm. Same-origin GET requests use network-first with cache fallback; cross-origin requests, non-GET requests, range requests, provider calls, API keys, generated exports, and arbitrary external resources are not intercepted.
 
-Keep `APP_SHELL` synchronized with required assets and increment `CACHE_NAME` when cache semantics or invalidation require it. Keep paths relative for GitHub Pages subpaths. Never call `skipWaiting()` to reload an active editing session without an explicit safe update flow. The Service Worker owns only static shell resources; IndexedDB owns user files.
+Keep `APP_SHELL` synchronized with required assets and increment `CACHE_NAME` when cache semantics or invalidation require it. Keep paths relative for GitHub Pages subpaths. Never call `skipWaiting()` to reload an active editing session without an explicit safe update flow. The Service Worker owns only static shell resources; the user-picked folder owns user files.
 
 ## 6. Canvas/workspace mutation rules
 
@@ -190,9 +190,9 @@ Use `switchCanvas()`, `enterSubcanvas()`, `leaveSubcanvas()`, and `revealWorkspa
 
 All vault adapters implement the asynchronous `VaultStore` contract with safe paths, content hashes, optimistic `expectedHash` preconditions, revisions, and change records:
 
-- `IndexedDbVault` is the browser adapter;
+- `DirectoryVault` is the browser adapter (folder-backed over a user-picked directory);
 - `FsVault` is the Node filesystem reference adapter; and
-- `MemoryVault` is the deterministic test adapter.
+- `MemoryVault` is the deterministic test adapter (also doubles as the browser staging adapter for import and Reset).
 
 Use `frontmatter.js` and the entity codecs rather than a general YAML library. Patching must preserve unknown frontmatter keys, comments, ordering, BOM, line endings, and Markdown body bytes. Validate dates, instants, enums, weekday ranges, IANA zones, path case-fold collisions, and JSON Canvas structure at storage/import boundaries. Do not concatenate untrusted content into HTML, CSS, or commands.
 
@@ -308,13 +308,17 @@ The skill automates most of the manual list below; fall back to a real browser f
 
 Do not claim these are browser-verified from Node tests alone:
 
-1. IndexedDB open/write/restore/quota behavior;
-2. vault-first boot, first-render budget, and reload persistence;
-3. task create, edit, complete, and Today UI projections;
-4. version-2 export/import round-trip and destructive recovery paths;
-5. offline reload, Service Worker control, and cache upgrade;
-6. timezone/local-date behavior at browser boundaries; and
-7. malformed-file repair behavior in the running UI.
+1. `DirectoryVault` open/write/restore and permission-loss behavior;
+2. vault-gate boot and reload/re-pick persistence;
+3. first-render budget;
+4. external-change reconciliation via Reload vault;
+5. task create, edit, complete, and Today UI projections over the folder vault;
+6. version-2 export/import round-trip and destructive recovery paths;
+7. offline reload, Service Worker control, and cache upgrade from v12;
+8. timezone/local-date behavior at browser boundaries; and
+9. malformed-file repair behavior in the running UI.
+
+The browser-check smoke suite asserts the gate, runs the headless OPFS contract suite, and stubs the picker for full-app smoke.
 
 When browser testing is available, use a fresh temporary profile for first-run behavior and a retained profile for reload/persistence. Check `await window.orbitVaultReady`, `window.orbitVaultStore`, `window.orbitCanvas.getDocument()`, `window.orbitCanvas.getWorkspace()`, and `window.orbitCanvas.getSummary()`.
 

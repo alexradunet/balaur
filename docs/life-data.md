@@ -20,11 +20,11 @@ MemoryIndex             disposable life-query projection
 
 The vault adapters share the same logical layout:
 
-- `IndexedDbVault` is the browser default;
+- `DirectoryVault` is the browser default (folder-backed over a user-picked directory, disk mtime, non-atomic write + `expectedHash` guard);
 - `FsVault` is the Node filesystem reference adapter; and
 - `MemoryVault` is the deterministic test adapter.
 
-The vault is the only source of truth. `MemoryIndex` can be deleted and rebuilt from the vault without losing meaningful data. A persistent index, including SQLite, is deferred; it is not loaded or required by v1. OPFS-backed SQLite Wasm would require COOP/COEP headers that GitHub Pages cannot provide, which is why the default projection is in-memory JavaScript. Upgrading a legacy localStorage profile is a clean break and drops its old task workflow state.
+The vault is the only source of truth. `MemoryIndex` can be deleted and rebuilt from the vault without losing meaningful data. A persistent index, including SQLite, is deferred; it is not loaded or required by v1. OPFS-backed SQLite Wasm would require COOP/COEP headers that GitHub Pages cannot provide, which is why the default projection is in-memory JavaScript.
 
 Identity is separate from location: an entity's immutable `orbit-id` is its identity, its path is a locator, and a JSON Canvas node ID is a placement. A task can therefore have zero, one, or many `file`-node placements.
 
@@ -257,7 +257,7 @@ The index is not exported as a separate source of truth and can be reconstructed
 
 ## Vault writes and conflicts
 
-All adapters support safe normalized paths, case-fold collision detection, content hashes, revisions, and optimistic `expectedHash` preconditions. `FsVault` rejects symlinked components and uses serialized writes, temporary siblings, no-replace hard-link commits, and restore rollback protection. `IndexedDbVault` keeps file contents, metadata, changes, and case-fold keys in IndexedDB; the Service Worker never caches those records.
+All adapters support safe normalized paths, case-fold collision detection, content hashes, revisions, and optimistic `expectedHash` preconditions. `FsVault` rejects symlinked components and uses serialized writes, temporary siblings, no-replace hard-link commits, and restore rollback protection. `DirectoryVault` keeps nothing in IndexedDB; the picked folder's plain files are the vault, and the Service Worker never caches them.
 
 Frontmatter and body updates are preservation-first. If an external edit changes the expected hash, the repository refuses the write instead of silently overwriting it. Missing or malformed canvas files are read-only until repaired explicitly.
 
@@ -284,6 +284,6 @@ A single `.canvas` export is interoperable JSON Canvas but is not a complete bac
 
 ## Verification status
 
-The explicit storage command in `AGENTS.md` passes **168 Node tests** across phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, and phase-query. This is the prior 164-test suite plus four component-card backup-boundary regressions in `phase4-backup.test.js`. Focused tests additionally cover component-card codec/catalog/repository behavior, generated card/widget operations, widget catalog/repository behavior, and widget source/envelope/protocol limits.
+The explicit storage command in `AGENTS.md` passes **197 Node tests** across phase1, phase2, phase3, phase4, phase4-backup, phase5, phase7, phase8, phase9, phase10, phase-query, and note-repository. Focused tests additionally cover component-card codec/catalog/repository behavior, generated card/widget operations, widget catalog/repository behavior, and widget source/envelope/protocol limits.
 
-Fresh and retained real-browser profiles verify vault-first boot, IndexedDB persistence across reload, task create/complete/Today interaction, component-card and widget persistence, version-2 export/import into a staging IndexedDB vault, and offline reload. IndexedDB quota/failure behavior, timezone boundaries in browser locale behavior, malformed-file repair affordances, and Service Worker upgrade from a previously deployed cache remain browser-pending.
+Fresh and retained real-browser profiles verify vault-first boot via the picker stub, folder persistence across reload, task create/complete/Today interaction, component-card and widget persistence, version-2 export/import into a staging `MemoryVault`, and offline reload. Permission-loss and quota behavior, timezone boundaries in browser locale behavior, malformed-file repair affordances, and Service Worker upgrade from a previously deployed cache remain browser-pending.

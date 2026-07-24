@@ -24,7 +24,7 @@ A small, standalone proof of concept for a local-first life-management app whose
 - Prompt-first AI notes that generate Markdown directly onto the canvas
 - Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
 - Library filters
-- Browser-local canonical-file persistence through an IndexedDB vault, with an in-memory query index rebuilt at boot
+- Folder-backed canonical-file persistence via the File System Access API (Chromium only), with an in-memory query index rebuilt at boot
 - JSON Canvas `.canvas` import/export and whole-space version-2 `.orbit.json` file-bundle backup/restore
 - Installable offline shell with a web app manifest and Service Worker
 - No package install, CDN, build step, or runtime database dependency
@@ -128,11 +128,17 @@ The runtime uses an opaque-origin iframe with exactly `sandbox="allow-scripts"`,
 
 ## Canonical files and queries
 
-Balaur stores `.canvas` documents, canonical `.md` life entities and component cards, `widgets/*.html`, and the `.orbit/workspace.json` sidecar in an IndexedDB vault in the browser. At boot, `LifeIndexer` projects life files into a disposable in-memory index while the component-card and widget catalogs preload renderable file records. Rendering uses those in-memory working sets rather than reading the vault for every card. Deleting or rebuilding the query index loses no user data. Upgrading a legacy localStorage profile is a clean break: its old task workflow state is not migrated.
+Balaur stores `.canvas` documents, canonical `.md` life entities and component cards, `widgets/*.html`, and the `.orbit/workspace.json` sidecar in a folder you pick at launch (Chromium-based browsers only: Chrome, Edge, Brave, or Arc). The folder is re-picked every launch; no handle is persisted. Use **Reload vault** to pick up external edits, or **Open another vault** to switch folders. At boot, `LifeIndexer` projects life files into a disposable in-memory index while the component-card and widget catalogs preload renderable file records. Rendering uses those in-memory working sets rather than reading the vault for every card. Deleting or rebuilding the query index loses no user data. `localStorage` is limited to theme and AI settings.
 
 A persistent index is a deferred optimization, not a v1 dependency. OPFS-backed SQLite Wasm requires COOP/COEP headers that GitHub Pages cannot provide, so the static app uses the pure-JavaScript in-memory projection. Whole-space version-2 export/import preserves the sidecar and raw logical vault files—including cards and widgets—rather than a database snapshot.
 
-Browser checks cover fresh and retained IndexedDB profiles, task create/complete/Today flows, component-card and widget persistence, whole-space export/import restoration, and Service Worker offline reload. IndexedDB quota/failure behavior, browser timezone boundaries, cache upgrades from an older deployed worker, and malformed-file repair affordances remain browser-pending. See [`docs/life-data.md`](docs/life-data.md) for file contracts and repositories, [`docs/architecture.md`](docs/architecture.md) for ownership, and [`docs/offline.md`](docs/offline.md) for shell caching and validation.
+Browser checks cover fresh and retained folder-backed profiles, task create/complete/Today flows, component-card and widget persistence, whole-space export/import restoration, and Service Worker offline reload. Permission-loss behavior, browser timezone boundaries, cache upgrades from an older deployed worker, and malformed-file repair affordances remain browser-pending. See [`docs/life-data.md`](docs/life-data.md) for file contracts and repositories, [`docs/architecture.md`](docs/architecture.md) for ownership, and [`docs/offline.md`](docs/offline.md) for shell caching and validation.
+
+## Migrating from the IndexedDB version
+
+1. In the currently deployed (IndexedDB) version, select **Export whole space** to save a `.orbit.json` backup.
+2. Open the new version and pick an **empty** folder when prompted.
+3. Select **Import** and choose the `.orbit.json` file. The restore replaces the picked folder's entire file tree with the backup contents.
 
 ## Connect an AI provider
 
@@ -182,7 +188,7 @@ This project is intentionally built with browser standards and no UI framework o
 
 - ES modules, Custom Elements, DOM templates, CSS custom properties, Pointer Events, SVG, Canvas, and direct WebGL
 - a command-based canvas engine for selection, geometry, JSON Canvas updates, undo, and sync
-- a versioned Service Worker application shell, IndexedDB/OPFS, and the File System Access API in the browser
+- a versioned Service Worker application shell and the File System Access API (`showDirectoryPicker`) in the browser
 - **Tauri 2** for a small desktop app with filesystem access and an adapter-compatible future persistent index, if needed
 - **Capacitor** as an optional mobile shell around the same web application
 - `.canvas` and Markdown files as the portable formats while the in-memory task/calendar projections remain disposable runtime state
