@@ -6,7 +6,7 @@ description: Verify the Balaur canvas app in headless Chrome over CDP — the de
 # Browser check (headless Chrome + CDP)
 
 This is the **default browser verification path** for this repository (AGENTS.md §13).
-`node --check` alone never proves persistence, IndexedDB, or canvas behavior — run this skill
+`node --check` alone never proves persistence, folder-vault boot, or canvas behavior — run this skill
 whenever JavaScript, CSS, storage, or shell assets change.
 
 ## Prerequisites
