@@ -1,4 +1,6 @@
-# ADR-0004: DirectoryVault — File System Access API as the sole browser vault adapter
+# ADR-0005: DirectoryVault — File System Access API as the sole browser vault adapter
+
+> Renumbered from ADR-0004 because `0004-file-unified-node-model.md` landed on main during this project.
 
 **Status:** Accepted
 **Date:** 2026-07-24
