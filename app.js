@@ -334,30 +334,36 @@ async function bootCanvasApp(){
   //    the gate status region.
   await new Promise(resolve=>{
     $("#openVaultFolder").onclick=async()=>{
-      let handle;
+      const button=$("#openVaultFolder");
+      button.disabled=true;
       try{
-        // BINDING CONSTRAINT (spec seam 2): reference the global at call time.
-        // Never capture showDirectoryPicker in a module-scope const; the
-        // browser-check driver stubs window.showDirectoryPicker with an OPFS
-        // handle to run the full smoke suite headlessly.
-        handle=await window.showDirectoryPicker({mode:"readwrite"});
-      }catch(error){
-        if(error?.name==="AbortError")return;
-        $("#vaultLandingMessage").textContent=error.message;
-        return;
-      }
-      try{
-        const vault=new DirectoryVault(handle);
-        const hadSidecar=await hasWorkspace(vault);
-        const empty=!hadSidecar&&(await vault.list("")).length===0;
-        await openVault(vault,{seed:empty});
-        currentVault=vault;
-        $("#vaultLanding").hidden=true;
-        shell.removeAttribute("hidden");shell.removeAttribute("inert");
-        resolve();
-      }catch(error){
-        // First-open failure: stay on the gate with the message.
-        $("#vaultLandingMessage").textContent=error.message;
+        let handle;
+        try{
+          // BINDING CONSTRAINT (spec seam 2): reference the global at call time.
+          // Never capture showDirectoryPicker in a module-scope const; the
+          // browser-check driver stubs window.showDirectoryPicker with an OPFS
+          // handle to run the full smoke suite headlessly.
+          handle=await window.showDirectoryPicker({mode:"readwrite"});
+        }catch(error){
+          if(error?.name==="AbortError")return;
+          $("#vaultLandingMessage").textContent=error.message;
+          return;
+        }
+        try{
+          const vault=new DirectoryVault(handle);
+          const hadSidecar=await hasWorkspace(vault);
+          const empty=!hadSidecar&&(await vault.list("")).length===0;
+          await openVault(vault,{seed:empty});
+          currentVault=vault;
+          $("#vaultLanding").hidden=true;
+          shell.removeAttribute("hidden");shell.removeAttribute("inert");
+          resolve();
+        }catch(error){
+          // First-open failure: stay on the gate with the message.
+          $("#vaultLandingMessage").textContent=error.message;
+        }
+      }finally{
+        button.disabled=false;
       }
     };
   });
@@ -1931,12 +1937,18 @@ $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",re
 $("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
 initCanvasIconPicker();
 $("#resetDemo").onclick=loadGraphStarter;
-$("#reloadVault").onclick=()=>{
+$("#reloadVault").onclick=async()=>{
   if(!currentVault)return;
-  openVault(currentVault,{seed:false}).catch(error=>{
+  const button=$("#reloadVault");
+  button.disabled=true;
+  try{
+    await openVault(currentVault,{seed:false});
+  }catch(error){
     setIndexStatus("Files unavailable",error.message);
     setCanonicalWritable(false,"Canonical files are unavailable; export or repair the vault before editing.");
-  });
+  }finally{
+    button.disabled=false;
+  }
 };
 $("#openAnotherVault").onclick=async()=>{
   await flushPendingWorkspaceEdits();
