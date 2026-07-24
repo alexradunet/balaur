@@ -6,7 +6,22 @@ Use these terms consistently. The glossary summarizes names and distinctions; `A
 
 ### Vault
 
-The source-of-truth collection of logical user files. Browser runtime uses `IndexedDbVault`; Node tooling and tests use `FsVault` or `MemoryVault`. A vault adapter is storage infrastructure, not a different data model.
+The source-of-truth collection of logical user files. Browser runtime uses `DirectoryVault` over a user-picked folder (File System Access API); Node tooling and tests use `FsVault` or `MemoryVault`. A vault adapter is storage infrastructure, not a different data model.
+
+### DirectoryVault
+
+The browser `VaultStore` adapter over a `FileSystemDirectoryHandle` from `showDirectoryPicker({ mode: "readwrite" })`. The picked folder's plain files are the vault; no content cache, no persisted handle; the folder is re-picked every launch.
+_Avoid_: folder vault, file-system vault.
+
+### Vault gate
+
+The full-screen landing screen shown at every launch: wordmark, "Open vault folder" button, and status region. On browsers without `showDirectoryPicker` or `crypto.subtle` it becomes an incompatibility gate and never dismisses.
+_Avoid_: landing page, splash screen, onboarding.
+
+### Adopt
+
+Opening a folder that has files but no `.orbit/workspace.json`: the sidecar and an empty root canvas are added (additive-only), matching files are indexed, and pre-existing foreign files are never modified or deleted.
+_Avoid_: import, migrate, seed.
 
 ### Canonical file
 
