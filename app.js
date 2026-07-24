@@ -1218,7 +1218,7 @@ function renderInspector() {
     readonlyMessage:"Canonical files are read-only until repaired or restored.",
     fields,
     notes,
-    colors:Object.entries(COLORS).map(([value,color])=>({value,color,active:item.color===value})),
+    colors:[...Object.entries(COLORS).map(([value,color])=>({value,color,active:item.color===value})),{value:DORMANT_NODE_COLOR,color:DORMANT_NODE_COLOR,active:item.color===DORMANT_NODE_COLOR}],
     actions,
   });
 }
