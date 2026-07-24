@@ -8,6 +8,53 @@
   }
   .app-shell.sidebar-closed { --sidebar: 0px; }
 
+  /* The grid/flex display values above override the UA `[hidden]{display:none}`,
+     so the hidden app shell and dismissed gate need explicit overrides. */
+  .app-shell[hidden] { display: none; }
+  #vaultLanding[hidden] { display: none; }
+
+  .vault-landing {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--balaur-space-4);
+    padding: var(--balaur-space-5);
+    background: var(--balaur-surface-page);
+    color: var(--balaur-content-on-dark);
+    text-align: center;
+    z-index: 100;
+  }
+  .vault-landing-wordmark {
+    margin: 0;
+    color: var(--balaur-action-primary);
+    font: 600 var(--balaur-text-xl)/1 var(--balaur-font-display);
+    letter-spacing: .04em;
+  }
+  .vault-landing-hint {
+    margin: 0;
+    max-width: 34ch;
+    color: var(--balaur-content-on-dark-muted);
+    font-size: var(--balaur-text-sm);
+  }
+  .vault-landing #openVaultFolder { margin-block-start: var(--balaur-space-2); }
+  #vaultLandingMessage {
+    margin: 0;
+    min-height: 1.2em;
+    max-width: 48ch;
+    color: var(--balaur-status-danger);
+    font-size: var(--balaur-text-sm);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .vault-landing { animation: vault-landing-fade 240ms ease-out; }
+  }
+  @keyframes vault-landing-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   .topbar {
     grid-column: 1 / -1;
     display: grid;
