@@ -308,7 +308,7 @@ The skill automates most of the manual list below; fall back to a real browser f
 
 Do not claim these are browser-verified from Node tests alone:
 
-1. `DirectoryVault` open/write/restore and permission-loss behavior;
+1. `DirectoryVault` open/write/restore, permission-loss behavior, and externally deleted directories;
 2. vault-gate boot and reload/re-pick persistence;
 3. first-render budget;
 4. external-change reconciliation via Reload vault;
