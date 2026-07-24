@@ -19,7 +19,7 @@ SQLite is not part of canonical-files-only v1 and is not loaded by the browser a
 
 Preserve these constraints. Do not introduce a proprietary Canvas dialect, framework, build pipeline, runtime package manager, or host-page execution of generated code. Generated or user-authored code runs only in sandboxed file-node widgets.
 
-The live site is deployed from `main` to <https://alexradunet.github.io/open-canvas-experiment/>.
+The live site is deployed from `main` to <https://alexradunet.github.io/balaur/>.
 
 ## 2. Read the relevant documentation first
 
