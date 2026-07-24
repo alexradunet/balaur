@@ -12,6 +12,7 @@ import { parseEntity } from "./storage/entity-codec.js";
 import { MemoryIndex } from "./storage/memory-index.js";
 import { LifeQuery } from "./storage/life-query.js";
 import { FileTaskRepository } from "./storage/task-repository.js";
+import { journalPath } from "./storage/journal-event-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
 import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacementFailure, validateGeneratedOperation } from "./ai/generated-operations.js";
@@ -40,6 +41,79 @@ const demoCanvas = {
     { id:"e-idea-trip", fromNode:"n-idea", fromSide:"right", toNode:"n-trip", toSide:"left", color:"2", toEnd:"arrow" }
   ]
 };
+
+const STARTER_TASK_ID="task-citybreak";
+const STARTER_TASK_PATH="tasks/choose-dates-for-the-autumn-trip-task-citybreak.md";
+function createGraphStarterWorkspace(){
+  const rootDocument={nodes:[
+    {id:"home-guide",type:"text",x:0,y:-220,width:1180,height:170,color:"3",text:"# Start here — your life, as a graph\nHome is the entry point. Four hubs hang off it; structure emerges from labelled connections, not folders.\n\n- Inbox — capture pending processing\n- Projects — committed efforts with a finish line\n- Wiki — durable reference\n- Archive — dormant and completed"},
+    {id:"portal-inbox",type:"file",x:0,y:20,width:360,height:240,color:"2",file:"canvases/inbox.canvas"},
+    {id:"portal-projects",type:"file",x:410,y:20,width:360,height:240,color:"6",file:"canvases/projects.canvas"},
+    {id:"portal-wiki",type:"file",x:0,y:300,width:360,height:240,color:"5",file:"canvases/wiki.canvas"},
+    {id:"portal-archive",type:"file",x:410,y:300,width:360,height:240,color:"3",file:"canvases/archive.canvas"},
+  ],edges:[]};
+  const result=freshWorkspace(rootDocument),root=result.canvases[result.rootId];
+  root.title="Home";root.document=rootDocument;root.camera=null;
+
+  const today=localDateISO(),journalFile=journalPath(today);
+  const hub=(id,title,path,portalNodeId,doc)=>{result.canvases[id]={id,title,parentId:result.rootId,portalNodeId,path,document:doc,camera:null,kind:"hub"};};
+  const inboxDoc={nodes:[
+    {id:"inbox-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Inbox\nCapture quick notes here, then process them into a project or the wiki. A healthy inbox trends toward empty."},
+    {id:"inbox-trip",type:"text",x:0,y:20,width:340,height:200,color:"2",text:`${NOTE_MARKERS.inbox}\n# Autumn city break idea\nDecide dates and a rough budget, then turn it into a real project.`},
+    {id:"inbox-to-citybreak",type:"file",x:420,y:20,width:340,height:200,color:"6",file:"canvases/city-break.canvas"},
+  ],edges:[
+    {id:"e-inbox-filed",fromNode:"inbox-trip",fromSide:"right",toNode:"inbox-to-citybreak",toSide:"left",toEnd:"arrow",color:"6",label:"filed-to"},
+  ]};
+  const projectsDoc={nodes:[
+    {id:"projects-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Projects\nCommitted efforts with a finish line. Each project is its own canvas holding tasks, notes, and sub-canvases."},
+    {id:"projects-citybreak",type:"file",x:0,y:20,width:360,height:240,color:"6",file:"canvases/city-break.canvas"},
+  ],edges:[]};
+  const cityBreakDoc={nodes:[
+    {id:"cb-note",type:"text",x:0,y:0,width:360,height:200,color:"6",text:"# Autumn city break\nThree days, one city, room to wander. Finish line: transport and accommodation booked."},
+    {id:"cb-task",type:"file",x:420,y:0,width:340,height:200,color:"5",file:STARTER_TASK_PATH},
+  ],edges:[
+    {id:"e-cb-partof",fromNode:"cb-task",fromSide:"left",toNode:"cb-note",toSide:"right",toEnd:"arrow",color:"6",label:"part-of"},
+  ]};
+  const wikiDoc={nodes:[
+    {id:"wiki-guide",type:"text",x:0,y:-180,width:760,height:120,color:"3",text:"# Wiki\nDurable reference and responsibilities. Pages interlink; this is the long-term memory of your life."},
+    {id:"wiki-budget",type:"text",x:0,y:0,width:340,height:200,color:"5",text:`${NOTE_MARKERS.reference}\n# Monthly budget\nFixed costs, everyday spending, and fun each get a limit. Reconcile monthly.`},
+    {id:"wiki-subscriptions",type:"text",x:420,y:0,width:340,height:200,color:"5",text:`${NOTE_MARKERS.reference}\n# Subscriptions\nReview recurring costs quarterly before they become invisible.`},
+    {id:"wiki-journal",type:"file",x:840,y:0,width:320,height:200,color:"3",file:journalFile},
+  ],edges:[
+    {id:"e-wiki-relates",fromNode:"wiki-subscriptions",fromSide:"left",toNode:"wiki-budget",toSide:"right",toEnd:"arrow",color:"5",label:"relates-to"},
+  ]};
+  const archiveDoc={nodes:[
+    {id:"archive-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Archive\nDormant and completed work. Nothing is deleted; things are filed here when they are done or paused."},
+    {id:"archive-portfolio",type:"text",x:0,y:20,width:360,height:200,color:DORMANT_NODE_COLOR,text:`${NOTE_MARKERS.reference}\n# Portfolio refresh (completed)\nShipped and shared. Kept for the record.`},
+  ],edges:[]};
+
+  hub("hub-inbox","Inbox","canvases/inbox.canvas","portal-inbox",inboxDoc);
+  hub("hub-projects","Projects","canvases/projects.canvas","portal-projects",projectsDoc);
+  hub("hub-wiki","Wiki","canvases/wiki.canvas","portal-wiki",wikiDoc);
+  hub("hub-archive","Archive","canvases/archive.canvas","portal-archive",archiveDoc);
+  result.canvases["project-city-break"]={id:"project-city-break",title:"City break",parentId:"hub-projects",portalNodeId:"projects-citybreak",path:"canvases/city-break.canvas",document:cityBreakDoc,camera:null,kind:"project"};
+  return normalizeWorkspace(result);
+}
+async function seedGraphStarterEntities(){
+  // Task file at the exact path the starter's cb-task node already references.
+  // No canvasId: the placement node exists in the City break canvas already.
+  if(taskRepository){
+    try{
+      await taskRepository.createTask({
+        id:STARTER_TASK_ID,path:STARTER_TASK_PATH,
+        title:"Choose dates for the autumn trip",
+        body:"Check the calendar and agree on a realistic budget window.",
+        status:"inbox",
+      });
+    }catch(_){/* already seeded */}
+  }
+  // Journal file for today at the path the starter's wiki-journal node references.
+  if(journalRepository){
+    const today=localDateISO();
+    try{await journalRepository.getJournal(today);}
+    catch(_){await journalRepository.createJournal({localDate:today,body:"Welcome to Balaur. This is your daily note — a quiet place to think out loud. Open Today to edit it, or place it on a canvas."});}
+  }
+}
 
 const $ = (selector, root=document) => root.querySelector(selector);
 const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
@@ -82,6 +156,7 @@ let lifeIndex=null;
 let lifeIndexer=null;
 let lifeQuery=null;
 let taskRepository=null;
+let journalRepository=null;
 let componentCardCatalog=null;
 let componentCardRepository=null;
 let widgetCatalog=null;
@@ -130,7 +205,7 @@ function loadWorkspace(){
       parsed.rootId=canvases[parsed.rootId]?parsed.rootId:Object.keys(canvases)[0];parsed.activeId=canvases[parsed.activeId]?parsed.activeId:parsed.rootId;return normalizeWorkspace(parsed);
     }
   }catch(_){}
-  return freshWorkspace();
+  return localStorage.getItem("orbit-canvas-v1")?freshWorkspace():createGraphStarterWorkspace();
 }
 
 
@@ -261,6 +336,10 @@ async function bootCanvasApp(){
     configureLifeRuntime(vault);
     await seedBundledWidget(vault);
     for (const diagnostic of result.diagnostics) console.warn("Vault workspace diagnostic", diagnostic);
+    if (firstRun) {
+      await seedGraphStarterEntities();
+      workspace = (await store.load()).workspace;
+    }
     await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild()]);
     const stats = lifeIndexer.stats();
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
@@ -309,7 +388,24 @@ async function rebuildLifeIndex(){
   setIndexStatus(`Files · ${stats.sourceFiles} indexed`, `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);
   renderToday(); renderNodes();
 }
-function loadGraphStarter(){toast("Graph starter arrives in Step 4");}
+async function loadGraphStarter(){
+  if(!canonicalWritable||!vaultStore) { toast("Canonical files are unavailable or read-only"); return; }
+  if(!confirm("Replace your current local space with the graph starter? Export your space first if you want a backup."))return;
+  try {
+    await flushPendingWorkspaceEdits();
+    const starter=createGraphStarterWorkspace();
+    const stagingVault=new IndexedDbVault(`orbit-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
+    await stagingStore.migrate(starter);
+    await seedBundledWidget(stagingVault);
+    workspace=starter;configureLifeRuntime(stagingVault);await seedGraphStarterEntities();
+    const snapshot=await stagingVault.snapshot(), canonicalVault=vaultStore.vault;
+    await canonicalVault.restore(snapshot);
+    const nextStore=new WorkspaceStore(canonicalVault), result=await nextStore.load();
+    if(!result?.workspace)throw new Error("Starter activation did not produce a workspace");
+    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
+    currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#canvasTitle").value=canvasRecord().title;renderWorkspaceNavigation();render();fitView();toast("Graph starter space loaded");
+  } catch(error) { console.warn("Could not reset the canonical vault",error); toast(`Could not load starter: ${error.message}`); }
+}
 function portalPreview(document){
   const nodes=(document.nodes||[]).slice(0,28);if(!nodes.length)return '<span class="portal-empty">Empty canvas · open to begin</span>';
   const minX=Math.min(...nodes.map(node=>node.x)),minY=Math.min(...nodes.map(node=>node.y)),maxX=Math.max(...nodes.map(node=>node.x+node.width)),maxY=Math.max(...nodes.map(node=>node.y+node.height)),width=Math.max(1,maxX-minX),height=Math.max(1,maxY-minY),scale=Math.min(210/width,82/height);
