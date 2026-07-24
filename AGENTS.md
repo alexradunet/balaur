@@ -245,7 +245,7 @@ Nested-canvas portals remain standard `file` nodes. Do not flatten nested docume
 
 AI output never directly mutates the host DOM or executes host-page JavaScript. Accept only allowlisted structured operations, validate IDs/fields/URLs/geometry/operation counts and the resulting canvas, show a human-readable proposal, and require confirmation before applying it. Typed life changes must call the file repositories, not write index rows directly.
 
-AI operators remain standard text nodes with inert markers and edge-derived inputs. Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection. File-node inputs resolve canonical file bodies.
+AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- orbit:ai-card -->` marker, with edge-derived inputs; their output is likewise a file-backed note connected by the reserved `AI output` edge (ADR-0004). Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection. File-node inputs resolve canonical file bodies.
 
 Live widgets run in iframes with exactly:
 
