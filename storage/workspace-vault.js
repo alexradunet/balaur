@@ -6,9 +6,9 @@
 //
 // The sidecar never embeds full documents; each canvas document lives at its own
 // logical path and is validated on read and write. This module is platform-neutral
-// and asynchronous so it runs against MemoryVault (tests) and IndexedDbVault
+// and asynchronous so it runs against MemoryVault (tests) and DirectoryVault
 // (browser). It is the tested foundation the Phase 4b app.js startup refactor
-// builds on; localStorage is consulted only once as a legacy-profile migration source.
+// builds on; the browser boots from a user-picked folder with no localStorage migration.
 
 import { isCanvas } from "./canvas-validate.js";
 import { assertSafePath, caseFoldKey } from "./vault-path.js";

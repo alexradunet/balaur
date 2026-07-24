@@ -1,8 +1,8 @@
 // VaultStore contract (Phase 2, plan §10.1).
 //
-// A platform-neutral, asynchronous logical vault. Adapters: MemoryVault (tests),
-// IndexedDbVault (browser default), and later browser-directory / Tauri. The
-// logical layout is identical across all adapters (plan §6).
+// A platform-neutral, asynchronous logical vault. Adapters: DirectoryVault
+// (browser, over a user-picked folder), FsVault (Node), and MemoryVault (tests).
+// The logical layout is identical across all adapters (plan §6).
 
 import { StorageError } from "./vault-errors.js";
 
