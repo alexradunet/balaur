@@ -575,6 +575,37 @@ function flushTaskFieldUpdate(id, patch) {
   taskUpdateTimers.delete(id);
   return updateTask(id,{...(prior?.patch||{}),...patch}).catch(error=>toast(error.message));
 }
+async function updateNoteBody(path, body){
+  if(!canonicalWritable||!noteRepository) throw new Error("Canonical files are unavailable or read-only.");
+  await flushPendingWorkspaceEdits();
+  const note=await enqueueMutation(async()=>{
+    const updated=await noteRepository.updateNote(path, body);
+    await reloadCanvasDocuments([currentCanvasId]);
+    renderNodes();
+    return updated;
+  });
+  return note;
+}
+function scheduleNoteUpdate(path, body){
+  const prior=noteUpdateTimers.get(path);if(prior)clearTimeout(prior.timer);
+  const timer=setTimeout(()=>{noteUpdateTimers.delete(path);updateNoteBody(path,body).catch(error=>toast(error.message));},250);
+  noteUpdateTimers.set(path,{timer,body});
+}
+function flushNoteUpdate(path, body){
+  const prior=noteUpdateTimers.get(path);if(prior)clearTimeout(prior.timer);
+  noteUpdateTimers.delete(path);
+  const next=body!==undefined?body:prior?.body;if(next===undefined)return Promise.resolve();
+  return updateNoteBody(path,next).catch(error=>toast(error.message));
+}
+function noteBodyFromInspector(detail){
+  const current=noteCatalog?.getByPath(detail.notePath)?.body||"";
+  if(detail.key==="noteBody")return String(detail.value??"");
+  if(detail.key==="aiTitle"||detail.key==="aiPrompt"){
+    const config=parseAICardBody(current);
+    return buildAICardText(detail.key==="aiTitle"?detail.value:config.title,detail.key==="aiPrompt"?detail.value:config.prompt);
+  }
+  return null;
+}
 async function completeTask(id){
   if(!canonicalWritable||!taskRepository) throw new Error("Canonical files are unavailable or read-only.");
   await flushPendingWorkspaceEdits();
@@ -917,6 +948,18 @@ function renderNodes() {
       } else if (fileEntity?.source?.entityType==="journal") {
         const row=fileEntity.row;
         content.innerHTML=`<div class="node-kicker">JOURNAL · ${escapeHTML(row.localDate)}</div><div class="node-body"><h3>${escapeHTML(row.localDate)}</h3><p>Daily note. Open in Today to edit, or place it on a canvas.</p></div>`;
+      } else if (isNotePath(node.file)) {
+        const note=noteCatalog?.getByPath(node.file)||noteCatalog?.getFallbackByPath(node.file)||{path:node.file,title:node.file.split("/").pop(),body:"",diagnostic:`Note file is unavailable: ${node.file}`};
+        if(note.diagnostic){
+          content.innerHTML=`<div class="node-kicker">NOTE · UNAVAILABLE</div><div class="node-body"><h3>${escapeHTML(note.title)}</h3><p>${escapeHTML(note.diagnostic)}</p></div>`;
+        } else if(note.body.includes(AI_CARD_MARKER)){
+          const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
+          content.innerHTML=`<div class="node-kicker">AI OPERATOR</div><div class="node-body"><h3 class="ai-card-title">${escapeHTML(config.title)}</h3><p class="ai-card-prompt">${escapeHTML(config.prompt)}</p><div class="ai-inputs">${inputs.length?inputs.map(input=>`<span class="ai-input-chip">← ${escapeHTML(nodeTitle(input))}</span>`).join(""):"<span class=\"ai-input-chip\">No inputs connected</span>"}</div></div><div class="ai-run-row"><span class="ai-run-status">${escapeHTML(runtime.status||"Ready")}</span><button class="ai-run-button" data-ai-run ${runtime.running?"disabled":""}>${runtime.running?"Running…":"Run now"}</button></div>`;
+        } else {
+          const kind=noteKind(node);
+          const kicker=kind==="inbox"?"INBOX · capture":kind==="reference"?"REFERENCE · wiki":textMeta(node);
+          content.innerHTML=`<div class="node-kicker">${kicker}</div><div class="node-body">${markdownToHTML(note.body)}</div>`;
+        }
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="node-body"><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p></div>`;
     }
     if (!canRetain) {
@@ -1165,7 +1208,7 @@ function renderFallbackInspector(panel,model){
     const closeButton=event.target.closest?.("[data-inspector-close]"),color=event.target.closest?.("[data-color]"),action=event.target.closest?.("[data-intent]");
     if(closeButton)panel.dispatchEvent(new CustomEvent("balaur-inspector-close",{bubbles:true,composed:true}));
     else if(color&&!color.disabled)panel.dispatchEvent(new CustomEvent("balaur-inspector-color",{bubbles:true,composed:true,detail:{value:color.dataset.color,modelKey:String(model.key||"")}}));
-    else if(action&&!action.disabled){const configured=model.actions.find(candidate=>candidate.intent===action.dataset.intent);if(configured)panel.dispatchEvent(new CustomEvent("balaur-inspector-action",{bubbles:true,composed:true,detail:{intent:configured.intent,modelKey:String(model.key||""),taskId:configured.taskId||null,cardId:configured.cardId||null,canvasId:configured.canvasId||null}}));}
+    else if(action&&!action.disabled){const configured=model.actions.find(candidate=>candidate.intent===action.dataset.intent);if(configured)panel.dispatchEvent(new CustomEvent("balaur-inspector-action",{bubbles:true,composed:true,detail:{intent:configured.intent,modelKey:String(model.key||""),taskId:configured.taskId||null,cardId:configured.cardId||null,canvasId:configured.canvasId||null,notePath:configured.notePath||null}}));}
   };
 }
 function setInspectorModel(panel,model){
@@ -1181,10 +1224,11 @@ function renderInspector() {
   let title="Connection";
   if(selected.kind==="node"){
     const task=taskForNode(item),componentCard=item.type==="file"&&!task?componentCardCatalog?.getByPath(item.file):null;
-    title=task?"Task":componentCard?"Component card":`${item.type[0].toUpperCase()+item.type.slice(1)} node`;
-    if(item.type==="text"&&isAICard(item)){
+    const note=item.type==="file"&&!task&&isNotePath(item.file)?noteCatalog?.getByPath(item.file)||noteCatalog?.getFallbackByPath(item.file)||{path:item.file,title:item.file.split("/").pop(),body:"",diagnostic:`Note file is unavailable: ${item.file}`}:null;
+    title=task?"Task":componentCard?"Component card":note?"Note":`${item.type[0].toUpperCase()+item.type.slice(1)} node`;
+    if(isAICard(item)){
       const config=parseAICard(item);
-      fields.push({key:"aiTitle",label:"Operator name",control:"text",value:config.title},{key:"aiPrompt",label:"AI instructions",control:"textarea",value:config.prompt});
+      fields.push({key:"aiTitle",label:"Operator name",control:"text",value:config.title,scope:"note",notePath:item.file},{key:"aiPrompt",label:"AI instructions",control:"textarea",value:config.prompt,scope:"note",notePath:item.file});
       notes.push({text:"Incoming connections become context. The generated note updates automatically when that context changes."});
     }else if(task){
       const statuses=["inbox","next","scheduled","waiting","done","cancelled"];
@@ -1196,9 +1240,12 @@ function renderInspector() {
         {key:"priority",label:"Priority",control:"select",value:task.priority??"",scope:"task",taskId:task.id,options:[{value:"",label:"None"},{value:"1",label:"High"},{value:"2",label:"Medium"},{value:"3",label:"Low"}]},
       );
       actions.push({intent:"delete-task",label:"Delete task everywhere",taskId:task.id});
+    }else if(note){
+      fields.push({key:"noteBody",label:"Markdown",control:"textarea",value:note.body,scope:"note",notePath:item.file});
+      actions.push({intent:"delete-note",label:"Delete note everywhere",notePath:item.file,danger:true});
     }else if(item.type==="text")fields.push({key:"text",label:"Markdown",control:"textarea",value:item.text});
     if(item.type==="link")fields.push({key:"url",label:"URL",control:"url",value:item.url});
-    if(item.type==="file"&&!task){
+    if(item.type==="file"&&!task&&!note){
       const subcanvasId=subcanvasIdFromNode(item),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
       if(subcanvas){
         fields.push({key:"title",label:"Canvas title",control:"text",value:subcanvas.title,scope:"canvas",canvasId:subcanvasId});
@@ -1260,6 +1307,15 @@ function applyInspectorField(detail,phase){
     else if(taskUpdateTimers.has(next.id))flushTaskFieldUpdate(next.id,next.patch);
     return;
   }
+  if(detail.scope==="note"){
+    if(!canonicalWritable||!noteRepository)return;
+    const path=detail.notePath;if(!path)return;
+    const body=noteBodyFromInspector(detail);if(body===null)return;
+    if(phase==="input")scheduleNoteUpdate(path,body);
+    else if(phase==="change")flushNoteUpdate(path,body);
+    else if(noteUpdateTimers.has(path))flushNoteUpdate(path,body);
+    return;
+  }
   if(detail.scope==="canvas"){
     if(phase!=="input")return;
     const record=workspace.canvases[detail.canvasId];if(!record)return;
@@ -1284,6 +1340,7 @@ document.addEventListener("balaur-inspector-action",event=>{
   if(event.detail.intent==="open-canvas"&&event.detail.canvasId)enterSubcanvas(event.detail.canvasId);
   else if(event.detail.intent==="delete-task")deleteTaskEverywhere(event.detail.taskId);
   else if(event.detail.intent==="delete-card")deleteComponentCardEverywhere(event.detail.cardId);
+  else if(event.detail.intent==="delete-note")deleteNoteEverywhere(event.detail.notePath);
   else if(event.detail.intent==="delete-selection")deleteSelection();
 });
 document.addEventListener("balaur-task-complete",async event=>{
@@ -1323,6 +1380,16 @@ async function deleteTaskEverywhere(taskId){
     selected=null;shell.classList.remove("inspector-open");render();renderToday();toast("Task deleted everywhere");
   }catch(error){toast(error.message);}
 }
+async function deleteNoteEverywhere(path){
+  if(!path||!noteRepository)return;
+  if(!confirm("Delete this note, its canonical file, and every canvas placement? This cannot be undone."))return;
+  const affected=[...new Set((noteCatalog?.getByPath(path)?.placements||[]).map(placement=>canvasIdFromPath(placement.canvasPath)).filter(Boolean))];
+  try{
+    await flushPendingWorkspaceEdits();
+    await enqueueMutation(async()=>{await noteRepository.deleteNote(path);await reloadCanvasDocuments(affected);});
+    selected=null;shell.classList.remove("inspector-open");render();toast("Note deleted everywhere");
+  }catch(error){toast(error.message);}
+}
 async function deleteSelection() {
   if (!canonicalWritable) { toast("Canonical files are read-only until repaired or restored"); return; }
   if (!selected) return;const before=aiCardSignatures();let canonicalMutation=false;
@@ -1335,6 +1402,12 @@ async function deleteSelection() {
       try{
         await flushPendingWorkspaceEdits();
         await enqueueMutation(async()=>{await taskRepository.removePlacement(currentCanvasId,selected.id);await reloadCanvasDocuments([currentCanvasId]);});
+      }catch(error){toast(error.message);return;}
+    } else if(node.type==="file"&&isNotePath(node.file)){
+      canonicalMutation=true;
+      try{
+        await flushPendingWorkspaceEdits();
+        await enqueueMutation(async()=>{await noteRepository.removePlacement(currentCanvasId,selected.id);await reloadCanvasDocuments([currentCanvasId]);});
       }catch(error){toast(error.message);return;}
     } else {
       documentData.nodes=documentData.nodes.filter(n=>n.id!==selected.id);
