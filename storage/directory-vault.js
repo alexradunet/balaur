@@ -21,8 +21,11 @@ import { ConflictError, PathError, StorageError, VaultError } from "./vault-erro
 export class DirectoryVault extends VaultStore {
   constructor(handle) {
     super();
-    if (!handle || handle.kind !== "directory") {
-      throw new StorageError("DirectoryVault requires a FileSystemDirectoryHandle", { code: "STORAGE_UNAVAILABLE" });
+    if (!handle) {
+      throw new StorageError("DirectoryVault requires a FileSystemDirectoryHandle; the handle is missing", { code: "STORAGE_UNAVAILABLE" });
+    }
+    if (handle.kind !== "directory") {
+      throw new StorageError(`DirectoryVault requires a directory handle; got kind "${handle.kind}", expected "directory"`, { code: "STORAGE_UNAVAILABLE" });
     }
     this._handle = handle;
     this._revision = 0;
@@ -112,6 +115,16 @@ export class DirectoryVault extends VaultStore {
     return handle.getFile();
   }
 
+  // Non-atomic stream write shared by write() and move(). createWritable is not
+  // atomic-rename; the expectedHash precondition is the conflict guard (ADR-0004).
+  // move() calls this directly rather than delegating to write(), preserving the
+  // single-bump invariant.
+  async _streamWrite(fileHandle, text) {
+    const writable = await fileHandle.createWritable();
+    await writable.write(text);
+    await writable.close();
+  }
+
   // Internal meta builder shared by stat/exists/write/move. A missing file (or a
   // missing parent directory) yields null; modifiedAt is the real disk mtime.
   async _stat(path) {
@@ -183,9 +196,7 @@ export class DirectoryVault extends VaultStore {
     const text = String(content);
     try {
       const handle = await this._fileHandle(p, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(text);
-      await writable.close();
+      await this._streamWrite(handle, text);
     } catch (error) {
       throw this._wrap(error, `Cannot write ${p}`);
     }
@@ -211,8 +222,9 @@ export class DirectoryVault extends VaultStore {
 
   // Mirrors MemoryVault.move ordering so a failed destination write never deletes
   // the source: read source, destination-exists conflict, precondition, fold
-  // check, INLINE destination write (never delegate to write — that would journal
-  // a spurious create and bump twice), a single move bump, then remove the source.
+  // check, destination write via the low-level _streamWrite (never delegate to
+  // this.write — that would journal a spurious create and bump twice), a single
+  // move bump, then remove the source.
   async move(from, to, options = {}) {
     const f = assertSafePath(from);
     const t = assertSafePath(to);
@@ -224,20 +236,19 @@ export class DirectoryVault extends VaultStore {
     const text = await this.read(f);
     try {
       const handle = await this._fileHandle(t, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(text);
-      await writable.close();
+      await this._streamWrite(handle, text);
     } catch (error) {
       throw this._wrap(error, `Cannot write ${t}`);
     }
-    const revision = this._bump(t, "move", existing.hash, f);
+    const hash = await contentHash(text);
+    const revision = this._bump(t, "move", hash, f);
     try {
       const sourceHandle = await this._fileHandle(f, {});
       await sourceHandle.remove();
     } catch (error) {
       throw this._wrap(error, `Cannot remove ${f}`);
     }
-    return { path: t, mediaType: existing.mediaType, size: existing.size, hash: existing.hash, modifiedAt: new Date().toISOString(), revision };
+    return { path: t, mediaType: existing.mediaType, size: byteLength(text), hash, modifiedAt: new Date().toISOString(), revision };
   }
 
   // Changed-path reconciliation support (LifeIndexer.reconcileWarm). Synchronous,
