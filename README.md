@@ -2,7 +2,7 @@
 
 A small, standalone proof of concept for a local-first life-management app whose primary interface and storage format is an infinite [JSON Canvas](https://jsoncanvas.org/) canvas.
 
-**[Open the live demo](https://alexradunet.github.io/open-canvas-experiment/)**
+**[Open the live demo](https://alexradunet.github.io/balaur/)**
 
 ![JSON Canvas 1.0](https://img.shields.io/badge/JSON_Canvas-1.0-7ee0a1)
 
