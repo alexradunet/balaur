@@ -26,7 +26,6 @@ function legacyWorkspace() {
     version: 1,
     rootId: "canvas-root",
     activeId: "canvas-root",
-    johnnyDecimal: { enabled: true, entries: { "10-19": { title: "Life admin" } } },
     canvases: {
       "canvas-root": {
         id: "canvas-root", title: "Life OS", parentId: null, portalNodeId: null, path: null,
@@ -40,7 +39,7 @@ function legacyWorkspace() {
         id: "canvas-planning", title: "11 Planning", parentId: "canvas-root", portalNodeId: "portal-1", path: "canvases/planning.canvas",
         document: doc(textNode("p1", "# Planning")),
         camera: { x: 0, y: 0, zoom: 0.5 },
-        jdCode: "11", jdTitle: "Planning", jdKind: "category",
+        kind: "project",
       },
     },
   };
@@ -66,10 +65,9 @@ test("toSidecar strips documents and stamps format/version/paths", () => {
   }
   assert.equal(sidecar.canvases["canvas-root"].title, "Life OS");
   assert.deepEqual(sidecar.canvases["canvas-planning"].camera, { x: 0, y: 0, zoom: 0.5 });
-  assert.equal(sidecar.canvases["canvas-planning"].jdCode, "11");
-  assert.equal(sidecar.canvases["canvas-planning"].jdTitle, "Planning");
-  assert.equal(sidecar.canvases["canvas-planning"].jdKind, "category");
-  assert.ok(!("jdCode" in sidecar.canvases["canvas-root"]), "records without JD metadata stay plain");
+  assert.equal(sidecar.canvases["canvas-planning"].kind, "project");
+  assert.ok(!("kind" in sidecar.canvases["canvas-root"]), "records without a kind stay plain");
+  assert.ok(!("johnnyDecimal" in sidecar), "sidecar no longer carries a JD index");
 });
 
 test("parseSidecar round-trips and rejects malformed sidecars", () => {
@@ -90,16 +88,20 @@ test("parseSidecar round-trips and rejects malformed sidecars", () => {
   assert.equal(parseSidecar(JSON.stringify(noActive)).activeId, "canvas-root");
 });
 
-test("load derives a missing jdKind from the Johnny Decimal entry", async () => {
+test("load strips legacy Johnny Decimal metadata from an old sidecar", async () => {
   const vault = new MemoryVault();
-  const source = legacyWorkspace();
-  await new WorkspaceStore(vault).migrate(source);
+  await new WorkspaceStore(vault).migrate(legacyWorkspace());
   const sidecar = JSON.parse(await vault.read(SIDECAR_PATH));
-  delete sidecar.canvases["canvas-planning"].jdKind;
-  sidecar.johnnyDecimal.entries["11"] = { code: "11", kind: "category" };
+  sidecar.johnnyDecimal = { enabled: true, entries: { "11": { kind: "category" } } };
+  sidecar.canvases["canvas-planning"].jdCode = "11";
+  sidecar.canvases["canvas-planning"].jdTitle = "Planning";
+  sidecar.canvases["canvas-planning"].jdKind = "category";
   await vault.write(SIDECAR_PATH, JSON.stringify(sidecar));
   const result = await new WorkspaceStore(vault).load();
-  assert.equal(result.workspace.canvases["canvas-planning"].jdKind, "category");
+  const record = result.workspace.canvases["canvas-planning"];
+  assert.equal(record.title, "11 Planning");           // data survives
+  assert.ok(!("jdCode" in record) && !("jdKind" in record) && !("jdTitle" in record));
+  assert.ok(!("johnnyDecimal" in result.workspace));
 });
 
 test("migrate then load reconstructs an equivalent workspace", async () => {
@@ -117,12 +119,9 @@ test("migrate then load reconstructs an equivalent workspace", async () => {
   assert.equal(ws.canvases["canvas-root"].title, "Life OS");
   assert.equal(ws.canvases["canvas-planning"].title, "11 Planning");
   assert.equal(ws.canvases["canvas-planning"].parentId, "canvas-root");
-  assert.equal(ws.canvases["canvas-planning"].jdCode, "11");
-  assert.equal(ws.canvases["canvas-planning"].jdTitle, "Planning");
-  assert.equal(ws.canvases["canvas-planning"].jdKind, "category");
+  assert.equal(ws.canvases["canvas-planning"].kind, "project");
   assert.deepEqual(ws.canvases["canvas-root"].document, original.canvases["canvas-root"].document);
   assert.deepEqual(ws.canvases["canvas-planning"].document, original.canvases["canvas-planning"].document);
-  assert.deepEqual(ws.johnnyDecimal, original.johnnyDecimal);
 });
 
 test("every canvas file is independently valid JSON Canvas", async () => {
@@ -297,6 +296,14 @@ test("extracted isCanvas validator agrees on valid and invalid documents", () =>
   assert.equal(isCanvas({ nodes: [{ id: "fraction", type: "text", x: 0.5, y: 0, width: 1, height: 1, text: "x" }], edges: [] }), false);
   assert.equal(isCanvas({ nodes: [{ id: "subpath", type: "file", x: 0, y: 0, width: 1, height: 1, file: "notes/a.md", subpath: "heading" }], edges: [] }), false);
   assert.equal(isCanvas({ nodes: [{ id: "zoom", type: "group", x: 0, y: 0, width: 1, height: 1, backgroundZoom: 1 }], edges: [] }), false);
+});
+
+test("parseSidecar sanitizes an unknown canvas kind", () => {
+  const sidecar = toSidecar(legacyWorkspace());
+  sidecar.canvases["canvas-planning"].kind = "bogus";
+  assert.ok(!("kind" in parseSidecar(JSON.stringify(sidecar)).canvases["canvas-planning"]));
+  sidecar.canvases["canvas-planning"].kind = "hub";
+  assert.equal(parseSidecar(JSON.stringify(sidecar)).canvases["canvas-planning"].kind, "hub");
 });
 
 test("sidecarToJSON and canvasToJSON are stable, pretty-printed text", () => {

@@ -48,10 +48,7 @@ export function toSidecar(workspace) {
       camera: record.camera || { ...DEFAULT_CAMERA },
     };
     if (record.icon) entry.icon = record.icon;
-    if (record.jdCode) entry.jdCode = record.jdCode;
-    if (record.jdTitle) entry.jdTitle = record.jdTitle;
-    const jdKind = record.jdKind || workspace.johnnyDecimal?.entries?.[record.jdCode]?.kind;
-    if (jdKind) entry.jdKind = jdKind;
+    if (record.kind === "hub" || record.kind === "project") entry.kind = record.kind;
     canvases[record.id] = entry;
   }
   return {
@@ -59,7 +56,6 @@ export function toSidecar(workspace) {
     version: SIDECAR_VERSION,
     rootId,
     activeId: workspace.activeId || rootId,
-    johnnyDecimal: workspace.johnnyDecimal || { enabled: false, entries: {} },
     canvases,
   };
 }
@@ -98,6 +94,10 @@ export function parseSidecar(text) {
       if (!icon || [...icon].length > 16) delete record.icon;
       else record.icon = icon;
     }
+    // Graph model (ADR-0003): canvas `kind` is optional app metadata. Legacy
+    // Johnny Decimal fields are stripped on read so pre-graph sidecars load.
+    delete record.jdCode; delete record.jdTitle; delete record.jdKind;
+    if (record.kind !== "hub" && record.kind !== "project") delete record.kind;
     const path = assertSafePath(record.path);
     if (!/^canvases\/[^/]+\.canvas$/.test(path)) throw new SchemaError(`Canvas path is outside canvases/: ${path}`, { code: "SIDECAR_CANVAS_PATH" });
     if (record.id === data.rootId && path !== ROOT_CANVAS_PATH) throw new SchemaError("Root canvas must use canvases/root.canvas", { code: "SIDECAR_CANVAS_PATH" });
@@ -121,8 +121,7 @@ export function parseSidecar(text) {
     }
   }
   if (typeof data.activeId !== "string" || !canvases[data.activeId]) data.activeId = data.rootId;
-  data.johnnyDecimal ||= { enabled: false, entries: {} };
-  data.johnnyDecimal.entries ||= {};
+  delete data.johnnyDecimal; // legacy JD index removed in ADR-0003
   return data;
 }
 
@@ -152,17 +151,12 @@ export async function loadWorkspace(vault) {
       if (err && err.code !== "NOT_FOUND") { try { rawContent = await vault.read(record.path); } catch (_) {} }
       diagnostics.push({ path: record.path, code, message: `${code === "CANVAS_MISSING" ? "Missing" : "Unreadable"} canvas file: ${record.path}` });
     }
-    const jdEntry = sidecar.johnnyDecimal?.entries?.[record.jdCode];
-    canvases[record.id] = {
-      ...record,
-      ...(record.jdKind || !jdEntry?.kind ? {} : { jdKind: jdEntry.kind }),
-      document, rawContent, readOnly, repairRequired: readOnly,
-    };
+    canvases[record.id] = { ...record, document, rawContent, readOnly, repairRequired: readOnly };
   }
   return {
     // In-memory workspace shape consumed by app.js (its `version: 1` contract),
     // distinct from the sidecar FILE format version (SIDECAR_VERSION).
-    workspace: { version: 1, rootId: sidecar.rootId, activeId: sidecar.activeId, johnnyDecimal: sidecar.johnnyDecimal, canvases },
+    workspace: { version: 1, rootId: sidecar.rootId, activeId: sidecar.activeId, canvases },
     diagnostics,
   };
 }
