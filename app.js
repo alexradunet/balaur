@@ -48,9 +48,21 @@ const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference
 const DORMANT_NODE_COLOR="#6c757d";
 const STARTER_TASK_ID="task-citybreak";
 const STARTER_TASK_PATH="tasks/choose-dates-for-the-autumn-trip-task-citybreak.md";
+const STARTER_NOTES={
+  homeGuide:"notes/start-here-your-life-as-a-graph.md",
+  inboxGuide:"notes/inbox.md",
+  inboxTrip:"notes/autumn-city-break-idea.md",
+  projectsGuide:"notes/projects.md",
+  cbNote:"notes/autumn-city-break.md",
+  wikiGuide:"notes/wiki.md",
+  wikiBudget:"notes/monthly-budget.md",
+  wikiSubscriptions:"notes/subscriptions.md",
+  archiveGuide:"notes/archive.md",
+  archivePortfolio:"notes/portfolio-refresh-completed.md",
+};
 function createGraphStarterWorkspace(){
   const rootDocument={nodes:[
-    {id:"home-guide",type:"text",x:0,y:-220,width:1180,height:170,color:"3",text:"# Start here — your life, as a graph\nHome is the entry point. Four hubs hang off it; structure emerges from labelled connections, not folders.\n\n- Inbox — capture pending processing\n- Projects — committed efforts with a finish line\n- Wiki — durable reference\n- Archive — dormant and completed"},
+    {id:"home-guide",type:"file",x:0,y:-220,width:1180,height:170,color:"3",file:STARTER_NOTES.homeGuide},
     {id:"portal-inbox",type:"file",x:0,y:20,width:360,height:240,color:"2",file:"canvases/inbox.canvas"},
     {id:"portal-projects",type:"file",x:410,y:20,width:360,height:240,color:"6",file:"canvases/projects.canvas"},
     {id:"portal-wiki",type:"file",x:0,y:300,width:360,height:240,color:"5",file:"canvases/wiki.canvas"},
@@ -62,33 +74,33 @@ function createGraphStarterWorkspace(){
   const today=localDateISO(),journalFile=journalPath(today);
   const hub=(id,title,path,portalNodeId,doc)=>{result.canvases[id]={id,title,parentId:result.rootId,portalNodeId,path,document:doc,camera:null,kind:"hub"};};
   const inboxDoc={nodes:[
-    {id:"inbox-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Inbox\nCapture quick notes here, then process them into a project or the wiki. A healthy inbox trends toward empty."},
-    {id:"inbox-trip",type:"text",x:0,y:20,width:340,height:200,color:"2",text:`${NOTE_MARKERS.inbox}\n# Autumn city break idea\nDecide dates and a rough budget, then turn it into a real project.`},
+    {id:"inbox-guide",type:"file",x:0,y:-160,width:760,height:120,color:"3",file:STARTER_NOTES.inboxGuide},
+    {id:"inbox-trip",type:"file",x:0,y:20,width:340,height:200,color:"2",file:STARTER_NOTES.inboxTrip},
     {id:"inbox-to-citybreak",type:"file",x:420,y:20,width:340,height:200,color:"6",file:"canvases/city-break.canvas"},
   ],edges:[
     {id:"e-inbox-filed",fromNode:"inbox-trip",fromSide:"right",toNode:"inbox-to-citybreak",toSide:"left",toEnd:"arrow",color:"6",label:"filed-to"},
   ]};
   const projectsDoc={nodes:[
-    {id:"projects-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Projects\nCommitted efforts with a finish line. Each project is its own canvas holding tasks, notes, and sub-canvases."},
+    {id:"projects-guide",type:"file",x:0,y:-160,width:760,height:120,color:"3",file:STARTER_NOTES.projectsGuide},
     {id:"projects-citybreak",type:"file",x:0,y:20,width:360,height:240,color:"6",file:"canvases/city-break.canvas"},
   ],edges:[]};
   const cityBreakDoc={nodes:[
-    {id:"cb-note",type:"text",x:0,y:0,width:360,height:200,color:"6",text:"# Autumn city break\nThree days, one city, room to wander. Finish line: transport and accommodation booked."},
+    {id:"cb-note",type:"file",x:0,y:0,width:360,height:200,color:"6",file:STARTER_NOTES.cbNote},
     {id:"cb-task",type:"file",x:420,y:0,width:340,height:200,color:"5",file:STARTER_TASK_PATH},
   ],edges:[
     {id:"e-cb-partof",fromNode:"cb-task",fromSide:"left",toNode:"cb-note",toSide:"right",toEnd:"arrow",color:"6",label:"part-of"},
   ]};
   const wikiDoc={nodes:[
-    {id:"wiki-guide",type:"text",x:0,y:-180,width:760,height:120,color:"3",text:"# Wiki\nDurable reference and responsibilities. Pages interlink; this is the long-term memory of your life."},
-    {id:"wiki-budget",type:"text",x:0,y:0,width:340,height:200,color:"5",text:`${NOTE_MARKERS.reference}\n# Monthly budget\nFixed costs, everyday spending, and fun each get a limit. Reconcile monthly.`},
-    {id:"wiki-subscriptions",type:"text",x:420,y:0,width:340,height:200,color:"5",text:`${NOTE_MARKERS.reference}\n# Subscriptions\nReview recurring costs quarterly before they become invisible.`},
+    {id:"wiki-guide",type:"file",x:0,y:-180,width:760,height:120,color:"3",file:STARTER_NOTES.wikiGuide},
+    {id:"wiki-budget",type:"file",x:0,y:0,width:340,height:200,color:"5",file:STARTER_NOTES.wikiBudget},
+    {id:"wiki-subscriptions",type:"file",x:420,y:0,width:340,height:200,color:"5",file:STARTER_NOTES.wikiSubscriptions},
     {id:"wiki-journal",type:"file",x:840,y:0,width:320,height:200,color:"3",file:journalFile},
   ],edges:[
     {id:"e-wiki-relates",fromNode:"wiki-subscriptions",fromSide:"left",toNode:"wiki-budget",toSide:"right",toEnd:"arrow",color:"5",label:"relates-to"},
   ]};
   const archiveDoc={nodes:[
-    {id:"archive-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Archive\nDormant and completed work. Nothing is deleted; things are filed here when they are done or paused."},
-    {id:"archive-portfolio",type:"text",x:0,y:20,width:360,height:200,color:DORMANT_NODE_COLOR,text:`${NOTE_MARKERS.reference}\n# Portfolio refresh (completed)\nShipped and shared. Kept for the record.`},
+    {id:"archive-guide",type:"file",x:0,y:-160,width:760,height:120,color:"3",file:STARTER_NOTES.archiveGuide},
+    {id:"archive-portfolio",type:"file",x:0,y:20,width:360,height:200,color:DORMANT_NODE_COLOR,file:STARTER_NOTES.archivePortfolio},
   ],edges:[]};
 
   hub("hub-inbox","Inbox","canvases/inbox.canvas","portal-inbox",inboxDoc);
@@ -110,6 +122,27 @@ async function seedGraphStarterEntities(){
         status:"inbox",
       });
     }catch(_){/* already seeded */}
+  }
+  // Note files at the exact paths the starter's file nodes already reference.
+  // No canvasId: the placement nodes exist in the hub canvases already. kind sets
+  // the inert marker (inbox/reference) via the repository; guides carry no marker.
+  if(noteRepository){
+    const seeds=[
+      {path:STARTER_NOTES.homeGuide,body:"# Start here — your life, as a graph\nHome is the entry point. Four hubs hang off it; structure emerges from labelled connections, not folders.\n\n- Inbox — capture pending processing\n- Projects — committed efforts with a finish line\n- Wiki — durable reference\n- Archive — dormant and completed"},
+      {path:STARTER_NOTES.inboxGuide,body:"# Inbox\nCapture quick notes here, then process them into a project or the wiki. A healthy inbox trends toward empty."},
+      {path:STARTER_NOTES.inboxTrip,kind:"inbox",body:"# Autumn city break idea\nDecide dates and a rough budget, then turn it into a real project."},
+      {path:STARTER_NOTES.projectsGuide,body:"# Projects\nCommitted efforts with a finish line. Each project is its own canvas holding tasks, notes, and sub-canvases."},
+      {path:STARTER_NOTES.cbNote,body:"# Autumn city break\nThree days, one city, room to wander. Finish line: transport and accommodation booked."},
+      {path:STARTER_NOTES.wikiGuide,body:"# Wiki\nDurable reference and responsibilities. Pages interlink; this is the long-term memory of your life."},
+      {path:STARTER_NOTES.wikiBudget,kind:"reference",body:"# Monthly budget\nFixed costs, everyday spending, and fun each get a limit. Reconcile monthly."},
+      {path:STARTER_NOTES.wikiSubscriptions,kind:"reference",body:"# Subscriptions\nReview recurring costs quarterly before they become invisible."},
+      {path:STARTER_NOTES.archiveGuide,body:"# Archive\nDormant and completed work. Nothing is deleted; things are filed here when they are done or paused."},
+      {path:STARTER_NOTES.archivePortfolio,kind:"reference",body:"# Portfolio refresh (completed)\nShipped and shared. Kept for the record."},
+    ];
+    for(const seed of seeds){
+      try{await noteRepository.createNote(seed);}
+      catch(_){/* already seeded */}
+    }
   }
   // Journal file for today at the path the starter's wiki-journal node references.
   if(journalRepository){
@@ -1263,7 +1296,7 @@ function renderInspector() {
     }else if(note){
       fields.push({key:"noteBody",label:"Markdown",control:"textarea",value:note.body,scope:"note",notePath:item.file});
       actions.push({intent:"delete-note",label:"Delete note everywhere",notePath:item.file,danger:true});
-    }else if(item.type==="text")fields.push({key:"text",label:"Markdown",control:"textarea",value:item.text});
+    }else if(item.type==="text")notes.push({text:"Imported text node · read-only. Balaur authors file-backed notes (ADR-0004)."});
     if(item.type==="link")fields.push({key:"url",label:"URL",control:"url",value:item.url});
     if(item.type==="file"&&!task&&!note){
       const subcanvasId=subcanvasIdFromNode(item),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
@@ -1345,8 +1378,7 @@ function applyInspectorField(detail,phase){
   }
   if(phase!=="input")return;
   const before=aiCardSignatures(),key=detail.key;
-  if(key==="aiTitle"||key==="aiPrompt"){const config=parseAICard(item);item.text=buildAICardText(key==="aiTitle"?detail.value:config.title,key==="aiPrompt"?detail.value:config.prompt);}
-  else if((key==="fromSide"||key==="toSide")&&!detail.value)delete item[key];
+  if((key==="fromSide"||key==="toSide")&&!detail.value)delete item[key];
   else item[key]=detail.value;
   scheduleSave();renderNodes();renderEdges();renderMinimap();scheduleChangedAICards(before);
 }
