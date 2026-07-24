@@ -1545,6 +1545,31 @@ function canvasSummary() {
   const openTasks=nodes.filter(n=>n.type==="text").reduce((total,n)=>total+(n.text.match(/- \[ \]/g)||[]).length,0);
   return {canvasId:currentCanvasId,canvasTitle:canvasRecord().title,nodes:nodes.length,edges:(documentData.edges||[]).length,openTasks,...counts};
 }
+const GRAPH_MEMORY_DEPTH=2, GRAPH_MEMORY_NODE_CAP=60;
+function graphMemoryDigest({maxDepth=GRAPH_MEMORY_DEPTH,nodeCap=GRAPH_MEMORY_NODE_CAP}={}){
+  const lines=[],visited=new Set();let nodeCount=0;
+  const edgeLabelsFrom=(doc,nodeId)=>(doc.edges||[]).filter(e=>e.fromNode===nodeId&&e.label&&e.label!=="AI output").map(e=>{const to=(doc.nodes||[]).find(n=>n.id===e.toNode);return to?`${e.label} → ${nodeTitle(to)}`:null;}).filter(Boolean);
+  const visit=(canvasId,depth)=>{
+    const record=workspace.canvases[canvasId];
+    if(!record||visited.has(canvasId)||depth>maxDepth)return;
+    visited.add(canvasId);
+    const kind=canvasKind(record);
+    lines.push(`${"  ".repeat(depth)}${record.title}${kind?` (${kind})`:canvasId===workspace.rootId?" (home)":""}`);
+    for(const node of record.document.nodes||[]){
+      if(nodeCount>=nodeCap)return;
+      if(node.type==="group")continue;
+      nodeCount++;
+      const marker=noteKind(node)?`[${noteKind(node)}] `:node.type==="file"?"[file] ":"";
+      lines.push(`${"  ".repeat(depth+1)}- ${marker}${nodeSummary(node)}`);
+      for(const rel of edgeLabelsFrom(record.document,node.id))lines.push(`${"  ".repeat(depth+2)}${rel}`);
+      const sub=subcanvasIdFromNode(node);
+      if(sub)visit(sub,depth+1);
+    }
+  };
+  visit(workspace.rootId,0);
+  if(nodeCount>=nodeCap)lines.push(`(truncated at ${nodeCap} nodes)`);
+  return lines.join("\n");
+}
 function updateAssistantContext() {
   const context=$("#aiContext");if(!context)return;const s=canvasSummary();
   context.innerHTML=`READING <b>${escapeHTML(s.canvasTitle)}</b> · <b>${s.nodes} nodes</b> · <b>${s.edges} links</b> · <b>${s.openTasks} tasks</b> · <b>${s.subcanvases} portals</b>`;
@@ -1607,6 +1632,8 @@ async function runLocalAssistant(prompt) {
   try {
     if(/summar|what(?:'s| is) (?:on|in)|parse/.test(lower)) {
       const s=canvasSummary();response=`I parsed the current JSON Canvas: ${s.nodes} content nodes and ${s.edges} connections. I found ${s.goals} goals, ${s.projects} projects, ${s.habits} habits, ${s.ideas} ideas, ${s.widgets} live widgets, and ${s.openTasks} unchecked tasks.`;
+    } else if(/graph|memory|my life|what(?:'s| is) in|overview/.test(lower)){
+      response=`Here is your graph, traversed from Home (depth ${GRAPH_MEMORY_DEPTH}):\n\n${graphMemoryDigest()}`;
     } else if(/(?:add|create).*(?:metric card|metric)/.test(lower)){
       const named=request.match(/(?:called|named)\s+(.+?)(?:\s+and\s+(?:set|use|make).*)?$/i)?.[1]?.replace(/[.!]$/,"")||"Weekly metric",box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),operations=[{type:"component-card.create",card:{id:uid("card"),title:named,recipe:"metric",fields:{value:"72%",label:"Current progress",progress:.72,trend:"up"},body:"Created locally without contacting an AI provider."},canvasId:currentCanvasId,placement:{id:uid("node"),x:Math.round(center.x-180),y:Math.round(center.y-110),width:360,height:220,color:"5"}}],theme=/warm|cozy|earth/.test(lower)?"warm":/calm|ocean|cool|teal/.test(lower)?"calm":/contrast|accessible/.test(lower)?"contrast":null;
       if(theme)operations.push({type:"theme.set",theme});assistantProposal("I prepared a local declarative metric card. Review every change before writing the canonical file.",operations);return;
@@ -1672,7 +1699,7 @@ Allowed operations:
 {"type":"component-card.update","id":"existing component-card id","patch":{"title":"optional","recipe":"optional","fields":<changed recipe fields>,"body":"optional"},"canvasId":"optional target canvas id","placement":{"id":"optional unique placement id","x":0,"y":0,"width":360,"height":220,"color":"optional 1-6 or #rrggbb"}}
 {"type":"widget.create","widget":{"path":"widgets/safe-stable-name.html","title":"title exactly matching the HTML title","source":"complete self-contained reviewed HTML"},"canvasId":"target canvas id","placement":{"x":0,"y":0,"width":420,"height":260,"color":"1-6 or #rrggbb"}}
 An update may contain only canvasId plus placement to add another placement without changing the canonical card fields.
-Component-card deletion is not a generated operation; it remains a separate confirmed action. Component cards are declarative data only: never return HTML, JavaScript, event handlers, host code, repository calls, or source fields. A widget.create source must be self-contained, include a matching non-empty title, use no external resources/network/navigation/forms/workers/nested frames, and handle reduced motion when animated. Widget code executes only after complete source review, explicit approval, and a second explicit Run action inside sandbox="allow-scripts"; it never receives host data or mutation access. Use only standard JSON Canvas fields for Canvas nodes. Use Markdown checkboxes in text nodes for tasks. Colors: 1 red/goals, 2 orange/ideas, 3 yellow/notes, 4 green/habits, 5 cyan/resources, 6 purple/projects. Preserve user data unless explicitly asked to remove it. Ask a question with an empty operations array if intent is ambiguous. Never put executable HTML or JavaScript in a text node. Keep responses concise.`;
+Component-card deletion is not a generated operation; it remains a separate confirmed action. Component cards are declarative data only: never return HTML, JavaScript, event handlers, host code, repository calls, or source fields. A widget.create source must be self-contained, include a matching non-empty title, use no external resources/network/navigation/forms/workers/nested frames, and handle reduced motion when animated. Widget code executes only after complete source review, explicit approval, and a second explicit Run action inside sandbox="allow-scripts"; it never receives host data or mutation access. Use only standard JSON Canvas fields for Canvas nodes. Use Markdown checkboxes in text nodes for tasks. Colors: 1 red/goals, 2 orange/ideas, 3 yellow/notes, 4 green/habits, 5 cyan/resources, 6 purple/projects. Edge labels are a convention, not a schema: part-of (structural), relates-to (associative), filed-to (lifecycle). AI output is reserved. Propose changes only as the allowed operations; never auto-tag or auto-link. Preserve user data unless explicitly asked to remove it. Ask a question with an empty operations array if intent is ambiguous. Never put executable HTML or JavaScript in a text node. Keep responses concise.`;
 }
 function parseProviderJSON(content) {
   if(Array.isArray(content))content=content.map(part=>part.text||part.content||"").join("");if(typeof content!=="string")throw new Error("Provider returned no text content");
@@ -1682,7 +1709,7 @@ function parseProviderJSON(content) {
 async function runRemoteAssistant(prompt) {
   assistantMessage(prompt,"user");const loading=assistantMessage("Thinking…");loading.classList.add("loading");const send=$("#aiForm button");send.disabled=true;
   try{
-    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),cards=[...new Map((documentData.nodes||[]).map(node=>[node.file,componentCardCatalog?.getByPath(node.file)]).filter(([,card])=>card).map(([,card])=>[card.id,card])).values()].map(card=>({id:card.id,title:card.title,recipe:card.recipe,value:card.value,label:card.label,progress:card.progress,trend:card.trend,maximum:card.maximum,unit:card.unit,tone:card.tone,path:card.path})),context=`Current canvas: ${canvasTrail().map(record=>record.title).join(" / ")}\nCurrent canvas id: ${currentCanvasId}\nCurrent viewport center: ${Math.round(center.x)}, ${Math.round(center.y)}.\nCurrent component cards:\n${JSON.stringify(cards)}\nCurrent JSON Canvas:\n${JSON.stringify(documentData)}`;
+    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),cards=[...new Map((documentData.nodes||[]).map(node=>[node.file,componentCardCatalog?.getByPath(node.file)]).filter(([,card])=>card).map(([,card])=>[card.id,card])).values()].map(card=>({id:card.id,title:card.title,recipe:card.recipe,value:card.value,label:card.label,progress:card.progress,trend:card.trend,maximum:card.maximum,unit:card.unit,tone:card.tone,path:card.path})),memory=graphMemoryDigest(),context=`Graph memory (traversed from Home, depth ${GRAPH_MEMORY_DEPTH}):\n${memory}\n\nCurrent canvas: ${canvasTrail().map(record=>record.title).join(" / ")}\nCurrent canvas id: ${currentCanvasId}\nCurrent viewport center: ${Math.round(center.x)}, ${Math.round(center.y)}.\nCurrent component cards:\n${JSON.stringify(cards)}\nCurrent JSON Canvas:\n${JSON.stringify(documentData)}`;
     const messages=[{role:"system",content:assistantSystemPrompt()},...aiConversation.slice(-8),{role:"user",content:`${prompt}\n\n${context}`}];
     const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages,temperature:.2,max_tokens:1800})}),body=await response.json(),content=body.choices?.[0]?.message?.content,plan=parseProviderJSON(content);
     loading.remove();assistantProposal(plan.message,plan.operations);aiConversation.push({role:"user",content:prompt},{role:"assistant",content:JSON.stringify(plan)});
