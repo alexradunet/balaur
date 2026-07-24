@@ -3,6 +3,7 @@
 // Dependency-free: uses Node's global WebSocket and fetch. See ../SKILL.md.
 //
 //   node browser-check.mjs smoke     [url] [--profile dir] [--offline] [--width N] [--height N] [--screenshot dir]
+//   node browser-check.mjs contract  [url] [--profile dir] [--width N] [--height N]
 //   node browser-check.mjs components [url] [--profile dir] [--width N] [--height N]
 //   node browser-check.mjs widgets   [url] [--profile dir] [--width N] [--height N] [--screenshot dir]
 //   node browser-check.mjs eval      [url] <expression> [--wait expr] [--profile dir] [--width N] [--height N]
@@ -236,6 +237,35 @@ const PROBE_IS_CANVAS = `(() => {
 })()`;
 
 // ---------------------------------------------------------------------------
+// Landing-aware boot. window.orbitCanvas is exposed only after a vault opens,
+// so every subcommand that waits on it must first get past the Vault gate.
+// This helper stubs window.showDirectoryPicker with an OPFS handle (spec seam 2)
+// and performs a real CDP click on the gate button, then waits for the app to
+// boot. The app references the global showDirectoryPicker at call time (app.js
+// gate handler), so the stub is picked up by the real click. No handle is
+// persisted by the app, so the gate shows on every load and the folder is
+// re-picked after each reload: call this after every navigate() and reload().
+// Same profile -> same OPFS origin -> the same subdirectory is re-picked, which
+// is what makes the persistence assertions meaningful. Returns the gate state
+// captured before the stub (for the smoke "gate" record).
+async function bootPastLanding(session, subdirectory = "vault-smoke") {
+  // The incompatibility gate disables the button; a healthy Chromium headless
+  // profile passes (showDirectoryPicker + crypto.subtle present on localhost).
+  // The button exists enabled in the markup before app.js wires its handler, so
+  // also require window.orbitVaultReady (assigned right after the handler is
+  // attached) to avoid clicking before the pick handler exists — a race the
+  // Fetch-intercepted failureSession (register.js blocked) reliably hits.
+  await session.waitFor(`(() => { const b = document.getElementById("openVaultFolder"); return b && !b.disabled && window.orbitVaultReady !== undefined; })()`, 15000);
+  const gate = await session.evaluate(`(() => ({ messageEmpty: document.getElementById("vaultLandingMessage").textContent.trim() === "", buttonEnabled: !document.getElementById("openVaultFolder").disabled }))()`);
+  await session.evaluate(`window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle(${JSON.stringify(subdirectory)}, { create: true })`);
+  // Real CDP click on the button center (user-gesture semantics), not el.click().
+  const point = await session.evaluate(`(() => { const r = document.getElementById("openVaultFolder").getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
+  await session.click(point.x, point.y);
+  await session.waitFor("window.orbitCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
+  return gate;
+}
+
+// ---------------------------------------------------------------------------
 // smoke subcommand: the baseline suite from AGENTS.md §13, automated.
 // ---------------------------------------------------------------------------
 
@@ -251,7 +281,8 @@ async function smoke(url, flags) {
   await session.start();
   try {
     await session.navigate();
-    await session.waitFor("window.orbitCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
+    const gate = await bootPastLanding(session);
+    record("gate: Vault gate passed, picker button enabled", gate.messageEmpty && gate.buttonEnabled, `message:${gate.messageEmpty ? "empty" : "set"} button:${gate.buttonEnabled ? "enabled" : "disabled"}`);
 
     // 1. Boot: no uncaught errors, no failed same-origin assets.
     const failedUrls = [];
@@ -364,7 +395,10 @@ async function smoke(url, flags) {
     if (bgPoint) {
       const before = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
       await session.dblclick(bgPoint.x, bgPoint.y);
-      await new Promise(r => setTimeout(r, 500));
+      // Note creation is async (file-backed note + canvas reload, ADR-0004) and
+      // takes ~700ms when a card is selected; poll for the new node rather than
+      // a fixed sleep. A timeout falls through to a graceful FAIL below.
+      await session.waitFor(`window.orbitCanvas.getDocument().nodes.length > ${before}`, 5000).catch(() => {});
       const info = await session.evaluate(`(() => {
         const nodes = window.orbitCanvas.getDocument().nodes;
         const last = nodes[nodes.length - 1];
@@ -383,7 +417,7 @@ async function smoke(url, flags) {
     const titleBefore = await session.evaluate("window.orbitCanvas.getWorkspace().canvases[window.orbitCanvas.getWorkspace().rootId].title");
     const nodesBefore = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
     await session.reload();
-    await session.waitFor("window.orbitCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
+    await bootPastLanding(session);
     await new Promise(r => setTimeout(r, 800));
     const titleAfter = await session.evaluate("window.orbitCanvas.getWorkspace().canvases[window.orbitCanvas.getWorkspace().rootId].title");
     const nodesAfter = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
@@ -393,7 +427,7 @@ async function smoke(url, flags) {
     if (flags.offline) {
       await session.setOffline(true);
       await session.reload();
-      await new Promise(r => setTimeout(r, 1500));
+      await bootPastLanding(session);
       const shellUp = await session.evaluate("!!document.querySelector('.canvas') && !!window.orbitCanvas").catch(() => false);
       record("offline: shell renders from cache", shellUp === true);
       await session.setOffline(false);
@@ -427,7 +461,7 @@ async function components(url, flags) {
   await session.start();
   try {
     await session.navigate();
-    await session.waitFor("window.orbitCanvas", 15000);
+    await bootPastLanding(session);
     const probe = await session.evaluate(`(async () => {
       const host = document.querySelector("balaur-add-menu");
       const defined = customElements.get("balaur-add-menu");
@@ -625,7 +659,7 @@ async function components(url, flags) {
     })()`);
     if (integrationSetup.ready) {
       await session.reload();
-      await session.waitFor("window.orbitCanvas", 15000);
+      await bootPastLanding(session);
       const integrationProbe = await session.evaluate(`(() => {
         const selector = '.canvas-node[data-id="${integrationSetup.nodeId}"] balaur-component-card';
         const invalidSelector = '.canvas-node[data-id="${integrationSetup.invalidNodeId}"] balaur-component-card';
@@ -1203,7 +1237,7 @@ async function components(url, flags) {
     await failureSession.start();
     await failureSession.failRequestsMatching(["/elements/register.js"]);
     await failureSession.navigate();
-    await failureSession.waitFor("window.orbitCanvas && window.orbitVaultStore", 15000);
+    await bootPastLanding(failureSession);
     const failureSetup = await failureSession.evaluate(`(async () => {
       const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
       const ids = {
@@ -1340,7 +1374,7 @@ async function components(url, flags) {
     })()`);
     await failureSession.waitFor(`document.getElementById("saveState")?.textContent.includes("Saved locally")`, 10000);
     await failureSession.reload();
-    await failureSession.waitFor("window.orbitCanvas && window.orbitVaultStore", 15000);
+    await bootPastLanding(failureSession);
     await failureSession.waitFor(`window.orbitCanvas?.getDocument().nodes.some(node => node.id === "component-registration-failure-save")`, 15000);
     const persisted = await failureSession.evaluate(`(() => {
       const ids = ${JSON.stringify({
@@ -1688,6 +1722,171 @@ MessagePort.prototype.postMessage = function(message, ...rest) {
 }
 
 // ---------------------------------------------------------------------------
+// contract subcommand: the DirectoryVault adapter suite over an OPFS handle
+// (spec seam 1). One async eval dynamically imports /storage/directory-vault.js
+// from the served origin, creates a fresh OPFS subdirectory per run, and
+// asserts the full VaultStore contract surface. Returns { ok, failures, checks };
+// the driver splits `checks` into PASS/FAIL records and exits nonzero on any
+// failure. No bootPastLanding: the adapter is exercised directly, the Vault gate
+// is never involved.
+const CONTRACT_EVAL = `(async () => {
+  const checks = [];
+  const failures = [];
+  const check = (name, ok, detail) => {
+    checks.push({ name, ok: !!ok, detail: detail || "" });
+    if (!ok) failures.push(name);
+  };
+  const expectThrow = async (fn, code, extra) => {
+    try {
+      await fn();
+      return { threw: false };
+    } catch (error) {
+      return { threw: true, codeOk: !!error && error.code === code, extraOk: extra ? !!extra(error) : true, code: error && error.code, name: error && error.name };
+    }
+  };
+  try {
+    const { DirectoryVault } = await import("/storage/directory-vault.js");
+    const root = await navigator.storage.getDirectory();
+    const stamp = Date.now();
+    const v = new DirectoryVault(await root.getDirectoryHandle("contract-main-" + stamp, { create: true }));
+
+    // create/read round-trip
+    const w1 = await v.write("a.md", "hello", { expectedHash: null });
+    check("create/read round-trip", (await v.read("a.md")) === "hello" && w1.path === "a.md");
+
+    // stat meta shape
+    const m = await v.stat("a.md");
+    const isoOk = !!m && typeof m.modifiedAt === "string" && !Number.isNaN(Date.parse(m.modifiedAt));
+    check("stat meta shape", !!m && m.path === "a.md" && m.mediaType === "text/markdown" && typeof m.size === "number" && m.size === 5 && typeof m.hash === "string" && m.hash.length > 0 && isoOk && typeof m.revision === "number", m ? ("mediaType=" + m.mediaType + " size=" + m.size + " revision=" + m.revision) : "null");
+
+    // exists true/false
+    check("exists true/false", (await v.exists("a.md")) === true && (await v.exists("missing.md")) === false);
+
+    // list ordering (plain code-unit) + prefix filter
+    await v.write("notes/b.md", "B", { expectedHash: null });
+    await v.write("notes/a.md", "A", { expectedHash: null });
+    await v.write("tasks/c.md", "C", { expectedHash: null });
+    const all = (await v.list("")).map((x) => x.path);
+    const sorted = all.slice().sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const notes = (await v.list("notes/")).map((x) => x.path);
+    check("list ordering + prefix filter", JSON.stringify(all) === JSON.stringify(sorted) && notes.length === 2 && notes.every((p) => p.startsWith("notes/")), "all=" + JSON.stringify(all));
+
+    // expectedHash null create-conflict
+    let r = await expectThrow(() => v.write("a.md", "x", { expectedHash: null }), "WRITE_CONFLICT");
+    check("expectedHash null create-conflict", r.threw && r.codeOk, r.threw ? ("code=" + r.code) : "no throw");
+
+    // expectedHash mismatch carries details.expected/details.actual
+    const cur = await v.stat("a.md");
+    r = await expectThrow(() => v.write("a.md", "x", { expectedHash: "deadbeef" }), "WRITE_CONFLICT", (e) => e.details && e.details.expected === "deadbeef" && e.details.actual === cur.hash);
+    check("expectedHash mismatch details", r.threw && r.codeOk && r.extraOk, r.threw ? ("code=" + r.code) : "no throw");
+
+    // expectedHash correct succeeds
+    const w2 = await v.write("a.md", "updated", { expectedHash: cur.hash });
+    check("expectedHash correct succeeds", (await v.read("a.md")) === "updated" && w2.hash !== cur.hash);
+
+    // NOT_FOUND on read of a missing path
+    r = await expectThrow(() => v.read("nope.md"), "NOT_FOUND");
+    check("NOT_FOUND on read missing", r.threw && r.codeOk, r.threw ? ("code=" + r.code) : "no throw");
+
+    // case-fold collision on create
+    await v.write("zfold/Upper.md", "u", { expectedHash: null });
+    r = await expectThrow(() => v.write("zfold/upper.md", "l", { expectedHash: null }), "PATH_CASE_COLLISION");
+    check("case-fold collision on create", r.threw && r.codeOk, r.threw ? ("code=" + r.code) : "no throw");
+
+    // move success: destination written, source gone, hash preserved
+    const src = await v.write("mv-src.md", "moveme", { expectedHash: null });
+    const mv = await v.move("mv-src.md", "mv-dst.md");
+    check("move success", mv.path === "mv-dst.md" && (await v.read("mv-dst.md")) === "moveme" && (await v.exists("mv-src.md")) === false && mv.hash === src.hash);
+
+    // move destination-exists conflict
+    await v.write("mv-d2.md", "x", { expectedHash: null });
+    r = await expectThrow(() => v.move("mv-dst.md", "mv-d2.md"), "WRITE_CONFLICT");
+    check("move destination-exists conflict", r.threw && r.codeOk, r.threw ? ("code=" + r.code) : "no throw");
+
+    // remove success
+    await v.write("rm.md", "x", { expectedHash: null });
+    const removed = await v.remove("rm.md");
+    check("remove success", removed === true && (await v.exists("rm.md")) === false);
+
+    // remove precondition mismatch (file survives)
+    await v.write("rm2.md", "content", { expectedHash: null });
+    r = await expectThrow(() => v.remove("rm2.md", { expectedHash: "wronghash" }), "WRITE_CONFLICT");
+    check("remove precondition mismatch", r.threw && r.codeOk && (await v.exists("rm2.md")) === true, r.threw ? ("code=" + r.code) : "no throw");
+
+    // snapshot/restore round-trip into a second fresh subdirectory
+    const snap = await v.snapshot();
+    const v2 = new DirectoryVault(await root.getDirectoryHandle("contract-restore-" + stamp, { create: true }));
+    const restored = await v2.restore(snap);
+    const pathsA = (await v.list("")).map((x) => x.path);
+    const pathsB = (await v2.list("")).map((x) => x.path);
+    let contentsEqual = JSON.stringify(pathsA) === JSON.stringify(pathsB);
+    if (contentsEqual) {
+      for (const p of pathsA) {
+        if ((await v.read(p)) !== (await v2.read(p))) { contentsEqual = false; break; }
+      }
+    }
+    check("snapshot/restore round-trip", snap.format === "orbit-vault-snapshot" && restored.count === pathsA.length && contentsEqual, "files=" + pathsA.length + " restored=" + restored.count);
+
+    // changesSince journal ordering (dedicated vault, controlled sequence)
+    const vj = new DirectoryVault(await root.getDirectoryHandle("contract-journal-" + stamp, { create: true }));
+    await vj.write("j.md", "one", { expectedHash: null });
+    const jstat = await vj.stat("j.md");
+    await vj.write("j.md", "two", { expectedHash: jstat.hash });
+    await vj.move("j.md", "k.md");
+    await vj.remove("k.md");
+    const journal = vj.changesSince(0);
+    const revs = journal.map((e) => e.revision);
+    const strictlyIncreasing = revs.every((rev, i) => i === 0 || rev > revs[i - 1]);
+    const ops = new Set(journal.map((e) => e.operation));
+    const opsOk = ["create", "modify", "move", "remove"].every((op) => ops.has(op));
+    check("changesSince journal ordering", journal.length === 4 && strictlyIncreasing && opsOk && vj.changesSince(journal[1].revision).length === 2, "ops=" + [...ops].join(","));
+
+    // TypeMismatchError -> PATH_COMPONENT (write onto a directory name)
+    await v.write("typemismatch/inner.md", "x", { expectedHash: null });
+    r = await expectThrow(() => v.write("typemismatch", "x"), "PATH_COMPONENT");
+    check("TypeMismatchError -> PATH_COMPONENT", r.threw && r.codeOk, r.threw ? ("code=" + r.code + " name=" + r.name) : "no throw");
+
+    return { ok: failures.length === 0, failures, checks };
+  } catch (error) {
+    checks.push({ name: "contract suite ran without throwing", ok: false, detail: (error && error.message) || String(error) });
+    failures.push("contract suite ran without throwing");
+    return { ok: false, failures, checks };
+  }
+})()`;
+
+async function contract(url, flags) {
+  const results = [];
+  const record = (name, ok, detail = "") => { results.push({ name, ok, detail }); };
+  const session = new BrowserSession({
+    url,
+    profile: flags.profile ? resolve(flags.profile) : null,
+    width: Number(flags.width) || 1440,
+    height: Number(flags.height) || 900,
+  });
+  await session.start();
+  try {
+    await session.navigate();
+    const result = await session.evaluate(CONTRACT_EVAL);
+    if (result && Array.isArray(result.checks)) {
+      for (const c of result.checks) record(c.name, c.ok, c.detail);
+    } else {
+      record("contract: suite returned a result", false, "no checks returned");
+    }
+    if (session.consoleErrors.length) record("contract: no uncaught console errors", false, session.consoleErrors.slice(0, 3).join(" | "));
+  } finally {
+    await session.close();
+  }
+
+  let failed = 0;
+  for (const r of results) {
+    if (!r.ok) failed++;
+    console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail ? `  [${r.detail}]` : ""}`);
+  }
+  console.log(failed === 0 ? `\nAll ${results.length} checks passed.` : `\n${failed}/${results.length} checks FAILED.`);
+  return failed === 0 ? 0 : 1;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -1699,6 +1898,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
   try {
     if (command === "smoke") {
       process.exit(await smoke(url, args.flags));
+    } else if (command === "contract") {
+      process.exit(await contract(url, args.flags));
     } else if (command === "components") {
       process.exit(await components(url, args.flags));
     } else if (command === "widgets") {
@@ -1720,12 +1921,12 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
       await session.start();
       try {
         await session.navigate();
-        await session.waitFor("window.orbitCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
+        await bootPastLanding(session);
         await new Promise(r => setTimeout(r, 600));
         console.log("wrote", await session.screenshot(file, args.flags.selector ?? null));
       } finally { await session.close(); }
     } else {
-      console.error("Unknown command. Use: smoke | components | widgets | eval | shot");
+      console.error("Unknown command. Use: smoke | contract | components | widgets | eval | shot");
       process.exit(2);
     }
   } catch (error) {
