@@ -15,6 +15,7 @@ IndexedDbVault (browser) / FsVault (Node) / MemoryVault (tests)
   ├─ habit-logs/YYYY/*.md        append-only daily habit events
   ├─ journal/YYYY/*.md           canonical journal entries
   ├─ events/*.md                 canonical calendar events
+  ├─ notes/*.md                  path-identified notes (inbox, reference, AI, freeform)
   ├─ cards/*.md                  canonical declarative component cards
   └─ widgets/*.html              canonical sandboxed widget source
 ```
@@ -23,7 +24,7 @@ JSON Canvas owns portable spatial content: nodes, geometry, edges, groups, links
 
 Markdown frontmatter and body own life-management fields and declarative component-card fields that JSON Canvas does not define. An entity or component card's immutable `orbit-id` is its identity, a path is its locator, and a canvas node ID is a placement. One canonical file may have zero, one, or many standard `file`-node placements. Widget identity is its safe canonical `widgets/*.html` path.
 
-`LifeIndexer` projects life entities into `MemoryIndex`, and `LifeQuery` is the app-facing read facade for Today, task status, habits, journals, and event ranges. ComponentCardCatalog and `WidgetCatalog` preload card/widget files and placement diagnostics for synchronous rendering; they do not become sources of truth. Every catalog and index is rebuilt from canonical vault files. Repositories write canonical files before reconciling projections.
+`LifeIndexer` projects life entities into `MemoryIndex`, and `LifeQuery` is the app-facing read facade for Today, task status, habits, journals, and event ranges. ComponentCardCatalog, `WidgetCatalog`, and `NoteCatalog` preload card/widget/note files and placement diagnostics for synchronous rendering; they do not become sources of truth. Every catalog and index is rebuilt from canonical vault files. Repositories write canonical files before reconciling projections.
 
 A persistent index, including SQLite, is a deferred future optimization rather than part of canonical-files-only v1. OPFS-backed SQLite Wasm would require COOP/COEP response headers that GitHub Pages cannot provide; the pure-JavaScript in-memory projection is therefore the compatible default. No database is loaded by the browser application.
 
@@ -35,7 +36,7 @@ A persistent index, including SQLite, is a deferred future optimization rather t
 2. open `IndexedDbVault`;
 3. load `.orbit/workspace.json` and each referenced `.canvas` file through `WorkspaceStore`;
 4. on a genuinely empty first run, migrate the legacy localStorage workspace once into canonical vault files;
-5. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, canonical repositories, and the component-card/widget catalogs;
+5. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, canonical repositories, and the component-card/widget/note catalogs;
 6. rebuild the in-memory query and rendering projections from vault files;
 7. render the active workspace from the loaded working set; and
 8. expose `window.orbitVaultReady`, `window.orbitVaultStore`, and the stable `window.orbitCanvas` integration surface.
@@ -62,7 +63,7 @@ The exception is the security runtime boundary: `<balaur-widget-frame>` owns onl
 
 `storage/frontmatter.js` performs constrained, preservation-first parsing and patching. It changes only Orbit-owned fields and preserves unknown keys, comments, ordering, BOM, line endings, and body content. `storage/entity-codec.js` defines the task, habit, habit-log, journal, and calendar-event contracts and validates dates, instants, enums, weekdays, and IANA timezones.
 
-`FileTaskRepository`, `FileHabitRepository`, `FileJournalRepository`, and `FileEventRepository` are asynchronous canonical-file repositories. `storage/life-indexer.js` parses all supported vault files, projects typed rows and placements into `MemoryIndex`, detects malformed files and duplicate identities, and supports cold rebuild and warm revision reconciliation. `storage/index-integrity.js` audits the disposable projection against the files and can purge and rebuild it.
+`FileTaskRepository`, `FileHabitRepository`, `FileJournalRepository`, `FileEventRepository`, and `FileNoteRepository` are asynchronous canonical-file repositories. `FileNoteRepository` owns path-identified `notes/*.md` files (no mandatory `orbit-id`), their standard `file`-node placements, and the path-generic drain primitive; `NoteCatalog` is its disposable synchronous body/placement projection (ADR-0004). `storage/life-indexer.js` parses all supported vault files, projects typed rows and placements into `MemoryIndex`, detects malformed files and duplicate identities, and supports cold rebuild and warm revision reconciliation. `storage/index-integrity.js` audits the disposable projection against the files and can purge and rebuild it.
 
 ### Component cards and widgets
 

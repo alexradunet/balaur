@@ -62,11 +62,11 @@ Validation and confirmation are controls around canonical repository writes; pro
 
 ## Prompt-first AI notes
 
-An AI note is a one-shot generation flow. Balaur first opens a native `<dialog>` for the question, calls the configured provider only after submission, and adds the resulting Markdown as an ordinary JSON Canvas text node. No placeholder node is created when the dialog is cancelled or the request fails.
+An AI note is a one-shot generation flow. Balaur first opens a native `<dialog>` for the question, calls the configured provider only after submission, and adds the resulting Markdown as a file-backed note: a standard `file` node referencing a `notes/*.md` file (ADR-0004). No placeholder node is created when the dialog is cancelled or the request fails.
 
 ## Reactive AI operator cards
 
-An AI operator remains a standard JSON Canvas text node. Balaur recognizes the existing portable Markdown compatibility marker rather than introducing a custom node type:
+An AI operator is a standard `file` node referencing a `notes/*.md` file (ADR-0004). Balaur recognizes the existing portable Markdown compatibility marker in the file body rather than introducing a custom node type:
 
 ```markdown
 <!-- orbit:ai-card -->
@@ -74,11 +74,11 @@ An AI operator remains a standard JSON Canvas text node. Balaur recognizes the e
 Summarize the connected notes and recommend the next action.
 ```
 
-Incoming edges define its context. The operator sends the prompt and connected node content to the configured provider, creates a standard text node for the result, and connects it with an edge labeled `AI output`. Subsequent executions update that same note instead of generating duplicates.
+Incoming edges define its context. The operator sends the prompt and connected node content to the configured provider, creates a file-backed note (a standard `file` node referencing `notes/*.md`) for the result, and connects it with an edge labeled `AI output`. Subsequent executions update that same note file instead of generating duplicates.
 
 Balaur computes signatures from the prompt, incoming edge set, and input content. Content or connection changes queue a debounced regeneration. Coordinates and card dimensions do not trigger requests. Directed cycles pause automatic execution, and an update arriving during a request queues one follow-up run.
 
-This representation remains readable in other JSON Canvas clients: they see ordinary text nodes and edges even if they do not understand the compatibility marker.
+This representation remains readable in other JSON Canvas clients: they see ordinary `file` nodes referencing Markdown files, with the compatibility marker living in the file body, even if they do not understand it.
 
 ## AI request flow
 

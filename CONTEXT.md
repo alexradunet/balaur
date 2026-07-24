@@ -28,9 +28,14 @@ The user-visible collection of canvas documents plus its hierarchy and applicati
 
 A life-management record whose identity and fields live in one canonical Markdown file. Tasks, habits, habit check-ins, journals, and calendar events are entities. An entity is not a canvas node.
 
+### Note
+
+A path-identified canonical `notes/*.md` file with no mandatory frontmatter or `orbit-id`; its identity is the path. Kind (inbox, reference, or AI) is an inert body marker rather than a separate type, and the indexer treats the file as valid untyped Markdown. Placed by zero or more standard `file` nodes, the note is the unified content unit that replaces inline text-node authoring (ADR-0004).
+_Avoid_: "text note", "inline note", "card", "entity".
+
 ### Placement
 
-A standard JSON Canvas `file` node that references a canonical entity or component-card file. Its node ID identifies that spatial occurrence only. One entity may have zero, one, or many placements.
+A standard JSON Canvas `file` node that references a canonical file (ADR-0004): a note (`notes/*.md`), an entity (task/habit/journal/event `.md`), a component card (`cards/*.md`), a widget (`.html`), or a portal sub-canvas (`canvases/*.canvas`). Its node ID identifies that spatial occurrence only; one canonical file may have zero, one, or many placements.
 
 ### Projection
 
@@ -86,11 +91,18 @@ The root canvas and the canonical AI + user entry point.
 
 ### Inbox note
 
-A text node marked `<!-- orbit:inbox -->` representing a capture pending processing.
+A note: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- orbit:inbox -->` marker; a capture pending processing.
+_Avoid_: "text node", "inbox card".
 
 ### Reference page
 
-A text node marked `<!-- orbit:reference -->` representing durable wiki content.
+A note: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- orbit:reference -->` marker; durable wiki content.
+_Avoid_: "text node", "reference card", "wiki page".
+
+### Drain
+
+To re-place a path-bound node from one canvas to another: remove the placement here and add a placement for the same path there, leaving the canonical file and its identity unchanged. Because every content node is path-bound, notes, tasks, and journals all drain the same way; this is how the daily canvas (project 002) processes captures.
+_Avoid_: "move", "reparent", "copy".
 
 ### Relation label
 
@@ -110,7 +122,13 @@ A harmless Markdown or HTML comment that lets Balaur recognize special behavior 
 
 ### AI operator
 
-A standard text node marked as an AI card whose incoming edges define context. It proposes allowlisted structured operations; it does not execute generated host-page code or directly mutate the host DOM.
+A standard `file` node referencing a `notes/*.md` file whose body carries the inert `<!-- orbit:ai-card -->` marker; incoming edges define its context, and its output is likewise a file-backed note connected by the reserved `AI output` edge. It proposes allowlisted structured operations; it does not execute generated host-page code or directly mutate the host DOM.
+_Avoid_: "text node", "AI note".
+
+### Text node (interop)
+
+A standard JSON Canvas `text` node that Balaur renders read-only for imported or external documents but never authors; its own authoring produces only `file`-backed notes (ADR-0004 guardrail). The validator still accepts `text` for JSON Canvas 1.0 interop, which is a render path, not an authoring license.
+_Avoid_: "authored text node", "editable text node", "note".
 
 ## Portability and recovery
 

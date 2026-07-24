@@ -68,6 +68,8 @@ storage/workspace-backup.js Version-2 whole-space file-bundle export/import
 storage/task-repository.js  FileTaskRepository: canonical task files and placements
 storage/habit-repository.js FileHabitRepository: definitions and daily check-ins
 storage/journal-event-repository.js  Journal and calendar-event repositories
+storage/note-catalog.js     Disposable synchronous note content projection (notes/*.md bodies and placements)
+storage/note-repository.js  FileNoteRepository: canonical note files under notes/, placements, and the drain primitive
 storage/index-integrity.js  Runtime-index audit and purge/rebuild recovery
 styles/                     Named cascade layers, tokens, shell, canvas, components, themes, responsive, motion
 docs/                       Architecture and subsystem documentation
@@ -108,11 +110,11 @@ Special behavior is represented without changing JSON Canvas:
 <!-- orbit:habit-entry id=... habit=... status=done value=1 at=... -->
 ```
 
-- Inbox notes and reference pages are standard text nodes with inert markers.
+- Notes, inbox captures, and reference pages are path-identified `notes/*.md` files placed by standard `file` nodes (ADR-0004). The inert marker lives in the file body; identity is the path, with no mandatory frontmatter or `orbit-id`. `text` remains a valid, rendered, read-only interop type that Balaur never authors.
 - `<!-- orbit:jd -->` is a legacy inert marker from pre-graph vaults; it remains harmless text.
 - Tasks, habits, journals, and calendar events are canonical Markdown files under `tasks/`, `habits/`, `habit-logs/`, `journal/`, and `events/`, each with the applicable Orbit frontmatter contract. Tasks are placed by standard `file` nodes; one task may have zero, one, or many placements.
 - Habit check-ins are inert comments in append-only daily habit-log files. They are not recurring task records.
-- AI operators are standard text nodes whose incoming edges provide context. For a file node, context assembly resolves the referenced file body, not just its path.
+- AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- orbit:ai-card -->` marker; their incoming edges provide context (ADR-0004). For a file node, context assembly resolves the referenced file body, not just its path.
 - Live HTML/Canvas/WebGL widgets are standard `file` nodes pointing to `.html` files.
 - Nested-canvas portals are standard `file` nodes pointing under `canvases/`.
 
@@ -243,7 +245,7 @@ Nested-canvas portals remain standard `file` nodes. Do not flatten nested docume
 
 AI output never directly mutates the host DOM or executes host-page JavaScript. Accept only allowlisted structured operations, validate IDs/fields/URLs/geometry/operation counts and the resulting canvas, show a human-readable proposal, and require confirmation before applying it. Typed life changes must call the file repositories, not write index rows directly.
 
-AI operators remain standard text nodes with inert markers and edge-derived inputs. Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection. File-node inputs resolve canonical file bodies.
+AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- orbit:ai-card -->` marker, with edge-derived inputs; their output is likewise a file-backed note connected by the reserved `AI output` edge (ADR-0004). Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection. File-node inputs resolve canonical file bodies.
 
 Live widgets run in iframes with exactly:
 
@@ -286,10 +288,11 @@ node --test \
   storage/phase1.test.js storage/phase2.test.js storage/phase3.test.js \
   storage/phase4.test.js storage/phase4-backup.test.js storage/phase5.test.js \
   storage/phase7.test.js storage/phase8.test.js storage/phase9.test.js \
-  storage/phase10.test.js storage/phase-query.test.js
+  storage/phase10.test.js storage/phase-query.test.js \
+  storage/note-repository.test.js
 ```
 
-This explicit suite currently passes **172 tests**: the prior 169-test suite plus three journal-placement tests in `phase8.test.js` (ADR-0003). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
+This explicit suite currently passes **196 tests**: the prior 172-test suite plus twenty-four note-repository tests in `storage/note-repository.test.js` (ADR-0004). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
 
 Then perform browser-level checks appropriate to the change. **The default way to check the application is the project `browser-check` skill** at `.pi/skills/browser-check/` — a dependency-free headless-Chrome-over-CDP driver that runs the baseline smoke suite below automatically (no WebDriver, no npm install). With the app served on `4173`:
 
