@@ -368,9 +368,9 @@ async function smoke(url, flags) {
       const info = await session.evaluate(`(() => {
         const nodes = window.orbitCanvas.getDocument().nodes;
         const last = nodes[nodes.length - 1];
-        return { count: nodes.length, lastText: last?.text ?? "" };
+        return { count: nodes.length, isNoteFile: last?.type === "file" && typeof last?.file === "string" && last.file.startsWith("notes/") };
       })()`);
-      record("create: dblclick on background creates a note", info.count === before + 1 && info.lastText.includes("New thought"), `${before} -> ${info.count}`);
+      record("create: dblclick on background creates a note", info.count === before + 1 && info.isNoteFile, `${before} -> ${info.count}`);
     } else {
       record("create: found a background point", false, "viewport fully covered");
     }

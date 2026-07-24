@@ -15,8 +15,7 @@ The orchestrator reads this file to recommend models for each task phase.
 
 ## Active models
 
-Provider `pi` is the only enabled provider (2026-07-24; claude, codex, copilot, opencode, omp disabled).
-The Model column holds the `paseo run --provider` value. **Tier, Strength, and Status are user-edited**: Paseo cannot know quota or tier. Fill these in.
+<!-- Availability via `paseo provider ls` (only `pi` is enabled on this box). The Model column holds the `paseo run --provider` value (`pi/<model-id>`). Tier, Strength, and Status are user-edited: Paseo cannot know quota or tier. Naming convention is a hint, not a fact: flash/mini ≈ budget, plus ≈ mid, max/luna/sol/terra ≈ premium. Fill the real tiers from your benchmarks and quota. -->
 
 | Model (paseo --provider value) | Tier | Strength | Status |
 |-------|------|----------|--------|
@@ -68,5 +67,5 @@ Spawned phases (delegated via `paseo run`; model comes from the role briefing's 
 - Update this file when quota changes, new models become available, or benchmarks shift.
 - The orchestrator recommends; the user always confirms before spawn.
 - If a model's status is `exhausted` or `removed`, the orchestrator falls back to the next model in the same tier.
-- Multi-model review panels should use models from different providers when possible (reduces correlated blind spots).
-- A bundled role briefing's `provider` field is the floor for that phase, not the recommendation: `roles/review.md` ships at premium tier even though the phase-defaults table lists mid. The registry governs what the orchestrator recommends; the role briefing governs what runs when nobody overrides.
+- Multi-model review panels should use models from different providers when possible (reduces correlated blind spots). On this box only the `pi` provider is enabled, so cross-provider panels are not currently possible.
+- A bundled role briefing's `provider` field is the floor for that phase, not the recommendation.

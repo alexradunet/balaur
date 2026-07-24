@@ -13,6 +13,8 @@ import { MemoryIndex } from "./storage/memory-index.js";
 import { LifeQuery } from "./storage/life-query.js";
 import { FileTaskRepository } from "./storage/task-repository.js";
 import { FileJournalRepository, journalPath } from "./storage/journal-event-repository.js";
+import { NoteCatalog, isNotePath } from "./storage/note-catalog.js";
+import { FileNoteRepository } from "./storage/note-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
 import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacementFailure, validateGeneratedOperation } from "./ai/generated-operations.js";
@@ -46,9 +48,21 @@ const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference
 const DORMANT_NODE_COLOR="#6c757d";
 const STARTER_TASK_ID="task-citybreak";
 const STARTER_TASK_PATH="tasks/choose-dates-for-the-autumn-trip-task-citybreak.md";
+const STARTER_NOTES={
+  homeGuide:"notes/start-here-your-life-as-a-graph.md",
+  inboxGuide:"notes/inbox.md",
+  inboxTrip:"notes/autumn-city-break-idea.md",
+  projectsGuide:"notes/projects.md",
+  cbNote:"notes/autumn-city-break.md",
+  wikiGuide:"notes/wiki.md",
+  wikiBudget:"notes/monthly-budget.md",
+  wikiSubscriptions:"notes/subscriptions.md",
+  archiveGuide:"notes/archive.md",
+  archivePortfolio:"notes/portfolio-refresh-completed.md",
+};
 function createGraphStarterWorkspace(){
   const rootDocument={nodes:[
-    {id:"home-guide",type:"text",x:0,y:-220,width:1180,height:170,color:"3",text:"# Start here — your life, as a graph\nHome is the entry point. Four hubs hang off it; structure emerges from labelled connections, not folders.\n\n- Inbox — capture pending processing\n- Projects — committed efforts with a finish line\n- Wiki — durable reference\n- Archive — dormant and completed"},
+    {id:"home-guide",type:"file",x:0,y:-220,width:1180,height:170,color:"3",file:STARTER_NOTES.homeGuide},
     {id:"portal-inbox",type:"file",x:0,y:20,width:360,height:240,color:"2",file:"canvases/inbox.canvas"},
     {id:"portal-projects",type:"file",x:410,y:20,width:360,height:240,color:"6",file:"canvases/projects.canvas"},
     {id:"portal-wiki",type:"file",x:0,y:300,width:360,height:240,color:"5",file:"canvases/wiki.canvas"},
@@ -60,33 +74,33 @@ function createGraphStarterWorkspace(){
   const today=localDateISO(),journalFile=journalPath(today);
   const hub=(id,title,path,portalNodeId,doc)=>{result.canvases[id]={id,title,parentId:result.rootId,portalNodeId,path,document:doc,camera:null,kind:"hub"};};
   const inboxDoc={nodes:[
-    {id:"inbox-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Inbox\nCapture quick notes here, then process them into a project or the wiki. A healthy inbox trends toward empty."},
-    {id:"inbox-trip",type:"text",x:0,y:20,width:340,height:200,color:"2",text:`${NOTE_MARKERS.inbox}\n# Autumn city break idea\nDecide dates and a rough budget, then turn it into a real project.`},
+    {id:"inbox-guide",type:"file",x:0,y:-160,width:760,height:120,color:"3",file:STARTER_NOTES.inboxGuide},
+    {id:"inbox-trip",type:"file",x:0,y:20,width:340,height:200,color:"2",file:STARTER_NOTES.inboxTrip},
     {id:"inbox-to-citybreak",type:"file",x:420,y:20,width:340,height:200,color:"6",file:"canvases/city-break.canvas"},
   ],edges:[
     {id:"e-inbox-filed",fromNode:"inbox-trip",fromSide:"right",toNode:"inbox-to-citybreak",toSide:"left",toEnd:"arrow",color:"6",label:"filed-to"},
   ]};
   const projectsDoc={nodes:[
-    {id:"projects-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Projects\nCommitted efforts with a finish line. Each project is its own canvas holding tasks, notes, and sub-canvases."},
+    {id:"projects-guide",type:"file",x:0,y:-160,width:760,height:120,color:"3",file:STARTER_NOTES.projectsGuide},
     {id:"projects-citybreak",type:"file",x:0,y:20,width:360,height:240,color:"6",file:"canvases/city-break.canvas"},
   ],edges:[]};
   const cityBreakDoc={nodes:[
-    {id:"cb-note",type:"text",x:0,y:0,width:360,height:200,color:"6",text:"# Autumn city break\nThree days, one city, room to wander. Finish line: transport and accommodation booked."},
+    {id:"cb-note",type:"file",x:0,y:0,width:360,height:200,color:"6",file:STARTER_NOTES.cbNote},
     {id:"cb-task",type:"file",x:420,y:0,width:340,height:200,color:"5",file:STARTER_TASK_PATH},
   ],edges:[
     {id:"e-cb-partof",fromNode:"cb-task",fromSide:"left",toNode:"cb-note",toSide:"right",toEnd:"arrow",color:"6",label:"part-of"},
   ]};
   const wikiDoc={nodes:[
-    {id:"wiki-guide",type:"text",x:0,y:-180,width:760,height:120,color:"3",text:"# Wiki\nDurable reference and responsibilities. Pages interlink; this is the long-term memory of your life."},
-    {id:"wiki-budget",type:"text",x:0,y:0,width:340,height:200,color:"5",text:`${NOTE_MARKERS.reference}\n# Monthly budget\nFixed costs, everyday spending, and fun each get a limit. Reconcile monthly.`},
-    {id:"wiki-subscriptions",type:"text",x:420,y:0,width:340,height:200,color:"5",text:`${NOTE_MARKERS.reference}\n# Subscriptions\nReview recurring costs quarterly before they become invisible.`},
+    {id:"wiki-guide",type:"file",x:0,y:-180,width:760,height:120,color:"3",file:STARTER_NOTES.wikiGuide},
+    {id:"wiki-budget",type:"file",x:0,y:0,width:340,height:200,color:"5",file:STARTER_NOTES.wikiBudget},
+    {id:"wiki-subscriptions",type:"file",x:420,y:0,width:340,height:200,color:"5",file:STARTER_NOTES.wikiSubscriptions},
     {id:"wiki-journal",type:"file",x:840,y:0,width:320,height:200,color:"3",file:journalFile},
   ],edges:[
     {id:"e-wiki-relates",fromNode:"wiki-subscriptions",fromSide:"left",toNode:"wiki-budget",toSide:"right",toEnd:"arrow",color:"5",label:"relates-to"},
   ]};
   const archiveDoc={nodes:[
-    {id:"archive-guide",type:"text",x:0,y:-160,width:760,height:120,color:"3",text:"# Archive\nDormant and completed work. Nothing is deleted; things are filed here when they are done or paused."},
-    {id:"archive-portfolio",type:"text",x:0,y:20,width:360,height:200,color:DORMANT_NODE_COLOR,text:`${NOTE_MARKERS.reference}\n# Portfolio refresh (completed)\nShipped and shared. Kept for the record.`},
+    {id:"archive-guide",type:"file",x:0,y:-160,width:760,height:120,color:"3",file:STARTER_NOTES.archiveGuide},
+    {id:"archive-portfolio",type:"file",x:0,y:20,width:360,height:200,color:DORMANT_NODE_COLOR,file:STARTER_NOTES.archivePortfolio},
   ],edges:[]};
 
   hub("hub-inbox","Inbox","canvases/inbox.canvas","portal-inbox",inboxDoc);
@@ -108,6 +122,27 @@ async function seedGraphStarterEntities(){
         status:"inbox",
       });
     }catch(_){/* already seeded */}
+  }
+  // Note files at the exact paths the starter's file nodes already reference.
+  // No canvasId: the placement nodes exist in the hub canvases already. kind sets
+  // the inert marker (inbox/reference) via the repository; guides carry no marker.
+  if(noteRepository){
+    const seeds=[
+      {path:STARTER_NOTES.homeGuide,body:"# Start here — your life, as a graph\nHome is the entry point. Four hubs hang off it; structure emerges from labelled connections, not folders.\n\n- Inbox — capture pending processing\n- Projects — committed efforts with a finish line\n- Wiki — durable reference\n- Archive — dormant and completed"},
+      {path:STARTER_NOTES.inboxGuide,body:"# Inbox\nCapture quick notes here, then process them into a project or the wiki. A healthy inbox trends toward empty."},
+      {path:STARTER_NOTES.inboxTrip,kind:"inbox",body:"# Autumn city break idea\nDecide dates and a rough budget, then turn it into a real project."},
+      {path:STARTER_NOTES.projectsGuide,body:"# Projects\nCommitted efforts with a finish line. Each project is its own canvas holding tasks, notes, and sub-canvases."},
+      {path:STARTER_NOTES.cbNote,body:"# Autumn city break\nThree days, one city, room to wander. Finish line: transport and accommodation booked."},
+      {path:STARTER_NOTES.wikiGuide,body:"# Wiki\nDurable reference and responsibilities. Pages interlink; this is the long-term memory of your life."},
+      {path:STARTER_NOTES.wikiBudget,kind:"reference",body:"# Monthly budget\nFixed costs, everyday spending, and fun each get a limit. Reconcile monthly."},
+      {path:STARTER_NOTES.wikiSubscriptions,kind:"reference",body:"# Subscriptions\nReview recurring costs quarterly before they become invisible."},
+      {path:STARTER_NOTES.archiveGuide,body:"# Archive\nDormant and completed work. Nothing is deleted; things are filed here when they are done or paused."},
+      {path:STARTER_NOTES.archivePortfolio,kind:"reference",body:"# Portfolio refresh (completed)\nShipped and shared. Kept for the record."},
+    ];
+    for(const seed of seeds){
+      try{await noteRepository.createNote(seed);}
+      catch(_){/* already seeded */}
+    }
   }
   // Journal file for today at the path the starter's wiki-journal node references.
   if(journalRepository){
@@ -163,9 +198,12 @@ let componentCardCatalog=null;
 let componentCardRepository=null;
 let widgetCatalog=null;
 let widgetRepository=null;
+let noteCatalog=null;
+let noteRepository=null;
 let canonicalWritable=false;
 const aiFileContentCache=new Map();
 const taskUpdateTimers=new Map();
+const noteUpdateTimers=new Map();
 
 const canvas = $("#canvas");
 const world = $("#world");
@@ -323,6 +361,11 @@ function configureLifeRuntime(vault) {
     vault, index: lifeIndex, indexer: lifeIndexer,
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
   });
+  noteCatalog = new NoteCatalog({ vault });
+  noteRepository = new FileNoteRepository({
+    vault, index: lifeIndex, indexer: lifeIndexer, catalog: noteCatalog,
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+  });
 }
 // Vault-first asynchronous boot. The only post-migration source of truth is the
 // IndexedDB vault; the MemoryIndex is rebuilt from its files for every session.
@@ -346,12 +389,12 @@ async function bootCanvasApp(){
       await seedGraphStarterEntities();
       workspace = (await store.load()).workspace;
     }
-    await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild()]);
+    await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild(), noteCatalog.rebuild()]);
     const stats = lifeIndexer.stats();
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
   } catch (error) {
     console.warn("Vault-first boot failed; canonical files are unavailable", error);
-    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; journalRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null;
+    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; journalRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null; noteCatalog = null; noteRepository = null;
     setIndexStatus("Files unavailable", error.message);
     setCanonicalWritable(false, "Canonical files are unavailable; export or repair the vault before editing.");
   }
@@ -389,7 +432,7 @@ function canvasTrail(id=currentCanvasId){
 function slug(value){return String(value).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,54)||"canvas";}
 async function rebuildLifeIndex(){
   if (!lifeIndexer) return;
-  await Promise.all([lifeIndexer.rebuild(), componentCardCatalog?.rebuild(), widgetCatalog?.rebuild()]);
+  await Promise.all([lifeIndexer.rebuild(), componentCardCatalog?.rebuild(), widgetCatalog?.rebuild(), noteCatalog?.rebuild()]);
   const stats = lifeIndexer.stats();
   setIndexStatus(`Files · ${stats.sourceFiles} indexed`, `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);
   renderToday(); renderNodes();
@@ -408,7 +451,7 @@ async function loadGraphStarter(){
     await canonicalVault.restore(snapshot);
     const nextStore=new WorkspaceStore(canonicalVault), result=await nextStore.load();
     if(!result?.workspace)throw new Error("Starter activation did not produce a workspace");
-    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
+    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
     currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#canvasTitle").value=canvasRecord().title;renderWorkspaceNavigation();render();fitView();toast("Graph starter space loaded");
   } catch(error) { console.warn("Could not reset the canonical vault",error); toast(`Could not load starter: ${error.message}`); }
 }
@@ -565,6 +608,37 @@ function flushTaskFieldUpdate(id, patch) {
   taskUpdateTimers.delete(id);
   return updateTask(id,{...(prior?.patch||{}),...patch}).catch(error=>toast(error.message));
 }
+async function updateNoteBody(path, body){
+  if(!canonicalWritable||!noteRepository) throw new Error("Canonical files are unavailable or read-only.");
+  await flushPendingWorkspaceEdits();
+  const note=await enqueueMutation(async()=>{
+    const updated=await noteRepository.updateNote(path, body);
+    await reloadCanvasDocuments([currentCanvasId]);
+    renderNodes();
+    return updated;
+  });
+  return note;
+}
+function scheduleNoteUpdate(path, body){
+  const prior=noteUpdateTimers.get(path);if(prior)clearTimeout(prior.timer);
+  const timer=setTimeout(()=>{noteUpdateTimers.delete(path);updateNoteBody(path,body).catch(error=>toast(error.message));},250);
+  noteUpdateTimers.set(path,{timer,body});
+}
+function flushNoteUpdate(path, body){
+  const prior=noteUpdateTimers.get(path);if(prior)clearTimeout(prior.timer);
+  noteUpdateTimers.delete(path);
+  const next=body!==undefined?body:prior?.body;if(next===undefined)return Promise.resolve();
+  return updateNoteBody(path,next).catch(error=>toast(error.message));
+}
+function noteBodyFromInspector(detail){
+  const current=noteCatalog?.getByPath(detail.notePath)?.body||"";
+  if(detail.key==="noteBody")return String(detail.value??"");
+  if(detail.key==="aiTitle"||detail.key==="aiPrompt"){
+    const config=parseAICardBody(current);
+    return buildAICardText(detail.key==="aiTitle"?detail.value:config.title,detail.key==="aiPrompt"?detail.value:config.prompt);
+  }
+  return null;
+}
 async function completeTask(id){
   if(!canonicalWritable||!taskRepository) throw new Error("Canonical files are unavailable or read-only.");
   await flushPendingWorkspaceEdits();
@@ -674,11 +748,12 @@ async function placeJournalOnCanvas(){
 function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);delete workspace.canvases[id];}
 
 const AI_CARD_MARKER="<!-- orbit:ai-card -->";
-function isAICard(node){return node?.type==="text"&&node.text.includes(AI_CARD_MARKER);}
-function parseAICard(node){
-  const lines=(node.text||"").split(/\r?\n/).filter(line=>line.trim()!==AI_CARD_MARKER),heading=lines.findIndex(line=>line.startsWith("# ")),title=heading>=0?lines[heading].slice(2).trim():"AI operator";
+function isAICard(node){return node?.type==="file"&&isNotePath(node.file)&&Boolean(noteCatalog?.getByPath(node.file)?.body?.includes(AI_CARD_MARKER));}
+function parseAICardBody(body){
+  const lines=(body||"").split(/\r?\n/).filter(line=>line.trim()!==AI_CARD_MARKER),heading=lines.findIndex(line=>line.startsWith("# ")),title=heading>=0?lines[heading].slice(2).trim():"AI operator";
   if(heading>=0)lines.splice(heading,1);return {title,prompt:lines.join("\n").trim()||"Summarize the connected notes."};
 }
+function parseAICard(node){return parseAICardBody(noteCatalog?.getByPath(node.file)?.body||"");}
 function buildAICardText(title,prompt){return `${AI_CARD_MARKER}\n# ${title.trim()||"AI operator"}\n${prompt.trim()||"Summarize the connected notes."}`;}
 function indexedEntityForPath(path) {
   const source = lifeIndex?.getSourceFile(path);
@@ -688,12 +763,13 @@ function indexedEntityForPath(path) {
   return { source, row };
 }
 function nodeTitle(node){
-  if(isAICard(node))return parseAICard(node).title;if(node.type==="text"){const heading=node.text.match(/^#{1,2}\s+(.+)$/m);return heading?heading[1]:"Text note";}if(node.type==="group")return node.label||"Group";if(node.type==="link")try{return new URL(node.url).hostname;}catch(_){return "Link";}if(node.type==="file"){const subcanvasId=subcanvasIdFromNode(node);if(subcanvasId)return workspace.canvases[subcanvasId].title;return indexedEntityForPath(node.file)?.row?.title||node.file.split("/").pop();}return node.id;
+  if(isAICard(node))return parseAICard(node).title;if(node.type==="text"){const heading=node.text.match(/^#{1,2}\s+(.+)$/m);return heading?heading[1]:"Text note";}if(node.type==="group")return node.label||"Group";if(node.type==="link")try{return new URL(node.url).hostname;}catch(_){return "Link";}if(node.type==="file"){if(isNotePath(node.file))return noteCatalog?.getByPath(node.file)?.title||node.file.split("/").pop();const subcanvasId=subcanvasIdFromNode(node);if(subcanvasId)return workspace.canvases[subcanvasId].title;return indexedEntityForPath(node.file)?.row?.title||node.file.split("/").pop();}return node.id;
 }
 function inputNodesForAICard(cardId,data=documentData){const byId=Object.fromEntries((data.nodes||[]).map(node=>[node.id,node]));return (data.edges||[]).filter(edge=>edge.toNode===cardId&&edge.label!=="AI output").map(edge=>byId[edge.fromNode]).filter(Boolean);}
 function nodeAIContent(node){
   if(node.type==="text")return node.text;if(node.type==="link")return node.url;
   if(node.type==="file"){
+    if(isNotePath(node.file))return noteCatalog?.getByPath(node.file)?.body||"";
     const cached=aiFileContentCache.get(node.file);if(cached)return cached;
     const entity=indexedEntityForPath(node.file);if(entity?.row)return [`Title: ${entity.row.title||entity.row.localDate||node.file}`, "Canonical body is loading.", node.subpath].filter(Boolean).join("\n");
     return node.subpath ? `${node.file}\nSubpath: ${node.subpath}` : node.file;
@@ -710,7 +786,7 @@ async function preloadAIFileInputs(nodes) {
     } catch (error) { aiFileContentCache.set(node.file, `Canonical file unavailable: ${node.file}`); console.warn("Could not preload AI file context", node.file, error); }
   }
 }
-function aiCardSignature(card,data=documentData){return JSON.stringify([card.text,inputNodesForAICard(card.id,data).map(node=>[node.id,nodeAIContent(node)])]);}
+function aiCardSignature(card,data=documentData){return JSON.stringify([nodeAIContent(card),inputNodesForAICard(card.id,data).map(node=>[node.id,nodeAIContent(node)])]);}
 function aiCardSignatures(data=documentData){return new Map((data.nodes||[]).filter(isAICard).map(card=>[card.id,aiCardSignature(card,data)]));}
 
 function textMeta(node) {
@@ -719,6 +795,7 @@ function textMeta(node) {
 }
 
 function noteKind(node){
+  if(node?.type==="file"&&isNotePath(node.file)){const kind=noteCatalog?.getByPath(node.file)?.kind;return kind==="inbox"||kind==="reference"?kind:null;}
   if(node?.type!=="text")return null;
   if(node.text.includes(NOTE_MARKERS.inbox))return "inbox";
   if(node.text.includes(NOTE_MARKERS.reference))return "reference";
@@ -728,8 +805,9 @@ function canvasKind(record){return record?.kind==="hub"||record?.kind==="project
 // One-line summary convention (ADR-0003): heading/title first, else first body line.
 function nodeSummary(node){
   const title=nodeTitle(node);
-  if(node?.type==="text"){
-    const bodyLine=(node.text||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*orbit:/.test(line));
+  const body=node?.type==="text"?node.text:(node?.type==="file"&&isNotePath(node.file)?noteCatalog?.getByPath(node.file)?.body||"":null);
+  if(body!==null){
+    const bodyLine=(body||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*orbit:/.test(line));
     const summary=(bodyLine||"").trim().slice(0,120);
     return summary&&summary!==title?`${title} — ${summary}`:title;
   }
@@ -903,6 +981,18 @@ function renderNodes() {
       } else if (fileEntity?.source?.entityType==="journal") {
         const row=fileEntity.row;
         content.innerHTML=`<div class="node-kicker">JOURNAL · ${escapeHTML(row.localDate)}</div><div class="node-body"><h3>${escapeHTML(row.localDate)}</h3><p>Daily note. Open in Today to edit, or place it on a canvas.</p></div>`;
+      } else if (isNotePath(node.file)) {
+        const note=noteCatalog?.getByPath(node.file)||noteCatalog?.getFallbackByPath(node.file)||{path:node.file,title:node.file.split("/").pop(),body:"",diagnostic:`Note file is unavailable: ${node.file}`};
+        if(note.diagnostic){
+          content.innerHTML=`<div class="node-kicker">NOTE · UNAVAILABLE</div><div class="node-body"><h3>${escapeHTML(note.title)}</h3><p>${escapeHTML(note.diagnostic)}</p></div>`;
+        } else if(note.body.includes(AI_CARD_MARKER)){
+          const config=parseAICard(node),inputs=inputNodesForAICard(node.id),runtime=aiCardRuntime.get(node.id)||{status:"Ready"};element.classList.add("ai-card");element.classList.toggle("running",runtime.running===true);
+          content.innerHTML=`<div class="node-kicker">AI OPERATOR</div><div class="node-body"><h3 class="ai-card-title">${escapeHTML(config.title)}</h3><p class="ai-card-prompt">${escapeHTML(config.prompt)}</p><div class="ai-inputs">${inputs.length?inputs.map(input=>`<span class="ai-input-chip">← ${escapeHTML(nodeTitle(input))}</span>`).join(""):"<span class=\"ai-input-chip\">No inputs connected</span>"}</div></div><div class="ai-run-row"><span class="ai-run-status">${escapeHTML(runtime.status||"Ready")}</span><button class="ai-run-button" data-ai-run ${runtime.running?"disabled":""}>${runtime.running?"Running…":"Run now"}</button></div>`;
+        } else {
+          const kind=noteKind(node);
+          const kicker=kind==="inbox"?"INBOX · capture":kind==="reference"?"REFERENCE · wiki":textMeta(node);
+          content.innerHTML=`<div class="node-kicker">${kicker}</div><div class="node-body">${markdownToHTML(note.body)}</div>`;
+        }
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="node-body"><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p></div>`;
     }
     if (!canRetain) {
@@ -1055,7 +1145,7 @@ function nodePointerDown(event,node) {
   window.addEventListener("pointermove",move); window.addEventListener("pointerup",up,{once:true});
 }
 
-canvas.addEventListener("pointerdown", event => {
+canvas.addEventListener("pointerdown", async event => {
   if (event.button === 1 || event.button === 0 && (spaceDown || currentTool === "pan")) {
     event.preventDefault(); canvas.classList.add("panning");
     const start={x:event.clientX,y:event.clientY,cx:camera.x,cy:camera.y};
@@ -1068,16 +1158,16 @@ canvas.addEventListener("pointerdown", event => {
     // geometry-test so a click that lands on a card never deselects or creates.
     if (nodeAtClientPoint(event.clientX,event.clientY)) return;
     selected=null;connectSource=null;connectSourceSide=null;shell.classList.remove("inspector-open");render();
-    if (currentTool === "note") { const p=canvasPoint(event.clientX,event.clientY); addNode("note",p); setTool("select"); }
+    if (currentTool === "note") { const p=canvasPoint(event.clientX,event.clientY); await addNode("note",p); setTool("select"); }
   }
 });
-canvas.addEventListener("dblclick", event => {
+canvas.addEventListener("dblclick", async event => {
   if (event.target.closest?.(".canvas-tools,.zoom-tools,.minimap,.edges")) return;
   // Create a note on empty canvas only. The geometry test (not event.target) is
   // authoritative so a double click over a card never spawns a note on top of it,
   // even when a mid-click re-render retargets the event to the background layer.
   if (nodeAtClientPoint(event.clientX,event.clientY)) return;
-  addNode("note",canvasPoint(event.clientX,event.clientY));
+  await addNode("note",canvasPoint(event.clientX,event.clientY));
 });
 canvas.addEventListener("wheel", event => {
   event.preventDefault();
@@ -1100,27 +1190,47 @@ function setTool(tool) {
 }
 
 
-function addNode(kind, point) {
+// Shared create-and-place for every file-backed authoring path (ADR-0004): write
+// the canonical notes/*.md file and add its file-node placement through the note
+// repository, then reload the canvas so the in-memory document matches the vault.
+// Returns {path, note, placement}. Throws when the vault is read-only so the AI
+// callers' try/catch surface the error; addNode wraps it for the UI paths.
+async function createNoteOnCanvas({title, body, kind=null, color, geometry, canvasId=currentCanvasId}){
+  if(!canonicalWritable||!noteRepository) throw new Error("Canonical files are unavailable or read-only.");
+  await flushPendingWorkspaceEdits();
+  const result=await enqueueMutation(()=>noteRepository.createNote({title, body, kind, color, canvasId, geometry}));
+  await reloadCanvasDocuments([canvasId]);
+  return result;
+}
+async function addNode(kind, point) {
   if(!canonicalWritable){toast("Canonical files are read-only until repaired or restored");return null;}
   if(kind==="subcanvas")return createSubcanvas(point);if(kind==="task"){openTaskDialog();return;}
   const center = point || canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);
   const presets={
-    note:{type:"text",color:"2",width:260,height:150,text:"# New thought\nStart writing here…"},
-    inbox:{type:"text",color:"2",width:280,height:160,text:`${NOTE_MARKERS.inbox}\n# New capture\nWrite it down now; process it later.`},
-    reference:{type:"text",color:"5",width:300,height:190,text:`${NOTE_MARKERS.reference}\n# New reference\nDurable knowledge worth keeping.`},
-    goal:{type:"text",color:"1",width:300,height:190,text:"# A meaningful goal\nWhat would make this worth doing?\n\n- [ ] Define the first step\n\nProgress: 0%"},
-    habit:{type:"text",color:"4",width:280,height:145,text:"# New daily practice\nMake it small enough to begin today."},
-    project:{type:"text",color:"6",width:300,height:210,text:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
-    ai:{type:"text",color:"5",width:330,height:210,text:`${AI_CARD_MARKER}\n# Weekly synthesis\nSummarize the connected notes. Highlight progress, blockers, and the most useful next action.`},
+    note:{color:"2",width:260,height:150,kind:null,body:"# New thought\nStart writing here…"},
+    inbox:{color:"2",width:280,height:160,kind:"inbox",body:"# New capture\nWrite it down now; process it later."},
+    reference:{color:"5",width:300,height:190,kind:"reference",body:"# New reference\nDurable knowledge worth keeping."},
+    goal:{color:"1",width:300,height:190,kind:null,body:"# A meaningful goal\nWhat would make this worth doing?\n\n- [ ] Define the first step\n\nProgress: 0%"},
+    habit:{color:"4",width:280,height:145,kind:null,body:"# New daily practice\nMake it small enough to begin today."},
+    project:{color:"6",width:300,height:210,kind:null,body:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
+    ai:{color:"5",width:330,height:210,kind:"ai",body:"# Weekly synthesis\nSummarize the connected notes. Highlight progress, blockers, and the most useful next action."},
     widget:{type:"file",color:"5",width:480,height:290,file:"widgets/focus-orbit.html"},
     group:{type:"group",color:"5",width:620,height:430,label:"New area"}
   };
   const preset=presets[kind]||presets.note;
-  const node={id:uid("node"),...preset,x:Math.round(center.x-preset.width/2),y:Math.round(center.y-preset.height/2)};
-  documentData.nodes ||= [];
-  if (kind==="group") documentData.nodes.unshift(node); else documentData.nodes.push(node);
-  selected={kind:"node",id:node.id}; shell.classList.add("inspector-open"); scheduleSave(); render();
-  return node;
+  if(preset.type){
+    const node={id:uid("node"),...preset,x:Math.round(center.x-preset.width/2),y:Math.round(center.y-preset.height/2)};
+    documentData.nodes ||= [];
+    if (kind==="group") documentData.nodes.unshift(node); else documentData.nodes.push(node);
+    selected={kind:"node",id:node.id}; shell.classList.add("inspector-open"); scheduleSave(); render();
+    return node;
+  }
+  const geometry={x:Math.round(center.x-preset.width/2),y:Math.round(center.y-preset.height/2),width:preset.width,height:preset.height};
+  let result;
+  try{result=await createNoteOnCanvas({body:preset.body,kind:preset.kind,color:preset.color,geometry});}
+  catch(error){toast(error.message);return null;}
+  selected={kind:"node",id:result.placement.nodeId}; shell.classList.add("inspector-open"); render();
+  return result;
 }
 
 function renderFallbackInspector(panel,model){
@@ -1151,7 +1261,7 @@ function renderFallbackInspector(panel,model){
     const closeButton=event.target.closest?.("[data-inspector-close]"),color=event.target.closest?.("[data-color]"),action=event.target.closest?.("[data-intent]");
     if(closeButton)panel.dispatchEvent(new CustomEvent("balaur-inspector-close",{bubbles:true,composed:true}));
     else if(color&&!color.disabled)panel.dispatchEvent(new CustomEvent("balaur-inspector-color",{bubbles:true,composed:true,detail:{value:color.dataset.color,modelKey:String(model.key||"")}}));
-    else if(action&&!action.disabled){const configured=model.actions.find(candidate=>candidate.intent===action.dataset.intent);if(configured)panel.dispatchEvent(new CustomEvent("balaur-inspector-action",{bubbles:true,composed:true,detail:{intent:configured.intent,modelKey:String(model.key||""),taskId:configured.taskId||null,cardId:configured.cardId||null,canvasId:configured.canvasId||null}}));}
+    else if(action&&!action.disabled){const configured=model.actions.find(candidate=>candidate.intent===action.dataset.intent);if(configured)panel.dispatchEvent(new CustomEvent("balaur-inspector-action",{bubbles:true,composed:true,detail:{intent:configured.intent,modelKey:String(model.key||""),taskId:configured.taskId||null,cardId:configured.cardId||null,canvasId:configured.canvasId||null,notePath:configured.notePath||null}}));}
   };
 }
 function setInspectorModel(panel,model){
@@ -1167,10 +1277,11 @@ function renderInspector() {
   let title="Connection";
   if(selected.kind==="node"){
     const task=taskForNode(item),componentCard=item.type==="file"&&!task?componentCardCatalog?.getByPath(item.file):null;
-    title=task?"Task":componentCard?"Component card":`${item.type[0].toUpperCase()+item.type.slice(1)} node`;
-    if(item.type==="text"&&isAICard(item)){
+    const note=item.type==="file"&&!task&&isNotePath(item.file)?noteCatalog?.getByPath(item.file)||noteCatalog?.getFallbackByPath(item.file)||{path:item.file,title:item.file.split("/").pop(),body:"",diagnostic:`Note file is unavailable: ${item.file}`}:null;
+    title=task?"Task":componentCard?"Component card":note?"Note":`${item.type[0].toUpperCase()+item.type.slice(1)} node`;
+    if(isAICard(item)){
       const config=parseAICard(item);
-      fields.push({key:"aiTitle",label:"Operator name",control:"text",value:config.title},{key:"aiPrompt",label:"AI instructions",control:"textarea",value:config.prompt});
+      fields.push({key:"aiTitle",label:"Operator name",control:"text",value:config.title,scope:"note",notePath:item.file},{key:"aiPrompt",label:"AI instructions",control:"textarea",value:config.prompt,scope:"note",notePath:item.file});
       notes.push({text:"Incoming connections become context. The generated note updates automatically when that context changes."});
     }else if(task){
       const statuses=["inbox","next","scheduled","waiting","done","cancelled"];
@@ -1182,9 +1293,12 @@ function renderInspector() {
         {key:"priority",label:"Priority",control:"select",value:task.priority??"",scope:"task",taskId:task.id,options:[{value:"",label:"None"},{value:"1",label:"High"},{value:"2",label:"Medium"},{value:"3",label:"Low"}]},
       );
       actions.push({intent:"delete-task",label:"Delete task everywhere",taskId:task.id});
-    }else if(item.type==="text")fields.push({key:"text",label:"Markdown",control:"textarea",value:item.text});
+    }else if(note){
+      fields.push({key:"noteBody",label:"Markdown",control:"textarea",value:note.body,scope:"note",notePath:item.file});
+      actions.push({intent:"delete-note",label:"Delete note everywhere",notePath:item.file,danger:true});
+    }else if(item.type==="text")notes.push({text:"Imported text node · read-only. Balaur authors file-backed notes (ADR-0004)."});
     if(item.type==="link")fields.push({key:"url",label:"URL",control:"url",value:item.url});
-    if(item.type==="file"&&!task){
+    if(item.type==="file"&&!task&&!note){
       const subcanvasId=subcanvasIdFromNode(item),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
       if(subcanvas){
         fields.push({key:"title",label:"Canvas title",control:"text",value:subcanvas.title,scope:"canvas",canvasId:subcanvasId});
@@ -1246,6 +1360,15 @@ function applyInspectorField(detail,phase){
     else if(taskUpdateTimers.has(next.id))flushTaskFieldUpdate(next.id,next.patch);
     return;
   }
+  if(detail.scope==="note"){
+    if(!canonicalWritable||!noteRepository)return;
+    const path=detail.notePath;if(!path)return;
+    const body=noteBodyFromInspector(detail);if(body===null)return;
+    if(phase==="input")scheduleNoteUpdate(path,body);
+    else if(phase==="change")flushNoteUpdate(path,body);
+    else if(noteUpdateTimers.has(path))flushNoteUpdate(path,body);
+    return;
+  }
   if(detail.scope==="canvas"){
     if(phase!=="input")return;
     const record=workspace.canvases[detail.canvasId];if(!record)return;
@@ -1255,8 +1378,7 @@ function applyInspectorField(detail,phase){
   }
   if(phase!=="input")return;
   const before=aiCardSignatures(),key=detail.key;
-  if(key==="aiTitle"||key==="aiPrompt"){const config=parseAICard(item);item.text=buildAICardText(key==="aiTitle"?detail.value:config.title,key==="aiPrompt"?detail.value:config.prompt);}
-  else if((key==="fromSide"||key==="toSide")&&!detail.value)delete item[key];
+  if((key==="fromSide"||key==="toSide")&&!detail.value)delete item[key];
   else item[key]=detail.value;
   scheduleSave();renderNodes();renderEdges();renderMinimap();scheduleChangedAICards(before);
 }
@@ -1270,6 +1392,7 @@ document.addEventListener("balaur-inspector-action",event=>{
   if(event.detail.intent==="open-canvas"&&event.detail.canvasId)enterSubcanvas(event.detail.canvasId);
   else if(event.detail.intent==="delete-task")deleteTaskEverywhere(event.detail.taskId);
   else if(event.detail.intent==="delete-card")deleteComponentCardEverywhere(event.detail.cardId);
+  else if(event.detail.intent==="delete-note")deleteNoteEverywhere(event.detail.notePath);
   else if(event.detail.intent==="delete-selection")deleteSelection();
 });
 document.addEventListener("balaur-task-complete",async event=>{
@@ -1309,6 +1432,16 @@ async function deleteTaskEverywhere(taskId){
     selected=null;shell.classList.remove("inspector-open");render();renderToday();toast("Task deleted everywhere");
   }catch(error){toast(error.message);}
 }
+async function deleteNoteEverywhere(path){
+  if(!path||!noteRepository)return;
+  if(!confirm("Delete this note, its canonical file, and every canvas placement? This cannot be undone."))return;
+  const affected=[...new Set((noteCatalog?.getByPath(path)?.placements||[]).map(placement=>canvasIdFromPath(placement.canvasPath)).filter(Boolean))];
+  try{
+    await flushPendingWorkspaceEdits();
+    await enqueueMutation(async()=>{await noteRepository.deleteNote(path);await reloadCanvasDocuments(affected);});
+    selected=null;shell.classList.remove("inspector-open");render();toast("Note deleted everywhere");
+  }catch(error){toast(error.message);}
+}
 async function deleteSelection() {
   if (!canonicalWritable) { toast("Canonical files are read-only until repaired or restored"); return; }
   if (!selected) return;const before=aiCardSignatures();let canonicalMutation=false;
@@ -1321,6 +1454,12 @@ async function deleteSelection() {
       try{
         await flushPendingWorkspaceEdits();
         await enqueueMutation(async()=>{await taskRepository.removePlacement(currentCanvasId,selected.id);await reloadCanvasDocuments([currentCanvasId]);});
+      }catch(error){toast(error.message);return;}
+    } else if(node.type==="file"&&isNotePath(node.file)){
+      canonicalMutation=true;
+      try{
+        await flushPendingWorkspaceEdits();
+        await enqueueMutation(async()=>{await noteRepository.removePlacement(currentCanvasId,selected.id);await reloadCanvasDocuments([currentCanvasId]);});
       }catch(error){toast(error.message);return;}
     } else {
       documentData.nodes=documentData.nodes.filter(n=>n.id!==selected.id);
@@ -1396,7 +1535,7 @@ async function importCanvas(file) {
       if(!result?.workspace)throw new Error("Canonical vault activation did not produce a workspace");
       // Switch application globals only after canonical activation and reload
       // have both succeeded.
-      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
+      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
       currentCanvasId=workspace.activeId; documentData=workspace.canvases[currentCanvasId].document; camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1}; selected=null; $("#canvasTitle").value=canvasRecord().title; render(); fitView();
       const stats=lifeIndexer.stats();setIndexStatus(`Files · ${stats.sourceFiles} indexed`,`${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);toast("Whole workspace and canonical files imported");return;
     }
@@ -1529,7 +1668,7 @@ async function applyCanvasOperations(operations) {
   }catch(error){failure=error;}
   finally{
     if(plan.generatedOperations.length||failure?.operationState?.reload){
-      try{await Promise.all([componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);await reloadCanvasDocuments(Object.keys(workspace.canvases));}
+      try{await Promise.all([componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);await reloadCanvasDocuments(Object.keys(workspace.canvases));}
       catch(error){if(!failure)failure=error;else console.warn("Could not reconcile a partially applied component-card plan",error);}
     }
     selected=null;shell.classList.remove("inspector-open");render();updateAssistantContext();scheduleChangedAICards(before);
@@ -1652,7 +1791,7 @@ async function runLocalAssistant(prompt) {
       const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-orbit.html"};await applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
     } else {
       const match=request.match(/(?:add|create)\s+(?:a |an )?(goal|habit|project|note)(?:\s+(?:called|named|to))?\s+(.+)/i);
-      if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"text",x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150,color:preset[0],text:preset[1]};await applyCanvasOperations([{type:"node.add",node}]);response=`Added a ${kind} card using standard JSON Canvas fields.`;}
+      if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);await createNoteOnCanvas({title,body:preset[1],color:preset[0],geometry:{x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150}});response=`Added a ${kind} card using standard JSON Canvas fields.`;}
       else response="I understand this canvas, but the GitHub Pages demo uses a local intent parser rather than a remote model. Try asking me to summarize it, create a metric card, add a goal/habit/project, add a 3D widget, or change the theme.";
     }
   } catch(error){response=`I did not apply that change: ${error.message}`;}
@@ -1740,7 +1879,7 @@ async function createAINote(prompt){
   const dialog=$("#aiNoteDialog"),button=$("#generateAINote"),result=$("#aiNoteResult");dialog.classList.add("generating");button.disabled=true;result.className="settings-test";result.textContent=`Asking ${aiSettings.model}…`;
   try{
     const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages:[{role:"system",content:"Create one clear, useful Markdown note that answers the user's prompt. Return only the note Markdown without code fences, commentary, HTML, or scripts. Give the note a concise level-one heading."},{role:"user",content:prompt}],temperature:.4,max_tokens:2200})}),body=await response.json();let generated=providerMessageContent(body.choices?.[0]?.message?.content);if(!/^#\s/m.test(generated))generated=`# AI note\n\n${generated}`;
-    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),node={id:uid("node"),type:"text",x:Math.round(center.x-190),y:Math.round(center.y-130),width:380,height:Math.min(480,Math.max(240,180+Math.round(generated.length/12))),color:"5",text:generated};documentData.nodes.push(node);selected={kind:"node",id:node.id};shell.classList.add("inspector-open");scheduleSave();render();dialog.close();$("#aiNotePrompt").value="";toast("AI note added");
+    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),created=await createNoteOnCanvas({title:"AI note",body:generated,color:"5",geometry:{x:Math.round(center.x-190),y:Math.round(center.y-130),width:380,height:Math.min(480,Math.max(240,180+Math.round(generated.length/12)))}});selected={kind:"node",id:created.placement.nodeId};shell.classList.add("inspector-open");render();dialog.close();$("#aiNotePrompt").value="";toast("AI note added");
   }catch(error){result.className="settings-test error";result.textContent=error.message;}
   finally{dialog.classList.remove("generating");button.disabled=false;}
 }
@@ -1756,9 +1895,10 @@ async function runAICard(cardId,{manual=false}={}) {
     const inputText=inputs.length?inputs.map((node,index)=>`## Input ${index+1}: ${nodeTitle(node)}\nType: ${node.type}\n${nodeAIContent(node).slice(0,30000)}`).join("\n\n---\n\n"):"No connected inputs.";
     const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages:[{role:"system",content:"You generate one useful Markdown note from connected JSON Canvas inputs. Follow the operator instructions. Return only the note Markdown, without code fences, commentary, or JSON. Do not include HTML or scripts."},{role:"user",content:`Operator: ${config.title}\nInstructions:\n${config.prompt}\n\nConnected inputs:\n${inputText}`}],temperature:.3,max_tokens:2200})}),body=await response.json();
     let generated=providerMessageContent(body.choices?.[0]?.message?.content);if(!/^#\s/m.test(generated))generated=`# ${config.title} — output\n\n${generated}`;
-    const before=aiCardSignatures();let outputEdge=(documentData.edges||[]).find(edge=>edge.fromNode===card.id&&edge.label==="AI output"),output=outputEdge&&documentData.nodes.find(node=>node.id===outputEdge.toNode&&node.type==="text");
-    if(!output){output={id:uid("node"),type:"text",x:card.x+card.width+90,y:card.y,width:380,height:240,color:"5",text:generated};documentData.nodes.push(output);outputEdge={id:uid("edge"),fromNode:card.id,fromSide:"right",toNode:output.id,toSide:"left",toEnd:"arrow",color:"5",label:"AI output"};documentData.edges.push(outputEdge);}else output.text=generated;
-    state.lastSignature=signature;state.status=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;scheduleSave();render();scheduleChangedAICards(before);toast(`${config.title} updated its output`);
+    const before=aiCardSignatures();const outputEdge=(documentData.edges||[]).find(edge=>{if(edge.fromNode!==card.id||edge.label!=="AI output")return false;const target=documentData.nodes.find(node=>node.id===edge.toNode);return !!target&&target.type==="file"&&isNotePath(target.file);});const outputNode=outputEdge&&documentData.nodes.find(node=>node.id===outputEdge.toNode);
+    if(!outputNode){const created=await createNoteOnCanvas({title:`${config.title} — output`,body:generated,color:"5",canvasId:currentCanvasId,geometry:{x:card.x+card.width+90,y:card.y,width:380,height:240}});documentData.edges||=[];documentData.edges.push({id:uid("edge"),fromNode:card.id,fromSide:"right",toNode:created.placement.nodeId,toSide:"left",toEnd:"arrow",color:"5",label:"AI output"});scheduleSave();}
+    else await noteRepository.updateNote(outputNode.file,generated);
+    state.lastSignature=signature;state.status=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;render();scheduleChangedAICards(before);toast(`${config.title} updated its output`);
   }catch(error){state.status=`Error · ${error.message.slice(0,55)}`;toast("AI operator failed");}
   finally{state.running=false;const pending=state.pending;state.pending=false;aiCardRuntime.set(cardId,state);renderNodes();if(pending)scheduleAICard(cardId,250);}
 }
