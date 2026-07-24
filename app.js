@@ -1112,7 +1112,7 @@ function nodePointerDown(event,node) {
   window.addEventListener("pointermove",move); window.addEventListener("pointerup",up,{once:true});
 }
 
-canvas.addEventListener("pointerdown", event => {
+canvas.addEventListener("pointerdown", async event => {
   if (event.button === 1 || event.button === 0 && (spaceDown || currentTool === "pan")) {
     event.preventDefault(); canvas.classList.add("panning");
     const start={x:event.clientX,y:event.clientY,cx:camera.x,cy:camera.y};
@@ -1125,16 +1125,16 @@ canvas.addEventListener("pointerdown", event => {
     // geometry-test so a click that lands on a card never deselects or creates.
     if (nodeAtClientPoint(event.clientX,event.clientY)) return;
     selected=null;connectSource=null;connectSourceSide=null;shell.classList.remove("inspector-open");render();
-    if (currentTool === "note") { const p=canvasPoint(event.clientX,event.clientY); addNode("note",p); setTool("select"); }
+    if (currentTool === "note") { const p=canvasPoint(event.clientX,event.clientY); await addNode("note",p); setTool("select"); }
   }
 });
-canvas.addEventListener("dblclick", event => {
+canvas.addEventListener("dblclick", async event => {
   if (event.target.closest?.(".canvas-tools,.zoom-tools,.minimap,.edges")) return;
   // Create a note on empty canvas only. The geometry test (not event.target) is
   // authoritative so a double click over a card never spawns a note on top of it,
   // even when a mid-click re-render retargets the event to the background layer.
   if (nodeAtClientPoint(event.clientX,event.clientY)) return;
-  addNode("note",canvasPoint(event.clientX,event.clientY));
+  await addNode("note",canvasPoint(event.clientX,event.clientY));
 });
 canvas.addEventListener("wheel", event => {
   event.preventDefault();
@@ -1157,27 +1157,47 @@ function setTool(tool) {
 }
 
 
-function addNode(kind, point) {
+// Shared create-and-place for every file-backed authoring path (ADR-0004): write
+// the canonical notes/*.md file and add its file-node placement through the note
+// repository, then reload the canvas so the in-memory document matches the vault.
+// Returns {path, note, placement}. Throws when the vault is read-only so the AI
+// callers' try/catch surface the error; addNode wraps it for the UI paths.
+async function createNoteOnCanvas({title, body, kind=null, color, geometry, canvasId=currentCanvasId}){
+  if(!canonicalWritable||!noteRepository) throw new Error("Canonical files are unavailable or read-only.");
+  await flushPendingWorkspaceEdits();
+  const result=await enqueueMutation(()=>noteRepository.createNote({title, body, kind, color, canvasId, geometry}));
+  await reloadCanvasDocuments([canvasId]);
+  return result;
+}
+async function addNode(kind, point) {
   if(!canonicalWritable){toast("Canonical files are read-only until repaired or restored");return null;}
   if(kind==="subcanvas")return createSubcanvas(point);if(kind==="task"){openTaskDialog();return;}
   const center = point || canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);
   const presets={
-    note:{type:"text",color:"2",width:260,height:150,text:"# New thought\nStart writing here…"},
-    inbox:{type:"text",color:"2",width:280,height:160,text:`${NOTE_MARKERS.inbox}\n# New capture\nWrite it down now; process it later.`},
-    reference:{type:"text",color:"5",width:300,height:190,text:`${NOTE_MARKERS.reference}\n# New reference\nDurable knowledge worth keeping.`},
-    goal:{type:"text",color:"1",width:300,height:190,text:"# A meaningful goal\nWhat would make this worth doing?\n\n- [ ] Define the first step\n\nProgress: 0%"},
-    habit:{type:"text",color:"4",width:280,height:145,text:"# New daily practice\nMake it small enough to begin today."},
-    project:{type:"text",color:"6",width:300,height:210,text:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
-    ai:{type:"text",color:"5",width:330,height:210,text:`${AI_CARD_MARKER}\n# Weekly synthesis\nSummarize the connected notes. Highlight progress, blockers, and the most useful next action.`},
+    note:{color:"2",width:260,height:150,kind:null,body:"# New thought\nStart writing here…"},
+    inbox:{color:"2",width:280,height:160,kind:"inbox",body:"# New capture\nWrite it down now; process it later."},
+    reference:{color:"5",width:300,height:190,kind:"reference",body:"# New reference\nDurable knowledge worth keeping."},
+    goal:{color:"1",width:300,height:190,kind:null,body:"# A meaningful goal\nWhat would make this worth doing?\n\n- [ ] Define the first step\n\nProgress: 0%"},
+    habit:{color:"4",width:280,height:145,kind:null,body:"# New daily practice\nMake it small enough to begin today."},
+    project:{color:"6",width:300,height:210,kind:null,body:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
+    ai:{color:"5",width:330,height:210,kind:"ai",body:"# Weekly synthesis\nSummarize the connected notes. Highlight progress, blockers, and the most useful next action."},
     widget:{type:"file",color:"5",width:480,height:290,file:"widgets/focus-orbit.html"},
     group:{type:"group",color:"5",width:620,height:430,label:"New area"}
   };
   const preset=presets[kind]||presets.note;
-  const node={id:uid("node"),...preset,x:Math.round(center.x-preset.width/2),y:Math.round(center.y-preset.height/2)};
-  documentData.nodes ||= [];
-  if (kind==="group") documentData.nodes.unshift(node); else documentData.nodes.push(node);
-  selected={kind:"node",id:node.id}; shell.classList.add("inspector-open"); scheduleSave(); render();
-  return node;
+  if(preset.type){
+    const node={id:uid("node"),...preset,x:Math.round(center.x-preset.width/2),y:Math.round(center.y-preset.height/2)};
+    documentData.nodes ||= [];
+    if (kind==="group") documentData.nodes.unshift(node); else documentData.nodes.push(node);
+    selected={kind:"node",id:node.id}; shell.classList.add("inspector-open"); scheduleSave(); render();
+    return node;
+  }
+  const geometry={x:Math.round(center.x-preset.width/2),y:Math.round(center.y-preset.height/2),width:preset.width,height:preset.height};
+  let result;
+  try{result=await createNoteOnCanvas({body:preset.body,kind:preset.kind,color:preset.color,geometry});}
+  catch(error){toast(error.message);return null;}
+  selected={kind:"node",id:result.placement.nodeId}; shell.classList.add("inspector-open"); render();
+  return result;
 }
 
 function renderFallbackInspector(panel,model){
@@ -1739,7 +1759,7 @@ async function runLocalAssistant(prompt) {
       const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-orbit.html"};await applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
     } else {
       const match=request.match(/(?:add|create)\s+(?:a |an )?(goal|habit|project|note)(?:\s+(?:called|named|to))?\s+(.+)/i);
-      if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"text",x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150,color:preset[0],text:preset[1]};await applyCanvasOperations([{type:"node.add",node}]);response=`Added a ${kind} card using standard JSON Canvas fields.`;}
+      if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);await createNoteOnCanvas({title,body:preset[1],color:preset[0],geometry:{x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150}});response=`Added a ${kind} card using standard JSON Canvas fields.`;}
       else response="I understand this canvas, but the GitHub Pages demo uses a local intent parser rather than a remote model. Try asking me to summarize it, create a metric card, add a goal/habit/project, add a 3D widget, or change the theme.";
     }
   } catch(error){response=`I did not apply that change: ${error.message}`;}
@@ -1827,7 +1847,7 @@ async function createAINote(prompt){
   const dialog=$("#aiNoteDialog"),button=$("#generateAINote"),result=$("#aiNoteResult");dialog.classList.add("generating");button.disabled=true;result.className="settings-test";result.textContent=`Asking ${aiSettings.model}…`;
   try{
     const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages:[{role:"system",content:"Create one clear, useful Markdown note that answers the user's prompt. Return only the note Markdown without code fences, commentary, HTML, or scripts. Give the note a concise level-one heading."},{role:"user",content:prompt}],temperature:.4,max_tokens:2200})}),body=await response.json();let generated=providerMessageContent(body.choices?.[0]?.message?.content);if(!/^#\s/m.test(generated))generated=`# AI note\n\n${generated}`;
-    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),node={id:uid("node"),type:"text",x:Math.round(center.x-190),y:Math.round(center.y-130),width:380,height:Math.min(480,Math.max(240,180+Math.round(generated.length/12))),color:"5",text:generated};documentData.nodes.push(node);selected={kind:"node",id:node.id};shell.classList.add("inspector-open");scheduleSave();render();dialog.close();$("#aiNotePrompt").value="";toast("AI note added");
+    const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2),created=await createNoteOnCanvas({title:"AI note",body:generated,color:"5",geometry:{x:Math.round(center.x-190),y:Math.round(center.y-130),width:380,height:Math.min(480,Math.max(240,180+Math.round(generated.length/12)))}});selected={kind:"node",id:created.placement.nodeId};shell.classList.add("inspector-open");render();dialog.close();$("#aiNotePrompt").value="";toast("AI note added");
   }catch(error){result.className="settings-test error";result.textContent=error.message;}
   finally{dialog.classList.remove("generating");button.disabled=false;}
 }
@@ -1843,9 +1863,10 @@ async function runAICard(cardId,{manual=false}={}) {
     const inputText=inputs.length?inputs.map((node,index)=>`## Input ${index+1}: ${nodeTitle(node)}\nType: ${node.type}\n${nodeAIContent(node).slice(0,30000)}`).join("\n\n---\n\n"):"No connected inputs.";
     const response=await providerFetch(aiSettings,"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:aiSettings.model,messages:[{role:"system",content:"You generate one useful Markdown note from connected JSON Canvas inputs. Follow the operator instructions. Return only the note Markdown, without code fences, commentary, or JSON. Do not include HTML or scripts."},{role:"user",content:`Operator: ${config.title}\nInstructions:\n${config.prompt}\n\nConnected inputs:\n${inputText}`}],temperature:.3,max_tokens:2200})}),body=await response.json();
     let generated=providerMessageContent(body.choices?.[0]?.message?.content);if(!/^#\s/m.test(generated))generated=`# ${config.title} — output\n\n${generated}`;
-    const before=aiCardSignatures();let outputEdge=(documentData.edges||[]).find(edge=>edge.fromNode===card.id&&edge.label==="AI output"),output=outputEdge&&documentData.nodes.find(node=>node.id===outputEdge.toNode&&node.type==="text");
-    if(!output){output={id:uid("node"),type:"text",x:card.x+card.width+90,y:card.y,width:380,height:240,color:"5",text:generated};documentData.nodes.push(output);outputEdge={id:uid("edge"),fromNode:card.id,fromSide:"right",toNode:output.id,toSide:"left",toEnd:"arrow",color:"5",label:"AI output"};documentData.edges.push(outputEdge);}else output.text=generated;
-    state.lastSignature=signature;state.status=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;scheduleSave();render();scheduleChangedAICards(before);toast(`${config.title} updated its output`);
+    const before=aiCardSignatures();const outputEdge=(documentData.edges||[]).find(edge=>edge.fromNode===card.id&&edge.label==="AI output");const outputNode=outputEdge&&documentData.nodes.find(node=>node.id===outputEdge.toNode&&node.type==="file"&&isNotePath(node.file));
+    if(!outputNode){const created=await createNoteOnCanvas({title:`${config.title} — output`,body:generated,color:"5",canvasId:currentCanvasId,geometry:{x:card.x+card.width+90,y:card.y,width:380,height:240}});documentData.edges||=[];documentData.edges.push({id:uid("edge"),fromNode:card.id,fromSide:"right",toNode:created.placement.nodeId,toSide:"left",toEnd:"arrow",color:"5",label:"AI output"});scheduleSave();}
+    else await noteRepository.updateNote(outputNode.file,generated);
+    state.lastSignature=signature;state.status=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;render();scheduleChangedAICards(before);toast(`${config.title} updated its output`);
   }catch(error){state.status=`Error · ${error.message.slice(0,55)}`;toast("AI operator failed");}
   finally{state.running=false;const pending=state.pending;state.pending=false;aiCardRuntime.set(cardId,state);renderNodes();if(pending)scheduleAICard(cardId,250);}
 }
