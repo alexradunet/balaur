@@ -12,7 +12,7 @@ import { parseEntity } from "./storage/entity-codec.js";
 import { MemoryIndex } from "./storage/memory-index.js";
 import { LifeQuery } from "./storage/life-query.js";
 import { FileTaskRepository } from "./storage/task-repository.js";
-import { journalPath } from "./storage/journal-event-repository.js";
+import { FileJournalRepository, journalPath } from "./storage/journal-event-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
 import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacementFailure, validateGeneratedOperation } from "./ai/generated-operations.js";
@@ -317,6 +317,10 @@ function configureLifeRuntime(vault) {
     vault, index: lifeIndex, indexer: lifeIndexer,
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
   });
+  journalRepository = new FileJournalRepository({
+    vault, index: lifeIndex, indexer: lifeIndexer,
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+  });
 }
 // Vault-first asynchronous boot. The only post-migration source of truth is the
 // IndexedDB vault; the MemoryIndex is rebuilt from its files for every session.
@@ -345,7 +349,7 @@ async function bootCanvasApp(){
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
   } catch (error) {
     console.warn("Vault-first boot failed; canonical files are unavailable", error);
-    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null;
+    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; journalRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null;
     setIndexStatus("Files unavailable", error.message);
     setCanonicalWritable(false, "Canonical files are unavailable; export or repair the vault before editing.");
   }
@@ -617,6 +621,48 @@ function renderToday(){
   assign("#todayOverdue",overdue,"No overdue tasks.");
   assign("#todayQueue",queue,"The task inbox is clear.");
   assign("#todayCompleted",completed,"Completed tasks will appear here.");
+  renderJournalPanel();
+}
+let journalViewDate=localDateISO();
+let journalLoadedDate=null;
+let journalSaveTimer=null;
+function shiftJournalDate(delta){
+  const d=new Date(`${journalViewDate}T00:00:00Z`);d.setUTCDate(d.getUTCDate()+delta);
+  journalViewDate=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
+  renderJournalPanel();
+}
+async function renderJournalPanel(){
+  const body=$("#journalBody");if(!body||!journalRepository)return;
+  $("#journalDate").textContent=new Intl.DateTimeFormat(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"}).format(new Date(`${journalViewDate}T00:00:00`));
+  $("#journalToday").disabled=journalViewDate===localDateISO();
+  if(journalLoadedDate===journalViewDate)return;
+  journalLoadedDate=journalViewDate;
+  let text="";
+  try{text=(await journalRepository.getJournal(journalViewDate)).body||"";}catch(_){text="";}
+  if(journalLoadedDate===journalViewDate)body.value=text;
+  $("#journalStatus").textContent="";
+}
+async function saveJournalBody(){
+  if(!journalRepository)return;
+  const body=$("#journalBody").value,status=$("#journalStatus");
+  try{
+    try{await journalRepository.getJournal(journalViewDate);}
+    catch(_){await journalRepository.createJournal({localDate:journalViewDate,body:""});}
+    await journalRepository.updateJournal(journalViewDate,{body});
+    status.textContent="Saved";
+  }catch(error){status.textContent=`Save failed: ${error.message}`;}
+}
+async function placeJournalOnCanvas(){
+  if(!journalRepository||!canonicalWritable){toast("Canonical files are read-only");return;}
+  try{
+    try{await journalRepository.getJournal(journalViewDate);}
+    catch(_){await journalRepository.createJournal({localDate:journalViewDate,body:$("#journalBody").value});}
+    await flushPendingWorkspaceEdits();
+    const placement=await enqueueMutation(()=>journalRepository.addPlacement(journalViewDate,currentCanvasId,{}));
+    await reloadCanvasDocuments([currentCanvasId]);
+    setAppView("canvas");revealWorkspaceNode(currentCanvasId,placement.nodeId);
+    toast("Journal placed on canvas");
+  }catch(error){toast(error.message);}
 }
 function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);delete workspace.canvases[id];}
 
@@ -1715,6 +1761,11 @@ $("#aiForm").onsubmit=event=>{event.preventDefault();const input=$("#aiPrompt"),
 $("#aiPrompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("#aiForm").requestSubmit();}};
 $$(".ai-suggestions button").forEach(button=>button.onclick=()=>runAssistant(button.textContent));
 $("#newTodayTask").onclick=()=>openTaskDialog({today:true});$("#closeTaskDialog").onclick=$("#cancelTaskDialog").onclick=()=>$("#taskDialog").close();$("#taskForm").onsubmit=async event=>{event.preventDefault();const result=$("#taskResult"),button=$("#createTaskButton");try{if(!event.currentTarget.reportValidity())return;button.disabled=true;await createTask({title:$("#taskTitle").value,notes:$("#taskNotes").value,canvasId:$("#taskCanvas").value,status:$("#taskStatus").value,scheduledOn:$("#taskScheduledOn").value,dueOn:$("#taskDueOn").value,priority:$("#taskPriority").value});$("#taskDialog").close();}catch(error){result.className="settings-test error";result.textContent=error.message;}finally{button.disabled=false;}};$("#todayQuickAdd").onsubmit=async event=>{event.preventDefault();const input=$("#todayTaskTitle"),title=input.value.trim();if(!title)return;const button=$("button",event.currentTarget);button.disabled=true;try{await createTask({title,status:"scheduled",scheduledOn:localDateISO(),canvasId:currentCanvasId});input.value="";renderToday();}catch(error){toast(error.message);}finally{button.disabled=false;}};
+$("#journalPrev").onclick=()=>shiftJournalDate(-1);
+$("#journalNext").onclick=()=>shiftJournalDate(1);
+$("#journalToday").onclick=()=>{journalViewDate=localDateISO();journalLoadedDate=null;renderJournalPanel();};
+$("#journalBody").addEventListener("input",()=>{clearTimeout(journalSaveTimer);$("#journalStatus").textContent="Saving…";journalSaveTimer=setTimeout(saveJournalBody,600);});
+$("#journalPlace").onclick=placeJournalOnCanvas;
 $("#closeAINote").onclick=$("#cancelAINote").onclick=()=>$("#aiNoteDialog").close();
 $("#aiNoteForm").onsubmit=event=>{event.preventDefault();const prompt=$("#aiNotePrompt").value.trim();if(prompt)createAINote(prompt);};
 $("#closeAISettings").onclick=$("#cancelAISettings").onclick=()=>$("#aiSettingsDialog").close();

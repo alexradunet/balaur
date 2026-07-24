@@ -112,6 +112,22 @@
         <header class="today-head"><div><span class="eyebrow" id="todayDate"></span><h1 id="todayHeading">Today</h1><p>Choose what deserves attention. Everything else can remain safely in its canvas.</p></div><button type="button" class="button primary" id="newTodayTask">＋ Add task</button></header>
         <div class="today-stats" aria-label="Today summary"><div><b id="todayPlannedCount">0</b><span>Planned</span></div><div><b id="todayDueCount">0</b><span>Overdue</span></div><div><b id="todayDoneCount">0</b><span>Completed</span></div></div>
         <form class="today-quick-add" id="todayQuickAdd"><label for="todayTaskTitle">Quick capture for today</label><div><input id="todayTaskTitle" required placeholder="What needs to move forward?"><button class="button primary" type="submit">Add for today</button></div></form>
+        <section class="today-section journal-panel" aria-labelledby="journalHeading">
+          <header>
+            <div><h2 id="journalHeading">Daily note</h2></div>
+            <div class="journal-nav">
+              <button type="button" id="journalPrev" aria-label="Previous day">‹</button>
+              <button type="button" id="journalToday">Today</button>
+              <button type="button" id="journalNext" aria-label="Next day">›</button>
+            </div>
+          </header>
+          <p class="journal-date" id="journalDate"></p>
+          <textarea id="journalBody" rows="6" placeholder="Write a few lines about today…"></textarea>
+          <div class="journal-actions">
+            <span class="journal-status" id="journalStatus" role="status"></span>
+            <button type="button" class="button ghost" id="journalPlace">Place on canvas</button>
+          </div>
+        </section>
         <div class="today-grid">
           <section class="today-section today-focus"><header><div><h2>Planned today</h2></div><small>Scheduled actions</small></header><balaur-task-list id="todayScheduled"></balaur-task-list></section>
           <section class="today-section"><header><div><h2>Overdue</h2></div><small>Needs a decision</small></header><balaur-task-list id="todayOverdue"></balaur-task-list></section>

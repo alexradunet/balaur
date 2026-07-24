@@ -9,6 +9,7 @@
 import { serializeJournal, parseJournal, serializeCalendarEvent, parseCalendarEvent, CalendarEventCodec, JournalCodec } from "./entity-codec.js";
 import { patchFields, replaceBody, isValidLocalDate, localDateForInstant } from "./frontmatter.js";
 import { entityPath } from "./vault-path.js";
+import { isCanvas } from "./canvas-validate.js";
 import { SchemaError } from "./vault-errors.js";
 
 function assertLocalDate(localDate) {
@@ -23,10 +24,11 @@ export function journalPath(localDate) {
 }
 
 export class FileJournalRepository {
-  constructor({ vault, index, indexer, now = () => new Date().toISOString() }) {
+  constructor({ vault, index, indexer, canvasPathFromId, now = () => new Date().toISOString() }) {
     this.vault = vault;
     this.index = index;
     this.indexer = indexer;
+    this.canvasPathFromId = canvasPathFromId || (() => null);
     this.now = now;
   }
 
@@ -59,6 +61,29 @@ export class FileJournalRepository {
     await this.vault.write(path, content, { expectedHash: stat.hash });
     await this.indexer.indexFile(path, content, {});
     return parsed;
+  }
+
+  async addPlacement(localDate, canvasId, geometry = {}) {
+    const path = journalPath(localDate);
+    const stat = await this.vault.stat(path);
+    if (!stat) throw new SchemaError(`Journal not found: ${localDate}`, { code: "JOURNAL_NOT_FOUND" });
+    const canvasPath = this.canvasPathFromId(canvasId);
+    if (!canvasPath) throw new SchemaError(`No canvas path for id: ${canvasId}`, { code: "CANVAS_NOT_FOUND" });
+    const canvasStat = await this.vault.stat(canvasPath);
+    if (!canvasStat) throw new SchemaError(`Canvas not found: ${canvasPath}`, { code: "CANVAS_NOT_FOUND" });
+    let doc;
+    try { doc = JSON.parse(await this.vault.read(canvasPath)); }
+    catch (err) { throw new SchemaError(`Invalid canvas document: ${canvasPath}`, { code: "CANVAS_INVALID", cause: err }); }
+    if (!isCanvas(doc)) throw new SchemaError(`Invalid canvas document: ${canvasPath}`, { code: "CANVAS_INVALID" });
+    const g = { x: 40, y: 40, width: 320, height: 200, ...geometry };
+    const nodeId = geometry.id || `node-${localDate}`;
+    if (doc.nodes.some((n) => n.id === nodeId) || doc.edges.some((e) => e.id === nodeId)) throw new SchemaError(`Canvas id already exists: ${nodeId}`, { code: "CANVAS_ID_DUPLICATE" });
+    doc.nodes.push({ id: nodeId, type: "file", file: path, x: g.x, y: g.y, width: g.width, height: g.height, ...(g.color ? { color: g.color } : {}) });
+    if (!isCanvas(doc)) throw new SchemaError(`Invalid canvas document: ${canvasPath}`, { code: "CANVAS_INVALID" });
+    const content = JSON.stringify(doc, null, 2) + "\n";
+    await this.vault.write(canvasPath, content, { expectedHash: canvasStat.hash });
+    await this.indexer.indexFile(canvasPath, content, {});
+    return { canvasId, nodeId, canvasPath, path };
   }
 }
 

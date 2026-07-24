@@ -490,4 +490,16 @@
   .task-dialog { width: min(520px, calc(100vw - 24px)); }
   .task-dialog textarea { height: 82px; }
   .task-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+
+  .journal-panel { max-width: 1120px; margin: 0 auto 22px; }
+  .journal-panel > header { display: flex; align-items: center; justify-content: space-between; margin-block-end: 6px; }
+  .journal-nav { display: flex; gap: 4px; }
+  .journal-nav button { font: 600 14px var(--balaur-font-mono); padding: 4px 10px; border: 1px solid var(--balaur-border-default); border-radius: var(--balaur-radius-control); background: transparent; color: var(--balaur-content-on-paper); cursor: pointer; }
+  .journal-nav button:hover { border-color: var(--balaur-border-focus); }
+  .journal-nav button:disabled { opacity: .4; cursor: default; }
+  .journal-date { margin: 0 0 8px; color: var(--balaur-content-on-paper-muted); font: 500 11px var(--balaur-font-mono); }
+  .journal-panel textarea { width: 100%; min-height: 110px; resize: vertical; padding: 10px 12px; border: 1px solid var(--balaur-border-default); border-radius: var(--balaur-radius-card); background: var(--balaur-surface-parchment); color: var(--balaur-content-on-paper); font: 400 13px/1.6 var(--balaur-font-body); }
+  .journal-panel textarea:focus-visible { border-color: var(--balaur-border-focus); outline: none; }
+  .journal-actions { display: flex; align-items: center; justify-content: space-between; margin-block-start: 8px; }
+  .journal-status { font: 400 10px var(--balaur-font-mono); color: var(--balaur-content-on-paper-muted); }
 }

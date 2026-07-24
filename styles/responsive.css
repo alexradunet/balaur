@@ -97,5 +97,6 @@
     .today-grid { grid-template-columns: 1fr; }
     .task-check { position: relative; }
     .task-check::before { content: ""; position: absolute; inset: -11px; }
+    .journal-panel textarea { min-height: 120px; }
   }
 }
