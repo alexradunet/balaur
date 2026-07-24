@@ -66,12 +66,12 @@ export class BalaurInspectorElement extends HTMLElement {
     this.#editor = element("div", "inspector-editor");
     const header = element("div", "inspector-head");
     this.#title = element("h3");
-    const close = element("button", "close-inspector");
-    close.type = "button";
-    close.dataset.inspectorClose = "";
-    close.setAttribute("aria-label", "Close inspector");
-    close.textContent = "×";
-    header.append(this.#title, close);
+    const back = element("button", "inspector-back");
+    back.type = "button";
+    back.dataset.inspectorClose = "";
+    back.setAttribute("aria-label", "Back to library");
+    back.textContent = "← Back";
+    header.append(back, this.#title);
     this.#form = element("form", "inspector-form");
     this.#form.addEventListener("submit", event => event.preventDefault());
     this.#notes = element("div", "inspector-notes");

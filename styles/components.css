@@ -1,24 +1,27 @@
 @layer components {
+  /* Selecting a card or connection swaps the library slot for the inspector:
+     the editor replaces the sidebar content instead of floating over the
+     canvas, so the spatial world is never covered or shifted. */
   .inspector {
-    position: fixed;
-    inset: 64px auto 0 var(--sidebar);
-    width: 292px;
+    grid-row: 2;
+    grid-column: 1;
+    display: none;
     overflow: hidden auto;
     border-inline-end: 2px solid var(--balaur-color-outline);
     background: var(--balaur-texture-oak);
-    box-shadow: 8px 0 24px rgb(0 0 0 / 38%);
     color: var(--balaur-content-on-dark);
     scroll-padding-block: var(--balaur-space-4);
-    visibility: hidden;
-    transform: translateX(-100%);
-    z-index: 15;
+    scrollbar-width: thin;
+    scrollbar-color: var(--balaur-color-leather-800) transparent;
   }
-  .app-shell.inspector-open .inspector {
-    visibility: visible;
-    transform: translateX(0);
+  .app-shell.inspector-open .inspector { display: block; }
+  .app-shell.inspector-open .sidebar { display: none; }
+  @media (min-width: 851px) {
+    /* The editor still needs its slot while the library is toggled closed. */
+    .app-shell.inspector-open { --sidebar: var(--sidebar-width); }
   }
   .inspector-empty {
-    width: 292px;
+    width: 100%;
     padding: 70px 30px;
     color: var(--balaur-content-on-dark-muted);
     text-align: center;
@@ -29,21 +32,36 @@
   .inspector-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 292px;
+    gap: 10px;
+    width: 100%;
     border-block-end: 1px solid var(--balaur-border-default);
-    padding: 18px;
+    padding: 12px 14px 12px 10px;
   }
-  .inspector-head h3 { margin: 0; font: 600 16px var(--balaur-font-display); }
-  .close-inspector {
-    min-width: var(--balaur-target-min);
+  .inspector-head h3 {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font: 600 16px var(--balaur-font-display);
+  }
+  .inspector-back {
+    flex: 0 0 auto;
     min-height: var(--balaur-target-min);
-    border: 0;
-    background: transparent;
+    border: 1px solid var(--balaur-border-default);
+    border-radius: var(--balaur-radius-control);
+    padding-inline: 9px;
+    background: var(--balaur-color-soot-900);
     color: var(--balaur-content-on-dark-muted);
+    font: 10px var(--balaur-font-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
     cursor: pointer;
   }
-  .inspector-form { width: 292px; padding: 18px; }
+  .inspector-back:hover,
+  .inspector-back:focus-visible {
+    border-color: var(--balaur-action-primary);
+    color: var(--balaur-action-primary);
+  }
+  .inspector-form { width: 100%; padding: 18px; }
   .field-hint {
     margin: -4px 0 16px;
     border-inline-start: 2px solid var(--balaur-action-assistant);

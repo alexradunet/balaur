@@ -1126,8 +1126,8 @@ function addNode(kind, point) {
 function renderFallbackInspector(panel,model){
   panel.dataset.fallbackInspector="";
   if(!model){const empty=document.createElement("p");empty.textContent="Select a node or connection to inspect it.";panel.replaceChildren(empty);return;}
-  const header=document.createElement("header"),title=document.createElement("h2"),close=fallbackButton("Close");
-  title.textContent=model.title||"Inspector";close.dataset.inspectorClose="";header.append(title,close);
+  const header=document.createElement("header"),title=document.createElement("h2"),back=fallbackButton("← Back","inspector-back");
+  title.textContent=model.title||"Inspector";back.dataset.inspectorClose="";back.setAttribute("aria-label","Back to library");header.append(back,title);
   const fields=document.createElement("div");
   for(const field of model.fields||[]){
     const label=document.createElement("label"),caption=document.createElement("span");
