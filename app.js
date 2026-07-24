@@ -1,5 +1,6 @@
 /* Balaur is dependency-free. Every canvas document follows JSON Canvas 1.0; hierarchy and cameras live in a local workspace sidecar. */
-import { IndexedDbVault } from "./storage/indexeddb-vault.js";
+import { DirectoryVault } from "./storage/directory-vault.js";
+import { MemoryVault } from "./storage/memory-vault.js";
 import { WorkspaceStore, hasWorkspace, canvasPathFor } from "./storage/workspace-vault.js";
 import { isCanvas } from "./storage/canvas-validate.js";
 import { ComponentCardCatalog } from "./storage/component-card-catalog.js";
@@ -21,27 +22,6 @@ import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacem
 const COLORS = {
   "1": "#ff7b78", "2": "#efa66a", "3": "#e9d56b",
   "4": "#7ee0a1", "5": "#64cbd0", "6": "#a78bfa"
-};
-
-const demoCanvas = {
-  nodes: [
-    { id:"g-week", type:"group", x:0, y:0, width:690, height:600, label:"This week", color:"4" },
-    { id:"g-horizon", type:"group", x:750, y:0, width:590, height:810, label:"On the horizon", color:"6" },
-    { id:"n-focus", type:"text", x:35, y:48, width:620, height:145, color:"3", text:"# A calmer, more intentional week\nProtect the mornings, move the important work forward, and leave enough space to notice life.\n\n`WEEK 29`  ·  **3 priorities**" },
-    { id:"n-project", type:"text", x:35, y:230, width:295, height:240, color:"6", text:"# Ship the portfolio refresh\nMake the work feel as considered as the work itself.\n\n- [x] Finalize case study copy\n- [ ] Record walkthrough\n- [ ] Publish and share\n\nProgress: 66%" },
-    { id:"n-habit", type:"text", x:360, y:230, width:295, height:150, color:"4", text:"# Morning pages\nWrite three pages before opening any inputs.\n\n**5 day streak**  ·  07:00" },
-    { id:"n-idea", type:"text", x:360, y:410, width:295, height:145, color:"2", text:"# Sunday without screens\nA small experiment: books, a long walk, cooking, and no glowing rectangles until evening." },
-    { id:"n-goal", type:"text", x:785, y:48, width:520, height:190, color:"1", text:"# Run a comfortable 10K\nBuild patiently. Finish feeling like there was a little more in the tank.\n\n- [x] Choose a training plan\n- [ ] Three easy runs / week\n- [ ] Race day · Sep 14\n\nProgress: 35%" },
-    { id:"n-reading", type:"text", x:785, y:280, width:250, height:160, color:"5", text:"# Reading next\n- [ ] Four Thousand Weeks\n- [ ] The Creative Act\n- [ ] Braiding Sweetgrass" },
-    { id:"n-trip", type:"link", x:1065, y:280, width:240, height:160, color:"6", url:"https://www.openstreetmap.org" },
-    { id:"n-orbit", type:"file", x:785, y:475, width:520, height:300, color:"5", file:"widgets/focus-orbit.html" }
-  ],
-  edges: [
-    { id:"e-focus-project", fromNode:"n-focus", fromSide:"bottom", toNode:"n-project", toSide:"top", color:"6", label:"focus" },
-    { id:"e-focus-habit", fromNode:"n-focus", fromSide:"bottom", toNode:"n-habit", toSide:"top", color:"4" },
-    { id:"e-habit-goal", fromNode:"n-habit", fromSide:"right", toNode:"n-goal", toSide:"left", color:"1", label:"supports" },
-    { id:"e-idea-trip", fromNode:"n-idea", fromSide:"right", toNode:"n-trip", toSide:"left", color:"2", toEnd:"arrow" }
-  ]
 };
 
 const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference -->"};
@@ -68,7 +48,7 @@ function createGraphStarterWorkspace(){
     {id:"portal-wiki",type:"file",x:0,y:300,width:360,height:240,color:"5",file:"canvases/wiki.canvas"},
     {id:"portal-archive",type:"file",x:410,y:300,width:360,height:240,color:"3",file:"canvases/archive.canvas"},
   ],edges:[]};
-  const result=freshWorkspace(rootDocument),root=result.canvases[result.rootId];
+  const result=minimalFreshWorkspace(),root=result.canvases[result.rootId];
   root.title="Home";root.document=rootDocument;root.camera=null;
 
   const today=localDateISO(),journalFile=journalPath(today);
@@ -108,7 +88,7 @@ function createGraphStarterWorkspace(){
   hub("hub-wiki","Wiki","canvases/wiki.canvas","portal-wiki",wikiDoc);
   hub("hub-archive","Archive","canvases/archive.canvas","portal-archive",archiveDoc);
   result.canvases["project-city-break"]={id:"project-city-break",title:"City break",parentId:"hub-projects",portalNodeId:"projects-citybreak",path:"canvases/city-break.canvas",document:cityBreakDoc,camera:null,kind:"project"};
-  return normalizeWorkspace(result);
+  return result;
 }
 async function seedGraphStarterEntities(){
   // Task file at the exact path the starter's cb-task node already references.
@@ -157,7 +137,7 @@ const $$ = (selector, root=document) => [...root.querySelectorAll(selector)];
 const clone = value => JSON.parse(JSON.stringify(value));
 const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
 
-const WORKSPACE_KEY="orbit-workspace-v1",ROOT_CANVAS_ID="canvas-root";
+const ROOT_CANVAS_ID="canvas-root";
 // Workspace globals are populated by the asynchronous vault-first boot
 // (bootCanvasApp). They begin as a valid placeholder workspace so module-eval
 // event wiring (closures) can attach safely before boot completes; real reads
@@ -188,6 +168,7 @@ function updateWithViewTransition(update) {
   return document.startViewTransition(update);
 }
 let vaultStore=null;
+let currentVault=null;
 let vaultReady=null;
 let lifeIndex=null;
 let lifeIndexer=null;
@@ -215,37 +196,8 @@ const syncNarrowShell = event => shell.classList.toggle("sidebar-closed", event.
 syncNarrowShell(narrowShell);
 narrowShell.addEventListener("change", syncNarrowShell);
 
-function loadDocument() {
-  try {
-    const saved = localStorage.getItem("orbit-canvas-v1");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (isCanvas(parsed)) return parsed;
-    }
-  } catch (_) {}
-  return clone(demoCanvas);
-}
-function freshWorkspace(document=loadDocument()){
-  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:localStorage.getItem("orbit-title")||"Life OS — Summer",parentId:null,portalNodeId:null,path:null,document,camera:{x:80,y:55,zoom:.78}}}};
-}
-function normalizeWorkspace(parsed){
-  delete parsed.johnnyDecimal; // legacy JD index (ADR-0003)
-  for(const record of Object.values(parsed.canvases)){
-    delete record.jdCode; delete record.jdTitle; delete record.jdKind;
-    if(record.kind!=="hub"&&record.kind!=="project")delete record.kind;
-    if(record.id===parsed.rootId){record.path=null;continue;}
-    if(!record.path){const parent=parsed.canvases[record.parentId],portal=parent?.document.nodes?.find(node=>node.id===record.portalNodeId);record.path=portal?.file||`canvases/${record.id}.canvas`;}
-  }
-  return parsed;
-}
-function loadWorkspace(){
-  try{
-    const parsed=JSON.parse(localStorage.getItem(WORKSPACE_KEY)||"null"),canvases=parsed?.canvases;
-    if(parsed?.version===1&&canvases&&typeof canvases==="object"&&Object.keys(canvases).length&&Object.values(canvases).every(record=>record&&typeof record.id==="string"&&typeof record.title==="string"&&isCanvas(record.document))){
-      parsed.rootId=canvases[parsed.rootId]?parsed.rootId:Object.keys(canvases)[0];parsed.activeId=canvases[parsed.activeId]?parsed.activeId:parsed.rootId;return normalizeWorkspace(parsed);
-    }
-  }catch(_){}
-  return localStorage.getItem("orbit-canvas-v1")?freshWorkspace():createGraphStarterWorkspace();
+function minimalFreshWorkspace(){
+  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Balaur",parentId:null,portalNodeId:null,path:null,document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
 }
 
 
@@ -367,43 +319,75 @@ function configureLifeRuntime(vault) {
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
   });
 }
-// Vault-first asynchronous boot. The only post-migration source of truth is the
-// IndexedDB vault; the MemoryIndex is rebuilt from its files for every session.
+// Vault-first asynchronous boot. The source of truth is the user-picked folder
+// (DirectoryVault); the MemoryIndex is rebuilt from its files for every session.
 async function bootCanvasApp(){
-  try {
-    const vault = new IndexedDbVault("orbit-vault");
-    const store = new WorkspaceStore(vault);
-    const hadWorkspace = await hasWorkspace(vault);
-    const firstRun = !hadWorkspace && !localStorage.getItem(WORKSPACE_KEY) && !localStorage.getItem("orbit-canvas-v1");
-    if (!hadWorkspace) await store.migrate(loadWorkspace());
-    const result = await store.load();
-    if (!result?.workspace?.canvases || !Object.keys(result.workspace.canvases).length) throw new Error("The vault workspace is empty");
-    workspace = result.workspace;
-    vaultStore = store;
-    window.orbitVaultStore = store;
-    setCanonicalWritable(!result.diagnostics.some((diagnostic) => diagnostic.code === "CANVAS_MISSING" || diagnostic.code === "CANVAS_INVALID" || diagnostic.code === "CANVAS_PARSE"), result.diagnostics.map((diagnostic) => diagnostic.message).join("; "));
-    configureLifeRuntime(vault);
-    await seedBundledWidget(vault);
-    for (const diagnostic of result.diagnostics) console.warn("Vault workspace diagnostic", diagnostic);
-    if (firstRun) {
-      await seedGraphStarterEntities();
-      workspace = (await store.load()).workspace;
-    }
-    await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild(), noteCatalog.rebuild()]);
-    const stats = lifeIndexer.stats();
-    setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
-  } catch (error) {
-    console.warn("Vault-first boot failed; canonical files are unavailable", error);
-    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; journalRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null; noteCatalog = null; noteRepository = null;
-    setIndexStatus("Files unavailable", error.message);
-    setCanonicalWritable(false, "Canonical files are unavailable; export or repair the vault before editing.");
+  // 1. Incompatibility gate: no fallback adapter (ADR-0005).
+  if(typeof window.showDirectoryPicker!=="function"||!globalThis.crypto?.subtle){
+    $("#vaultLandingMessage").textContent="Balaur needs a Chromium-based desktop browser (Chrome, Edge, Brave, or Arc) to open a vault folder.";
+    $("#openVaultFolder").disabled=true;
+    setIndexStatus("Files unavailable","This browser cannot open vault folders (File System Access API unavailable).");
+    return;
   }
-  currentCanvasId = workspace.canvases[workspace.activeId] ? workspace.activeId : workspace.rootId;
-  documentData = workspace.canvases[currentCanvasId].document;
-  camera = workspace.canvases[currentCanvasId].camera || { x: 80, y: 55, zoom: .78 };
-  $("#canvasTitle").value = canvasRecord().title;
-  renderWorkspaceNavigation(); render();
-  setTimeout(fitView, 50);
+  // 2. Wait for a successful folder pick. AbortError (cancelled picker) is
+  //    swallowed: stay on the gate, no message. Other picker errors surface in
+  //    the gate status region.
+  await new Promise(resolve=>{
+    $("#openVaultFolder").onclick=async()=>{
+      let handle;
+      try{
+        // BINDING CONSTRAINT (spec seam 2): reference the global at call time.
+        // Never capture showDirectoryPicker in a module-scope const; the
+        // browser-check driver stubs window.showDirectoryPicker with an OPFS
+        // handle to run the full smoke suite headlessly.
+        handle=await window.showDirectoryPicker({mode:"readwrite"});
+      }catch(error){
+        if(error?.name==="AbortError")return;
+        $("#vaultLandingMessage").textContent=error.message;
+        return;
+      }
+      try{
+        const vault=new DirectoryVault(handle);
+        const hadSidecar=await hasWorkspace(vault);
+        const empty=!hadSidecar&&(await vault.list("")).length===0;
+        await openVault(vault,{seed:empty});
+        currentVault=vault;
+        $("#vaultLanding").hidden=true;
+        shell.removeAttribute("hidden");shell.removeAttribute("inert");
+        resolve();
+      }catch(error){
+        // First-open failure: stay on the gate with the message.
+        $("#vaultLandingMessage").textContent=error.message;
+      }
+    };
+  });
+}
+async function openVault(vault,{seed}){
+  const store=new WorkspaceStore(vault);
+  const had=await hasWorkspace(vault);
+  if(!had)await store.migrate(seed?createGraphStarterWorkspace():minimalFreshWorkspace());
+  const result=await store.load();
+  if(!result?.workspace?.canvases||!Object.keys(result.workspace.canvases).length)throw new Error("The vault workspace is empty");
+  workspace=result.workspace;
+  vaultStore=store;
+  window.orbitVaultStore=store;
+  setCanonicalWritable(!result.diagnostics.some((diagnostic)=>diagnostic.code==="CANVAS_MISSING"||diagnostic.code==="CANVAS_INVALID"||diagnostic.code==="CANVAS_PARSE"),result.diagnostics.map((diagnostic)=>diagnostic.message).join("; "));
+  configureLifeRuntime(vault);
+  await seedBundledWidget(vault);
+  for(const diagnostic of result.diagnostics)console.warn("Vault workspace diagnostic",diagnostic);
+  if(seed){
+    await seedGraphStarterEntities();
+    workspace=(await store.load()).workspace;
+  }
+  await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
+  const stats=lifeIndexer.stats();
+  setIndexStatus(canonicalWritable?`Files · ${stats.sourceFiles} indexed`:"Files read-only · repair/export required",canonicalWritable?`${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`:"Repair the canonical vault or export it before editing.");
+  currentCanvasId=workspace.canvases[workspace.activeId]?workspace.activeId:workspace.rootId;
+  documentData=workspace.canvases[currentCanvasId].document;
+  camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:.78};
+  $("#canvasTitle").value=canvasRecord().title;
+  renderWorkspaceNavigation();render();
+  setTimeout(fitView,50);
 }
 
 function colorValue(color) { return COLORS[color] || color || "#737b87"; }
@@ -443,7 +427,7 @@ async function loadGraphStarter(){
   try {
     await flushPendingWorkspaceEdits();
     const starter=createGraphStarterWorkspace();
-    const stagingVault=new IndexedDbVault(`orbit-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
+    const stagingVault=new MemoryVault(), stagingStore=new WorkspaceStore(stagingVault);
     await stagingStore.migrate(starter);
     await seedBundledWidget(stagingVault);
     workspace=starter;configureLifeRuntime(stagingVault);await seedGraphStarterEntities();
@@ -1516,11 +1500,11 @@ async function importCanvas(file) {
     if(parsed?.format==="orbit-workspace"){
       if(!confirm("Import this whole Balaur space? Your current canonical vault will be replaced."))return;
       await flushPendingWorkspaceEdits();
-      const stagingVault=new IndexedDbVault(`orbit-vault-${uid("import")}`);
+      const stagingVault=new MemoryVault();
       await importBundle(stagingVault,JSON.stringify(parsed));
       // Validate and index the complete staging space before touching the
-      // canonical vault. IndexedDB restore is one transaction, so reloads use
-      // the same orbit-vault name rather than a stranded import database.
+      // canonical vault. Staging runs in memory; restore then replaces the
+      // picked folder's file tree in one pass.
       const stagingIndex=new MemoryIndex();
       const stagingCanvasIds=new Map(Object.values(parsed.workspace.canvases||{}).map(record=>[record.path,record.id]));
       const stagingCanvasIdFromPath=path=>stagingCanvasIds.get(path)||String(path).split("/").pop().replace(/\.canvas$/,"");
@@ -1529,7 +1513,7 @@ async function importCanvas(file) {
       const audit=await auditIndex(stagingVault,stagingIndex,{canvasIdFromPath:stagingCanvasIdFromPath});
       if(!audit.ok)throw new Error(`Imported space failed index audit: ${audit.problems.map(problem=>problem.message).join("; ")}`);
       const snapshot=await stagingVault.snapshot();
-      const canonicalVault=new IndexedDbVault("orbit-vault");
+      const canonicalVault=vaultStore.vault;
       await canonicalVault.restore(snapshot);
       const nextStore=new WorkspaceStore(canonicalVault),result=await nextStore.load();
       if(!result?.workspace)throw new Error("Canonical vault activation did not produce a workspace");
@@ -1947,6 +1931,19 @@ $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",re
 $("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
 initCanvasIconPicker();
 $("#resetDemo").onclick=loadGraphStarter;
+$("#reloadVault").onclick=()=>{
+  if(!currentVault)return;
+  openVault(currentVault,{seed:false}).catch(error=>{
+    setIndexStatus("Files unavailable",error.message);
+    setCanonicalWritable(false,"Canonical files are unavailable; export or repair the vault before editing.");
+  });
+};
+$("#openAnotherVault").onclick=async()=>{
+  await flushPendingWorkspaceEdits();
+  shell.setAttribute("inert","");
+  shell.hidden=true;
+  $("#vaultLanding").hidden=false;
+};
 $("#minimap").onclick=fitView;
 
 window.addEventListener("keydown",event=>{
