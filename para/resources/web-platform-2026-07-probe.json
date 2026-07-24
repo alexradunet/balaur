@@ -1,0 +1,277 @@
+{
+  "_comment": "Raw feature-detection results from HeadlessChrome/150.0.0.0 (matches stable 150.0.7871.186), captured 2026-07-24 over http://localhost. Round 1 had probe artifacts (single-argument CSS.supports misuse, accessor-getter typeof, headless gaps); round 2 supersedes it where they overlap. Headless caveats: navigator.share/canShare are undefined in headless but ship in real Chrome; BarcodeDetector is absent on Linux desktop only; navigator.ml (WebNN) has no Linux backend; self.ai requires origin-trial enrollment plus a downloaded Gemini Nano model.",
+  "meta": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+    "secureContext": true,
+    "crossOriginIsolated": false,
+    "SharedArrayBuffer": "undefined (requires COOP/COEP, which GitHub Pages cannot provide)",
+    "deviceMemory": 8,
+    "hardwareConcurrency": 4
+  },
+  "ecmascript": {
+    "shipped": {
+      "Object.groupBy / Map.groupBy": true,
+      "Promise.withResolvers": true,
+      "Promise.try": true,
+      "Promise.any": true,
+      "Array.fromAsync": true,
+      "Array.toSorted/toReversed/with": true,
+      "Array.findLast": true,
+      "Set methods (union, intersection, difference, ...)": true,
+      "Iterator helpers (map, filter, take, ...)": true,
+      "Iterator.concat": true,
+      "Iterator.zip / zipKeyed / chunk / includes / join / range": false,
+      "Map.getOrInsert / getOrInsertComputed": true,
+      "Set.getOrInsert / getOrInsertComputed": false,
+      "RegExp.escape": true,
+      "JSON.rawJSON (JSON.parse source text access)": true,
+      "duplicate named capture groups": true,
+      "String.isWellFormed/toWellFormed": true,
+      "resizable ArrayBuffer": true,
+      "ArrayBuffer.transfer": true,
+      "Uint8Array.toBase64/fromBase64 (incl. base64url alphabet)": true,
+      "Uint8Array.toHex/fromHex": true,
+      "Math.sumPrecise": true,
+      "Math.f16round": true,
+      "Float16Array": true,
+      "Error.isError": true,
+      "Atomics.pause": true,
+      "Atomics.waitAsync": true,
+      "using / await using (explicit resource management)": true,
+      "Symbol.dispose / Symbol.asyncDispose": true,
+      "Temporal (Now, PlainDate, PlainDateTime, ZonedDateTime, Instant, Duration; Calendar/TimeZone classes removed from spec)": true,
+      "Temporal timezone math (Europe/Bucharest DST add)": true,
+      "Intl.DurationFormat": true,
+      "Intl.Segmenter": true,
+      "Intl.Locale getTextInfo()": true,
+      "Intl.supportedValuesOf": true,
+      "Intl.PluralRules.selectRange": true,
+      "Intl.NumberFormat.formatRange": true,
+      "Observable / Observable.from (TC39 Observable, Chromium-first)": true,
+      "structuredClone": true,
+      "Object.hasOwn": true,
+      "AbortSignal.any / timeout / throwIfAborted": true,
+      "fetch upload streaming (Request duplex: half)": true,
+      "import.meta.resolve": true,
+      "import attributes (with { type: 'json' })": true,
+      "crypto.randomUUID / crypto.subtle": true,
+      "WeakRef / FinalizationRegistry": true
+    },
+    "not_shipped": {
+      "decorators (TC39 stage 2.7)": "SyntaxError",
+      "import defer (stage 3)": "SyntaxError",
+      "import source (source phase imports, stage 3)": "SyntaxError",
+      "AsyncContext / AsyncLocalStorage (demoted to stage 2)": false,
+      "ShadowRealm (stage 2.7)": false,
+      "Signals (stage 1)": false,
+      "Decimal (stage 1)": false,
+      "Records and Tuples": "withdrawn from TC39"
+    },
+    "wasm": {
+      "WebAssembly globals present": ["compile", "validate", "instantiate", "Module", "Instance", "Table", "Memory", "Global", "Tag", "JSTag", "Exception", "CompileError", "LinkError", "RuntimeError", "compileStreaming", "instantiateStreaming", "Suspending", "promising", "SuspendError"],
+      "Wasm GC JS API (Struct/Array/StringView)": "not exposed in Chrome 150",
+      "Wasm JSPI (Suspending/promising)": true,
+      "note": "irrelevant to Balaur (no Wasm in the app); recorded for completeness"
+    }
+  },
+  "css": {
+    "selectors": {
+      ":has() (incl. relative :has(> x))": true,
+      ":focus-visible": true,
+      ":popover-open": true,
+      ":user-valid / :user-invalid": true,
+      ":dir()": true,
+      ":modal": true,
+      ":state() (custom states)": true,
+      ":open (details/popover)": true,
+      ":closed": false,
+      "::selection": true,
+      "::backdrop": true,
+      "::spelling-error / ::grammar-error": true,
+      "::target-text": true,
+      ":active-view-transition / :active-view-transition-type()": true,
+      "select::picker(select)": true,
+      "CSS nesting": true,
+      "style() container queries": true
+    },
+    "layout_positioning": {
+      "anchor-name / position-anchor / position-area / position-try-fallbacks / position-visibility / anchor-size()": true,
+      "subgrid": true,
+      "@scope": true,
+      "@layer": true,
+      "container queries (inline-size) + units (cqw)": true,
+      "container-type: scroll-state + @container scroll-state(stuck: top)": true,
+      "interpolate-size: allow-keywords": true,
+      "calc-size()": true,
+      "fit-content() function": false,
+      "masonry": false,
+      "dvh/svh/lvh": true,
+      "logical properties": true
+    },
+    "color_theming": {
+      "color-mix()": true,
+      "oklch/oklab/lab/lch": true,
+      "relative color syntax": true,
+      "light-dark()": true,
+      "color-scheme": true,
+      "color-contrast()": false
+    },
+    "motion": {
+      "view-transition-name / view-transition-class": true,
+      "document.startViewTransition + ViewTransition interface": true,
+      "@view-transition (MPA) at-rule parses": true,
+      "scroll-driven animations (animation-timeline scroll()/view(), view-timeline-name, timeline-scope)": true,
+      "@starting-style": true,
+      "transition-behavior: allow-discrete": true,
+      "overlay": true,
+      "@property": true,
+      "individual transform properties": true,
+      "offset-path": true
+    },
+    "functions_math": {
+      "trig (sin/cos/tan)": true,
+      "round()/mod()/rem()": true,
+      "hypot()/sqrt()/pow()/exp()/log()": true,
+      "sign()/abs()": true,
+      "if()": true,
+      "sibling-index()/sibling-count()": true,
+      "attr() typed": true,
+      "random()": false,
+      "env(safe-area-inset-*)": true
+    },
+    "typography_forms": {
+      "text-wrap: balance / pretty / text-wrap-style": true,
+      "text-box (trim-both cap alphabetic)": true,
+      "initial-letter": true,
+      "text-spacing-trim": true,
+      "text-autospace": true,
+      "hanging-punctuation": false,
+      "font-palette + @font-palette-values": true,
+      "font-size-adjust": true,
+      "font-variant-emoji": true,
+      "field-sizing: content": true,
+      "accent-color / caret-color": true
+    },
+    "rendering_perf": {
+      "content-visibility + contentvisibilityautostatechange": true,
+      "contain-intrinsic-size": true,
+      "contain: layout paint": true,
+      "backdrop-filter": true,
+      "corner-shape (incl. superellipse())": true,
+      "object-view-box": true,
+      "scrollbar-color / scrollbar-width": true,
+      "scroll-snap-type / scroll-behavior / overscroll-behavior": true,
+      "overflow: clip": true,
+      "forced-color-adjust / print-color-adjust": true
+    },
+    "houdini": {
+      "CSS.paintWorklet (Paint API, Chromium-only desktop)": true,
+      "CSS.layoutWorklet": false,
+      "CSS.animationWorklet": false,
+      "CSS.highlights (Custom Highlight API)": true,
+      "CSS.registerProperty": true
+    },
+    "media_queries_parse": ["prefers-reduced-motion", "prefers-color-scheme", "prefers-contrast", "prefers-reduced-transparency", "dynamic-range", "update", "overflow-block", "pointer", "video-color-gamut", "display-mode", "device-posture", "prefers-reduced-data", "forced-colors"],
+    "media_query_notes": "inverted-colors is NOT supported in Chrome (Firefox 114, Safari 9.1 only); prefers-reduced-data is Chromium-only"
+  },
+  "platform_apis": {
+    "ui_primitives": {
+      "popover attribute + beforetoggle/toggle events": true,
+      "popover=hint": "IDL reflects 'hint' but behavior ships in Chrome 151 (BCD); treat as not yet available on stable 150",
+      "Invoker buttons (commandfor/command, commandForElement)": true,
+      "dialog closedby (close watcher) + CloseWatcher interface": true,
+      "inert": true,
+      "autofocus on any element": true,
+      "beforematch": true,
+      "details name (exclusive accordion)": true,
+      "details contentVisibility (lazy)": false,
+      "select customization (appearance: base-select, ::picker(select), selectedcontent)": true,
+      "showPicker()": true,
+      "formdata event + requestSubmit": true,
+      "ElementInternals + states (CustomStateSet)": true,
+      "adoptedStyleSheets + customElements.upgrade": true
+    },
+    "navigation_history": {
+      "Navigation API (navigation.currentEntry, onnavigate, oncurrententrychange, activation, NavigationActivation)": true,
+      "document.prerendering": true,
+      "Speculation Rules API": true,
+      "launchQueue (PWA launch handling)": true,
+      "Window Controls Overlay": true,
+      "Document Picture-in-Picture": true,
+      "Element PiP (video)": true
+    },
+    "storage_files": {
+      "IndexedDB": true,
+      "OPFS (navigator.storage.getDirectory)": true,
+      "Storage Buckets API": true,
+      "StorageManager.estimate / persist": true,
+      "File System Access (showDirectoryPicker/showSaveFilePicker/showOpenFilePicker)": true,
+      "CompressionStream gzip/deflate": true,
+      "CompressionStream zstd": "Unsupported compression format: 'zstd' (not shipped)",
+      "Blob.bytes()": true,
+      "Web Locks": true,
+      "BroadcastChannel": true
+    },
+    "workers_modules": {
+      "module workers": true,
+      "import maps": true,
+      "OffscreenCanvas + transferControlToOffscreen": true,
+      "scheduler.postTask / scheduler.yield": true,
+      "requestIdleCallback": true
+    },
+    "service_worker": {
+      "registration.router (static routing API)": "ABSENT from ServiceWorkerRegistration.prototype in Chrome 150 (shipped in Chrome 121, since removed; do not build on it)",
+      "periodicSync / backgroundFetch / pushManager / sync / navigationPreload": true,
+      "contentIndex": false
+    },
+    "canvas_graphics": {
+      "Canvas2D roundRect / letterSpacing / fontKerning / drawFocusIfNeeded": true,
+      "Canvas2D beginLayer/endLayer (layers)": "absent (shipped Chrome 123, since removed)",
+      "Path2D.addPath": true,
+      "createImageBitmap / ImageDecoder": true,
+      "WebGL2": true,
+      "WebGPU (navigator.gpu, requestAdapter; Linux desktop included)": true,
+      "WebGL EXT_clip_cull_distance": "false under headless SwiftShader; available on real GPU Chrome"
+    },
+    "observers_perf": {
+      "ResizeObserver / IntersectionObserver / MutationObserver / ReportingObserver": true,
+      "Long Animation Frames (LoAF) + PerformanceScriptTiming": true,
+      "Event Timing / first-input / LCP / layout-shift / visibility-state entries": true,
+      "soft navigation entries": false,
+      "scrollend": true,
+      "scrollsnapchanged/scrollsnapbegin": "absent in Chrome 150",
+      "contentvisibilityautostatechange": true
+    },
+    "ai_ml": {
+      "navigator.ml (WebNN)": "absent on Linux (no backend); available on Windows/ChromeOS/Android, origin trial since Chrome 112",
+      "self.ai (Prompt API and friends)": "absent without origin-trial enrollment and a downloaded Gemini Nano model",
+      "navigator.modelContext (WebMCP)": "absent without origin trial (available from Chrome 149) or chrome://flags/#enable-webmcp-testing"
+    },
+    "input_clipboard_share": {
+      "Async Clipboard write + ClipboardItem (+ unsanitized support check)": true,
+      "Web Share": "undefined in headless only; ships in real Chrome desktop 89+",
+      "EyeDropper": true,
+      "Local Font Access (queryLocalFonts)": true,
+      "EditContext": true,
+      "VirtualKeyboard": true,
+      "Pointer capture / getCoalescedEvents / getPredictedEvents / pointerrawupdate": true,
+      "speechRecognition (webkit-prefixed) / speechSynthesis": true
+    },
+    "device_system": {
+      "Wake Lock / Idle Detection / Badging": true,
+      "Network Information API (connection.saveData)": true,
+      "getInstalledRelatedApps": true,
+      "Screen Details (multi-screen)": true,
+      "Web MIDI / USB / Serial / HID / XR / Gamepad": true,
+      "Web Bluetooth": "undefined in headless; ships in real Chrome desktop",
+      "BarcodeDetector": "absent on Linux desktop only"
+    },
+    "security": {
+      "Sanitizer (constructible) + Element.setHTML + setHTMLUnsafe + Document.parseHTMLUnsafe": true,
+      "Sanitizer.getDefaultConfiguration": "absent in this build",
+      "Trusted Types": true,
+      "Passkeys conditional mediation": true,
+      "FedCM (IdentityCredential)": true
+    }
+  }
+}
