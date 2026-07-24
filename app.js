@@ -684,11 +684,12 @@ async function placeJournalOnCanvas(){
 function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);delete workspace.canvases[id];}
 
 const AI_CARD_MARKER="<!-- orbit:ai-card -->";
-function isAICard(node){return node?.type==="text"&&node.text.includes(AI_CARD_MARKER);}
-function parseAICard(node){
-  const lines=(node.text||"").split(/\r?\n/).filter(line=>line.trim()!==AI_CARD_MARKER),heading=lines.findIndex(line=>line.startsWith("# ")),title=heading>=0?lines[heading].slice(2).trim():"AI operator";
+function isAICard(node){return node?.type==="file"&&isNotePath(node.file)&&Boolean(noteCatalog?.getByPath(node.file)?.body?.includes(AI_CARD_MARKER));}
+function parseAICardBody(body){
+  const lines=(body||"").split(/\r?\n/).filter(line=>line.trim()!==AI_CARD_MARKER),heading=lines.findIndex(line=>line.startsWith("# ")),title=heading>=0?lines[heading].slice(2).trim():"AI operator";
   if(heading>=0)lines.splice(heading,1);return {title,prompt:lines.join("\n").trim()||"Summarize the connected notes."};
 }
+function parseAICard(node){return parseAICardBody(noteCatalog?.getByPath(node.file)?.body||"");}
 function buildAICardText(title,prompt){return `${AI_CARD_MARKER}\n# ${title.trim()||"AI operator"}\n${prompt.trim()||"Summarize the connected notes."}`;}
 function indexedEntityForPath(path) {
   const source = lifeIndex?.getSourceFile(path);
@@ -698,12 +699,13 @@ function indexedEntityForPath(path) {
   return { source, row };
 }
 function nodeTitle(node){
-  if(isAICard(node))return parseAICard(node).title;if(node.type==="text"){const heading=node.text.match(/^#{1,2}\s+(.+)$/m);return heading?heading[1]:"Text note";}if(node.type==="group")return node.label||"Group";if(node.type==="link")try{return new URL(node.url).hostname;}catch(_){return "Link";}if(node.type==="file"){const subcanvasId=subcanvasIdFromNode(node);if(subcanvasId)return workspace.canvases[subcanvasId].title;return indexedEntityForPath(node.file)?.row?.title||node.file.split("/").pop();}return node.id;
+  if(isAICard(node))return parseAICard(node).title;if(node.type==="text"){const heading=node.text.match(/^#{1,2}\s+(.+)$/m);return heading?heading[1]:"Text note";}if(node.type==="group")return node.label||"Group";if(node.type==="link")try{return new URL(node.url).hostname;}catch(_){return "Link";}if(node.type==="file"){if(isNotePath(node.file))return noteCatalog?.getByPath(node.file)?.title||node.file.split("/").pop();const subcanvasId=subcanvasIdFromNode(node);if(subcanvasId)return workspace.canvases[subcanvasId].title;return indexedEntityForPath(node.file)?.row?.title||node.file.split("/").pop();}return node.id;
 }
 function inputNodesForAICard(cardId,data=documentData){const byId=Object.fromEntries((data.nodes||[]).map(node=>[node.id,node]));return (data.edges||[]).filter(edge=>edge.toNode===cardId&&edge.label!=="AI output").map(edge=>byId[edge.fromNode]).filter(Boolean);}
 function nodeAIContent(node){
   if(node.type==="text")return node.text;if(node.type==="link")return node.url;
   if(node.type==="file"){
+    if(isNotePath(node.file))return noteCatalog?.getByPath(node.file)?.body||"";
     const cached=aiFileContentCache.get(node.file);if(cached)return cached;
     const entity=indexedEntityForPath(node.file);if(entity?.row)return [`Title: ${entity.row.title||entity.row.localDate||node.file}`, "Canonical body is loading.", node.subpath].filter(Boolean).join("\n");
     return node.subpath ? `${node.file}\nSubpath: ${node.subpath}` : node.file;
@@ -720,7 +722,7 @@ async function preloadAIFileInputs(nodes) {
     } catch (error) { aiFileContentCache.set(node.file, `Canonical file unavailable: ${node.file}`); console.warn("Could not preload AI file context", node.file, error); }
   }
 }
-function aiCardSignature(card,data=documentData){return JSON.stringify([card.text,inputNodesForAICard(card.id,data).map(node=>[node.id,nodeAIContent(node)])]);}
+function aiCardSignature(card,data=documentData){return JSON.stringify([nodeAIContent(card),inputNodesForAICard(card.id,data).map(node=>[node.id,nodeAIContent(node)])]);}
 function aiCardSignatures(data=documentData){return new Map((data.nodes||[]).filter(isAICard).map(card=>[card.id,aiCardSignature(card,data)]));}
 
 function textMeta(node) {
@@ -729,6 +731,7 @@ function textMeta(node) {
 }
 
 function noteKind(node){
+  if(node?.type==="file"&&isNotePath(node.file)){const kind=noteCatalog?.getByPath(node.file)?.kind;return kind==="inbox"||kind==="reference"?kind:null;}
   if(node?.type!=="text")return null;
   if(node.text.includes(NOTE_MARKERS.inbox))return "inbox";
   if(node.text.includes(NOTE_MARKERS.reference))return "reference";
@@ -738,8 +741,9 @@ function canvasKind(record){return record?.kind==="hub"||record?.kind==="project
 // One-line summary convention (ADR-0003): heading/title first, else first body line.
 function nodeSummary(node){
   const title=nodeTitle(node);
-  if(node?.type==="text"){
-    const bodyLine=(node.text||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*orbit:/.test(line));
+  const body=node?.type==="text"?node.text:(node?.type==="file"&&isNotePath(node.file)?noteCatalog?.getByPath(node.file)?.body||"":null);
+  if(body!==null){
+    const bodyLine=(body||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*orbit:/.test(line));
     const summary=(bodyLine||"").trim().slice(0,120);
     return summary&&summary!==title?`${title} — ${summary}`:title;
   }
