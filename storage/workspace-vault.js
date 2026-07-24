@@ -1,7 +1,7 @@
 // Canonical workspace persistence on a VaultStore (Phase 4, ADR-0001, plan §6/§14).
 //
 // Ownership after the file-canonical migration:
-//   .orbit/workspace.json   metadata-only sidecar (hierarchy, cameras, JD index)
+//   .orbit/workspace.json   metadata-only sidecar (hierarchy, cameras, canvas kind)
 //   canvases/<name>.canvas  one independently-valid JSON Canvas document each
 //
 // The sidecar never embeds full documents; each canvas document lives at its own

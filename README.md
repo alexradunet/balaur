@@ -91,7 +91,7 @@ A new browser profile opens with a self-teaching graph starter: Home (the root c
 
 Structure emerges from labelled connections, not folders or numeric codes. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields.
 
-Archive is manual: drag a node or portal under the Archive hub and apply the dormant grey color swatch in the inspector. Nothing is deleted.
+Archive is manual: create or copy the content into the Archive canvas and apply the dormant grey color swatch in the inspector. Nothing is deleted. A cross-canvas reparent command is deferred to a future release.
 
 ## Journaling
 

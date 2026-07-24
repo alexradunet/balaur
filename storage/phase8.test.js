@@ -7,16 +7,23 @@ import { MemoryVault } from "./memory-vault.js";
 import { MemoryIndex } from "./memory-index.js";
 import { LifeIndexer } from "./life-indexer.js";
 import { FileJournalRepository, FileEventRepository, journalPath } from "./journal-event-repository.js";
+import { isCanvas } from "./canvas-validate.js";
 
 const NOW = "2026-07-21T18:00:00.000Z";
+
+const CANVAS_PATH = "canvases/root.canvas";
 
 function setup() {
   const vault = new MemoryVault();
   const index = new MemoryIndex();
   const indexer = new LifeIndexer({ vault, index });
-  const journals = new FileJournalRepository({ vault, index, indexer, now: () => NOW });
+  const journals = new FileJournalRepository({ vault, index, indexer, canvasPathFromId: (id) => id === "canvas-root" ? CANVAS_PATH : null, now: () => NOW });
   const events = new FileEventRepository({ vault, index, indexer, now: () => NOW });
   return { vault, index, indexer, journals, events };
+}
+
+async function seedCanvas(vault) {
+  await vault.write(CANVAS_PATH, JSON.stringify({ nodes: [], edges: [] }, null, 2) + "\n");
 }
 
 // --- journals ----------------------------------------------------------------
@@ -62,6 +69,42 @@ test("updateJournal rejects a missing journal", async () => {
 test("journalPath formats the dated path and rejects bad dates", () => {
   assert.equal(journalPath("2026-07-21"), "journal/2026/2026-07-21.md");
   assert.throws(() => journalPath("nope"), /Bad local date/);
+});
+
+test("addPlacement places a journal file node on a canvas", async () => {
+  const { journals, vault } = setup();
+  await seedCanvas(vault);
+  await journals.createJournal({ localDate: "2026-07-21", body: "Hello." });
+  const result = await journals.addPlacement("2026-07-21", "canvas-root", { id: "j-node" });
+  assert.equal(result.canvasId, "canvas-root");
+  assert.equal(result.nodeId, "j-node");
+  assert.equal(result.path, "journal/2026/2026-07-21.md");
+  const doc = JSON.parse(await vault.read(CANVAS_PATH));
+  assert.ok(isCanvas(doc), "canvas must remain valid after placement");
+  const node = doc.nodes.find((n) => n.id === "j-node");
+  assert.ok(node, "file node must exist");
+  assert.equal(node.type, "file");
+  assert.equal(node.file, "journal/2026/2026-07-21.md");
+});
+
+test("addPlacement rejects a duplicate node id with CANVAS_ID_DUPLICATE", async () => {
+  const { journals, vault } = setup();
+  await seedCanvas(vault);
+  await journals.createJournal({ localDate: "2026-07-21", body: "Hello." });
+  await journals.addPlacement("2026-07-21", "canvas-root", { id: "dup" });
+  await assert.rejects(
+    () => journals.addPlacement("2026-07-21", "canvas-root", { id: "dup" }),
+    (err) => err.code === "CANVAS_ID_DUPLICATE",
+  );
+});
+
+test("addPlacement rejects a missing journal with JOURNAL_NOT_FOUND", async () => {
+  const { journals, vault } = setup();
+  await seedCanvas(vault);
+  await assert.rejects(
+    () => journals.addPlacement("2099-01-01", "canvas-root", {}),
+    (err) => err.code === "JOURNAL_NOT_FOUND",
+  );
 });
 
 // --- calendar events ---------------------------------------------------------

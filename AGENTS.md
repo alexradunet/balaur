@@ -45,7 +45,7 @@ index.html                  Static application shell, dialogs, templates, landma
 main.js                     Ordered ES-module entry point and offline registration
 server.mjs                  Dependency-free local static server
 server.test.mjs             Static server behavior and traversal tests
-app.js                      Vault-first canvas engine, workspace, JD, tasks/Today, AI, import/export
+app.js                      Vault-first canvas engine, workspace, graph model, tasks/Today, AI, import/export
 offline/register.js         Progressive Service Worker registration
 sw.js                       Versioned same-origin application-shell cache
 manifest.webmanifest        Install metadata, scope, colors, and local icons
@@ -162,7 +162,7 @@ The vault is the post-migration source of truth. `localStorage` is not a workspa
 
 Rendering must use the loaded in-memory working set; it must not perform an asynchronous file read for every card during rendering. On writes, save the canonical file or canvas with an expected-content-hash precondition, then reindex and refresh projections. Warm reconciliation honors vault revisions and move old paths.
 
-`window.orbitVaultReady` is the boot promise and `window.orbitVaultStore` is the configured workspace store when boot succeeds. The stable `window.orbitCanvas` surface exposes document/workspace getters, validation and operation application, AI-card execution, hierarchy/JD navigation, task creation, view switching, and whole-space export. Keep raw mutable internals private.
+`window.orbitVaultReady` is the boot promise and `window.orbitVaultStore` is the configured workspace store when boot succeeds. The stable `window.orbitCanvas` surface exposes document/workspace getters, validation and operation application, AI-card execution, graph navigation, task creation, view switching, and whole-space export. Keep raw mutable internals private.
 
 ### 5.1 Offline application-shell rules
 
@@ -233,7 +233,7 @@ The graph model (ADR-0003) replaces the Johnny Decimal subsystem. Home is the ro
 
 Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum (that would be a proprietary Canvas dialect, forbidden by §4.1). `AI output` stays reserved.
 
-Archive is a manual, explicit action: reparent under the Archive hub and set the dormant color `#6c757d`. Never delete.
+Archive is a manual, explicit action: recreate or copy the content into the Archive canvas and set the dormant color `#6c757d`. Never delete. A cross-canvas reparent command is deferred; in v1 the user creates the node in the Archive canvas directly (or copies the text and deletes the original placement).
 
 Journaling is a Today-view feature (daily-note panel with date navigation and place-on-canvas), not a spatial hub.
 
@@ -289,7 +289,7 @@ node --test \
   storage/phase10.test.js storage/phase-query.test.js
 ```
 
-This explicit suite currently passes **169 tests**: the prior 168-test suite plus one kind-sanitization test in `phase4.test.js` (ADR-0003). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
+This explicit suite currently passes **172 tests**: the prior 169-test suite plus three journal-placement tests in `phase8.test.js` (ADR-0003). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
 
 Then perform browser-level checks appropriate to the change. **The default way to check the application is the project `browser-check` skill** at `.pi/skills/browser-check/` — a dependency-free headless-Chrome-over-CDP driver that runs the baseline smoke suite below automatically (no WebDriver, no npm install). With the app served on `4173`:
 

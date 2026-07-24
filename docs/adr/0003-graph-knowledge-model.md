@@ -30,7 +30,7 @@ Replace the JD subsystem with a graph-first knowledge model:
 
 5. **Journaling as a Today feature** — daily-note panel in the Today view with date navigation (prev/Today/next), editable body (debounced create-or-update), and an explicit "Place on canvas" button that adds a standard `file` node for the viewed date's journal onto the currently open canvas. Journal files use the existing `FileJournalRepository` and `journal/YYYY/YYYY-MM-DD.md` layout.
 
-6. **Archive convention** — reparent a node/portal under the Archive hub and set the dormant node color `#6c757d` (a named constant `DORMANT_NODE_COLOR`). Never delete. Manual and explicit; no automated archive button for v1.
+6. **Archive convention** — recreate or copy the content into the Archive canvas and set the dormant node color `#6c757d` (a named constant `DORMANT_NODE_COLOR`). Never delete. Manual and explicit; no automated archive button or cross-canvas reparent command for v1 (deferred follow-up).
 
 7. **Sidecar schema** — drop `johnnyDecimal`; add optional canvas `kind` (`hub`/`project`) as app metadata; `parseSidecar` strips legacy `johnnyDecimal` and unknown `kind` values on read so old sidecars load. `SIDECAR_VERSION` stays at 2 (bumping would break every existing vault and backup).
 

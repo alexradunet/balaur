@@ -42,6 +42,8 @@ const demoCanvas = {
   ]
 };
 
+const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference -->"};
+const DORMANT_NODE_COLOR="#6c757d";
 const STARTER_TASK_ID="task-citybreak";
 const STARTER_TASK_PATH="tasks/choose-dates-for-the-autumn-trip-task-citybreak.md";
 function createGraphStarterWorkspace(){
@@ -626,7 +628,11 @@ function renderToday(){
 let journalViewDate=localDateISO();
 let journalLoadedDate=null;
 let journalSaveTimer=null;
+function flushJournalSave(){
+  if(journalSaveTimer!==null){clearTimeout(journalSaveTimer);journalSaveTimer=null;saveJournalBody(journalViewDate);}
+}
 function shiftJournalDate(delta){
+  flushJournalSave();
   const d=new Date(`${journalViewDate}T00:00:00Z`);d.setUTCDate(d.getUTCDate()+delta);
   journalViewDate=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
   renderJournalPanel();
@@ -642,18 +648,19 @@ async function renderJournalPanel(){
   if(journalLoadedDate===journalViewDate)body.value=text;
   $("#journalStatus").textContent="";
 }
-async function saveJournalBody(){
+async function saveJournalBody(date){
   if(!journalRepository)return;
   const body=$("#journalBody").value,status=$("#journalStatus");
   try{
-    try{await journalRepository.getJournal(journalViewDate);}
-    catch(_){await journalRepository.createJournal({localDate:journalViewDate,body:""});}
-    await journalRepository.updateJournal(journalViewDate,{body});
-    status.textContent="Saved";
-  }catch(error){status.textContent=`Save failed: ${error.message}`;}
+    try{await journalRepository.getJournal(date);}
+    catch(_){await journalRepository.createJournal({localDate:date,body:""});}
+    await journalRepository.updateJournal(date,{body});
+    if(date===journalViewDate)status.textContent="Saved";
+  }catch(error){if(date===journalViewDate)status.textContent=`Save failed: ${error.message}`;}
 }
 async function placeJournalOnCanvas(){
   if(!journalRepository||!canonicalWritable){toast("Canonical files are read-only");return;}
+  flushJournalSave();
   try{
     try{await journalRepository.getJournal(journalViewDate);}
     catch(_){await journalRepository.createJournal({localDate:journalViewDate,body:$("#journalBody").value});}
@@ -711,9 +718,6 @@ function textMeta(node) {
   return map[node.color] || node.type.toUpperCase();
 }
 
-const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference -->"};
-const DORMANT_NODE_COLOR="#6c757d";
-const RELATION_LABELS=["part-of","relates-to","filed-to"]; // convention only; never enforced
 function noteKind(node){
   if(node?.type!=="text")return null;
   if(node.text.includes(NOTE_MARKERS.inbox))return "inbox";
@@ -877,6 +881,7 @@ function renderNodes() {
       content.innerHTML = `<div class="node-kicker">LINK</div><div class="node-body"><h3>${escapeHTML(linkTitle)}</h3><p>Open this resource in a new tab.</p><a class="node-link" href="${safeURL(node.url)}" target="_blank" rel="noreferrer">${escapeHTML(node.url)} ↗</a></div>`;
     } else if (node.type === "file") {
       const subcanvasId=subcanvasIdFromNode(node),subcanvas=subcanvasId&&workspace.canvases[subcanvasId];
+      const fileEntity=indexedEntityForPath(node.file);
       if(subcanvas){
         const children=Object.values(workspace.canvases).filter(record=>record.parentId===subcanvasId).length;element.classList.add("subcanvas-node");element.dataset.subcanvasId=subcanvasId;
         content.innerHTML=`<div class="node-kicker">${subcanvas.kind==="hub"?"HUB · PORTAL":subcanvas.kind==="project"?"PROJECT · PORTAL":"SUB-CANVAS · ZOOM PORTAL"}</div><div class="node-body"><h3>${escapeHTML(subcanvas.title)}</h3><p>${subcanvas.document.nodes.length} item${subcanvas.document.nodes.length===1?"":"s"}${children?` · ${children} nested`:""}</p><div class="portal-preview">${portalPreview(subcanvas.document)}</div><div class="portal-actions"><span>Double-click or zoom to 220%</span><button type="button" data-open-subcanvas>Open ↘</button></div></div>`;
@@ -895,9 +900,8 @@ function renderNodes() {
           }
           host.path=model.path;host.title=model.title;host.source=model.source;host.diagnostic=model.diagnostic||"";host.themeSnapshot=widgetThemeSnapshot();host.preferences=widgetPreferences();
         }
-      } else if (node.type==="file" && indexedEntityForPath(node.file)?.source?.entityType==="journal") {
-        const row=indexedEntityForPath(node.file).row;
-        element.classList.add("journal-card");
+      } else if (fileEntity?.source?.entityType==="journal") {
+        const row=fileEntity.row;
         content.innerHTML=`<div class="node-kicker">JOURNAL · ${escapeHTML(row.localDate)}</div><div class="node-body"><h3>${escapeHTML(row.localDate)}</h3><p>Daily note. Open in Today to edit, or place it on a canvas.</p></div>`;
       } else content.innerHTML = `<div class="node-kicker">FILE</div><div class="node-body"><div class="file-preview">▧</div><h3>${escapeHTML(node.file.split("/").pop())}</h3><p>${escapeHTML(node.subpath || node.file)}</p></div>`;
     }
@@ -1630,7 +1634,7 @@ function proposeLocalWidget() {
 async function runLocalAssistant(prompt) {
   const request=prompt.trim();if(!request)return;assistantMessage(request,"user");const lower=request.toLowerCase();let response="";
   try {
-    if(/summar|what(?:'s| is) (?:on|in)|parse/.test(lower)) {
+    if(/summar|what(?:'s| is) on|parse/.test(lower)) {
       const s=canvasSummary();response=`I parsed the current JSON Canvas: ${s.nodes} content nodes and ${s.edges} connections. I found ${s.goals} goals, ${s.projects} projects, ${s.habits} habits, ${s.ideas} ideas, ${s.widgets} live widgets, and ${s.openTasks} unchecked tasks.`;
     } else if(/graph|memory|my life|what(?:'s| is) in|overview/.test(lower)){
       response=`Here is your graph, traversed from Home (depth ${GRAPH_MEMORY_DEPTH}):\n\n${graphMemoryDigest()}`;
@@ -1790,8 +1794,8 @@ $$(".ai-suggestions button").forEach(button=>button.onclick=()=>runAssistant(but
 $("#newTodayTask").onclick=()=>openTaskDialog({today:true});$("#closeTaskDialog").onclick=$("#cancelTaskDialog").onclick=()=>$("#taskDialog").close();$("#taskForm").onsubmit=async event=>{event.preventDefault();const result=$("#taskResult"),button=$("#createTaskButton");try{if(!event.currentTarget.reportValidity())return;button.disabled=true;await createTask({title:$("#taskTitle").value,notes:$("#taskNotes").value,canvasId:$("#taskCanvas").value,status:$("#taskStatus").value,scheduledOn:$("#taskScheduledOn").value,dueOn:$("#taskDueOn").value,priority:$("#taskPriority").value});$("#taskDialog").close();}catch(error){result.className="settings-test error";result.textContent=error.message;}finally{button.disabled=false;}};$("#todayQuickAdd").onsubmit=async event=>{event.preventDefault();const input=$("#todayTaskTitle"),title=input.value.trim();if(!title)return;const button=$("button",event.currentTarget);button.disabled=true;try{await createTask({title,status:"scheduled",scheduledOn:localDateISO(),canvasId:currentCanvasId});input.value="";renderToday();}catch(error){toast(error.message);}finally{button.disabled=false;}};
 $("#journalPrev").onclick=()=>shiftJournalDate(-1);
 $("#journalNext").onclick=()=>shiftJournalDate(1);
-$("#journalToday").onclick=()=>{journalViewDate=localDateISO();journalLoadedDate=null;renderJournalPanel();};
-$("#journalBody").addEventListener("input",()=>{clearTimeout(journalSaveTimer);$("#journalStatus").textContent="Saving…";journalSaveTimer=setTimeout(saveJournalBody,600);});
+$("#journalToday").onclick=()=>{flushJournalSave();journalViewDate=localDateISO();journalLoadedDate=null;renderJournalPanel();};
+$("#journalBody").addEventListener("input",()=>{clearTimeout(journalSaveTimer);$("#journalStatus").textContent="Saving…";const date=journalViewDate;journalSaveTimer=setTimeout(()=>{journalSaveTimer=null;saveJournalBody(date);},600);});
 $("#journalPlace").onclick=placeJournalOnCanvas;
 $("#closeAINote").onclick=$("#cancelAINote").onclick=()=>$("#aiNoteDialog").close();
 $("#aiNoteForm").onsubmit=event=>{event.preventDefault();const prompt=$("#aiNotePrompt").value.trim();if(prompt)createAINote(prompt);};

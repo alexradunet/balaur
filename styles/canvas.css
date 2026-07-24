@@ -506,10 +506,12 @@
   .add-menu-item small { display: block; margin-block-start: 1px; color: var(--balaur-content-on-dark-muted); font-size: 9px; line-height: 1.25; }
   .add-icon { font: 500 17px var(--balaur-font-mono); }
   .note-icon { color: var(--balaur-canvas-orange); }
+  .inbox-icon { color: var(--balaur-canvas-orange); }
   .goal-icon, .task-icon { color: var(--balaur-canvas-red); }
   .habit-icon, .ai-icon { color: var(--balaur-canvas-green); }
   .project-icon { color: var(--balaur-canvas-purple); }
   .widget-icon, .ai-note-icon { color: var(--balaur-canvas-cyan); }
+  .reference-icon { color: var(--balaur-canvas-cyan); }
   .subcanvas-icon { color: var(--balaur-action-primary); }
   .zoom-tools {
     position: absolute;
