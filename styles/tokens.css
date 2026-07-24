@@ -97,6 +97,7 @@
     --balaur-canvas-cyan: #64cbd0;
     --balaur-canvas-purple: #a78bfa;
 
-    --sidebar: 250px;
+    --sidebar-width: 250px;
+    --sidebar: var(--sidebar-width);
   }
 }

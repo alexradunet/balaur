@@ -29,29 +29,25 @@
       transform: translateX(-100%);
     }
 
+    /* Narrow layout: the inspector takes over the library's left drawer slot
+       instead of floating over the canvas, mirroring the desktop swap. */
     .inspector {
       position: fixed;
-      inset: 64px 0 0 auto;
+      inset: 64px auto 0 0;
       display: block;
-      width: min(292px, 88vw);
+      width: min(300px, 86vw);
       visibility: hidden;
-      transform: translateX(100%);
-      box-shadow: -8px 0 24px rgb(0 0 0 / 38%);
+      transform: translateX(-100%);
       z-index: 31;
     }
     .app-shell.inspector-open .inspector {
       visibility: visible;
       transform: translateX(0);
     }
-    /* Narrow layout docks the inspector as a right sheet, so the desktop
-       left-recenter of the tool rail and the zoom-control shift no longer apply. */
-    .app-shell.inspector-open .canvas-tools { transform: translateX(-50%); }
-    .app-shell.inspector-open .zoom-tools { left: 17px; }
-    /* The empty-state arrow points at the canvas: on mobile the inspector is a
-       right sheet, so the canvas sits to its left — flip the glyph accordingly. */
-    .inspector-empty > span { font-size: 0; }
-    .inspector-empty > span::before { content: "↖"; font-size: 25px; }
-    .inspector-form, .inspector-head, .inspector-empty { width: 100%; }
+    .app-shell.inspector-open .sidebar {
+      visibility: hidden;
+      transform: translateX(-100%);
+    }
   }
 
   @media (max-width: 620px) {

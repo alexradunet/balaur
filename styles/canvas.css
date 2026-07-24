@@ -452,10 +452,6 @@
     transform: translateX(-50%);
     transition: transform var(--balaur-duration-panel) var(--balaur-ease-standard);
   }
-  /* While the left inspector overlay is open it covers the leading 292px of the
-     canvas. Shift the rail by half that width so it stays centred in the live,
-     uncovered canvas instead of slipping beneath the panel on narrower windows. */
-  .app-shell.inspector-open .canvas-tools { transform: translateX(calc(-50% + 146px)); }
   .canvas-tools > span { width: 1px; margin: 5px 3px; background: var(--balaur-border-default); }
   .tool {
     width: var(--balaur-target-min);
@@ -523,9 +519,6 @@
     padding: 3px;
     background: var(--balaur-surface-oak-raised);
   }
-  /* The left inspector overlay covers the leading 292px of the canvas; slide the
-     zoom controls clear of it so −/+/fit stay clickable while a card is selected. */
-  .app-shell.inspector-open .zoom-tools { left: 309px; }
   .zoom-tools button {
     min-width: var(--balaur-target-min);
     height: var(--balaur-target-min);

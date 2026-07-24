@@ -5,7 +5,7 @@
 //   node browser-check.mjs smoke     [url] [--profile dir] [--offline] [--width N] [--height N] [--screenshot dir]
 //   node browser-check.mjs components [url] [--profile dir] [--width N] [--height N]
 //   node browser-check.mjs widgets   [url] [--profile dir] [--width N] [--height N] [--screenshot dir]
-//   node browser-check.mjs eval      [url] <expression> [--wait expr] [--profile dir]
+//   node browser-check.mjs eval      [url] <expression> [--wait expr] [--profile dir] [--width N] [--height N]
 //   node browser-check.mjs shot      [url] <file.png> [--selector css] [--profile dir]
 import { spawn, execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -1706,7 +1706,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
     } else if (command === "eval") {
       const expression = args.positional.find(a => a !== url) ?? args.positional[0];
       if (!expression) throw new Error("Usage: browser-check.mjs eval [url] <expression> [--wait expr]");
-      const session = new BrowserSession({ url, profile: args.flags.profile ? resolve(args.flags.profile) : null });
+      const session = new BrowserSession({ url, profile: args.flags.profile ? resolve(args.flags.profile) : null, width: Number(args.flags.width) || 1440, height: Number(args.flags.height) || 900 });
       await session.start();
       try {
         await session.navigate();
