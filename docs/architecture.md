@@ -8,7 +8,7 @@ The vault is the source of truth:
 
 ```text
 IndexedDbVault (browser) / FsVault (Node) / MemoryVault (tests)
-  ├─ .orbit/workspace.json      hierarchy, cameras, JD metadata
+  ├─ .orbit/workspace.json      hierarchy, cameras, canvas kind metadata
   ├─ canvases/*.canvas           independent JSON Canvas 1.0 documents
   ├─ tasks/*.md                  canonical task entities
   ├─ habits/*.md                 canonical habit definitions
@@ -19,7 +19,7 @@ IndexedDbVault (browser) / FsVault (Node) / MemoryVault (tests)
   └─ widgets/*.html              canonical sandboxed widget source
 ```
 
-JSON Canvas owns portable spatial content: nodes, geometry, edges, groups, links, and standard file references. The workspace sidecar owns hierarchy, canvas paths, cameras, active canvas, and Johnny Decimal metadata; none of that application state is added to exported Canvas documents.
+JSON Canvas owns portable spatial content: nodes, geometry, edges, groups, links, and standard file references. The workspace sidecar owns hierarchy, canvas paths, cameras, active canvas, and optional canvas `kind` metadata (`hub`/`project`); none of that application state is added to exported Canvas documents. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
 
 Markdown frontmatter and body own life-management fields and declarative component-card fields that JSON Canvas does not define. An entity or component card's immutable `orbit-id` is its identity, a path is its locator, and a canvas node ID is a placement. One canonical file may have zero, one, or many standard `file`-node placements. Widget identity is its safe canonical `widgets/*.html` path.
 
@@ -76,15 +76,11 @@ The exception is the security runtime boundary: `<balaur-widget-frame>` owns onl
 
 ## JSON Canvas and nested canvases
 
-Every canvas level is an independent JSON Canvas 1.0 document with only standard node types (`text`, `file`, `link`, `group`) and standard edge fields. A parent points to a child through a standard file node such as `canvases/11-finance.canvas`. Sidecar metadata supplies the parent, portal node, title, camera, and Johnny Decimal projection. Navigation can enter and leave nested canvases without flattening their documents.
+Every canvas level is an independent JSON Canvas 1.0 document with only standard node types (`text`, `file`, `link`, `group`) and standard edge fields. A parent points to a child through a standard file node such as `canvases/inbox.canvas`. Sidecar metadata supplies the parent, portal node, title, camera, and optional `kind`. Navigation can enter and leave nested canvases without flattening their documents.
 
-Johnny Decimal is a validated hierarchy projection:
+The graph model (ADR-0003) replaces the Johnny Decimal subsystem. Home is the root canvas; four hub canvases (Inbox, Projects, Wiki, Archive) hang off it. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The AI memory layer traverses from Home via labelled edges + type markers + one-line summaries, bounded to depth 2 and 60 nodes.
 
-- root → area (`10-19`);
-- area → category (`11`); and
-- category → item (`11.01`).
-
-Portals are ordinary file nodes. Simple item notes may carry harmless `orbit:jd` comments, but the comment is not the item identity; sidecar hierarchy and readable note content remain synchronized.
+Portals are ordinary file nodes. Legacy `<!-- orbit:jd -->` comments from pre-graph vaults remain harmless inert text.
 
 ## AI and widgets
 

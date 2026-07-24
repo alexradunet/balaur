@@ -22,7 +22,7 @@ The user-visible collection of canvas documents plus its hierarchy and applicati
 
 ### Workspace sidecar
 
-`.orbit/workspace.json`. It owns canvas paths and titles, hierarchy and portals, active canvas, cameras, and Johnny Decimal metadata. It never embeds canvas documents.
+`.orbit/workspace.json`. It owns canvas paths and titles, hierarchy and portals, active canvas, cameras, and optional canvas `kind` metadata (`hub`/`project`). It never embeds canvas documents. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
 
 ### Entity
 
@@ -76,13 +76,37 @@ A reviewed canonical `widgets/*.html` file run only on explicit request inside a
 
 A standard `file` node that points to another `.canvas` file. The sidecar records the parent relationship; the node itself remains portable JSON Canvas.
 
-### Johnny Decimal projection
+### Hub
 
-The validated area/category/item view over the nested-canvas hierarchy. It does not replace the hierarchy or define a proprietary node type.
+A light entry canvas (Inbox, Projects, Wiki, or Archive) hanging off Home. Marked with sidecar `kind: "hub"`. Hubs are entry points, not folders.
+
+### Home
+
+The root canvas and the canonical AI + user entry point.
+
+### Inbox note
+
+A text node marked `<!-- orbit:inbox -->` representing a capture pending processing.
+
+### Reference page
+
+A text node marked `<!-- orbit:reference -->` representing durable wiki content.
+
+### Relation label
+
+A standard edge `label` used by convention: `part-of` (structural), `relates-to` (associative), `filed-to` (lifecycle). Never enforced as an enum.
+
+### Dormant node
+
+A node with color `#6c757d` indicating archived or completed work.
+
+### Graph memory
+
+A bounded traversal from Home (depth 2, 60-node cap) that digests the workspace graph for the AI assistant. Read-only; writes remain confirmed operations.
 
 ### Inert marker
 
-A harmless Markdown or HTML comment that lets Balaur recognize special behavior while remaining readable in other editors. Markers do not create custom Canvas types or a second source of truth.
+A harmless Markdown or HTML comment that lets Balaur recognize special behavior while remaining readable in other editors. Markers do not create custom Canvas types or a second source of truth. Examples: `<!-- orbit:inbox -->`, `<!-- orbit:reference -->`, `<!-- orbit:ai-card -->`. Legacy `<!-- orbit:jd -->` markers from pre-graph vaults remain harmless inert text.
 
 ### AI operator
 

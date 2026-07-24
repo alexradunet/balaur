@@ -5,7 +5,7 @@ Balaur's canonical-files-only v1 stores life data as readable files in a vault. 
 ## Ownership
 
 ```text
-.orbit/workspace.json  hierarchy, canvas metadata, cameras, JD metadata
+.orbit/workspace.json  hierarchy, canvas metadata, cameras, optional canvas kind
 canvases/*.canvas       canonical JSON Canvas 1.0 documents
 tasks/*.md              task definitions and workflow state
 habits/*.md             habit definitions
@@ -37,15 +37,23 @@ The sidecar is `.orbit/workspace.json`:
   "version": 2,
   "rootId": "canvas-root",
   "activeId": "canvas-root",
-  "johnnyDecimal": { "enabled": false, "entries": {} },
   "canvases": {
     "canvas-root": {
       "id": "canvas-root",
-      "title": "Life OS",
+      "title": "Home",
       "path": "canvases/root.canvas",
       "parentId": null,
       "portalNodeId": null,
       "camera": { "x": 80, "y": 55, "zoom": 0.78 }
+    },
+    "hub-inbox": {
+      "id": "hub-inbox",
+      "title": "Inbox",
+      "path": "canvases/inbox.canvas",
+      "parentId": "canvas-root",
+      "portalNodeId": "portal-inbox",
+      "camera": { "x": 80, "y": 55, "zoom": 0.78 },
+      "kind": "hub"
     }
   }
 }
@@ -174,7 +182,11 @@ updated-at: "2026-07-21T09:00:00Z"
 Journal body.
 ```
 
-The required fields are `orbit-id`, `local-date`, `created-at`, and `updated-at`. `FileJournalRepository` keeps one canonical file per local date and preserves frontmatter/body formatting on updates.
+The required fields are `orbit-id`, `local-date`, `created-at`, and `updated-at`. `FileJournalRepository` keeps one canonical file per local date and preserves frontmatter/body formatting on updates. Journals are placeable as standard `file` nodes via `FileJournalRepository.addPlacement` and surfaced in the Today daily-note panel.
+
+### Node typing and relations
+
+Node typing uses three existing channels (ADR-0003): sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The dormant node color `#6c757d` marks archived items.
 
 ### Calendar events: `events/*.md`
 

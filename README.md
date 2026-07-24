@@ -10,7 +10,7 @@ A small, standalone proof of concept for a local-first life-management app whose
 
 - Infinite canvas with pan, centered zoom, fit-to-view, and minimap
 - Nested sub-canvases with live previews, breadcrumbs, switching, and infinite zoom navigation
-- Johnny Decimal areas, categories, and items with automatic IDs, validation, numeric sorting, and direct lookup
+- Graph-first knowledge model: Home + four hub canvases (Inbox, Projects, Wiki, Archive) with labelled edges, node typing, and a self-teaching starter
 - Draggable and resizable text, link, file, group, and sub-canvas portal nodes
 - Goals, projects, habits, ideas, and notes represented with standard JSON Canvas fields
 - Portable task cards backed by canonical Markdown files for status, scheduling, due dates, and priority
@@ -81,27 +81,21 @@ On Debian/Ubuntu, copy it to `/usr/local/share/ca-certificates/balaur-dev-ca.crt
 | Delete | `Delete` / `Backspace` |
 | Switch workspace view | Select **Canvas** or **Today** in the header |
 | Add task | Select **＋ Add → Task** on the canvas action bar, or **Add task** in Today |
-| Open Johnny Decimal index | Select **JD** beside Canvases or press `Ctrl/Cmd + K` |
+| Reset starter | Select **Reset demo** in the sidebar to load the graph starter |
 | Export current canvas | `Ctrl/Cmd + S` |
 | Export all canvases | Select **Export whole space** in the sidebar |
 
-## Johnny Decimal spaces
+## Graph model
 
-A new browser profile opens with a pre-seeded fictional life index for **Alex, a 30-year-old man**. Existing spaces can load it from **JD → Load starter** after exporting a backup; loading the starter replaces the canonical vault and reseeds the same task cards used on first run.
+A new browser profile opens with a self-teaching graph starter: Home (the root canvas) with four hub portals (Inbox, Projects, Wiki, Archive), example nodes demonstrating the pipeline, and labelled edges. Existing spaces can reload it from **Reset demo** after exporting a backup.
 
-Select **JD** beside the Canvases heading. Balaur determines the next valid level from the selected parent:
+Structure emerges from labelled connections, not folders or numeric codes. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields.
 
-```text
-Index
-└── 10–19 — Personal          area
-    └── 11 — Finance          category
-        ├── 11.01 — Budget    item note
-        └── 11.02 — Taxes     item canvas
-```
+Archive is manual: drag a node or portal under the Archive hub and apply the dormant grey color swatch in the inspector. Nothing is deleted.
 
-The starter includes 9 areas, 17 categories, 34 practical item notes, and 9 task cards covering life admin, health and fitness, career, money, home systems, relationships, learning, hobbies, travel, and archives. It is an editable example rather than personal, financial, or medical advice.
+## Journaling
 
-Area, category, and canvas-item portals remain standard JSON Canvas file nodes. Item notes store their identifier in a harmless Markdown comment and heading. IDs are checked for the correct parent range, duplicates are rejected, and the canvas hierarchy is sorted numerically. The same dialog provides direct **Go to ID** navigation.
+The Today view includes a daily-note panel with prev/Today/next date navigation, an editable body (debounced save), and a **Place on canvas** button that adds a standard `file` node for the viewed date's journal onto the currently open canvas.
 
 ## Tasks and Today
 
@@ -169,7 +163,7 @@ By default, the key lives in `sessionStorage` for the current tab. Enabling **Re
 
 ## Data model
 
-Each canvas remains a JSON Canvas 1.0 document with only the top-level `nodes` and `edges` arrays. A sub-canvas portal is a standard file node pointing to a child document under `canvases/`; Johnny Decimal portals use readable paths such as `canvases/11-finance.canvas`. Balaur's browser-local workspace sidecar tracks hierarchy, titles, Johnny Decimal identifiers, and camera positions without adding private fields to canvas objects.
+Each canvas remains a JSON Canvas 1.0 document with only the top-level `nodes` and `edges` arrays. A sub-canvas portal is a standard file node pointing to a child document under `canvases/`. Balaur's browser-local workspace sidecar tracks hierarchy, titles, optional canvas `kind`, and camera positions without adding private fields to canvas objects. The graph starter seeds Home + four hubs + a project canvas with example nodes and labelled edges.
 
 **Export .canvas** exports the currently open level. **Export whole space** produces a version-2 `.orbit.json` file bundle containing the sidecar, every standards-compliant canvas document, canonical Markdown files (including component cards), and widget/attachment files; the normal Import action restores either format. Version-1 bundles are intentionally rejected in canonical-files-only v1.
 

@@ -8,6 +8,10 @@ AI changes to life entities use the file repositories. A task, habit, journal en
 
 When an incoming AI context edge targets a canonical entity `file` node, Balaur preloads the referenced Markdown file and supplies its parsed title/body rather than treating the path as the content. Missing or unreadable files produce a diagnostic and a bounded fallback; they are never silently treated as the file body.
 
+### Graph memory layer
+
+The assistant traverses the workspace graph from Home via labelled edges, type markers, and one-line summaries (ADR-0003). The traversal is bounded to depth 2 canvas hops and 60 nodes. It is read-only: the AI proposes changes only through the existing confirmed operation flow. Edge labels `part-of`, `relates-to`, and `filed-to` are a convention; `AI output` is reserved. The digest is prepended to both local and remote assistant context.
+
 ## Keep the host document standard
 
 JSON Canvas 1.0 has no `component`, `html`, `widget`, or `webgl` node type. Balaur does not add one. A declarative card is a standard file node pointing to `cards/*.md`; a live widget is a standard file node pointing to `widgets/*.html`:

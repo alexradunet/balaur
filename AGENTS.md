@@ -32,6 +32,7 @@ Before changing a subsystem, read its source and design document:
 - `docs/generative-canvas.md` — AI operations, live widgets, and security boundaries
 - `docs/design-system.md` — Balaur tokens, material roles, motion, and CSS organization
 - `docs/adr/0001-file-canonical-life-data.md` — accepted file-canonical decision
+- `docs/adr/0003-graph-knowledge-model.md` — graph-first knowledge model replacing Johnny Decimal
 - `plans/canonical-v1-files-only.md` — implementation plan and browser-pending work
 - `vendor/pixel-loom/README.md` — design-system provenance
 
@@ -62,7 +63,7 @@ storage/life-indexer.js     Projects vault files into the runtime index
 storage/life-query.js       App-facing query facade over MemoryIndex
 storage/memory-index.js     Disposable in-memory index port
 storage/canvas-validate.js  Shared strict JSON Canvas 1.0 validator
-storage/workspace-vault.js  Sidecar plus per-canvas `.canvas` persistence
+storage/workspace-vault.js  Sidecar plus per-canvas `.canvas` persistence (graph model `kind`, legacy JD stripped)
 storage/workspace-backup.js Version-2 whole-space file-bundle export/import
 storage/task-repository.js  FileTaskRepository: canonical task files and placements
 storage/habit-repository.js FileHabitRepository: definitions and daily check-ins
@@ -101,12 +102,14 @@ All imported, restored, or model-generated documents must pass `storage/canvas-v
 Special behavior is represented without changing JSON Canvas:
 
 ```md
-<!-- orbit:jd 11.01 -->
+<!-- orbit:inbox -->
+<!-- orbit:reference -->
 <!-- orbit:ai-card -->
 <!-- orbit:habit-entry id=... habit=... status=done value=1 at=... -->
 ```
 
-- Johnny Decimal item notes are standard text nodes.
+- Inbox notes and reference pages are standard text nodes with inert markers.
+- `<!-- orbit:jd -->` is a legacy inert marker from pre-graph vaults; it remains harmless text.
 - Tasks, habits, journals, and calendar events are canonical Markdown files under `tasks/`, `habits/`, `habit-logs/`, `journal/`, and `events/`, each with the applicable Orbit frontmatter contract. Tasks are placed by standard `file` nodes; one task may have zero, one, or many placements.
 - Habit check-ins are inert comments in append-only daily habit-log files. They are not recurring task records.
 - AI operators are standard text nodes whose incoming edges provide context. For a file node, context assembly resolves the referenced file body, not just its path.
@@ -117,7 +120,7 @@ Markers must remain harmless and readable in other editors. There is no generate
 
 ### 4.3 Workspace sidecar and canvas files
 
-The canonical sidecar is `.orbit/workspace.json`. It owns canvas titles and paths, parent/portal relationships, active canvas, cameras, and Johnny Decimal metadata. It does not embed canvas documents. Each canvas document is stored separately under `canvases/*.canvas` and is validated independently.
+The canonical sidecar is `.orbit/workspace.json`. It owns canvas titles and paths, parent/portal relationships, active canvas, cameras, and optional canvas `kind` metadata (`hub`/`project`). It does not embed canvas documents. Each canvas document is stored separately under `canvases/*.canvas` and is validated independently. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
 
 Do not put hierarchy, cameras, active filters, selection, or other UI state into exported `.canvas` documents. Destructive hierarchy operations must remove related sidecar records and orphaned canvas files safely. Missing or invalid canvas files load as read-only repair placeholders with their raw content retained; saving must never replace them with an empty document.
 
@@ -224,15 +227,17 @@ Task completion and edits patch canonical frontmatter with an expected hash. Rem
 
 Habits are definitions plus append-only daily check-in events. Journals and calendar events use the same file-canonical layer rather than feature-specific stores. Test local-date behavior with timezone boundaries; never derive a local date by slicing a UTC timestamp.
 
-## 9. Johnny Decimal and nested-canvas rules
+## 9. Graph knowledge model and nested-canvas rules
 
-Johnny Decimal is a validated projection over the nested-canvas hierarchy:
+The graph model (ADR-0003) replaces the Johnny Decimal subsystem. Home is the root canvas; four hub canvases (Inbox, Projects, Wiki, Archive) hang off it. Structure emerges from labelled edges, not numeric codes.
 
-- root → area (`10-19`);
-- area → category (`11`); and
-- category → item (`11.01`).
+Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum (that would be a proprietary Canvas dialect, forbidden by §4.1). `AI output` stays reserved.
 
-Preserve numeric ordering, parent-range validation, duplicate rejection, sidecar/heading synchronization, and reachability through standard file-node portals. Do not flatten nested documents during save or export.
+Archive is a manual, explicit action: reparent under the Archive hub and set the dormant color `#6c757d`. Never delete.
+
+Journaling is a Today-view feature (daily-note panel with date navigation and place-on-canvas), not a spatial hub.
+
+Nested-canvas portals remain standard `file` nodes. Do not flatten nested documents during save or export. `<!-- orbit:jd -->` markers from pre-graph vaults remain harmless inert text; no migration is performed.
 
 ## 10. AI and widget security boundaries
 
@@ -284,7 +289,7 @@ node --test \
   storage/phase10.test.js storage/phase-query.test.js
 ```
 
-This explicit suite currently passes **168 tests**: the prior 164-test suite plus four component-card backup-boundary tests in `phase4-backup.test.js` (the deleted phase6 suite is intentionally excluded). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
+This explicit suite currently passes **169 tests**: the prior 168-test suite plus one kind-sanitization test in `phase4.test.js` (ADR-0003). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
 
 Then perform browser-level checks appropriate to the change. **The default way to check the application is the project `browser-check` skill** at `.pi/skills/browser-check/` — a dependency-free headless-Chrome-over-CDP driver that runs the baseline smoke suite below automatically (no WebDriver, no npm install). With the app served on `4173`:
 
