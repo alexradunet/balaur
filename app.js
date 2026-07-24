@@ -13,6 +13,8 @@ import { MemoryIndex } from "./storage/memory-index.js";
 import { LifeQuery } from "./storage/life-query.js";
 import { FileTaskRepository } from "./storage/task-repository.js";
 import { FileJournalRepository, journalPath } from "./storage/journal-event-repository.js";
+import { NoteCatalog, isNotePath } from "./storage/note-catalog.js";
+import { FileNoteRepository } from "./storage/note-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
 import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacementFailure, validateGeneratedOperation } from "./ai/generated-operations.js";
@@ -163,9 +165,12 @@ let componentCardCatalog=null;
 let componentCardRepository=null;
 let widgetCatalog=null;
 let widgetRepository=null;
+let noteCatalog=null;
+let noteRepository=null;
 let canonicalWritable=false;
 const aiFileContentCache=new Map();
 const taskUpdateTimers=new Map();
+const noteUpdateTimers=new Map();
 
 const canvas = $("#canvas");
 const world = $("#world");
@@ -323,6 +328,11 @@ function configureLifeRuntime(vault) {
     vault, index: lifeIndex, indexer: lifeIndexer,
     canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
   });
+  noteCatalog = new NoteCatalog({ vault });
+  noteRepository = new FileNoteRepository({
+    vault, index: lifeIndex, indexer: lifeIndexer, catalog: noteCatalog,
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+  });
 }
 // Vault-first asynchronous boot. The only post-migration source of truth is the
 // IndexedDB vault; the MemoryIndex is rebuilt from its files for every session.
@@ -346,12 +356,12 @@ async function bootCanvasApp(){
       await seedGraphStarterEntities();
       workspace = (await store.load()).workspace;
     }
-    await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild()]);
+    await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild(), noteCatalog.rebuild()]);
     const stats = lifeIndexer.stats();
     setIndexStatus(canonicalWritable ? `Files · ${stats.sourceFiles} indexed` : "Files read-only · repair/export required", canonicalWritable ? `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics` : "Repair the canonical vault or export it before editing.");
   } catch (error) {
     console.warn("Vault-first boot failed; canonical files are unavailable", error);
-    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; journalRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null;
+    vaultStore = null; lifeIndex = null; lifeIndexer = null; lifeQuery = null; taskRepository = null; journalRepository = null; componentCardCatalog = null; componentCardRepository = null; widgetCatalog = null; widgetRepository = null; noteCatalog = null; noteRepository = null;
     setIndexStatus("Files unavailable", error.message);
     setCanonicalWritable(false, "Canonical files are unavailable; export or repair the vault before editing.");
   }
@@ -389,7 +399,7 @@ function canvasTrail(id=currentCanvasId){
 function slug(value){return String(value).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,54)||"canvas";}
 async function rebuildLifeIndex(){
   if (!lifeIndexer) return;
-  await Promise.all([lifeIndexer.rebuild(), componentCardCatalog?.rebuild(), widgetCatalog?.rebuild()]);
+  await Promise.all([lifeIndexer.rebuild(), componentCardCatalog?.rebuild(), widgetCatalog?.rebuild(), noteCatalog?.rebuild()]);
   const stats = lifeIndexer.stats();
   setIndexStatus(`Files · ${stats.sourceFiles} indexed`, `${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);
   renderToday(); renderNodes();
@@ -408,7 +418,7 @@ async function loadGraphStarter(){
     await canonicalVault.restore(snapshot);
     const nextStore=new WorkspaceStore(canonicalVault), result=await nextStore.load();
     if(!result?.workspace)throw new Error("Starter activation did not produce a workspace");
-    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
+    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
     currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#canvasTitle").value=canvasRecord().title;renderWorkspaceNavigation();render();fitView();toast("Graph starter space loaded");
   } catch(error) { console.warn("Could not reset the canonical vault",error); toast(`Could not load starter: ${error.message}`); }
 }
@@ -1396,7 +1406,7 @@ async function importCanvas(file) {
       if(!result?.workspace)throw new Error("Canonical vault activation did not produce a workspace");
       // Switch application globals only after canonical activation and reload
       // have both succeeded.
-      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);
+      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
       currentCanvasId=workspace.activeId; documentData=workspace.canvases[currentCanvasId].document; camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1}; selected=null; $("#canvasTitle").value=canvasRecord().title; render(); fitView();
       const stats=lifeIndexer.stats();setIndexStatus(`Files · ${stats.sourceFiles} indexed`,`${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);toast("Whole workspace and canonical files imported");return;
     }
@@ -1529,7 +1539,7 @@ async function applyCanvasOperations(operations) {
   }catch(error){failure=error;}
   finally{
     if(plan.generatedOperations.length||failure?.operationState?.reload){
-      try{await Promise.all([componentCardCatalog.rebuild(),widgetCatalog.rebuild()]);await reloadCanvasDocuments(Object.keys(workspace.canvases));}
+      try{await Promise.all([componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);await reloadCanvasDocuments(Object.keys(workspace.canvases));}
       catch(error){if(!failure)failure=error;else console.warn("Could not reconcile a partially applied component-card plan",error);}
     }
     selected=null;shell.classList.remove("inspector-open");render();updateAssistantContext();scheduleChangedAICards(before);
