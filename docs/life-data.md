@@ -12,6 +12,7 @@ habits/*.md             habit definitions
 habit-logs/YYYY/*.md    append-only daily habit check-in events
 journal/YYYY/*.md       journal entries by local date
 events/*.md             calendar events
+notes/*.md              path-identified notes (inbox, reference, AI, freeform)
 cards/*.md              canonical declarative component cards
 widgets/*.html          canonical reviewed widget source
 MemoryIndex             disposable life-query projection
@@ -184,9 +185,15 @@ Journal body.
 
 The required fields are `orbit-id`, `local-date`, `created-at`, and `updated-at`. `FileJournalRepository` keeps one canonical file per local date and preserves frontmatter/body formatting on updates. Journals are placeable as standard `file` nodes via `FileJournalRepository.addPlacement` and surfaced in the Today daily-note panel.
 
+### Notes: `notes/*.md`
+
+A note is a path-identified canonical Markdown file under `notes/` (ADR-0004). Identity is the path; there is no mandatory frontmatter and no mandatory `orbit-id`. The body is ordinary Markdown; the title is derived, not stored (the first `# Heading`, falling back to the path slug). Note kind (inbox, reference, or AI) is carried by the same inert body markers as before (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`, `<!-- orbit:ai-card -->`) at the top of the body; no frontmatter field is added for kind. The indexer treats a note as a valid untyped source record (`entityType: null`, `parseStatus: "ok"`). Notes are placed by zero or more standard `file` nodes; note placements are not tracked by the disposable placements index, so `FileNoteRepository` resolves them by scanning canvas documents. `FileNoteRepository` writes the file first under an expected-hash precondition, reindexes, and reconciles the `NoteCatalog` projection.
+
 ### Node typing and relations
 
-Node typing uses three existing channels (ADR-0003): sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The dormant node color `#6c757d` marks archived items.
+Node typing uses three existing channels (ADR-0003): sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`, `<!-- orbit:ai-card -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The dormant node color `#6c757d` marks archived items.
+
+Content nodes are file-backed (ADR-0004): notes, inbox captures, reference pages, and AI operators are standard `file` nodes referencing `notes/*.md`, with kind carried by an inert body marker rather than a custom node type. The standard `text` node remains valid and rendered but is read-only interop for imported or external documents; Balaur never authors it.
 
 ### Calendar events: `events/*.md`
 
