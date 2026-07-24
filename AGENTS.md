@@ -292,7 +292,7 @@ node --test \
   storage/note-repository.test.js
 ```
 
-This explicit suite currently passes **196 tests**: the prior 172-test suite plus twenty-four note-repository tests in `storage/note-repository.test.js` (ADR-0004). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
+This explicit suite currently passes **197 tests**: the prior 172-test suite plus twenty-five note-repository tests in `storage/note-repository.test.js` (ADR-0004). Also run `git diff --check`; for JavaScript changes run `node --check` on every touched module.
 
 Then perform browser-level checks appropriate to the change. **The default way to check the application is the project `browser-check` skill** at `.pi/skills/browser-check/` — a dependency-free headless-Chrome-over-CDP driver that runs the baseline smoke suite below automatically (no WebDriver, no npm install). With the app served on `4173`:
 

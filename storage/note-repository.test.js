@@ -130,6 +130,12 @@ test("addPlacement rejects a missing canvas with CANVAS_NOT_FOUND", async () => 
   await assert.rejects(() => repo.addPlacement(path, "canvas-nope", {}), (err) => err.code === "CANVAS_NOT_FOUND");
 });
 
+test("addPlacement rejects a missing note with NOTE_NOT_FOUND", async () => {
+  const { repo, vault } = setup();
+  await seedCanvases(vault);
+  await assert.rejects(() => repo.addPlacement("notes/ghost.md", "canvas-root", {}), (err) => err.code === "NOTE_NOT_FOUND");
+});
+
 test("addPlacement rejects non-integer or non-positive geometry with CANVAS_GEOMETRY_INVALID", async () => {
   const { repo, vault } = setup();
   await seedCanvases(vault);

@@ -76,6 +76,8 @@ export class FileNoteRepository {
   // Add a standard file-node placement for a note path on a canvas. Cloned from
   // FileJournalRepository.addPlacement, but path-keyed and geometry-validated.
   async addPlacement(path, canvasId, geometry = {}) {
+    const noteStat = await this.vault.stat(path);
+    if (!noteStat) throw new SchemaError(`Note not found: ${path}`, { code: "NOTE_NOT_FOUND" });
     const canvasPath = this.canvasPathFromId(canvasId);
     if (!canvasPath) throw new SchemaError(`No canvas path for id: ${canvasId}`, { code: "CANVAS_NOT_FOUND" });
     const stat = await this.vault.stat(canvasPath);
