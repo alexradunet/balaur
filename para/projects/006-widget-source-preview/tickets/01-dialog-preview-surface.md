@@ -1,12 +1,14 @@
 ---
 phase: ticket
-status: review
+status: done
 project: 006-widget-source-preview
 ticket: 01
 title: Dialog preview surface
 blocked-by: []
 worker: 8ec5b5ba-dcbf-424e-9317-748a2b7ac7f0
 branch: 006-widget-source-preview
+implemented-at: 568f993
+reviewed: approved
 shared-blast-radius: true
 planned-at: b9f94d7
 date: 2026-07-25
