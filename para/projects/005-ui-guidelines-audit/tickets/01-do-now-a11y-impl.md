@@ -4,7 +4,7 @@ status: done
 project: 005-ui-guidelines-audit
 ticket: 01
 date: 2026-07-26
-commit: 528b291
+commit: af8d624
 branch: ripe-gecko
 ---
 
