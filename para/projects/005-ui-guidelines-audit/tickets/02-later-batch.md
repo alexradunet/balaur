@@ -1,9 +1,10 @@
 ---
 phase: ticket
-status: ready
+status: in-progress
 project: 005-ui-guidelines-audit
 ticket: 02
 blocked-by: []
+worker: "a85a55e"
 branch: "ripe-gecko"
 shared-blast-radius: false
 planned-at: 1016146
