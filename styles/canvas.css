@@ -444,7 +444,7 @@
 
   .canvas-tools {
     position: absolute;
-    bottom: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     display: flex;
     gap: 2px;
@@ -478,6 +478,7 @@
     display: grid;
     max-height: calc(100dvh - 160px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     gap: 2px;
     min-width: 250px;
     border: 2px solid var(--balaur-color-outline);
@@ -515,8 +516,8 @@
   .subcanvas-icon { color: var(--balaur-action-primary); }
   .zoom-tools {
     position: absolute;
-    left: 17px;
-    bottom: 17px;
+    left: calc(17px + env(safe-area-inset-left, 0px));
+    bottom: calc(17px + env(safe-area-inset-bottom, 0px));
     display: flex;
     border: 2px solid var(--balaur-color-outline);
     border-radius: var(--balaur-radius-control);
@@ -531,14 +532,15 @@
     background: transparent;
     color: var(--balaur-content-on-dark-muted);
     font: 11px var(--balaur-font-mono);
+    font-variant-numeric: tabular-nums;
     cursor: pointer;
   }
   .zoom-tools button:last-child { border: 0; }
   .zoom-tools button:hover { color: var(--balaur-action-primary); }
   .minimap {
     position: absolute;
-    right: 17px;
-    bottom: 17px;
+    right: calc(17px + env(safe-area-inset-right, 0px));
+    bottom: calc(17px + env(safe-area-inset-bottom, 0px));
     width: 128px;
     height: 82px;
     overflow: hidden;

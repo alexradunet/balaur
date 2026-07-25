@@ -7,6 +7,10 @@
     background: var(--balaur-surface-page);
   }
   .app-shell.sidebar-closed { --sidebar: 0px; }
+  .app-shell.sidebar-closed .sidebar {
+    visibility: hidden;
+    transform: translateX(-100%);
+  }
 
   /* The grid/flex display values above override the UA `[hidden]{display:none}`,
      so the hidden app shell and dismissed gate need explicit overrides. */
@@ -32,6 +36,7 @@
     color: var(--balaur-action-primary);
     font: 600 var(--balaur-text-xl)/1 var(--balaur-font-display);
     letter-spacing: .04em;
+    text-wrap: balance;
   }
   .vault-landing-hint {
     margin: 0;
@@ -201,6 +206,7 @@
     width: 322px;
     max-height: calc(100dvh - 96px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     border: 2px solid var(--balaur-color-outline);
     border-radius: var(--balaur-radius-panel);
     padding: 10px;
@@ -336,6 +342,7 @@
     color: var(--balaur-content-on-dark-muted);
     font: 10px var(--balaur-font-mono);
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
   .save-state i {
     display: inline-block;
@@ -374,10 +381,12 @@
   .sidebar {
     grid-row: 2;
     grid-column: 1;
+    width: var(--sidebar-width);
     display: flex;
     flex-direction: column;
     gap: var(--balaur-space-5);
     overflow: hidden auto;
+    overscroll-behavior: contain;
     border-inline-end: 2px solid var(--balaur-color-outline);
     padding: var(--balaur-space-4) 10px;
     background: var(--balaur-texture-oak);
@@ -500,6 +509,7 @@
     color: var(--balaur-content-on-dark-muted);
     font: 10px var(--balaur-font-mono);
     font-style: normal;
+    font-variant-numeric: tabular-nums;
   }
   .nav-item.active em { color: var(--balaur-action-primary); }
   .canvas-list-item { padding-inline-start: calc(9px + var(--canvas-depth, 0) * 14px); }
@@ -573,8 +583,8 @@
 
   .familiar-control {
     position: fixed;
-    right: 18px;
-    bottom: 112px;
+    right: calc(18px + env(safe-area-inset-right, 0px));
+    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
     display: inline-flex;
     align-items: center;
     gap: 8px;

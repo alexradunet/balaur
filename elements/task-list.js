@@ -1,3 +1,5 @@
+const shortDate=iso=>new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric"}).format(new Date(`${iso}T00:00:00`));
+
 function element(name, className = "") {
   const node = document.createElement(name);
   if (className) node.className = className;
@@ -77,8 +79,8 @@ export class BalaurTaskListElement extends HTMLElement {
     refs.title.textContent = String(item.title || "Untitled task");
     refs.context.textContent = String(item.context || "Inbox");
     const dates = [];
-    if (item.scheduledOn) dates.push(["", item.scheduledOn, `Plan ${String(item.scheduledOn).slice(5)}`]);
-    if (item.dueOn) dates.push(["due", item.dueOn, `Due ${String(item.dueOn).slice(5)}`]);
+    if (item.scheduledOn) dates.push(["", item.scheduledOn, `Plan ${shortDate(item.scheduledOn)}`]);
+    if (item.dueOn) dates.push(["due", item.dueOn, `Due ${shortDate(item.dueOn)}`]);
     while (refs.dates.children.length > dates.length) refs.dates.lastElementChild.remove();
     dates.forEach(([className, dateTime, text], index) => {
       const time = refs.dates.children[index] || refs.dates.appendChild(element("time"));
