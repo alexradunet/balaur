@@ -42,7 +42,7 @@
       </div>
 
       <nav class="top-actions" aria-label="Document actions">
-        <span class="save-state" id="saveState"><i></i> Saved locally</span>
+        <span class="save-state" id="saveState" role="status"><i></i> Saved locally</span>
         <button class="button assistant-button familiar-control" id="assistantButton" aria-label="Ask Balaur"><span class="familiar-glyph" aria-hidden="true">◒</span><span class="familiar-label">Ask Balaur</span></button>
         <button class="button ghost" id="importButton">Import</button>
         <button class="button primary" id="exportButton">Export .canvas</button>
@@ -57,7 +57,7 @@
       </nav>
 
       <nav aria-label="Canvas library">
-        <div class="section-heading"><p class="section-label">LIBRARY</p><button class="tiny-btn" id="newGroup" title="Add group">＋</button></div>
+        <div class="section-heading"><p class="section-label">LIBRARY</p><button class="tiny-btn" id="newGroup" title="Add group" aria-label="Add group">＋</button></div>
         <button class="nav-item active" data-filter="all"><span>◫</span>Everything <em id="allCount">0</em></button>
         <button class="nav-item" data-filter="1"><span><i class="dot red"></i></span>Goals <em id="goalCount">0</em></button>
         <button class="nav-item" data-filter="4"><span><i class="dot green"></i></span>Habits <em id="habitCount">0</em></button>
@@ -71,7 +71,7 @@
         <button class="nav-item" id="resetDemo"><span>↺</span>Reset starter</button>
         <button class="nav-item" id="reloadVault"><span>⟳</span>Reload vault</button>
         <button class="nav-item" id="openAnotherVault"><span>⇄</span>Open another vault</button>
-        <div class="storage-state is-indexing" title="Preparing the canonical files"><i></i><span id="lifeIndexStatus">Preparing files…</span></div>
+        <div class="storage-state is-indexing" title="Preparing the canonical files"><i></i><span id="lifeIndexStatus" role="status">Preparing files...</span></div>
         <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
       </section>
     </aside>
@@ -84,11 +84,11 @@
         </div>
 
         <div class="canvas-tools" role="toolbar" aria-label="Canvas tools">
-          <button class="tool active" data-tool="select" title="Select (V)">↖</button>
-          <button class="tool" data-tool="pan" title="Pan (H)">✋</button>
+          <button class="tool active" data-tool="select" title="Select (V)" aria-label="Select">↖</button>
+          <button class="tool" data-tool="pan" title="Pan (H)" aria-label="Pan">✋</button>
           <span></span>
-          <button class="tool" data-tool="connect" title="Connect nodes (C), or drag a card’s side handle">⌁</button>
-          <button class="tool" data-tool="note" title="Add note (N)">T</button>
+          <button class="tool" data-tool="connect" title="Connect nodes (C), or drag a card's side handle" aria-label="Connect">⌁</button>
+          <button class="tool" data-tool="note" title="Add note (N)" aria-label="Add note">T</button>
           <span></span>
           <balaur-add-menu class="add-menu">
             <button class="tool add-menu-toggle" id="addMenuToggle" aria-haspopup="menu" aria-expanded="false" aria-controls="addMenu" title="Add to canvas">＋</button>
@@ -109,10 +109,10 @@
         </div>
 
         <div class="zoom-tools">
-          <button id="zoomOut" aria-label="Zoom out">−</button><button id="zoomLabel" title="Reset zoom">100%</button><button id="zoomIn" aria-label="Zoom in">＋</button><button id="fitView" title="Fit canvas">⌗</button>
+          <button id="zoomOut" aria-label="Zoom out">−</button><button id="zoomLabel" title="Reset zoom" aria-label="Reset zoom to 100%">100%</button><button id="zoomIn" aria-label="Zoom in">＋</button><button id="fitView" title="Fit canvas" aria-label="Fit canvas to view">⌗</button>
         </div>
 
-        <div class="minimap" id="minimap"><div class="mini-world" id="miniWorld"></div><div class="mini-viewport" id="miniViewport"></div></div>
+        <button type="button" class="minimap" id="minimap" aria-label="Fit canvas to view"><div class="mini-world" id="miniWorld"></div><div class="mini-viewport" id="miniViewport"></div></button>
         <div class="toast" id="toast" role="status"></div>
       </div>
 
@@ -130,7 +130,7 @@
             </div>
           </header>
           <p class="journal-date" id="journalDate"></p>
-          <textarea id="journalBody" rows="6" placeholder="Write a few lines about today…"></textarea>
+          <textarea id="journalBody" rows="6" placeholder="Write a few lines about today…" aria-label="Daily note"></textarea>
           <div class="journal-actions">
             <span class="journal-status" id="journalStatus" role="status"></span>
             <button type="button" class="button ghost" id="journalPlace">Place on canvas</button>
@@ -153,7 +153,7 @@
         <div class="ai-head-actions"><button id="openAISettings" aria-label="AI provider settings" title="AI provider settings">⚙</button><button id="closeAssistant" aria-label="Close assistant">×</button></div>
       </header>
       <div class="ai-context" id="aiContext"></div>
-      <div class="ai-messages" id="aiMessages">
+      <div class="ai-messages" id="aiMessages" aria-live="polite">
         <div class="ai-message assistant"><span>✦</span><p>I can read this canvas and propose safe changes. Use the ⚙ settings to connect Mistral or another OpenAI-compatible provider directly from your browser.</p></div>
       </div>
       <div class="ai-suggestions">
@@ -163,7 +163,7 @@
         <button>Add a 3D widget</button>
       </div>
       <form class="ai-form" id="aiForm">
-        <textarea id="aiPrompt" rows="2" placeholder="Ask about or change this canvas…"></textarea>
+        <textarea id="aiPrompt" rows="2" placeholder="Ask about or change this canvas…" aria-label="Ask Balaur about this canvas"></textarea>
         <button type="submit" aria-label="Send">↑</button>
       </form>
       <footer id="aiProviderStatus"><i></i> Local mode — canvas data stays in this browser</footer>
@@ -173,7 +173,7 @@
   <dialog class="settings-dialog task-dialog" id="taskDialog">
     <balaur-dialog-frame>
     <form id="taskForm">
-      <header><div><span>✓</span><div><b>Create task</b><small>Portable card, queryable life data</small></div></div><button type="button" id="closeTaskDialog" aria-label="Close">×</button></header>
+      <header><div><span aria-hidden="true">✓</span><div><b>Create task</b><small>Portable card, queryable life data</small></div></div><button type="button" id="closeTaskDialog" aria-label="Close">×</button></header>
       <div class="settings-body">
         <label class="settings-field"><span>Task</span><input id="taskTitle" required autofocus placeholder="Review monthly budget"></label>
         <label class="settings-field"><span>Notes</span><textarea id="taskNotes" placeholder="Optional context or desired outcome"></textarea></label>
@@ -190,7 +190,7 @@
   <dialog class="settings-dialog ai-note-dialog" id="aiNoteDialog">
     <balaur-dialog-frame>
     <form id="aiNoteForm">
-      <header><div><span>✎</span><div><b>Create an AI note</b><small>Ask first, add the answer to your canvas</small></div></div><button type="button" id="closeAINote" aria-label="Close">×</button></header>
+      <header><div><span aria-hidden="true">✎</span><div><b>Create an AI note</b><small>Ask first, add the answer to your canvas</small></div></div><button type="button" id="closeAINote" aria-label="Close">×</button></header>
       <div class="settings-body">
         <label class="settings-field"><span>Prompt or question</span><textarea id="aiNotePrompt" required autofocus placeholder="What would you like the note to explore?\n\nFor example: Turn my rough idea into a practical project brief."></textarea></label>
         <div class="ai-note-hint">The response will be added as a standard Markdown text node near the center of your current view.</div>
@@ -204,13 +204,13 @@
   <dialog class="settings-dialog" id="aiSettingsDialog">
     <balaur-dialog-frame>
     <form id="aiSettingsForm" autocomplete="off">
-      <header><div><span>✦</span><div><b>AI provider</b><small>OpenAI-compatible chat completions</small></div></div><button type="button" id="closeAISettings" aria-label="Close settings">×</button></header>
+      <header><div><span aria-hidden="true">✦</span><div><b>AI provider</b><small>OpenAI-compatible chat completions</small></div></div><button type="button" id="closeAISettings" aria-label="Close settings">×</button></header>
       <div class="settings-body">
         <div class="settings-notice"><b>Client-side testing</b><p>Your key is sent directly from this browser to the provider. It is never sent to Balaur or GitHub Pages. Only remember it on a trusted device.</p></div>
         <label class="settings-field"><span>API base URL</span><input id="aiBaseURL" type="url" required placeholder="https://api.mistral.ai/v1"></label>
-        <label class="settings-field"><span>Model</span><input id="aiModel" required placeholder="mistral-small-latest"></label>
+        <label class="settings-field"><span>Model</span><input id="aiModel" required placeholder="mistral-small-latest" spellcheck="false"></label>
         <label class="settings-field"><span>API key</span><div class="key-input"><input id="aiAPIKey" type="password" autocomplete="new-password" required placeholder="Paste your API key"><button type="button" id="toggleAIKey" aria-label="Show API key">Show</button></div></label>
-        <label class="settings-check"><input id="rememberAIKey" type="checkbox"><span><b>Remember API key</b><small>Stores the key in this browser's localStorage.</small></span></label>
+        <label class="settings-check"><input id="rememberAIKey" type="checkbox"><span><b>Remember API key</b><small>Stores the key in this browser’s localStorage.</small></span></label>
         <div class="settings-test" id="aiSettingsResult" role="status"></div>
       </div>
       <footer><button type="button" class="button ghost" id="testAIProvider">Test connection</button><button type="button" class="button ghost" id="clearAIProvider">Use local</button><span></span><button type="button" class="button ghost" id="cancelAISettings">Cancel</button><button type="submit" class="button primary">Save provider</button></footer>

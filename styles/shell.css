@@ -164,6 +164,10 @@
     color: var(--balaur-content-on-dark);
     font: 600 15px/1.2 var(--balaur-font-display);
   }
+  #canvasTitle:focus-visible {
+    outline: 2px solid var(--balaur-border-focus);
+    outline-offset: 4px;
+  }
   .canvas-title-row {
     display: flex;
     align-items: center;

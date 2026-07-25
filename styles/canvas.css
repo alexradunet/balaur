@@ -22,6 +22,10 @@
     background-size: 24px 24px, 24px 24px, auto;
     cursor: default;
   }
+  .canvas:focus-visible {
+    outline: 2px solid var(--balaur-border-focus);
+    outline-offset: -2px;
+  }
   .canvas.panning, .canvas.tool-pan { cursor: grab; }
   .canvas.panning { cursor: grabbing; }
   .world { position: absolute; inset: 0 auto auto 0; transform-origin: 0 0; will-change: transform; }
@@ -542,6 +546,8 @@
     border-radius: var(--balaur-radius-control);
     background: var(--balaur-surface-oak-raised);
     opacity: .9;
+    padding: 0;
+    cursor: pointer;
   }
   .mini-world { position: absolute; inset: 0; }
   .mini-node { position: absolute; border-radius: 1px; background: var(--balaur-surface-parchment); }
