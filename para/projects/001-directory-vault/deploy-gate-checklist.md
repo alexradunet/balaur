@@ -9,7 +9,7 @@ the merge; workers never push or merge.
 
 Perform and report the result before merge:
 
-- [ ] (a) Open the LIVE deployed site (https://alexradunet.github.io/open-canvas-experiment/) in a Chromium browser that has data present; use **Export whole space** to produce a version-2 `.orbit.json`.
+- [ ] (a) Open the LIVE deployed site (https://alexradunet.github.io/balaur/) in a Chromium browser that has data present; use **Export whole space** to produce a version-2 `.orbit.json`.
 - [ ] (b) Serve the feature branch locally (`python3 -m http.server 4173`), launch, and pick an **EMPTY** folder at the Vault gate.
 - [ ] (c) **Import** the `.orbit.json` (restore replaces the picked folder's file tree; the existing confirm dialog warns the canonical vault is replaced).
 - [ ] (d) Confirm the workspace renders complete: canvases, tasks, habits, journals.
