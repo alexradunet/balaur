@@ -154,7 +154,7 @@ let activeFilter = "all";
 let activeAppView = "canvas";
 let spaceDown = false;
 let saveTimer;
-let pendingSave=Promise.resolve();
+const idleSave=Promise.resolve();let pendingSave=idleSave;
 let mutationQueue=Promise.resolve();
 const aiCardRuntime=new Map();
 let renderedSelectionKey = null;
@@ -220,7 +220,7 @@ async function saveWorkspaceNow(){
 function persistWorkspace(){
   const operation=enqueueMutation(saveWorkspaceNow);
   pendingSave=operation;
-  operation.then(()=>{},()=>{}).then(()=>{if(pendingSave===operation)pendingSave=Promise.resolve();});
+  operation.then(()=>{},()=>{}).then(()=>{if(pendingSave===operation)pendingSave=idleSave;});
   return operation;
 }
 function markSaveResult(promise){
@@ -583,6 +583,7 @@ function revealWorkspaceNode(canvasId,nodeId){
   const reveal=()=>{if(currentCanvasId!==canvasId)return;const node=documentData.nodes.find(item=>item.id===nodeId);if(!node)return;selected={kind:"node",id:nodeId};shell.classList.add("inspector-open");render();focusNode(node,1.05);};if(currentCanvasId===canvasId)reveal();else{switchCanvas(canvasId,{direction:"switch",focusNodeId:nodeId});setTimeout(reveal,320);}
 }
 function localDateISO(date=new Date()){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;}
+const shortDate=iso=>new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric"}).format(new Date(`${iso}T00:00:00`));
 function taskForNode(node){
   if(node?.type!=="file"||!lifeIndex)return null;
   return lifeIndex.allTasks().find(task=>task.sourcePath===node.file)||null;
@@ -950,7 +951,7 @@ function renderNodes() {
         host.model = model;
       }
     } else if (node.type === "file" && taskIdFromNode(node)) {
-      const task=taskForNode(node),taskId=task.id,status=task.status||"inbox";element.classList.add("task-card");element.classList.toggle("task-complete",status==="done");element.dataset.taskId=taskId;content.innerHTML=`<div class="node-kicker">TASK · ${escapeHTML(status.toUpperCase())}</div><div class="node-body">${markdownToHTML(`# ${task.title}`)}</div><div class="task-node-footer"><span>${task.scheduledOn?`Plan ${escapeHTML(task.scheduledOn)}`:task.dueOn?`Due ${escapeHTML(task.dueOn)}`:"Not scheduled"}</span><button type="button" data-node-complete-task ${status==="done"?"disabled":""}>${status==="done"?"Completed":"Mark done"}</button></div>`;
+      const task=taskForNode(node),taskId=task.id,status=task.status||"inbox";element.classList.add("task-card");element.classList.toggle("task-complete",status==="done");element.dataset.taskId=taskId;content.innerHTML=`<div class="node-kicker">TASK · ${escapeHTML(status.toUpperCase())}</div><div class="node-body">${markdownToHTML(`# ${task.title}`)}</div><div class="task-node-footer"><span>${task.scheduledOn?`Plan ${escapeHTML(shortDate(task.scheduledOn))}`:task.dueOn?`Due ${escapeHTML(shortDate(task.dueOn))}`:"Not scheduled"}</span><button type="button" data-node-complete-task ${status==="done"?"disabled":""}>${status==="done"?"Completed":"Mark done"}</button></div>`;
     } else if (node.type === "link") {
       let linkTitle = "Saved link";
       try { linkTitle = new URL(node.url).hostname.replace(/^www\./, ""); } catch (_) {}
@@ -1720,7 +1721,7 @@ function setAssistantOpen(open) {
   const panel=$("#aiPanel");panel.classList.toggle("open",open);panel.setAttribute("aria-hidden",String(!open));panel.inert=!open;updateAssistantContext();if(open)setTimeout(()=>$("#aiPrompt").focus(),180);
 }
 function assistantMessage(text,role="assistant") {
-  const message=document.createElement("div");message.className=`ai-message ${role}`;message.innerHTML=role==="assistant"?"<span>✦</span><p></p>":"<p></p>";$("p",message).textContent=text;$("#aiMessages").append(message);message.scrollIntoView({behavior:"smooth",block:"end"});return message;
+  const message=document.createElement("div");message.className=`ai-message ${role}`;message.innerHTML=role==="assistant"?"<span>✦</span><p></p>":"<p></p>";$("p",message).textContent=text;$("#aiMessages").append(message);message.scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth",block:"end"});return message;
 }
 function operationDescription(operation) {
   if(operation.type==="component-card.create"||operation.type==="component-card.update"||operation.type==="widget.create"){
@@ -1756,7 +1757,7 @@ function assistantProposal(text,operations) {
     };
     discard.onclick=()=>{apply.disabled=true;discard.textContent=durablePartial?`${durablePartial[0].toUpperCase()}${durablePartial.slice(1)} kept`:"Discarded";discard.disabled=true;};
   }
-  message.scrollIntoView({behavior:"smooth",block:"end"});return message;
+  message.scrollIntoView({behavior:reducedMotion.matches?"auto":"smooth",block:"end"});return message;
 }
 function proposeLocalWidget() {
   const title="Canvas focus dial",id=uid("widget"),box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2);
@@ -1980,6 +1981,13 @@ window.addEventListener("keydown",event=>{
 });
 window.addEventListener("keyup",event=>{if(event.code==="Space")spaceDown=false;});
 window.addEventListener("resize",()=>{applyCamera();});
+window.addEventListener("beforeunload",event=>{
+  if(saveTimer!=null||journalSaveTimer!=null||pendingSave!==idleSave){
+    flushPendingWorkspaceEdits();
+    event.preventDefault();
+    event.returnValue="";
+  }
+});
 // Async vault writes cannot be awaited from beforeunload. Durability is
 // provided by the serialized queue and resolved save state; users should keep
 // the page open until a pending save completes.

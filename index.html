@@ -2,13 +2,16 @@
 <html lang="en" class="theme-dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#100d0b" />
   <meta name="description" content="A local-first life-management workspace built on JSON Canvas." />
   <title>Balaur — life on a canvas</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/balaur.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/balaur-192.png" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="vendor/pixel-loom/fonts/worksans-400-latin.woff2" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="vendor/pixel-loom/fonts/newsreader-600-latin.woff2" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="vendor/pixel-loom/fonts/jetbrainsmono-400-latin.woff2" />
   <link rel="stylesheet" href="vendor/pixel-loom/fonts.css" />
   <link rel="stylesheet" href="styles/layers.css" />
   <link rel="stylesheet" href="styles/tokens.css" />
@@ -175,7 +178,7 @@
     <form id="taskForm">
       <header><div><span aria-hidden="true">✓</span><div><b>Create task</b><small>Portable card, queryable life data</small></div></div><button type="button" id="closeTaskDialog" aria-label="Close">×</button></header>
       <div class="settings-body">
-        <label class="settings-field"><span>Task</span><input id="taskTitle" required autofocus placeholder="Review monthly budget"></label>
+        <label class="settings-field"><span>Task</span><input id="taskTitle" required autofocus placeholder="Review monthly budget…"></label>
         <label class="settings-field"><span>Notes</span><textarea id="taskNotes" placeholder="Optional context or desired outcome"></textarea></label>
         <label class="settings-field"><span>Canvas</span><select id="taskCanvas" required></select></label>
         <div class="task-field-row"><label class="settings-field"><span>Status</span><select id="taskStatus"><option value="inbox">Inbox</option><option value="next">Next</option><option value="scheduled">Scheduled</option><option value="waiting">Waiting</option></select></label><label class="settings-field"><span>Priority</span><select id="taskPriority"><option value="">None</option><option value="1">High</option><option value="2">Medium</option><option value="3">Low</option></select></label></div>
@@ -209,7 +212,7 @@
         <div class="settings-notice"><b>Client-side testing</b><p>Your key is sent directly from this browser to the provider. It is never sent to Balaur or GitHub Pages. Only remember it on a trusted device.</p></div>
         <label class="settings-field"><span>API base URL</span><input id="aiBaseURL" type="url" required placeholder="https://api.mistral.ai/v1"></label>
         <label class="settings-field"><span>Model</span><input id="aiModel" required placeholder="mistral-small-latest" spellcheck="false"></label>
-        <label class="settings-field"><span>API key</span><div class="key-input"><input id="aiAPIKey" type="password" autocomplete="new-password" required placeholder="Paste your API key"><button type="button" id="toggleAIKey" aria-label="Show API key">Show</button></div></label>
+        <label class="settings-field"><span>API key</span><div class="key-input"><input id="aiAPIKey" type="password" autocomplete="new-password" required placeholder="Paste your API key…"><button type="button" id="toggleAIKey" aria-label="Show API key">Show</button></div></label>
         <label class="settings-check"><input id="rememberAIKey" type="checkbox"><span><b>Remember API key</b><small>Stores the key in this browser’s localStorage.</small></span></label>
         <div class="settings-test" id="aiSettingsResult" role="status"></div>
       </div>

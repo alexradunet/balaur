@@ -28,7 +28,6 @@
       visibility: hidden;
       transform: translateX(-100%);
     }
-
     /* Narrow layout: the inspector takes over the library's left drawer slot
        instead of floating over the canvas, mirroring the desktop swap. */
     .inspector {
