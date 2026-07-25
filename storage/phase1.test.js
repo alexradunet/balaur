@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 
 import { contentHash, shortId } from "./content-hash.js";
 import {
-  normalizePath, assertSafePath, slugify, entityPath, byteLength,
+  normalizePath, assertSafePath, slugify, canvasSlug, entityPath, byteLength,
   caseFoldKey, samePathFold, MAX_COMPONENT_BYTES,
 } from "./vault-path.js";
 import {
@@ -111,6 +111,27 @@ test("slugify and entityPath produce the documented layout", () => {
   assert.equal(slugify(""), "untitled");
   assert.equal(entityPath("tasks", "Finish quarterly review", "task-a1b2c3"),
     "tasks/finish-quarterly-review--a1b2c3.md");
+});
+
+test("canvasSlug keeps Unicode, folds punctuation, caps at 60, falls back to id", () => {
+  // Unicode letters are kept (unlike ASCII-only slugify).
+  assert.equal(canvasSlug("Caf\u00e9 R\u00e9sum\u00e9", "canvas-x"), "caf\u00e9-r\u00e9sum\u00e9");
+  // Punctuation folds to hyphens; consecutive hyphens collapse.
+  assert.equal(canvasSlug("Trip -- Plans!!", "canvas-x"), "trip-plans");
+  // Leading/trailing hyphens are trimmed.
+  assert.equal(canvasSlug("  --weird--  ", "canvas-x"), "weird");
+  // Empty or punctuation-only titles fall back to the canvas id.
+  assert.equal(canvasSlug("", "canvas-a1b2c3"), "canvas-a1b2c3");
+  assert.equal(canvasSlug("!!!", "canvas-a1b2c3"), "canvas-a1b2c3");
+  // Over-long slugs truncate at the last hyphen boundary before 60 code points.
+  const long = canvasSlug("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda", "x");
+  assert.equal(long, "alpha-beta-gamma-delta-epsilon-zeta-eta-theta-iota-kappa");
+  assert.ok([...long].length <= 60);
+  assert.ok(!long.endsWith("-"));
+  // With no hyphen in the first 60 chars, hard-truncate at exactly 60 code points.
+  const solid = canvasSlug("a".repeat(80), "x");
+  assert.equal([...solid].length, 60);
+  assert.equal(solid, "a".repeat(60));
 });
 
 // --- constrained value grammar ----------------------------------------------

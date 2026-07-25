@@ -7,8 +7,8 @@ import { MemoryVault } from "./memory-vault.js";
 import { isCanvas } from "./canvas-validate.js";
 import {
   SIDECAR_PATH, SIDECAR_FORMAT, SIDECAR_VERSION, ROOT_CANVAS_PATH,
-  canvasPathFor, toSidecar, parseSidecar, sidecarToJSON, canvasToJSON,
-  loadWorkspace, hasWorkspace, WorkspaceStore,
+  canvasPathFor, uniqueCanvasPath, renameCanvasPath, toSidecar, parseSidecar,
+  sidecarToJSON, canvasToJSON, loadWorkspace, hasWorkspace, WorkspaceStore,
 } from "./workspace-vault.js";
 import { ConflictError, SchemaError, PathError } from "./vault-errors.js";
 
@@ -310,4 +310,90 @@ test("sidecarToJSON and canvasToJSON are stable, pretty-printed text", () => {
   const ws = legacyWorkspace();
   assert.ok(sidecarToJSON(ws).endsWith("\n"));
   assert.ok(canvasToJSON(ws.canvases["canvas-root"].document).includes("\n  "));
+});
+
+test("uniqueCanvasPath resolves collisions with case-folded sequential suffixes", () => {
+  // No collision: the base path is free.
+  assert.equal(uniqueCanvasPath("trip", []), "canvases/trip.canvas");
+  // Sequential suffixes skip already-taken paths.
+  assert.equal(uniqueCanvasPath("trip", ["canvases/trip.canvas"]), "canvases/trip-2.canvas");
+  assert.equal(uniqueCanvasPath("trip", ["canvases/trip.canvas", "canvases/trip-2.canvas"]), "canvases/trip-3.canvas");
+  // Comparison is case-folded: "Trip" blocks "trip".
+  assert.equal(uniqueCanvasPath("trip", ["canvases/Trip.canvas"]), "canvases/trip-2.canvas");
+});
+
+test("renameCanvasPath updates the record and rewrites file-node references", () => {
+  const ws = {
+    rootId: "c-root",
+    canvases: {
+      "c-root": {
+        id: "c-root", path: "canvases/root.canvas",
+        document: { nodes: [
+          { id: "t1", type: "text", x: 0, y: 0, width: 10, height: 10, text: "keep" },
+          { id: "p1", type: "file", x: 0, y: 0, width: 10, height: 10, file: "canvases/child.canvas" },
+          { id: "p2", type: "file", x: 0, y: 0, width: 10, height: 10, file: "canvases/other.canvas" },
+        ], edges: [] },
+      },
+      "c-child": {
+        id: "c-child", path: "canvases/child.canvas",
+        document: { nodes: [
+          { id: "self", type: "file", x: 0, y: 0, width: 10, height: 10, file: "canvases/child.canvas" },
+        ], edges: [] },
+      },
+      "c-other": {
+        id: "c-other", path: "canvases/other.canvas",
+        document: { nodes: [{ id: "o1", type: "text", x: 0, y: 0, width: 10, height: 10, text: "untouched" }], edges: [] },
+      },
+    },
+  };
+  const result = renameCanvasPath(ws, "c-child", "canvases/child-v2.canvas");
+  assert.equal(result.oldPath, "canvases/child.canvas");
+  assert.equal(result.newPath, "canvases/child-v2.canvas");
+  // The cross-referencing root and the self-referencing child are touched, in
+  // insertion order; c-other (no matching file-node) is not.
+  assert.deepEqual(result.affectedCanvasIds, ["c-root", "c-child"]);
+  assert.equal(ws.canvases["c-child"].path, "canvases/child-v2.canvas");
+  const rootNodes = ws.canvases["c-root"].document.nodes;
+  assert.equal(rootNodes.find((n) => n.id === "p1").file, "canvases/child-v2.canvas");
+  assert.equal(ws.canvases["c-child"].document.nodes.find((n) => n.id === "self").file, "canvases/child-v2.canvas");
+  // Non-file nodes and file-nodes pointing at a different path are untouched.
+  assert.equal(rootNodes.find((n) => n.id === "t1").text, "keep");
+  assert.equal(rootNodes.find((n) => n.id === "p2").file, "canvases/other.canvas");
+});
+
+test("renameCanvasPath rejects missing records, missing paths, and bad targets", () => {
+  const ws = {
+    rootId: "c-root",
+    canvases: {
+      "c-root": { id: "c-root", path: "canvases/root.canvas", document: { nodes: [], edges: [] } },
+      "c-nopath": { id: "c-nopath", path: null, document: { nodes: [], edges: [] } },
+    },
+  };
+  // Missing canvas id.
+  assert.throws(() => renameCanvasPath(ws, "nope", "canvases/x.canvas"), SchemaError);
+  // Record with no concrete stored path to rename from.
+  assert.throws(() => renameCanvasPath(ws, "c-nopath", "canvases/x.canvas"), SchemaError);
+  // newPath outside canvases/.
+  assert.throws(() => renameCanvasPath(ws, "c-root", "notes/x.canvas"), SchemaError);
+  // Unsafe path (traversal) is rejected by assertSafePath.
+  assert.throws(() => renameCanvasPath(ws, "c-root", "../escape.canvas"), PathError);
+});
+
+test("renameCanvasPath rewrites file-node references and save removes the orphaned old path", async () => {
+  const vault = new MemoryVault();
+  const store = new WorkspaceStore(vault);
+  await store.migrate(legacyWorkspace());
+  const ws = (await store.load()).workspace;
+  const result = renameCanvasPath(ws, "canvas-planning", "canvases/planning-v2.canvas");
+  assert.equal(result.oldPath, "canvases/planning.canvas");
+  assert.equal(result.newPath, "canvases/planning-v2.canvas");
+  assert.deepEqual(result.affectedCanvasIds, ["canvas-root"]);
+  const portal = ws.canvases["canvas-root"].document.nodes.find((n) => n.id === "portal-1");
+  assert.equal(portal.file, "canvases/planning-v2.canvas");
+  await store.save(ws);
+  assert.equal(await vault.exists("canvases/planning.canvas"), false); // old path orphan-removed
+  assert.equal(await vault.exists("canvases/planning-v2.canvas"), true);
+  const reloaded = (await new WorkspaceStore(vault).load()).workspace;
+  assert.equal(reloaded.canvases["canvas-planning"].path, "canvases/planning-v2.canvas");
+  assert.equal(reloaded.canvases["canvas-root"].document.nodes.find((n) => n.id === "portal-1").file, "canvases/planning-v2.canvas");
 });

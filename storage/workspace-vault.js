@@ -31,6 +31,48 @@ export function canvasPathFor(record, rootId) {
   return assertSafePath(record.path || `canvases/${record.id}.canvas`);
 }
 
+// Collision-free logical .canvas path for a base slug. Returns canvases/<slug>.canvas,
+// appending -2, -3, ... until the path is unused. Comparison is case-folded so
+// case-insensitive filesystems cannot collide (e.g. "Trip" vs "trip").
+export function uniqueCanvasPath(slug, existingPaths) {
+  const taken = new Set((existingPaths || []).map((path) => caseFoldKey(path)));
+  const base = `canvases/${slug}.canvas`;
+  if (!taken.has(caseFoldKey(base))) return base;
+  let n = 2;
+  while (taken.has(caseFoldKey(`canvases/${slug}-${n}.canvas`))) n += 1;
+  return `canvases/${slug}-${n}.canvas`;
+}
+
+// Pure in-memory canvas rename. Validates newPath, updates the record's path, and
+// rewrites every file-node referencing the old path across all canvas documents (a
+// canvas may be referenced from more than one canvas). Returns the change summary;
+// the caller is responsible for the vault write ordering and save (which orphan-removes
+// the old path via WorkspaceStore._save).
+export function renameCanvasPath(workspace, canvasId, newPath) {
+  const record = workspace?.canvases?.[canvasId];
+  if (!record) throw new SchemaError(`No canvas record to rename: ${canvasId}`, { code: "CANVAS_RENAME_MISSING" });
+  const oldPath = record.path;
+  if (typeof oldPath !== "string" || !oldPath) {
+    throw new SchemaError(`Canvas ${canvasId} has no concrete path to rename from`, { code: "CANVAS_RENAME_NO_PATH" });
+  }
+  const safeNew = assertSafePath(newPath);
+  if (!/^canvases\/[^/]+\.canvas$/.test(safeNew)) {
+    throw new SchemaError(`Canvas path is outside canvases/: ${safeNew}`, { code: "SIDECAR_CANVAS_PATH" });
+  }
+  record.path = safeNew;
+  const affectedCanvasIds = [];
+  for (const rec of Object.values(workspace.canvases)) {
+    const nodes = rec?.document?.nodes;
+    if (!Array.isArray(nodes)) continue;
+    let touched = false;
+    for (const node of nodes) {
+      if (node && node.type === "file" && node.file === oldPath) { node.file = safeNew; touched = true; }
+    }
+    if (touched) affectedCanvasIds.push(rec.id);
+  }
+  return { oldPath, newPath: safeNew, affectedCanvasIds };
+}
+
 // Build the metadata-only sidecar object from an in-memory workspace. Canvas
 // documents are intentionally omitted; each lives at canvasPathFor(record).
 // Transient/machine-local state (selection, dialogs, runtime AI status) is never
