@@ -1,6 +1,6 @@
 ---
 phase: ticket
-status: review
+status: done
 project: 005-ui-guidelines-audit
 ticket: 01
 blocked-by: []
