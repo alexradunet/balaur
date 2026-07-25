@@ -239,7 +239,7 @@ test("journal, calendar-event, and habit-log entries are projected", async () =>
     allDay: false, source: "balaur", createdAt: INST, updatedAt: INST, body: "",
   }));
   const entry = { id: "habit-entry-r4s5t6", habit: "habit-walk", status: "done", value: 1, at: INST };
-  await vault.write("habit-logs/2026/2026-07-21.md", serializeHabitLog({
+  await vault.write("habits/habit-logs/2026/2026-07-21.md", serializeHabitLog({
     localDate: "2026-07-21", body: `- [x] Walk\n  ${serializeHabitEntry(entry)}\n`,
   }));
 

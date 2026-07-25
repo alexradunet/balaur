@@ -15,16 +15,22 @@ import { ENTITY_CODECS, parseHabitEntries } from "./entity-codec.js";
 import { isCanvas } from "./canvas-validate.js";
 
 // Entity directory -> balaur-type (canonical vault layout).
+// Keys longer than one segment (e.g. "habits/habit-logs") must be checked
+// before single-segment keys so that nested paths resolve correctly.
 const ENTITY_DIR_TO_TYPE = {
   "tasks": "task",
   "habits": "habit",
-  "habit-logs": "habit-log",
+  "habits/habit-logs": "habit-log",
   "journal": "journal",
   "events": "calendar-event",
 };
 
 export function entityTypeFromPath(path) {
-  const dir = String(path).split("/")[0];
+  const str = String(path);
+  for (const key of Object.keys(ENTITY_DIR_TO_TYPE)) {
+    if (key.includes("/") && str.startsWith(key + "/")) return ENTITY_DIR_TO_TYPE[key];
+  }
+  const dir = str.split("/")[0];
   return ENTITY_DIR_TO_TYPE[dir] || null;
 }
 

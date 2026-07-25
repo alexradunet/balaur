@@ -9,7 +9,7 @@ Balaur's canonical-files-only v1 stores life data as readable files in a vault. 
 canvases/*.canvas       canonical JSON Canvas 1.0 documents
 tasks/*.md              task definitions and workflow state
 habits/*.md             habit definitions
-habit-logs/YYYY/*.md    append-only daily habit check-in events
+habits/habit-logs/YYYY/*.md  append-only daily habit check-in events
 journal/YYYY/*.md       journal entries by local date
 events/*.md             calendar events
 notes/*.md              path-identified notes (inbox, reference, AI, freeform)
@@ -154,7 +154,7 @@ Habit context.
 
 Required fields are `balaur-id`, `title`, `frequency`, `created-at`, and `updated-at`. Frequencies are `daily`, `weekly`, and `monthly`. Weekdays are unique integers from 1 through 7. Check-ins are historical events, not an overwritten counter.
 
-### Habit logs: `habit-logs/YYYY/YYYY-MM-DD.md`
+### Habit logs: `habits/habit-logs/YYYY/YYYY-MM-DD.md`
 
 A daily log has a small identity frontmatter block and inert, constrained event comments in its body:
 

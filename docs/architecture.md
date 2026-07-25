@@ -12,7 +12,7 @@ DirectoryVault (browser) / FsVault (Node) / MemoryVault (tests)
   ├─ canvases/*.canvas           independent JSON Canvas 1.0 documents
   ├─ tasks/*.md                  canonical task entities
   ├─ habits/*.md                 canonical habit definitions
-  ├─ habit-logs/YYYY/*.md        append-only daily habit events
+  ├─ habits/habit-logs/YYYY/*.md  append-only daily habit events
   ├─ journal/YYYY/*.md           canonical journal entries
   ├─ events/*.md                 canonical calendar events
   ├─ notes/*.md                  path-identified notes (inbox, reference, AI, freeform)

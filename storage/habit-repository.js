@@ -2,7 +2,7 @@
 //
 // Habit definitions are canonical Markdown files under habits/. Daily check-ins
 // are append-only event markers in a per-day habit-log file
-// (habit-logs/YYYY/YYYY-MM-DD.md); the latest event per (habit, local-date) is a
+// (habits/habit-logs/YYYY/YYYY-MM-DD.md); the latest event per (habit, local-date) is a
 // projection, while the daily history is preserved (plan: habits are event logs,
 // not recurring tasks). Writes go to the canonical files first, then reindex
 // through the LifeIndexer. Platform-neutral and asynchronous — tested against
@@ -27,7 +27,7 @@ function randomToken() {
 // Logical path for a day's habit-log file (plan §6 layout).
 export function habitLogPath(localDate) {
   if (!isValidLocalDate(String(localDate))) throw new SchemaError(`Bad local date: ${localDate}`, { code: "BAD_LOCAL_DATE" });
-  return `habit-logs/${String(localDate).slice(0, 4)}/${localDate}.md`;
+  return `habits/habit-logs/${String(localDate).slice(0, 4)}/${localDate}.md`;
 }
 
 export class FileHabitRepository {

@@ -93,7 +93,7 @@ test("checkIn creates a per-day habit-log file and indexes the event", async () 
   const { repo, vault, index } = setup();
   await repo.createHabit({ id: "habit-walk", title: "Walk" });
   const result = await repo.checkIn("habit-walk", { localDate: "2026-07-21", status: "done", value: 1 });
-  assert.equal(result.logPath, "habit-logs/2026/2026-07-21.md");
+  assert.equal(result.logPath, "habits/habit-logs/2026/2026-07-21.md");
   const log = await vault.read(result.logPath);
   assert.match(log, /balaur-type: habit-log/);
   assert.match(log, /balaur:habit-entry/);
@@ -137,7 +137,7 @@ test("multiple habits share one per-day log file", async () => {
   await repo.createHabit({ id: "habit-b", title: "B" });
   await repo.checkIn("habit-a", { localDate: "2026-07-21" });
   await repo.checkIn("habit-b", { localDate: "2026-07-21" });
-  const log = await vault.read("habit-logs/2026/2026-07-21.md");
+  const log = await vault.read("habits/habit-logs/2026/2026-07-21.md");
   assert.match(log, /habit=habit-a/);
   assert.match(log, /habit=habit-b/);
   assert.equal(index.allHabitEntries().length, 2);
@@ -148,8 +148,8 @@ test("check-ins on different days create separate preserved log files", async ()
   await repo.createHabit({ id: "habit-walk", title: "Walk" });
   await repo.checkIn("habit-walk", { localDate: "2026-07-21" });
   await repo.checkIn("habit-walk", { localDate: "2026-07-22" });
-  assert.equal(await vault.exists("habit-logs/2026/2026-07-21.md"), true);
-  assert.equal(await vault.exists("habit-logs/2026/2026-07-22.md"), true);
+  assert.equal(await vault.exists("habits/habit-logs/2026/2026-07-21.md"), true);
+  assert.equal(await vault.exists("habits/habit-logs/2026/2026-07-22.md"), true);
 });
 
 test("entriesFor returns a habit's events newest-first", async () => {
@@ -169,8 +169,8 @@ test("checkIn requires an existing habit", async () => {
 });
 
 test("habitLogPath formats the dated path and rejects bad dates", () => {
-  assert.equal(habitLogPath("2026-07-21"), "habit-logs/2026/2026-07-21.md");
-  assert.equal(habitLogPath("2025-12-31"), "habit-logs/2025/2025-12-31.md");
+  assert.equal(habitLogPath("2026-07-21"), "habits/habit-logs/2026/2026-07-21.md");
+  assert.equal(habitLogPath("2025-12-31"), "habits/habit-logs/2025/2025-12-31.md");
   assert.throws(() => habitLogPath("07/21/2026"), /Bad local date/);
   assert.throws(() => habitLogPath(""), /Bad local date/);
 });
