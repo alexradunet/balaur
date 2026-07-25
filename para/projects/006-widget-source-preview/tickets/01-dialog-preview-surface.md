@@ -1,6 +1,6 @@
 ---
 phase: ticket
-status: in-progress
+status: review
 project: 006-widget-source-preview
 ticket: 01
 title: Dialog preview surface
