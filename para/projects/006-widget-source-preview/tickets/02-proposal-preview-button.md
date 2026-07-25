@@ -5,8 +5,10 @@ project: 006-widget-source-preview
 ticket: 02
 title: Proposal details Preview button
 blocked-by: [01]
-worker: implement-worker
+worker: 91b33a70-83a8-4b69-a4ab-e2d7490be793
 branch: 006-widget-source-preview
+implemented-at: 77d0a98
+reviewed: approved
 shared-blast-radius: true
 planned-at: b9f94d7
 date: 2026-07-25
