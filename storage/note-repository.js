@@ -1,11 +1,11 @@
 // File-canonical note repository (project 003, ADR-0004).
 //
 // A Note is a path-identified canonical notes/*.md file with no mandatory
-// frontmatter and no orbit-id; its identity is its path. This is a thin
+// frontmatter and no balaur-id; its identity is its path. This is a thin
 // PATH-KEYED repository that combines the task/journal canonical-file-first
 // write discipline (expected-hash preconditions, reindex-after-write) with the
 // component-card path-scan placement resolution. Note placements are NOT tracked
-// by the disposable placements index (notes have no orbit-id and notes/ is not an
+// by the disposable placements index (notes have no balaur-id and notes/ is not an
 // entity directory), so placements are resolved by scanning canvas documents.
 //
 // replacePlacement(path, fromCanvasId, nodeId, toCanvasId, geometry) is the

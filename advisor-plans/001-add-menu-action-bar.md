@@ -475,7 +475,7 @@ node .pi/skills/browser-check/scripts/browser-check.mjs smoke --offline
 node .pi/skills/browser-check/scripts/browser-check.mjs smoke --width 380
 node .pi/skills/browser-check/scripts/browser-check.mjs eval 'document.querySelectorAll(".add-menu-item").length'
 node .pi/skills/browser-check/scripts/browser-check.mjs eval '(() => { document.getElementById("addMenuToggle").click(); return { hidden: document.getElementById("addMenu").hidden, expanded: document.getElementById("addMenuToggle").getAttribute("aria-expanded") }; })()'
-node .pi/skills/browser-check/scripts/browser-check.mjs eval '(() => { const before = window.orbitCanvas.getDocument().nodes.length; document.getElementById("addMenuToggle").click(); document.querySelector(".add-menu-item[data-add=note]").click(); return { before, after: window.orbitCanvas.getDocument().nodes.length, menuHidden: document.getElementById("addMenu").hidden }; })()'
+node .pi/skills/browser-check/scripts/browser-check.mjs eval '(() => { const before = window.balaurCanvas.getDocument().nodes.length; document.getElementById("addMenuToggle").click(); document.querySelector(".add-menu-item[data-add=note]").click(); return { before, after: window.balaurCanvas.getDocument().nodes.length, menuHidden: document.getElementById("addMenu").hidden }; })()'
 node .pi/skills/browser-check/scripts/browser-check.mjs eval '(() => { document.getElementById("addMenuToggle").click(); document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); return document.getElementById("addMenu").hidden; })()'
 node .pi/skills/browser-check/scripts/browser-check.mjs shot /tmp/add-menu-open.png
 ```

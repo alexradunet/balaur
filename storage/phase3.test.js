@@ -15,7 +15,7 @@ const INST = "2026-07-21T18:00:00.000Z";
 
 function taskMd(id, title, extra = {}) {
   return serializeTask({
-    orbitId: id, title, status: extra.status || "next", priority: extra.priority ?? null,
+    balaurId: id, title, status: extra.status || "next", priority: extra.priority ?? null,
     scheduledOn: extra.scheduledOn ?? null, dueOn: extra.dueOn ?? null, completedAt: extra.completedAt ?? null,
     estimateMinutes: extra.estimateMinutes ?? null, recurrence: null,
     createdAt: INST, updatedAt: INST, body: extra.body || "",
@@ -45,7 +45,7 @@ test("buildSourceRecord classifies task, untyped note, malformed, and canvas", a
   assert.equal(note.record.parseStatus, "ok");
 
   const malformed = await buildSourceRecord("tasks/b--b1b2b3.md",
-    "---\norbit-schema: 2\norbit-type: task\norbit-id: \"task-b\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n");
+    "---\nbalaur-schema: 2\nbalaur-type: task\nbalaur-id: \"task-b\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n");
   assert.equal(malformed.record.parseStatus, "error");
   assert.match(malformed.record.parseError, /SCHEMA_NEWER/);
 
@@ -76,7 +76,7 @@ test("indexFile projects a task; reindexing replaces it in place", async () => {
 test("a malformed file is isolated: it gets a diagnostic and does not corrupt others", async () => {
   const { vault, index, indexer } = makeIndexer();
   await vault.write("tasks/good--g1g1g1.md", taskMd("task-good", "Good"));
-  await vault.write("tasks/bad--b1b1b1.md", "---\norbit-schema: 1\norbit-type: task\nstatus: next\nstatus: done\n---\n"); // duplicate key
+  await vault.write("tasks/bad--b1b1b1.md", "---\nbalaur-schema: 1\nbalaur-type: task\nstatus: next\nstatus: done\n---\n"); // duplicate key
   await indexer.rebuild();
   assert.equal(index.allTasks().length, 1);
   assert.equal(index.taskById("task-good").title, "Good");
@@ -88,7 +88,7 @@ test("a malformed file is isolated: it gets a diagnostic and does not corrupt ot
 
 // --- duplicate identity ------------------------------------------------------
 
-test("duplicate orbit-ids across files produce DUPLICATE_ID diagnostics", async () => {
+test("duplicate balaur-ids across files produce DUPLICATE_ID diagnostics", async () => {
   const { vault, index, indexer } = makeIndexer();
   await vault.write("tasks/one--x1x1x1.md", taskMd("task-dup", "One"));
   await vault.write("tasks/two--x2x2x2.md", taskMd("task-dup", "Two"));
@@ -231,12 +231,12 @@ test("full rebuild is idempotent", async () => {
 test("journal, calendar-event, and habit-log entries are projected", async () => {
   const { vault, index, indexer } = makeIndexer();
   await vault.write("journal/2026/2026-07-21.md", serializeJournal({
-    orbitId: "journal-2026-07-21", localDate: "2026-07-21", createdAt: INST, updatedAt: INST, body: "# Tue",
+    balaurId: "journal-2026-07-21", localDate: "2026-07-21", createdAt: INST, updatedAt: INST, body: "# Tue",
   }));
   await vault.write("events/dentist--m4n5o6.md", serializeCalendarEvent({
-    orbitId: "event-dentist-m4n5o6", title: "Dentist", startsAt: "2026-07-24T09:00:00+03:00",
+    balaurId: "event-dentist-m4n5o6", title: "Dentist", startsAt: "2026-07-24T09:00:00+03:00",
     endsAt: "2026-07-24T10:00:00+03:00", localDate: "2026-07-24", timezone: "Europe/Bucharest",
-    allDay: false, source: "orbit", createdAt: INST, updatedAt: INST, body: "",
+    allDay: false, source: "balaur", createdAt: INST, updatedAt: INST, body: "",
   }));
   const entry = { id: "habit-entry-r4s5t6", habit: "habit-walk", status: "done", value: 1, at: INST };
   await vault.write("habit-logs/2026/2026-07-21.md", serializeHabitLog({
@@ -256,7 +256,7 @@ test("journal, calendar-event, and habit-log entries are projected", async () =>
 
 test("stats excludes the workspace sidecar from life source-file counts", async () => {
   const { vault, indexer } = makeIndexer();
-  await vault.write(".orbit/workspace.json", "{}", { mediaType: "application/json" });
+  await vault.write(".balaur/workspace.json", "{}", { mediaType: "application/json" });
   const stats = await indexer.rebuild();
   assert.equal(stats.sourceFiles, 0);
 });

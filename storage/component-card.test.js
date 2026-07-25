@@ -104,14 +104,14 @@ test("codec rejects fields that do not belong to the selected recipe", () => {
 
 test("codec rejects malformed, missing, duplicate, and wrong-type frontmatter", () => {
   assert.throws(() => parseComponentCard("# no frontmatter"), (error) => error.code === "FM_NO_DELIMITER");
-  assert.throws(() => parseComponentCard("---\norbit-schema: 1\norbit-type: component-card\n---\n"), assertCode("CARD_FIELD_REQUIRED"));
+  assert.throws(() => parseComponentCard("---\nbalaur-schema: 1\nbalaur-type: component-card\n---\n"), assertCode("CARD_FIELD_REQUIRED"));
   assert.throws(() => parseComponentCard(serializeComponentCard(baseCard()).replace("recipe: metric\n", "recipe: metric\nrecipe: list\n")), (error) => error.code === "FM_DUPLICATE_KEY");
-  assert.throws(() => parseComponentCard(serializeComponentCard(baseCard()).replace("orbit-type: component-card", "orbit-type: task")), assertCode("CARD_TYPE_MISMATCH"));
-  assert.throws(() => parseComponentCard(serializeComponentCard(baseCard()).replace("orbit-schema: 1", "orbit-schema: 2")), assertCode("SCHEMA_NEWER"));
+  assert.throws(() => parseComponentCard(serializeComponentCard(baseCard()).replace("balaur-type: component-card", "balaur-type: task")), assertCode("CARD_TYPE_MISMATCH"));
+  assert.throws(() => parseComponentCard(serializeComponentCard(baseCard()).replace("balaur-schema: 1", "balaur-schema: 2")), assertCode("SCHEMA_NEWER"));
 });
 
 test("patching preserves unknown keys, comments, ordering, BOM, CRLF, and body bytes", () => {
-  const original = "\uFEFF---\r\n# owner note\r\norbit-schema: 1\r\norbit-type: component-card\r\norbit-id: \"card-preserve\"\r\ncustom-key: keep\r\ntitle: \"Before\"\r\nrecipe: callout\r\ntone: info\r\n---\r\n\r\nBody  \r\nbytes\r\n";
+  const original = "\uFEFF---\r\n# owner note\r\nbalaur-schema: 1\r\nbalaur-type: component-card\r\nbalaur-id: \"card-preserve\"\r\ncustom-key: keep\r\ntitle: \"Before\"\r\nrecipe: callout\r\ntone: info\r\n---\r\n\r\nBody  \r\nbytes\r\n";
   const patched = patchComponentCard(original, { title: "After", tone: "success" });
   assert.ok(patched.startsWith("\uFEFF---\r\n# owner note\r\n"));
   assert.ok(patched.includes("custom-key: keep\r\n"));
@@ -126,7 +126,7 @@ test("patching preserves unknown keys, comments, ordering, BOM, CRLF, and body b
 });
 
 test("patching transitions metric values to progress numbers without rewriting preserved bytes", () => {
-  const original = "\uFEFF---\r\norbit-schema: 1\r\norbit-type: component-card\r\norbit-id: \"card-transition\"\r\ncustom-key: keep\r\ntitle: \"Transition\"\r\nrecipe: metric\r\nvalue: \"72%\"\r\nlabel: \"Target\"\r\nprogress: 0.72\r\ntrend: up\r\n---\r\n\r\nBody  \r\n";
+  const original = "\uFEFF---\r\nbalaur-schema: 1\r\nbalaur-type: component-card\r\nbalaur-id: \"card-transition\"\r\ncustom-key: keep\r\ntitle: \"Transition\"\r\nrecipe: metric\r\nvalue: \"72%\"\r\nlabel: \"Target\"\r\nprogress: 0.72\r\ntrend: up\r\n---\r\n\r\nBody  \r\n";
   const patched = patchComponentCard(original, {
     recipe: "progress",
     value: 7,
@@ -147,7 +147,7 @@ test("patching transitions metric values to progress numbers without rewriting p
 });
 
 test("patching transitions progress numbers to metric values without rewriting preserved bytes", () => {
-  const original = "\uFEFF---\r\norbit-schema: 1\r\norbit-type: component-card\r\norbit-id: \"card-transition-back\"\r\ncustom-key: keep\r\ntitle: \"Transition\"\r\nrecipe: progress\r\nvalue: 7\r\nmaximum: 10\r\nunit: \"hours\"\r\n---\r\n\r\nBody  \r\n";
+  const original = "\uFEFF---\r\nbalaur-schema: 1\r\nbalaur-type: component-card\r\nbalaur-id: \"card-transition-back\"\r\ncustom-key: keep\r\ntitle: \"Transition\"\r\nrecipe: progress\r\nvalue: 7\r\nmaximum: 10\r\nunit: \"hours\"\r\n---\r\n\r\nBody  \r\n";
   const patched = patchComponentCard(original, {
     recipe: "metric",
     value: "72%",
@@ -180,7 +180,7 @@ test("catalog rebuild reports malformed, duplicate, missing, and orphaned cards"
   await vault.write(placedPath, serializeComponentCard(baseCard()));
   await vault.write(duplicatePath, serializeComponentCard(baseCard({ title: "Duplicate" })));
   await vault.write(orphanPath, serializeComponentCard(baseCard({ id: "card-orphan", title: "Orphan" })));
-  await vault.write("cards/broken.md", "---\norbit-schema: 1\norbit-type: component-card\n---\n");
+  await vault.write("cards/broken.md", "---\nbalaur-schema: 1\nbalaur-type: component-card\n---\n");
   await vault.write("canvases/root.canvas", canvas([
     fileNode("placed", placedPath),
     fileNode("malformed", "cards/broken.md", 400),
@@ -197,7 +197,7 @@ test("catalog rebuild reports malformed, duplicate, missing, and orphaned cards"
   assert.ok(catalog.diagnostics().find((diagnostic) => diagnostic.code === "DUPLICATE_ID").details.paths.includes(duplicatePath));
 });
 
-test("catalog suppresses a valid card when a malformed card claims the same orbit-id", async () => {
+test("catalog suppresses a valid card when a malformed card claims the same balaur-id", async () => {
   const vault = new MemoryVault();
   const validPath = "cards/valid.md";
   const malformedPath = "cards/malformed.md";
@@ -382,7 +382,7 @@ test("title moves retain both files and reconcile partial placements after a Can
   assert.equal(catalog.getByPath(created.path).placements.length, 1);
   assert.equal(catalog.getByPath(destination).placements.length, 1);
   assert.equal(catalog.getById(created.id), null);
-  assert.ok(catalog.diagnostics().some((item) => item.code === "DUPLICATE_ID" && item.details.orbitId === created.id));
+  assert.ok(catalog.diagnostics().some((item) => item.code === "DUPLICATE_ID" && item.details.balaurId === created.id));
 });
 
 test("repository supports multiple strict placements, removes one, then deletes everywhere", async () => {

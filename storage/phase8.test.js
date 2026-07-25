@@ -34,7 +34,7 @@ test("createJournal writes a dated journal file and indexes it", async () => {
   assert.equal(localDate, "2026-07-21");
   assert.equal(path, "journal/2026/2026-07-21.md");
   const stored = await vault.read(path);
-  assert.match(stored, /orbit-type: journal/);
+  assert.match(stored, /balaur-type: journal/);
   assert.match(stored, /Journal text\./);
   assert.equal(index.allJournals().length, 1);
   assert.equal(index.allJournals()[0].localDate, "2026-07-21");
@@ -46,7 +46,7 @@ test("getJournal reads the entry back", async () => {
   const j = await journals.getJournal("2026-07-21");
   assert.equal(j.localDate, "2026-07-21");
   assert.equal(j.body, "# Tuesday\n\nJournal text.");
-  assert.equal(j.orbitId, "journal-2026-07-21");
+  assert.equal(j.balaurId, "journal-2026-07-21");
 });
 
 test("updateJournal replaces the body, preserving identity and bumping updated-at", async () => {
@@ -55,7 +55,7 @@ test("updateJournal replaces the body, preserving identity and bumping updated-a
   const updated = await journals.updateJournal("2026-07-21", { body: "New body." });
   assert.equal(updated.body, "New body.");
   assert.equal(updated.localDate, "2026-07-21");
-  assert.equal(updated.orbitId, "journal-2026-07-21");
+  assert.equal(updated.balaurId, "journal-2026-07-21");
   assert.equal(updated.updatedAt, NOW);
   assert.equal((await journals.getJournal("2026-07-21")).body, "New body.");
   assert.equal(index.allJournals().length, 1);
@@ -118,7 +118,7 @@ test("createEvent writes an event file and indexes it", async () => {
   });
   assert.equal(id, "event-dentist");
   assert.match(path, /^events\/dentist-appointment--dentist\.md$|^events\/dentist-appointment--.+\.md$/);
-  assert.match(await vault.read(path), /orbit-type: calendar-event/);
+  assert.match(await vault.read(path), /balaur-type: calendar-event/);
   assert.equal(index.allEvents().length, 1);
   assert.equal(index.allEvents()[0].title, "Dentist appointment");
 });

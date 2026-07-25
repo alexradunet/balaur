@@ -34,7 +34,7 @@ export async function auditIndex(vault, index, { canvasIdFromPath = null } = {})
   const actual = new Map();
   for (const [type, rows] of [["task", index.allTasks()], ["habit", index.allHabits()], ["journal", index.allJournals()], ["calendar-event", index.allEvents()], ["habit-entry", index.allHabitEntries()]]) for (const row of rows) actual.set(rowKey(type, row), { type, row });
   for (const [key, item] of expected) {
-    const conflict = duplicateDiagnostics.some((d) => d.sourcePath === item.path && d.detailsJson && JSON.parse(d.detailsJson).orbitId === item.row.id);
+    const conflict = duplicateDiagnostics.some((d) => d.sourcePath === item.path && d.detailsJson && JSON.parse(d.detailsJson).balaurId === item.row.id);
     if (conflict) continue;
     const got = actual.get(key);
     if (!got) problems.push({ code: "MISSING_TYPED_ROW", path: item.path, message: `Missing typed row: ${key}` });

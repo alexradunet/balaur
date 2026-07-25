@@ -47,7 +47,7 @@ export class FileHabitRepository {
     const id = input.id || this._newId();
     const ts = this.now();
     const habit = {
-      orbitId: id, title,
+      balaurId: id, title,
       frequency: input.frequency || "daily",
       weekdays: input.weekdays || [],
       target: input.target ?? null,

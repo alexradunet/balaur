@@ -1,7 +1,7 @@
 // Canonical workspace persistence on a VaultStore (Phase 4, ADR-0001, plan §6/§14).
 //
 // Ownership after the file-canonical migration:
-//   .orbit/workspace.json   metadata-only sidecar (hierarchy, cameras, canvas kind)
+//   .balaur/workspace.json   metadata-only sidecar (hierarchy, cameras, canvas kind)
 //   canvases/<name>.canvas  one independently-valid JSON Canvas document each
 //
 // The sidecar never embeds full documents; each canvas document lives at its own
@@ -14,8 +14,8 @@ import { isCanvas } from "./canvas-validate.js";
 import { assertSafePath, caseFoldKey } from "./vault-path.js";
 import { SchemaError, ParseError } from "./vault-errors.js";
 
-export const SIDECAR_PATH = ".orbit/workspace.json";
-export const SIDECAR_FORMAT = "orbit-workspace";
+export const SIDECAR_PATH = ".balaur/workspace.json";
+export const SIDECAR_FORMAT = "balaur-workspace";
 export const SIDECAR_VERSION = 2; // sidecar FILE format version (file-canonical)
 export const CANVAS_MEDIA_TYPE = "application/jsoncanvas+json";
 export const SIDECAR_MEDIA_TYPE = "application/json";

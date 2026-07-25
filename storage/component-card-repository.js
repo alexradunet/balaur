@@ -73,8 +73,8 @@ export class FileComponentCardRepository {
     const parsed = parseComponentCard(content);
     const path = validateCardPath(input.path || componentCardPath(parsed.title, id));
     await this.catalog.rebuild();
-    const identityClaimed = this.catalog.getById(id) || this.catalog.diagnostics().some((item) => item.details?.orbitId === id);
-    if (identityClaimed) throw schemaError(`Component-card orbit-id already exists: ${id}`, "CARD_ID_DUPLICATE");
+    const identityClaimed = this.catalog.getById(id) || this.catalog.diagnostics().some((item) => item.details?.balaurId === id);
+    if (identityClaimed) throw schemaError(`Component-card balaur-id already exists: ${id}`, "CARD_ID_DUPLICATE");
     await this.vault.write(path, content, { expectedHash: null });
     await this.catalog.reconcile([path]);
     let placement = null;

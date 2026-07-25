@@ -9,7 +9,7 @@ Canonical user data lives in a vault and has four parts:
 ```text
 JSON Canvas files (.canvas)   canonical spatial documents
 Markdown files (.md)          canonical life entities
-.orbit/workspace.json         hierarchy, cameras, and application-only metadata
+.balaur/workspace.json         hierarchy, cameras, and application-only metadata
 MemoryIndex                   disposable runtime query projection
 ```
 
@@ -104,17 +104,17 @@ All imported, restored, or model-generated documents must pass `storage/canvas-v
 Special behavior is represented without changing JSON Canvas:
 
 ```md
-<!-- orbit:inbox -->
-<!-- orbit:reference -->
-<!-- orbit:ai-card -->
-<!-- orbit:habit-entry id=... habit=... status=done value=1 at=... -->
+<!-- balaur:inbox -->
+<!-- balaur:reference -->
+<!-- balaur:ai-card -->
+<!-- balaur:habit-entry id=... habit=... status=done value=1 at=... -->
 ```
 
-- Notes, inbox captures, and reference pages are path-identified `notes/*.md` files placed by standard `file` nodes (ADR-0004). The inert marker lives in the file body; identity is the path, with no mandatory frontmatter or `orbit-id`. `text` remains a valid, rendered, read-only interop type that Balaur never authors.
-- `<!-- orbit:jd -->` is a legacy inert marker from pre-graph vaults; it remains harmless text.
-- Tasks, habits, journals, and calendar events are canonical Markdown files under `tasks/`, `habits/`, `habit-logs/`, `journal/`, and `events/`, each with the applicable Orbit frontmatter contract. Tasks are placed by standard `file` nodes; one task may have zero, one, or many placements.
+- Notes, inbox captures, and reference pages are path-identified `notes/*.md` files placed by standard `file` nodes (ADR-0004). The inert marker lives in the file body; identity is the path, with no mandatory frontmatter or `balaur-id`. `text` remains a valid, rendered, read-only interop type that Balaur never authors.
+- `<!-- balaur:jd -->` is a legacy inert marker from pre-graph vaults; it remains harmless text.
+- Tasks, habits, journals, and calendar events are canonical Markdown files under `tasks/`, `habits/`, `habit-logs/`, `journal/`, and `events/`, each with the applicable Balaur frontmatter contract. Tasks are placed by standard `file` nodes; one task may have zero, one, or many placements.
 - Habit check-ins are inert comments in append-only daily habit-log files. They are not recurring task records.
-- AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- orbit:ai-card -->` marker; their incoming edges provide context (ADR-0004). For a file node, context assembly resolves the referenced file body, not just its path.
+- AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- balaur:ai-card -->` marker; their incoming edges provide context (ADR-0004). For a file node, context assembly resolves the referenced file body, not just its path.
 - Live HTML/Canvas/WebGL widgets are standard `file` nodes pointing to `.html` files.
 - Nested-canvas portals are standard `file` nodes pointing under `canvases/`.
 
@@ -122,7 +122,7 @@ Markers must remain harmless and readable in other editors. There is no generate
 
 ### 4.3 Workspace sidecar and canvas files
 
-The canonical sidecar is `.orbit/workspace.json`. It owns canvas titles and paths, parent/portal relationships, active canvas, cameras, and optional canvas `kind` metadata (`hub`/`project`). It does not embed canvas documents. Each canvas document is stored separately under `canvases/*.canvas` and is validated independently. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
+The canonical sidecar is `.balaur/workspace.json`. It owns canvas titles and paths, parent/portal relationships, active canvas, cameras, and optional canvas `kind` metadata (`hub`/`project`). It does not embed canvas documents. Each canvas document is stored separately under `canvases/*.canvas` and is validated independently. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
 
 Do not put hierarchy, cameras, active filters, selection, or other UI state into exported `.canvas` documents. Destructive hierarchy operations must remove related sidecar records and orphaned canvas files safely. Missing or invalid canvas files load as read-only repair placeholders with their raw content retained; saving must never replace them with an empty document.
 
@@ -146,7 +146,7 @@ Date conventions are mandatory:
 
 ### 4.5 Whole-space backups
 
-A version-2 `.orbit.json` backup contains the metadata-only sidecar and raw logical vault files (`.canvas`, `.md`, widgets, and other stored files). It never contains a database snapshot. Import validates paths, canvases, file-node references, entities, duplicate IDs, and diagnostics before writing to an empty staging vault. Version-1 bundles are rejected in canonical v1; the old migration format is intentionally not a second source of truth.
+A version-2 `.balaur.json` backup contains the metadata-only sidecar and raw logical vault files (`.canvas`, `.md`, widgets, and other stored files). It never contains a database snapshot. Import validates paths, canvases, file-node references, entities, duplicate IDs, and diagnostics before writing to an empty staging vault. Version-1 bundles are rejected in canonical v1; the old migration format is intentionally not a second source of truth.
 
 ## 5. Runtime and initialization model
 
@@ -157,18 +157,18 @@ The module graph rooted at `main.js` is deliberate. The app's intended startup s
 3. `DirectoryVault` opens the picked folder; `WorkspaceStore` loads or migrates (create if empty, Adopt if files but no sidecar, open if sidecar present);
 4. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, and the task repository used by the shipped UI;
 5. rebuild the in-memory index from the vault files;
-6. render the workspace and expose `window.orbitCanvas`; and
+6. render the workspace and expose `window.balaurCanvas`; and
 7. progressively register the Service Worker.
 
 No handle is persisted; the folder is re-picked every launch. `localStorage` is limited to theme and AI settings and is not a workspace fallback or persistence mirror. Vault-first boot, folder persistence, first-render timing, and graceful behavior in a real browser are browser-pending even though the wiring is present and the Node storage logic is tested. If the vault cannot be opened, the UI reports that canonical files are unavailable.
 
 Rendering must use the loaded in-memory working set; it must not perform an asynchronous file read for every card during rendering. On writes, save the canonical file or canvas with an expected-content-hash precondition, then reindex and refresh projections. Warm reconciliation honors vault revisions and move old paths.
 
-`window.orbitVaultReady` is the boot promise and `window.orbitVaultStore` is the configured workspace store when boot succeeds. The stable `window.orbitCanvas` surface exposes document/workspace getters, validation and operation application, AI-card execution, graph navigation, task creation, view switching, and whole-space export. Keep raw mutable internals private.
+`window.balaurVaultReady` is the boot promise and `window.balaurVaultStore` is the configured workspace store when boot succeeds. The stable `window.balaurCanvas` surface exposes document/workspace getters, validation and operation application, AI-card execution, graph navigation, task creation, view switching, and whole-space export. Keep raw mutable internals private.
 
 ### 5.1 Offline application-shell rules
 
-`sw.js` precaches the required local modules, styles, fonts, icons, manifest, and sample widget under cache `orbit-shell-v13`. It does not precache database Wasm. Same-origin GET requests use network-first with cache fallback; cross-origin requests, non-GET requests, range requests, provider calls, API keys, generated exports, and arbitrary external resources are not intercepted.
+`sw.js` precaches the required local modules, styles, fonts, icons, manifest, and sample widget under cache `balaur-shell-v13`. It does not precache database Wasm. Same-origin GET requests use network-first with cache fallback; cross-origin requests, non-GET requests, range requests, provider calls, API keys, generated exports, and arbitrary external resources are not intercepted.
 
 Keep `APP_SHELL` synchronized with required assets and increment `CACHE_NAME` when cache semantics or invalidation require it. Keep paths relative for GitHub Pages subpaths. Never call `skipWaiting()` to reload an active editing session without an explicit safe update flow. The Service Worker owns only static shell resources; the user-picked folder owns user files.
 
@@ -204,7 +204,7 @@ Activity or diagnostics that matter to recovery belong in canonical files or exp
 
 Task creation is file-first:
 
-1. generate an immutable `orbit-id` and safe stable path;
+1. generate an immutable `balaur-id` and safe stable path;
 2. write a canonical `tasks/*.md` file;
 3. add a standard `file` node placement to the selected canvas;
 4. save the canvas; and
@@ -214,9 +214,9 @@ A portable task has the following shape:
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: task
-orbit-id: "task-a1b2c3"
+balaur-schema: 1
+balaur-type: task
+balaur-id: "task-a1b2c3"
 title: "A readable task title"
 status: next
 scheduled-on: "2026-07-22"
@@ -233,19 +233,19 @@ Habits are definitions plus append-only daily check-in events. Journals and cale
 
 The graph model (ADR-0003) replaces the Johnny Decimal subsystem. Home is the root canvas; four hub canvases (Inbox, Projects, Wiki, Archive) hang off it. Structure emerges from labelled edges, not numeric codes.
 
-Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum (that would be a proprietary Canvas dialect, forbidden by §4.1). `AI output` stays reserved.
+Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- balaur:inbox -->`, `<!-- balaur:reference -->`), and entity frontmatter `balaur-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum (that would be a proprietary Canvas dialect, forbidden by §4.1). `AI output` stays reserved.
 
 Archive is a manual, explicit action: recreate or copy the content into the Archive canvas and set the dormant color `#6c757d`. Never delete. A cross-canvas reparent command is deferred; in v1 the user creates the node in the Archive canvas directly (or copies the text and deletes the original placement).
 
 Journaling is a Today-view feature (daily-note panel with date navigation and place-on-canvas), not a spatial hub.
 
-Nested-canvas portals remain standard `file` nodes. Do not flatten nested documents during save or export. `<!-- orbit:jd -->` markers from pre-graph vaults remain harmless inert text; no migration is performed.
+Nested-canvas portals remain standard `file` nodes. Do not flatten nested documents during save or export. `<!-- balaur:jd -->` markers from pre-graph vaults remain harmless inert text; no migration is performed.
 
 ## 10. AI and widget security boundaries
 
 AI output never directly mutates the host DOM or executes host-page JavaScript. Accept only allowlisted structured operations, validate IDs/fields/URLs/geometry/operation counts and the resulting canvas, show a human-readable proposal, and require confirmation before applying it. Typed life changes must call the file repositories, not write index rows directly.
 
-AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- orbit:ai-card -->` marker, with edge-derived inputs; their output is likewise a file-backed note connected by the reserved `AI output` edge (ADR-0004). Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection. File-node inputs resolve canonical file bodies.
+AI operators are standard `file` nodes referencing `notes/*.md` files whose body carries the inert `<!-- balaur:ai-card -->` marker, with edge-derived inputs; their output is likewise a file-backed note connected by the reserved `AI output` edge (ADR-0004). Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection. File-node inputs resolve canonical file bodies.
 
 Live widgets run in iframes with exactly:
 
@@ -271,7 +271,7 @@ Put rules in the appropriate existing layer, prefer Balaur tokens, use logical p
 
 Match the native strict-ES-module style. Prefer cohesive modules and named helpers, explicit side effects, feature detection, stable IDs, event delegation, `AbortController` where useful, and validation at storage/import/AI boundaries. Disable asynchronous controls while running and surface errors in the relevant status region. Stop pointer propagation for controls inside draggable cards. Avoid globals when values can be derived from workspace, document data, or the runtime index.
 
-Do not mass-format `app.js`. Extend `window.orbitCanvas` only for a stable browser/integration command; do not expose raw mutable storage or index internals.
+Do not mass-format `app.js`. Extend `window.balaurCanvas` only for a stable browser/integration command; do not expose raw mutable storage or index internals.
 
 ## 13. Running and validating changes
 
@@ -320,7 +320,7 @@ Do not claim these are browser-verified from Node tests alone:
 
 The browser-check smoke suite asserts the gate, runs the headless OPFS contract suite, and stubs the picker for full-app smoke.
 
-When browser testing is available, use a fresh temporary profile for first-run behavior and a retained profile for reload/persistence. Check `await window.orbitVaultReady`, `window.orbitVaultStore`, `window.orbitCanvas.getDocument()`, `window.orbitCanvas.getWorkspace()`, and `window.orbitCanvas.getSummary()`.
+When browser testing is available, use a fresh temporary profile for first-run behavior and a retained profile for reload/persistence. Check `await window.balaurVaultReady`, `window.balaurVaultStore`, `window.balaurCanvas.getDocument()`, `window.balaurCanvas.getWorkspace()`, and `window.balaurCanvas.getSummary()`.
 
 ## 14. Documentation expectations
 

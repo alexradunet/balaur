@@ -68,7 +68,7 @@
 - [ ] Implement the flat frontmatter codec using existing `collectKnownFields`, `serializeFrontmatter`, `patchFields`, and `replaceBody`; enforce exact limits from the spec.
 - [ ] Add safe `cards/` path generation and repository file-first semantics following `FileTaskRepository`.
 - [ ] Implement disposable catalog cold rebuild and path reconciliation without adding rows to `MemoryIndex`.
-- [ ] Extend backup validation to parse `cards/*.md`, detect duplicate Orbit IDs across supported canonical entities/cards, and retain raw files.
+- [ ] Extend backup validation to parse `cards/*.md`, detect duplicate Balaur IDs across supported canonical entities/cards, and retain raw files.
 - [ ] Run focused tests and the explicit 165-test suite; expect all pass.
 
 ### Task 3: Declarative card element and Canvas rendering

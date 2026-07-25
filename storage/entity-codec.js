@@ -1,9 +1,9 @@
 // Canonical entity codecs (Phase 1, plan §9).
 //
-// Each entity is a Markdown file: constrained frontmatter (orbit-schema 1) plus
+// Each entity is a Markdown file: constrained frontmatter (balaur-schema 1) plus
 // an ordinary Markdown body. Field keys are kebab-case in files and camelCase in
 // application objects. Parsing validates required fields, enums, dates, and the
-// orbit-schema version; unknown frontmatter is preserved by the codec layer.
+// balaur-schema version; unknown frontmatter is preserved by the codec layer.
 
 import { splitFrontmatter, collectKnownFields, serializeFrontmatter, isValidInstant, isValidIanaTimezone } from "./frontmatter.js";
 import { ParseError, SchemaError } from "./vault-errors.js";
@@ -13,10 +13,10 @@ export const SUPPORTED_SCHEMA = 1;
 function kebabToCamel(k) { return k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()); }
 
 function validateSchema(schema) {
-  if (schema === undefined || schema === null) throw new SchemaError("Missing orbit-schema", { code: "SCHEMA_MISSING" });
-  if (typeof schema !== "number" || !Number.isFinite(schema)) throw new SchemaError("Invalid orbit-schema", { code: "SCHEMA_INVALID" });
-  if (schema > SUPPORTED_SCHEMA) throw new SchemaError(`Unsupported orbit-schema ${schema} (read-only)`, { code: "SCHEMA_NEWER" });
-  if (schema !== SUPPORTED_SCHEMA) throw new SchemaError(`Unsupported orbit-schema ${schema}`, { code: "SCHEMA_UNSUPPORTED" });
+  if (schema === undefined || schema === null) throw new SchemaError("Missing balaur-schema", { code: "SCHEMA_MISSING" });
+  if (typeof schema !== "number" || !Number.isFinite(schema)) throw new SchemaError("Invalid balaur-schema", { code: "SCHEMA_INVALID" });
+  if (schema > SUPPORTED_SCHEMA) throw new SchemaError(`Unsupported balaur-schema ${schema} (read-only)`, { code: "SCHEMA_NEWER" });
+  if (schema !== SUPPORTED_SCHEMA) throw new SchemaError(`Unsupported balaur-schema ${schema}`, { code: "SCHEMA_UNSUPPORTED" });
 }
 
 const TASK_STATUSES = new Set(["inbox", "next", "scheduled", "waiting", "done", "cancelled"]);
@@ -51,8 +51,8 @@ function makeCodec({ type, fields, order, required }) {
     for (const key of order) {
       const camel = kebabToCamel(key);
       let value = entity[camel];
-      if (key === "orbit-schema") value = SUPPORTED_SCHEMA;
-      else if (key === "orbit-type") value = type;
+      if (key === "balaur-schema") value = SUPPORTED_SCHEMA;
+      else if (key === "balaur-type") value = type;
       else if (value === undefined) {
         if (required.includes(key)) {
           throw new ParseError(`Missing required field: ${key}`, { code: "ENTITY_MISSING_FIELD", details: { key } });
@@ -61,7 +61,7 @@ function makeCodec({ type, fields, order, required }) {
       }
       fmFields[key] = value;
     }
-    validateEntityValues(type, Object.fromEntries(order.filter((key) => !["orbit-schema", "orbit-type"].includes(key)).map((key) => [kebabToCamel(key), fmFields[key]])));
+    validateEntityValues(type, Object.fromEntries(order.filter((key) => !["balaur-schema", "balaur-type"].includes(key)).map((key) => [kebabToCamel(key), fmFields[key]])));
     const fm = serializeFrontmatter(fmFields, spec, order);
     const body = entity.body ?? "";
     return fm + (body ? "\n" + body : "");
@@ -71,19 +71,19 @@ function makeCodec({ type, fields, order, required }) {
     const fm = splitFrontmatter(text);
     if (!fm) throw new ParseError("Missing or unterminated frontmatter", { code: "FM_NO_DELIMITER" });
     const raw = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), spec);
-    validateSchema(raw["orbit-schema"]);
-    if (raw["orbit-type"] !== type) {
-      throw new ParseError(`Expected orbit-type "${type}", got "${raw["orbit-type"]}"`, { code: "ENTITY_TYPE_MISMATCH" });
+    validateSchema(raw["balaur-schema"]);
+    if (raw["balaur-type"] !== type) {
+      throw new ParseError(`Expected balaur-type "${type}", got "${raw["balaur-type"]}"`, { code: "ENTITY_TYPE_MISMATCH" });
     }
     for (const key of required) {
-      if (key === "orbit-schema" || key === "orbit-type") continue;
+      if (key === "balaur-schema" || key === "balaur-type") continue;
       if (raw[key] === undefined || raw[key] === null) {
         throw new ParseError(`Missing required field: ${key}`, { code: "ENTITY_MISSING_FIELD", details: { key } });
       }
     }
     const out = Object.create(null);
     for (const key of order) {
-      if (key === "orbit-schema" || key === "orbit-type") continue;
+      if (key === "balaur-schema" || key === "balaur-type") continue;
       out[kebabToCamel(key)] = raw[key] === undefined ? null : raw[key];
     }
     let body = fm.lines.slice(fm.closeIdx + 1).join("");
@@ -101,56 +101,56 @@ function makeCodec({ type, fields, order, required }) {
 export const TaskCodec = makeCodec({
   type: "task",
   fields: {
-    "orbit-schema": "number", "orbit-type": "enum", "orbit-id": "string", "title": "string",
+    "balaur-schema": "number", "balaur-type": "enum", "balaur-id": "string", "title": "string",
     "status": "enum", "priority": "number", "scheduled-on": "date", "due-on": "date",
     "completed-at": "instant", "estimate-minutes": "number", "recurrence": "string",
     "created-at": "instant", "updated-at": "instant",
   },
-  order: ["orbit-schema", "orbit-type", "orbit-id", "title", "status", "priority",
+  order: ["balaur-schema", "balaur-type", "balaur-id", "title", "status", "priority",
     "scheduled-on", "due-on", "completed-at", "estimate-minutes", "recurrence",
     "created-at", "updated-at"],
-  required: ["orbit-id", "title", "status", "created-at", "updated-at"],
+  required: ["balaur-id", "title", "status", "created-at", "updated-at"],
 });
 
 export const HabitCodec = makeCodec({
   type: "habit",
   fields: {
-    "orbit-schema": "number", "orbit-type": "enum", "orbit-id": "string", "title": "string",
+    "balaur-schema": "number", "balaur-type": "enum", "balaur-id": "string", "title": "string",
     "frequency": "enum", "weekdays": "number[]", "target": "number", "unit": "string",
     "archived-at": "instant", "created-at": "instant", "updated-at": "instant",
   },
-  order: ["orbit-schema", "orbit-type", "orbit-id", "title", "frequency", "weekdays",
+  order: ["balaur-schema", "balaur-type", "balaur-id", "title", "frequency", "weekdays",
     "target", "unit", "archived-at", "created-at", "updated-at"],
-  required: ["orbit-id", "title", "frequency", "created-at", "updated-at"],
+  required: ["balaur-id", "title", "frequency", "created-at", "updated-at"],
 });
 
 export const HabitLogCodec = makeCodec({
   type: "habit-log",
-  fields: { "orbit-schema": "number", "orbit-type": "enum", "local-date": "date" },
-  order: ["orbit-schema", "orbit-type", "local-date"],
+  fields: { "balaur-schema": "number", "balaur-type": "enum", "local-date": "date" },
+  order: ["balaur-schema", "balaur-type", "local-date"],
   required: ["local-date"],
 });
 
 export const JournalCodec = makeCodec({
   type: "journal",
   fields: {
-    "orbit-schema": "number", "orbit-type": "enum", "orbit-id": "string", "local-date": "date",
+    "balaur-schema": "number", "balaur-type": "enum", "balaur-id": "string", "local-date": "date",
     "created-at": "instant", "updated-at": "instant",
   },
-  order: ["orbit-schema", "orbit-type", "orbit-id", "local-date", "created-at", "updated-at"],
-  required: ["orbit-id", "local-date", "created-at", "updated-at"],
+  order: ["balaur-schema", "balaur-type", "balaur-id", "local-date", "created-at", "updated-at"],
+  required: ["balaur-id", "local-date", "created-at", "updated-at"],
 });
 
 export const CalendarEventCodec = makeCodec({
   type: "calendar-event",
   fields: {
-    "orbit-schema": "number", "orbit-type": "enum", "orbit-id": "string", "title": "string",
+    "balaur-schema": "number", "balaur-type": "enum", "balaur-id": "string", "title": "string",
     "starts-at": "instant", "ends-at": "instant", "local-date": "date", "timezone": "string",
     "all-day": "boolean", "source": "enum", "created-at": "instant", "updated-at": "instant",
   },
-  order: ["orbit-schema", "orbit-type", "orbit-id", "title", "starts-at", "ends-at",
+  order: ["balaur-schema", "balaur-type", "balaur-id", "title", "starts-at", "ends-at",
     "local-date", "timezone", "all-day", "source", "created-at", "updated-at"],
-  required: ["orbit-id", "title", "starts-at", "local-date", "timezone", "created-at", "updated-at"],
+  required: ["balaur-id", "title", "starts-at", "local-date", "timezone", "created-at", "updated-at"],
 });
 
 export const ENTITY_CODECS = {
@@ -173,21 +173,21 @@ export const parseJournal = (text) => JournalCodec.parse(text);
 export const serializeCalendarEvent = (e) => CalendarEventCodec.serialize(e);
 export const parseCalendarEvent = (text) => CalendarEventCodec.parse(text);
 
-// Dispatch on orbit-type. Returns { type, ...fields, body }.
+// Dispatch on balaur-type. Returns { type, ...fields, body }.
 export function parseEntity(text) {
   const fm = splitFrontmatter(text);
   if (!fm) throw new ParseError("Missing or unterminated frontmatter", { code: "FM_NO_DELIMITER" });
-  const probe = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), { fields: { "orbit-type": "enum" } });
-  const type = probe["orbit-type"];
+  const probe = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), { fields: { "balaur-type": "enum" } });
+  const type = probe["balaur-type"];
   const codec = ENTITY_CODECS[type];
-  if (!codec) throw new ParseError(`Unknown orbit-type: ${type}`, { code: "ENTITY_UNKNOWN_TYPE" });
+  if (!codec) throw new ParseError(`Unknown balaur-type: ${type}`, { code: "ENTITY_UNKNOWN_TYPE" });
   return { type, ...codec.parse(text) };
 }
 
 // --- habit-log check-in event markers (plan §9.4) ----------------------------
 // Constrained token grammar; no arbitrary user text inside the marker.
 
-const HABIT_ENTRY_START_RE = /<!--\s*orbit:habit-entry\b/gi;
+const HABIT_ENTRY_START_RE = /<!--\s*balaur:habit-entry\b/gi;
 const ENTRY_TOKEN_RE = /^[a-z0-9][a-z0-9.:+-]*$/i;
 
 export function parseHabitEntries(body) {
@@ -200,7 +200,7 @@ export function parseHabitEntries(body) {
     const end = source.indexOf("-->", start.index);
     if (end < 0) throw new ParseError("Unterminated habit-entry marker", { code: "HABIT_ENTRY_INVALID" });
     const marker = source.slice(start.index, end + 3);
-    const m = /^<!--\s*orbit:habit-entry\s+([^>]*?)\s*-->$/i.exec(marker);
+    const m = /^<!--\s*balaur:habit-entry\s+([^>]*?)\s*-->$/i.exec(marker);
     if (!m) throw new ParseError("Malformed habit-entry marker", { code: "HABIT_ENTRY_INVALID" });
     const attrs = Object.create(null);
     const tokens = m[1].trim() ? m[1].trim().split(/\s+/) : [];
@@ -232,5 +232,5 @@ export function serializeHabitEntry(entry) {
   if (!isValidInstant(entry.at)) throw new ParseError(`Bad habit-entry instant: ${entry.at}`, { code: "HABIT_ENTRY_INVALID" });
   const value = Number(entry.value);
   if (!Number.isFinite(value)) throw new ParseError(`Bad habit-entry value: ${entry.value}`, { code: "FM_BAD_NUMBER" });
-  return `<!-- orbit:habit-entry id=${token("id", entry.id)} habit=${token("habit", entry.habit)} status=${token("status", entry.status)} value=${value} at=${token("at", entry.at)} -->`;
+  return `<!-- balaur:habit-entry id=${token("id", entry.id)} habit=${token("habit", entry.habit)} status=${token("status", entry.status)} value=${value} at=${token("at", entry.at)} -->`;
 }

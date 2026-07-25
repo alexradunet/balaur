@@ -35,7 +35,7 @@ export class FileJournalRepository {
   async createJournal({ localDate, body = "", id = null }) {
     const d = assertLocalDate(localDate);
     const ts = this.now();
-    const journal = { orbitId: id || `journal-${d}`, localDate: d, createdAt: ts, updatedAt: ts, body };
+    const journal = { balaurId: id || `journal-${d}`, localDate: d, createdAt: ts, updatedAt: ts, body };
     const path = journalPath(d);
     const content = serializeJournal(journal);
     await this.vault.write(path, content, { expectedHash: null });
@@ -116,13 +116,13 @@ export class FileEventRepository {
     const id = input.id || this._newId();
     const ts = this.now();
     const event = {
-      orbitId: id, title,
+      balaurId: id, title,
       startsAt: input.startsAt,
       endsAt: input.endsAt ?? null,
       timezone: input.timezone || "UTC",
       localDate: assertLocalDate(input.localDate || localDateForInstant(input.startsAt, input.timezone || "UTC")),
       allDay: input.allDay ?? false,
-      source: input.source || "orbit",
+      source: input.source || "balaur",
       createdAt: ts, updatedAt: ts,
       body: input.body || "",
     };

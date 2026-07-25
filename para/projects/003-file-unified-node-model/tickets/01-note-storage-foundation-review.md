@@ -24,7 +24,7 @@ Verification run by this review (not taken on trust):
 
 ## Confirmed seams (all hold)
 
-1. **No orbit-id, no mandatory frontmatter.** `createNote` writes only marker + body
+1. **No balaur-id, no mandatory frontmatter.** `createNote` writes only marker + body
    (`note-repository.js:57-61` `_noteContent`); the test asserts the placed node's keys
    are exactly `["file","height","id","type","width","x","y"]`
    (`note-repository.test.js:84-92`) and that the index record is untyped
@@ -44,7 +44,7 @@ Verification run by this review (not taken on trust):
 
 `replacePlacement(path, fromCanvasId, nodeId, toCanvasId, geometry)`
 (`note-repository.js:175-180`) is path-generic and path-keyed: it takes an explicit
-path, never derives an orbit-id, and re-places the SAME path on the target — the
+path, never derives an balaur-id, and re-places the SAME path on the target — the
 primitive project 002 consumes.
 
 ## Reconciliations flagged by the implementer (judged correct, not findings)

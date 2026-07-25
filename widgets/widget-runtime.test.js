@@ -45,7 +45,7 @@ function messageAtBytes(direction, makeMessage, limit) {
 
 const validHostMessages = [
   {
-    type: "orbit.widget.theme.v1",
+    type: "balaur.widget.theme.v1",
     version: 1,
     payload: {
       tokens: {
@@ -65,20 +65,20 @@ const validHostMessages = [
     },
   },
   {
-    type: "orbit.widget.preferences.v1",
+    type: "balaur.widget.preferences.v1",
     version: 1,
     payload: { reducedMotion: true, reducedTransparency: false, contrast: "more" },
   },
-  { type: "orbit.widget.visibility.v1", version: 1, payload: { visible: true } },
-  { type: "orbit.widget.pause.v1", version: 1, payload: { reason: "offscreen" } },
+  { type: "balaur.widget.visibility.v1", version: 1, payload: { visible: true } },
+  { type: "balaur.widget.pause.v1", version: 1, payload: { reason: "offscreen" } },
 ];
 
 const validWidgetMessages = [
-  { type: "orbit.widget.ready.v1", version: 1, payload: {} },
-  { type: "orbit.widget.status.v1", version: 1, payload: { message: "Rendering" } },
-  { type: "orbit.widget.resize.v1", version: 1, payload: { width: 640, height: 360 } },
-  { type: "orbit.widget.heartbeat.v1", version: 1, payload: {} },
-  { type: "orbit.widget.diagnostic.v1", version: 1, payload: { level: "warning", message: "WebGL fallback active" } },
+  { type: "balaur.widget.ready.v1", version: 1, payload: {} },
+  { type: "balaur.widget.status.v1", version: 1, payload: { message: "Rendering" } },
+  { type: "balaur.widget.resize.v1", version: 1, payload: { width: 640, height: 360 } },
+  { type: "balaur.widget.heartbeat.v1", version: 1, payload: {} },
+  { type: "balaur.widget.diagnostic.v1", version: 1, payload: { level: "warning", message: "WebGL fallback active" } },
 ];
 
 test("exports the approved widget limits exactly", () => {
@@ -97,16 +97,16 @@ test("accepts native custom elements, declarative Shadow DOM, and allowed embedd
   const source = `<!doctype html>
     <title>Shadow dial &amp; controls</title>
     <style>
-      orbit-dial { display: block; background-image: url(data:image/svg+xml,%3Csvg%3E%3C/svg%3E); }
-      @media (prefers-reduced-motion: reduce) { orbit-dial { animation: none; } }
+      balaur-dial { display: block; background-image: url(data:image/svg+xml,%3Csvg%3E%3C/svg%3E); }
+      @media (prefers-reduced-motion: reduce) { balaur-dial { animation: none; } }
     </style>
-    <orbit-dial>
+    <balaur-dial>
       <template shadowrootmode="open"><canvas width="320" height="180"></canvas></template>
       <img alt="" src="blob:https://example.invalid/asset">
       <video src="data:video/mp4;base64,AA=="></video>
-    </orbit-dial>
+    </balaur-dial>
     <script>
-      customElements.define("orbit-dial", class extends HTMLElement {
+      customElements.define("balaur-dial", class extends HTMLElement {
         connectedCallback() { if (!this.shadowRoot) this.attachShadow({ mode: "closed" }); }
       });
     </script>`;
@@ -228,7 +228,7 @@ test("requires reduced-motion handling when animation is declared or scheduled",
 });
 
 test("builds trusted CSP, bootstrap, generated source, and diagnostics in strict order", () => {
-  const source = titled("<orbit-safe>generated-marker</orbit-safe>");
+  const source = titled("<balaur-safe>generated-marker</balaur-safe>");
   const documentSource = buildWidgetDocument(source, { bootstrapSource: "globalThis.bootstrapMarker = true;" });
   const cspIndex = documentSource.indexOf("data-balaur-csp");
   const bootstrapIndex = documentSource.indexOf("data-balaur-bootstrap");
@@ -266,7 +266,7 @@ test("rejects unknown directions, wrapper fields, message types, and versions", 
   const ready = validWidgetMessages[0];
   assert.throws(() => validateWidgetMessage("sideways", ready), /direction/i);
   assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { ...ready, extra: true }), /unknown|field/i);
-  assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { ...ready, type: "orbit.widget.mutate.v1" }), /message type/i);
+  assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { ...ready, type: "balaur.widget.mutate.v1" }), /message type/i);
   assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { ...ready, version: 2 }), /version/i);
   assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { ...ready, version: "1" }), /version/i);
 });
@@ -289,12 +289,12 @@ test("rejects prototype-bearing, accessor, sparse, cyclic, and toJSON-bearing da
     Object.assign([], { 1: "hole" }),
   ];
   for (const payload of payloads) {
-    assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { type: "orbit.widget.status.v1", version: 1, payload }), /plain JSON data|plain data/i);
+    assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { type: "balaur.widget.status.v1", version: 1, payload }), /plain JSON data|plain data/i);
   }
   const cyclic = {};
   cyclic.self = cyclic;
-  assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { type: "orbit.widget.status.v1", version: 1, payload: cyclic }), /plain JSON data|cyclic/i);
-  const value = { type: "orbit.widget.ready.v1", version: 1, payload: {} };
+  assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, { type: "balaur.widget.status.v1", version: 1, payload: cyclic }), /plain JSON data|cyclic/i);
+  const value = { type: "balaur.widget.ready.v1", version: 1, payload: {} };
   value.payload.toJSON = () => { invoked = true; return {}; };
   assert.throws(() => validateWidgetMessage(WIDGET_TO_HOST, value), /plain JSON data|plain data/i);
   assert.equal(invoked, false);
@@ -302,7 +302,7 @@ test("rejects prototype-bearing, accessor, sparse, cyclic, and toJSON-bearing da
 
 test("measures closed protocol messages at the exact UTF-8 byte boundary", () => {
   const exact = messageAtBytes(WIDGET_TO_HOST, (message) => ({
-    type: "orbit.widget.status.v1",
+    type: "balaur.widget.status.v1",
     version: 1,
     payload: { message },
   }), MAX_WIDGET_MESSAGE_BYTES);
@@ -363,13 +363,13 @@ test("requires real reduced-motion evidence rather than comment or string decoys
     /reduced motion/i,
   );
   assert.throws(
-    () => validateWidgetSource(titled("<script>const typeDecoy = \"orbit.widget.preferences.v1\"; const reducedMotion = false; requestAnimationFrame(draw);</script>")),
+    () => validateWidgetSource(titled("<script>const typeDecoy = \"balaur.widget.preferences.v1\"; const reducedMotion = false; requestAnimationFrame(draw);</script>")),
     /reduced motion/i,
   );
   assert.doesNotThrow(() => validateWidgetSource(titled("<script>const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches; requestAnimationFrame(draw);</script>")));
   assert.doesNotThrow(() => validateWidgetSource(titled(`<script>
     addEventListener("message", (event) => {
-      if (event.data.type === "orbit.widget.preferences.v1" && event.data.payload.reducedMotion) cancelAnimationFrame(frame);
+      if (event.data.type === "balaur.widget.preferences.v1" && event.data.payload.reducedMotion) cancelAnimationFrame(frame);
     });
     requestAnimationFrame(draw);
   </script>`)));
@@ -387,7 +387,7 @@ test("rejects parser-state absorbers and unclosed inert or raw-text containers",
 
 test("preserves own __proto__ data for schema rejection and normalizes null prototypes", () => {
   const message = Object.assign(Object.create(null), {
-    type: "orbit.widget.status.v1",
+    type: "balaur.widget.status.v1",
     version: 1,
     payload: Object.assign(Object.create(null), { message: "ready" }),
   });
@@ -398,7 +398,7 @@ test("preserves own __proto__ data for schema rejection and normalizes null prot
   const pollutedPayload = { message: "ready" };
   Object.defineProperty(pollutedPayload, "__proto__", { value: { canonicalData: true }, enumerable: true });
   assert.throws(
-    () => validateWidgetMessage(WIDGET_TO_HOST, { type: "orbit.widget.status.v1", version: 1, payload: pollutedPayload }),
+    () => validateWidgetMessage(WIDGET_TO_HOST, { type: "balaur.widget.status.v1", version: 1, payload: pollutedPayload }),
     /unknown|field|plain JSON data/i,
   );
   assert.equal(Object.getPrototypeOf(pollutedPayload), Object.prototype);
@@ -534,7 +534,7 @@ test("rejects regex-forged reduced-motion evidence and accepts slash-free handle
     requestAnimationFrame(draw);
   </script>`;
   const forgedProtocol = String.raw`<script>
-    function evidence() { return /type === "orbit.widget.preferences.v1" && payload.reducedMotion/; }
+    function evidence() { return /type === "balaur.widget.preferences.v1" && payload.reducedMotion/; }
     requestAnimationFrame(draw);
   </script>`;
   assert.throws(() => validateWidgetSource(titled(forgedMatchMedia)), /reduced motion/i);
@@ -546,7 +546,7 @@ test("rejects regex-forged reduced-motion evidence and accepts slash-free handle
   </script>`)));
   assert.doesNotThrow(() => validateWidgetSource(titled(`<script>
     addEventListener("message", event => {
-      if (event.data.type === "orbit.widget.preferences.v1" && event.data.payload.reducedMotion) cancelAnimationFrame(frame);
+      if (event.data.type === "balaur.widget.preferences.v1" && event.data.payload.reducedMotion) cancelAnimationFrame(frame);
     });
     requestAnimationFrame(draw);
   </script>`)));
@@ -606,7 +606,7 @@ test("ignores mid-line classic-script comment evidence outside strings", () => {
 
 test("requires structural protocol reduced-motion handling rather than nearby identifiers", () => {
   const looseComparison = `<script>
-    const matchingType = event.data.type === "orbit.widget.preferences.v1";
+    const matchingType = event.data.type === "balaur.widget.preferences.v1";
     const reducedMotion = false;
     requestAnimationFrame(draw);
   </script>`;
@@ -615,13 +615,13 @@ test("requires structural protocol reduced-motion handling rather than nearby id
   assert.doesNotThrow(() => validateWidgetSource(titled(`<script>
     addEventListener("message", event => {
       const { reducedMotion } = event.data.payload;
-      if (event.data.type === "orbit.widget.preferences.v1" && reducedMotion) cancelAnimationFrame(frame);
+      if (event.data.type === "balaur.widget.preferences.v1" && reducedMotion) cancelAnimationFrame(frame);
     });
     requestAnimationFrame(draw);
   </script>`)));
   assert.doesNotThrow(() => validateWidgetSource(titled(`<script>
     switch (event.data.type) {
-      case "orbit.widget.preferences.v1":
+      case "balaur.widget.preferences.v1":
         if (event.data.payload.reducedMotion) cancelAnimationFrame(frame);
     }
     requestAnimationFrame(draw);
@@ -644,17 +644,17 @@ test("detects animate tokens across member whitespace and comments", () => {
 test("requires protocol type and reducedMotion payload to use the same receiver", () => {
   const cases = [
     `<script>
-      if (event.data.type === "orbit.widget.preferences.v1" && unrelated.payload.reducedMotion) cancelAnimationFrame(frame);
+      if (event.data.type === "balaur.widget.preferences.v1" && unrelated.payload.reducedMotion) cancelAnimationFrame(frame);
       requestAnimationFrame(draw);
     </script>`,
     `<script>
       const { reducedMotion } = unrelated.payload;
-      if (event.data.type === "orbit.widget.preferences.v1" && reducedMotion) cancelAnimationFrame(frame);
+      if (event.data.type === "balaur.widget.preferences.v1" && reducedMotion) cancelAnimationFrame(frame);
       requestAnimationFrame(draw);
     </script>`,
     `<script>
       switch (event.data.type) {
-        case "orbit.widget.preferences.v1":
+        case "balaur.widget.preferences.v1":
           if (unrelated.payload.reducedMotion) cancelAnimationFrame(frame);
       }
       requestAnimationFrame(draw);
@@ -662,7 +662,7 @@ test("requires protocol type and reducedMotion payload to use the same receiver"
   ];
   for (const source of cases) assert.throws(() => validateWidgetSource(titled(source)), /reduced motion/i);
   assert.doesNotThrow(() => validateWidgetSource(titled(`<script>
-    if (message.type === "orbit.widget.preferences.v1" && message.payload.reducedMotion) cancelAnimationFrame(frame);
+    if (message.type === "balaur.widget.preferences.v1" && message.payload.reducedMotion) cancelAnimationFrame(frame);
     requestAnimationFrame(draw);
   </script>`)));
 });
@@ -670,16 +670,16 @@ test("requires protocol type and reducedMotion payload to use the same receiver"
 test("scopes switch protocol evidence to the exact preferences case body", () => {
   const wrongCase = `<script>
     switch (message.type) {
-      case "orbit.widget.preferences.v1":
+      case "balaur.widget.preferences.v1":
         break;
-      case "orbit.widget.other.v1":
+      case "balaur.widget.other.v1":
         if (message.payload.reducedMotion) cancelAnimationFrame(frame);
     }
     requestAnimationFrame(draw);
   </script>`;
   const afterSwitch = `<script>
     switch (message.type) {
-      case "orbit.widget.preferences.v1":
+      case "balaur.widget.preferences.v1":
         break;
     }
     if (message.payload.reducedMotion) cancelAnimationFrame(frame);
@@ -689,7 +689,7 @@ test("scopes switch protocol evidence to the exact preferences case body", () =>
   assert.throws(() => validateWidgetSource(titled(afterSwitch)), /reduced motion/i);
   assert.doesNotThrow(() => validateWidgetSource(titled(`<script>
     switch (message.type) {
-      case "orbit.widget.preferences.v1":
+      case "balaur.widget.preferences.v1":
         if (message.payload.reducedMotion) cancelAnimationFrame(frame);
         break;
       default:

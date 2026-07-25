@@ -101,13 +101,13 @@ test("changesSince reports operations after a revision", async () => {
 test("restore rolls back the old root when activation fails", async () => {
   class FailingActivationVault extends FsVault {
     async _rename(from, to) {
-      if (from.includes(".orbit-restore-") && to === this.root) throw new Error("activation failed");
+      if (from.includes(".balaur-restore-") && to === this.root) throw new Error("activation failed");
       return super._rename(from, to);
     }
   }
   await vault.write("keep.md", "old");
   const failing = new FailingActivationVault(dir);
-  await assert.rejects(() => failing.restore({ format: "orbit-vault-snapshot", files: [{ path: "new.md", text: "new" }] }), /activation failed/);
+  await assert.rejects(() => failing.restore({ format: "balaur-vault-snapshot", files: [{ path: "new.md", text: "new" }] }), /activation failed/);
   assert.equal(await failing.read("keep.md"), "old");
   assert.equal(await failing.exists("new.md"), false);
 });
@@ -145,9 +145,9 @@ test("integrates with WorkspaceStore: a canonical workspace persists to a real f
   await store.migrate(workspace);
 
   // Real files exist on disk.
-  assert.equal(await vault.exists(".orbit/workspace.json"), true);
+  assert.equal(await vault.exists(".balaur/workspace.json"), true);
   assert.equal(await vault.exists("canvases/canvas-root.canvas"), true);
-  const sidecarOnDisk = JSON.parse(await fsp.readFile(nodePath.join(dir, ".orbit/workspace.json"), "utf8"));
+  const sidecarOnDisk = JSON.parse(await fsp.readFile(nodePath.join(dir, ".balaur/workspace.json"), "utf8"));
   assert.equal(sidecarOnDisk.canvases["canvas-root"].path, "canvases/canvas-root.canvas");
   assert.ok(!("document" in sidecarOnDisk.canvases["canvas-root"]));
 

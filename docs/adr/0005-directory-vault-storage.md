@@ -15,7 +15,7 @@ Balaur's browser vault was `IndexedDbVault`: opaque origin-private storage the u
 
 `DirectoryVault` is the sole browser vault adapter. It implements the existing async `VaultStore` contract over a `FileSystemDirectoryHandle` obtained from `showDirectoryPicker({ mode: "readwrite" })`. The constructor takes the handle (the test seam; headless contract tests pass an OPFS handle via `navigator.storage.getDirectory()`). The folder is re-picked every launch with zero persisted handles. Browsers lacking `showDirectoryPicker` or `crypto.subtle` receive a full-screen incompatibility message; no fallback adapter is provided.
 
-Existing data migrates by one-time manual whole-space `.orbit.json` export from the deployed IndexedDB version, then version-2 backup import into the picked folder (the existing `workspace-backup.js` flow re-pointed at a `MemoryVault` staging adapter). `IndexedDbVault` (`storage/indexeddb-vault.js`) and the `localStorage` first-run migration are deleted. `MemoryVault` (test adapter) and `FsVault` (Node reference/tooling) are unchanged.
+Existing data migrates by one-time manual whole-space `.balaur.json` export from the deployed IndexedDB version, then version-2 backup import into the picked folder (the existing `workspace-backup.js` flow re-pointed at a `MemoryVault` staging adapter). `IndexedDbVault` (`storage/indexeddb-vault.js`) and the `localStorage` first-run migration are deleted. `MemoryVault` (test adapter) and `FsVault` (Node reference/tooling) are unchanged.
 
 File-canonical ownership (ADR-0001) is unchanged: this is an adapter swap, not an ownership change. Canonical Markdown files, JSON Canvas documents, the workspace sidecar, and the disposable `MemoryIndex` projection retain their roles and contracts.
 

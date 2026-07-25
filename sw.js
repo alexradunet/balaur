@@ -1,4 +1,4 @@
-const CACHE_NAME = "orbit-shell-v13";
+const CACHE_NAME = "balaur-shell-v13";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -66,7 +66,7 @@ const APP_SHELL = [
   "./vendor/pixel-loom/fonts/worksans-400-latin.woff2",
   "./vendor/pixel-loom/fonts/worksans-500-latin-ext.woff2",
   "./vendor/pixel-loom/fonts/worksans-500-latin.woff2",
-  "./widgets/focus-orbit.html",
+  "./widgets/focus-balaur.html",
   "./icons/balaur.svg",
   "./icons/balaur-192.png",
   "./icons/balaur-512.png"
@@ -80,7 +80,7 @@ self.addEventListener("install", event => {
 
 self.addEventListener("activate", event => {
   event.waitUntil(Promise.all([
-    caches.keys().then(names => Promise.all(names.filter(name => name.startsWith("orbit-shell-") && name !== CACHE_NAME).map(name => caches.delete(name)))),
+    caches.keys().then(names => Promise.all(names.filter(name => name.startsWith("balaur-shell-") && name !== CACHE_NAME).map(name => caches.delete(name)))),
     self.registration.navigationPreload?.enable() || Promise.resolve(),
     self.clients.claim()
   ]));

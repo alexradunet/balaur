@@ -227,7 +227,7 @@ const PROBE_BACKGROUND_POINT = `(() => {
 
 // Structural JSON Canvas 1.0 check of the live document (no module import needed).
 const PROBE_IS_CANVAS = `(() => {
-  const doc = window.orbitCanvas.getDocument();
+  const doc = window.balaurCanvas.getDocument();
   if (!doc || !Array.isArray(doc.nodes) || !Array.isArray(doc.edges)) return false;
   const types = new Set(["text", "file", "link", "group"]);
   const ids = new Set(doc.nodes.map(n => n.id));
@@ -237,7 +237,7 @@ const PROBE_IS_CANVAS = `(() => {
 })()`;
 
 // ---------------------------------------------------------------------------
-// Landing-aware boot. window.orbitCanvas is exposed only after a vault opens,
+// Landing-aware boot. window.balaurCanvas is exposed only after a vault opens,
 // so every subcommand that waits on it must first get past the Vault gate.
 // This helper stubs window.showDirectoryPicker with an OPFS handle (spec seam 2)
 // and performs a real CDP click on the gate button, then waits for the app to
@@ -252,16 +252,16 @@ async function bootPastLanding(session, subdirectory = "vault-smoke") {
   // The incompatibility gate disables the button; a healthy Chromium headless
   // profile passes (showDirectoryPicker + crypto.subtle present on localhost).
   // The button exists enabled in the markup before app.js wires its handler, so
-  // also require window.orbitVaultReady (assigned right after the handler is
+  // also require window.balaurVaultReady (assigned right after the handler is
   // attached) to avoid clicking before the pick handler exists — a race the
   // Fetch-intercepted failureSession (register.js blocked) reliably hits.
-  await session.waitFor(`(() => { const b = document.getElementById("openVaultFolder"); return b && !b.disabled && window.orbitVaultReady !== undefined; })()`, 15000);
+  await session.waitFor(`(() => { const b = document.getElementById("openVaultFolder"); return b && !b.disabled && window.balaurVaultReady !== undefined; })()`, 15000);
   const gate = await session.evaluate(`(() => ({ messageEmpty: document.getElementById("vaultLandingMessage").textContent.trim() === "", buttonEnabled: !document.getElementById("openVaultFolder").disabled }))()`);
   await session.evaluate(`window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle(${JSON.stringify(subdirectory)}, { create: true })`);
   // Real CDP click on the button center (user-gesture semantics), not el.click().
   const point = await session.evaluate(`(() => { const r = document.getElementById("openVaultFolder").getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
   await session.click(point.x, point.y);
-  await session.waitFor("window.orbitCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
+  await session.waitFor("window.balaurCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
   return gate;
 }
 
@@ -291,7 +291,7 @@ async function smoke(url, flags) {
     record("boot: no failed asset requests", failedUrls.length === 0, failedUrls.slice(0, 3).join(" | "));
 
     // 2. Every document node rendered as a card.
-    const counts = await session.evaluate(`({ dom: document.querySelectorAll('.canvas-node').length, doc: window.orbitCanvas.getDocument().nodes.length })`);
+    const counts = await session.evaluate(`({ dom: document.querySelectorAll('.canvas-node').length, doc: window.balaurCanvas.getDocument().nodes.length })`);
     record("render: DOM cards match document nodes", counts.dom === counts.doc && counts.doc > 0, `${counts.dom}/${counts.doc}`);
 
     // 3. Canonical file index came up (in-memory index over the vault; no SQLite in canonical v1).
@@ -340,12 +340,12 @@ async function smoke(url, flags) {
       // 5. An explicit portal double-click must navigate without creating nodes,
       // then restore the original canvas for the remaining smoke probes.
       const portal = await session.evaluate(`(async () => {
-        const originalCanvasId = window.orbitCanvas.getCurrentCanvas().id;
-        const pending = window.orbitCanvas.createSubcanvas({ x: 0, y: 0 });
+        const originalCanvasId = window.balaurCanvas.getCurrentCanvas().id;
+        const pending = window.balaurCanvas.createSubcanvas({ x: 0, y: 0 });
         document.getElementById("subcanvasTitle").value = "Smoke portal";
         document.getElementById("subcanvasForm").requestSubmit();
         const portalNode = await pending;
-        const workspace = window.orbitCanvas.getWorkspace();
+        const workspace = window.balaurCanvas.getWorkspace();
         const child = Object.values(workspace.canvases).find(canvas =>
           canvas.parentId === originalCanvasId && canvas.portalNodeId === portalNode.id);
         return {
@@ -361,22 +361,22 @@ async function smoke(url, flags) {
         const rect = target.getBoundingClientRect();
         target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, detail: 2, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }));
       })()`);
-      await session.waitFor(`window.orbitCanvas.getCurrentCanvas().id === ${JSON.stringify(portal.childCanvasId)}`, 5000);
+      await session.waitFor(`window.balaurCanvas.getCurrentCanvas().id === ${JSON.stringify(portal.childCanvasId)}`, 5000);
       const portalAfter = await session.evaluate(`(() => {
-        const workspace = window.orbitCanvas.getWorkspace();
+        const workspace = window.balaurCanvas.getWorkspace();
         return {
-          canvasId: window.orbitCanvas.getCurrentCanvas().id,
+          canvasId: window.balaurCanvas.getCurrentCanvas().id,
           total: Object.values(workspace.canvases).reduce((sum, canvas) => sum + (canvas.document?.nodes?.length || 0), 0),
         };
       })()`);
       record("create: portal dblclick navigates without creating nodes", portal.childCanvasId !== null && portalAfter.canvasId === portal.childCanvasId && portalAfter.total === portal.total, `${portal.total} -> ${portalAfter.total}`);
-      await session.evaluate(`window.orbitCanvas.switchCanvas(${JSON.stringify(portal.originalCanvasId)})`);
-      await session.waitFor(`window.orbitCanvas.getCurrentCanvas().id === ${JSON.stringify(portal.originalCanvasId)}`, 5000);
+      await session.evaluate(`window.balaurCanvas.switchCanvas(${JSON.stringify(portal.originalCanvasId)})`);
+      await session.waitFor(`window.balaurCanvas.getCurrentCanvas().id === ${JSON.stringify(portal.originalCanvasId)}`, 5000);
       await new Promise(r => setTimeout(r, 350));
-      record("create: portal probe restores original canvas", await session.evaluate(`window.orbitCanvas.getCurrentCanvas().id === ${JSON.stringify(portal.originalCanvasId)}`));
+      record("create: portal probe restores original canvas", await session.evaluate(`window.balaurCanvas.getCurrentCanvas().id === ${JSON.stringify(portal.originalCanvasId)}`));
 
       // 6. Note tool: clicking inside a card must NOT create a card.
-      const beforeTool = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
+      const beforeTool = await session.evaluate("window.balaurCanvas.getDocument().nodes.length");
       await session.evaluate(`document.querySelector('.tool[data-tool="note"]').click()`);
       await session.evaluate(`(() => {
         const target = document.querySelector('.canvas-node:not(.group-node) .node-content');
@@ -386,7 +386,7 @@ async function smoke(url, flags) {
         window.dispatchEvent(new PointerEvent('pointerup', { ...options, buttons: 0 }));
       })()`);
       await new Promise(r => setTimeout(r, 400));
-      const afterTool = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
+      const afterTool = await session.evaluate("window.balaurCanvas.getDocument().nodes.length");
       record("create: note tool on card creates nothing", afterTool === beforeTool, `${beforeTool} -> ${afterTool}`);
       await session.evaluate(`document.querySelector('.tool[data-tool="select"]').click()`);
     } else {
@@ -396,14 +396,14 @@ async function smoke(url, flags) {
     // 7. Double-clicking empty background still creates a note.
     const bgPoint = await session.evaluate(PROBE_BACKGROUND_POINT);
     if (bgPoint) {
-      const before = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
+      const before = await session.evaluate("window.balaurCanvas.getDocument().nodes.length");
       await session.dblclick(bgPoint.x, bgPoint.y);
       // Note creation is async (file-backed note + canvas reload, ADR-0004) and
       // takes ~700ms when a card is selected; poll for the new node rather than
       // a fixed sleep. A timeout falls through to a graceful FAIL below.
-      await session.waitFor(`window.orbitCanvas.getDocument().nodes.length > ${before}`, 5000).catch(() => {});
+      await session.waitFor(`window.balaurCanvas.getDocument().nodes.length > ${before}`, 5000).catch(() => {});
       const info = await session.evaluate(`(() => {
-        const nodes = window.orbitCanvas.getDocument().nodes;
+        const nodes = window.balaurCanvas.getDocument().nodes;
         const last = nodes[nodes.length - 1];
         return { count: nodes.length, isNoteFile: last?.type === "file" && typeof last?.file === "string" && last.file.startsWith("notes/") };
       })()`);
@@ -417,13 +417,13 @@ async function smoke(url, flags) {
     await session.waitFor(`document.getElementById("saveState")?.textContent.includes("Saved locally")`, 10000);
 
     // 9. Controlled reload preserves the workspace (same profile).
-    const titleBefore = await session.evaluate("window.orbitCanvas.getWorkspace().canvases[window.orbitCanvas.getWorkspace().rootId].title");
-    const nodesBefore = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
+    const titleBefore = await session.evaluate("window.balaurCanvas.getWorkspace().canvases[window.balaurCanvas.getWorkspace().rootId].title");
+    const nodesBefore = await session.evaluate("window.balaurCanvas.getDocument().nodes.length");
     await session.reload();
     await bootPastLanding(session);
     await new Promise(r => setTimeout(r, 800));
-    const titleAfter = await session.evaluate("window.orbitCanvas.getWorkspace().canvases[window.orbitCanvas.getWorkspace().rootId].title");
-    const nodesAfter = await session.evaluate("window.orbitCanvas.getDocument().nodes.length");
+    const titleAfter = await session.evaluate("window.balaurCanvas.getWorkspace().canvases[window.balaurCanvas.getWorkspace().rootId].title");
+    const nodesAfter = await session.evaluate("window.balaurCanvas.getDocument().nodes.length");
     record("persist: reload keeps title and node count", titleBefore === titleAfter && nodesBefore === nodesAfter, `${nodesBefore} -> ${nodesAfter}`);
 
     // 10. Offline reload renders the shell from the Service Worker cache.
@@ -431,7 +431,7 @@ async function smoke(url, flags) {
       await session.setOffline(true);
       await session.reload();
       await bootPastLanding(session);
-      const shellUp = await session.evaluate("!!document.querySelector('.canvas') && !!window.orbitCanvas").catch(() => false);
+      const shellUp = await session.evaluate("!!document.querySelector('.canvas') && !!window.balaurCanvas").catch(() => false);
       record("offline: shell renders from cache", shellUp === true);
       await session.setOffline(false);
     }
@@ -502,13 +502,13 @@ async function components(url, flags) {
       host.close({ restoreFocus: true });
       const closeRestoresFocus = closed() && document.activeElement === toggle;
 
-      const nodesBeforeInvalidIntent = window.orbitCanvas.getDocument().nodes.length;
+      const nodesBeforeInvalidIntent = window.balaurCanvas.getDocument().nodes.length;
       host.dispatchEvent(new CustomEvent("balaur-add", {
         bubbles: true,
         composed: true,
         detail: { kind: "toString" },
       }));
-      const invalidIntentIgnored = window.orbitCanvas.getDocument().nodes.length === nodesBeforeInvalidIntent;
+      const invalidIntentIgnored = window.balaurCanvas.getDocument().nodes.length === nodesBeforeInvalidIntent;
 
       const intents = [];
       host.addEventListener("balaur-add", event => {
@@ -618,13 +618,13 @@ async function components(url, flags) {
       record("components: reconnect does not duplicate listeners", probe.reconnectsCleanly);
     }
     const integrationSetup = await session.evaluate(`(async () => {
-      await window.orbitVaultReady;
+      await window.balaurVaultReady;
       const path = "cards/browser-component-probe.md";
       const invalidPath = "cards/browser-invalid-component-probe.md";
       const nodeId = "browser-component-probe-node";
       const invalidNodeId = "browser-invalid-component-probe-node";
       const iframeNodeId = "browser-iframe-probe-node";
-      const vault = window.orbitVaultStore?.vault;
+      const vault = window.balaurVaultStore?.vault;
       if (!vault) return { ready: false };
       if (!await vault.stat(path)) {
         const { serializeComponentCard } = await import("./storage/component-card-codec.js");
@@ -640,9 +640,9 @@ async function components(url, flags) {
         }), { expectedHash: null });
       }
       if (!await vault.stat(invalidPath)) {
-        await vault.write(invalidPath, "---\\norbit-schema: 1\\norbit-type: component-card\\norbit-id: card-browser-invalid\\ntitle: \\"Recoverable invalid card\\"\\nrecipe: progress\\nvalue: 12\\nmaximum: 10\\n---\\nRecognizable **raw fallback body**.", { expectedHash: null });
+        await vault.write(invalidPath, "---\\nbalaur-schema: 1\\nbalaur-type: component-card\\nbalaur-id: card-browser-invalid\\ntitle: \\"Recoverable invalid card\\"\\nrecipe: progress\\nvalue: 12\\nmaximum: 10\\n---\\nRecognizable **raw fallback body**.", { expectedHash: null });
       }
-      const existingIds = new Set(window.orbitCanvas.getDocument().nodes.map(node => node.id));
+      const existingIds = new Set(window.balaurCanvas.getDocument().nodes.map(node => node.id));
       const operations = [];
       if (!existingIds.has(nodeId)) operations.push({
         type: "node.add",
@@ -654,9 +654,9 @@ async function components(url, flags) {
       });
       if (!existingIds.has(iframeNodeId)) operations.push({
         type: "node.add",
-        node: { id: iframeNodeId, type: "file", file: "widgets/focus-orbit.html", x: 1780, y: 0, width: 420, height: 260, color: "5" },
+        node: { id: iframeNodeId, type: "file", file: "widgets/focus-balaur.html", x: 1780, y: 0, width: 420, height: 260, color: "5" },
       });
-      if (operations.length) window.orbitCanvas.applyOperations(operations);
+      if (operations.length) window.balaurCanvas.applyOperations(operations);
       await new Promise(resolve => setTimeout(resolve, 700));
       return { ready: true, nodeId, invalidNodeId, iframeNodeId };
     })()`);
@@ -670,19 +670,19 @@ async function components(url, flags) {
         const host = document.querySelector(selector);
         const invalidHost = document.querySelector(invalidSelector);
         const iframe = document.querySelector(iframeSelector);
-        const standardFileNode = window.orbitCanvas.getDocument().nodes.some(node =>
+        const standardFileNode = window.balaurCanvas.getDocument().nodes.some(node =>
           node.id === "${integrationSetup.nodeId}"
           && node.type === "file"
           && node.file === "cards/browser-component-probe.md"
         );
-        const vault = window.orbitVaultStore.vault;
+        const vault = window.balaurVaultStore.vault;
         const originalRead = vault.read;
         let renderReads = 0;
         vault.read = function(...args) {
           renderReads++;
           return originalRead.apply(this, args);
         };
-        window.orbitCanvas.applyOperations([]);
+        window.balaurCanvas.applyOperations([]);
         vault.read = originalRead;
         const hostAfterRender = document.querySelector(selector);
         const iframeAfterRender = document.querySelector(iframeSelector);
@@ -711,9 +711,9 @@ async function components(url, flags) {
         try {
           const cardId = "card-browser-component-probe";
           const secondNodeId = "browser-component-probe-node-second";
-          const canvasId = window.orbitCanvas.getCurrentCanvas().id;
-          if (!window.orbitCanvas.getDocument().nodes.some(node => node.id === secondNodeId)) {
-            await window.orbitCanvas.applyOperations([{
+          const canvasId = window.balaurCanvas.getCurrentCanvas().id;
+          if (!window.balaurCanvas.getDocument().nodes.some(node => node.id === secondNodeId)) {
+            await window.balaurCanvas.applyOperations([{
               type: "component-card.update",
               id: cardId,
               patch: {},
@@ -726,9 +726,9 @@ async function components(url, flags) {
             id: cardId,
             patch: { fields: { value: "93%", label: "Patched everywhere", progress: 0.93, trend: "up" } },
           };
-          const proposal = window.orbitCanvas.validateOperations([patchOnly]);
-          await window.orbitCanvas.applyOperations([patchOnly]);
-          const placements = window.orbitCanvas.getDocument().nodes.filter(node => node.file === "cards/browser-component-probe.md");
+          const proposal = window.balaurCanvas.validateOperations([patchOnly]);
+          await window.balaurCanvas.applyOperations([patchOnly]);
+          const placements = window.balaurCanvas.getDocument().nodes.filter(node => node.file === "cards/browser-component-probe.md");
           const patchedHosts = placements.map(node => document.querySelector('.canvas-node[data-id="' + CSS.escape(node.id) + '"] balaur-component-card'));
           patchedHosts[0]?.querySelector("[data-card-open]")?.click();
           const deleteCard = document.querySelector('#inspector [data-intent="delete-card"]');
@@ -737,9 +737,9 @@ async function components(url, flags) {
           window.confirm = () => false;
           deleteCard?.click();
           await new Promise(resolve => setTimeout(resolve, 200));
-          const vault = window.orbitVaultStore.vault;
+          const vault = window.balaurVaultStore.vault;
           const cancelled = !!await vault.stat("cards/browser-component-probe.md")
-            && window.orbitCanvas.getDocument().nodes.filter(node => node.file === "cards/browser-component-probe.md").length === 2;
+            && window.balaurCanvas.getDocument().nodes.filter(node => node.file === "cards/browser-component-probe.md").length === 2;
           window.confirm = () => true;
           deleteCard?.click();
           for (let index = 0; index < 50 && await vault.stat("cards/browser-component-probe.md"); index++) {
@@ -754,7 +754,7 @@ async function components(url, flags) {
             separateDeleteActions: !!deleteCard && !!deletePlacement && deleteCard !== deletePlacement,
             cancelled,
             deleted: !await vault.stat("cards/browser-component-probe.md")
-              && !window.orbitCanvas.getDocument().nodes.some(node => node.file === "cards/browser-component-probe.md")
+              && !window.balaurCanvas.getDocument().nodes.some(node => node.file === "cards/browser-component-probe.md")
               && !document.querySelector('balaur-component-card[data-node-id="${integrationSetup.nodeId}"]'),
           };
         } catch (error) {
@@ -776,8 +776,8 @@ async function components(url, flags) {
     const applicationSetup = await session.evaluate(`(async () => {
       const today = (() => { const date = new Date(); return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0"); })();
       const title = "Task 7 component flow";
-      if (!document.body.textContent.includes(title)) await window.orbitCanvas.createTask({ title, status: "scheduled", scheduledOn: today });
-      window.orbitCanvas.setView("today");
+      if (!document.body.textContent.includes(title)) await window.balaurCanvas.createTask({ title, status: "scheduled", scheduledOn: today });
+      window.balaurCanvas.setView("today");
       return { title };
     })()`);
     await session.waitFor(`document.querySelector('#todayScheduled [data-task-id] .task-copy')?.textContent.includes(${JSON.stringify(applicationSetup.title)})`, 10000);
@@ -785,7 +785,7 @@ async function components(url, flags) {
       const row = [...document.querySelectorAll("#todayScheduled [data-task-id]")].find(node => node.textContent.includes(${JSON.stringify(applicationSetup.title)}));
       const open = row?.querySelector("[data-open-task]");
       open?.focus();
-      window.orbitCanvas.setView("today");
+      window.balaurCanvas.setView("today");
       const currentRow = [...document.querySelectorAll("#todayScheduled [data-task-id]")].find(node => node.textContent.includes(${JSON.stringify(applicationSetup.title)}));
       const stable = currentRow === row && currentRow?.querySelector("[data-open-task]") === open && document.activeElement === open;
       currentRow?.querySelector("[data-complete-task]")?.click();
@@ -821,18 +821,18 @@ async function components(url, flags) {
     record("components: native dialog form submits through app controller", true);
 
     const navigationSetup = await session.evaluate(`(async () => {
-      window.orbitCanvas.setView("canvas");
-      const parentId = window.orbitCanvas.getCurrentCanvas().id;
-      const before = new Set(Object.keys(window.orbitCanvas.getWorkspace().canvases));
-      const pending = window.orbitCanvas.createSubcanvas();
+      window.balaurCanvas.setView("canvas");
+      const parentId = window.balaurCanvas.getCurrentCanvas().id;
+      const before = new Set(Object.keys(window.balaurCanvas.getWorkspace().canvases));
+      const pending = window.balaurCanvas.createSubcanvas();
       document.getElementById("subcanvasTitle").value = "Components child";
       document.getElementById("subcanvasForm").requestSubmit();
       await pending;
-      const childId = Object.keys(window.orbitCanvas.getWorkspace().canvases).find(id => !before.has(id));
-      window.orbitCanvas.switchCanvas(childId);
+      const childId = Object.keys(window.balaurCanvas.getWorkspace().canvases).find(id => !before.has(id));
+      window.balaurCanvas.switchCanvas(childId);
       return { parentId, childId };
     })()`);
-    await session.waitFor(`window.orbitCanvas.getCurrentCanvas().id === ${JSON.stringify(navigationSetup.childId)}`, 5000);
+    await session.waitFor(`window.balaurCanvas.getCurrentCanvas().id === ${JSON.stringify(navigationSetup.childId)}`, 5000);
     const breadcrumb = await session.evaluate(`(() => {
       const trail = document.getElementById("canvasBreadcrumbs");
       const list = document.getElementById("canvasList");
@@ -843,15 +843,15 @@ async function components(url, flags) {
       parent.click();
       return { hosts, landmarks: !!landmarks, clicked: true };
     })()`);
-    await session.waitFor(`window.orbitCanvas.getCurrentCanvas().id === ${JSON.stringify(navigationSetup.parentId)}`, 5000);
+    await session.waitFor(`window.balaurCanvas.getCurrentCanvas().id === ${JSON.stringify(navigationSetup.parentId)}`, 5000);
     record("components: workspace navigation hosts render hierarchy and breadcrumbs", breadcrumb.hosts);
     record("components: workspace navigation retains named native landmarks", breadcrumb.landmarks);
     record("components: breadcrumb composed intent switches canvas", breadcrumb.clicked);
 
     const inspectorSetup = await session.evaluate(`(() => {
       const id = "task-7-inspector-probe";
-      if (!window.orbitCanvas.getDocument().nodes.some(node => node.id === id)) {
-        window.orbitCanvas.applyOperations([{ type: "node.add", node: { id, type: "text", x: 20, y: 20, width: 260, height: 160, color: "2", text: "# Inspector probe" } }]);
+      if (!window.balaurCanvas.getDocument().nodes.some(node => node.id === id)) {
+        window.balaurCanvas.applyOperations([{ type: "node.add", node: { id, type: "text", x: 20, y: 20, width: 260, height: 160, color: "2", text: "# Inspector probe" } }]);
       }
       return { id };
     })()`);
@@ -869,9 +869,9 @@ async function components(url, flags) {
       field.focus();
       field.value = "# Inspector edited";
       field.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: "d" }));
-      window.orbitCanvas.applyOperations([]);
+      window.balaurCanvas.applyOperations([]);
       const fieldAfter = inspector.querySelector('[data-field-key="text"]');
-      const edited = window.orbitCanvas.getDocument().nodes.find(node => node.id === ${JSON.stringify(inspectorSetup.id)})?.text === "# Inspector edited";
+      const edited = window.balaurCanvas.getDocument().nodes.find(node => node.id === ${JSON.stringify(inspectorSetup.id)})?.text === "# Inspector edited";
       const rect = inspector.getBoundingClientRect();
       return {
         host: inspector.matches("balaur-inspector"),
@@ -1261,13 +1261,13 @@ async function components(url, flags) {
         "balaur-workspace-nav",
       ].every(name => !customElements.get(name));
 
-      const initialCanvasId = window.orbitCanvas.getCurrentCanvas().id;
+      const initialCanvasId = window.balaurCanvas.getCurrentCanvas().id;
       const alternateCanvas = [...document.querySelectorAll("#canvasList [data-fallback-canvas-id]")]
         .find(button => button.dataset.fallbackCanvasId !== initialCanvasId);
       alternateCanvas?.click();
       await wait(100);
       const navigationWorks = Boolean(alternateCanvas)
-        && window.orbitCanvas.getCurrentCanvas().id === alternateCanvas.dataset.fallbackCanvasId
+        && window.balaurCanvas.getCurrentCanvas().id === alternateCanvas.dataset.fallbackCanvasId
         && document.querySelectorAll('#canvasList [aria-current="page"]').length === 1;
 
       document.querySelector('[data-app-view="today"]')?.click();
@@ -1280,23 +1280,23 @@ async function components(url, flags) {
         && Boolean(taskOpen)
         && !document.querySelector("#canvas").hidden;
 
-      const beforeAdd = window.orbitCanvas.getDocument().nodes.length;
+      const beforeAdd = window.balaurCanvas.getDocument().nodes.length;
       document.querySelector("#addMenuToggle")?.click();
       const addPanelOpened = !document.querySelector("#addMenu")?.hidden;
       document.querySelector('balaur-add-menu [data-add="note"]')?.click();
       await wait(100);
       const nativeAddWorks = addPanelOpened
-        && window.orbitCanvas.getDocument().nodes.length === beforeAdd + 1;
+        && window.balaurCanvas.getDocument().nodes.length === beforeAdd + 1;
 
-      const vault = window.orbitVaultStore.vault;
+      const vault = window.balaurVaultStore.vault;
       const cardPath = "cards/registration-fallback.md";
       const widgetPath = "widgets/registration-fallback.html";
       if (!(await vault.stat(cardPath))) {
         await vault.write(cardPath, [
           "---",
-          "orbit-schema: 1",
-          "orbit-type: component-card",
-          'orbit-id: "card-registration-fallback"',
+          "balaur-schema: 1",
+          "balaur-type: component-card",
+          'balaur-id: "card-registration-fallback"',
           'title: "Readable fallback card"',
           "recipe: callout",
           "tone: info",
@@ -1311,7 +1311,7 @@ async function components(url, flags) {
           mediaType: "text/html",
         });
       }
-      const canvasDocument = window.orbitCanvas.getDocument();
+      const canvasDocument = window.balaurCanvas.getDocument();
       const operations = [];
       if (!canvasDocument.nodes.some(node => node.id === ids.note)) {
         operations.push({
@@ -1331,7 +1331,7 @@ async function components(url, flags) {
           node: { id: ids.widget, type: "file", file: widgetPath, x: 640, y: 20, width: 320, height: 190 },
         });
       }
-      if (operations.length) await window.orbitCanvas.applyOperations(operations);
+      if (operations.length) await window.balaurCanvas.applyOperations(operations);
       await wait(100);
       const card = document.querySelector('.canvas-node[data-id="' + ids.card + '"]');
       const widget = document.querySelector('.canvas-node[data-id="' + ids.widget + '"]');
@@ -1360,11 +1360,11 @@ async function components(url, flags) {
         && inspector.textContent.includes("File node")
         && inspector.querySelectorAll("[data-field-key]").length > 0
         && inspector.querySelectorAll("[data-intent]").length > 0;
-      const cardNode = window.orbitCanvas.getDocument().nodes.find(node => node.id === ids.card);
+      const cardNode = window.balaurCanvas.getDocument().nodes.find(node => node.id === ids.card);
       const targetColor = cardNode?.color === "1" ? "2" : "1";
       inspector?.querySelector('[data-color="' + targetColor + '"]')?.click();
       await wait(50);
-      const inspectorActionWorks = window.orbitCanvas.getDocument().nodes
+      const inspectorActionWorks = window.balaurCanvas.getDocument().nodes
         .some(node => node.id === ids.card && node.color === targetColor);
       return {
         definitionsAbsent,
@@ -1381,14 +1381,14 @@ async function components(url, flags) {
     await failureSession.waitFor(`document.getElementById("saveState")?.textContent.includes("Saved locally")`, 10000);
     await failureSession.reload();
     await bootPastLanding(failureSession);
-    await failureSession.waitFor(`window.orbitCanvas?.getDocument().nodes.some(node => node.id === "component-registration-failure-save")`, 15000);
+    await failureSession.waitFor(`window.balaurCanvas?.getDocument().nodes.some(node => node.id === "component-registration-failure-save")`, 15000);
     const persisted = await failureSession.evaluate(`(() => {
       const ids = ${JSON.stringify({
         note: "component-registration-failure-save",
         card: "component-registration-fallback-card",
         widget: "component-registration-fallback-widget",
       })};
-      const documentModel = window.orbitCanvas.getDocument();
+      const documentModel = window.balaurCanvas.getDocument();
       return {
         rendered: document.querySelectorAll(".canvas-node").length === documentModel.nodes.length,
         persisted: Object.values(ids).every(id => documentModel.nodes.some(node => node.id === id)),
@@ -1428,12 +1428,12 @@ async function widgets(url, flags) {
   const results = [];
   const record = (name, ok, detail = "") => { results.push({ name, ok, detail }); };
   const basicSource = `<!doctype html><title>Browser widget</title><p>Ready</p><script>
-addEventListener("balaur-widget-ready", () => balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:"source-ready"}}));
+addEventListener("balaur-widget-ready", () => balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:"source-ready"}}));
 addEventListener("balaur-widget-message", event => {
   const message = event.detail;
-  if (message.type === "orbit.widget.theme.v1") balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:"theme:" + message.payload.tokens.primary}});
-  if (message.type === "orbit.widget.preferences.v1") balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:"preferences:" + message.payload.reducedMotion}});
-  if (message.type === "orbit.widget.visibility.v1") balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:"visibility:" + message.payload.visible}});
+  if (message.type === "balaur.widget.theme.v1") balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:"theme:" + message.payload.tokens.primary}});
+  if (message.type === "balaur.widget.preferences.v1") balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:"preferences:" + message.payload.reducedMotion}});
+  if (message.type === "balaur.widget.visibility.v1") balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:"visibility:" + message.payload.visible}});
 });<\/script>`;
   const hostileSource = `<!doctype html><title>Hostile probe</title><p>Probe</p><script>
 addEventListener("balaur-widget-ready", async () => {
@@ -1469,25 +1469,25 @@ addEventListener("balaur-widget-ready", async () => {
   await new Promise(resolve => setTimeout(resolve, 500));
   blocked.form ||= violations.has("form-action");
   blocked.frame = violations.has("frame-src");
-  balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:JSON.stringify(blocked)}});
+  balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:JSON.stringify(blocked)}});
 });<\/script>`;
   const navigationSource = `<!doctype html><title>Navigation probe</title><script>
 addEventListener("balaur-widget-ready", () => { location.href = "data:text/html,navigated"; });
 <\/script>`;
   const floodSource = `<!doctype html><title>Flood probe</title><script>
 addEventListener("balaur-widget-ready", () => {
-  for (let index = 0; index < 80; index++) balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:"flood-" + index}});
+  for (let index = 0; index < 80; index++) balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:"flood-" + index}});
 });<\/script>`;
   const invalidMessageSource = `<!doctype html><title>Schema probe</title><script>
-addEventListener("balaur-widget-ready", () => balaurWidget.post({type:"orbit.widget.mutate.v1",version:1,payload:{canonical:true}}));
+addEventListener("balaur-widget-ready", () => balaurWidget.post({type:"balaur.widget.mutate.v1",version:1,payload:{canonical:true}}));
 <\/script>`;
   const oversizedMessageSource = `<!doctype html><title>Size probe</title><script>
-addEventListener("balaur-widget-ready", () => balaurWidget.post({type:"orbit.widget.status.v1",version:1,payload:{message:"x".repeat(70 * 1024)}}));
+addEventListener("balaur-widget-ready", () => balaurWidget.post({type:"balaur.widget.status.v1",version:1,payload:{message:"x".repeat(70 * 1024)}}));
 <\/script>`;
   const quietSource = `<!doctype html><title>Quiet probe</title><script>
 const original = MessagePort.prototype.postMessage;
 MessagePort.prototype.postMessage = function(message, ...rest) {
-  if (message?.type === "orbit.widget.heartbeat.v1") return;
+  if (message?.type === "balaur.widget.heartbeat.v1") return;
   return original.call(this, message, ...rest);
 };
 <\/script>`;
@@ -1533,7 +1533,7 @@ MessagePort.prototype.postMessage = function(message, ...rest) {
         const frame = host.shadowRoot.querySelector("iframe");
         const buttons = [...host.shadowRoot.querySelectorAll("button")];
         const statusBeforeFake = host.status;
-        dispatchEvent(new MessageEvent("message", {data:{type:"orbit.widget.status.v1",version:1,payload:{message:"global-forgery"}}}));
+        dispatchEvent(new MessageEvent("message", {data:{type:"balaur.widget.status.v1",version:1,payload:{message:"global-forgery"}}}));
         return {
           attributes: frame?.getAttribute("sandbox") === "allow-scripts"
             && frame?.getAttribute("referrerpolicy") === "no-referrer"
@@ -1831,7 +1831,7 @@ const CONTRACT_EVAL = `(async () => {
         if ((await v.read(p)) !== (await v2.read(p))) { contentsEqual = false; break; }
       }
     }
-    check("snapshot/restore round-trip", snap.format === "orbit-vault-snapshot" && restored.count === pathsA.length && contentsEqual, "files=" + pathsA.length + " restored=" + restored.count);
+    check("snapshot/restore round-trip", snap.format === "balaur-vault-snapshot" && restored.count === pathsA.length && contentsEqual, "files=" + pathsA.length + " restored=" + restored.count);
 
     // changesSince journal ordering (dedicated vault, controlled sequence)
     const vj = new DirectoryVault(await root.getDirectoryHandle("contract-journal-" + stamp, { create: true }));

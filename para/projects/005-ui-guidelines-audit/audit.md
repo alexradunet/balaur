@@ -9,7 +9,7 @@ guidelines-source: https://raw.githubusercontent.com/vercel-labs/web-interface-g
 # UI audit against Vercel Web Interface Guidelines
 
 Scope: `index.html`, `styles/*.css`, `elements/*.js`, `app.js` (UI surface),
-`widgets/focus-orbit.html`, `vendor/pixel-loom/fonts.css`. Guidelines fetched
+`widgets/focus-balaur.html`, `vendor/pixel-loom/fonts.css`. Guidelines fetched
 fresh at audit time. Verdict: strong baseline (reduced-motion system,
 forced-colors, `inert` panels, menu keyboard nav, sandboxed widgets, no
 `transition: all`, no zoom-blocking viewport). Gaps cluster in accessible
@@ -59,7 +59,7 @@ styles/motion.css reduced-motion collapse and explicit transition properties;
 elements/add-menu.js (popover, arrows/Home/End/Escape, focus restore);
 elements/workspace-nav.js (aria-current, hidden separators); elements/inspector.js
 (wrapped labels, color aria-labels); elements/widget-frame.js (sandbox="allow-scripts",
-iframe title, role=status); widgets/focus-orbit.html (reduced motion); no
+iframe title, role=status); widgets/focus-balaur.html (reduced motion); no
 user-scalable=no; theme-color meta; native <dialog>; inert + aria-hidden AI panel;
 toast role=status; menu semantics; autocomplete="new-password" on the key input;
 confirm() on every delete-everywhere path; escapeHTML/safeURL everywhere;

@@ -42,8 +42,8 @@ test("createTask writes a canonical .md file and indexes it", async () => {
   assert.equal(id, "task-a1b2c3");
   assert.match(path, /^tasks\/finish-quarterly-review--a1b2c3\.md$/);
   const stored = await vault.read(path);
-  assert.match(stored, /orbit-type: task/);
-  assert.match(stored, /orbit-id: "?task-a1b2c3"?/);
+  assert.match(stored, /balaur-type: task/);
+  assert.match(stored, /balaur-id: "?task-a1b2c3"?/);
   assert.match(stored, /Collect the numbers\./);
   const row = index.taskById(id);
   assert.equal(row.title, "Finish quarterly review");

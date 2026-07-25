@@ -27,7 +27,7 @@ indexeddb-vault.js -252.
 - Dead-reference sweep `grep -rn "indexeddb-vault\|IndexedDbVault"
   --include=*.js --include=*.mjs --include=*.html . | grep -v vendor/|teach/|plans/`
   → no output.
-- `grep -n "localStorage" app.js` → only theme (`orbit-canvas-theme`, :1667/:1890)
+- `grep -n "localStorage" app.js` → only theme (`balaur-canvas-theme`, :1667/:1890)
   and AI-settings (`AI_SETTINGS_KEY`/`AI_SECRET_KEY`, :1788/:1789/:1798/:1930).
 
 ## Critical correctness points (all verified in code)
@@ -45,15 +45,15 @@ indexeddb-vault.js -252.
    `hadSidecar`/`empty` detection (`:338-339`), `openVault(vault,{seed:empty})`
    shared core (`:340`), hide landing + reveal shell (`:342-343`). Module tail
    (`:1965-1968`) keeps `vaultReady=bootCanvasApp();
-   window.orbitVaultReady=vaultReady; await vaultReady;` then the
-   `window.orbitCanvas` assignment — `orbitVaultReady` resolves immediately in
-   gated mode (early `return`) with `vaultStore` left null; `orbitCanvas`
+   window.balaurVaultReady=vaultReady; await vaultReady;` then the
+   `window.balaurCanvas` assignment — `balaurVaultReady` resolves immediately in
+   gated mode (early `return`) with `vaultStore` left null; `balaurCanvas`
    exposed in both modes. PASS.
 3. **openVault core** (`app.js:362-388`) — `WorkspaceStore` (`:363`),
    `hasWorkspace` (`:364`), `!had → store.migrate(seed?
    createGraphStarterWorkspace():minimalFreshWorkspace())` additive Adopt
    (`:365-366`), `store.load()` with empty-workspace guard (`:367-368`),
-   assign `workspace`/`vaultStore`/`window.orbitVaultStore` + diagnostic
+   assign `workspace`/`vaultStore`/`window.balaurVaultStore` + diagnostic
    `setCanonicalWritable` + `configureLifeRuntime` + `seedBundledWidget`
    (`:369-373`), `seed → seedGraphStarterEntities()` + reload (`:375-377`),
    catalog rebuilds (`:378`) and `setIndexStatus` (`:379-380`), post-boot
@@ -74,7 +74,7 @@ indexeddb-vault.js -252.
    PASS.
 5. **Deletion completeness** — `demoCanvas`, `loadDocument`, `freshWorkspace`,
    `normalizeWorkspace`, localStorage-reading `loadWorkspace`, `WORKSPACE_KEY`,
-   `firstRun`, `orbit-canvas-v1`, `orbit-title`, `orbit-workspace-v1` all absent
+   `firstRun`, `balaur-canvas-v1`, `balaur-title`, `balaur-workspace-v1` all absent
    from app.js (grep returns nothing for each). `indexeddb-vault.js` deleted;
    zero `IndexedDbVault`/`indexeddb-vault` references in `*.js`/`*.mjs`/`*.html`
    outside `docs/adr/`, `teach/`, `plans/`, `para/`. Theme and AI-settings
@@ -100,7 +100,7 @@ indexeddb-vault.js -252.
    full-viewport centered column, `z-index:100`, `--balaur-surface-page`
    background; wordmark/hint/message use Balaur type/status tokens; optional
    fade guarded by `@media (prefers-reduced-motion: no-preference)`. PASS.
-9. **sw.js** — `CACHE_NAME="orbit-shell-v13"` (`:1`); `APP_SHELL` drops
+9. **sw.js** — `CACHE_NAME="balaur-shell-v13"` (`:1`); `APP_SHELL` drops
    `indexeddb-vault.js`, adds `directory-vault.js` + `memory-vault.js`. Cross
    check (`comm -23` of `grep -o 'from "\./[^"]*"' app.js | sort -u` minus
    `APP_SHELL`) → empty: all 20 app.js static imports are precached. The three

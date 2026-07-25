@@ -19,7 +19,7 @@ Canonical-files-only v1 uses a vault as the sole source of truth:
 ```text
 JSON Canvas files (.canvas)   canonical spatial documents
 Markdown files (.md)          canonical life entities
-.orbit/workspace.json         hierarchy and application-only canvas metadata
+.balaur/workspace.json         hierarchy and application-only canvas metadata
 MemoryIndex                   disposable runtime query projection
 ```
 
@@ -28,12 +28,12 @@ SQLite and other persistent indexes are deferred future optimizations. No databa
 The binding properties are:
 
 1. Tasks, habits, habit logs, journals, and calendar events have canonical Markdown representations. Canvases are canonical `.canvas` files.
-2. Entity identity is the immutable `orbit-id` in canonical content. A path is a locator. A canvas node ID is a placement. One entity can have zero, one, or many standard `file`-node placements.
+2. Entity identity is the immutable `balaur-id` in canonical content. A path is a locator. A canvas node ID is a placement. One entity can have zero, one, or many standard `file`-node placements.
 3. `LifeIndexer` projects files into `MemoryIndex`; `LifeQuery` exposes app-facing Today, task, habit, journal, and calendar reads. The index is disposable and rebuilt from vault files at boot.
 4. Repositories write canonical files first with expected-content-hash preconditions, then reindex. The index never becomes a second owner of visible content or geometry.
 5. `VaultStore` is asynchronous and adapter-neutral. `IndexedDbVault` is the browser default; `MemoryVault` supports tests; `FsVault` is the Node filesystem reference adapter.
-6. Frontmatter is constrained and preservation-first. Orbit patches only known fields while retaining unknown keys, comments, ordering, BOM, line endings, and body content.
-7. `.orbit/workspace.json` stores hierarchy, cameras, titles, paths, active canvas, and Johnny Decimal metadata. It does not embed canvas documents.
+6. Frontmatter is constrained and preservation-first. Balaur patches only known fields while retaining unknown keys, comments, ordering, BOM, line endings, and body content.
+7. `.balaur/workspace.json` stores hierarchy, cameras, titles, paths, active canvas, and Johnny Decimal metadata. It does not embed canvas documents.
 8. Version-2 whole-space backups contain the sidecar and raw logical vault files, never a database snapshot. Version-1 bundles are rejected in v1 rather than maintained as a second migration path.
 
 ## Runtime sequence
@@ -48,7 +48,7 @@ The browser boot is vault-first and asynchronous:
 6. render the in-memory working set; and
 7. register the offline shell progressively.
 
-After migration, localStorage is not a source of truth. `window.orbitVaultReady` and `window.orbitVaultStore` are the integration points for boot and storage status. Real-browser verification of IndexedDB durability, first-render timing, and the complete UI flow remains pending; Node tests verify the platform-neutral implementation.
+After migration, localStorage is not a source of truth. `window.balaurVaultReady` and `window.balaurVaultStore` are the integration points for boot and storage status. Real-browser verification of IndexedDB durability, first-render timing, and the complete UI flow remains pending; Node tests verify the platform-neutral implementation.
 
 ## Standards and security retained
 

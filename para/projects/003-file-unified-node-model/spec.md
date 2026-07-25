@@ -32,7 +32,7 @@ Unify on one node model: every content node is a standard JSON Canvas `file` nod
 referencing a canonical `.md`/`.html`/`.canvas`; the canvas document is only space
 plus edges. `group` (layout) and `link` (external URL) stay, since neither is
 vault content. Notes become path-identified `.md` files under `notes/` with no
-mandatory frontmatter and no mandatory `orbit-id`; their identity is their path.
+mandatory frontmatter and no mandatory `balaur-id`; their identity is their path.
 Every authoring template and the double-click-background handler become
 file-creating actions that write the `.md` first and then add a `file`-node
 placement, exactly like the task and journal repositories already do.
@@ -64,7 +64,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
 ### 1. Note file contract
 
 - A note is a canonical Markdown file under the `notes/` directory. Identity is
-  the path; there is no mandatory `orbit-id` and no mandatory frontmatter. This
+  the path; there is no mandatory `balaur-id` and no mandatory frontmatter. This
   matches the widget/sub-canvas pattern (path-identified) and is the lightest
   format that still drains.
 - The note body is ordinary Markdown. Its title is derived, not stored: the first
@@ -72,16 +72,16 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
   existing one-line-summary convention already applied to text notes (heading
   first, else first non-empty non-marker body line).
 - Note kind (inbox / reference / AI) is carried by the same inert HTML-comment
-  markers as today (`orbit:inbox`, `orbit:reference`, `orbit:ai-card`), placed at
+  markers as today (`balaur:inbox`, `balaur:reference`, `balaur:ai-card`), placed at
   the top of the `.md` body. The markers stay harmless and readable in other
   editors; the mechanism is unchanged, only its home moves from a text node's
   `text` field to a file body. No new frontmatter field is introduced for kind.
 - Indexer treatment: a note is an **untyped** `.md`. The indexer already classifies
-  a frontmatter-less (or non-Orbit) Markdown file as a valid untyped source record
+  a frontmatter-less (or non-Balaur) Markdown file as a valid untyped source record
   (`entityType: null`, `parseStatus: "ok"`); this is proven prior art for
-  `notes/*.md`. No new `orbit-type: note` is added in v1 (YAGNI). The file format
+  `notes/*.md`. No new `balaur-type: note` is added in v1 (YAGNI). The file format
   upgrades cleanly to a typed entity later if a need appears, because the codec
-  layer already dispatches on `orbit-type` and preserves unknown frontmatter.
+  layer already dispatches on `balaur-type` and preserves unknown frontmatter.
 - Path convention and collision handling: a note path is `notes/<slug>.md` where
   the slug comes from the note title through the existing slug normalizer. Because
   identity is the path and notes are not renamed in v1, the slug is chosen once at
@@ -101,7 +101,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
   This is the preferred seam: it reuses the established repository pattern rather
   than inventing a generic mechanism.
 - The repository is **path-keyed, not id-keyed**, because notes have no mandatory
-  `orbit-id`. Its surface:
+  `balaur-id`. Its surface:
   - create a note (allocate the collision-safe path, write the `.md`, index it,
     optionally place it) and return `{ path, placement }`;
   - add a placement for a path on a canvas (push a standard
@@ -117,7 +117,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
     remove the file, then reindex).
 - **Critical grounding:** note placements are *not* tracked by the disposable
   placements index. The indexer only records placements for files in an entity
-  directory that also carry an `orbit-id`; a `notes/*.md` file is neither, so its
+  directory that also carry an `balaur-id`; a `notes/*.md` file is neither, so its
   file-nodes are skipped by placement extraction (the same reason widget and
   sub-canvas file-nodes are skipped). Consequences the repository must honor:
   - add/remove placement operate directly on the canvas document by path and node
@@ -136,7 +136,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
   placement helper the note/task/journal repositories can use) — do not build a
   separate draining subsystem here; that is 002's concern.
 - Rename/move stability: the grill settled that note rename stability rides the
-  existing vault move (`oldPath`) reconciliation rather than an `orbit-id`. Scope
+  existing vault move (`oldPath`) reconciliation rather than an `balaur-id`. Scope
   that precisely: the warm reconciliation keeps the *index source record* coherent
   across a move (old-path ancestry), but canvas file-nodes are matched by path, so
   a path change only stays coherent if the canvas file-nodes are rewritten (as the
@@ -164,7 +164,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
   the produced node type changes from `text` to `file`.
 - The `goal`, `habit`, and `project` templates are content presets, not typed
   entities in v1: they become ordinary notes whose body carries the preset Markdown
-  (and the preset color on the placement). They are not promoted to `orbit-type`
+  (and the preset color on the placement). They are not promoted to `balaur-type`
   entities (YAGNI); the unified model already gives them placements and drainability.
   (`habit` the *template* is a note; the typed `habits/*.md` entity and its
   repository are unchanged and unrelated to this template.)
@@ -175,7 +175,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
 ### 4. AI operator migration
 
 - An AI operator card becomes a `.md` note whose body carries the existing inert
-  `orbit:ai-card` marker, then the `# Title` heading, then the prompt. The marker,
+  `balaur:ai-card` marker, then the `# Title` heading, then the prompt. The marker,
   title, and prompt parsing move from operating on a text node's `text` field to
   operating on the note's file body (resolved through the synchronous note
   projection from decision 5). AI-card *detection* (`isAICard`) therefore checks the
@@ -261,7 +261,7 @@ never author text nodes. This lands as ADR-0004, reversing AGENTS.md §4.2
   plus edges. `group` (layout) and `link` (external URL) remain; inline `text`
   content authoring is retired.
 - State the note contract: notes are path-identified `notes/*.md` files with no
-  mandatory `orbit-id`/frontmatter; kind is an inert body marker; the indexer treats
+  mandatory `balaur-id`/frontmatter; kind is an inert body marker; the indexer treats
   them as valid untyped Markdown.
 - State the interop guardrail precisely: `text` remains a valid, rendered, read-only
   node type for imported/external canvases (JSON Canvas 1.0 interop); Balaur's own
@@ -329,7 +329,7 @@ skill and remains browser-pending until run; the Node suite does not claim it.
 2. APPROVED — keep note placements OUT of the disposable placements index. Pin
    "drain/delete resolve placements by scanning canvas documents for the path" as an
    explicit regression test in that suite. Do NOT extend `extractCanvasPlacements` /
-   the indexer to track path-identified note placements; notes stay `orbit-id`-free.
+   the indexer to track path-identified note placements; notes stay `balaur-id`-free.
 3. APPROVED — use a disposable synchronous note content projection (a body cache in
    the ComponentCardCatalog / WidgetCatalog mold) to keep render and AI-card detection
    synchronous, rather than retaining note bodies inside the indexer's source records.
@@ -337,10 +337,10 @@ skill and remains browser-pending until run; the Node suite does not claim it.
 ## Out of Scope
 
 - Auto-migration of existing inline text nodes: hard cut; dangerous mass-rewrite without consent (settled in grill).
-- A typed `orbit-type: note` entity and `orbit-id` for notes: YAGNI; path identity suffices and upgrades later.
+- A typed `balaur-type: note` entity and `balaur-id` for notes: YAGNI; path identity suffices and upgrades later.
 - A note-rename UI and canvas file-node path rewriting on rename: not needed while notes are path-identified and never renamed; reuses the component-card pattern if ever wanted.
 - The daily canvas itself, the `year→month→day` hierarchy, on-demand canvas creation, and the draining-queue UX: project 002, which consumes the drain primitive this project provides.
-- Tracking note placements in the disposable placements index: excluded to keep notes `orbit-id`-free; drain/delete resolve placements by path scan.
+- Tracking note placements in the disposable placements index: excluded to keep notes `balaur-id`-free; drain/delete resolve placements by path scan.
 - Promoting `goal`/`habit`/`project` note templates to typed entities: they remain content-preset notes; typed habits/tasks are separate and unchanged.
 - True semantic zoom and "inbox as a place" retirement details: 002 concerns.
 
@@ -361,7 +361,7 @@ skill and remains browser-pending until run; the Node suite does not claim it.
   `notes/*.md` in the backup phase suite), so file-backed notes are covered by
   version-2 export/import with no backup-format change; import validation of
   file-node references already covers `notes/` targets.
-- `window.orbitCanvas` may gain a stable note-create command only if a browser/
+- `window.balaurCanvas` may gain a stable note-create command only if a browser/
   integration need appears; do not expose raw vault/index internals (AGENTS.md §12).
 
 ## Domain flags
@@ -369,9 +369,9 @@ skill and remains browser-pending until run; the Node suite does not claim it.
 These terms in `CONTEXT.md` are contradicted by the unified model and need human
 reconciliation (this spec does not edit `CONTEXT.md`):
 
-- **Inbox note** — currently "A text node marked `<!-- orbit:inbox -->`". Proposed: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- orbit:inbox -->` marker; represents a capture pending processing.
-- **Reference page** — currently "A text node marked `<!-- orbit:reference -->`". Proposed: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- orbit:reference -->` marker; represents durable wiki content.
-- **AI operator** — currently "A standard text node marked as an AI card". Proposed: a standard `file` node referencing a `notes/*.md` file whose body carries the inert `<!-- orbit:ai-card -->` marker; incoming edges define context; its output is likewise a file-backed note connected by the reserved `AI output` edge.
-- **Note** (new term, proposed): a path-identified canonical `notes/*.md` file with no mandatory frontmatter or `orbit-id`; identity is the path; kind (inbox/reference/AI) is an inert body marker; placed by zero or more standard `file` nodes. The unified content unit that replaces inline text-node authoring.
+- **Inbox note** — currently "A text node marked `<!-- balaur:inbox -->`". Proposed: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- balaur:inbox -->` marker; represents a capture pending processing.
+- **Reference page** — currently "A text node marked `<!-- balaur:reference -->`". Proposed: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- balaur:reference -->` marker; represents durable wiki content.
+- **AI operator** — currently "A standard text node marked as an AI card". Proposed: a standard `file` node referencing a `notes/*.md` file whose body carries the inert `<!-- balaur:ai-card -->` marker; incoming edges define context; its output is likewise a file-backed note connected by the reserved `AI output` edge.
+- **Note** (new term, proposed): a path-identified canonical `notes/*.md` file with no mandatory frontmatter or `balaur-id`; identity is the path; kind (inbox/reference/AI) is an inert body marker; placed by zero or more standard `file` nodes. The unified content unit that replaces inline text-node authoring.
 - **Drain** (new term, proposed; primarily 002's): to re-place a path-bound node from one canvas to another (remove the placement here, add a placement for the same path there), leaving the canonical file and its identity unchanged. The mechanism by which the daily canvas processes captures.
 - **Text node (interop)** (new nuance, proposed): a standard JSON Canvas `text` node that Balaur renders read-only for imported/external documents but never authors; authoring produces only `file`-backed notes (ADR-0004 guardrail).

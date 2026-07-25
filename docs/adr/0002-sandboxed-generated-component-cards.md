@@ -26,7 +26,7 @@ Both forms use standard JSON Canvas `file` nodes:
 - declarative cards point to canonical `cards/*.md` files; and
 - executable widgets point to canonical `widgets/*.html` files.
 
-The Canvas node ID identifies a placement. A component card's immutable `orbit-id` identifies its canonical data; a widget's safe path identifies its canonical source. One canonical file may have multiple placements. Whole-space version-2 backup carries the raw files and placement documents.
+The Canvas node ID identifies a placement. A component card's immutable `balaur-id` identifies its canonical data; a widget's safe path identifies its canonical source. One canonical file may have multiple placements. Whole-space version-2 backup carries the raw files and placement documents.
 
 ### Component/controller boundary
 
@@ -38,7 +38,7 @@ The top-level canvas node renderer remains imperative. A measured `<balaur-canva
 
 ### Declarative component cards
 
-Canonical component cards use constrained Orbit frontmatter and Markdown. Allowed recipes are `metric`, `progress`, `callout`, `list`, and `timeline`, with recipe-specific fields and size limits. `FileComponentCardRepository` performs expected-hash writes, safe renames, placement reconciliation, and failure-safe create/update/place operations. `ComponentCardCatalog` is a disposable synchronous rendering projection and retains readable diagnostics/raw fallback for malformed files.
+Canonical component cards use constrained Balaur frontmatter and Markdown. Allowed recipes are `metric`, `progress`, `callout`, `list`, and `timeline`, with recipe-specific fields and size limits. `FileComponentCardRepository` performs expected-hash writes, safe renames, placement reconciliation, and failure-safe create/update/place operations. `ComponentCardCatalog` is a disposable synchronous rendering projection and retains readable diagnostics/raw fallback for malformed files.
 
 Generated operations may create or update component cards. They are closed-schema plain data, validated against known cards/canvases, safe paths, recipe fields, geometry, colors, operation/payload bounds, evolving node IDs, and the resulting JSON Canvas document. Generated deletion is not allowed. The app describes exact IDs, paths, targets, fields, and placement before approval. A successful file write followed by failed Canvas placement remains durable and retry omits the completed write.
 
