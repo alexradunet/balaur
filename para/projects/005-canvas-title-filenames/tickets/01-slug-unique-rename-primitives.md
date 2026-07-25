@@ -1,11 +1,11 @@
 ---
 phase: ticket
-status: ready
+status: done
 project: 005-canvas-title-filenames
 ticket: 01
 blocked-by: []
-worker: ""
-branch: ""
+worker: "3b0c72f2-9bb5-4d0e-b353-caaf40fdbbfd"
+branch: "wealthy-blowfish"
 shared-blast-radius: true
 planned-at: 71899aa
 ---
