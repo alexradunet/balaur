@@ -70,6 +70,7 @@ On Debian/Ubuntu, copy it to `/usr/local/share/ca-certificates/balaur-dev-ca.crt
 
 | Action | Control |
 |---|---|
+| Resize library | Drag the library's right edge; `Tab` to it then `←`/`→` (hold `Shift` for larger steps); double-click to reset |
 | Pan | Hold `Space` and drag, middle-drag, or use the hand tool |
 | Zoom | Mouse wheel, `+`, or `-` |
 | Enter sub-canvas | Double-click its portal, choose **Open**, or zoom over it past 220% |

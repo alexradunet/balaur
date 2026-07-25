@@ -192,7 +192,9 @@ const nodeLayer = $("#nodes");
 const edgeLayer = $("#edges");
 const shell = $(".app-shell");
 const narrowShell = matchMedia("(max-width: 850px)");
-const syncNarrowShell = event => shell.classList.toggle("sidebar-closed", event.matches);
+const sidebarMenu = $("#sidebarMenu");
+const reflectSidebar = () => sidebarMenu?.setAttribute("aria-expanded", String(!shell.classList.contains("sidebar-closed")));
+const syncNarrowShell = event => { shell.classList.toggle("sidebar-closed", event.matches); reflectSidebar(); };
 syncNarrowShell(narrowShell);
 narrowShell.addEventListener("change", syncNarrowShell);
 
@@ -1954,7 +1956,60 @@ $$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=bu
 $$(".tool:not(.add-menu-toggle)").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;if(tool==="note")setTool("note");else setTool(tool);});
 $("#zoomIn").onclick=()=>setZoom(camera.zoom*1.2);$("#zoomOut").onclick=()=>setZoom(camera.zoom/1.2);$("#zoomLabel").onclick=()=>setZoom(1);$("#fitView").onclick=fitView;
 $("#exportButton").onclick=exportCanvas;$("#exportWorkspaceButton").onclick=()=>exportWorkspace().catch(error=>{alert(`Could not export a complete backup.\n\n${error.message}`);});$("#importButton").onclick=()=>$("#fileInput").click();$("#fileInput").onchange=e=>{if(e.target.files[0])importCanvas(e.target.files[0]);e.target.value="";};
-$("#sidebarToggle").onclick=()=>shell.classList.toggle("sidebar-closed");$("#sidebar").addEventListener("click",event=>{if(narrowShell.matches&&event.target.closest("button"))shell.classList.add("sidebar-closed");});
+$("#sidebarMenu").onclick=()=>{shell.classList.toggle("sidebar-closed");reflectSidebar();};$("#sidebar").addEventListener("click",event=>{if(narrowShell.matches&&event.target.closest("button")){shell.classList.add("sidebar-closed");reflectSidebar();}});
+// Resizable library: drag the inline-end edge to resize, double-click to
+// reset, arrow keys for keyboard users. The width persists as shell UI state
+// (same localStorage category as theme). Width-adaptive layout is driven by
+// the sidebar container query in shell.css; height adaptation in responsive.css.
+(() => {
+  const resizer = $("#sidebarResizer");
+  if (!resizer) return;
+  const MIN = 180;
+  const maxOf = () => Math.min(480, Math.round(window.innerWidth * 0.5));
+  const readWidth = () => {
+    const px = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width"));
+    return Number.isFinite(px) && px > 0 ? px : 250;
+  };
+  const apply = px => {
+    document.documentElement.style.setProperty("--sidebar-width", `${Math.round(px)}px`);
+    resizer.setAttribute("aria-valuenow", String(Math.round(px)));
+  };
+  const persist = px => localStorage.setItem("balaur-shell-sidebar-width", String(Math.round(px)));
+  resizer.addEventListener("pointerdown", event => {
+    if (narrowShell.matches || shell.classList.contains("inspector-open")) return;
+    const startX = event.clientX, startW = readWidth(), hi = maxOf();
+    try { resizer.setPointerCapture(event.pointerId); } catch (_) {}
+    document.documentElement.classList.add("sidebar-resizing");
+    const move = ev => apply(Math.max(MIN, Math.min(hi, startW + (ev.clientX - startX))));
+    const done = ev => {
+      document.documentElement.classList.remove("sidebar-resizing");
+      try { resizer.releasePointerCapture(ev.pointerId); } catch (_) {}
+      resizer.removeEventListener("pointermove", move);
+      resizer.removeEventListener("pointerup", done);
+      resizer.removeEventListener("pointercancel", done);
+      persist(readWidth());
+    };
+    resizer.addEventListener("pointermove", move);
+    resizer.addEventListener("pointerup", done);
+    resizer.addEventListener("pointercancel", done);
+  });
+  resizer.addEventListener("dblclick", () => { apply(250); persist(250); });
+  resizer.addEventListener("keydown", event => {
+    if (narrowShell.matches) return;
+    const step = event.shiftKey ? 64 : 16;
+    let next = readWidth();
+    if (event.key === "ArrowLeft") next = Math.max(MIN, next - step);
+    else if (event.key === "ArrowRight") next = Math.min(maxOf(), next + step);
+    else if (event.key === "Home") next = MIN;
+    else if (event.key === "End") next = maxOf();
+    else return;
+    event.preventDefault();
+    apply(next);
+    persist(next);
+  });
+  const saved = parseInt(localStorage.getItem("balaur-shell-sidebar-width"), 10);
+  if (Number.isFinite(saved) && saved >= MIN) apply(Math.min(maxOf(), saved));
+})();
 $("#assistantButton").onclick=()=>setAssistantOpen(!$("#aiPanel").classList.contains("open"));$("#closeAssistant").onclick=()=>setAssistantOpen(false);$("#openAISettings").onclick=openAISettings;
 $("#aiForm").onsubmit=event=>{event.preventDefault();const input=$("#aiPrompt"),prompt=input.value;input.value="";runAssistant(prompt);};
 $("#aiPrompt").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("#aiForm").requestSubmit();}};

@@ -10,6 +10,8 @@
     .app-shell { --sidebar: 0px; }
     .brand { visibility: hidden; overflow: hidden; padding: 0; border: 0; }
     .topbar { grid-template-columns: 0 minmax(0, 1fr) auto; }
+    .sidebar-menu { display: inline-flex; }
+    .sidebar-resizer { display: none; }
     .save-state { display: none; }
     .minimap { display: none; }
     .app-views { margin-inline-start: 2px; }
@@ -47,6 +49,14 @@
       visibility: hidden;
       transform: translateX(-100%);
     }
+  }
+
+  /* Short viewport ≈ short library: shed the tip card and tighten spacing. */
+  @media (max-height: 640px) {
+    .sidebar { gap: var(--balaur-space-3); padding-block: var(--balaur-space-3); }
+    .tip { display: none; }
+    .sidebar-bottom { gap: 1px; }
+    .spec-link { padding-block: 6px; }
   }
 
   @media (max-width: 620px) {

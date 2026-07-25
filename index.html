@@ -39,7 +39,7 @@
       </div>
 
       <div class="view-title">
-        <button class="icon-btn sidebar-toggle" id="sidebarToggle" aria-label="Toggle library">☰</button>
+        <button class="icon-btn sidebar-menu" id="sidebarMenu" aria-label="Open library" aria-expanded="false">☰</button>
         <div><nav class="canvas-breadcrumbs" aria-label="Canvas hierarchy"><balaur-workspace-nav id="canvasBreadcrumbs" mode="trail"></balaur-workspace-nav></nav><div class="canvas-title-row"><span class="canvas-icon-picker"><button type="button" class="canvas-icon-toggle" id="canvasIconToggle" aria-label="Choose canvas icon" aria-expanded="false" title="Canvas icon"><span id="canvasIconGlyph" aria-hidden="true">◫</span></button><div class="canvas-icon-panel" id="canvasIconPanel" hidden><div class="canvas-icon-head"><span>Canvas icon</span><button type="button" class="canvas-icon-reset" data-icon-reset>Reset</button></div><div data-icon-grid></div><label class="canvas-icon-custom"><span>or type one</span><input type="text" maxlength="8" autocomplete="off" spellcheck="false" aria-label="Type a custom icon" placeholder="✦" /></label></div></span><input id="canvasTitle" value="Life OS — Summer" aria-label="Canvas title" /></div></div>
         <nav class="app-views" aria-label="Application views"><button type="button" class="active" data-app-view="canvas">Canvas</button><button type="button" data-app-view="today">Today</button></nav>
       </div>
@@ -61,23 +61,24 @@
 
       <nav aria-label="Canvas library">
         <div class="section-heading"><p class="section-label">LIBRARY</p><button class="tiny-btn" id="newGroup" title="Add group" aria-label="Add group">＋</button></div>
-        <button class="nav-item active" data-filter="all"><span>◫</span>Everything <em id="allCount">0</em></button>
-        <button class="nav-item" data-filter="1"><span><i class="dot red"></i></span>Goals <em id="goalCount">0</em></button>
-        <button class="nav-item" data-filter="4"><span><i class="dot green"></i></span>Habits <em id="habitCount">0</em></button>
-        <button class="nav-item" data-filter="6"><span><i class="dot purple"></i></span>Projects <em id="projectCount">0</em></button>
-        <button class="nav-item" data-filter="2"><span><i class="dot orange"></i></span>Ideas <em id="ideaCount">0</em></button>
+        <button class="nav-item active" data-filter="all"><span>◫</span><span class="nav-label">Everything</span> <em id="allCount">0</em></button>
+        <button class="nav-item" data-filter="1"><span><i class="dot red"></i></span><span class="nav-label">Goals</span> <em id="goalCount">0</em></button>
+        <button class="nav-item" data-filter="4"><span><i class="dot green"></i></span><span class="nav-label">Habits</span> <em id="habitCount">0</em></button>
+        <button class="nav-item" data-filter="6"><span><i class="dot purple"></i></span><span class="nav-label">Projects</span> <em id="projectCount">0</em></button>
+        <button class="nav-item" data-filter="2"><span><i class="dot orange"></i></span><span class="nav-label">Ideas</span> <em id="ideaCount">0</em></button>
       </nav>
 
       <section class="sidebar-bottom" aria-label="Help and information">
         <div class="tip"><span>↘</span><div><b>Infinite zoom</b><p>Double-click a sub-canvas, or zoom into it past 220%. Zoom all the way out to return.</p></div></div>
-        <button class="nav-item" id="exportWorkspaceButton"><span>⇩</span>Export whole space</button>
-        <button class="nav-item" id="resetDemo"><span>↺</span>Reset starter</button>
-        <button class="nav-item" id="reloadVault"><span>⟳</span>Reload vault</button>
-        <button class="nav-item" id="openAnotherVault"><span>⇄</span>Open another vault</button>
+        <button class="nav-item" id="exportWorkspaceButton"><span>⇩</span><span class="nav-label">Export whole space</span></button>
+        <button class="nav-item" id="resetDemo"><span>↺</span><span class="nav-label">Reset starter</span></button>
+        <button class="nav-item" id="reloadVault"><span>⟳</span><span class="nav-label">Reload vault</span></button>
+        <button class="nav-item" id="openAnotherVault"><span>⇄</span><span class="nav-label">Open another vault</span></button>
         <div class="storage-state is-indexing" title="Preparing the canonical files"><i></i><span id="lifeIndexStatus" role="status">Preparing files…</span></div>
         <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
       </section>
     </aside>
+    <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-orientation="vertical" aria-label="Resize library (drag or arrow keys; double-click to reset)" aria-valuenow="250" aria-valuemin="180" aria-valuemax="480" tabindex="0"></div>
 
     <main class="canvas-wrap">
       <div class="canvas" id="canvas" tabindex="0">

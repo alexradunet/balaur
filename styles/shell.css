@@ -1,15 +1,11 @@
 @layer shell {
   .app-shell {
+    position: relative;
     display: grid;
     grid-template: 64px minmax(0, 1fr) / var(--sidebar) minmax(0, 1fr);
     width: 100vw;
     height: 100dvh;
     background: var(--balaur-surface-page);
-  }
-  .app-shell.sidebar-closed { --sidebar: 0px; }
-  .app-shell.sidebar-closed .sidebar {
-    visibility: hidden;
-    transform: translateX(-100%);
   }
 
   /* The grid/flex display values above override the UA `[hidden]{display:none}`,
@@ -382,6 +378,7 @@
     grid-row: 2;
     grid-column: 1;
     width: var(--sidebar-width);
+    container: sidebar / inline-size;
     display: flex;
     flex-direction: column;
     gap: var(--balaur-space-5);
@@ -512,6 +509,13 @@
     font-variant-numeric: tabular-nums;
   }
   .nav-item.active em { color: var(--balaur-action-primary); }
+  .nav-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .canvas-list-item { padding-inline-start: calc(9px + var(--canvas-depth, 0) * 14px); }
   .canvas-list-item b {
     min-width: 0;
@@ -598,5 +602,65 @@
   .familiar-glyph {
     color: var(--balaur-action-primary);
     font-size: 1.125rem;
+  }
+
+  /* Narrow-only drawer control (mobile); hidden on desktop, where the
+     library is always visible and resizable. */
+  .sidebar-menu { display: none; }
+
+  /* Drag handle on the library's inline-end edge. Positioned by --sidebar so
+     it tracks the column boundary as the panel resizes; the brand column in
+     the topbar tracks the same token, keeping the logo aligned. */
+  .sidebar-resizer {
+    position: absolute;
+    top: 64px;
+    bottom: 0;
+    left: var(--sidebar);
+    width: 10px;
+    margin-inline-start: -5px;
+    z-index: 12;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+  }
+  .sidebar-resizer::before {
+    content: "";
+    position: absolute;
+    inset: 0 3px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background-color var(--balaur-duration-focus) var(--balaur-ease-standard);
+  }
+  .sidebar-resizer:hover::before,
+  .sidebar-resizer:focus-visible::before {
+    background: var(--balaur-border-default);
+  }
+  .sidebar-resizer:active::before,
+  html.sidebar-resizing .sidebar-resizer::before {
+    background: var(--balaur-action-primary);
+  }
+  /* The inspector reuses the library slot; hide the handle while it owns it. */
+  .app-shell.inspector-open .sidebar-resizer { display: none; }
+  html.sidebar-resizing,
+  html.sidebar-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+  }
+
+  /* Width-adaptive library: collapse to an icon rail when narrow. */
+  @container sidebar (max-width: 220px) {
+    .sidebar { padding-inline: 4px; gap: var(--balaur-space-4); }
+    .section-label { display: none; }
+    .section-heading { justify-content: center; padding-inline: 0; }
+    .nav-item { justify-content: center; gap: 0; padding-inline: 0; }
+    .nav-label,
+    .nav-item em,
+    .canvas-list-item b,
+    .canvas-list-item em { display: none; }
+    .canvas-list-item { padding-inline-start: 0; }
+    .tip { display: none; }
+    .spec-link { display: none; }
+    .storage-state span { display: none; }
+    .storage-state { justify-content: center; }
   }
 }
