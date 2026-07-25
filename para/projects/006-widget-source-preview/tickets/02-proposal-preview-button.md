@@ -1,12 +1,12 @@
 ---
 phase: ticket
-status: ready
+status: done
 project: 006-widget-source-preview
 ticket: 02
 title: Proposal details Preview button
 blocked-by: [01]
-worker: ""
-branch: ""
+worker: implement-worker
+branch: 006-widget-source-preview
 shared-blast-radius: true
 planned-at: b9f94d7
 date: 2026-07-25
