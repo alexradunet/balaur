@@ -170,7 +170,7 @@ test("rejects prototype-bearing input recursively", () => {
 });
 
 test("enforces identifier, duplicate, target Canvas, and safe path contracts", () => {
-  assertInvalid(metricCreate({ card: { ...metricCreate().card, id: "../bad" } }), /orbit-id/i);
+  assertInvalid(metricCreate({ card: { ...metricCreate().card, id: "../bad" } }), /balaur-id/i);
   assertInvalid(metricCreate({ card: { ...metricCreate().card, id: "card-existing" } }), /already exists/i);
   assertInvalid(metricCreate({ card: { ...metricCreate().card, path: "../escape.md" } }), /path/i);
   assertInvalid(metricCreate({ card: { ...metricCreate().card, path: "notes/not-a-card.md" } }), /cards\//i);

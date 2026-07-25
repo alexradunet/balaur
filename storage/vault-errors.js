@@ -24,7 +24,7 @@ export class ParseError extends VaultError {
   constructor(message, opts = {}) { super(message, { code: "PARSE_INVALID", ...opts }); }
 }
 
-// Missing or unsupported orbit-schema (plan §8.4).
+// Missing or unsupported balaur-schema (plan §8.4).
 export class SchemaError extends VaultError {
   constructor(message, opts = {}) { super(message, { code: "SCHEMA_UNSUPPORTED", ...opts }); }
 }

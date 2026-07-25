@@ -24,7 +24,7 @@ const COLORS = {
   "4": "#7ee0a1", "5": "#64cbd0", "6": "#a78bfa"
 };
 
-const NOTE_MARKERS={inbox:"<!-- orbit:inbox -->",reference:"<!-- orbit:reference -->"};
+const NOTE_MARKERS={inbox:"<!-- balaur:inbox -->",reference:"<!-- balaur:reference -->"};
 const DORMANT_NODE_COLOR="#6c757d";
 const STARTER_TASK_ID="task-citybreak";
 const STARTER_TASK_PATH="tasks/choose-dates-for-the-autumn-trip-task-citybreak.md";
@@ -284,7 +284,7 @@ function canvasIdFromPath(path) {
   return record?.id || String(path).split("/").pop().replace(/\.canvas$/, "");
 }
 async function seedBundledWidget(vault) {
-  const path = "widgets/focus-orbit.html";
+  const path = "widgets/focus-balaur.html";
   if (await vault.stat(path)) return;
   const response = await fetch(new URL(path, document.baseURI));
   if (!response.ok) throw new Error(`Could not load bundled widget source: ${response.status}`);
@@ -384,7 +384,7 @@ async function openVault(vault,{seed}){
   if(!result?.workspace?.canvases||!Object.keys(result.workspace.canvases).length)throw new Error("The vault workspace is empty");
   workspace=result.workspace;
   vaultStore=store;
-  window.orbitVaultStore=store;
+  window.balaurVaultStore=store;
   setCanonicalWritable(!result.diagnostics.some((diagnostic)=>diagnostic.code==="CANVAS_MISSING"||diagnostic.code==="CANVAS_INVALID"||diagnostic.code==="CANVAS_PARSE"),result.diagnostics.map((diagnostic)=>diagnostic.message).join("; "));
   configureLifeRuntime(vault);
   await seedBundledWidget(vault);
@@ -449,7 +449,7 @@ async function loadGraphStarter(){
     await canonicalVault.restore(snapshot);
     const nextStore=new WorkspaceStore(canonicalVault), result=await nextStore.load();
     if(!result?.workspace)throw new Error("Starter activation did not produce a workspace");
-    vaultStore=nextStore;window.orbitVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
+    vaultStore=nextStore;window.balaurVaultStore=nextStore;workspace=result.workspace;configureLifeRuntime(canonicalVault);await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
     currentCanvasId=workspace.rootId;documentData=workspace.canvases[currentCanvasId].document;camera={x:80,y:55,zoom:.78};selected=null;connectSource=null;connectSourceSide=null;$("#canvasTitle").value=canvasRecord().title;renderWorkspaceNavigation();render();fitView();toast("Graph starter space loaded");
   } catch(error) { console.warn("Could not reset the canonical vault",error); toast(`Could not load starter: ${error.message}`); }
 }
@@ -745,7 +745,7 @@ async function placeJournalOnCanvas(){
 }
 function deleteCanvasTree(id){for(const child of Object.values(workspace.canvases).filter(record=>record.parentId===id))deleteCanvasTree(child.id);delete workspace.canvases[id];}
 
-const AI_CARD_MARKER="<!-- orbit:ai-card -->";
+const AI_CARD_MARKER="<!-- balaur:ai-card -->";
 function isAICard(node){return node?.type==="file"&&isNotePath(node.file)&&Boolean(noteCatalog?.getByPath(node.file)?.body?.includes(AI_CARD_MARKER));}
 function parseAICardBody(body){
   const lines=(body||"").split(/\r?\n/).filter(line=>line.trim()!==AI_CARD_MARKER),heading=lines.findIndex(line=>line.startsWith("# ")),title=heading>=0?lines[heading].slice(2).trim():"AI operator";
@@ -757,7 +757,7 @@ function indexedEntityForPath(path) {
   const source = lifeIndex?.getSourceFile(path);
   if (!source?.entityId || source.parseStatus === "error") return null;
   const readers = { task: "allTasks", habit: "allHabits", journal: "allJournals", "calendar-event": "allEvents" };
-  const row = readers[source.entityType] ? lifeIndex[readers[source.entityType]]().find(item => item.id === source.entityId || item.orbitId === source.entityId) : null;
+  const row = readers[source.entityType] ? lifeIndex[readers[source.entityType]]().find(item => item.id === source.entityId || item.balaurId === source.entityId) : null;
   return { source, row };
 }
 function nodeTitle(node){
@@ -805,7 +805,7 @@ function nodeSummary(node){
   const title=nodeTitle(node);
   const body=node?.type==="text"?node.text:(node?.type==="file"&&isNotePath(node.file)?noteCatalog?.getByPath(node.file)?.body||"":null);
   if(body!==null){
-    const bodyLine=(body||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*orbit:/.test(line));
+    const bodyLine=(body||"").split(/\r?\n/).find(line=>line.trim()&&!/^#{1,2}\s/.test(line)&&!/^\s*<!--\s*balaur:/.test(line));
     const summary=(bodyLine||"").trim().slice(0,120);
     return summary&&summary!==title?`${title} — ${summary}`:title;
   }
@@ -828,7 +828,7 @@ function markdownToHTML(source="") {
       continue;
     }
     if (inList) { html += "</ul>"; inList = false; }
-    if (!line.trim() || /^<!--\s*orbit:/.test(line.trim())) continue;
+    if (!line.trim() || /^<!--\s*balaur:/.test(line.trim())) continue;
     if (line.startsWith("# ")) html += `<h2>${inline(line.slice(2))}</h2>`;
     else if (line.startsWith("## ")) html += `<h3>${inline(line.slice(3))}</h3>`;
     else if (/^Progress:\s*\d+%/i.test(line)) {
@@ -1213,7 +1213,7 @@ async function addNode(kind, point) {
     habit:{color:"4",width:280,height:145,kind:null,body:"# New daily practice\nMake it small enough to begin today."},
     project:{color:"6",width:300,height:210,kind:null,body:"# Untitled project\nDescribe the outcome, not just the activity.\n\n- [ ] First milestone\n- [ ] Next milestone\n\nProgress: 0%"},
     ai:{color:"5",width:330,height:210,kind:"ai",body:"# Weekly synthesis\nSummarize the connected notes. Highlight progress, blockers, and the most useful next action."},
-    widget:{type:"file",color:"5",width:480,height:290,file:"widgets/focus-orbit.html"},
+    widget:{type:"file",color:"5",width:480,height:290,file:"widgets/focus-balaur.html"},
     group:{type:"group",color:"5",width:620,height:430,label:"New area"}
   };
   const preset=presets[kind]||presets.note;
@@ -1506,13 +1506,13 @@ async function exportWorkspace(){
   saveCurrentCanvasState(); workspace.activeId=currentCanvasId; await persistWorkspace();
   const {bundle,diagnostics}=await exportBundle(vaultStore.vault);
   assertCompleteExport(diagnostics);
-  downloadJSON(JSON.parse(serializeBundle(bundle)),`${slug(workspace.canvases[workspace.rootId].title)}.orbit.json`);
+  downloadJSON(JSON.parse(serializeBundle(bundle)),`${slug(workspace.canvases[workspace.rootId].title)}.balaur.json`);
   toast(`${Object.keys(workspace.canvases).length} canvases and canonical files exported`);
 }
 async function importCanvas(file) {
   try {
     const parsed=JSON.parse(await file.text());
-    if(parsed?.format==="orbit-workspace"){
+    if(parsed?.format==="balaur-workspace"){
       if(!confirm("Import this whole Balaur space? Your current canonical vault will be replaced."))return;
       await flushPendingWorkspaceEdits();
       const stagingVault=new MemoryVault();
@@ -1534,7 +1534,7 @@ async function importCanvas(file) {
       if(!result?.workspace)throw new Error("Canonical vault activation did not produce a workspace");
       // Switch application globals only after canonical activation and reload
       // have both succeeded.
-      vaultStore=nextStore; workspace=result.workspace; window.orbitVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
+      vaultStore=nextStore; workspace=result.workspace; window.balaurVaultStore=vaultStore; configureLifeRuntime(canonicalVault); await Promise.all([lifeIndexer.rebuild(),componentCardCatalog.rebuild(),widgetCatalog.rebuild(),noteCatalog.rebuild()]);
       currentCanvasId=workspace.activeId; documentData=workspace.canvases[currentCanvasId].document; camera=workspace.canvases[currentCanvasId].camera||{x:80,y:55,zoom:1}; selected=null; $("#canvasTitle").value=canvasRecord().title; render(); fitView();
       const stats=lifeIndexer.stats();setIndexStatus(`Files · ${stats.sourceFiles} indexed`,`${stats.tasks} tasks · ${stats.habits} habits · ${stats.diagnostics} diagnostics`);toast("Whole workspace and canonical files imported");return;
     }
@@ -1679,7 +1679,7 @@ async function applyCanvasOperations(operations) {
 function applyCanvasTheme(theme) {
   const allowed=new Set(["default","warm","calm","contrast"]), value=allowed.has(theme)?theme:"default";
   if(value==="default")document.body.removeAttribute("data-canvas-theme");else document.body.dataset.canvasTheme=value;
-  localStorage.setItem("orbit-canvas-theme",value);
+  localStorage.setItem("balaur-canvas-theme",value);
 }
 function canvasSummary() {
   const nodes=(documentData.nodes||[]).filter(node=>node.type!=="group"), counts={goals:0,habits:0,projects:0,ideas:0,widgets:0,subcanvases:0};
@@ -1787,7 +1787,7 @@ async function runLocalAssistant(prompt) {
     } else if(/reset.*(?:theme|style)|default (?:theme|style)/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"default"}]);response="Reset the canvas styling to its default theme.";
     } else if(/(?:add|create).*(?:sub.?canvas|nested canvas)/.test(lower)){createSubcanvas();response="Created a nested canvas portal. Double-click it or zoom into it to enter.";
     } else if(/(?:add|create).*(?:3d|webgl|html|widget)/.test(lower)) {
-      const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-orbit.html"};await applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
+      const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-balaur.html"};await applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
     } else {
       const match=request.match(/(?:add|create)\s+(?:a |an )?(goal|habit|project|note)(?:\s+(?:called|named|to))?\s+(.+)/i);
       if(match){const kind=match[1].toLowerCase(),title=match[2].replace(/[.!]$/,"");const preset={goal:["1",`# ${title}\nWhat does success look like?\n\n- [ ] Choose the first step\n\nProgress: 0%`],habit:["4",`# ${title}\nMake the practice small and repeatable.`],project:["6",`# ${title}\nDefine the desired outcome.\n\n- [ ] First milestone\n\nProgress: 0%`],note:["2",`# ${title}\nStart writing here…`]}[kind];const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);await createNoteOnCanvas({title,body:preset[1],color:preset[0],geometry:{x:Math.round(center.x-150),y:Math.round(center.y-90),width:300,height:kind==="project"||kind==="goal"?200:150}});response=`Added a ${kind} card using standard JSON Canvas fields.`;}
@@ -1797,7 +1797,7 @@ async function runLocalAssistant(prompt) {
   setTimeout(()=>assistantMessage(response),180);
 }
 
-const AI_SETTINGS_KEY="orbit-ai-provider-v1",AI_SECRET_KEY="orbit-ai-secret-v1";
+const AI_SETTINGS_KEY="balaur-ai-provider-v1",AI_SECRET_KEY="balaur-ai-secret-v1";
 let aiConversation=[];
 function loadAISettings() {
   let saved={};try{saved=JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)||"{}");}catch(_){}
@@ -1902,7 +1902,7 @@ async function runAICard(cardId,{manual=false}={}) {
   finally{state.running=false;const pending=state.pending;state.pending=false;aiCardRuntime.set(cardId,state);renderNodes();if(pending)scheduleAICard(cardId,250);}
 }
 
-applyCanvasTheme(localStorage.getItem("orbit-canvas-theme")||"default");updateProviderUI();
+applyCanvasTheme(localStorage.getItem("balaur-canvas-theme")||"default");updateProviderUI();
 
 const ADD_KINDS=new Set(["note","goal","habit","project","inbox","reference","task","ai-note","ai","widget","subcanvas"]);
 function runAddKind(kind){if(kind==="ai-note")openAINoteDialog();else if(kind==="widget")proposeLocalWidget();else addNode(kind);}
@@ -1984,6 +1984,6 @@ window.addEventListener("resize",()=>{applyCamera();});
 // provided by the serialized queue and resolved save state; users should keep
 // the page open until a pending save completes.
 vaultReady=bootCanvasApp();
-window.orbitVaultReady=vaultReady;
+window.balaurVaultReady=vaultReady;
 await vaultReady;
-window.orbitCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createTask,loadGraphStarter,rebuildIndex:rebuildLifeIndex,setView:setAppView,switchCanvas,exportWorkspace};
+window.balaurCanvas={getDocument:()=>clone(documentData),getWorkspace:()=>clone(workspace),getCurrentCanvas:()=>({id:currentCanvasId,title:canvasRecord().title,trail:canvasTrail().map(record=>({id:record.id,title:record.title}))}),getSummary:canvasSummary,validateOperations:validateCanvasOperations,applyOperations:applyCanvasOperations,runAICard,createSubcanvas,createTask,loadGraphStarter,rebuildIndex:rebuildLifeIndex,setView:setAppView,switchCanvas,exportWorkspace};

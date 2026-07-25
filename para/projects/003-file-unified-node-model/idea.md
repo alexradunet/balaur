@@ -28,7 +28,7 @@ canvas (002) is built on, so it is sequenced *before* 002.
 ## Scope
 - Retire inline `text` content authoring; notes/inbox/reference/goal/AI cards
   become `.md` files. `group` (layout) and `link` (external URL) stay.
-- Notes are path-identified (`notes/<slug>.md`), no mandatory orbit-id.
+- Notes are path-identified (`notes/<slug>.md`), no mandatory balaur-id.
 - Hard-cut migration (early development): regenerate the starter, no migration
   of existing inline text nodes. `text` stays a valid *rendered* type for
   imported/external canvases (JSON Canvas interop).

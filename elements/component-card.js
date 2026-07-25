@@ -107,7 +107,7 @@ function renderMarkdown(container, source) {
       continue;
     }
     list = null;
-    if (!line.trim() || /^<!--\s*orbit:/.test(line.trim())) continue;
+    if (!line.trim() || /^<!--\s*balaur:/.test(line.trim())) continue;
     const heading = line.match(/^#{1,6}\s+(.+)$/);
     const block = element(heading ? "h3" : "p");
     appendInline(block, heading ? heading[1] : line);

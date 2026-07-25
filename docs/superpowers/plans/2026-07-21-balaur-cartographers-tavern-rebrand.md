@@ -4,7 +4,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebrand the existing standards-first Orbit JSON Canvas application as Balaur, establish an app-local CSS design system and motion foundation, and apply the approved Cartographer’s Tavern identity without changing portable data or workflow behavior.
+**Goal:** Rebrand the existing standards-first Balaur JSON Canvas application as Balaur, establish an app-local CSS design system and motion foundation, and apply the approved Cartographer’s Tavern identity without changing portable data or workflow behavior.
 
 **Architecture:** Keep the current static HTML, CSS, JavaScript, JSON Canvas, SQLite Wasm, and PWA architecture. Add one CSS token source (`styles/tokens.css`) and one motion recipe layer (`styles/motion.css`), migrate existing component styles to semantic custom properties, and keep native HTML controls. Progressive features must preserve immediate functional fallbacks.
 
@@ -14,7 +14,7 @@
 
 - Read `docs/superpowers/specs/2026-07-21-balaur-cartographers-tavern-design.md` before editing.
 - No framework, OCTANT package, component library, package manager, build step, CDN, or runtime dependency.
-- Preserve `orbit:` Markdown markers, `orbit-*` browser storage keys, `window.orbitCanvas`, `window.orbitLifeStore`, workspace bundle `format: "orbit-workspace"`, SQLite schema, and JSON Canvas data.
+- Preserve `balaur:` Markdown markers, `balaur-*` browser storage keys, `window.balaurCanvas`, `window.balaurLifeStore`, workspace bundle `format: "balaur-workspace"`, SQLite schema, and JSON Canvas data.
 - Visible product and assistant identity becomes Balaur; whole-space download filename becomes `.balaur.json`.
 - Runtime token source is `styles/tokens.css`; do not add a hand-maintained duplicate JSON token file.
 - Every author CSS rule belongs to `tokens`, `foundation`, `shell`, `canvas`, `components`, `themes`, `responsive`, or `motion`.
@@ -263,7 +263,7 @@ In `index.html`, add `styles/tokens.css` after `styles/layers.css` and `styles/m
 
 - [ ] **Step 6: Add the new styles to the offline shell and bump the cache**
 
-Change `CACHE_NAME` to `orbit-shell-v2` and add `./styles/tokens.css` and `./styles/motion.css` in stylesheet load order. Keep the internal `orbit-shell-` cache prefix so the existing activation cleanup deletes version 1.
+Change `CACHE_NAME` to `balaur-shell-v2` and add `./styles/tokens.css` and `./styles/motion.css` in stylesheet load order. Keep the internal `balaur-shell-` cache prefix so the existing activation cleanup deletes version 1.
 
 - [ ] **Step 7: Verify the foundation in the browser**
 
@@ -290,9 +290,9 @@ git commit -m "Add Balaur token and motion foundations"
 - Create: `icons/balaur.svg`
 - Create: `icons/balaur-192.png`
 - Create: `icons/balaur-512.png`
-- Delete: `icons/orbit.svg`
-- Delete: `icons/orbit-192.png`
-- Delete: `icons/orbit-512.png`
+- Delete: `icons/balaur.svg`
+- Delete: `icons/balaur-192.png`
+- Delete: `icons/balaur-512.png`
 - Modify: `index.html:6-11,25-28,36-41,126-145,199-210`
 - Modify: `app.js:1,655-667,715-720,781-792`
 - Modify: `manifest.webmanifest:3-15`
@@ -327,7 +327,7 @@ Change:
 - document title to `Balaur — life on a canvas`;
 - assistant aside label and heading to `Balaur`;
 - provider notice to “It is never sent to Balaur or GitHub Pages.”;
-- keep `.orbit` in the import `accept` list for backward compatibility with old backups.
+- keep `.balaur` in the import `accept` list for backward compatibility with old backups.
 
 - [ ] **Step 2: Change only user-facing JavaScript strings and backup filename**
 
@@ -336,23 +336,23 @@ In `app.js`:
 ```js
 async function exportWorkspace() {
   persistWorkspace();
-  const store = await window.orbitLifeReady;
+  const store = await window.balaurLifeReady;
   const lifeData = store?.exportSnapshot?.() || null;
   downloadJSON(
-    { format: "orbit-workspace", version: 1, exportedAt: new Date().toISOString(), workspace, lifeData },
+    { format: "balaur-workspace", version: 1, exportedAt: new Date().toISOString(), workspace, lifeData },
     `${slug(workspace.canvases[workspace.rootId].title)}.balaur.json`
   );
   toast(`${Object.keys(workspace.canvases).length} canvases and life data exported`);
 }
 ```
 
-The object’s `format` must remain `orbit-workspace`. Change import confirmation to “Import this Balaur space…”, and change the remote model prompt opening to:
+The object’s `format` must remain `balaur-workspace`. Change import confirmation to “Import this Balaur space…”, and change the remote model prompt opening to:
 
 ```js
 return `You are Balaur, an assistant operating a JSON Canvas 1.0 life-management canvas. Respond with exactly one JSON object and no markdown fences: {"message":"Brief response to the user","operations":[]}.
 ```
 
-Also change the opening code comment to Balaur, `offline/register.js`’s warning to “Balaur could not enable offline mode”, and the two user-visible life-store errors to “this Balaur build” / “Could not initialize the Balaur life database”. Do not rename `WORKSPACE_KEY`, AI storage keys, `window.orbitCanvas`, life-store globals, events, marker regexes, or cache prefixes.
+Also change the opening code comment to Balaur, `offline/register.js`’s warning to “Balaur could not enable offline mode”, and the two user-visible life-store errors to “this Balaur build” / “Could not initialize the Balaur life database”. Do not rename `WORKSPACE_KEY`, AI storage keys, `window.balaurCanvas`, life-store globals, events, marker regexes, or cache prefixes.
 
 - [ ] **Step 3: Create the cartographer icon**
 
@@ -369,11 +369,11 @@ Create `icons/balaur.svg`:
 </svg>
 ```
 
-Render exact 192 × 192 and 512 × 512 PNGs from the SVG using the browser screenshot tool. Confirm each PNG’s dimensions before deleting the Orbit icons.
+Render exact 192 × 192 and 512 × 512 PNGs from the SVG using the browser screenshot tool. Confirm each PNG’s dimensions before deleting the Balaur icons.
 
 - [ ] **Step 4: Update manifest and offline cache paths**
 
-Set manifest name/short name to Balaur, theme/background to `#100d0b`, and icon paths to `icons/balaur-*`. Update `sw.js` paths to the same filenames and bump `CACHE_NAME` to `orbit-shell-v3`; keep `widgets/focus-orbit.html` because “orbit” there describes the visualization, not the product namespace.
+Set manifest name/short name to Balaur, theme/background to `#100d0b`, and icon paths to `icons/balaur-*`. Update `sw.js` paths to the same filenames and bump `CACHE_NAME` to `balaur-shell-v3`; keep `widgets/focus-balaur.html` because “balaur” there describes the visualization, not the product namespace.
 
 - [ ] **Step 5: Verify identity and compatibility**
 
@@ -382,7 +382,7 @@ Browser checks:
 - tab title, installed-app metadata, brand, assistant heading, and provider notice say Balaur;
 - exactly one `Ask Balaur` control exists;
 - export filename ends in `.balaur.json`;
-- exported JSON still contains `"format": "orbit-workspace"`;
+- exported JSON still contains `"format": "balaur-workspace"`;
 - re-importing that backup succeeds;
 - existing local workspace loads without reset.
 
@@ -390,8 +390,8 @@ Browser checks:
 
 ```bash
 git add index.html app.js offline/register.js storage/life-store.js manifest.webmanifest sw.js icons/balaur.svg icons/balaur-192.png icons/balaur-512.png
-git rm icons/orbit.svg icons/orbit-192.png icons/orbit-512.png
-git commit -m "Rebrand Orbit identity as Balaur"
+git rm icons/balaur.svg icons/balaur-192.png icons/balaur-512.png
+git commit -m "Rebrand Balaur identity as Balaur"
 ```
 
 ### Task 3: Build the carved-oak shell and responsive familiar
@@ -486,7 +486,7 @@ Keep literal labels and descriptions. Do not add runes, quest names, or a hidden
 
 Use Newsreader only for the brand wordmark and current canvas title. Use JetBrains Mono for breadcrumbs, status, metadata, and section labels. Make primary controls carved gold/ink rather than gradients. Set button minimum height to 44 px where the full label is shown; compact spatial tool buttons are handled in Task 4.
 
-Use the coiled cartographer mark rather than the previous orbital ellipse:
+Use the coiled cartographer mark rather than the previous balaural ellipse:
 
 ```css
 .brand-mark {
@@ -1011,7 +1011,7 @@ Then:
 - remove `vendor/pixel-loom/tokens/linen.css` from `index.html`;
 - remove the Linen path from `sw.js`;
 - keep `vendor/pixel-loom/fonts.css` and font files.
-- bump `CACHE_NAME` to `orbit-shell-v4` so installed copies receive the final cache manifest;
+- bump `CACHE_NAME` to `balaur-shell-v4` so installed copies receive the final cache manifest;
 
 Expected search after removal: no legacy/vendor color token matches in `styles/`.
 
@@ -1051,14 +1051,14 @@ git commit -m "Complete Balaur responsive design system cutover"
 
 - [ ] **Step 1: Update user-facing product documentation**
 
-Replace user-facing Orbit product names with Balaur across the listed documents and update `AGENTS.md`’s repository identity and `.balaur.json` guidance. Preserve literal technical references where compatibility requires them:
+Replace user-facing Balaur product names with Balaur across the listed documents and update `AGENTS.md`’s repository identity and `.balaur.json` guidance. Preserve literal technical references where compatibility requires them:
 
-- `<!-- orbit:task ... -->`, `<!-- orbit:jd ... -->`, and `<!-- orbit:ai-card -->` markers;
-- `orbit-workspace` bundle format;
+- `<!-- balaur:task ... -->`, `<!-- balaur:jd ... -->`, and `<!-- balaur:ai-card -->` markers;
+- `balaur-workspace` bundle format;
 - internal storage/global names when documenting compatibility;
-- `widgets/focus-orbit.html` when referring to the file path or the “Focus orbit” visualization.
+- `widgets/focus-balaur.html` when referring to the file path or the “Focus balaur” visualization.
 
-Change `.orbit.json` user guidance to `.balaur.json` and explain that the internal bundle format remains stable.
+Change `.balaur.json` user guidance to `.balaur.json` and explain that the internal bundle format remains stable.
 
 - [ ] **Step 2: Rewrite the existing design-system document around the actual implementation**
 
@@ -1121,11 +1121,11 @@ Compare with the approved Cartographer’s Tavern reference. Remove any grain, b
 
 Search expectations:
 
-- user-facing `Orbit` in application sources, README, and current product docs: no matches; historical ADRs/plans/specs and explicitly documented internal compatibility names are excluded;
+- user-facing `Balaur` in application sources, README, and current product docs: no matches; historical ADRs/plans/specs and explicitly documented internal compatibility names are excluded;
 - `--balaur-duration-*` and `--balaur-ease-*`: definitions in `tokens.css`, consumers in `motion.css`;
 - duration/easing literals in `shell.css`, `canvas.css`, `components.css`, and `responsive.css`: no matches;
 - `vendor/pixel-loom/tokens/linen.css` in `index.html` or `sw.js`: no matches;
-- internal `orbit:` markers, storage keys, globals, event names, cache cleanup prefix, and `orbit-workspace`: still present.
+- internal `balaur:` markers, storage keys, globals, event names, cache cleanup prefix, and `balaur-workspace`: still present.
 
 - [ ] **Step 8: Commit**
 

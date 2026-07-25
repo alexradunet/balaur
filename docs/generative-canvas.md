@@ -29,7 +29,7 @@ JSON Canvas 1.0 has no `component`, `html`, `widget`, or `webgl` node type. Bala
 }
 ```
 
-Other JSON Canvas clients still see valid file attachments. The immutable Orbit ID inside a component-card file is its identity; the safe widget path identifies widget source; the Canvas node ID is only a placement. One canonical file may be placed on multiple canvases. Component-card and widget catalogs preload parsed content, source, placements, and repair diagnostics so render does not read the vault once per card.
+Other JSON Canvas clients still see valid file attachments. The immutable Balaur ID inside a component-card file is its identity; the safe widget path identifies widget source; the Canvas node ID is only a placement. One canonical file may be placed on multiple canvases. Component-card and widget catalogs preload parsed content, source, placements, and repair diagnostics so render does not read the vault once per card.
 
 ## Declarative component cards
 
@@ -52,10 +52,10 @@ Canvas edits remain structured operations such as `node.add`, `node.update`, and
 The stable browser integration surface includes:
 
 ```js
-window.orbitCanvas.getDocument()
-window.orbitCanvas.getSummary()
-window.orbitCanvas.validateOperations(operations)
-window.orbitCanvas.applyOperations(operations)
+window.balaurCanvas.getDocument()
+window.balaurCanvas.getSummary()
+window.balaurCanvas.validateOperations(operations)
+window.balaurCanvas.applyOperations(operations)
 ```
 
 Validation and confirmation are controls around canonical repository writes; provider output never receives direct repository, vault, DOM, or host-code execution access.
@@ -69,7 +69,7 @@ An AI note is a one-shot generation flow. Balaur first opens a native `<dialog>`
 An AI operator is a standard `file` node referencing a `notes/*.md` file (ADR-0004). Balaur recognizes the existing portable Markdown compatibility marker in the file body rather than introducing a custom node type:
 
 ```markdown
-<!-- orbit:ai-card -->
+<!-- balaur:ai-card -->
 # Weekly synthesis
 Summarize the connected notes and recommend the next action.
 ```

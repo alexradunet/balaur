@@ -4,22 +4,22 @@
 
 **Date:** 2026-07-21
 
-**Scope:** Orbit workspace storage, tasks, habits, journals, calendar events, indexing, import/export, and future filesystem adapters
+**Scope:** Balaur workspace storage, tasks, habits, journals, calendar events, indexing, import/export, and future filesystem adapters
 
-**Current production behavior:** Not yet implemented. Orbit currently keeps canvas documents in the workspace sidecar and treats SQLite task/temporal rows as authoritative operational state.
+**Current production behavior:** Not yet implemented. Balaur currently keeps canvas documents in the workspace sidecar and treats SQLite task/temporal rows as authoritative operational state.
 
 ## 1. Executive decision
 
-Orbit should evolve toward this ownership model:
+Balaur should evolve toward this ownership model:
 
 ```text
 JSON Canvas files             canonical spatial documents
 Markdown files                canonical human-readable life entities
-.orbit/workspace.json         application-only hierarchy and UI metadata
+.balaur/workspace.json         application-only hierarchy and UI metadata
 SQLite                        disposable, rebuildable query/search index
 ```
 
-SQLite remains important. It should continue to power Today, calendar ranges, habit streaks, search, sorting, and filtering. The change is that deleting SQLite must no longer delete meaningful user data: Orbit must be able to rebuild every portable entity row from `.md` and `.canvas` files.
+SQLite remains important. It should continue to power Today, calendar ranges, habit streaks, search, sorting, and filtering. The change is that deleting SQLite must no longer delete meaningful user data: Balaur must be able to rebuild every portable entity row from `.md` and `.canvas` files.
 
 This is a file-canonical architecture, not a files-only runtime. Removing the database would make repeated temporal queries and large-workspace startup unnecessarily expensive.
 
@@ -27,7 +27,7 @@ The first implementation should be a complete task vertical slice before migrati
 
 ## 2. Goals
 
-1. Make tasks, habits, journal entries, and calendar events inspectable outside Orbit.
+1. Make tasks, habits, journal entries, and calendar events inspectable outside Balaur.
 2. Keep every canvas independently valid JSON Canvas 1.0.
 3. Represent life entities on canvases through standard `file` nodes.
 4. Preserve SQLite query performance.
@@ -69,7 +69,7 @@ The Obsidian Tasks plugin performs an initial vault scan and then reindexes chan
 - [startup and incremental event handling](https://github.com/obsidian-tasks-group/obsidian-tasks/blob/a1a371da082b39b29309c173b813be4530f2af2a/src/Obsidian/Cache.ts#L146-L210)
 - [full initial scan and per-file replacement](https://github.com/obsidian-tasks-group/obsidian-tasks/blob/a1a371da082b39b29309c173b813be4530f2af2a/src/Obsidian/Cache.ts#L242-L338)
 
-Orbit should use the same broad pattern while persisting its typed cache in SQLite.
+Balaur should use the same broad pattern while persisting its typed cache in SQLite.
 
 ### 4.2 Content hashes enable cheap incremental reconciliation
 
@@ -79,7 +79,7 @@ QMD maps paths to content hashes, compares incoming content with the existing ha
 - [incremental content comparison](https://github.com/tobi/qmd/blob/e428df76bc0274d9e93eb7ca3e95673315c42e90/src/cli/qmd.ts#L1700-L1751)
 - [missing-file reconciliation](https://github.com/tobi/qmd/blob/e428df76bc0274d9e93eb7ca3e95673315c42e90/src/cli/qmd.ts#L1762-L1773)
 
-Orbit should use metadata as a fast hint and a content hash as the correctness check. File modification time alone is not a stable content identity.
+Balaur should use metadata as a fast hint and a content hash as the correctness check. File modification time alone is not a stable content identity.
 
 ### 4.3 Filename, title, and identity are separate concerns
 
@@ -87,13 +87,13 @@ Logseq's accepted 2026 Markdown Mirror ADR is database-canonical rather than fil
 
 - [source-of-truth and runtime constraints](https://github.com/logseq/logseq/blob/3de7c75154b628dadfdb53dae6253c8bf5e2ab1b/docs/adr/0016-markdown-mirror.md#L6-L56)
 
-Its path and write rules are directly useful to Orbit:
+Its path and write rules are directly useful to Balaur:
 
 - [stable identity independent of friendly path](https://github.com/logseq/logseq/blob/3de7c75154b628dadfdb53dae6253c8bf5e2ab1b/docs/adr/0016-markdown-mirror.md#L70-L81)
 - [cross-platform filename normalization](https://github.com/logseq/logseq/blob/3de7c75154b628dadfdb53dae6253c8bf5e2ab1b/docs/adr/0016-markdown-mirror.md#L147-L173)
 - [debounce, content deduplication, atomic writes, and worker ownership](https://github.com/logseq/logseq/blob/3de7c75154b628dadfdb53dae6253c8bf5e2ab1b/docs/adr/0016-markdown-mirror.md#L175-L198)
 
-Orbit should put a stable ID inside every entity file, keep paths stable by default, normalize paths identically on all platforms, and compare hashes before writing.
+Balaur should put a stable ID inside every entity file, keep paths stable by default, normalize paths identically on all platforms, and compare hashes before writing.
 
 ### 4.4 Browser files and desktop files need one logical interface
 
@@ -105,7 +105,7 @@ Tauri provides scoped file operations and recursive watching, but dangerous oper
 
 - <https://v2.tauri.app/plugin/file-system/>
 
-Orbit therefore needs a logical vault interface with multiple adapters. The browser default should not pretend that it has unrestricted filesystem access.
+Balaur therefore needs a logical vault interface with multiple adapters. The browser default should not pretend that it has unrestricted filesystem access.
 
 ### 4.5 Frontmatter is a convention over a complex serialization language
 
@@ -113,7 +113,7 @@ YAML 1.2 is a complete data serialization language with mappings, sequences, tag
 
 - <https://yaml.org/spec/1.2.2/>
 
-Orbit should generate YAML-compatible frontmatter but support only a deliberately constrained set of Orbit-owned top-level properties. It should preserve unknown content rather than attempting to parse and reserialize arbitrary YAML.
+Balaur should generate YAML-compatible frontmatter but support only a deliberately constrained set of Balaur-owned top-level properties. It should preserve unknown content rather than attempting to parse and reserialize arbitrary YAML.
 
 ### 4.6 Standard Canvas file nodes provide the portable link
 
@@ -123,9 +123,9 @@ JSON Canvas 1.0 already defines a `file` node with a relative path and optional 
 
 No custom `task`, `habit`, `journal`, or `event` node type is necessary.
 
-## 5. Current Orbit state
+## 5. Current Balaur state
 
-The current workspace uses `version: 1` and embeds each canvas document under `workspace.canvases[id].document`. The workspace is persisted to `orbit-workspace-v1` in `localStorage`.
+The current workspace uses `version: 1` and embeds each canvas document under `workspace.canvases[id].document`. The workspace is persisted to `balaur-workspace-v1` in `localStorage`.
 
 Current task creation performs a dual write:
 
@@ -136,7 +136,7 @@ Current whole-space backup contains:
 
 ```json
 {
-  "format": "orbit-workspace",
+  "format": "balaur-workspace",
   "version": 1,
   "workspace": {},
   "lifeData": {
@@ -156,10 +156,10 @@ The habits, habit entries, journals, and calendar tables exist, but only task ca
 
 ## 6. Target workspace layout
 
-A logical Orbit vault should look like:
+A logical Balaur vault should look like:
 
 ```text
-.orbit/
+.balaur/
   workspace.json
 
 canvases/
@@ -196,7 +196,7 @@ The logical layout must be identical in IndexedDB, whole-space exports, user-sel
 
 ### 6.1 Sidecar ownership
 
-`.orbit/workspace.json` remains application-specific and owns:
+`.balaur/workspace.json` remains application-specific and owns:
 
 - workspace format version;
 - root and active canvas IDs;
@@ -218,7 +218,7 @@ Browser permission handles, API keys, transient diagnostics, selection, open dia
 Every canonical entity has an immutable ID stored in its content:
 
 ```yaml
-orbit-id: "task-a1b2c3"
+balaur-id: "task-a1b2c3"
 ```
 
 Rules:
@@ -227,7 +227,7 @@ Rules:
 - IDs remain stable when a title, path, canvas placement, or Johnny Decimal location changes.
 - IDs are unique across the workspace, not merely within an entity type.
 - The prefix communicates type to humans but is not used as the only validation rule.
-- Duplicate IDs are errors; Orbit must not silently choose one file as authoritative.
+- Duplicate IDs are errors; Balaur must not silently choose one file as authoritative.
 - A path is a locator, not identity.
 - A canvas node ID is placement identity, not entity identity.
 
@@ -264,20 +264,20 @@ Unsafe paths must produce diagnostics rather than escaping the vault root.
 
 ### 8.1 General envelope
 
-An Orbit entity Markdown file begins with frontmatter on the first line:
+An Balaur entity Markdown file begins with frontmatter on the first line:
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: task
-orbit-id: "task-a1b2c3"
+balaur-schema: 1
+balaur-type: task
+balaur-id: "task-a1b2c3"
 ...
 ---
 
 Human-readable Markdown body.
 ```
 
-### 8.2 Supported Orbit-owned values
+### 8.2 Supported Balaur-owned values
 
 The initial codec supports known top-level keys with:
 
@@ -290,12 +290,12 @@ The initial codec supports known top-level keys with:
 
 Dates and instants are always serialized as quoted strings. IDs and user-authored titles are always quoted.
 
-Orbit does not generate:
+Balaur does not generate:
 
 - anchors or aliases;
 - custom YAML tags;
 - block scalar values in frontmatter;
-- nested Orbit-owned mappings;
+- nested Balaur-owned mappings;
 - multiple YAML documents;
 - schema-dependent timestamp objects;
 - executable or language-specific types.
@@ -308,26 +308,26 @@ It should:
 
 1. locate the opening and closing delimiter;
 2. scan top-level keys without evaluating unknown YAML structures;
-3. parse only known Orbit-owned values;
+3. parse only known Balaur-owned values;
 4. preserve unknown keys, comments, ordering, indentation, line endings, and the Markdown body;
 5. replace only the exact known property lines being changed;
-6. append a missing Orbit-owned key before the closing delimiter;
+6. append a missing Balaur-owned key before the closing delimiter;
 7. reject duplicate known keys;
 8. retain a UTF-8 BOM if one was present;
 9. refuse to write when the frontmatter cannot be patched safely.
 
 A malformed external file must remain untouched and receive an index diagnostic.
 
-External-edit robustness bar (first delivery): Orbit-written files edited externally must remain readable when the editor only makes compatible changes — reordering known flat keys, re-quoting known string values, and converting a known flow array to a block array (or back) for known array fields. The constrained parser must tolerate these without marking the file read-only. Editors that introduce unsupported structures (nested mappings under Orbit keys, anchors/aliases, custom tags) produce a read-only diagnostic, not a silent rewrite. Add a validation-matrix case (§19.1) for "Obsidian-reflowed frontmatter". A full YAML parser is reconsidered only if this bar proves insufficient in practice (§24.3). This resolves review S4.
+External-edit robustness bar (first delivery): Balaur-written files edited externally must remain readable when the editor only makes compatible changes — reordering known flat keys, re-quoting known string values, and converting a known flow array to a block array (or back) for known array fields. The constrained parser must tolerate these without marking the file read-only. Editors that introduce unsupported structures (nested mappings under Balaur keys, anchors/aliases, custom tags) produce a read-only diagnostic, not a silent rewrite. Add a validation-matrix case (§19.1) for "Obsidian-reflowed frontmatter". A full YAML parser is reconsidered only if this bar proves insufficient in practice (§24.3). This resolves review S4.
 
 ### 8.4 Schema evolution
 
-`orbit-schema` versions the entity-file contract independently of SQLite `PRAGMA user_version` and workspace bundle versions.
+`balaur-schema` versions the entity-file contract independently of SQLite `PRAGMA user_version` and workspace bundle versions.
 
-- Missing `orbit-schema` on an Orbit-marked file is a validation error until a migration rule exists.
+- Missing `balaur-schema` on an Balaur-marked file is a validation error until a migration rule exists.
 - A newer unsupported schema is read-only and diagnostic.
 - File migrations are explicit transforms with before/after validation.
-- Unknown non-Orbit properties are always retained.
+- Unknown non-Balaur properties are always retained.
 
 ## 9. Canonical entity formats
 
@@ -335,9 +335,9 @@ External-edit robustness bar (first delivery): Orbit-written files edited extern
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: task
-orbit-id: "task-a1b2c3"
+balaur-schema: 1
+balaur-type: task
+balaur-id: "task-a1b2c3"
 title: "Finish quarterly review"
 status: next
 priority: 1
@@ -390,15 +390,15 @@ Consequences:
 - a task with no placement remains available in Inbox/search;
 - SQLite derives placements by scanning canvas file nodes.
 
-Legacy `<!-- orbit:task ... -->` text nodes remain accepted during migration but are not generated for new file-canonical tasks.
+Legacy `<!-- balaur:task ... -->` text nodes remain accepted during migration but are not generated for new file-canonical tasks.
 
 ### 9.3 Habit definition
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: habit
-orbit-id: "habit-morning-walk"
+balaur-schema: 1
+balaur-type: habit
+balaur-id: "habit-morning-walk"
 title: "Morning walk"
 frequency: weekly
 weekdays: [1, 2, 3, 4, 5]
@@ -418,15 +418,15 @@ Habit definitions describe intent. They do not contain an ever-growing array of 
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: habit-log
+balaur-schema: 1
+balaur-type: habit-log
 local-date: "2026-07-21"
 ---
 
 # Habit check-ins
 
 - [x] Morning walk
-  <!-- orbit:habit-entry id=habit-entry-r4s5t6 habit=habit-morning-walk status=done value=1 at=2026-07-21T07:12:00.000Z -->
+  <!-- balaur:habit-entry id=habit-entry-r4s5t6 habit=habit-morning-walk status=done value=1 at=2026-07-21T07:12:00.000Z -->
 ```
 
 Rules:
@@ -445,9 +445,9 @@ The exact event grammar must be finalized with parser tests before implementatio
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: journal
-orbit-id: "journal-2026-07-21"
+balaur-schema: 1
+balaur-type: journal
+balaur-id: "journal-2026-07-21"
 local-date: "2026-07-21"
 created-at: "2026-07-21T06:30:00.000Z"
 updated-at: "2026-07-21T20:15:00.000Z"
@@ -458,22 +458,22 @@ updated-at: "2026-07-21T20:15:00.000Z"
 Journal text remains ordinary Markdown.
 ```
 
-The date belongs in both the normalized path and validated metadata. A mismatch is diagnostic; Orbit does not silently move the file.
+The date belongs in both the normalized path and validated metadata. A mismatch is diagnostic; Balaur does not silently move the file.
 
 ### 9.6 Calendar event
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: calendar-event
-orbit-id: "event-dentist-m4n5o6"
+balaur-schema: 1
+balaur-type: calendar-event
+balaur-id: "event-dentist-m4n5o6"
 title: "Dentist appointment"
 starts-at: "2026-07-24T09:00:00+03:00"
 ends-at: "2026-07-24T10:00:00+03:00"
 local-date: "2026-07-24"
 timezone: "Europe/Bucharest"
 all-day: false
-source: orbit
+source: balaur
 created-at: "2026-07-21T18:00:00.000Z"
 updated-at: "2026-07-21T18:00:00.000Z"
 ---
@@ -492,7 +492,7 @@ Until that design ships:
 - task/habit/entity current state must be rebuildable;
 - `activity_log` may remain a derived diagnostic/history cache;
 - version-2 backups must clearly document whether detailed transition history is portable;
-- Orbit must not claim complete database disposability if meaningful history still exists only in SQLite.
+- Balaur must not claim complete database disposability if meaningful history still exists only in SQLite.
 
 ## 10. VaultStore abstraction
 
@@ -577,7 +577,7 @@ Where `showDirectoryPicker()` is available:
 - never silently fall back to a different writable location after access is lost;
 - use hash preconditions to detect external changes;
 - provide a visible disconnected/read-only state;
-- retain normalized `.orbit.json` import/export as the universal fallback.
+- retain normalized `.balaur.json` import/export as the universal fallback.
 
 ### 10.4 Tauri adapter
 
@@ -657,7 +657,7 @@ CREATE TABLE index_state (
 );
 ```
 
-`.canvas` files are indexed with `entity_type='canvas'` and `entity_id=NULL`; SQLite permits multiple NULLs in a `UNIQUE` column, so many canvases coexist while entity files keep a unique non-null `orbit-id`. Canvas placements are recorded in `entity_placements`, not as `source_files` entity IDs (resolves review M4).
+`.canvas` files are indexed with `entity_type='canvas'` and `entity_id=NULL`; SQLite permits multiple NULLs in a `UNIQUE` column, so many canvases coexist while entity files keep a unique non-null `balaur-id`. Canvas placements are recorded in `entity_placements`, not as `source_files` entity IDs (resolves review M4).
 
 ### 11.3 Typed table changes
 
@@ -683,7 +683,7 @@ source_hash
 
 Placements move to `entity_placements`.
 
-The version-1 `tasks` table also carries `block_key` (with `UNIQUE(canvas_id, node_id, block_key)`) anticipating multiple blocks per node. Migration 2 drops `canvas_id`, `node_id`, and `block_key` from the task row; any multi-block content is split into separate canonical task files (each with its own `orbit-id`) before the columns are removed, and the repository's camelCase `mapTask` boundary is updated to match (resolves review M1).
+The version-1 `tasks` table also carries `block_key` (with `UNIQUE(canvas_id, node_id, block_key)`) anticipating multiple blocks per node. Migration 2 drops `canvas_id`, `node_id`, and `block_key` from the task row; any multi-block content is split into separate canonical task files (each with its own `balaur-id`) before the columns are removed, and the repository's camelCase `mapTask` boundary is updated to match (resolves review M1).
 
 `recurrence_json` already exists in migration 1 as an opaque value. Until the flat portable recurrence representation (§9.1) is defined, migration 2 carries the existing value forward unchanged (or stores `null` when absent); it must not be silently reinterpreted, and recurrence UI does not ship before the flat representation exists (resolves review M2).
 
@@ -732,7 +732,7 @@ Deletion:
 
 Rename:
 
-- identify the entity from `orbit-id`, not only watcher event pairing;
+- identify the entity from `balaur-id`, not only watcher event pairing;
 - update `source_files.path` and typed `source_path` values transactionally;
 - update canvas references only through an explicit safe path-repair operation;
 - detect case-only renames and case-fold collisions;
@@ -786,7 +786,7 @@ The indexer:
 - serializes changes that affect the same identity;
 - compares hash before parsing;
 - ignores exact self-write echoes;
-- does not ignore a different external hash merely because it arrived soon after an Orbit write;
+- does not ignore a different external hash merely because it arrived soon after an Balaur write;
 - reports indexing status through events rather than blocking canvas rendering.
 
 ### 12.4 Explicit maintenance commands
@@ -894,8 +894,8 @@ Preload visible file nodes when switching canvases. Render from the in-memory ca
 
 Markdown file nodes should render:
 
-- task controls for `orbit-type: task`;
-- habit controls for `orbit-type: habit`;
+- task controls for `balaur-type: task`;
+- habit controls for `balaur-type: habit`;
 - journal/event summaries for their types;
 - ordinary sanitized Markdown for unknown or untyped `.md` files;
 - a missing-file or parse-error card when unavailable.
@@ -916,7 +916,7 @@ await life.removePlacement(canvasId, nodeId)
 
 Raw SQLite mutation methods should not be used by components once file-canonical mode is enabled.
 
-The `window.orbitCanvas` integration surface (`AGENTS.md` §12) gains the placement commands above and becomes async for mutations; update it and `AGENTS.md` §12 in the same change (resolves review M6).
+The `window.balaurCanvas` integration surface (`AGENTS.md` §12) gains the placement commands above and becomes async for mutations; update it and `AGENTS.md` §12 in the same change (resolves review M6).
 
 ### 14.5 AI context resolution for file nodes
 
@@ -942,11 +942,11 @@ An entity may have zero, one, or many placements (§9.2). Projections that previ
 
 ### 15.1 Normalized bundle
 
-A version-2 `.orbit.json` backup should contain the sidecar and logical files, not a SQLite snapshot:
+A version-2 `.balaur.json` backup should contain the sidecar and logical files, not a SQLite snapshot:
 
 ```json
 {
-  "format": "orbit-workspace",
+  "format": "balaur-workspace",
   "version": 2,
   "exportedAt": "2026-07-21T18:00:00.000Z",
   "workspace": {},
@@ -996,7 +996,7 @@ Version-1 bundles remain importable. Import should:
 4. build a new index;
 5. activate only when verified.
 
-Single active-level `.canvas` import/export remains valid JSON Canvas 1.0, but its semantics change: task/entity content now lives in separate `.md` files, so a lone exported `.canvas` may contain `file` nodes whose targets are not bundled. Orbit must either bundle referenced entity files alongside a single-canvas export or visibly mark dangling `file` references, and must never claim a bare `.canvas` is a complete entity backup. Whole-space export (§15.1) remains the only complete backup (resolves review S3).
+Single active-level `.canvas` import/export remains valid JSON Canvas 1.0, but its semantics change: task/entity content now lives in separate `.md` files, so a lone exported `.canvas` may contain `file` nodes whose targets are not bundled. Balaur must either bundle referenced entity files alongside a single-canvas export or visibly mark dangling `file` references, and must never claim a bare `.canvas` is a complete entity backup. Whole-space export (§15.1) remains the only complete backup (resolves review S3).
 
 ## 16. Migration of existing profiles
 
@@ -1167,7 +1167,7 @@ This phase makes the vault the single canonical store for canvases **before** an
 Deliverables:
 
 - move `record.document` content into logical `.canvas` paths in the vault;
-- keep metadata-only records in `.orbit/workspace.json`;
+- keep metadata-only records in `.balaur/workspace.json`;
 - replace the synchronous `localStorage` workspace load with the async vault-first startup graph (§14.1): VaultStore → sidecar → preload active canvas → canvas app → LifeStore index → reconcile → offline;
 - in-memory working set and active-canvas preloading; serialized save queue;
 - nested-canvas portal path validation;
@@ -1367,7 +1367,7 @@ Large rebuilds need progress and must not freeze pointer interaction. The shippe
 - stale SQLite revision;
 - deleted SQLite database;
 - revoked directory permission;
-- external edit during Orbit edit;
+- external edit during Balaur edit;
 - watcher create/rename/delete storm.
 
 ### 19.4 Migration
@@ -1478,13 +1478,13 @@ Reason: broad offline behavior and transactional metadata without requiring a pe
 
 ### 24.2 One task per file versus checklist tasks inside arbitrary notes
 
-**Recommendation:** one canonical file per Orbit task for the first implementation.
+**Recommendation:** one canonical file per Balaur task for the first implementation.
 
 Reason: stable identity, safe field patching, multiple canvas placements, simple deletion, and no ambiguous line-location updates. Arbitrary Markdown checklist import can be a later explicit feature.
 
 ### 24.3 Frontmatter library
 
-**Recommendation:** no unrestricted YAML library in the static prototype. Implement a small preservation-oriented scanner for known flat Orbit properties.
+**Recommendation:** no unrestricted YAML library in the static prototype. Implement a small preservation-oriented scanner for known flat Balaur properties.
 
 The first delivery targets the compatible-edit robustness bar defined in §8.3; the trigger for reconsidering a full parser is that bar proving insufficient in practice. Any parser must be vendored with provenance and must preserve comments/formatting or use surgical source edits (resolves review S4).
 

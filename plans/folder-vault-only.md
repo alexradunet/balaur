@@ -27,9 +27,9 @@ and is out of scope here.
 5. **Landing screen:** Balaur wordmark + one unified **"Open vault folder"**
    button + non-Chromium fallback + an error/status region.
 6. **Folder open/create/adopt (additive-only):**
-   - has `.orbit/workspace.json` → **open**;
+   - has `.balaur/workspace.json` → **open**;
    - **empty** folder → **create** + seed starter tasks (reuse existing first-run seeding);
-   - files but **no sidecar** → **adopt**: add `.orbit/` + a minimal root canvas,
+   - files but **no sidecar** → **adopt**: add `.balaur/` + a minimal root canvas,
      index what matches our codecs, leave everything else as plain files;
    - **never modify or delete pre-existing files**; seeding happens only for an
      empty folder.
@@ -40,7 +40,7 @@ and is out of scope here.
    data irreversibly (accepted). **Before deploy, export anything worth keeping
    via the current "Export whole space"/"Export .canvas".**
 9. **Export/import surface:** keep single-`.canvas` export; **remove** whole-space
-   `.orbit.json` bundle export + import from the UI; no zip / copy-vault in v1.
+   `.balaur.json` bundle export + import from the UI; no zip / copy-vault in v1.
    (The `storage/workspace-backup.js` module and its Node tests stay — only the
    app wiring/buttons are removed — so the 168-test suite is not broken.)
 
@@ -81,7 +81,7 @@ Methods (all async; call `assertSafePath(path)` on every path first):
   modifiedAt: new Date(file.lastModified).toISOString(), revision: this._revision }`.
 - `list(prefix = "")` — recursively walk from the prefix directory using
   `for await (const entry of dirHandle.values())`; recurse `kind === "directory"`,
-  collect `_meta` for `kind === "file"`. Return the array. (Skip nothing — `.orbit`,
+  collect `_meta` for `kind === "file"`. Return the array. (Skip nothing — `.balaur`,
   `canvases`, entities, widgets are all real files.)
 - `read(path)` — file handle → text; if missing throw
   `VaultError("Not found: …", { code: "NOT_FOUND" })`.
@@ -130,7 +130,7 @@ Grep for the symbols below; line numbers drift, so locate by name.
 **Delete the legacy localStorage workspace path:**
 - `loadDocument()`, `freshWorkspace()`, `normalizeWorkspace()`, and the
   localStorage-reading `loadWorkspace()` (the `WORKSPACE_KEY` /
-  `orbit-canvas-v1` / `orbit-title` readers). Keep `createJohnnyDecimalStarterWorkspace()`
+  `balaur-canvas-v1` / `balaur-title` readers). Keep `createJohnnyDecimalStarterWorkspace()`
   (the seeded starter builder) — it is the source for the empty-folder create path.
 - Add a small `minimalFreshWorkspace()` that returns a `version:1` workspace with a
   single root canvas whose document is `{ nodes: [], edges: [] }` and a default title
@@ -143,10 +143,10 @@ Grep for the symbols below; line numbers drift, so locate by name.
   2. `const had = await hasWorkspace(vault);`
   3. if `!had`: `const ws = seed ? createJohnnyDecimalStarterWorkspace() : minimalFreshWorkspace(); await store.migrate(ws);`
      (`migrate` writes with `expectedHash: null`, i.e. additive — it only creates
-     `.orbit/workspace.json` + `canvases/root.canvas`, never touching other files.)
+     `.balaur/workspace.json` + `canvases/root.canvas`, never touching other files.)
   4. `const result = await store.load();` (existing diagnostics/repair-placeholder
      behavior is retained.)
-  5. set `workspace`, `vaultStore`, `window.orbitVaultStore`; `setCanonicalWritable(…)`;
+  5. set `workspace`, `vaultStore`, `window.balaurVaultStore`; `setCanonicalWritable(…)`;
      `configureLifeRuntime(vault)`; `seedBundledWidget(vault)`;
   6. if `seed` (empty folder): `await seedStarterTasks(); workspace = (await store.load()).workspace;`
   7. `await Promise.all([lifeIndexer.rebuild(), componentCardCatalog.rebuild(), widgetCatalog.rebuild()]);`
@@ -155,7 +155,7 @@ Grep for the symbols below; line numbers drift, so locate by name.
      render code that follows today's `bootCanvasApp`).
 - `bootCanvasApp()` now just shows the landing screen and returns a promise that
   resolves once a vault is opened. Keep `vaultReady = bootCanvasApp();
-  window.orbitVaultReady = vaultReady; await vaultReady;` at the module tail.
+  window.balaurVaultReady = vaultReady; await vaultReady;` at the module tail.
 
 **Landing / open / reload / switch wiring (set up early, before `await vaultReady`):**
 - `#openVaultFolder` click → guard `if (!("showDirectoryPicker" in window))` (show
@@ -182,7 +182,7 @@ Grep for the symbols below; line numbers drift, so locate by name.
 `createJohnnyDecimalStarterWorkspace()` → save into the **current** `vaultStore`
 (a normal `save()`, which CAS-overwrites owned canvases and removes orphans) →
 `seedStarterTasks()` → rebuild indexes → re-render. No staging vault needed; drop the
-`IndexedDbVault("orbit-vault-…")` staging dance (and the `MemoryVault` import if it
+`IndexedDbVault("balaur-vault-…")` staging dance (and the `MemoryVault` import if it
 was only for this).
 
 ## 6. `index.html`
@@ -215,7 +215,7 @@ vault opens. Keep it minimal.
 
 ## 8. `sw.js`
 
-- `CACHE_NAME` is currently `"orbit-shell-v12"` → bump to `"orbit-shell-v13"`.
+- `CACHE_NAME` is currently `"balaur-shell-v12"` → bump to `"balaur-shell-v13"`.
 - `APP_SHELL`: **add** `"./storage/directory-vault.js"`. **Remove**
   `"./storage/indexeddb-vault.js"` (no longer imported). Remove
   `"./storage/workspace-backup.js"` only after confirming no remaining importer
@@ -240,7 +240,7 @@ Keep `storage/workspace-backup.js` and its tests (`phase4.test.js`,
   (landing-screen → folder-vault boot; no localStorage migration; no IndexedDB),
   §5.1 (SW still shell-only; user data is in the folder), §7 (DirectoryVault is the
   browser adapter; IndexedDbVault gone), §13 browser-pending list (folder-vault boot,
-  permission, reload), §16 definition of done. Note the cache is now `orbit-shell-v13`.
+  permission, reload), §16 definition of done. Note the cache is now `balaur-shell-v13`.
 - **docs/architecture.md:** adapter list + "future desktop shell" note (web is now
   folder-vault-only; a Tauri shell adds an `fs`-kind adapter + config-file registry).
 - **docs/life-data.md:** vault adapters section — `DirectoryVault` replaces
@@ -285,14 +285,14 @@ app wiring; `workspace-backup.js` and all tested modules stay.)
 
 Browser (manual, Chromium — browser-pending per §13):
 1. Launch → landing screen; open an **empty** folder → creates + seeds starter tasks.
-2. Open a folder with **files but no `.orbit`** → adopts (adds `.orbit/`, indexes
+2. Open a folder with **files but no `.balaur`** → adopts (adds `.balaur/`, indexes
    matching files, pre-existing files untouched).
-3. Open a folder that **has `.orbit/workspace.json`** → opens it.
+3. Open a folder that **has `.balaur/workspace.json`** → opens it.
 4. Edit a vault file externally → click **Reload vault** → change appears; a
    conflicting save raises a ConflictError rather than overwriting.
 5. **Open another vault** → back to landing → pick a different folder → switches.
 6. Single `.canvas` export still works; bundle export/import buttons are gone.
-7. Offline reload serves the shell from `orbit-shell-v13`.
+7. Offline reload serves the shell from `balaur-shell-v13`.
 8. Firefox/Safari → landing shows the Chromium-required notice, no dead button.
 
 ## 13. Data-loss warning (deploy gate)
@@ -310,5 +310,5 @@ deploying to `main`, export anything worth keeping from the live site via the cu
 - Landing screen + Chromium gate + Reload + Open-another wired.
 - Bundle export/import removed from UI; single-`.canvas` export retained; 168-test
   suite green; `node --check` clean.
-- SW cache bumped to `orbit-shell-v13` with `directory-vault.js` added.
+- SW cache bumped to `balaur-shell-v13` with `directory-vault.js` added.
 - Docs (§10) updated; browser-pending behavior labeled, not claimed.

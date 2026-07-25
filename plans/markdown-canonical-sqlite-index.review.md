@@ -88,7 +88,7 @@ decision is recorded, the plan proposes to violate the repo's own contract.
 The most important *technical* defect. Verified current state:
 
 - The **entire workspace, including every canvas document**, lives in one synchronous
-  `localStorage` key: `WORKSPACE_KEY="orbit-workspace-v1"` (`app.js:82`), written by
+  `localStorage` key: `WORKSPACE_KEY="balaur-workspace-v1"` (`app.js:82`), written by
   `persistWorkspace()` via `localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspace))`
   (`app.js:151`), where `workspace.canvases[id].document` holds each document.
 - Canvases do not move into the vault until **Phase 6**.
@@ -185,17 +185,17 @@ not claim it is unchanged.
 
 ### S4. The constrained frontmatter parser vs. real external editors
 
-§8.3's preservation codec is correct for **Orbit's own** writes. But Goal 1 is "inspectable
-outside Orbit," and users will *edit*, not just inspect. Editors like Obsidian routinely
+§8.3's preservation codec is correct for **Balaur's own** writes. But Goal 1 is "inspectable
+outside Balaur," and users will *edit*, not just inspect. Editors like Obsidian routinely
 **reflow YAML on save** (re-quoting, reordering, converting flow arrays `[1, 2, 3]` to block
-arrays, stripping comments). The constrained known-key parser may then fail to locate Orbit
+arrays, stripping comments). The constrained known-key parser may then fail to locate Balaur
 fields and mark the file read-only/diagnostic (§8.4) — a confusing outcome for a file that is
 still valid YAML.
 
 The plan's escape hatch (§24.3: "reconsider a full parser only if real external-edit
 compatibility proves necessary") is sensible, but **this trigger is likely to fire early** if
-editing outside Orbit is a goal. **Recommendation:** (a) state explicitly that the first delivery
-targets *Orbit-written files edited externally only in compatible ways*, and define the minimal
+editing outside Balaur is a goal. **Recommendation:** (a) state explicitly that the first delivery
+targets *Balaur-written files edited externally only in compatible ways*, and define the minimal
 robustness bar (e.g., tolerate reordering and re-quoting of known flat keys, and flow↔block
 arrays for known array fields); (b) add a validation-matrix case (§19.1) for "Obsidian-reflowed
 frontmatter."
@@ -236,7 +236,7 @@ let the 10k-file budget (§18) implicitly force a Worker into the critical path.
   Pages HTTPS) is async; Node's `crypto` is sync. The codec/indexer hashing API must be async.
   The plan's `VaultStore` is already async, so this is consistent — just note it so the Phase-1
   "stable content hashing utility" is not designed synchronous.
-- **M6 — `window.orbitCanvas` surface changes.** `AGENTS.md` §12 documents `window.orbitCanvas`
+- **M6 — `window.balaurCanvas` surface changes.** `AGENTS.md` §12 documents `window.balaurCanvas`
   (`createTask`, etc., `app.js:849`). The async file-first model and new methods
   (`addPlacement`, `removePlacement`, §14.4) change this integration surface. Note that it and
   `AGENTS.md` §12 must be updated.
@@ -263,7 +263,7 @@ let the 10k-file budget (§18) implicitly force a Worker into the critical path.
 | §7 no OPFS/COOP-COEP on Pages | ✅ Respected |
 | §8 two-layer task creation | ⚠️ **Contradicted** — needs ADR amendment |
 | §10 AI/widget security boundaries | ✅ Respected; extend to AI *reads* (S1) |
-| §12 `window.orbitCanvas` surface | ⚠️ Needs update (M6) |
+| §12 `window.balaurCanvas` surface | ⚠️ Needs update (M6) |
 | §13 no npm / no build | ✅ Node built-in test runner is compatible |
 | §14 docs updated with behavior | ✅ §22 covers it, but gate the ADR first (C1) |
 

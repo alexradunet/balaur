@@ -3,11 +3,11 @@
 **Status:** Accepted
 **Date:** 2026-07-24
 **Deciders:** Repository owner
-**Supersedes:** The Johnny Decimal subsystem (dialog, `goToJD`, numeric codes, sidecar `johnnyDecimal` index, `<!-- orbit:jd -->` markers-as-structure)
+**Supersedes:** The Johnny Decimal subsystem (dialog, `goToJD`, numeric codes, sidecar `johnnyDecimal` index, `<!-- balaur:jd -->` markers-as-structure)
 
 ## Context
 
-Balaur shipped a Johnny Decimal (JD) subsystem: numeric area/category/item codes, a validation dialog, `goToJD` lookup, `<!-- orbit:jd -->` markers treated as structure, and a sidecar `johnnyDecimal` index. JD is heavier than the app needs, has no lifecycle (capture → project → archive), and forces a dialog/validation layer that fights the canvas-as-editable-graph medium.
+Balaur shipped a Johnny Decimal (JD) subsystem: numeric area/category/item codes, a validation dialog, `goToJD` lookup, `<!-- balaur:jd -->` markers treated as structure, and a sidecar `johnnyDecimal` index. JD is heavier than the app needs, has no lifecycle (capture → project → archive), and forces a dialog/validation layer that fights the canvas-as-editable-graph medium.
 
 The settled direction reframes the app as "Obsidian + AI + Canvas as the operating layer": the editable spatial canvas graph *is* the knowledge layer, and the AI reads/traverses it as memory.
 
@@ -19,10 +19,10 @@ Replace the JD subsystem with a graph-first knowledge model:
 
 2. **Node typing via three existing channels** (no new mechanism):
    - Canvas kinds (sidecar `kind`): `hub`, `project`
-   - Note kinds (inert body markers): `<!-- orbit:inbox -->` (capture pending processing), `<!-- orbit:reference -->` (durable wiki page)
-   - Entity files (frontmatter `orbit-type`): `task`, `journal` (both already exist)
-   - `<!-- orbit:ai-card -->` (existing marker)
-   - `<!-- orbit:jd -->` markers from pre-graph vaults remain harmless inert text; no migration is performed.
+   - Note kinds (inert body markers): `<!-- balaur:inbox -->` (capture pending processing), `<!-- balaur:reference -->` (durable wiki page)
+   - Entity files (frontmatter `balaur-type`): `task`, `journal` (both already exist)
+   - `<!-- balaur:ai-card -->` (existing marker)
+   - `<!-- balaur:jd -->` markers from pre-graph vaults remain harmless inert text; no migration is performed.
 
 3. **Relation labels as convention, not enforced schema** (an enforced enum would be a proprietary Canvas dialect, forbidden by AGENTS.md §4.1): `part-of` (structural), `relates-to` (associative), `filed-to` (lifecycle: inbox→Project/Wiki, Project→Archive). `AI output` stays reserved. Edge `label` is already accepted by the validator, rendered, and editable.
 
@@ -34,7 +34,7 @@ Replace the JD subsystem with a graph-first knowledge model:
 
 7. **Sidecar schema** — drop `johnnyDecimal`; add optional canvas `kind` (`hub`/`project`) as app metadata; `parseSidecar` strips legacy `johnnyDecimal` and unknown `kind` values on read so old sidecars load. `SIDECAR_VERSION` stays at 2 (bumping would break every existing vault and backup).
 
-8. **No migration** — existing JD vaults keep their `<!-- orbit:jd -->` markers as inert text and their canvases as valid JSON Canvas. `normalizeWorkspace` and `parseSidecar` strip legacy sidecar JD on load. Users can export a whole-space backup (still valid) or load the new graph starter.
+8. **No migration** — existing JD vaults keep their `<!-- balaur:jd -->` markers as inert text and their canvases as valid JSON Canvas. `normalizeWorkspace` and `parseSidecar` strip legacy sidecar JD on load. Users can export a whole-space backup (still valid) or load the new graph starter.
 
 9. **Self-teaching graph starter** replaces the JD "Alex, age 30" starter: Home (root) + four hub portals + example nodes demonstrating the pipeline (an inbox note `filed-to` a Project canvas containing a task; reference pages `relates-to` each other under Wiki; a journal node; an archived item under Archive), with labelled edges and one-line summaries. Bundled widget seeding retained.
 
@@ -44,7 +44,7 @@ Replace the JD subsystem with a graph-first knowledge model:
 
 - The JD dialog, `goToJD`, `createJDEntry`, `loadJohnnyDecimalStarter`, `createJohnnyDecimalStarterWorkspace`, `seedStarterTasks`, and all `jd*` helper functions are removed from `app.js`.
 - The sidecar no longer carries a `johnnyDecimal` index; `parseSidecar` strips legacy JD fields on read.
-- The `window.orbitCanvas` surface exposes `loadGraphStarter` instead of `createJDEntry`/`goToJD`/`loadJohnnyDecimalStarter`.
+- The `window.balaurCanvas` surface exposes `loadGraphStarter` instead of `createJDEntry`/`goToJD`/`loadJohnnyDecimalStarter`.
 - The Today view gains a daily-note panel with date navigation and place-on-canvas.
 - The AI assistant receives a bounded graph memory digest (traversed from Home) as context for both local and remote providers.
 - The inspector color swatches include the dormant grey `#6c757d` for the archive convention.

@@ -96,7 +96,7 @@ export class ComponentCardCatalog {
         const message = `Malformed component card: ${error.code || error.message}`;
         diagnostics.push(diagnostic(meta.path, "CARD_MALFORMED", message, {
           errorCode: error.code || null,
-          orbitId: claimedId,
+          balaurId: claimedId,
         }));
         fallbackByPath.set(meta.path, recoverFallback(text, meta.path, claimedId, message));
       }
@@ -139,7 +139,7 @@ export class ComponentCardCatalog {
       if (paths.length < 2) continue;
       paths.sort();
       duplicateIds.add(id);
-      diagnostics.push(diagnostic(paths[0], "DUPLICATE_ID", `Duplicate orbit-id "${id}" across ${paths.length} component cards`, { orbitId: id, paths: Object.freeze([...paths]) }));
+      diagnostics.push(diagnostic(paths[0], "DUPLICATE_ID", `Duplicate balaur-id "${id}" across ${paths.length} component cards`, { balaurId: id, paths: Object.freeze([...paths]) }));
     }
 
     const byPath = new Map();

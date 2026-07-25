@@ -20,7 +20,7 @@ _Avoid_: landing page, splash screen, onboarding.
 
 ### Adopt
 
-Opening a folder that has files but no `.orbit/workspace.json`: the sidecar and an empty root canvas are added (additive-only), matching files are indexed, and pre-existing foreign files are never modified or deleted.
+Opening a folder that has files but no `.balaur/workspace.json`: the sidecar and an empty root canvas are added (additive-only), matching files are indexed, and pre-existing foreign files are never modified or deleted.
 _Avoid_: import, migrate, seed.
 
 ### Canonical file
@@ -37,7 +37,7 @@ The user-visible collection of canvas documents plus its hierarchy and applicati
 
 ### Workspace sidecar
 
-`.orbit/workspace.json`. It owns canvas paths and titles, hierarchy and portals, active canvas, cameras, and optional canvas `kind` metadata (`hub`/`project`). It never embeds canvas documents. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
+`.balaur/workspace.json`. It owns canvas paths and titles, hierarchy and portals, active canvas, cameras, and optional canvas `kind` metadata (`hub`/`project`). It never embeds canvas documents. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
 
 ### Entity
 
@@ -45,7 +45,7 @@ A life-management record whose identity and fields live in one canonical Markdow
 
 ### Note
 
-A path-identified canonical `notes/*.md` file with no mandatory frontmatter or `orbit-id`; its identity is the path. Kind (inbox, reference, or AI) is an inert body marker rather than a separate type, and the indexer treats the file as valid untyped Markdown. Placed by zero or more standard `file` nodes, the note is the unified content unit that replaces inline text-node authoring (ADR-0004).
+A path-identified canonical `notes/*.md` file with no mandatory frontmatter or `balaur-id`; its identity is the path. Kind (inbox, reference, or AI) is an inert body marker rather than a separate type, and the indexer treats the file as valid untyped Markdown. Placed by zero or more standard `file` nodes, the note is the unified content unit that replaces inline text-node authoring (ADR-0004).
 _Avoid_: "text note", "inline note", "card", "entity".
 
 ### Placement
@@ -64,7 +64,7 @@ A canonical-file-first service that validates and writes entities, then reconcil
 
 ### Task
 
-A canonical `tasks/*.md` entity with an immutable Orbit ID and explicit status. A task can exist without a placement.
+A canonical `tasks/*.md` entity with an immutable Balaur ID and explicit status. A task can exist without a placement.
 
 ### Scheduled date
 
@@ -106,12 +106,12 @@ The root canvas and the canonical AI + user entry point.
 
 ### Inbox note
 
-A note: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- orbit:inbox -->` marker; a capture pending processing.
+A note: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- balaur:inbox -->` marker; a capture pending processing.
 _Avoid_: "text node", "inbox card".
 
 ### Reference page
 
-A note: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- orbit:reference -->` marker; durable wiki content.
+A note: a path-identified `notes/*.md` file placed by a standard `file` node, whose body carries the inert `<!-- balaur:reference -->` marker; durable wiki content.
 _Avoid_: "text node", "reference card", "wiki page".
 
 ### Drain
@@ -133,11 +133,11 @@ A bounded traversal from Home (depth 2, 60-node cap) that digests the workspace 
 
 ### Inert marker
 
-A harmless Markdown or HTML comment that lets Balaur recognize special behavior while remaining readable in other editors. Markers do not create custom Canvas types or a second source of truth. Examples: `<!-- orbit:inbox -->`, `<!-- orbit:reference -->`, `<!-- orbit:ai-card -->`. Legacy `<!-- orbit:jd -->` markers from pre-graph vaults remain harmless inert text.
+A harmless Markdown or HTML comment that lets Balaur recognize special behavior while remaining readable in other editors. Markers do not create custom Canvas types or a second source of truth. Examples: `<!-- balaur:inbox -->`, `<!-- balaur:reference -->`, `<!-- balaur:ai-card -->`. Legacy `<!-- balaur:jd -->` markers from pre-graph vaults remain harmless inert text.
 
 ### AI operator
 
-A standard `file` node referencing a `notes/*.md` file whose body carries the inert `<!-- orbit:ai-card -->` marker; incoming edges define its context, and its output is likewise a file-backed note connected by the reserved `AI output` edge. It proposes allowlisted structured operations; it does not execute generated host-page code or directly mutate the host DOM.
+A standard `file` node referencing a `notes/*.md` file whose body carries the inert `<!-- balaur:ai-card -->` marker; incoming edges define its context, and its output is likewise a file-backed note connected by the reserved `AI output` edge. It proposes allowlisted structured operations; it does not execute generated host-page code or directly mutate the host DOM.
 _Avoid_: "text node", "AI note".
 
 ### Text node (interop)
@@ -153,7 +153,7 @@ One valid `.canvas` document. It may reference canonical files not included in t
 
 ### Whole-space backup
 
-A validated version-2 `.orbit.json` bundle containing the metadata-only sidecar and raw logical vault files. It is the complete life-data backup and never includes a database snapshot.
+A validated version-2 `.balaur.json` bundle containing the metadata-only sidecar and raw logical vault files. It is the complete life-data backup and never includes a database snapshot.
 
 ### Repair placeholder
 

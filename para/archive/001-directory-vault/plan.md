@@ -49,7 +49,7 @@ screen (the "Vault gate"), a folder pick, and workspace load. `IndexedDbVault`
 and the one-time `localStorage` first-run migration are deleted. Browsers
 without `showDirectoryPicker` or `crypto.subtle` get a full-screen gate
 message with no fallback. Existing data migrates by one-time whole-space
-`.orbit.json` export from the deployed IndexedDB version, then version-2
+`.balaur.json` export from the deployed IndexedDB version, then version-2
 import into an empty picked folder.
 
 ## Current state
@@ -77,7 +77,7 @@ Facts the executor needs, inlined. All line numbers are against `e3103b2`.
   `caseFoldKey` (plus others the adapter does not need).
 - `storage/workspace-vault.js` (260 lines) — `WorkspaceStore`, `hasWorkspace`,
   `canvasPathFor`, `parseSidecar`. `hasWorkspace(vault)` is
-  `vault.exists(".orbit/workspace.json")`. `migrate(workspace)` writes every
+  `vault.exists(".balaur/workspace.json")`. `migrate(workspace)` writes every
   file with `expectedHash: null` (additive-only create; this is the Adopt
   mechanism). `load()` returns `{ workspace, diagnostics }` with read-only
   repair placeholders for missing/invalid canvases. JD stripping already lives
@@ -93,12 +93,12 @@ Facts the executor needs, inlined. All line numbers are against `e3103b2`.
 - `styles/shell.css` — `@layer shell` (the layer order is declared in
   `styles/layers.css`: `tokens, foundation, shell, canvas, components, themes,
   responsive, motion`). `.app-shell { display: grid; ... }` is the first rule.
-- `sw.js` (114 lines) — `CACHE_NAME = "orbit-shell-v12"` at line 1;
+- `sw.js` (114 lines) — `CACHE_NAME = "balaur-shell-v12"` at line 1;
   `"./storage/indexeddb-vault.js"` at line 18 of `APP_SHELL`.
 - `.pi/skills/browser-check/scripts/browser-check.mjs` (1735 lines) — CDP
   driver. Subcommands: `smoke`, `components`, `widgets`, `eval`, `shot`.
   `DEFAULT_URL = "http://localhost:4173/"`. Every subcommand except `eval`
-  waits on `window.orbitCanvas` after navigate (lines 254, 386 reload, 430,
+  waits on `window.balaurCanvas` after navigate (lines 254, 386 reload, 430,
   628, 1206, 1343, 1723).
 
 ### app.js regions touched
@@ -120,24 +120,24 @@ function createGraphStarterWorkspace(){
 }
 
 // app.js:125 — WORKSPACE_KEY dies, ROOT_CANVAS_ID stays
-const WORKSPACE_KEY="orbit-workspace-v1",ROOT_CANVAS_ID="canvas-root";
+const WORKSPACE_KEY="balaur-workspace-v1",ROOT_CANVAS_ID="canvas-root";
 
 // app.js:130 region — module-level placeholder workspace + `let vaultStore=null;`
 // at ~160. STAYS exactly as-is (event wiring attaches before boot completes).
 
 // app.js:180-211 — the four deletions
-function loadDocument() { /* reads localStorage "orbit-canvas-v1", falls back to clone(demoCanvas) */ }
-function freshWorkspace(document=loadDocument()){ /* reads localStorage "orbit-title" */ }
+function loadDocument() { /* reads localStorage "balaur-canvas-v1", falls back to clone(demoCanvas) */ }
+function freshWorkspace(document=loadDocument()){ /* reads localStorage "balaur-title" */ }
 function normalizeWorkspace(parsed){ /* JD stripping; already duplicated in parseSidecar */ }
 function loadWorkspace(){ /* reads localStorage WORKSPACE_KEY */ }
 
 // app.js:329-365 — bootCanvasApp (rewritten; see Architecture §2)
 async function bootCanvasApp(){
   try {
-    const vault = new IndexedDbVault("orbit-vault");
+    const vault = new IndexedDbVault("balaur-vault");
     const store = new WorkspaceStore(vault);
     const hadWorkspace = await hasWorkspace(vault);
-    const firstRun = !hadWorkspace && !localStorage.getItem(WORKSPACE_KEY) && !localStorage.getItem("orbit-canvas-v1");
+    const firstRun = !hadWorkspace && !localStorage.getItem(WORKSPACE_KEY) && !localStorage.getItem("balaur-canvas-v1");
     if (!hadWorkspace) await store.migrate(loadWorkspace());
     // ... load, diagnostics, configureLifeRuntime, seedBundledWidget,
     //     firstRun -> seedGraphStarterEntities, rebuilds, setIndexStatus ...
@@ -146,27 +146,27 @@ async function bootCanvasApp(){
 }
 
 // app.js:403 — loadGraphStarter staging (re-point)
-const stagingVault=new IndexedDbVault(`orbit-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
+const stagingVault=new IndexedDbVault(`balaur-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
 // app.js:408-409
 const snapshot=await stagingVault.snapshot(), canonicalVault=vaultStore.vault;
 
 // app.js:1380 — importCanvas version-2 branch staging (re-point)
-const stagingVault=new IndexedDbVault(`orbit-vault-${uid("import")}`);
+const stagingVault=new IndexedDbVault(`balaur-vault-${uid("import")}`);
 // app.js:1393
-const canonicalVault=new IndexedDbVault("orbit-vault");
+const canonicalVault=new IndexedDbVault("balaur-vault");
 
 // app.js:1815 region — button wiring; add the two new handlers near:
 $("#resetDemo").onclick=loadGraphStarter;
 
 // app.js:1825-1831 — module tail (shape STAYS)
 vaultReady=bootCanvasApp();
-window.orbitVaultReady=vaultReady;
+window.balaurVaultReady=vaultReady;
 await vaultReady;
-window.orbitCanvas={ ... };
+window.balaurCanvas={ ... };
 ```
 
 localStorage uses that STAY (not vault data): theme at app.js:1544/1766
-(`orbit-canvas-theme`), AI settings at app.js:1665-1675/1806
+(`balaur-canvas-theme`), AI settings at app.js:1665-1675/1806
 (`AI_SETTINGS_KEY`/`AI_SECRET_KEY`). Uses that vanish with the deletions:
 app.js:182, 191, 205, 210, 334.
 
@@ -199,7 +199,7 @@ this worktree already contains the updated entries (see "Pre-staged files").
 DirectoryVault is the sole browser adapter over
 `showDirectoryPicker({ mode: "readwrite" })`; hard gate on missing
 `showDirectoryPicker` or `crypto.subtle`; re-pick per launch, zero persisted
-handles; one-time manual `.orbit.json` migration; non-atomic `createWritable`
+handles; one-time manual `.balaur.json` migration; non-atomic `createWritable`
 guarded by `expectedHash`; Adopt is additive-only; file-canonical ownership
 (ADR-0001) unchanged. Every implementation decision below stays consistent
 with it.
@@ -275,7 +275,7 @@ Staged file sets (the tickets phase turns these into tickets; see Sequencing):
 - Any persisted directory handle, `queryPermission`/`requestPermission` calls,
   fallback adapter, filesystem watcher, atomic-rename emulation: ruled out by
   the spec and ADR-0004.
-- The `window.orbitCanvas` surface shape: unchanged.
+- The `window.balaurCanvas` surface shape: unchanged.
 
 ## Git workflow
 
@@ -373,7 +373,7 @@ include `details: { name: error.name, message: error.message }`):
 - `async list(prefix = "")` — recursive walk from `this._handle` via
   `for await (const entry of dirHandle.values())`; recurse
   `kind === "directory"` (paths joined with `/`), collect `_stat` meta for
-  `kind === "file"`; skip nothing (`.orbit`, `canvases`, entities, widgets,
+  `kind === "file"`; skip nothing (`.balaur`, `canvases`, entities, widgets,
   and foreign files are all listed); filter `meta.path.startsWith(prefix)`;
   sort by plain code-unit comparison:
   `out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))`
@@ -407,7 +407,7 @@ include `details: { name: error.name, message: error.message }`):
   7. return meta for `to` with the preserved content hash and
      `modifiedAt: new Date().toISOString()`.
 - `async snapshot()` — `const metas = await this.list("")`, read each;
-  returns `{ format: "orbit-vault-snapshot", revision: this._revision, files:
+  returns `{ format: "balaur-vault-snapshot", revision: this._revision, files:
   [{ path, mediaType, text }] }` sorted by path. Identical shape to
   MemoryVault/FsVault snapshots.
 - `async restore(snapshot)` — documented semantics: replaces the entire file
@@ -519,10 +519,10 @@ Add `let currentVault=null;` next to `let vaultStore=null;` (~app.js:160).
 
 Replace `bootCanvasApp()` with the gate + pick-await shape. The module tail
 (app.js:1825-1831) keeps its exact shape: `vaultReady=bootCanvasApp();
-window.orbitVaultReady=vaultReady; await vaultReady;` then the existing
-`window.orbitCanvas` assignment. `window.orbitVaultReady` resolves when a vault
+window.balaurVaultReady=vaultReady; await vaultReady;` then the existing
+`window.balaurCanvas` assignment. `window.balaurVaultReady` resolves when a vault
 has opened, or immediately when the gate fires (with `vaultStore` left null);
-`window.orbitCanvas` is exposed in both cases (gated mode runs over the
+`window.balaurCanvas` is exposed in both cases (gated mode runs over the
 placeholder workspace behind the full-screen overlay).
 
 ```js
@@ -577,13 +577,13 @@ callers route the error. Body, in order:
 2. `const had=await hasWorkspace(vault);`
 3. if `!had`: `await store.migrate(seed?createGraphStarterWorkspace():minimalFreshWorkspace());`
    `migrate` writes with `expectedHash: null`, so this is additive-only: it
-   creates `.orbit/workspace.json` and `canvases/root.canvas` and never
+   creates `.balaur/workspace.json` and `canvases/root.canvas` and never
    touches pre-existing files (the Adopt behavior).
 4. `const result=await store.load();` (existing diagnostics and read-only
    repair placeholders are retained); keep the empty-workspace guard:
    `if(!result?.workspace?.canvases||!Object.keys(result.workspace.canvases).length)throw new Error("The vault workspace is empty");`
 5. assign `workspace=result.workspace; vaultStore=store;
-   window.orbitVaultStore=store;` then the existing
+   window.balaurVaultStore=store;` then the existing
    `setCanonicalWritable(!result.diagnostics.some(...), ...)` diagnostic logic
    (app.js:341) and the `for (const diagnostic of result.diagnostics)
    console.warn(...)` loop; `configureLifeRuntime(vault);`
@@ -634,14 +634,14 @@ attached, so the next pick runs the first-open flow with the new handle.
 `importCanvas(file)` version-2 branch (app.js:1380 region):
 ```js
 // before
-const stagingVault=new IndexedDbVault(`orbit-vault-${uid("import")}`);
+const stagingVault=new IndexedDbVault(`balaur-vault-${uid("import")}`);
 // after
 const stagingVault=new MemoryVault();
 ```
 and:
 ```js
 // before
-const canonicalVault=new IndexedDbVault("orbit-vault");
+const canonicalVault=new IndexedDbVault("balaur-vault");
 // after
 const canonicalVault=vaultStore.vault;
 ```
@@ -657,7 +657,7 @@ picked folder's file tree and staging now runs in memory.
 `loadGraphStarter()` (app.js:403 region):
 ```js
 // before
-const stagingVault=new IndexedDbVault(`orbit-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
+const stagingVault=new IndexedDbVault(`balaur-vault-${uid("reset")}`), stagingStore=new WorkspaceStore(stagingVault);
 // after
 const stagingVault=new MemoryVault(), stagingStore=new WorkspaceStore(stagingVault);
 ```
@@ -741,7 +741,7 @@ atomic stage.
 
 #### 3.3 `sw.js`
 
-- Line 1: `const CACHE_NAME = "orbit-shell-v13";`
+- Line 1: `const CACHE_NAME = "balaur-shell-v13";`
 - In `APP_SHELL`: remove `"./storage/indexeddb-vault.js"` (line 18); add
   `"./storage/directory-vault.js"` and `"./storage/memory-vault.js"` (both now
   imported by app.js, so required for offline boot). Keep
@@ -758,9 +758,9 @@ event-retargeting caveat. No new dependencies; the driver uses Node's built-in
 
 #### 4.1 Shared landing-aware boot helper
 
-Every subcommand that waits on `window.orbitCanvas`/`window.orbitVaultStore`
+Every subcommand that waits on `window.balaurCanvas`/`window.balaurVaultStore`
 (smoke:254, smoke reload:386, components:430, widgets:628/1206/1343,
-shot:1723) must first get past the Vault gate, because `window.orbitCanvas`
+shot:1723) must first get past the Vault gate, because `window.balaurCanvas`
 is exposed only after a vault opens (module tail awaits the pick). Add one
 helper near the top of the driver and call it at each of those sites:
 
@@ -774,7 +774,7 @@ async function bootPastLanding(session, subdirectory = "vault-smoke") {
   // Real CDP click (user-gesture semantics), not el.click():
   const point = await session.evaluate(`(() => { const r = document.getElementById("openVaultFolder").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
   await session.click(point.x, point.y);
-  await session.waitFor("window.orbitCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
+  await session.waitFor("window.balaurCanvas && document.querySelectorAll('.canvas-node').length > 0", 15000);
 }
 ```
 
@@ -787,7 +787,7 @@ Notes for the executor:
   `seedBundledWidget` fetches only when the widget file is absent (it exists
   after the first open).
 - The `eval` subcommand stays raw (no landing handling); it does not wait on
-  `window.orbitCanvas` unless `--wait` is given.
+  `window.balaurCanvas` unless `--wait` is given.
 - Headless Chrome is Chromium, so the gate passes (`showDirectoryPicker`
   exists, `crypto.subtle` exists on localhost); the real picker is never
   called because the stub replaces it before the click.
@@ -826,7 +826,7 @@ the usage comment at the top of the driver and the "Unknown command" line.
 
 #### 4.3 `smoke` rework
 
-- Replace the current prelude (`navigate` + wait on orbitCanvas at line 254)
+- Replace the current prelude (`navigate` + wait on balaurCanvas at line 254)
   with: `navigate` → `bootPastLanding(session)` → a new record
   `"gate: Vault gate passed, picker button enabled"` (asserted inside the
   helper's first wait; record `#vaultLandingMessage` empty and
@@ -839,10 +839,10 @@ the usage comment at the top of the driver and the "Unknown command" line.
   then the existing title/node-count assertions.
 - Step 10 (`--offline`): `setOffline(true)` → `reload` → `bootPastLanding`
   (the gate, stub, and vault reads all work from cache/OPFS) → assert
-  `!!document.querySelector('.canvas') && !!window.orbitCanvas` →
+  `!!document.querySelector('.canvas') && !!window.balaurCanvas` →
   `setOffline(false)`.
 - `components`, `widgets` (including its extra `failureSession` instances at
-  1206/1343), and `shot`: replace each `waitFor("window.orbitCanvas...")`
+  1206/1343), and `shot`: replace each `waitFor("window.balaurCanvas...")`
   that immediately follows a `navigate()` with `bootPastLanding(session)`.
 
 #### 4.4 `SKILL.md` update
@@ -876,7 +876,7 @@ Firefox/Safari are manual smoke.
     `crypto.subtle`), (2) Vault gate → `showDirectoryPicker({ mode: "readwrite" })`,
     (3) DirectoryVault opens; WorkspaceStore loads/migrates (create if empty,
     Adopt if files-but-no-sidecar, open if sidecar), (4) index rebuild,
-    (5) render + `window.orbitCanvas`, (6) progressive SW registration; delete
+    (5) render + `window.balaurCanvas`, (6) progressive SW registration; delete
     the localStorage first-run migration step (line ~37) and state no handle
     is persisted;
   - line ~43 paragraph: drop the one-time-migration sentences; verification
@@ -885,7 +885,7 @@ Firefox/Safari are manual smoke.
   - line ~75 VaultStore paragraph → DirectoryVault is the browser default,
     folder-backed, no content cache, non-atomic `createWritable` guarded by
     `expectedHash`;
-  - line ~97: `orbit-shell-v12` → `orbit-shell-v13`; "It does not cache
+  - line ~97: `balaur-shell-v12` → `balaur-shell-v13`; "It does not cache
     IndexedDB records" → "It does not cache vault files (the user-picked
     folder owns them)";
   - "Future packaging" paragraph (~105): browser directory access is now
@@ -900,7 +900,7 @@ Firefox/Safari are manual smoke.
     IndexedDB; the picked folder's plain files are the vault; the Service
     Worker never caches them.
 - `docs/offline.md`:
-  - line ~10 and every `orbit-shell-v12` mention (6 total) → `orbit-shell-v13`;
+  - line ~10 and every `balaur-shell-v12` mention (6 total) → `balaur-shell-v13`;
   - line ~11 runtime-pieces bullet → user files live in the user-picked
     folder, never in the SW cache;
   - precache list description gains `directory-vault.js`/`memory-vault.js`,
@@ -919,7 +919,7 @@ Firefox/Safari are manual smoke.
   - new short "Migrating from the IndexedDB version" subsection: (1) export
     whole space from the currently deployed version BEFORE the switch,
     (2) open the new version and pick an EMPTY folder, (3) Import the
-    `.orbit.json` (restore replaces the picked folder's file tree).
+    `.balaur.json` (restore replaces the picked folder's file tree).
 - `AGENTS.md`:
   - §3 repo map: the `storage/indexeddb-vault.js` line (line ~60) →
     `storage/directory-vault.js  File System Access browser vault adapter over a user-picked folder`;
@@ -929,7 +929,7 @@ Firefox/Safari are manual smoke.
   - §5 boot model (lines ~153-161): renumber per the architecture.md list
     above; delete the localStorage first-run migration step; state that no
     handle is persisted and the folder is re-picked every launch;
-  - §5.1 (line ~169): cache name `orbit-shell-v7` → `orbit-shell-v13` (the
+  - §5.1 (line ~169): cache name `balaur-shell-v7` → `balaur-shell-v13` (the
     doc is stale; sw.js is at v12 pre-change, v13 post-change); "IndexedDB
     owns user files" → "the user-picked folder owns user files";
   - §7 adapter list (line ~191): DirectoryVault is the browser adapter;
@@ -948,7 +948,7 @@ Firefox/Safari are manual smoke.
 remain in `docs/`, `README.md`, `AGENTS.md` except the ADR-0004 "supersedes"
 line and explicitly historical wording:
 `grep -rn "IndexedDbVault\|indexeddb-vault" docs/ README.md AGENTS.md | grep -v "adr/0004"`.
-All `orbit-shell-v` mentions in docs read `v13`.
+All `balaur-shell-v` mentions in docs read `v13`.
 
 ## Sequencing (input to the tickets phase)
 
@@ -995,16 +995,16 @@ From the spec's Testing Decisions (the binding source):
    files indexed; sidecar folder → open; external editor edit → Reload vault
    shows the change; conflicting app save → conflict toast, no overwrite;
    delete/rename the vault folder mid-session → read-only "files unavailable"
-   affordance; Open another vault switches folders; import `.orbit.json` into
+   affordance; Open another vault switches folders; import `.balaur.json` into
    an empty picked folder (migration rehearsal); export whole space from the
    folder vault; Firefox/Safari shows the gate with a disabled button; offline
-   reload serves the shell from `orbit-shell-v13`.
+   reload serves the shell from `balaur-shell-v13`.
 5. **Deploy gate (Stage 5, pre-merge, mandatory)**: shipping orphans any data
    left in the old IndexedDB vault. Before merging to `main`: (a) open the
    LIVE deployed site (https://alexradunet.github.io/open-canvas-experiment/)
    in a Chromium browser with data present and Export whole space to a
-   `.orbit.json`; (b) serve the feature branch locally, pick an EMPTY folder,
-   Import the `.orbit.json`; (c) confirm the workspace renders complete
+   `.balaur.json`; (b) serve the feature branch locally, pick an EMPTY folder,
+   Import the `.balaur.json`; (c) confirm the workspace renders complete
    (canvases, tasks, habits, journals). The owner accepted this one-time
    manual migration in the grill. Report the rehearsal result before merge.
 
@@ -1017,11 +1017,11 @@ Machine-checkable. ALL must hold:
 - [ ] `git diff --check` clean
 - [ ] `storage/indexeddb-vault.js` deleted; dead-reference sweep returns no output (excluding `vendor/`, `teach/`, `plans/`)
 - [ ] `grep -n "localStorage" app.js` shows only theme + AI-settings lines
-- [ ] `grep -o 'from "\./[^"]*"' app.js | sort -u` modules all present in `sw.js` `APP_SHELL`; `CACHE_NAME` is `orbit-shell-v13`
+- [ ] `grep -o 'from "\./[^"]*"' app.js | sort -u` modules all present in `sw.js` `APP_SHELL`; `CACHE_NAME` is `balaur-shell-v13`
 - [ ] `browser-check.mjs contract` → all pass, exit 0
 - [ ] `browser-check.mjs smoke --offline` → all pass, exit 0 (includes the gate record and re-pick-after-reload)
 - [ ] `index.html` has `#vaultLanding` before `.app-shell`, `.app-shell` carries `hidden inert` in markup, `#reloadVault` and `#openAnotherVault` exist
-- [ ] Docs: no non-historical `IndexedDbVault` claims outside `docs/adr/0004-*`; all doc cache mentions read `orbit-shell-v13`; README has the migration subsection
+- [ ] Docs: no non-historical `IndexedDbVault` claims outside `docs/adr/0004-*`; all doc cache mentions read `balaur-shell-v13`; README has the migration subsection
 - [ ] ADR-0004 and `CONTEXT.md` committed unchanged from their pre-staged content
 - [ ] Stage 5 migration rehearsal performed and reported (pre-merge gate)
 - [ ] No files outside the staged scope lists are modified (`git status`)

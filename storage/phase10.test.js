@@ -22,7 +22,7 @@ function setup() {
 
 function taskContent(id, title, status = "next") {
   return serializeTask({
-    orbitId: id, title, status, priority: null, scheduledOn: null, dueOn: null,
+    balaurId: id, title, status, priority: null, scheduledOn: null, dueOn: null,
     completedAt: status === "done" ? INST : null, estimateMinutes: null,
     recurrence: null, createdAt: INST, updatedAt: INST, body: "",
   });
@@ -84,7 +84,7 @@ test("auditIndex maps JD canvas paths through the injected resolver", async () =
   assert.deepEqual(index.allPlacements().map(({ canvasId, nodeId }) => ({ canvasId, nodeId })), [{ canvasId: "canvas-jd-category", nodeId: "placement-1" }]);
 });
 
-test("auditIndex detects a duplicate orbit-id across files", async () => {
+test("auditIndex detects a duplicate balaur-id across files", async () => {
   const { vault, index, indexer } = setup();
   const dup = taskContent("task-dup", "A");
   await vault.write("tasks/a.md", dup); await indexer.indexFile("tasks/a.md", dup, {});
@@ -93,7 +93,7 @@ test("auditIndex detects a duplicate orbit-id across files", async () => {
   const audit = await auditIndex(vault, index);
   const diag = audit.problems.find((p) => p.code === "DUPLICATE_ID");
   assert.ok(diag);
-  assert.equal(diag.details.orbitId, "task-dup");
+  assert.equal(diag.details.balaurId, "task-dup");
   assert.equal(diag.details.paths.length, 2);
 });
 

@@ -9,12 +9,12 @@ Fix in priority order. Keep the app bootable, preserve AGENTS.md boundaries, run
 ## P0 — Critical (block shipping)
 
 ### C1 ✅ Johnny Decimal workspaces crash render: `jdKind` not persisted in the sidecar
-`storage/workspace-vault.js:38-62` (`toSidecar`) persists `jdCode`/`jdTitle` but drops `jdKind`; `app.js:508` calls `subcanvas.jdKind.toUpperCase()` whenever `jdCode` is set → throws after the boot round-trip through `WorkspaceStore`, rejecting the top-level module (no `window.orbitCanvas`, no SW registration).
+`storage/workspace-vault.js:38-62` (`toSidecar`) persists `jdCode`/`jdTitle` but drops `jdKind`; `app.js:508` calls `subcanvas.jdKind.toUpperCase()` whenever `jdCode` is set → throws after the boot round-trip through `WorkspaceStore`, rejecting the top-level module (no `window.balaurCanvas`, no SW registration).
 **Fix:** persist `jdKind` in `toSidecar` and restore it when the sidecar is loaded back into canvas records; as a belt-and-braces guard, derive `jdKind` from `workspace.johnnyDecimal.entries[code].kind` before render and make `app.js:508` tolerant of a missing `jdKind`. Add a Node test that round-trips a JD workspace (with `jdKind`) through `WorkspaceStore` and asserts `jdKind` survives.
 
 ### C2 ✅ Whole-space import is not durable across reload (vault-name mismatch)
-`app.js:789-796` imports into `new IndexedDbVault(\`orbit-vault-${uid("import")}\`)` and switches globals in memory only; boot (`app.js:223`) hardcodes `new IndexedDbVault("orbit-vault")`. On reload the imported space (and post-import edits) is stranded; the toast reports success.
-**Fix:** validate + rebuild (+ audit) in the staging vault, then **atomically copy into the canonical `orbit-vault`** (e.g. `const snap = await staging.snapshot(); await canonical.restore(snap);`) and re-boot from `orbit-vault`; switch globals only after activation succeeds. Add a Node test: import a bundle into a staging `MemoryVault`, activate into a canonical `MemoryVault`, and assert the canonical vault holds the imported files.
+`app.js:789-796` imports into `new IndexedDbVault(\`balaur-vault-${uid("import")}\`)` and switches globals in memory only; boot (`app.js:223`) hardcodes `new IndexedDbVault("balaur-vault")`. On reload the imported space (and post-import edits) is stranded; the toast reports success.
+**Fix:** validate + rebuild (+ audit) in the staging vault, then **atomically copy into the canonical `balaur-vault`** (e.g. `const snap = await staging.snapshot(); await canonical.restore(snap);`) and re-boot from `balaur-vault`; switch globals only after activation succeeds. Add a Node test: import a bundle into a staging `MemoryVault`, activate into a canonical `MemoryVault`, and assert the canonical vault holds the imported files.
 
 ### C3 ✅ Ordinary "Delete node" deletes the whole task entity everywhere
 `app.js` `deleteSelection` (~735-744) calls `taskRepository.deleteTask(taskId)` for a task file-node, deleting the canonical task + every placement, with no task-specific confirmation — violates the placement/entity separation (AGENTS.md/README).
@@ -58,7 +58,7 @@ Fix in priority order. Keep the app bootable, preserve AGENTS.md boundaries, run
 - **S6 Read-only repair placeholders / vault-unavailable fallback are editable-but-unsavable in the UI** (`workspace-vault.js:132-151`, `app.js:247-251`): mutation controls stay enabled, the app says "Saved," but `WorkspaceStore` skips the record. Fix: disable mutation controls for repair/unavailable workspaces and show a persistent repair/export message.
 - **S7 Warm move reconciliation can leave stale rows** (`life-indexer.js:276-291`): coalescing by new path loses `oldPath` when a move is followed by modify/remove; the read-failure branch calls `removeFile()` without awaiting. Fix: preserve move ancestry while coalescing; process old-path removal + new-path indexing in one transaction; await every removal.
 - **S8 A malformed duplicate does not suppress the valid "winner"** (`life-indexer.js:72-98,151-169`): `entityId` is assigned only after full entity parsing, so a file with a valid duplicate id but invalid status escapes duplicate detection. Fix: extract constrained identity independently of full typed parsing; detect identity conflicts before projecting.
-- **S9 Habit-marker validation can ignore a malformed marker** (`entity-codec.js:190-199`): one valid marker + a later unterminated marker passes the global "any complete marker" check. Fix: tokenize every `orbit:habit-entry` occurrence and require each to match the full grammar.
+- **S9 Habit-marker validation can ignore a malformed marker** (`entity-codec.js:190-199`): one valid marker + a later unterminated marker passes the global "any complete marker" check. Fix: tokenize every `balaur:habit-entry` occurrence and require each to match the full grammar.
 - **S10 Habit check-in append is not preservation-first** (`habit-repository.js:108-114`): `replace(/\s+$/,"")` strips user trailing whitespace and always appends LF (changes CRLF). Fix: detect the file terminator; append without trimming/rewriting existing bytes.
 - **S11 `life-query.js:44` event range compares ISO strings, not instants** — different-offset timestamps can be mis-included/excluded/mis-sorted. Fix: validate bounds once and compare numeric epoch values.
 - **S12 `canvas-validate.js` accepts non-JSON-Canvas-1.0 structures** — fractional geometry, `subpath` not starting with `#`, non-standard `backgroundZoom`. Fix: enforce integer geometry, fragment subpaths, and only spec-defined fields (keep the project's required top-level arrays).
@@ -69,7 +69,7 @@ Fix in priority order. Keep the app bootable, preserve AGENTS.md boundaries, run
 
 - `refreshLifeViews()` and the module-level `indexStatus` variable in `app.js` are dead code — remove.
 - `#resetDemo` double-confirms (its handler + `loadJohnnyDecimalStarter` each `confirm()`).
-- Sidecar `.orbit/workspace.json` is counted in `stats.sourceFiles` (sidebar noise).
+- Sidecar `.balaur/workspace.json` is counted in `stats.sourceFiles` (sidebar noise).
 - `importBundle` "requires empty staging vault" guard has no test; app import runs `rebuild()` but not `auditIndex` in staging.
 - Document (README/life-data) that upgrading a legacy localStorage profile drops task workflow state (intended clean break).
 - Stale references: `life-indexer.js:4-6` comment (SQLite consumer), `workspace-backup.js:64` v1 message, `docs/design-system.md:3`, `vendor/sqlite/README.md`, and `docs/generative-canvas.md`/`docs/life-data.md`/README overstatements (file-content AI context, transactional move, FsVault atomicity, durable backup/restore, placement-only deletion) — align with the fixed behavior.

@@ -22,7 +22,7 @@ What the platform gives a vanilla-JS, no-build-step app like Balaur right now, v
 
 Two rounds of in-browser feature detection ran against a local page; round 2 fixed round-1 probe artifacts (single-argument `CSS.supports` misuse, `typeof` on accessor getters, headless-only gaps). Raw results: [`web-platform-2026-07-probe.json`](web-platform-2026-07-probe.json). Headless caveats that are NOT missing features: `navigator.share` (real Chrome desktop has it since 89), `BarcodeDetector` (Linux desktop only), `navigator.ml` (no WebNN backend on Linux), `self.ai` (needs origin-trial enrollment plus a downloaded Gemini Nano model).
 
-Balaur already uses: same-document View Transitions with a reduced-motion guard (`app.js:149`), popover for the add menu, native `dialog.showModal()`, `inert`, `matchMedia` for motion/width/transparency/contrast, custom elements, and a versioned shell-caching Service Worker (`sw.js`, `orbit-shell-v12`). Everything below is delta, not a restatement of the baseline.
+Balaur already uses: same-document View Transitions with a reduced-motion guard (`app.js:149`), popover for the add menu, native `dialog.showModal()`, `inert`, `matchMedia` for motion/width/transparency/contrast, custom elements, and a versioned shell-caching Service Worker (`sw.js`, `balaur-shell-v12`). Everything below is delta, not a restatement of the baseline.
 
 ## 2. Executive summary
 
@@ -51,7 +51,7 @@ TC39's July 2026 state: ES2025 is fully shipped, the ES2026 set is mostly shippe
 | Feature | Chrome | Firefox | Safari | Balaur relevance |
 |---|---|---|---|---|
 | `Object.groupBy` / `Map.groupBy` | 117 | 119 | 17.4 | Index projections, Today grouping |
-| `Promise.withResolvers` | 119 | 121 | 17.4 | Cleaner `orbitVaultReady` boot promise |
+| `Promise.withResolvers` | 119 | 121 | 17.4 | Cleaner `balaurVaultReady` boot promise |
 | `Promise.try` | 128 | 134 | 18.2 | Uniform sync/async repository entry points |
 | Set methods (`union`, `intersection`, `difference`, ...) | 122 | 127 | 17 | Placement diffs, canvas reconciliation |
 | Iterator helpers (`map`, `filter`, `take`, ...) | 122 | 131 | 18.4 | Lazy graph traversal in `life-query.js` |
@@ -180,7 +180,7 @@ Long Animation Frames (`long-animation-frame`) is Chrome 123 and Chromium-only; 
 
 ### 5.6 Canvas, graphics, input
 
-WebGPU is live in Chrome 150 on Linux (`navigator.gpu.requestAdapter` present; BCD marks the interface Baseline at 144, Firefox 141, Safari 26). For widgets, the §10 stance (WebGL2 inside self-contained widgets with 2D fallbacks) stays right: WebGPU is an optional upgrade path for `widgets/focus-orbit.html`-class widgets, feature-detected, never required. Canvas2D: `roundRect`, `letterSpacing`, `Path2D.addPath` present; **Canvas2D layers (`beginLayer`/`endLayer`) were removed** after shipping in Chrome 123. Pointer events expose `getCoalescedEvents`/`getPredictedEvents` for smoother drag previews. Custom Highlight API (`CSS.highlights`, Chrome 105, Firefox 140, Safari 17.2) plus `::target-text` can render future canvas search highlights without mutating card DOM. EyeDropper (95) and Local Font Access (103) remain Chromium-only desktop curiosities; EditContext (121) is irrelevant because Balaur uses native inputs.
+WebGPU is live in Chrome 150 on Linux (`navigator.gpu.requestAdapter` present; BCD marks the interface Baseline at 144, Firefox 141, Safari 26). For widgets, the §10 stance (WebGL2 inside self-contained widgets with 2D fallbacks) stays right: WebGPU is an optional upgrade path for `widgets/focus-balaur.html`-class widgets, feature-detected, never required. Canvas2D: `roundRect`, `letterSpacing`, `Path2D.addPath` present; **Canvas2D layers (`beginLayer`/`endLayer`) were removed** after shipping in Chrome 123. Pointer events expose `getCoalescedEvents`/`getPredictedEvents` for smoother drag previews. Custom Highlight API (`CSS.highlights`, Chrome 105, Firefox 140, Safari 17.2) plus `::target-text` can render future canvas search highlights without mutating card DOM. EyeDropper (95) and Local Font Access (103) remain Chromium-only desktop curiosities; EditContext (121) is irrelevant because Balaur uses native inputs.
 
 ### 5.7 Security
 

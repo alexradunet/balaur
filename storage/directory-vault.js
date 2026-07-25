@@ -166,7 +166,7 @@ export class DirectoryVault extends VaultStore {
     return file.text();
   }
 
-  // Recursive walk from the root handle; skip nothing (.orbit, canvases,
+  // Recursive walk from the root handle; skip nothing (.balaur, canvases,
   // entities, widgets, and foreign files are all listed).
   async _walk(dir, rel, out) {
     for await (const entry of dir.values()) {
@@ -264,7 +264,7 @@ export class DirectoryVault extends VaultStore {
       files.push({ path: meta.path, mediaType: meta.mediaType, text: await this.read(meta.path) });
     }
     files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-    return { format: "orbit-vault-snapshot", revision: this._revision, files };
+    return { format: "balaur-vault-snapshot", revision: this._revision, files };
   }
 
   // Replaces the entire file tree of the picked folder (empty directories may

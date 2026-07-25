@@ -25,7 +25,7 @@ Scope verified: `git diff 003-file-unified-node-model...HEAD --stat` shows ONLY
   allowlisted operations through the unchanged `applyCanvasOperations` path
   (`app.js:1563,1603`). The AI output is now a note file body rendered through
   `markdownToHTML(note.body)` (`app.js:961`), which escapes via `escapeHTML`
-  (`app.js:787`) and skips `<!-- orbit:` marker lines — never executed as host
+  (`app.js:787`) and skips `<!-- balaur:` marker lines — never executed as host
   code.
 - **Temporal guarantees unchanged:** `scheduleAICard`, `scheduleChangedAICards`,
   `aiCardHasCycle` (`app.js:1737-1745`) and the `runAICard` `finally` queued-rerun

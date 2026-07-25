@@ -164,7 +164,7 @@ unchanged, as are the task/journal/habit/component-card/widget repositories.
    - For the inbox/reference/ai presets the body is passed WITHOUT the leading
      marker and `kind` is set, so `_noteContent(kind, body)` prepends the marker
      exactly once. The resulting file body is byte-identical to the old text-node
-     `text` field (e.g. `<!-- orbit:inbox -->\n# New capture\n…`); passing both a
+     `text` field (e.g. `<!-- balaur:inbox -->\n# New capture\n…`); passing both a
      marker-bearing body AND `kind` would have doubled the marker.
 
 ## Browser-pending

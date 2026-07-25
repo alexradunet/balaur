@@ -21,23 +21,23 @@ const BOOTSTRAP_SOURCE = `(() => {
   let port = null;
   const post = message => { if (port) port.postMessage(message); };
   Object.defineProperty(globalThis, "balaurWidget", { value: Object.freeze({ post }), configurable: false, writable: false });
-  globalThis.__balaurReportDiagnostic = payload => post({ type: "orbit.widget.diagnostic.v1", version: 1, payload });
+  globalThis.__balaurReportDiagnostic = payload => post({ type: "balaur.widget.diagnostic.v1", version: 1, payload });
   addEventListener("message", function initialize(event) {
-    if (port || event.data?.type !== "orbit.widget.init.v1" || event.data?.version !== 1 || event.ports.length !== 1) return;
+    if (port || event.data?.type !== "balaur.widget.init.v1" || event.data?.version !== 1 || event.ports.length !== 1) return;
     port = event.ports[0];
     port.onmessage = messageEvent => {
       const message = messageEvent.data;
       if (!message || message.version !== 1 || typeof message.type !== "string" || !message.payload || typeof message.payload !== "object") return;
-      if (message.type === "orbit.widget.theme.v1") {
+      if (message.type === "balaur.widget.theme.v1") {
         for (const [key, value] of Object.entries(message.payload.tokens)) document.documentElement.style.setProperty("--balaur-" + key, value);
       }
-      if (message.type === "orbit.widget.pause.v1") dispatchEvent(new CustomEvent("balaur-widget-pause", { detail: message.payload }));
+      if (message.type === "balaur.widget.pause.v1") dispatchEvent(new CustomEvent("balaur-widget-pause", { detail: message.payload }));
       dispatchEvent(new CustomEvent("balaur-widget-message", { detail: message }));
     };
     port.start();
-    post({ type: "orbit.widget.ready.v1", version: 1, payload: {} });
+    post({ type: "balaur.widget.ready.v1", version: 1, payload: {} });
     dispatchEvent(new Event("balaur-widget-ready"));
-    setInterval(() => post({ type: "orbit.widget.heartbeat.v1", version: 1, payload: {} }), 5000);
+    setInterval(() => post({ type: "balaur.widget.heartbeat.v1", version: 1, payload: {} }), 5000);
   }, { once: true });
 })();`;
 
@@ -155,9 +155,9 @@ export class BalaurWidgetFrameElement extends HTMLElement {
   get themeSnapshot() { return this.#themeSnapshot; }
   set themeSnapshot(value) { this.#themeSnapshot = value && typeof value === "object" ? { ...value } : null; this.#sendTheme(); }
   get preferences() { return { ...this.#preferences }; }
-  set preferences(value) { this.#preferences = value && typeof value === "object" ? { ...value } : this.#preferences; this.#send("orbit.widget.preferences.v1", this.#preferences); }
+  set preferences(value) { this.#preferences = value && typeof value === "object" ? { ...value } : this.#preferences; this.#send("balaur.widget.preferences.v1", this.#preferences); }
   get visibility() { return this.#visibility; }
-  set visibility(value) { this.#visibility = Boolean(value); this.#send("orbit.widget.visibility.v1", { visible: this.#visibility }); }
+  set visibility(value) { this.#visibility = Boolean(value); this.#send("balaur.widget.visibility.v1", { visible: this.#visibility }); }
   get active() { return activeWidgets.has(this) && Boolean(this.#iframe); }
   get status() { return this.#status; }
 
@@ -199,7 +199,7 @@ export class BalaurWidgetFrameElement extends HTMLElement {
   }
 
   pause(reason = "user") {
-    if (this.#port) this.#send("orbit.widget.pause.v1", { reason });
+    if (this.#port) this.#send("balaur.widget.pause.v1", { reason });
     this.#cleanup();
     this.#setState("paused", "Paused — source remains available for review or reload.");
   }
@@ -227,7 +227,7 @@ export class BalaurWidgetFrameElement extends HTMLElement {
     channel.port1.onmessage = (event) => this.#receive(event.data);
     channel.port1.onmessageerror = () => this.#stop("error", "Widget message could not be decoded.");
     channel.port1.start();
-    iframe.contentWindow.postMessage({ type: "orbit.widget.init.v1", version: WIDGET_PROTOCOL_VERSION, payload: {} }, "*", [channel.port2]);
+    iframe.contentWindow.postMessage({ type: "balaur.widget.init.v1", version: WIDGET_PROTOCOL_VERSION, payload: {} }, "*", [channel.port2]);
     this.#heartbeatTimer = setInterval(() => {
       if (performance.now() - this.#lastHeartbeat >= HEARTBEAT_INTERVAL_MS * HEARTBEAT_MISSES - 250) {
         this.#stop("unresponsive", "Widget is unresponsive after three missed heartbeats. It was not restarted.");
@@ -247,20 +247,20 @@ export class BalaurWidgetFrameElement extends HTMLElement {
     let message;
     try { message = validateWidgetMessage(WIDGET_TO_HOST, value); }
     catch (error) { this.#stop("error", `Widget message schema rejected: ${error.message}`); return; }
-    if (message.type === "orbit.widget.ready.v1") {
+    if (message.type === "balaur.widget.ready.v1") {
       this.#lastHeartbeat = now;
       this.#setState("ready", "Ready");
       this.#sendTheme();
-      this.#send("orbit.widget.preferences.v1", this.#preferences);
-      this.#send("orbit.widget.visibility.v1", { visible: this.#visibility && !document.hidden });
-    } else if (message.type === "orbit.widget.heartbeat.v1") this.#lastHeartbeat = now;
-    else if (message.type === "orbit.widget.status.v1") this.#setState("ready", message.payload.message);
-    else if (message.type === "orbit.widget.diagnostic.v1") this.#setState("ready", `${message.payload.level}: ${message.payload.message}`);
-    else if (message.type === "orbit.widget.resize.v1" && this.#iframe) this.#iframe.style.minHeight = `${message.payload.height}px`;
+      this.#send("balaur.widget.preferences.v1", this.#preferences);
+      this.#send("balaur.widget.visibility.v1", { visible: this.#visibility && !document.hidden });
+    } else if (message.type === "balaur.widget.heartbeat.v1") this.#lastHeartbeat = now;
+    else if (message.type === "balaur.widget.status.v1") this.#setState("ready", message.payload.message);
+    else if (message.type === "balaur.widget.diagnostic.v1") this.#setState("ready", `${message.payload.level}: ${message.payload.message}`);
+    else if (message.type === "balaur.widget.resize.v1" && this.#iframe) this.#iframe.style.minHeight = `${message.payload.height}px`;
   }
 
   #sendTheme() {
-    if (this.#themeSnapshot) this.#send("orbit.widget.theme.v1", { tokens: this.#themeSnapshot });
+    if (this.#themeSnapshot) this.#send("balaur.widget.theme.v1", { tokens: this.#themeSnapshot });
   }
 
   #send(type, payload) {

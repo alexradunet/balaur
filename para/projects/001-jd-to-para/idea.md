@@ -12,7 +12,7 @@ date: 2026-07-24
 ## Scope (confirmed by user)
 Option 1 — full subsystem replacement, not just starter content.
 
-Remove the JD numeric model (codes, validation, sorting, `<!-- orbit:jd -->`
+Remove the JD numeric model (codes, validation, sorting, `<!-- balaur:jd -->`
 markers, the JD dialog, `goToJD`/`createJDEntry`, and the sidecar
 `johnnyDecimal.entries` index). Replace with a PARA model (Projects / Areas /
 Resources / Archive) built on the existing nested-canvas + file-node engine.

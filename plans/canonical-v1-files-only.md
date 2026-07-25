@@ -8,7 +8,7 @@ See `docs/adr/0001-file-canonical-life-data.md` for the file-canonical decision.
 
 Make the file-canonical system the **initial canonical version** of Balaur:
 
-- Canonical `.md` life entities + `.canvas` documents + `.orbit/workspace.json` sidecar, stored in the vault, are the **only** source of truth.
+- Canonical `.md` life entities + `.canvas` documents + `.balaur/workspace.json` sidecar, stored in the vault, are the **only** source of truth.
 - **No SQLite.** Remove the SQLite store, its schema migrations, the SQL index port, and the legacy marker-task/migration scaffolding. SQLite (or another persistent index) is a **deferred future optimization**, not part of this version.
 - Queries (Today, calendar, habits, search) are served by an **in-memory index derived from the files at boot** (`LifeIndexer` + `MemoryIndex`), rebuilt from the vault and reconciled on change. This is pure JS over the vault, so it works identically in the browser (GitHub Pages, no special headers), Node, and Tauri.
 - Remove the "old way" entirely: marker tasks, SQLite-owned tables, `localStorage` as source of truth, and the "Direction vs Currently" dual framing in docs.
@@ -17,9 +17,9 @@ Make the file-canonical system the **initial canonical version** of Balaur:
 ## 2. Guiding principles (non-negotiable)
 
 - JSON Canvas documents stay standard (`{nodes, edges}`, node types text/file/link/group). No custom node types or app-only fields.
-- Markers, where any remain, are inert `<!-- orbit:... -->` HTML comments. Tasks are canonical `.md` files placed by standard `file` nodes; a canvas node id is placement, not identity.
+- Markers, where any remain, are inert `<!-- balaur:... -->` HTML comments. Tasks are canonical `.md` files placed by standard `file` nodes; a canvas node id is placement, not identity.
 - The vault (files) is canonical; the in-memory index is a disposable projection rebuilt from files. Deleting the index loses nothing.
-- Preservation-first frontmatter: patch only Orbit-owned fields; never reflow, reorder, or drop unknown keys, comments, BOM, or line endings.
+- Preservation-first frontmatter: patch only Balaur-owned fields; never reflow, reorder, or drop unknown keys, comments, BOM, or line endings.
 - Validate at boundaries (import, AI, storage, parse). Escape dynamic HTML. Keep security boundaries (sandboxed widgets, provider keys in sessionStorage).
 - Keep the static app bootable at every committed step. No `npm install`, no build step.
 
@@ -27,7 +27,7 @@ Make the file-canonical system the **initial canonical version** of Balaur:
 
 ```
 Vault (IndexedDbVault browser / FsVault node / MemoryVault tests)
-  ├─ .orbit/workspace.json        sidecar: hierarchy + camera + JD metadata (no documents)
+  ├─ .balaur/workspace.json        sidecar: hierarchy + camera + JD metadata (no documents)
   ├─ canvases/*.canvas            canonical JSON Canvas documents
   ├─ tasks/*.md  habits/*.md  habit-logs/*.md  journal/*.md  events/*.md   canonical entities
   └─ (widgets/*.html)             sandboxed file-node widgets
@@ -41,7 +41,7 @@ Runtime query layer:
   LifeIndexer projects files into MemoryIndex; the app queries MemoryIndex for Today/calendar/habits.
 ```
 
-No `storage/life-store.js`, no `vendor/sqlite` usage at runtime, no `window.orbitLifeStore`/`orbitLifeReady`, no task markers, no `localStorage` workspace as source of truth.
+No `storage/life-store.js`, no `vendor/sqlite` usage at runtime, no `window.balaurLifeStore`/`balaurLifeReady`, no task markers, no `localStorage` workspace as source of truth.
 
 ## 4. Task F — Foundation (additive, Node-verified; app keeps booting on the old path)
 
@@ -58,7 +58,7 @@ Address these reviewer findings in the kept code. For each, update or add Node t
 - Body updates currently parse + fully reserialize, dropping unknown frontmatter keys/comments/ordering/BOM/line-endings. Fix to the task-repository pattern: patch `updated-at` surgically with `patchFields`, then replace only the bytes after the closing frontmatter delimiter (see `replaceBody` in `storage/task-repository.js`). Preserve the detected line terminator.
 
 ### F3. Workspace path safety (`storage/workspace-vault.js`)
-- Require **unique case-folded** `canvases/*.canvas` paths; reject a sidecar that points a canvas at an entity path (e.g. `tasks/x.md`), at `.orbit/workspace.json`, or at the same path as another canvas.
+- Require **unique case-folded** `canvases/*.canvas` paths; reject a sidecar that points a canvas at an entity path (e.g. `tasks/x.md`), at `.balaur/workspace.json`, or at the same path as another canvas.
 - Validate key/record id consistency and parent/portal hierarchy references.
 - A missing or invalid canvas file must load as a **read-only** placeholder that preserves the raw malformed content and is **never overwritten** with an empty document on save. Add a repair affordance flag rather than silent empty-substitution. Update `storage/phase4.test.js` accordingly (it currently enshrines empty substitution).
 
@@ -67,7 +67,7 @@ Address these reviewer findings in the kept code. For each, update or add Node t
 - `deleteTask` ("delete everywhere"): do not swallow placement-removal errors silently — abort if placements cannot be resolved; remove the canonical file with its last-known `expectedHash` (not an unconditional delete).
 
 ### F5. Duplicate ids: no winner (`storage/life-indexer.js`)
-- Detect duplicate `orbit-id`s **before** applying typed projections; suppress **every** conflicting typed projection and placement (do not let `Map.set`/last-write pick a winner). Record `DUPLICATE_ID` diagnostics for all conflicting files.
+- Detect duplicate `balaur-id`s **before** applying typed projections; suppress **every** conflicting typed projection and placement (do not let `Map.set`/last-write pick a winner). Record `DUPLICATE_ID` diagnostics for all conflicting files.
 - Incremental `indexFile()` must re-evaluate identity conflicts (a new file can create a duplicate).
 - Warm reconciliation must process a `move` as transactional old-path removal + new-path indexing (honor `oldPath`; do not leave stale source rows).
 
@@ -117,10 +117,10 @@ node --test storage/phase1.test.js storage/phase2.test.js storage/phase3.test.js
 Scope: `app.js`, `main.js`, `sw.js`, `offline/register.js`; delete `storage/life-store.js`. Rewire the app from SQLite/markers to the file-only runtime layer built in Task F. This is browser-bound: make the changes carefully, run `node --check` on every touched file, keep the app bootable, and document precisely what needs browser verification.
 
 - **Boot vault-first (async):** open the vault (`IndexedDbVault`), load the sidecar + canvas documents (`WorkspaceStore`), build the in-memory index (`LifeIndexer.rebuild` over `MemoryIndex`), then render. One-time import of a legacy `localStorage` workspace on first run is acceptable; after that `localStorage` is not a source of truth. Keep a graceful message if the vault is unavailable.
-- **Tasks:** replace marker-task `createTask` (marker node + `store.upsertTask`) with `FileTaskRepository.createTask` (canonical `.md` file + standard `file`-node placement). Completion/edit via `updateTask`/`completeTask`. Remove `TASK_MARKER_RE`, `buildTaskText`, `reconcileTaskMarkers`, and the `orbit:life-store-ready` listener.
+- **Tasks:** replace marker-task `createTask` (marker node + `store.upsertTask`) with `FileTaskRepository.createTask` (canonical `.md` file + standard `file`-node placement). Completion/edit via `updateTask`/`completeTask`. Remove `TASK_MARKER_RE`, `buildTaskText`, `reconcileTaskMarkers`, and the `balaur:life-store-ready` listener.
 - **Today / views:** query the in-memory index (Task F15) instead of `lifeStore`. Preserve current rendering/interaction behavior.
 - **Export/import:** use the version-2 file bundle (`storage/workspace-backup.js`) instead of `store.exportSnapshot/importSnapshot`. Remove `resetLifeDatabase` (or repurpose to "rebuild index from files").
-- **Stats/status:** replace the "SQLite <version> · local" sidebar state with vault/index status (e.g. "Files · N indexed"). Remove `window.orbitLifeStore`/`orbitLifeReady` usage.
+- **Stats/status:** replace the "SQLite <version> · local" sidebar state with vault/index status (e.g. "Files · N indexed"). Remove `window.balaurLifeStore`/`balaurLifeReady` usage.
 - **main.js:** remove `import "./storage/life-store.js";`; order startup so the vault boot completes before the canvas app is exposed.
 - **sw.js:** remove `./storage/life-store.js`, `./vendor/sqlite/sqlite3.mjs`, `./vendor/sqlite/sqlite3.wasm` from `APP_SHELL`; add any new runtime storage modules (e.g. `storage/life-query.js`); bump `CACHE_NAME`. Keep all paths relative; no `skipWaiting()` auto-reload.
 - Use the strict `isCanvas` (Task F1) for import/AI/storage validation in `app.js`.
@@ -129,7 +129,7 @@ Scope: `app.js`, `main.js`, `sw.js`, `offline/register.js`; delete `storage/life
 ```
 node --check app.js main.js sw.js offline/register.js storage/*.js
 ```
-Confirm no remaining references to `orbitLifeStore`, `orbitLifeReady`, `life-store`, `reconcileTaskMarkers`, or task markers. **Do not commit.** List every behavior that requires browser verification (boot, task create/complete, Today, export/import, offline reload).
+Confirm no remaining references to `balaurLifeStore`, `balaurLifeReady`, `life-store`, `reconcileTaskMarkers`, or task markers. **Do not commit.** List every behavior that requires browser verification (boot, task create/complete, Today, export/import, offline reload).
 
 ## 6. Task D — Documentation re-frame (depends on Task S)
 
@@ -148,7 +148,7 @@ Scope: `AGENTS.md`, `docs/architecture.md`, `docs/life-data.md`, `docs/offline.m
 - **Do not run `git commit`/`git push`.** Make changes, run the verification commands, and report. The orchestrator verifies and commits.
 - Keep each step bootable; do not leave the app importing a deleted module.
 - Preserve AGENTS.md non-negotiable boundaries (standard JSON Canvas, inert markers, escaped HTML, sandboxed widgets, sessionStorage keys).
-- A concurrent Balaur rebrand exists on `main`; do not rename functional identifiers (`orbit-*` keys, `window.orbitCanvas`) gratuitously.
+- A concurrent Balaur rebrand exists on `main`; do not rename functional identifiers (`balaur-*` keys, `window.balaurCanvas`) gratuitously.
 
 ## 8. Browser-pending (cannot be verified in Node — flag, don't claim)
 

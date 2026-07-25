@@ -13,7 +13,7 @@ branch: 001-directory-vault
 Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d`):
 
 - `602a937` app: boot through the Vault gate and DirectoryVault
-- `595df04` shell: add the Vault gate overlay and bump precache to orbit-shell-v13
+- `595df04` shell: add the Vault gate overlay and bump precache to balaur-shell-v13
 - `15d5a5c` storage: delete IndexedDbVault and reword stale adapter comments
 
 ## Pre-flight and STOP-condition checks
@@ -38,7 +38,7 @@ Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d
   `ownedCanvasPaths = new Set()` (workspace-vault.js:175), populated only by
   `load()` (:192). `openVault` calls `store.migrate()` before `store.load()`, so
   `_save`'s orphan-removal loop iterates an empty set. `migrate` (`fresh=true`)
-  writes only `canvases/root.canvas` and `.orbit/workspace.json` with
+  writes only `canvases/root.canvas` and `.balaur/workspace.json` with
   `expectedHash: null` (additive creates). Pre-existing foreign files are never
   modified or removed.
 - **Binding constraint (Seam 2)**: the pick handler references the global
@@ -62,7 +62,7 @@ Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d
   `freshWorkspace`, `normalizeWorkspace`, and localStorage-reading `loadWorkspace`
   removed; `WORKSPACE_KEY` removed (line kept as `const ROOT_CANVAS_ID="canvas-root";`);
   stale boot comment reworded to name the user-picked folder. Verified: grep for
-  all deleted symbols returns nothing; `orbit-canvas-v1`/`orbit-title` gone.
+  all deleted symbols returns nothing; `balaur-canvas-v1`/`balaur-title` gone.
 - [x] §2.4 Boot rewrite: added `let currentVault=null;` (app.js:171).
   `bootCanvasApp()` is now (1) incompatibility gate on missing
   `showDirectoryPicker`/`crypto.subtle` (fills `#vaultLandingMessage`, disables
@@ -75,7 +75,7 @@ Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d
   `openVault(vault,{seed})` is the shared core (steps 1–8): WorkspaceStore;
   `hasWorkspace`; `!had → store.migrate(seed?createGraphStarterWorkspace():minimalFreshWorkspace())`
   (additive Adopt); `store.load()` with the empty-workspace guard; assign
-  `workspace`/`vaultStore`/`window.orbitVaultStore` + `setCanonicalWritable`
+  `workspace`/`vaultStore`/`window.balaurVaultStore` + `setCanonicalWritable`
   diagnostics + `configureLifeRuntime` + `seedBundledWidget`; `seed →
   seedGraphStarterEntities()` + reload; rebuild the catalogs + `setIndexStatus`;
   the post-boot block. Throws on failure; callers route the error. Verified:
@@ -87,9 +87,9 @@ Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d
     (`lifeIndexer`, `componentCardCatalog`, `widgetCatalog`, `noteCatalog`) is
     preserved, not regressed to three.
 - [x] Module tail keeps its exact shape (app.js:1965-1968):
-  `vaultReady=bootCanvasApp(); window.orbitVaultReady=vaultReady; await vaultReady;`
-  then the existing `window.orbitCanvas` assignment. In incompatibility-gated mode
-  `bootCanvasApp` returns immediately so `orbitCanvas` is exposed over the
+  `vaultReady=bootCanvasApp(); window.balaurVaultReady=vaultReady; await vaultReady;`
+  then the existing `window.balaurCanvas` assignment. In incompatibility-gated mode
+  `bootCanvasApp` returns immediately so `balaurCanvas` is exposed over the
   placeholder workspace; in the normal landing flow it resolves after a pick.
 - [x] §2.5 Wiring (app.js:1934-1946): `#reloadVault` →
   `openVault(currentVault,{seed:false})` guarded by `if(!currentVault)return;`,
@@ -121,7 +121,7 @@ Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d
   `--balaur-surface-page` background); wordmark/hint/message use existing type and
   status tokens; optional fade guarded by `@media (prefers-reduced-motion: no-preference)`.
   Verified: braces balanced (107/107), single `@layer shell`.
-- [x] §3.3 `sw.js`: `CACHE_NAME = "orbit-shell-v13"`; `APP_SHELL` drops
+- [x] §3.3 `sw.js`: `CACHE_NAME = "balaur-shell-v13"`; `APP_SHELL` drops
   `indexeddb-vault.js`, adds `directory-vault.js` + `memory-vault.js`, keeps
   `workspace-backup.js`. Verified: `node --check sw.js` OK; every module in
   `grep -o 'from "\./[^"]*"' app.js | sort -u` is present in `APP_SHELL` (none missing).
@@ -149,8 +149,8 @@ Landed as three logical commits on `001-directory-vault` (starting HEAD `ab4432d
   Node tests — DirectoryVault is browser-only, verified by ticket 03's driver).
 - `git diff --check HEAD` → clean.
 - Dead-reference sweep `grep -rn "indexeddb-vault\|IndexedDbVault" --include="*.js" --include="*.mjs" . | grep -v "^./vendor/\|^./teach/\|^./plans/"` → no output. Remaining references are only in historical ADR text (`docs/adr/`), `teach/` lessons, `plans/`, and `para/` project artifacts.
-- `grep -n "localStorage" app.js` → only theme (`orbit-canvas-theme`, lines 1667/1890) and AI-settings (`AI_SETTINGS_KEY`/`AI_SECRET_KEY`, lines 1788/1789/1798/1930).
-- `grep -o 'from "\./[^"]*"' app.js | sort -u` → all 20 modules present in `APP_SHELL`; `CACHE_NAME` is `orbit-shell-v13`.
+- `grep -n "localStorage" app.js` → only theme (`balaur-canvas-theme`, lines 1667/1890) and AI-settings (`AI_SETTINGS_KEY`/`AI_SECRET_KEY`, lines 1788/1789/1798/1930).
+- `grep -o 'from "\./[^"]*"' app.js | sort -u` → all 20 modules present in `APP_SHELL`; `CACHE_NAME` is `balaur-shell-v13`.
 - `showDirectoryPicker` referenced only as the global at call time (app.js:326 gate, :343 pick); no module-scope capture.
 - `git diff --name-status ab4432d..HEAD` → exactly the seven in-scope files; nothing out of scope.
 

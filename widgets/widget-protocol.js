@@ -4,17 +4,17 @@ export const WIDGET_PROTOCOL_VERSION = 1;
 export const MAX_WIDGET_MESSAGE_BYTES = 64 * 1024;
 
 const HOST_MESSAGE_TYPES = new Set([
-  "orbit.widget.pause.v1",
-  "orbit.widget.preferences.v1",
-  "orbit.widget.theme.v1",
-  "orbit.widget.visibility.v1",
+  "balaur.widget.pause.v1",
+  "balaur.widget.preferences.v1",
+  "balaur.widget.theme.v1",
+  "balaur.widget.visibility.v1",
 ]);
 const WIDGET_MESSAGE_TYPES = new Set([
-  "orbit.widget.diagnostic.v1",
-  "orbit.widget.heartbeat.v1",
-  "orbit.widget.ready.v1",
-  "orbit.widget.resize.v1",
-  "orbit.widget.status.v1",
+  "balaur.widget.diagnostic.v1",
+  "balaur.widget.heartbeat.v1",
+  "balaur.widget.ready.v1",
+  "balaur.widget.resize.v1",
+  "balaur.widget.status.v1",
 ]);
 const THEME_TOKEN_KEYS = Object.freeze([
   "surface",
@@ -153,15 +153,15 @@ function validateDiagnostic(payload) {
 }
 
 const PAYLOAD_VALIDATORS = Object.freeze({
-  "orbit.widget.theme.v1": validateTheme,
-  "orbit.widget.preferences.v1": validatePreferences,
-  "orbit.widget.visibility.v1": validateVisibility,
-  "orbit.widget.pause.v1": validatePause,
-  "orbit.widget.ready.v1": (payload) => validateEmpty(payload, "ready payload"),
-  "orbit.widget.status.v1": validateStatus,
-  "orbit.widget.resize.v1": validateResize,
-  "orbit.widget.heartbeat.v1": (payload) => validateEmpty(payload, "heartbeat payload"),
-  "orbit.widget.diagnostic.v1": validateDiagnostic,
+  "balaur.widget.theme.v1": validateTheme,
+  "balaur.widget.preferences.v1": validatePreferences,
+  "balaur.widget.visibility.v1": validateVisibility,
+  "balaur.widget.pause.v1": validatePause,
+  "balaur.widget.ready.v1": (payload) => validateEmpty(payload, "ready payload"),
+  "balaur.widget.status.v1": validateStatus,
+  "balaur.widget.resize.v1": validateResize,
+  "balaur.widget.heartbeat.v1": (payload) => validateEmpty(payload, "heartbeat payload"),
+  "balaur.widget.diagnostic.v1": validateDiagnostic,
 });
 
 export function validateWidgetMessage(direction, value) {
