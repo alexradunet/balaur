@@ -66,6 +66,27 @@ export function slugify(title) {
   return slug;
 }
 
+// Human-readable canvas filename slug from a title (title-derived canvas filenames).
+// Keeps Unicode letters and digits, folds everything else to hyphens, caps at 60
+// characters truncated on a hyphen boundary, and falls back to fallbackId when empty.
+// Distinct from slugify (ASCII-only, "untitled" fallback) which entity paths keep.
+export function canvasSlug(title, fallbackId) {
+  let slug = String(title ?? "").normalize("NFC").toLowerCase();
+  slug = slug.replace(/[\/\\<>:"|?*\u0000-\u001f\u007f]/g, " ");
+  slug = slug.replace(/[^\p{L}\p{N}]+/gu, "-");
+  slug = slug.replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+  slug = trimTrailing(slug);
+  if (!slug) return String(fallbackId);
+  const chars = [...slug];
+  if (chars.length > 60) {
+    let cut = chars.slice(0, 60).join("");
+    const boundary = cut.lastIndexOf("-");
+    cut = boundary > 0 ? cut.slice(0, boundary) : cut;
+    slug = cut.replace(/-+$/g, "");
+  }
+  return slug;
+}
+
 // Sanitize a single existing component, preserving case. Replaces forbidden
 // characters with "-", NFC-normalizes, and trims trailing spaces/periods.
 function sanitizeComponent(segment) {

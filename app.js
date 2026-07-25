@@ -1,13 +1,13 @@
 /* Balaur is dependency-free. Every canvas document follows JSON Canvas 1.0; hierarchy and cameras live in a local workspace sidecar. */
 import { DirectoryVault } from "./storage/directory-vault.js";
 import { MemoryVault } from "./storage/memory-vault.js";
-import { WorkspaceStore, hasWorkspace, canvasPathFor } from "./storage/workspace-vault.js";
+import { WorkspaceStore, hasWorkspace, canvasPathFor, uniqueCanvasPath, renameCanvasPath } from "./storage/workspace-vault.js";
 import { isCanvas } from "./storage/canvas-validate.js";
 import { ComponentCardCatalog } from "./storage/component-card-catalog.js";
 import { FileComponentCardRepository } from "./storage/component-card-repository.js";
 import { WidgetCatalog } from "./storage/widget-catalog.js";
 import { FileWidgetRepository } from "./storage/widget-repository.js";
-import { componentCardPath, slugify } from "./storage/vault-path.js";
+import { componentCardPath, slugify, canvasSlug } from "./storage/vault-path.js";
 import { LifeIndexer } from "./storage/life-indexer.js";
 import { parseEntity } from "./storage/entity-codec.js";
 import { MemoryIndex } from "./storage/memory-index.js";
@@ -49,7 +49,7 @@ function createGraphStarterWorkspace(){
     {id:"portal-archive",type:"file",x:410,y:300,width:360,height:240,color:"3",file:"canvases/archive.canvas"},
   ],edges:[]};
   const result=minimalFreshWorkspace(),root=result.canvases[result.rootId];
-  root.title="Home";root.document=rootDocument;root.camera=null;
+  root.title="Home";root.path="canvases/home.canvas";root.document=rootDocument;root.camera=null;
 
   const today=localDateISO(),journalFile=journalPath(today);
   const hub=(id,title,path,portalNodeId,doc)=>{result.canvases[id]={id,title,parentId:result.rootId,portalNodeId,path,document:doc,camera:null,kind:"hub"};};
@@ -197,7 +197,7 @@ syncNarrowShell(narrowShell);
 narrowShell.addEventListener("change", syncNarrowShell);
 
 function minimalFreshWorkspace(){
-  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Balaur",parentId:null,portalNodeId:null,path:null,document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
+  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Balaur",parentId:null,portalNodeId:null,path:"canvases/balaur.canvas",document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
 }
 
 
@@ -254,7 +254,7 @@ async function reloadCanvasDocuments(canvasIds){
   if(!vaultStore)return;
   for(const id of new Set(canvasIds)){
     const record=workspace.canvases[id];if(!record||record.readOnly)continue;
-    const path=canvasPathFor(record,workspace.rootId);
+    const path=canvasPathFor(record);
     const parsed=JSON.parse(await vaultStore.vault.read(path));
     if(!isCanvas(parsed))throw new Error(`Canonical canvas is invalid: ${record.path}`);
     const stat=await vaultStore.vault.stat(path);if(stat)vaultStore.hashes.set(path,stat.hash);
@@ -280,7 +280,7 @@ function setCanonicalWritable(writable, message = "") {
   if(!writable&&message)setIndexStatus("Files read-only · repair/export required",message);
 }
 function canvasIdFromPath(path) {
-  const record = Object.values(workspace.canvases).find(item => canvasPathFor(item, workspace.rootId) === path);
+  const record = Object.values(workspace.canvases).find(item => canvasPathFor(item) === path);
   return record?.id || String(path).split("/").pop().replace(/\.canvas$/, "");
 }
 async function seedBundledWidget(vault) {
@@ -301,7 +301,7 @@ function configureLifeRuntime(vault) {
     catalog: componentCardCatalog,
     canvasPathFromId: id => {
       const record = workspace.canvases[id];
-      return record ? canvasPathFor(record, workspace.rootId) : null;
+      return record ? canvasPathFor(record) : null;
     },
   });
   widgetCatalog = new WidgetCatalog({ vault });
@@ -310,21 +310,21 @@ function configureLifeRuntime(vault) {
     catalog: widgetCatalog,
     canvasPathFromId: id => {
       const record = workspace.canvases[id];
-      return record ? canvasPathFor(record, workspace.rootId) : null;
+      return record ? canvasPathFor(record) : null;
     },
   });
   taskRepository = new FileTaskRepository({
     vault, index: lifeIndex, indexer: lifeIndexer,
-    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record) : null; }
   });
   journalRepository = new FileJournalRepository({
     vault, index: lifeIndex, indexer: lifeIndexer,
-    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record) : null; }
   });
   noteCatalog = new NoteCatalog({ vault });
   noteRepository = new FileNoteRepository({
     vault, index: lifeIndex, indexer: lifeIndexer, catalog: noteCatalog,
-    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record) : null; }
   });
 }
 // Vault-first asynchronous boot. The source of truth is the user-picked folder
@@ -571,10 +571,38 @@ function leaveSubcanvas(){
   const child=canvasRecord(),parentId=child?.parentId;if(!parentId)return;switchCanvas(parentId,{direction:"out",focusNodeId:child.portalNodeId});
 }
 function focusNode(node,zoom=1.05){camera.zoom=zoom;camera.x=(canvas.clientWidth-node.width*zoom)/2-node.x*zoom;camera.y=(canvas.clientHeight-node.height*zoom)/2-node.y*zoom;applyCamera();}
-function createSubcanvas(point){
-  if(!canonicalWritable){toast("Canonical files are read-only until repaired or restored");return null;}
-  const center=point||canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),id=uid("canvas"),nodeId=uid("node"),siblings=Object.values(workspace.canvases).filter(record=>record.parentId===currentCanvasId).length,title=`New canvas ${siblings+1}`,node={id:nodeId,type:"file",x:Math.round(center.x-180),y:Math.round(center.y-125),width:360,height:250,color:"3",file:`canvases/${id}.canvas`};
-  workspace.canvases[id]={id,title,parentId:currentCanvasId,portalNodeId:nodeId,path:node.file,document:{nodes:[],edges:[]},camera:null};documentData.nodes.push(node);selected={kind:"node",id:node.id};shell.classList.add("inspector-open");scheduleSave();render();toast("Sub-canvas created · double-click or zoom into it");return node;
+function promptCanvasTitle(initial){
+  return new Promise(resolve=>{
+    const dialog=$("#subcanvasDialog"),form=$("#subcanvasForm"),input=$("#subcanvasTitle");
+    const cancelBtn=$("#cancelSubcanvasDialog"),closeBtn=$("#closeSubcanvasDialog");
+    input.value=initial||"";
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;form.removeEventListener("submit",onSubmit);cancelBtn.removeEventListener("click",onCancel);closeBtn.removeEventListener("click",onCancel);dialog.removeEventListener("close",onClose);dialog.close();resolve(value);};
+    const onSubmit=event=>{event.preventDefault();finish(input.value.trim());};
+    const onCancel=()=>finish("");
+    const onClose=()=>finish("");
+    form.addEventListener("submit",onSubmit);
+    cancelBtn.addEventListener("click",onCancel);
+    closeBtn.addEventListener("click",onCancel);
+    dialog.addEventListener("close",onClose);
+    dialog.showModal();
+    input.focus();input.select();
+  });
+}
+function createSubcanvas(point, defaultTitle){
+  if(!canonicalWritable){toast("Canonical files are read-only until repaired or restored");return Promise.resolve(null);}
+  const center=point||canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2);
+  const siblings=Object.values(workspace.canvases).filter(record=>record.parentId===currentCanvasId).length;
+  const initial=(defaultTitle&&defaultTitle.trim())||`New canvas ${siblings+1}`;
+  return promptCanvasTitle(initial).then(title=>{
+    if(!title)return null; // cancelled or empty -> abort, create nothing
+    const id=uid("canvas"),nodeId=uid("node");
+    const existingPaths=Object.values(workspace.canvases).map(record=>record.path).filter(Boolean);
+    const path=uniqueCanvasPath(canvasSlug(title,id),existingPaths);
+    const node={id:nodeId,type:"file",x:Math.round(center.x-180),y:Math.round(center.y-125),width:360,height:250,color:"3",file:path};
+    workspace.canvases[id]={id,title,parentId:currentCanvasId,portalNodeId:nodeId,path,document:{nodes:[],edges:[]},camera:null};
+    documentData.nodes.push(node);selected={kind:"node",id:node.id};shell.classList.add("inspector-open");scheduleSave();render();toast("Sub-canvas created · double-click or zoom into it");return node;
+  });
 }
 function nextNodePosition(document,width,height){
   if(document===documentData){const box=canvas.getBoundingClientRect(),center=canvasPoint(box.left+box.width/2,box.top+box.height/2);return{x:Math.round(center.x-width/2),y:Math.round(center.y-height/2)};}const nodes=document.nodes||[];if(!nodes.length)return{x:0,y:0};return{x:Math.max(...nodes.map(node=>node.x+node.width))+60,y:Math.min(...nodes.map(node=>node.y))};
@@ -1785,7 +1813,7 @@ async function runLocalAssistant(prompt) {
     } else if(/calm|ocean|cool|teal/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"calm"}]);response="Applied the calm teal canvas theme.";
     } else if(/contrast|accessible/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"contrast"}]);response="Applied the high-contrast canvas theme.";
     } else if(/reset.*(?:theme|style)|default (?:theme|style)/.test(lower)) {await applyCanvasOperations([{type:"theme.set",theme:"default"}]);response="Reset the canvas styling to its default theme.";
-    } else if(/(?:add|create).*(?:sub.?canvas|nested canvas)/.test(lower)){createSubcanvas();response="Created a nested canvas portal. Double-click it or zoom into it to enter.";
+    } else if(/(?:add|create).*(?:sub.?canvas|nested canvas)/.test(lower)){const named=lower.match(/(?:named|called|titled)\s+(.+?)\.?$/);const node=await createSubcanvas(undefined,named?named[1].trim():undefined);response=node?"Created a nested canvas portal. Double-click it or zoom into it to enter.":"No canvas created.";
     } else if(/(?:add|create).*(?:3d|webgl|html|widget)/.test(lower)) {
       const center=canvasPoint(canvas.getBoundingClientRect().left+canvas.clientWidth/2,canvas.getBoundingClientRect().top+canvas.clientHeight/2),node={id:uid("node"),type:"file",x:Math.round(center.x-240),y:Math.round(center.y-145),width:480,height:290,color:"5",file:"widgets/focus-orbit.html"};await applyCanvasOperations([{type:"node.add",node}]);response="Added a sandboxed WebGL file node. It is still a standard JSON Canvas file node pointing to an HTML file.";
     } else {
@@ -1943,7 +1971,38 @@ $("#toggleAIKey").onclick=()=>{const input=$("#aiAPIKey"),show=input.type==="pas
 $("#aiSettingsForm").onsubmit=event=>{event.preventDefault();if(!event.currentTarget.reportValidity())return;try{const settings=settingsFromForm();if(!settings.model||!settings.apiKey)throw new Error("Model and API key are required");persistAISettings(settings);$("#aiSettingsDialog").close();toast(`Connected to ${settings.model}`);}catch(error){setSettingsResult(error.message,"error");}};
 $("#testAIProvider").onclick=async()=>{const form=$("#aiSettingsForm");if(!form.reportValidity())return;const button=$("#testAIProvider");try{const settings=settingsFromForm();button.disabled=true;setSettingsResult("Testing direct browser connection…");setSettingsResult(await testAIProvider(settings),"success");}catch(error){setSettingsResult(error.message,"error");}finally{button.disabled=false;}};
 $("#clearAIProvider").onclick=()=>{persistAISettings({...aiSettings,apiKey:"",rememberKey:false});localStorage.removeItem(AI_SECRET_KEY);sessionStorage.removeItem(AI_SECRET_KEY);$("#aiSettingsDialog").close();toast("Using local canvas tools");};
-$("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};$("#canvasTitle").onblur=()=>{$("#canvasTitle").value=canvasRecord().title;};
+async function commitCanvasTitle(){
+  const input=$("#canvasTitle"),record=canvasRecord();
+  if(!record)return;
+  const title=input.value.trim();
+  if(!title||title===record.title){input.value=record.title;return;}
+  if(!canonicalWritable||!vaultStore){input.value=record.title;return;}
+  const oldTitle=record.title,id=record.id;
+  record.title=title; // claim synchronously so a follow-up blur/Enter commit sees no change
+  const existingPaths=Object.values(workspace.canvases).filter(r=>r.id!==id).map(r=>r.path).filter(Boolean);
+  const newPath=uniqueCanvasPath(canvasSlug(title,id),existingPaths);
+  try{
+    await flushPendingWorkspaceEdits();
+    await enqueueMutation(async()=>{
+      saveCurrentCanvasState();
+      renameCanvasPath(workspace,id,newPath);
+      workspace.activeId=currentCanvasId;
+      await vaultStore.save(workspace);
+      const fromRevision=Number(lifeIndex?.getIndexState("indexedRevision")||0);
+      await lifeIndexer?.reconcileWarm(fromRevision);
+    });
+    renderWorkspaceNavigation();render();
+  }catch(error){
+    record.title=oldTitle;
+    console.warn("Could not rename canvas file",error);
+    toast("Could not rename the canvas file");
+  }finally{
+    input.value=canvasRecord().title;
+  }
+}
+$("#canvasTitle").oninput=()=>{saveCurrentCanvasState();scheduleSave();renderWorkspaceNavigation();};
+$("#canvasTitle").onblur=()=>commitCanvasTitle();
+$("#canvasTitle").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();commitCanvasTitle();}};
 initCanvasIconPicker();
 $("#resetDemo").onclick=loadGraphStarter;
 $("#reloadVault").onclick=async()=>{

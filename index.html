@@ -187,6 +187,18 @@
     </balaur-dialog-frame>
   </dialog>
 
+  <dialog class="settings-dialog" id="subcanvasDialog">
+    <balaur-dialog-frame>
+    <form id="subcanvasForm">
+      <header><div><span>▦</span><div><b>New canvas</b><small>Name it so the file is easy to find</small></div></div><button type="button" id="closeSubcanvasDialog" aria-label="Close">×</button></header>
+      <div class="settings-body">
+        <label class="settings-field"><span>Canvas name</span><input id="subcanvasTitle" autofocus autocomplete="off" placeholder="City break"></label>
+      </div>
+      <footer><span></span><button type="button" class="button ghost" id="cancelSubcanvasDialog">Cancel</button><button type="submit" class="button primary" id="createSubcanvasButton">Create canvas</button></footer>
+    </form>
+    </balaur-dialog-frame>
+  </dialog>
+
   <dialog class="settings-dialog ai-note-dialog" id="aiNoteDialog">
     <balaur-dialog-frame>
     <form id="aiNoteForm">

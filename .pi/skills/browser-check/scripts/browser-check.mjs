@@ -339,9 +339,12 @@ async function smoke(url, flags) {
 
       // 5. An explicit portal double-click must navigate without creating nodes,
       // then restore the original canvas for the remaining smoke probes.
-      const portal = await session.evaluate(`(() => {
+      const portal = await session.evaluate(`(async () => {
         const originalCanvasId = window.orbitCanvas.getCurrentCanvas().id;
-        const portalNode = window.orbitCanvas.createSubcanvas({ x: 0, y: 0 });
+        const pending = window.orbitCanvas.createSubcanvas({ x: 0, y: 0 });
+        document.getElementById("subcanvasTitle").value = "Smoke portal";
+        document.getElementById("subcanvasForm").requestSubmit();
+        const portalNode = await pending;
         const workspace = window.orbitCanvas.getWorkspace();
         const child = Object.values(workspace.canvases).find(canvas =>
           canvas.parentId === originalCanvasId && canvas.portalNodeId === portalNode.id);
@@ -817,11 +820,14 @@ async function components(url, flags) {
     record("components: native dialog frame focuses and cancels", dialogCancel.native && dialogCancel.closed);
     record("components: native dialog form submits through app controller", true);
 
-    const navigationSetup = await session.evaluate(`(() => {
+    const navigationSetup = await session.evaluate(`(async () => {
       window.orbitCanvas.setView("canvas");
       const parentId = window.orbitCanvas.getCurrentCanvas().id;
       const before = new Set(Object.keys(window.orbitCanvas.getWorkspace().canvases));
-      window.orbitCanvas.createSubcanvas();
+      const pending = window.orbitCanvas.createSubcanvas();
+      document.getElementById("subcanvasTitle").value = "Components child";
+      document.getElementById("subcanvasForm").requestSubmit();
+      await pending;
       const childId = Object.keys(window.orbitCanvas.getWorkspace().canvases).find(id => !before.has(id));
       window.orbitCanvas.switchCanvas(childId);
       return { parentId, childId };
