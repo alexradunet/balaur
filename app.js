@@ -226,6 +226,14 @@ function persistWorkspace(){
 function markSaveResult(promise){
   promise.then(()=>{$("#saveState").innerHTML="<i></i> Saved locally";},error=>{
     console.warn("Could not persist the canonical vault workspace",error);
+    if(error?.code==="STORAGE_UNAVAILABLE"){
+      // Vault folder unlinked or its permission revoked mid-session (spec user
+      // story 11): flip read-only in place, mirroring the Reload vault path,
+      // instead of only toasting a generic save failure.
+      setCanonicalWritable(false,"Canonical files are unavailable; reload or re-open the vault folder before editing.");
+      toast("Vault files are unavailable; reload or re-open the vault folder");
+      return;
+    }
     $("#saveState").innerHTML="<i></i> Save failed";
     toast("Could not save the canonical files; your changes are not durable");
   });
