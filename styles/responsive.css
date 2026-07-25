@@ -4,6 +4,7 @@
     .today-head { align-items: start; }
     .today-task { grid-template-columns: 25px minmax(0, 1fr); }
     .task-dates { grid-column: 2; justify-content: start; }
+    .widget-source-dialog-body { grid-template-columns: 1fr; }
   }
 
   @media (max-width: 850px) {

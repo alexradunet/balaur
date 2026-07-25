@@ -19,6 +19,7 @@ import { FileNoteRepository } from "./storage/note-repository.js";
 import { exportBundle, importBundle, serializeBundle, assertCompleteExport } from "./storage/workspace-backup.js";
 import { auditIndex } from "./storage/index-integrity.js";
 import { assertPlainDataTree, describeGeneratedOperation, recoverGeneratedPlacementFailure, validateGeneratedOperation } from "./ai/generated-operations.js";
+import { buildWidgetDocument } from "./widgets/widget-envelope.js";
 const COLORS = {
   "1": "#ff7b78", "2": "#efa66a", "3": "#e9d56b",
   "4": "#7ee0a1", "5": "#64cbd0", "6": "#a78bfa"
@@ -26,6 +27,15 @@ const COLORS = {
 
 const NOTE_MARKERS={inbox:"<!-- balaur:inbox -->",reference:"<!-- balaur:reference -->"};
 const DORMANT_NODE_COLOR="#6c757d";
+const PREVIEW_BOOTSTRAP_SOURCE = `
+(() => {
+  const report = (level, value) => {
+    const message = value instanceof Error ? value.message : String(value ?? "Unknown widget error");
+    globalThis.__balaurReportDiagnostic?.({ level, message: message.slice(0, 4096) });
+  };
+  addEventListener("error", (event) => report("error", event.error || event.message));
+  addEventListener("unhandledrejection", (event) => report("error", event.reason));
+})();`;
 const STARTER_TASK_ID="task-citybreak";
 const STARTER_TASK_PATH="tasks/choose-dates-for-the-autumn-trip-task-citybreak.md";
 const STARTER_NOTES={
@@ -887,10 +897,55 @@ function showWidgetSourceReview({title="Live widget",path="",source=""}={}) {
   let dialog=$("#widgetSourceDialog");
   if(!dialog){
     dialog=document.createElement("dialog");dialog.id="widgetSourceDialog";dialog.className="widget-source-dialog";
-    dialog.innerHTML='<article><header><div><small>REVIEWED CANONICAL SOURCE</small><h2></h2></div><button type="button" data-close-widget-source aria-label="Close source review">Close</button></header><p class="widget-capability-summary">Sandboxed scripts and inline styles only. No host data or mutation, storage, network, forms, popups, workers, or nested frames. Self-navigation pauses the widget; hard request suppression is not claimed.</p><code></code><pre></pre></article>';
+    dialog.innerHTML='<article><header><div><small>REVIEWED CANONICAL SOURCE</small><h2></h2></div><div class="widget-source-dialog-actions"><button type="button" class="widget-preview-button" data-preview-widget>Preview</button><button type="button" data-close-widget-source aria-label="Close source review">Close</button></div></header><p class="widget-capability-summary">Sandboxed scripts and inline styles only. No host data or mutation, storage, network, forms, popups, workers, or nested frames. Self-navigation pauses the widget; hard request suppression is not claimed.</p><div class="widget-source-dialog-body"><div class="widget-source-region"><code></code><pre></pre></div><div class="widget-preview-region" aria-live="polite"><p class="widget-preview-placeholder">Click Preview to run the widget in a sandbox.</p></div></div></article>';
     document.body.append(dialog);$("[data-close-widget-source]",dialog).onclick=()=>dialog.close();
+    dialog._previewObjectUrl = null;
+    dialog.addEventListener("close", () => {
+      const region = $(".widget-preview-region", dialog);
+      if (region) {
+        const iframe = $("iframe", region);
+        if (iframe) iframe.remove();
+        region.innerHTML = '<p class="widget-preview-placeholder">Click Preview to run the widget in a sandbox.</p>';
+      }
+      if (dialog._previewObjectUrl) {
+        URL.revokeObjectURL(dialog._previewObjectUrl);
+        dialog._previewObjectUrl = null;
+      }
+    });
+    $("[data-preview-widget]", dialog).onclick = () => {
+      const source = $("pre", dialog).textContent;
+      if (!source) return;
+      const region = $(".widget-preview-region", dialog);
+      const priorIframe = $("iframe", region);
+      if (priorIframe) priorIframe.remove();
+      if (dialog._previewObjectUrl) {
+        URL.revokeObjectURL(dialog._previewObjectUrl);
+        dialog._previewObjectUrl = null;
+      }
+      const statusLine = $(".widget-preview-status", region);
+      if (statusLine) statusLine.remove();
+      const placeholder = $(".widget-preview-placeholder", region);
+      if (placeholder) placeholder.remove();
+      try {
+        const documentSource = buildWidgetDocument(source, { bootstrapSource: PREVIEW_BOOTSTRAP_SOURCE });
+        dialog._previewObjectUrl = URL.createObjectURL(new Blob([documentSource], { type: "text/html" }));
+        const iframe = document.createElement("iframe");
+        iframe.setAttribute("sandbox", "allow-scripts");
+        iframe.setAttribute("referrerpolicy", "no-referrer");
+        iframe.title = $("h2", dialog).textContent || "Widget preview";
+        iframe.src = dialog._previewObjectUrl;
+        region.append(iframe);
+      } catch (error) {
+        const status = document.createElement("p");
+        status.className = "widget-preview-status";
+        status.textContent = error.message || "Preview unavailable";
+        region.append(status);
+      }
+    };
   }
-  $("h2",dialog).textContent=title;$("code",dialog).textContent=path;$("pre",dialog).textContent=source;dialog.showModal();
+  $("h2",dialog).textContent=title;$("code",dialog).textContent=path;$("pre",dialog).textContent=source;
+  $("[data-preview-widget]", dialog).disabled = !source;
+  dialog.showModal();
 }
 document.addEventListener("balaur-widget-view-source",event=>{event.stopPropagation();showWidgetSourceReview(event.detail);});
 

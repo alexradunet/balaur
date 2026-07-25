@@ -307,6 +307,21 @@
   .widget-source-dialog header { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
   .widget-source-dialog h2 { margin: 4px 0; }
   .widget-source-dialog .widget-capability-summary { color: var(--balaur-content-on-dark-muted); }
+  .widget-source-dialog-actions { display: flex; gap: 8px; align-items: center; }
+  .widget-source-dialog-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-block-start: 12px; }
+  .widget-source-region { min-inline-size: 0; }
+  .widget-preview-region {
+    min-inline-size: 0;
+    min-block-size: 12rem;
+    border: 1px solid var(--balaur-border-default);
+    background: var(--balaur-surface-page);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .widget-preview-region iframe { inline-size: 100%; block-size: 100%; border: 0; }
+  .widget-preview-placeholder { color: var(--balaur-content-on-dark-muted); font-size: 0.85rem; }
+  .widget-preview-status { color: var(--balaur-status-danger); font-size: 0.85rem; padding: 12px; }
   balaur-task-list,
   balaur-workspace-nav,
   balaur-inspector {
