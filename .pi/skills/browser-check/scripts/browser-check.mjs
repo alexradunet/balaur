@@ -303,6 +303,26 @@ async function smoke(url, flags) {
       record("index: canonical files indexed", false, await session.evaluate(`document.getElementById("lifeIndexStatus").textContent.trim()`).catch(() => "unreadable"));
     }
 
+    // 3b. The sidebar shows a collapsible canvas tree: a chevron toggle hides a
+    // branch's descendants, the state persists to localStorage, and opening a
+    // canvas never strands its row inside a collapsed branch.
+    const tree = await session.evaluate(`(() => {
+      const rows = [...document.querySelectorAll('#canvasList .tree-row')];
+      const activeId = window.balaurCanvas.getCurrentCanvas().id;
+      const expandable = [...document.querySelectorAll('#canvasList .tree-toggle:not(.leaf)')];
+      const toggle = expandable.find(t => t.dataset.treeToggle !== activeId) || expandable[0];
+      if (!toggle) return { ok: false, reason: 'no expandable toggle', rows: rows.length };
+      const visible = () => rows.filter(r => !r.hidden).length;
+      const before = visible();
+      toggle.click();
+      const collapsed = visible();
+      const id = toggle.dataset.treeToggle;
+      const aria = toggle.getAttribute('aria-expanded');
+      const persisted = JSON.parse(localStorage.getItem('balaur-shell-collapsed-canvases') || '[]').includes(id);
+      return { ok: rows.length > 0 && collapsed < before && aria === 'false' && persisted, rows: rows.length, before, collapsed, id, aria, persisted };
+    })()`);
+    record("tree: collapsible branch hides descendants and persists", tree.ok, `rows:${tree.rows} ${tree.before}->${tree.collapsed} aria:${tree.aria} persisted:${tree.persisted}`);
+
     // 4. Clicking a card selects it and opens the inspector.
     const cardPoint = await session.evaluate(PROBE_VISIBLE_CARD);
     if (cardPoint) {
@@ -336,6 +356,34 @@ async function smoke(url, flags) {
         await session.screenshot(file, ".canvas-node.selected");
         record("select: screenshot captured", true, file);
       }
+
+      // 4b. The sidebar stays visible and its resize handle stays live while a
+      // note is being edited: the inspector docks on the canvas's far edge as a
+      // third grid column, so dragging the handle widens the sidebar even with
+      // the inspector open.
+      const resize = await session.evaluate(`(() => {
+        const shell = document.querySelector('.app-shell');
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('sidebarResizer');
+        const inspectorOpen = shell.classList.contains('inspector-open');
+        const sidebarVisible = getComputedStyle(sidebar).display !== 'none';
+        const resizerVisible = getComputedStyle(resizer).display !== 'none';
+        const readW = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'));
+        const before = readW();
+        const rr = resizer.getBoundingClientRect();
+        const o = { bubbles: true, cancelable: true, button: 0, buttons: 1, pointerId: 77, clientX: rr.left + rr.width / 2, clientY: rr.top + 40 };
+        resizer.dispatchEvent(new PointerEvent('pointerdown', o));
+        resizer.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: o.clientX + 60 }));
+        resizer.dispatchEvent(new PointerEvent('pointerup', { ...o, clientX: o.clientX + 60, buttons: 0 }));
+        const after = readW();
+        const persisted = localStorage.getItem('balaur-shell-sidebar-width');
+        document.documentElement.style.setProperty('--sidebar-width', '250px');
+        document.documentElement.classList.remove('sidebar-resizing');
+        localStorage.setItem('balaur-shell-sidebar-width', '250');
+        resizer.setAttribute('aria-valuenow', '250');
+        return { ok: inspectorOpen && sidebarVisible && resizerVisible && (after - before) >= 50, inspectorOpen, sidebarVisible, resizerVisible, before: Math.round(before), after: Math.round(after), persisted };
+      })()`);
+      record("resize: sidebar handle stays live while inspector open", resize.ok, `inspector:${resize.inspectorOpen} sidebar:${resize.sidebarVisible} resizer:${resize.resizerVisible} ${resize.before}->${resize.after} persisted:${resize.persisted}`);
 
       // 5. An explicit portal double-click must navigate without creating nodes,
       // then restore the original canvas for the remaining smoke probes.
@@ -412,6 +460,33 @@ async function smoke(url, flags) {
       record("create: found a background point", false, "viewport fully covered");
     }
 
+    // 7b. Card color filters live in the top-bar action row; the sidebar keeps
+    // only the canvas tree. The dropdown dims non-matching cards, the toggle
+    // reflects the active color, and resetting to Everything clears the dim.
+    const filter = await session.evaluate(`(() => {
+      const toggle = document.getElementById('filterMenuToggle');
+      const panel = document.getElementById('filterMenu');
+      if (!toggle || !panel) return { ok: false, reason: 'no filter menu' };
+      const inTopbar = !!toggle.closest('.topbar');
+      const sidebarHasFilters = !!document.querySelector('#sidebar [data-filter]');
+      toggle.click();
+      const opened = !panel.hidden && toggle.getAttribute('aria-expanded') === 'true';
+      const doc = window.balaurCanvas.getDocument();
+      const nonGroup = doc.nodes.filter(n => n.type !== 'group');
+      const filters = [...panel.querySelectorAll('[data-filter]')].filter(b => b.dataset.filter !== 'all');
+      const pick = filters.map(b => ({ f: b.dataset.filter, c: nonGroup.filter(n => n.color === b.dataset.filter).length })).sort((a, b) => b.c - a.c)[0];
+      const colorBtn = panel.querySelector('[data-filter="' + pick.f + '"]');
+      colorBtn.click();
+      const dimmed = document.querySelectorAll('.canvas-node.filtered').length;
+      const expected = nonGroup.length - pick.c;
+      const label = document.getElementById('filterMenuLabel').textContent;
+      const panelClosed = panel.hidden;
+      panel.querySelector('[data-filter="all"]').click();
+      const dimmedAfterReset = document.querySelectorAll('.canvas-node.filtered').length;
+      return { ok: inTopbar && !sidebarHasFilters && opened && dimmed === expected && panelClosed && dimmedAfterReset === 0, inTopbar, sidebarHasFilters, opened, dimmed, expected, kept: pick.c, label, dimmedAfterReset };
+    })()`);
+    record("filter: top-bar dropdown dims non-matching cards", filter.ok, `topbar:${filter.inTopbar} sidebarClean:${!filter.sidebarHasFilters} dimmed:${filter.dimmed}/${filter.expected} kept:${filter.kept} label:${filter.label} reset:${filter.dimmedAfterReset}`);
+
     // 8. Live document stays valid JSON Canvas 1.0.
     record("export: document is valid JSON Canvas", await session.evaluate(PROBE_IS_CANVAS));
     await session.waitFor(`document.getElementById("saveState")?.textContent.includes("Saved locally")`, 10000);
@@ -425,6 +500,22 @@ async function smoke(url, flags) {
     const titleAfter = await session.evaluate("window.balaurCanvas.getWorkspace().canvases[window.balaurCanvas.getWorkspace().rootId].title");
     const nodesAfter = await session.evaluate("window.balaurCanvas.getDocument().nodes.length");
     record("persist: reload keeps title and node count", titleBefore === titleAfter && nodesBefore === nodesAfter, `${nodesBefore} -> ${nodesAfter}`);
+
+    // 9b. The collapsed branch from step 3b must still be collapsed after the
+    // reload, because collapse state is persisted shell UI state. Re-expand it
+    // so the offline reload starts from a clean tree.
+    const treeAfter = await session.evaluate(`(() => {
+      const rows = [...document.querySelectorAll('#canvasList .tree-row')];
+      const toggle = [...document.querySelectorAll('#canvasList .tree-toggle')].find(t => t.dataset.treeToggle === ${JSON.stringify(tree && tree.id)});
+      if (!toggle) return { ok: false, reason: 'toggle gone', full: rows.length };
+      const aria = toggle.getAttribute('aria-expanded');
+      const visible = rows.filter(r => !r.hidden).length;
+      const full = rows.length;
+      const persisted = JSON.parse(localStorage.getItem('balaur-shell-collapsed-canvases') || '[]').includes(${JSON.stringify(tree && tree.id)});
+      if (aria === 'false') toggle.click();
+      return { ok: aria === 'false' && visible < full && persisted, aria, visible, full, persisted };
+    })()`);
+    record("tree: collapsed branch survives reload", treeAfter.ok, `aria:${treeAfter.aria} visible:${treeAfter.visible}/${treeAfter.full} persisted:${treeAfter.persisted}`);
 
     // 10. Offline reload renders the shell from the Service Worker cache.
     if (flags.offline) {

@@ -23,7 +23,7 @@ A small, standalone proof of concept for a local-first life-management app whose
 - Balaur, a canvas-aware familiar with local tools or a client-side OpenAI-compatible provider
 - Prompt-first AI notes that generate Markdown directly onto the canvas
 - Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
-- Library filters
+- Card color filters from the top-bar action row
 - Folder-backed canonical-file persistence via the File System Access API (Chromium only), with an in-memory query index rebuilt at boot
 - JSON Canvas `.canvas` import/export and whole-space version-2 `.balaur.json` file-bundle backup/restore
 - Installable offline shell with a web app manifest and Service Worker
@@ -70,7 +70,7 @@ On Debian/Ubuntu, copy it to `/usr/local/share/ca-certificates/balaur-dev-ca.crt
 
 | Action | Control |
 |---|---|
-| Resize library | Drag the library's right edge; `Tab` to it then `←`/`→` (hold `Shift` for larger steps); double-click to reset |
+| Resize sidebar | Drag the sidebar's right edge; `Tab` to it then `←`/`→` (hold `Shift` for larger steps); double-click to reset (the handle stays live while editing a note) |
 | Pan | Hold `Space` and drag, middle-drag, or use the hand tool |
 | Zoom | Mouse wheel, `+`, or `-` |
 | Enter sub-canvas | Double-click its portal, choose **Open**, or zoom over it past 220% |

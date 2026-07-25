@@ -175,6 +175,54 @@
     gap: 9px;
     min-width: 0;
   }
+  .canvas-filter-picker { position: relative; display: inline-flex; flex: 0 0 auto; margin-inline-start: 8px; }
+  .canvas-filter-picker[hidden] { display: none; }
+  .canvas-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    padding-inline: 9px;
+    border: 1px solid var(--balaur-border-default);
+    border-radius: var(--balaur-radius-control);
+    background: var(--balaur-color-soot-900);
+    box-shadow: inset 1px 1px rgb(255 255 255 / 8%);
+    color: var(--balaur-content-on-dark);
+    cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .canvas-filter-toggle:hover { border-color: var(--balaur-action-primary); transform: translateY(-1px); }
+  .canvas-filter-toggle[aria-expanded="true"] { border-color: var(--balaur-action-primary); box-shadow: inset 0 0 0 1px var(--balaur-action-primary); }
+  .filter-glyph { color: var(--balaur-content-on-dark-muted); font-size: 13px; line-height: 1; }
+  .filter-glyph.dot { width: 9px; height: 9px; }
+  .canvas-filter-toggle:hover .filter-glyph { color: var(--balaur-content-on-dark); }
+  .canvas-filter-toggle:hover .filter-glyph.dot { box-shadow: 0 0 7px 1px currentColor; }
+  .canvas-filter-label {
+    color: var(--balaur-content-on-dark-muted);
+    font: 500 9px var(--balaur-font-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .canvas-filter-toggle:hover .canvas-filter-label,
+  .canvas-filter-toggle[aria-expanded="true"] .canvas-filter-label { color: var(--balaur-content-on-dark); }
+  .canvas-filter-caret { color: var(--balaur-content-on-dark-muted); font-size: 8px; line-height: 1; }
+  .canvas-filter-panel {
+    position: absolute;
+    top: calc(100% + 9px);
+    inset-inline-start: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 224px;
+    border: 2px solid var(--balaur-color-outline);
+    border-radius: var(--balaur-radius-panel);
+    padding: 6px;
+    background: var(--balaur-surface-oak-raised);
+    box-shadow: inset 1px 1px var(--balaur-border-default), var(--balaur-shadow-overlay);
+  }
+  .canvas-filter-panel[hidden] { display: none; }
+  .canvas-filter-panel .nav-item { min-height: 34px; }
   .canvas-icon-picker { position: relative; display: inline-flex; flex: 0 0 auto; }
   .canvas-icon-toggle {
     display: inline-flex;
@@ -517,6 +565,42 @@
     white-space: nowrap;
   }
   .canvas-list-item { padding-inline-start: calc(9px + var(--canvas-depth, 0) * 14px); }
+  /* Collapsible canvas tree: one row per canvas, chevron toggles the branch.
+     Faint vertical guides mark each ancestry level up to the row's depth. */
+  .tree-row {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding-inline-start: calc(var(--canvas-depth, 0) * 14px);
+    background-image: repeating-linear-gradient(90deg, transparent 0 13px, var(--balaur-border-subtle) 13px 14px);
+    background-size: calc(var(--canvas-depth, 0) * 14px) 100%;
+    background-repeat: no-repeat;
+  }
+  .tree-row[hidden] { display: none; }
+  .tree-toggle {
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    min-height: var(--balaur-target-min);
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--balaur-content-on-dark-muted);
+    cursor: pointer;
+  }
+  .tree-toggle span {
+    display: inline-block;
+    font-size: 9px;
+    line-height: 1;
+    transition:
+      transform var(--balaur-duration-focus) var(--balaur-ease-standard),
+      color var(--balaur-duration-focus) var(--balaur-ease-standard);
+  }
+  .tree-toggle[aria-expanded="true"] span { transform: rotate(90deg); }
+  .tree-toggle:hover span,
+  .tree-toggle:focus-visible span { color: var(--balaur-action-primary); }
+  .tree-toggle.leaf { visibility: hidden; }
+  .tree-row .canvas-list-item { flex: 1; min-width: 0; padding-inline-start: 5px; }
   .canvas-list-item b {
     min-width: 0;
     overflow: hidden;
@@ -639,8 +723,6 @@
   html.sidebar-resizing .sidebar-resizer::before {
     background: var(--balaur-action-primary);
   }
-  /* The inspector reuses the library slot; hide the handle while it owns it. */
-  .app-shell.inspector-open .sidebar-resizer { display: none; }
   html.sidebar-resizing,
   html.sidebar-resizing * {
     cursor: col-resize !important;
@@ -658,6 +740,9 @@
     .canvas-list-item b,
     .canvas-list-item em { display: none; }
     .canvas-list-item { padding-inline-start: 0; }
+    .tree-row { padding-inline-start: 0; background-image: none; }
+    .tree-toggle { display: none; }
+    .tree-row .canvas-list-item { padding-inline-start: 0; }
     .tip { display: none; }
     .spec-link { display: none; }
     .storage-state span { display: none; }

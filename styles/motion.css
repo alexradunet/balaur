@@ -22,9 +22,9 @@
     transition-delay: 0s;
   }
 
-  /* Desktop swaps the inspector into the library slot via display, so give the
-     swap a short directional reveal; narrow widths keep the drawer slide
-     driven by the transform transition above. */
+  /* Desktop docks the inspector on the canvas's far edge via display, so give
+     the docking a short directional reveal from that edge; narrow widths keep
+     the drawer slide driven by the transform transition above. */
   @media (min-width: 851px) {
     .app-shell.inspector-open .inspector {
       animation: inspector-reveal var(--balaur-duration-panel) var(--balaur-ease-enter);
@@ -124,7 +124,7 @@
   @keyframes connection-flow { to { stroke-dashoffset: -10; } }
   @keyframes status-breathe { 50% { opacity: .35; } }
   @keyframes inspector-reveal {
-    from { opacity: 0; transform: translateX(calc(-1 * var(--balaur-distance-panel))); }
+    from { opacity: 0; transform: translateX(var(--balaur-distance-panel)); }
     to { opacity: 1; transform: none; }
   }
   @keyframes ai-run { to { background-position: -200% 0; } }

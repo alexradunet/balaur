@@ -39,9 +39,23 @@
       </div>
 
       <div class="view-title">
-        <button class="icon-btn sidebar-menu" id="sidebarMenu" aria-label="Open library" aria-expanded="false">☰</button>
+        <button class="icon-btn sidebar-menu" id="sidebarMenu" aria-label="Open workspace" aria-expanded="false">☰</button>
         <div><nav class="canvas-breadcrumbs" aria-label="Canvas hierarchy"><balaur-workspace-nav id="canvasBreadcrumbs" mode="trail"></balaur-workspace-nav></nav><div class="canvas-title-row"><span class="canvas-icon-picker"><button type="button" class="canvas-icon-toggle" id="canvasIconToggle" aria-label="Choose canvas icon" aria-expanded="false" title="Canvas icon"><span id="canvasIconGlyph" aria-hidden="true">◫</span></button><div class="canvas-icon-panel" id="canvasIconPanel" hidden><div class="canvas-icon-head"><span>Canvas icon</span><button type="button" class="canvas-icon-reset" data-icon-reset>Reset</button></div><div data-icon-grid></div><label class="canvas-icon-custom"><span>or type one</span><input type="text" maxlength="8" autocomplete="off" spellcheck="false" aria-label="Type a custom icon" placeholder="✦" /></label></div></span><input id="canvasTitle" value="Life OS — Summer" aria-label="Canvas title" /></div></div>
         <nav class="app-views" aria-label="Application views"><button type="button" class="active" data-app-view="canvas">Canvas</button><button type="button" data-app-view="today">Today</button></nav>
+        <span class="canvas-filter-picker" id="canvasFilterPicker">
+          <button type="button" class="canvas-filter-toggle" id="filterMenuToggle" aria-haspopup="menu" aria-expanded="false" aria-controls="filterMenu" title="Filter cards by color">
+            <span class="filter-glyph" id="filterMenuGlyph" aria-hidden="true">◫</span>
+            <span class="canvas-filter-label" id="filterMenuLabel">Everything</span>
+            <span class="canvas-filter-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="canvas-filter-panel" id="filterMenu" role="menu" aria-label="Filter cards by color" hidden>
+            <button type="button" class="nav-item active" role="menuitem" data-filter="all"><span>◫</span><span class="nav-label">Everything</span><em id="allCount">0</em></button>
+            <button type="button" class="nav-item" role="menuitem" data-filter="1"><span><i class="dot red"></i></span><span class="nav-label">Goals</span><em id="goalCount">0</em></button>
+            <button type="button" class="nav-item" role="menuitem" data-filter="4"><span><i class="dot green"></i></span><span class="nav-label">Habits</span><em id="habitCount">0</em></button>
+            <button type="button" class="nav-item" role="menuitem" data-filter="6"><span><i class="dot purple"></i></span><span class="nav-label">Projects</span><em id="projectCount">0</em></button>
+            <button type="button" class="nav-item" role="menuitem" data-filter="2"><span><i class="dot orange"></i></span><span class="nav-label">Ideas</span><em id="ideaCount">0</em></button>
+          </div>
+        </span>
       </div>
 
       <nav class="top-actions" aria-label="Document actions">
@@ -53,19 +67,10 @@
       </nav>
     </header>
 
-    <aside class="sidebar" id="sidebar" aria-label="Canvas library">
+    <aside class="sidebar" id="sidebar" aria-label="Workspace">
       <nav aria-label="Canvas hierarchy">
-        <div class="section-heading"><p class="section-label">CANVASES</p><span class="section-actions"><button class="tiny-btn" id="newCanvas" title="Add sub-canvas" aria-label="Add sub-canvas">＋</button></span></div>
+        <div class="section-heading"><p class="section-label">CANVASES</p><span class="section-actions"><button class="tiny-btn" id="newGroup" title="Add group" aria-label="Add group">▢</button><button class="tiny-btn" id="newCanvas" title="Add sub-canvas" aria-label="Add sub-canvas">＋</button></span></div>
         <balaur-workspace-nav id="canvasList" mode="canvases"></balaur-workspace-nav>
-      </nav>
-
-      <nav aria-label="Canvas library">
-        <div class="section-heading"><p class="section-label">LIBRARY</p><button class="tiny-btn" id="newGroup" title="Add group" aria-label="Add group">＋</button></div>
-        <button class="nav-item active" data-filter="all"><span>◫</span><span class="nav-label">Everything</span> <em id="allCount">0</em></button>
-        <button class="nav-item" data-filter="1"><span><i class="dot red"></i></span><span class="nav-label">Goals</span> <em id="goalCount">0</em></button>
-        <button class="nav-item" data-filter="4"><span><i class="dot green"></i></span><span class="nav-label">Habits</span> <em id="habitCount">0</em></button>
-        <button class="nav-item" data-filter="6"><span><i class="dot purple"></i></span><span class="nav-label">Projects</span> <em id="projectCount">0</em></button>
-        <button class="nav-item" data-filter="2"><span><i class="dot orange"></i></span><span class="nav-label">Ideas</span> <em id="ideaCount">0</em></button>
       </nav>
 
       <section class="sidebar-bottom" aria-label="Help and information">
@@ -78,7 +83,7 @@
         <a href="https://jsoncanvas.org/spec/1.0/" target="_blank" rel="noreferrer" class="spec-link">JSON Canvas 1.0 <span>↗</span></a>
       </section>
     </aside>
-    <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-orientation="vertical" aria-label="Resize library (drag or arrow keys; double-click to reset)" aria-valuenow="250" aria-valuemin="180" aria-valuemax="480" tabindex="0"></div>
+    <div class="sidebar-resizer" id="sidebarResizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar (drag or arrow keys; double-click to reset)" aria-valuenow="250" aria-valuemin="180" aria-valuemax="480" tabindex="0"></div>
 
     <main class="canvas-wrap">
       <div class="canvas" id="canvas" tabindex="0">

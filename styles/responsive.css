@@ -65,6 +65,9 @@
     .view-title > div { display: none; }
     .app-views { margin: 0; }
     .app-views button { min-height: var(--balaur-target-min); padding-inline: 7px; }
+    .canvas-filter-picker { margin-inline-start: 2px; }
+    .canvas-filter-label,
+    .canvas-filter-caret { display: none; }
     .top-actions { gap: 4px; padding-inline: 4px; }
     .top-actions .button.ghost { display: none; }
     #exportButton {

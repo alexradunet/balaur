@@ -554,7 +554,7 @@ function initCanvasIconPicker(){
   document.addEventListener("pointerdown",event=>{const path=event.composedPath();if(isOpen()&&!path.includes(panel)&&!path.includes(toggle))close();});
 }
 function activateCanvas(id,{focusNodeId=null,fit=false}={}){
-  const record=workspace.canvases[id];if(!record)return;currentCanvasId=id;workspace.activeId=id;documentData=record.document;camera=record.camera?{...record.camera}:{x:80,y:55,zoom:1};selected=null;connectSource=null;connectSourceSide=null;activeFilter="all";aiCardRuntime.clear();shell.classList.remove("inspector-open");$$('.nav-item[data-filter]').forEach(button=>button.classList.toggle("active",button.dataset.filter==="all"));$("#canvasTitle").value=record.title;render();
+  const record=workspace.canvases[id];if(!record)return;currentCanvasId=id;workspace.activeId=id;documentData=record.document;camera=record.camera?{...record.camera}:{x:80,y:55,zoom:1};selected=null;connectSource=null;connectSourceSide=null;activeFilter="all";aiCardRuntime.clear();shell.classList.remove("inspector-open");reflectActiveFilter();$("#canvasTitle").value=record.title;render();
   if(focusNodeId){const node=documentData.nodes.find(item=>item.id===focusNodeId);if(node)focusNode(node,1.05);else fitView();}
   else if(fit||!record.camera)fitView();
 }
@@ -1116,7 +1116,7 @@ function render() {
 }
 function setAppView(view){
   $("balaur-add-menu")?.close?.();
-  activeAppView=view==="today"?"today":"canvas";if(activeAppView==="today")shell.classList.remove("inspector-open");$("#canvas").hidden=activeAppView!=="canvas";$("#todayView").hidden=activeAppView!=="today";$$('[data-app-view]').forEach(button=>button.classList.toggle("active",button.dataset.appView===activeAppView));if(activeAppView==="today")renderToday();else applyCamera();
+  activeAppView=view==="today"?"today":"canvas";if(activeAppView==="today")shell.classList.remove("inspector-open");const filterPicker=$("#canvasFilterPicker");if(filterPicker)filterPicker.hidden=activeAppView!=="canvas";$("#canvas").hidden=activeAppView!=="canvas";$("#todayView").hidden=activeAppView!=="today";$$('[data-app-view]').forEach(button=>button.classList.toggle("active",button.dataset.appView===activeAppView));if(activeAppView==="today")renderToday();else applyCamera();
 }
 function applyCamera() {
   world.style.transform = `translate(${camera.x}px,${camera.y}px) scale(${camera.zoom})`;
@@ -1267,7 +1267,7 @@ function renderFallbackInspector(panel,model){
   panel.dataset.fallbackInspector="";
   if(!model){const empty=document.createElement("p");empty.textContent="Select a node or connection to inspect it.";panel.replaceChildren(empty);return;}
   const header=document.createElement("header"),title=document.createElement("h2"),back=fallbackButton("← Back","inspector-back");
-  title.textContent=model.title||"Inspector";back.dataset.inspectorClose="";back.setAttribute("aria-label","Back to library");header.append(back,title);
+  title.textContent=model.title||"Inspector";back.dataset.inspectorClose="";back.setAttribute("aria-label","Close inspector");header.append(back,title);
   const fields=document.createElement("div");
   for(const field of model.fields||[]){
     const label=document.createElement("label"),caption=document.createElement("span");
@@ -1503,6 +1503,27 @@ function updateCounts() {
   const nodes=(documentData.nodes||[]).filter(n=>n.type!=="group");
   $("#allCount").textContent=nodes.length;
   [["goalCount","1"],["habitCount","4"],["projectCount","6"],["ideaCount","2"]].forEach(([id,c])=>$("#"+id).textContent=nodes.filter(n=>n.color===c).length);
+}
+// Color filters live in the top bar action row; the sidebar keeps only the
+// canvas tree. JSON Canvas preset colors stay document semantics: the filter
+// merely dims non-matching cards and skips them in edge rendering.
+const FILTER_META={all:{glyph:"◫",label:"Everything"},1:{glyph:"●",label:"Goals",dot:"red"},4:{glyph:"●",label:"Habits",dot:"green"},6:{glyph:"●",label:"Projects",dot:"purple"},2:{glyph:"●",label:"Ideas",dot:"orange"}};
+function reflectActiveFilter(){
+  const meta=FILTER_META[activeFilter]||FILTER_META.all;
+  const glyph=$("#filterMenuGlyph"),label=$("#filterMenuLabel");
+  if(glyph){glyph.textContent=meta.glyph;glyph.className=meta.dot?`filter-glyph dot ${meta.dot}`:"filter-glyph";}
+  if(label)label.textContent=meta.label;
+  $$(".nav-item[data-filter]").forEach(button=>button.classList.toggle("active",button.dataset.filter===activeFilter));
+}
+function initFilterMenu(){
+  const toggle=$("#filterMenuToggle"),panel=$("#filterMenu");if(!toggle||!panel)return;
+  const isOpen=()=>!panel.hidden;
+  const close=()=>{panel.hidden=true;toggle.setAttribute("aria-expanded","false");};
+  toggle.addEventListener("click",()=>{const open=panel.hidden;panel.hidden=!open;toggle.setAttribute("aria-expanded",String(open));});
+  panel.addEventListener("keydown",event=>{if(event.key==="Escape"){event.stopPropagation();close();toggle.focus();}});
+  document.addEventListener("pointerdown",event=>{const path=event.composedPath();if(isOpen()&&!path.includes(panel)&&!path.includes(toggle))close();});
+  $$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=button.dataset.filter;reflectActiveFilter();renderNodes();renderEdges();close();});
+  reflectActiveFilter();
 }
 function renderMinimap() {
   const mini=$("#miniWorld"),view=$("#miniViewport");if(!mini)return;if(!documentData.nodes?.length){mini.innerHTML="";view.style.cssText="display:none";return;}view.style.display="";
@@ -1952,15 +1973,17 @@ document.addEventListener("click",event=>{
 });
 $$('[data-app-view]').forEach(button=>button.onclick=()=>setAppView(button.dataset.appView));
 $("#newGroup").onclick=()=>addNode("group");$("#newCanvas").onclick=()=>createSubcanvas();
-$$(".nav-item[data-filter]").forEach(button=>button.onclick=()=>{activeFilter=button.dataset.filter;$$(".nav-item[data-filter]").forEach(b=>b.classList.toggle("active",b===button));renderNodes();renderEdges();});
+initFilterMenu();
 $$(".tool:not(.add-menu-toggle)").forEach(button=>button.onclick=()=>{const tool=button.dataset.tool;if(tool==="note")setTool("note");else setTool(tool);});
 $("#zoomIn").onclick=()=>setZoom(camera.zoom*1.2);$("#zoomOut").onclick=()=>setZoom(camera.zoom/1.2);$("#zoomLabel").onclick=()=>setZoom(1);$("#fitView").onclick=fitView;
 $("#exportButton").onclick=exportCanvas;$("#exportWorkspaceButton").onclick=()=>exportWorkspace().catch(error=>{alert(`Could not export a complete backup.\n\n${error.message}`);});$("#importButton").onclick=()=>$("#fileInput").click();$("#fileInput").onchange=e=>{if(e.target.files[0])importCanvas(e.target.files[0]);e.target.value="";};
-$("#sidebarMenu").onclick=()=>{shell.classList.toggle("sidebar-closed");reflectSidebar();};$("#sidebar").addEventListener("click",event=>{if(narrowShell.matches&&event.target.closest("button")){shell.classList.add("sidebar-closed");reflectSidebar();}});
-// Resizable library: drag the inline-end edge to resize, double-click to
+$("#sidebarMenu").onclick=()=>{shell.classList.toggle("sidebar-closed");reflectSidebar();};$("#sidebar").addEventListener("click",event=>{if(narrowShell.matches&&event.target.closest("button")&&!event.target.closest(".tree-toggle")){shell.classList.add("sidebar-closed");reflectSidebar();}});
+// Resizable sidebar: drag the inline-end edge to resize, double-click to
 // reset, arrow keys for keyboard users. The width persists as shell UI state
-// (same localStorage category as theme). Width-adaptive layout is driven by
-// the sidebar container query in shell.css; height adaptation in responsive.css.
+// (same localStorage category as theme). The inspector docks on the canvas's
+// far edge, so the handle stays live while a note is being edited. Width-adaptive
+// layout is driven by the sidebar container query in shell.css; height
+// adaptation in responsive.css.
 (() => {
   const resizer = $("#sidebarResizer");
   if (!resizer) return;
@@ -1976,7 +1999,7 @@ $("#sidebarMenu").onclick=()=>{shell.classList.toggle("sidebar-closed");reflectS
   };
   const persist = px => localStorage.setItem("balaur-shell-sidebar-width", String(Math.round(px)));
   resizer.addEventListener("pointerdown", event => {
-    if (narrowShell.matches || shell.classList.contains("inspector-open")) return;
+    if (narrowShell.matches) return;
     const startX = event.clientX, startW = readWidth(), hi = maxOf();
     try { resizer.setPointerCapture(event.pointerId); } catch (_) {}
     document.documentElement.classList.add("sidebar-resizing");

@@ -1,6 +1,6 @@
 ---
 name: browser-check
-description: Verify the Balaur canvas app in headless Chrome over CDP — the default way to check this application after any change. Runs the AGENTS.md §13 baseline smoke suite (boot, render, file index, selection, card creation, persistence, offline), plus ad-hoc runtime probes and screenshots. Use whenever a change to app.js, styles/, storage/, sw.js, or index.html needs browser-level verification.
+description: Verify the Balaur canvas app in headless Chrome over CDP — the default way to check this application after any change. Runs the AGENTS.md §13 baseline smoke suite (boot, render, file index, collapsible tree, selection, resize-while-editing, card creation, top-bar filter, persistence, offline), plus ad-hoc runtime probes and screenshots. Use whenever a change to app.js, styles/, storage/, sw.js, or index.html needs browser-level verification.
 ---
 
 # Browser check (headless Chrome + CDP)

@@ -17,7 +17,7 @@ JSON Canvas preset colors remain separate because red, orange, yellow, green, cy
 
 ## Material roles
 
-- **Carved oak:** top bar, library, inspector, controls, dialogs, menus, the Today ledger backdrop, and the Balaur panel.
+- **Carved oak:** top bar, sidebar, inspector, controls, dialogs, menus, the Today ledger backdrop, and the Balaur panel.
 - **Map parchment:** canvas field and node cards. Each content card carries an inked dark title tab above its parchment body (see Signature elements).
 - **Task ledger:** Today sheets and task rows.
 - **Candle gold:** primary actions, active selections, and bearing lines.
@@ -40,7 +40,7 @@ styles/
   layers.css             explicit cascade order
   tokens.css             primitive, semantic, component, and motion tokens
   foundation.css         reset, focus, contrast, and platform preferences
-  shell.css              carved-oak header and responsive library
+  shell.css              carved-oak header and responsive sidebar
   canvas.css             parchment field, nodes, edges, and bearing selection
   components.css         Today, assistant, dialogs, and application component surfaces
   elements.css           light-DOM Custom Element hosts, component cards, and Add menu
@@ -62,7 +62,7 @@ Every author rule belongs to a named cascade layer. Files load through standard 
 Motion explains state, hierarchy, and spatial travel:
 
 - press and focus use short tokenized feedback;
-- library, inspector, assistant, and dialog surfaces use panel travel;
+- sidebar, inspector, assistant, and dialog surfaces use panel travel;
 - the Add menu drops from the action bar with short tokenized travel (flipped upward in the narrow shell);
 - nested-canvas navigation uses a document View Transition when supported;
 - the selection frame animates once when selection enters;
@@ -72,7 +72,7 @@ All duration, easing, distance, and scale values come from `styles/tokens.css`; 
 
 ## Responsive contract
 
-Desktop keeps the library in normal grid flow. Selecting a card or connection swaps the library's grid slot for the inspector: the node-details panel replaces the sidebar content rather than floating over the canvas, so the canvas track never resizes, the spatial world never shifts, and the bottom tool rail stays centred in the full canvas. The panel's ← Back button deselects and restores the library; clicking empty canvas or pressing Escape does the same. At narrow widths the library becomes a left off-canvas drawer and the inspector takes over that same drawer slot when a card is selected, so the editor never floats over the cards and the canvas retains the viewport majority. Today uses a named content-container query, because its available width changes when the drawer opens. The library is resizable on desktop: dragging its inline-end edge updates the shared `--sidebar-width` token, so the topbar brand column tracks the boundary and the logo stays aligned. The width persists across reloads as shell UI state (the same `localStorage` category as theme); double-click the edge to reset. A named `sidebar` container query collapses the library to an icon rail below 220px, and a short-viewport media query sheds the tip card and tightens spacing. Touch controls expose at least a 44 × 44 CSS-pixel target or an equivalent expanded hit area.
+Desktop keeps the sidebar in normal grid flow. The sidebar shows a collapsible canvas tree: each parent canvas carries a chevron toggle that hides or reveals its descendants, the branch state persists across reloads as shell UI state (the same `localStorage` category as the sidebar width), and opening a canvas never leaves its row hidden inside a collapsed branch. Card color filters live in the top-bar action row as a compact dropdown keyed to the JSON Canvas preset colors. Selecting a card or connection docks the inspector on the canvas's inline-end edge as a third grid column: the node-details panel replaces neither the sidebar nor the canvas, so the spatial world never shifts, the bottom tool rail stays centred in the remaining canvas, and the sidebar — tree and resize handle alike — stays visible and live while a note is being edited. The panel's ← Back button deselects and closes the inspector; clicking empty canvas or pressing Escape does the same. At narrow widths the sidebar becomes a left off-canvas drawer and the inspector takes over that same drawer slot when a card is selected, so the editor never floats over the cards and the canvas retains the viewport majority. Today uses a named content-container query, because its available width changes when the drawer opens. The sidebar is resizable on desktop: dragging its inline-end edge updates the shared `--sidebar-width` token, so the topbar brand column tracks the boundary and the logo stays aligned. The width persists across reloads as shell UI state (the same `localStorage` category as theme); double-click the edge to reset. A named `sidebar` container query collapses the sidebar to an icon rail below 220px, and a short-viewport media query sheds the tip card and tightens spacing. Touch controls expose at least a 44 × 44 CSS-pixel target or an equivalent expanded hit area.
 
 ## CSS Baseline policy
 

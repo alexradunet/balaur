@@ -1,14 +1,16 @@
 @layer components {
-  /* Selecting a card or connection swaps the library slot for the inspector:
-     the editor replaces the sidebar content instead of floating over the
-     canvas, so the spatial world is never covered or shifted. */
+  /* Selecting a card or connection docks the inspector on the canvas's
+     inline-end edge as a third grid column: the sidebar keeps its tree
+     visible and its resize handle live while a note is being edited, and
+     only the canvas track gives up space, so the spatial world is never
+     covered. Narrow widths keep the left-drawer swap (responsive.css). */
   .inspector {
     grid-row: 2;
-    grid-column: 1;
+    grid-column: 3;
     display: none;
     overflow: hidden auto;
     overscroll-behavior: contain;
-    border-inline-end: 2px solid var(--balaur-color-outline);
+    border-inline-start: 2px solid var(--balaur-color-outline);
     background: var(--balaur-texture-oak);
     color: var(--balaur-content-on-dark);
     scroll-padding-block: var(--balaur-space-4);
@@ -16,10 +18,10 @@
     scrollbar-color: var(--balaur-color-leather-800) transparent;
   }
   .app-shell.inspector-open .inspector { display: block; }
-  .app-shell.inspector-open .sidebar { display: none; }
   @media (min-width: 851px) {
-    /* The editor still needs its slot while the library is toggled closed. */
-    .app-shell.inspector-open { --sidebar: var(--sidebar-width); }
+    .app-shell.inspector-open {
+      grid-template-columns: var(--sidebar) minmax(0, 1fr) var(--inspector-width);
+    }
   }
   .inspector-empty {
     width: 100%;
