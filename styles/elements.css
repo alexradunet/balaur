@@ -294,6 +294,10 @@
     font: .72rem/1.45 var(--balaur-font-mono);
   }
 
+  .widget-operation-review .widget-preview-button {
+    margin-block-start: 8px;
+  }
+
   .widget-source-dialog {
     inline-size: min(56rem, calc(100% - 24px));
     max-block-size: calc(100dvh - 24px);

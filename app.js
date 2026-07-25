@@ -1811,7 +1811,7 @@ function assistantMessage(text,role="assistant") {
 function operationDescription(operation) {
   if(operation.type==="component-card.create"||operation.type==="component-card.update"||operation.type==="widget.create"){
     const description=describeGeneratedOperation(operation),source=description.source;
-    return `<div class="${source?"widget-operation-review":""}"><b>${escapeHTML(description.title)}</b> · ${escapeHTML(description.summary)}${description.details.length?`<small>${description.details.map(escapeHTML).join(" · ")}</small>`:""}${source?`<details><summary>Review complete source (${source.length} characters)</summary><pre>${escapeHTML(source)}</pre></details>`:""}</div>`;
+    return `<div class="${source?"widget-operation-review":""}"><b>${escapeHTML(description.title)}</b> · ${escapeHTML(description.summary)}${description.details.length?`<small>${description.details.map(escapeHTML).join(" · ")}</small>`:""}${source?`<details><summary>Review complete source (${source.length} characters)</summary><pre>${escapeHTML(source)}</pre>${operation.type==="widget.create"?`<button type="button" class="widget-preview-button" data-preview-widget-source data-widget-title="${escapeHTML(operation.widget.title)}" data-widget-path="${escapeHTML(operation.widget.path)}">Preview</button>`:""}</details>`:""}</div>`;
   }
   const names={"node.add":"Add node","node.update":"Update node","node.remove":"Delete node","edge.add":"Add connection","edge.update":"Update connection","edge.remove":"Delete connection","theme.set":"Set theme"};
   const target=operation.id||operation.node?.id||operation.edge?.id||operation.theme||"";return `<div><b>${escapeHTML(names[operation.type]||operation.type)}</b>${target?` · ${escapeHTML(target)}`:""}</div>`;
@@ -1822,6 +1822,13 @@ function assistantProposal(text,operations) {
   message.className="ai-message assistant";message.innerHTML=`<span>✦</span><div class="ai-proposal"><p></p>${normalized.length?`<div class="ai-operation-list">${normalized.map(operationDescription).join("")}</div><div class="ai-proposal-actions"><button class="apply">Apply ${normalized.length} change${normalized.length===1?"":"s"}</button><button class="discard">Discard</button></div>`:""}</div>`;$("p",message).textContent=text||"I reviewed the canvas.";$("#aiMessages").append(message);
   if(normalized.length){
     const apply=$(".apply",message),discard=$(".discard",message),list=$(".ai-operation-list",message),renderPending=()=>{list.innerHTML=`${appliedCount?`<div><b>${appliedCount} earlier change${appliedCount===1?"":"s"} applied</b></div>`:""}${pendingOperations.map(operationDescription).join("")}`;};
+    list.addEventListener("click",event=>{
+      const button=event.target.closest?.("[data-preview-widget-source]");
+      if(!button||!list.contains(button))return;
+      event.stopPropagation();
+      const pre=button.closest("details")?.querySelector("pre");
+      showWidgetSourceReview({title:button.dataset.widgetTitle||"Live widget",path:button.dataset.widgetPath||"",source:pre?.textContent||""});
+    });
     apply.onclick=async()=>{
       apply.disabled=true;discard.disabled=true;apply.textContent="Applying…";
       try{await applyCanvasOperations(pendingOperations);appliedCount+=pendingOperations.length;pendingOperations=[];durablePartial=null;apply.textContent="Applied";discard.remove();renderPending();toast("AI changes applied");}
