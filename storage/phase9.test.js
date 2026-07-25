@@ -146,9 +146,9 @@ test("integrates with WorkspaceStore: a canonical workspace persists to a real f
 
   // Real files exist on disk.
   assert.equal(await vault.exists(".orbit/workspace.json"), true);
-  assert.equal(await vault.exists("canvases/root.canvas"), true);
+  assert.equal(await vault.exists("canvases/canvas-root.canvas"), true);
   const sidecarOnDisk = JSON.parse(await fsp.readFile(nodePath.join(dir, ".orbit/workspace.json"), "utf8"));
-  assert.equal(sidecarOnDisk.canvases["canvas-root"].path, "canvases/root.canvas");
+  assert.equal(sidecarOnDisk.canvases["canvas-root"].path, "canvases/canvas-root.canvas");
   assert.ok(!("document" in sidecarOnDisk.canvases["canvas-root"]));
 
   // A fresh store (new session) loads the same workspace from disk.

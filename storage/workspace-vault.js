@@ -17,17 +17,15 @@ import { SchemaError, ParseError } from "./vault-errors.js";
 export const SIDECAR_PATH = ".orbit/workspace.json";
 export const SIDECAR_FORMAT = "orbit-workspace";
 export const SIDECAR_VERSION = 2; // sidecar FILE format version (file-canonical)
-export const ROOT_CANVAS_PATH = "canvases/root.canvas";
 export const CANVAS_MEDIA_TYPE = "application/jsoncanvas+json";
 export const SIDECAR_MEDIA_TYPE = "application/json";
 const DEFAULT_CAMERA = { x: 80, y: 55, zoom: 0.78 };
 
-// Logical .canvas path for a canvas record. The root is always
-// canvases/root.canvas; other canvases use their stored path or a derived
-// canvases/<id>.canvas. The result is strictly validated so a corrupt sidecar
-// cannot escape the vault root (plan §7.3, Phase 4 portal path validation).
-export function canvasPathFor(record, rootId) {
-  if (record.id === rootId) return assertSafePath(ROOT_CANVAS_PATH);
+// Logical .canvas path for a canvas record. Every canvas (root included) uses its
+// stored path or a derived canvases/<id>.canvas; the root is no longer a special case
+// because its identity is the sidecar rootId, not its filename. The result is strictly
+// validated so a corrupt sidecar cannot escape the vault root.
+export function canvasPathFor(record) {
   return assertSafePath(record.path || `canvases/${record.id}.canvas`);
 }
 
@@ -84,7 +82,7 @@ export function toSidecar(workspace) {
     const entry = {
       id: record.id,
       title: record.title,
-      path: canvasPathFor(record, rootId),
+      path: canvasPathFor(record),
       parentId: record.parentId ?? null,
       portalNodeId: record.portalNodeId ?? null,
       camera: record.camera || { ...DEFAULT_CAMERA },
@@ -142,7 +140,6 @@ export function parseSidecar(text) {
     if (record.kind !== "hub" && record.kind !== "project") delete record.kind;
     const path = assertSafePath(record.path);
     if (!/^canvases\/[^/]+\.canvas$/.test(path)) throw new SchemaError(`Canvas path is outside canvases/: ${path}`, { code: "SIDECAR_CANVAS_PATH" });
-    if (record.id === data.rootId && path !== ROOT_CANVAS_PATH) throw new SchemaError("Root canvas must use canvases/root.canvas", { code: "SIDECAR_CANVAS_PATH" });
     const fold = caseFoldKey(path);
     if (folds.has(fold)) throw new SchemaError(`Canvas path collision: ${path}`, { code: "SIDECAR_CANVAS_COLLISION" });
     folds.set(fold, path);

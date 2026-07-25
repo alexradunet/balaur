@@ -69,7 +69,7 @@ test("exportBundle produces a sorted, sidecar-separated bundle", async () => {
   const paths = bundle.files.map((f) => f.path);
   assert.deepEqual(paths, [...paths].sort(), "files must be deterministically sorted");
   assert.ok(!paths.includes(SIDECAR_PATH), "sidecar must not be duplicated into files");
-  assert.ok(paths.includes("canvases/root.canvas"));
+  assert.ok(paths.includes("canvases/canvas-root.canvas"));
   assert.ok(paths.includes("canvases/planning.canvas"));
   assert.ok(paths.includes(TASK_PATH));
   assert.ok(paths.includes("notes/idea.md"));
@@ -147,7 +147,7 @@ test("validateBundle rejects unsafe and duplicate paths, and invalid canvases", 
   await assert.rejects(() => validateBundle(dup), PathError);
 
   const badCanvas = structuredClone(bundle);
-  badCanvas.files.find((f) => f.path === "canvases/root.canvas").text = JSON.stringify({ nodes: [{ bad: 1 }] });
+  badCanvas.files.find((f) => f.path === "canvases/canvas-root.canvas").text = JSON.stringify({ nodes: [{ bad: 1 }] });
   await assert.rejects(() => validateBundle(badCanvas), (e) => e.code === "CANVAS_INVALID");
 });
 
@@ -217,7 +217,7 @@ test("validateBundle rejects a canvas reference to a missing component card", as
   const vault = await populatedVault();
   const { bundle } = await exportBundle(vault);
   const missing = structuredClone(bundle);
-  const root = missing.files.find((file) => file.path === "canvases/root.canvas");
+  const root = missing.files.find((file) => file.path === "canvases/canvas-root.canvas");
   const document = JSON.parse(root.text);
   document.nodes.push({ id: "missing-card", type: "file", file: "cards/missing.md", x: 0, y: 200, width: 360, height: 220 });
   root.text = JSON.stringify(document, null, 2) + "\n";
@@ -274,6 +274,6 @@ test("importBundle writes files first and the sidecar last", async () => {
   const staging = new MemoryVault();
   await importBundle(staging, serializeBundle(bundle));
   assert.equal(await staging.exists(SIDECAR_PATH), true);
-  assert.equal(await staging.exists("canvases/root.canvas"), true);
+  assert.equal(await staging.exists("canvases/canvas-root.canvas"), true);
   assert.equal(await staging.exists(TASK_PATH), true);
 });

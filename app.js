@@ -49,7 +49,7 @@ function createGraphStarterWorkspace(){
     {id:"portal-archive",type:"file",x:410,y:300,width:360,height:240,color:"3",file:"canvases/archive.canvas"},
   ],edges:[]};
   const result=minimalFreshWorkspace(),root=result.canvases[result.rootId];
-  root.title="Home";root.document=rootDocument;root.camera=null;
+  root.title="Home";root.path="canvases/home.canvas";root.document=rootDocument;root.camera=null;
 
   const today=localDateISO(),journalFile=journalPath(today);
   const hub=(id,title,path,portalNodeId,doc)=>{result.canvases[id]={id,title,parentId:result.rootId,portalNodeId,path,document:doc,camera:null,kind:"hub"};};
@@ -197,7 +197,7 @@ syncNarrowShell(narrowShell);
 narrowShell.addEventListener("change", syncNarrowShell);
 
 function minimalFreshWorkspace(){
-  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Balaur",parentId:null,portalNodeId:null,path:null,document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
+  return {version:1,rootId:ROOT_CANVAS_ID,activeId:ROOT_CANVAS_ID,canvases:{[ROOT_CANVAS_ID]:{id:ROOT_CANVAS_ID,title:"Balaur",parentId:null,portalNodeId:null,path:"canvases/balaur.canvas",document:{nodes:[],edges:[]},camera:{x:80,y:55,zoom:.78}}}};
 }
 
 
@@ -246,7 +246,7 @@ async function reloadCanvasDocuments(canvasIds){
   if(!vaultStore)return;
   for(const id of new Set(canvasIds)){
     const record=workspace.canvases[id];if(!record||record.readOnly)continue;
-    const path=canvasPathFor(record,workspace.rootId);
+    const path=canvasPathFor(record);
     const parsed=JSON.parse(await vaultStore.vault.read(path));
     if(!isCanvas(parsed))throw new Error(`Canonical canvas is invalid: ${record.path}`);
     const stat=await vaultStore.vault.stat(path);if(stat)vaultStore.hashes.set(path,stat.hash);
@@ -272,7 +272,7 @@ function setCanonicalWritable(writable, message = "") {
   if(!writable&&message)setIndexStatus("Files read-only · repair/export required",message);
 }
 function canvasIdFromPath(path) {
-  const record = Object.values(workspace.canvases).find(item => canvasPathFor(item, workspace.rootId) === path);
+  const record = Object.values(workspace.canvases).find(item => canvasPathFor(item) === path);
   return record?.id || String(path).split("/").pop().replace(/\.canvas$/, "");
 }
 async function seedBundledWidget(vault) {
@@ -293,7 +293,7 @@ function configureLifeRuntime(vault) {
     catalog: componentCardCatalog,
     canvasPathFromId: id => {
       const record = workspace.canvases[id];
-      return record ? canvasPathFor(record, workspace.rootId) : null;
+      return record ? canvasPathFor(record) : null;
     },
   });
   widgetCatalog = new WidgetCatalog({ vault });
@@ -302,21 +302,21 @@ function configureLifeRuntime(vault) {
     catalog: widgetCatalog,
     canvasPathFromId: id => {
       const record = workspace.canvases[id];
-      return record ? canvasPathFor(record, workspace.rootId) : null;
+      return record ? canvasPathFor(record) : null;
     },
   });
   taskRepository = new FileTaskRepository({
     vault, index: lifeIndex, indexer: lifeIndexer,
-    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record) : null; }
   });
   journalRepository = new FileJournalRepository({
     vault, index: lifeIndex, indexer: lifeIndexer,
-    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record) : null; }
   });
   noteCatalog = new NoteCatalog({ vault });
   noteRepository = new FileNoteRepository({
     vault, index: lifeIndex, indexer: lifeIndexer, catalog: noteCatalog,
-    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record, workspace.rootId) : null; }
+    canvasPathFromId: id => { const record = workspace.canvases[id]; return record ? canvasPathFor(record) : null; }
   });
 }
 // Vault-first asynchronous boot. The source of truth is the user-picked folder
