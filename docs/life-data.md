@@ -5,7 +5,7 @@ Balaur's canonical-files-only v1 stores life data as readable files in a vault. 
 ## Ownership
 
 ```text
-.orbit/workspace.json  hierarchy, canvas metadata, cameras, optional canvas kind
+.balaur/workspace.json  hierarchy, canvas metadata, cameras, optional canvas kind
 canvases/*.canvas       canonical JSON Canvas 1.0 documents
 tasks/*.md              task definitions and workflow state
 habits/*.md             habit definitions
@@ -26,15 +26,15 @@ The vault adapters share the same logical layout:
 
 The vault is the only source of truth. `MemoryIndex` can be deleted and rebuilt from the vault without losing meaningful data. A persistent index, including SQLite, is deferred; it is not loaded or required by v1. OPFS-backed SQLite Wasm would require COOP/COEP headers that GitHub Pages cannot provide, which is why the default projection is in-memory JavaScript.
 
-Identity is separate from location: an entity's immutable `orbit-id` is its identity, its path is a locator, and a JSON Canvas node ID is a placement. A task can therefore have zero, one, or many `file`-node placements.
+Identity is separate from location: an entity's immutable `balaur-id` is its identity, its path is a locator, and a JSON Canvas node ID is a placement. A task can therefore have zero, one, or many `file`-node placements.
 
 ## Workspace sidecar and canvases
 
-The sidecar is `.orbit/workspace.json`:
+The sidecar is `.balaur/workspace.json`:
 
 ```json
 {
-  "format": "orbit-workspace",
+  "format": "balaur-workspace",
   "version": 2,
   "rootId": "canvas-root",
   "activeId": "canvas-root",
@@ -66,28 +66,28 @@ A `.canvas` file must contain only standard JSON Canvas 1.0 structures. The shar
 
 ## Frontmatter contract
 
-Orbit writes a constrained YAML-compatible frontmatter block. Values are quoted strings, finite numbers, booleans, enum tokens, valid dates/instants, or simple flow arrays. The parser knows only Orbit-owned flat fields. Unknown keys, comments, ordering, indentation, BOM, line endings, and Markdown body are preserved. Repository updates patch named fields and replace only the body bytes after the closing delimiter.
+Balaur writes a constrained YAML-compatible frontmatter block. Values are quoted strings, finite numbers, booleans, enum tokens, valid dates/instants, or simple flow arrays. The parser knows only Balaur-owned flat fields. Unknown keys, comments, ordering, indentation, BOM, line endings, and Markdown body are preserved. Repository updates patch named fields and replace only the body bytes after the closing delimiter.
 
-Every Orbit entity uses:
+Every Balaur entity uses:
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: <type>
+balaur-schema: 1
+balaur-type: <type>
 ...
 ---
 Markdown body remains ordinary user content.
 ```
 
-`orbit-schema` must be `1`; newer schemas are read-only and unsupported schemas are rejected. Required identity and timestamps are validated rather than inferred. Component cards use the same preservation-first frontmatter machinery but their own schema and catalog; widgets are retained as reviewed raw HTML rather than parsed as life entities.
+`balaur-schema` must be `1`; newer schemas are read-only and unsupported schemas are rejected. Required identity and timestamps are validated rather than inferred. Component cards use the same preservation-first frontmatter machinery but their own schema and catalog; widgets are retained as reviewed raw HTML rather than parsed as life entities.
 
 ### Tasks: `tasks/*.md`
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: task
-orbit-id: "task-a1b2c3"
+balaur-schema: 1
+balaur-type: task
+balaur-id: "task-a1b2c3"
 title: "Review monthly budget"
 status: next
 priority: 1
@@ -102,7 +102,7 @@ updated-at: "2026-07-21T09:00:00Z"
 Optional context and Markdown body.
 ```
 
-Required fields are `orbit-id`, `title`, `status`, `created-at`, and `updated-at`. Task statuses are `inbox`, `next`, `scheduled`, `waiting`, `done`, and `cancelled`. `scheduled-on` expresses scheduling intent; `due-on` is a separate deadline. `completed-at`, priority, estimate, recurrence, and dates may be null when allowed by the contract.
+Required fields are `balaur-id`, `title`, `status`, `created-at`, and `updated-at`. Task statuses are `inbox`, `next`, `scheduled`, `waiting`, `done`, and `cancelled`. `scheduled-on` expresses scheduling intent; `due-on` is a separate deadline. `completed-at`, priority, estimate, recurrence, and dates may be null when allowed by the contract.
 
 `FileTaskRepository` creates, updates, completes, reopens, and deletes task files. It writes a standard `file` node for each requested placement and uses content-hash preconditions for edits and removals. Removing a placement does not remove the task; deleting everywhere removes all placements before the canonical file.
 
@@ -112,9 +112,9 @@ A component card is declarative canonical data placed through one or more standa
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: component-card
-orbit-id: "card-weekly-focus"
+balaur-schema: 1
+balaur-type: component-card
+balaur-id: "card-weekly-focus"
 title: "Weekly focus"
 recipe: metric
 value: "72%"
@@ -127,7 +127,7 @@ Ordinary Markdown context.
 
 Recipes are `metric`, `progress`, `callout`, `list`, and `timeline`. Recipe-specific fields are validated: metric uses a string value with optional label, normalized progress, and `up`/`down`/`flat` trend; progress uses finite non-negative value, positive maximum, and optional unit; callout accepts `info`, `success`, `warning`, or `danger`; list and timeline derive their display from the Markdown body. Titles and short fields are limited to 160 Unicode code points, units to 32, the body to 32 KiB, and the complete file to 64 KiB.
 
-`FileComponentCardRepository` creates, patches, renames, places, unplaces, and deletes these files with expected-hash preconditions. `orbit-id` is immutable. A title change may move the canonical safe path and rewrites every placement; a failed move or placement is failure-safe. A patch-only update changes canonical data and refreshes all existing placements without simulating a new placement. Removing a Canvas node deletes only that placement; the separate confirmed delete-everywhere action removes every placement before removing the canonical file. `ComponentCardCatalog` retains valid parsed cards and readable raw diagnostics for malformed files so rendering remains synchronous and never replaces a damaged file.
+`FileComponentCardRepository` creates, patches, renames, places, unplaces, and deletes these files with expected-hash preconditions. `balaur-id` is immutable. A title change may move the canonical safe path and rewrites every placement; a failed move or placement is failure-safe. A patch-only update changes canonical data and refreshes all existing placements without simulating a new placement. Removing a Canvas node deletes only that placement; the separate confirmed delete-everywhere action removes every placement before removing the canonical file. `ComponentCardCatalog` retains valid parsed cards and readable raw diagnostics for malformed files so rendering remains synchronous and never replaces a damaged file.
 
 ### Widgets: `widgets/*.html`
 
@@ -137,9 +137,9 @@ A widget's reviewed self-contained source is the canonical file. `FileWidgetRepo
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: habit
-orbit-id: "habit-strength"
+balaur-schema: 1
+balaur-type: habit
+balaur-id: "habit-strength"
 title: "Strength training"
 frequency: weekly
 weekdays: [1, 3, 5]
@@ -152,7 +152,7 @@ updated-at: "2026-07-21T09:00:00Z"
 Habit context.
 ```
 
-Required fields are `orbit-id`, `title`, `frequency`, `created-at`, and `updated-at`. Frequencies are `daily`, `weekly`, and `monthly`. Weekdays are unique integers from 1 through 7. Check-ins are historical events, not an overwritten counter.
+Required fields are `balaur-id`, `title`, `frequency`, `created-at`, and `updated-at`. Frequencies are `daily`, `weekly`, and `monthly`. Weekdays are unique integers from 1 through 7. Check-ins are historical events, not an overwritten counter.
 
 ### Habit logs: `habit-logs/YYYY/YYYY-MM-DD.md`
 
@@ -160,11 +160,11 @@ A daily log has a small identity frontmatter block and inert, constrained event 
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: habit-log
+balaur-schema: 1
+balaur-type: habit-log
 local-date: "2026-07-21"
 ---
-<!-- orbit:habit-entry id=entry-a1 habit=habit-strength status=done value=1 at=2026-07-21T06:30:00Z -->
+<!-- balaur:habit-entry id=entry-a1 habit=habit-strength status=done value=1 at=2026-07-21T06:30:00Z -->
 ```
 
 Each `habit-entry` requires unique `id`, `habit`, `status`, `value`, and `at` attributes. Status is `done`, `skipped`, or `missed`; value is finite; `at` is a valid ISO instant. Malformed markers invalidate the source file rather than creating a malformed projection row. `FileHabitRepository.checkIn()` appends events and derives the local date using the intended timezone.
@@ -173,9 +173,9 @@ Each `habit-entry` requires unique `id`, `habit`, `status`, `value`, and `at` at
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: journal
-orbit-id: "journal-2026-07-21"
+balaur-schema: 1
+balaur-type: journal
+balaur-id: "journal-2026-07-21"
 local-date: "2026-07-21"
 created-at: "2026-07-21T09:00:00Z"
 updated-at: "2026-07-21T09:00:00Z"
@@ -183,15 +183,15 @@ updated-at: "2026-07-21T09:00:00Z"
 Journal body.
 ```
 
-The required fields are `orbit-id`, `local-date`, `created-at`, and `updated-at`. `FileJournalRepository` keeps one canonical file per local date and preserves frontmatter/body formatting on updates. Journals are placeable as standard `file` nodes via `FileJournalRepository.addPlacement` and surfaced in the Today daily-note panel.
+The required fields are `balaur-id`, `local-date`, `created-at`, and `updated-at`. `FileJournalRepository` keeps one canonical file per local date and preserves frontmatter/body formatting on updates. Journals are placeable as standard `file` nodes via `FileJournalRepository.addPlacement` and surfaced in the Today daily-note panel.
 
 ### Notes: `notes/*.md`
 
-A note is a path-identified canonical Markdown file under `notes/` (ADR-0004). Identity is the path; there is no mandatory frontmatter and no mandatory `orbit-id`. The body is ordinary Markdown; the title is derived, not stored (the first `# Heading`, falling back to the path slug). Note kind (inbox, reference, or AI) is carried by the same inert body markers as before (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`, `<!-- orbit:ai-card -->`) at the top of the body; no frontmatter field is added for kind. The indexer treats a note as a valid untyped source record (`entityType: null`, `parseStatus: "ok"`). Notes are placed by zero or more standard `file` nodes; note placements are not tracked by the disposable placements index, so `FileNoteRepository` resolves them by scanning canvas documents. `FileNoteRepository` writes the file first under an expected-hash precondition, reindexes, and reconciles the `NoteCatalog` projection.
+A note is a path-identified canonical Markdown file under `notes/` (ADR-0004). Identity is the path; there is no mandatory frontmatter and no mandatory `balaur-id`. The body is ordinary Markdown; the title is derived, not stored (the first `# Heading`, falling back to the path slug). Note kind (inbox, reference, or AI) is carried by the same inert body markers as before (`<!-- balaur:inbox -->`, `<!-- balaur:reference -->`, `<!-- balaur:ai-card -->`) at the top of the body; no frontmatter field is added for kind. The indexer treats a note as a valid untyped source record (`entityType: null`, `parseStatus: "ok"`). Notes are placed by zero or more standard `file` nodes; note placements are not tracked by the disposable placements index, so `FileNoteRepository` resolves them by scanning canvas documents. `FileNoteRepository` writes the file first under an expected-hash precondition, reindexes, and reconciles the `NoteCatalog` projection.
 
 ### Node typing and relations
 
-Node typing uses three existing channels (ADR-0003): sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`, `<!-- orbit:ai-card -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The dormant node color `#6c757d` marks archived items.
+Node typing uses three existing channels (ADR-0003): sidecar `kind` (`hub`/`project`), inert body markers (`<!-- balaur:inbox -->`, `<!-- balaur:reference -->`, `<!-- balaur:ai-card -->`), and entity frontmatter `balaur-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The dormant node color `#6c757d` marks archived items.
 
 Content nodes are file-backed (ADR-0004): notes, inbox captures, reference pages, and AI operators are standard `file` nodes referencing `notes/*.md`, with kind carried by an inert body marker rather than a custom node type. The standard `text` node remains valid and rendered but is read-only interop for imported or external documents; Balaur never authors it.
 
@@ -199,23 +199,23 @@ Content nodes are file-backed (ADR-0004): notes, inbox captures, reference pages
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: calendar-event
-orbit-id: "event-a1b2c3"
+balaur-schema: 1
+balaur-type: calendar-event
+balaur-id: "event-a1b2c3"
 title: "Dentist"
 starts-at: "2026-07-22T14:00:00+01:00"
 ends-at: "2026-07-22T15:00:00+01:00"
 local-date: "2026-07-22"
 timezone: "Europe/London"
 all-day: false
-source: orbit
+source: balaur
 created-at: "2026-07-21T09:00:00Z"
 updated-at: "2026-07-21T09:00:00Z"
 ---
 Event notes.
 ```
 
-Required fields are `orbit-id`, `title`, `starts-at`, `local-date`, `timezone`, `created-at`, and `updated-at`. Instants must be real ISO 8601 timestamps; timezones must be valid IANA names. The local date is explicit and is not obtained by slicing a UTC timestamp.
+Required fields are `balaur-id`, `title`, `starts-at`, `local-date`, `timezone`, `created-at`, and `updated-at`. Instants must be real ISO 8601 timestamps; timezones must be valid IANA names. The local date is explicit and is not obtained by slicing a UTC timestamp.
 
 ## Date and time conventions
 
@@ -230,7 +230,7 @@ These conventions apply to every repository and projection:
 
 ## Runtime projections
 
-`LifeIndexer` builds source records for every vault file. It records media type, path, content hash, byte size, entity type/id, parse status, and diagnostics. Untyped Markdown and opaque attachments can remain valid source files; malformed Orbit entities and invalid canvases are diagnostics.
+`LifeIndexer` builds source records for every vault file. It records media type, path, content hash, byte size, entity type/id, parse status, and diagnostics. Untyped Markdown and opaque attachments can remain valid source files; malformed Balaur entities and invalid canvases are diagnostics.
 
 Typed life projections include:
 
@@ -239,9 +239,9 @@ Typed life projections include:
 - journal entries; and
 - calendar events.
 
-Duplicate `orbit-id` life files never produce a winner: every conflicting typed projection and placement is suppressed and each conflicting path receives a `DUPLICATE_ID` diagnostic. Missing file-node targets, parse failures, and index drift are diagnostics. `index-integrity.js` compares canonical files, hashes, typed rows, placements, and diagnostics and can purge/rebuild the index.
+Duplicate `balaur-id` life files never produce a winner: every conflicting typed projection and placement is suppressed and each conflicting path receives a `DUPLICATE_ID` diagnostic. Missing file-node targets, parse failures, and index drift are diagnostics. `index-integrity.js` compares canonical files, hashes, typed rows, placements, and diagnostics and can purge/rebuild the index.
 
-Cold rebuild uses `LifeIndexer.rebuild()`. Warm updates use vault revisions and `LifeIndexer.reconcileWarm()`, preserving old-path ancestry for moves and applying each projection through `MemoryIndex.transaction()`. `MemoryIndex.transaction()` rolls back the complete projection, diagnostics, and state for that projection on failure. The browser exposes `window.orbitCanvas.rebuildIndex()` as a recovery command.
+Cold rebuild uses `LifeIndexer.rebuild()`. Warm updates use vault revisions and `LifeIndexer.reconcileWarm()`, preserving old-path ancestry for moves and applying each projection through `MemoryIndex.transaction()`. `MemoryIndex.transaction()` rolls back the complete projection, diagnostics, and state for that projection on failure. The browser exposes `window.balaurCanvas.rebuildIndex()` as a recovery command.
 
 ComponentCardCatalog and `WidgetCatalog` are separate disposable rendering projections over `cards/*.md` and `widgets/*.html`. They retain placements and parse/repair status and rebuild at boot or after repository writes. They are not query indexes and never own canonical content.
 
@@ -267,10 +267,10 @@ Frontmatter and body updates are preservation-first. If an external edit changes
 
 ```json
 {
-  "format": "orbit-workspace",
+  "format": "balaur-workspace",
   "version": 2,
   "exportedAt": "2026-07-21T09:00:00Z",
-  "workspace": { "format": "orbit-workspace", "version": 2, "rootId": "canvas-root", "canvases": {} },
+  "workspace": { "format": "balaur-workspace", "version": 2, "rootId": "canvas-root", "canvases": {} },
   "files": [
     { "path": "canvases/root.canvas", "mediaType": "application/jsoncanvas+json", "text": "{\"nodes\":[],\"edges\":[]}\n" },
     { "path": "tasks/review-monthly-budget-task-a1b2c3.md", "mediaType": "text/markdown", "text": "---\\n..." }
@@ -278,7 +278,7 @@ Frontmatter and body updates are preservation-first. If an external edit changes
 }
 ```
 
-The sidecar is in `workspace`; files are raw text so frontmatter, line endings, component-card Markdown, and widget source remain inspectable. Export validates every canvas and reports unreadable files. Import rejects version-1 bundles, requires an empty staging vault, validates every path, canvas, file-node reference, supported entity, component card, and duplicate Orbit ID before the first write, writes files with `expectedHash: null`, and leaves activation to the caller after all projections rebuild successfully.
+The sidecar is in `workspace`; files are raw text so frontmatter, line endings, component-card Markdown, and widget source remain inspectable. Export validates every canvas and reports unreadable files. Import rejects version-1 bundles, requires an empty staging vault, validates every path, canvas, file-node reference, supported entity, component card, and duplicate Balaur ID before the first write, writes files with `expectedHash: null`, and leaves activation to the caller after all projections rebuild successfully.
 
 A single `.canvas` export is interoperable JSON Canvas but is not a complete backup when its file references are not bundled. A version-2 whole-space bundle is the portable recovery format for sidecar metadata and raw canonical canvas, life, card, widget, and attachment files.
 

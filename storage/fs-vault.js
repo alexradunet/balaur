@@ -68,7 +68,7 @@ export class FsVault extends VaultStore {
   _checkPrecondition(p, existing, expectedHash) { if (expectedHash === undefined) return; if (expectedHash === null && existing) throw new ConflictError(`Expected "${p}" to not exist`, { code: "WRITE_CONFLICT" }); if (expectedHash !== null && (!existing || existing.hash !== expectedHash)) throw new ConflictError(`Hash mismatch for "${p}"`, { code: "WRITE_CONFLICT" }); }
   async _ensureParent(p) { const clean = await this._assertComponents(p); const dir = nodePath.dirname(this._abs(clean)); await fsp.mkdir(dir, { recursive: true }); await this._assertComponents(clean); return clean; }
   async _atomicWrite(p, text, existing, expectedHash) {
-    const abs = this._abs(p); const tmp = `${abs}.orbit-tmp-${process.pid}-${randomBytes(6).toString("hex")}`;
+    const abs = this._abs(p); const tmp = `${abs}.balaur-tmp-${process.pid}-${randomBytes(6).toString("hex")}`;
     await fsp.writeFile(tmp, text, { encoding: "utf8", flag: "wx" });
     try {
       // A hard link is an O_EXCL-style commit: it never replaces a file that
@@ -121,15 +121,15 @@ export class FsVault extends VaultStore {
   }
   async move(from, to, options = {}) { return this._enqueue(() => this._move(from, to, options)); }
   changesSince(revision) { return this._journal.filter((e) => e.revision > revision); }
-  async snapshot() { const files = (await this.list("")).map((m) => ({ path: m.path, mediaType: m.mediaType, text: null })); for (const f of files) f.text = await this.read(f.path); return { format: "orbit-vault-snapshot", revision: this._revision, files: files.sort((a, b) => a.path.localeCompare(b.path)) }; }
+  async snapshot() { const files = (await this.list("")).map((m) => ({ path: m.path, mediaType: m.mediaType, text: null })); for (const f of files) f.text = await this.read(f.path); return { format: "balaur-vault-snapshot", revision: this._revision, files: files.sort((a, b) => a.path.localeCompare(b.path)) }; }
   async restore(snapshot) { return this._enqueue(() => this._restore(snapshot)); }
   async _rename(from, to) { return fsp.rename(from, to); }
   async _restore(snapshot) {
     try { const rootStat = await fsp.lstat(this.root); if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) throw new PathError("Vault root is not a real directory", { code: "PATH_SYMLINK" }); } catch (e) { if (e.code !== "ENOENT") throw e; }
     const prepared = [], seen = new Map();
     for (const file of snapshot?.files || []) { const p = assertSafePath(file.path), fold = caseFoldKey(p); if (seen.has(fold)) throw new PathError(`Case-fold collision: "${p}" vs "${seen.get(fold)}"`, { code: "PATH_CASE_COLLISION" }); seen.set(fold, p); prepared.push({ p, text: String(file.text), hash: await contentHash(String(file.text)), mediaType: file.mediaType || mediaTypeFor(p) }); }
-    const staging = `${this.root}.orbit-restore-${process.pid}-${randomBytes(6).toString("hex")}`; await fsp.mkdir(staging, { recursive: true });
-    const backup = `${this.root}.orbit-old-${process.pid}-${randomBytes(6).toString("hex")}`;
+    const staging = `${this.root}.balaur-restore-${process.pid}-${randomBytes(6).toString("hex")}`; await fsp.mkdir(staging, { recursive: true });
+    const backup = `${this.root}.balaur-old-${process.pid}-${randomBytes(6).toString("hex")}`;
     let oldRootMoved = false;
     try {
       for (const file of prepared) { const abs = nodePath.join(staging, file.p); await fsp.mkdir(nodePath.dirname(abs), { recursive: true }); await fsp.writeFile(abs, file.text, { flag: "wx" }); }

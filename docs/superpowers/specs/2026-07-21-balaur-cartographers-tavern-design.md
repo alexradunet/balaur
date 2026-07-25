@@ -4,11 +4,11 @@
 
 **Date:** 2026-07-21  
 **Status:** Approved in brainstorming  
-**Scope:** Rebrand the current Orbit JSON Canvas prototype as Balaur without replacing or integrating the separate `../balaur` application
+**Scope:** Rebrand the current Balaur JSON Canvas prototype as Balaur without replacing or integrating the separate `../balaur` application
 
 ## Summary
 
-Rebrand Orbit as **Balaur**, a spatial personal life OS that feels like a cartographer’s tavern: carved oak application furniture around an inked map table, with portable parchment cards arranged across it. The experience remains a serious local-first tool. Its RPG character comes from material, typography, and one small companion presence rather than renamed controls or decorative effects on every surface.
+Rebrand Balaur as **Balaur**, a spatial personal life OS that feels like a cartographer’s tavern: carved oak application furniture around an inked map table, with portable parchment cards arranged across it. The experience remains a serious local-first tool. Its RPG character comes from material, typography, and one small companion presence rather than renamed controls or decorative effects on every surface.
 
 The redesign must improve **canvas readability first**. It preserves the existing static, standards-first architecture, JSON Canvas interoperability, SQLite task projections, Johnny Decimal hierarchy, Today view, AI tools, and interaction model.
 
@@ -38,7 +38,7 @@ This project takes the useful identity without taking the platform complexity. I
 - No React, OCTANT, component library, package manager, build system, or runtime dependency.
 - No copied tavern dialogue UI, quest terminology, experience levels, inventory slots, or pervasive runes.
 - No changes to task workflow, SQLite schema, JSON Canvas structure, Johnny Decimal rules, AI operation behavior, or application navigation.
-- No rename of internal browser storage keys or existing `orbit:` Markdown marker namespaces.
+- No rename of internal browser storage keys or existing `balaur:` Markdown marker namespaces.
 - No new light theme in this pass.
 
 ## Considered approaches
@@ -318,9 +318,9 @@ The map owns the viewport. Library and inspector use the application’s existin
 
 ### Top bar
 
-- Replace visible Orbit identity with Balaur and the familiar sigil.
+- Replace visible Balaur identity with Balaur and the familiar sigil.
 - Keep canvas breadcrumbs, editable title, Canvas/Today switch, save state, import, and export.
-- Replace “Ask Orbit” with the single responsive `Ask Balaur` familiar control defined above; do not keep a duplicate top-bar trigger on desktop.
+- Replace “Ask Balaur” with the single responsive `Ask Balaur` familiar control defined above; do not keep a duplicate top-bar trigger on desktop.
 - Healthy local persistence stays quiet. Failure becomes explicit text with a recovery action where one exists.
 
 ### Library and capture shelf
@@ -375,7 +375,7 @@ Today becomes a tavern notice board without becoming a quest log.
 
 ### Assistant panel
 
-- Rename Orbit Copilot to Balaur.
+- Rename Balaur Copilot to Balaur.
 - Open it from the familiar control while preserving the existing panel, provider settings, suggestions, message flow, and security copy.
 - Use oak for panel chrome, parchment for readable assistant messages, and dark inset slabs for provider or tool detail.
 - Do not import the separate Balaur application’s RPG dialogue layout or portrait pipeline.
@@ -404,7 +404,7 @@ No continuous grain animation, floating cards, sparkles, random candle flicker, 
 
 - document title and metadata;
 - product brand and mark;
-- “Orbit” and “Orbit Copilot” user-facing copy;
+- “Balaur” and “Balaur Copilot” user-facing copy;
 - assistant actions and status labels;
 - starter/onboarding references;
 - whole-space backup filename to `.balaur.json`;
@@ -412,7 +412,7 @@ No continuous grain animation, floating cards, sparkles, random candle flicker, 
 
 ### Preserve internally
 
-- existing `orbit:` Markdown markers;
+- existing `balaur:` Markdown markers;
 - existing browser storage keys;
 - SQLite schema and records;
 - JSON Canvas node and edge data;
@@ -469,7 +469,7 @@ Expected files remain within the current standards-first application:
 - Modify `styles/themes.css`: preserve AI-selectable canvas themes only where they do not conflict with legibility; do not add another application theme.
 - Modify `app.js`: user-facing naming, `.balaur.json` backup filename, one reduced-motion-aware View Transition boundary, and the minimal selection-entry state required by the Balaur bearing.
 - Modify `main.js` only if the offline-ready global receives a visible name; otherwise preserve the existing internal namespace.
-- Replace `icons/orbit.svg`, `icons/orbit-192.png`, and `icons/orbit-512.png` with a simple Balaur cartographer mark and update their filenames.
+- Replace `icons/balaur.svg`, `icons/balaur-192.png`, and `icons/balaur-512.png` with a simple Balaur cartographer mark and update their filenames.
 - Modify `manifest.webmanifest`: Balaur name, short name, palette, and icon paths.
 - Modify `sw.js`: cache the new token/motion styles and Balaur icons; bump the cache version while preserving the existing storage/data namespace.
 - Modify `README.md`, `docs/design-system.md`, `docs/offline.md`, and other existing user-facing documentation after the application works.
@@ -525,7 +525,7 @@ Capture the canvas, Today, dialog, assistant, and narrow shell. Compare them wit
 
 ## Acceptance criteria
 
-- Every visible Orbit product reference becomes Balaur.
+- Every visible Balaur product reference becomes Balaur.
 - Existing local data loads without migration.
 - JSON Canvas `.canvas` import/export remains valid and unchanged.
 - Whole-space export uses a `.balaur.json` filename and remains importable.

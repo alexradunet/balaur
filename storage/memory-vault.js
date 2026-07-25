@@ -157,7 +157,7 @@ export class MemoryVault extends VaultStore {
     const files = [...this._files.values()]
       .map((r) => ({ path: r.path, mediaType: r.mediaType, text: r.content }))
       .sort((a, b) => (a.path < b.path ? -1 : 1));
-    return { format: "orbit-vault-snapshot", revision: this._revision, files };
+    return { format: "balaur-vault-snapshot", revision: this._revision, files };
   }
 
   async restore(snapshot) {

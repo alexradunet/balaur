@@ -24,8 +24,8 @@ test("createHabit writes a canonical habit file and indexes it", async () => {
   assert.equal(id, "habit-morning-walk");
   assert.match(path, /^habits\/morning-walk--morningwalk\.md$|^habits\/morning-walk--.+\.md$/);
   const stored = await vault.read(path);
-  assert.match(stored, /orbit-type: habit/);
-  assert.match(stored, /orbit-id: "?habit-morning-walk"?/);
+  assert.match(stored, /balaur-type: habit/);
+  assert.match(stored, /balaur-id: "?habit-morning-walk"?/);
   assert.equal(index.allHabits().length, 1);
   assert.equal(index.allHabits()[0].title, "Morning walk");
 });
@@ -95,8 +95,8 @@ test("checkIn creates a per-day habit-log file and indexes the event", async () 
   const result = await repo.checkIn("habit-walk", { localDate: "2026-07-21", status: "done", value: 1 });
   assert.equal(result.logPath, "habit-logs/2026/2026-07-21.md");
   const log = await vault.read(result.logPath);
-  assert.match(log, /orbit-type: habit-log/);
-  assert.match(log, /orbit:habit-entry/);
+  assert.match(log, /balaur-type: habit-log/);
+  assert.match(log, /balaur:habit-entry/);
   assert.match(log, /habit=habit-walk/);
   assert.match(log, /status=done/);
   const entries = index.allHabitEntries();
@@ -118,7 +118,7 @@ test("checkIn preserves trailing bytes and CRLF when appending", async () => {
   const second = await repo.checkIn("habit-walk", { localDate: "2026-07-21", value: 2 });
   const final = await vault.read(first.logPath);
   assert.ok(final.startsWith(external), "existing bytes must remain untouched");
-  assert.match(final, new RegExp(`orbit:habit-entry id=${second.entryId}[^\\r\\n]*\\r\\n`));
+  assert.match(final, new RegExp(`balaur:habit-entry id=${second.entryId}[^\\r\\n]*\\r\\n`));
 });
 
 test("checkIn appends to the same day's log, preserving history (not overwriting)", async () => {

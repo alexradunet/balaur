@@ -1,6 +1,6 @@
 // Version-2 whole-space backup/restore (Phase 4, ADR-0001, plan §15).
 //
-// A version-2 .orbit.json bundle contains the metadata-only sidecar plus the raw
+// A version-2 .balaur.json bundle contains the metadata-only sidecar plus the raw
 // logical files (canvases, entities, widgets) — never a SQLite snapshot, which is
 // rebuildable. Export preserves file bytes and validates every canvas; import
 // validates the envelope, every path, every canvas, and detects duplicate or
@@ -14,7 +14,7 @@ import { SIDECAR_PATH, SIDECAR_FORMAT, SIDECAR_VERSION, parseSidecar } from "./w
 import { buildSourceRecord } from "./life-indexer.js";
 import { inspectComponentCardIdentity, parseComponentCard } from "./component-card-codec.js";
 
-export const BACKUP_FORMAT = SIDECAR_FORMAT; // "orbit-workspace"
+export const BACKUP_FORMAT = SIDECAR_FORMAT; // "balaur-workspace"
 export const BACKUP_VERSION = SIDECAR_VERSION; // 2
 
 // Export the whole vault to a version-2 bundle. Reads raw file text (byte
@@ -94,7 +94,7 @@ export async function validateBundle(data) {
   const seen = new Set();
   const paths = new Set();
   const diagnostics = [];
-  const entityIds = new Map(); // orbitId -> [paths]
+  const entityIds = new Map(); // balaurId -> [paths]
 
   for (const file of data.files) {
     if (!file || typeof file.path !== "string" || typeof file.text !== "string") {
@@ -137,7 +137,7 @@ export async function validateBundle(data) {
 
   for (const [id, dupePaths] of entityIds) {
     if (dupePaths.length > 1) {
-      diagnostics.push({ path: dupePaths[0], code: "DUPLICATE_ID", message: `Duplicate orbit-id ${id}`, details: { orbitId: id, paths: dupePaths } });
+      diagnostics.push({ path: dupePaths[0], code: "DUPLICATE_ID", message: `Duplicate balaur-id ${id}`, details: { balaurId: id, paths: dupePaths } });
     }
   }
   const canvasDocs = new Map();

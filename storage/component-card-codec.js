@@ -17,9 +17,9 @@ export const COMPONENT_CARD_SPEC = Object.freeze({
 });
 
 const BASE_FIELDS = {
-  "orbit-schema": "number",
-  "orbit-type": "enum",
-  "orbit-id": "string",
+  "balaur-schema": "number",
+  "balaur-type": "enum",
+  "balaur-id": "string",
   title: "string",
   recipe: "enum",
   label: "string",
@@ -29,7 +29,7 @@ const BASE_FIELDS = {
   unit: "string",
   tone: "enum",
 };
-const ORDER = ["orbit-schema", "orbit-type", "orbit-id", "title", "recipe", "value", "label", "progress", "trend", "maximum", "unit", "tone"];
+const ORDER = ["balaur-schema", "balaur-type", "balaur-id", "title", "recipe", "value", "label", "progress", "trend", "maximum", "unit", "tone"];
 const RECIPES = new Set(["metric", "progress", "callout", "list", "timeline"]);
 const TRENDS = new Set(["up", "down", "flat"]);
 const TONES = new Set(["info", "success", "warning", "danger"]);
@@ -41,7 +41,7 @@ const RECIPE_FIELDS = Object.freeze({
   timeline: new Set(),
 });
 const RECIPE_FIELD_NAMES = Object.freeze(["value", "label", "progress", "trend", "maximum", "unit", "tone"]);
-const IDENTITY_SPEC = Object.freeze({ fields: Object.freeze({ "orbit-type": "enum", "orbit-id": "string" }) });
+const IDENTITY_SPEC = Object.freeze({ fields: Object.freeze({ "balaur-type": "enum", "balaur-id": "string" }) });
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const PROBE_SPEC = Object.freeze({ fields: Object.freeze({ recipe: "enum" }) });
 
@@ -72,14 +72,14 @@ function validateString(value, name, maximum, { required = false, nonEmpty = fal
 
 function validateCommon(card) {
   if (card.schema !== 1) {
-    if (typeof card.schema === "number" && card.schema > 1) fail(`Unsupported orbit-schema ${card.schema} (read-only)`, "SCHEMA_NEWER");
-    if (card.schema === undefined || card.schema === null) fail("Missing orbit-schema", "SCHEMA_MISSING");
-    fail(`Unsupported orbit-schema ${card.schema}`, "SCHEMA_UNSUPPORTED");
+    if (typeof card.schema === "number" && card.schema > 1) fail(`Unsupported balaur-schema ${card.schema} (read-only)`, "SCHEMA_NEWER");
+    if (card.schema === undefined || card.schema === null) fail("Missing balaur-schema", "SCHEMA_MISSING");
+    fail(`Unsupported balaur-schema ${card.schema}`, "SCHEMA_UNSUPPORTED");
   }
-  if (card.type === undefined || card.type === null) fail("Missing required component-card field: orbit-type", "CARD_FIELD_REQUIRED", { key: "orbit-type" });
-  if (card.type !== "component-card") fail(`Expected orbit-type "component-card", got "${card.type}"`, "CARD_TYPE_MISMATCH");
-  if (card.id === undefined || card.id === null) fail("Missing required component-card field: orbit-id", "CARD_FIELD_REQUIRED", { key: "orbit-id" });
-  if (typeof card.id !== "string" || !ID_RE.test(card.id)) fail("Invalid component-card orbit-id", "CARD_ID_INVALID");
+  if (card.type === undefined || card.type === null) fail("Missing required component-card field: balaur-type", "CARD_FIELD_REQUIRED", { key: "balaur-type" });
+  if (card.type !== "component-card") fail(`Expected balaur-type "component-card", got "${card.type}"`, "CARD_TYPE_MISMATCH");
+  if (card.id === undefined || card.id === null) fail("Missing required component-card field: balaur-id", "CARD_FIELD_REQUIRED", { key: "balaur-id" });
+  if (typeof card.id !== "string" || !ID_RE.test(card.id)) fail("Invalid component-card balaur-id", "CARD_ID_INVALID");
   validateString(card.title, "title", COMPONENT_CARD_SPEC.maxTitleCodePoints, { required: true, nonEmpty: true });
   if (card.recipe === undefined || card.recipe === null) fail("Missing required component-card field: recipe", "CARD_FIELD_REQUIRED", { key: "recipe" });
   if (!RECIPES.has(card.recipe)) fail(`Invalid component-card recipe: ${card.recipe}`, "CARD_RECIPE_INVALID");
@@ -128,9 +128,9 @@ function bodyFromFrontmatter(fm) {
 
 function fromRaw(raw, body, options = {}) {
   return {
-    schema: raw["orbit-schema"],
-    type: raw["orbit-type"],
-    id: raw["orbit-id"],
+    schema: raw["balaur-schema"],
+    type: raw["balaur-type"],
+    id: raw["balaur-id"],
     title: raw.title,
     recipe: raw.recipe,
     value: raw.value ?? null,
@@ -151,8 +151,8 @@ export function inspectComponentCardIdentity(text) {
   if (!fm) throw new ParseError("Missing or unterminated frontmatter", { code: "FM_NO_DELIMITER" });
   const raw = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), IDENTITY_SPEC);
   return {
-    type: raw["orbit-type"] ?? null,
-    id: raw["orbit-id"] ?? null,
+    type: raw["balaur-type"] ?? null,
+    id: raw["balaur-id"] ?? null,
   };
 }
 
@@ -172,7 +172,7 @@ export function serializeComponentCard(input = {}) {
   const card = validateCard({
     schema: 1,
     type: "component-card",
-    id: input.id ?? input.orbitId,
+    id: input.id ?? input.balaurId,
     title: input.title,
     recipe: input.recipe,
     value: input.value ?? null,
@@ -185,9 +185,9 @@ export function serializeComponentCard(input = {}) {
     body: input.body ?? "",
   });
   const fields = {
-    "orbit-schema": card.schema,
-    "orbit-type": card.type,
-    "orbit-id": card.id,
+    "balaur-schema": card.schema,
+    "balaur-type": card.type,
+    "balaur-id": card.id,
     title: card.title,
     recipe: card.recipe,
     value: card.value,
@@ -209,7 +209,7 @@ export function patchComponentCard(text, patch = {}) {
   const current = parseComponentCard(text);
   const keys = Object.keys(patch);
   for (const key of keys) {
-    if (key === "id" || key === "orbitId") fail("Component-card orbit-id is immutable", "CARD_ID_IMMUTABLE");
+    if (key === "id" || key === "balaurId") fail("Component-card balaur-id is immutable", "CARD_ID_IMMUTABLE");
     if (!PATCH_KEYS.has(key)) fail(`Unknown component-card field: ${key}`, "CARD_UNKNOWN_FIELD", { key });
   }
   const candidate = { ...current, ...patch };

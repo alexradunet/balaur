@@ -45,7 +45,7 @@ Generated code never registers a custom element in the Balaur host page, receive
 The design preserves these shipped boundaries:
 
 - JSON Canvas documents contain only standard `text`, `file`, `link`, and `group` nodes and standard edge fields.
-- Application metadata remains in `.orbit/workspace.json`.
+- Application metadata remains in `.balaur/workspace.json`.
 - Tasks, habits, habit logs, journals, events, component cards, and widgets are canonical vault files.
 - `MemoryIndex` remains a disposable projection for life queries, not a component store.
 - Rendering reads an already-loaded in-memory working set rather than performing one vault read per card per render.
@@ -137,15 +137,15 @@ Canvas dragging, selection, geometry, SVG edges, camera, pointer capture, and co
 
 ### 8.1 File and placement
 
-Component cards live at `cards/<safe-stable-name>.md`. A card has one immutable `orbit-id`; a path is its locator; each standard Canvas file node is one placement.
+Component cards live at `cards/<safe-stable-name>.md`. A card has one immutable `balaur-id`; a path is its locator; each standard Canvas file node is one placement.
 
 Example:
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: component-card
-orbit-id: "card-a1b2c3"
+balaur-schema: 1
+balaur-type: component-card
+balaur-id: "card-a1b2c3"
 title: "Weekly focus"
 recipe: metric
 value: "72%"
@@ -173,9 +173,9 @@ The file owns component-card data. Placement color remains a standard JSON Canva
 
 ### 8.2 Common fields
 
-- `orbit-schema`: required integer, exactly `1`.
-- `orbit-type`: required enum, exactly `component-card`.
-- `orbit-id`: required immutable string matching the existing safe Orbit ID conventions.
+- `balaur-schema`: required integer, exactly `1`.
+- `balaur-type`: required enum, exactly `component-card`.
+- `balaur-id`: required immutable string matching the existing safe Balaur ID conventions.
 - `title`: required non-empty string, maximum 160 Unicode code points.
 - `recipe`: required enum: `metric`, `progress`, `callout`, `list`, or `timeline`.
 - Markdown body: maximum 32 KiB UTF-8; ordinary readable context or recipe content.
@@ -337,18 +337,18 @@ Every message has `{ type, version, payload }`, is schema-validated, and is limi
 
 Allowed host-to-widget messages:
 
-- `orbit.widget.theme.v1`;
-- `orbit.widget.preferences.v1`;
-- `orbit.widget.visibility.v1`;
-- `orbit.widget.pause.v1`.
+- `balaur.widget.theme.v1`;
+- `balaur.widget.preferences.v1`;
+- `balaur.widget.visibility.v1`;
+- `balaur.widget.pause.v1`.
 
 Allowed widget-to-host messages:
 
-- `orbit.widget.ready.v1`;
-- `orbit.widget.status.v1`;
-- `orbit.widget.resize.v1` with bounded dimensions;
-- `orbit.widget.heartbeat.v1`;
-- `orbit.widget.diagnostic.v1` with bounded plain text.
+- `balaur.widget.ready.v1`;
+- `balaur.widget.status.v1`;
+- `balaur.widget.resize.v1` with bounded dimensions;
+- `balaur.widget.heartbeat.v1`;
+- `balaur.widget.diagnostic.v1` with bounded plain text.
 
 There is no host command, mutation request, or canonical-data message in v1. Widget status and diagnostics cannot write canonical files, Canvas nodes, workspace metadata, the runtime index, or application settings.
 
@@ -369,7 +369,7 @@ Iframe content cannot inherit host CSS custom properties. The host reads an allo
 
 ```json
 {
-  "type": "orbit.widget.theme.v1",
+  "type": "balaur.widget.theme.v1",
   "version": 1,
   "payload": {
     "tokens": {

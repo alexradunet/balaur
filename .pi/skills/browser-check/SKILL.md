@@ -35,9 +35,9 @@ node .pi/skills/browser-check/scripts/browser-check.mjs smoke
 node .pi/skills/browser-check/scripts/browser-check.mjs smoke --offline --screenshot /tmp/shots
 
 # One-off runtime probe (prints JSON). The page is loaded and app boot is awaited.
-node .pi/skills/browser-check/scripts/browser-check.mjs eval "window.orbitCanvas.getSummary()"
-node .pi/skills/browser-check/scripts/browser-check.mjs eval "await window.orbitVaultReady && window.orbitCanvas.getSummary()"
-node .pi/skills/browser-check/scripts/browser-check.mjs eval "document.title" --wait "window.orbitCanvas"
+node .pi/skills/browser-check/scripts/browser-check.mjs eval "window.balaurCanvas.getSummary()"
+node .pi/skills/browser-check/scripts/browser-check.mjs eval "await window.balaurVaultReady && window.balaurCanvas.getSummary()"
+node .pi/skills/browser-check/scripts/browser-check.mjs eval "document.title" --wait "window.balaurCanvas"
 
 # Screenshot (full page, or one element with --selector).
 node .pi/skills/browser-check/scripts/browser-check.mjs shot /tmp/canvas.png
@@ -66,7 +66,7 @@ node .pi/skills/browser-check/scripts/browser-check.mjs contract
 9. Controlled reload (same profile) preserves title and node count — the suite
    re-stubs the picker and re-picks the same OPFS subdirectory after the reload.
 10. With `--offline`: offline reload re-stubs the picker and renders the shell
-    from the SW cache (`orbit-shell-v13`).
+    from the SW cache (`balaur-shell-v13`).
 
 ## Recipes
 
@@ -86,24 +86,24 @@ node .pi/skills/browser-check/scripts/browser-check.mjs smoke --profile "$P"
 node .pi/skills/browser-check/scripts/browser-check.mjs smoke --width 380 --height 800 --screenshot /tmp/narrow
 ```
 
-**Deep probes** — useful runtime surfaces: `window.orbitCanvas.getDocument()`,
-`.getWorkspace()`, `.getSummary()`, `await window.orbitVaultReady`,
-`window.orbitVaultStore`.
+**Deep probes** — useful runtime surfaces: `window.balaurCanvas.getDocument()`,
+`.getWorkspace()`, `.getSummary()`, `await window.balaurVaultReady`,
+`window.balaurVaultStore`.
 
 ## Vault gate and the picker stub (headless)
 
-The app boots behind a full-screen Vault gate and exposes `window.orbitCanvas`
-only after a folder is picked, so every subcommand that waits on `orbitCanvas`
+The app boots behind a full-screen Vault gate and exposes `window.balaurCanvas`
+only after a folder is picked, so every subcommand that waits on `balaurCanvas`
 (`smoke`, `components`, `widgets`' failure sessions, `shot`) first runs
 `bootPastLanding(session)`. It:
 
 1. waits for `#openVaultFolder` to be present, enabled, **and** for
-   `window.orbitVaultReady` to be defined (the app wires the pick handler right
+   `window.balaurVaultReady` to be defined (the app wires the pick handler right
    before assigning that promise; waiting on it avoids clicking before the
    handler exists — a race the `Fetch`-intercepted failure session reliably hits);
 2. installs `window.showDirectoryPicker = async () => (await navigator.storage.getDirectory()).getDirectoryHandle("vault-smoke", { create: true })` — an OPFS handle with the same `FileSystemDirectoryHandle` interface, no picker, no gesture;
 3. performs a **real CDP click** on the button center (user-gesture semantics, not `el.click()`); the app references the global `showDirectoryPicker` at call time, so the stub is honored;
-4. waits for `window.orbitCanvas` plus at least one rendered card.
+4. waits for `window.balaurCanvas` plus at least one rendered card.
 
 The app persists no handle, so the gate shows on every load and the folder is
 re-picked after each `reload()`: `bootPastLanding` is called after every

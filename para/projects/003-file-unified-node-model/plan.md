@@ -66,7 +66,7 @@ Read these before editing. Line numbers are against commit `9ab2c1d`.
 ### Vocabulary (from the reconciled `CONTEXT.md` — use these terms in names/comments)
 
 - **Note**: a path-identified canonical `notes/*.md` file, no mandatory
-  frontmatter or `orbit-id`; identity is the path. Kind (inbox/reference/AI) is
+  frontmatter or `balaur-id`; identity is the path. Kind (inbox/reference/AI) is
   an inert body marker. Placed by zero or more standard `file` nodes.
 - **Placement**: a standard JSON Canvas `file` node referencing a canonical
   file; its node ID identifies that spatial occurrence only.
@@ -83,7 +83,7 @@ Read these before editing. Line numbers are against commit `9ab2c1d`.
 
 Every content node is a standard `file` node referencing a canonical
 `.md`/`.html`/`.canvas`; the canvas is only space plus edges. Notes are
-path-identified `notes/*.md` with no mandatory `orbit-id`/frontmatter; kind is
+path-identified `notes/*.md` with no mandatory `balaur-id`/frontmatter; kind is
 an inert body marker; the indexer treats them as valid untyped Markdown. `text`
 remains valid/rendered/read-only for interop. Migration is a hard cut:
 regenerate the starter; no auto-rewrite of existing inline text nodes.
@@ -157,7 +157,7 @@ Authoring paths that currently produce `type:"text"` (all must become file-backe
 
 AI operator detection/parsing (must move from `node.text` to the resolved note body):
 
-- `AI_CARD_MARKER="<!-- orbit:ai-card -->"` — `app.js:676`.
+- `AI_CARD_MARKER="<!-- balaur:ai-card -->"` — `app.js:676`.
 - `isAICard(node)` — `app.js:677` (`node?.type==="text"&&node.text.includes(...)`).
 - `parseAICard(node)` / `buildAICardText(title,prompt)` — `app.js:678-682`.
 - `nodeTitle` / `nodeSummary` / `nodeAIContent` / `noteKind` / `textMeta` —
@@ -173,7 +173,7 @@ Rendering (`renderNodes`, `app.js:805-905`):
   link, subcanvas, widget, journal (`app.js:898-901`), and a generic `FILE`
   fallback (`app.js:902`). A `notes/*.md` file-node currently falls into the
   generic FILE fallback; add a note branch before it.
-- `markdownToHTML` (`app.js:735-760`) already skips `<!-- orbit:… -->` marker
+- `markdownToHTML` (`app.js:735-760`) already skips `<!-- balaur:… -->` marker
   lines, so a note body's inert marker never renders.
 
 Inspector (`renderInspector`, `app.js:1146-1228`; `applyInspectorField`, `app.js:1240-1262`):
@@ -216,7 +216,7 @@ Starter:
   starter references, then the journal. Seed the note files the same way.
 - First-run path: `loadWorkspace()` (`app.js:203-210`) returns
   `createGraphStarterWorkspace()` on a true fresh install. The legacy
-  `demoCanvas` (`app.js:24-42`, reached only via a pre-existing `orbit-canvas-v1`
+  `demoCanvas` (`app.js:24-42`, reached only via a pre-existing `balaur-canvas-v1`
   localStorage key through `freshWorkspace`/`loadDocument`) is a migration
   artifact — see Scope.
 
@@ -282,24 +282,24 @@ Starter:
 - `storage/life-indexer.js`, `storage/memory-index.js`, `storage/canvas-validate.js`
   — no changes. Note placements stay OUT of the placements index; the validator
   keeps accepting `text`. Extending `extractCanvasPlacements` to track note
-  placements is forbidden (it would force an `orbit-id` onto notes).
+  placements is forbidden (it would force an `balaur-id` onto notes).
 - The task / journal / habit / component-card / widget repositories and their
   phase suites — unchanged. Their contract tests must keep passing unmodified.
 - The daily canvas, the `year→month→day` hierarchy, on-demand canvas creation,
   and the draining-queue UX — project 002. This plan only provides the
   path-generic re-place (drain) primitive.
-- A typed `orbit-type: note` entity or an `orbit-id` for notes — YAGNI; path
+- A typed `balaur-type: note` entity or an `balaur-id` for notes — YAGNI; path
   identity suffices.
 - A note-rename UI and canvas file-node path rewriting on rename — not needed
   while notes are path-identified and never renamed.
 - Auto-migration of existing inline text nodes — hard cut; never mass-rewrite
   user canvases.
 - The legacy `demoCanvas` (`app.js:24-42`) and its `freshWorkspace`/`loadDocument`
-  path — reached only via a pre-existing `orbit-canvas-v1` localStorage key. The
+  path — reached only via a pre-existing `balaur-canvas-v1` localStorage key. The
   hard cut deliberately does not migrate existing data; on a true fresh install
   `createGraphStarterWorkspace()` is used instead. Its text nodes now render
   read-only (the interop path). Leave it untouched; see Maintenance notes.
-- `window.orbitCanvas` — do not add a note command unless a browser/integration
+- `window.balaurCanvas` — do not add a note command unless a browser/integration
   need appears; never expose raw vault/index internals (AGENTS.md §12).
 
 ## Git workflow
@@ -346,8 +346,8 @@ orphan diagnostic for notes.
 
 Title derivation: the first `# Heading` line in the body, else the path slug
 (`path.split("/").at(-1).replace(/\.md$/,"")`). Kind: `"inbox"` if the body includes
-`<!-- orbit:inbox -->`, `"reference"` if it includes `<!-- orbit:reference -->`,
-`"ai"` if it includes `<!-- orbit:ai-card -->`, else `null`. (Reuse the marker
+`<!-- balaur:inbox -->`, `"reference"` if it includes `<!-- balaur:reference -->`,
+`"ai"` if it includes `<!-- balaur:ai-card -->`, else `null`. (Reuse the marker
 strings; define them locally or import from a shared spot — do not duplicate the
 AI marker string drift-prone; a local const matching `app.js:676` is acceptable.)
 
@@ -375,7 +375,7 @@ Methods (all async except where noted):
 - `createNote({title, body="", kind=null, color, canvasId, geometry})`: derive the
   title from `body`'s first `# Heading` when `title` is omitted; build the file
   content as ordinary Markdown (prepend the kind marker line
-  `<!-- orbit:inbox -->` / `<!-- orbit:reference -->` / `<!-- orbit:ai-card -->`
+  `<!-- balaur:inbox -->` / `<!-- balaur:reference -->` / `<!-- balaur:ai-card -->`
   when `kind` is set, then the body); `const path = this.allocatePath(title)`;
   `await this.vault.write(path, content, {expectedHash:null})`;
   `await this.indexer.indexFile(path, content, {})`; `await this.catalog.reconcile([path])`;
@@ -631,8 +631,8 @@ matches (no code path mutates a text node's content).
   the exact path its `file` node references, via
   `noteRepository.createNote({path:STARTER_NOTES.x, body:"…", kind:…})` — exactly the
   way the task is seeded at `STARTER_TASK_PATH` today (wrap in try/catch so re-seeding
-  is idempotent). The inbox capture carries the `<!-- orbit:inbox -->` marker, the
-  reference pages carry `<!-- orbit:reference -->`. Because `createNote` allocates a
+  is idempotent). The inbox capture carries the `<!-- balaur:inbox -->` marker, the
+  reference pages carry `<!-- balaur:reference -->`. Because `createNote` allocates a
   path from the title, pass the explicit `path` (add an `input.path` override to
   `createNote` in Step 2 if not already present — the task repository supports
   `input.path` the same way, `task-repository.js:69`).
@@ -657,7 +657,7 @@ matches (no code path mutates a text node's content).
   to get the real new total, then update the "**172 tests**" sentence to the actual
   number and name the new note-repository suite as the addition.
 - `docs/life-data.md`: add the note contract (path-identified `notes/*.md`, no
-  mandatory frontmatter/`orbit-id`, kind is an inert body marker, indexer treats it
+  mandatory frontmatter/`balaur-id`, kind is an inert body marker, indexer treats it
   as valid untyped Markdown), add notes to the ownership list, and update the
   node-typing section (notes are file-backed; `text` is read-only interop).
 - `docs/architecture.md`: update the ownership model and the repository list to
@@ -750,7 +750,7 @@ Stop and report back (do not improvise) if:
 - Preserving the AI security boundary (operators propose allowlisted operations;
   output never executes host code; `ai/generated-operations.js` allowlist) would
   require changing that boundary. Report instead.
-- Implementing a step would force an `orbit-id` or mandatory frontmatter onto notes,
+- Implementing a step would force an `balaur-id` or mandatory frontmatter onto notes,
   or would require extending `extractCanvasPlacements` / the placements index to
   track note placements. That contradicts ADR-0004 and Testing Decision #2; report.
 - The code at the locations in "Current state" does not match the excerpts (the
@@ -775,9 +775,9 @@ Stop and report back (do not improvise) if:
 - **Note rename is intentionally absent.** Notes are path-identified and the app
   exposes no rename, so placements never go stale from an app-driven rename. If a
   rename UI is ever wanted, reuse the component-card `_rewritePlacementPaths` pattern
-  (`component-card-repository.js:108-124`); do not add an `orbit-id` for it.
+  (`component-card-repository.js:108-124`); do not add an `balaur-id` for it.
 - **The legacy `demoCanvas` (`app.js:24-42`)** is the one remaining text-producing
-  path. It is reached only via a pre-existing `orbit-canvas-v1` localStorage key
+  path. It is reached only via a pre-existing `balaur-canvas-v1` localStorage key
   (the pre-ADR migration fallback); a true fresh install uses
   `createGraphStarterWorkspace()`. The hard cut deliberately does not migrate it, and
   its text nodes now render read-only. If "no code path authors a text node" must be

@@ -8,7 +8,7 @@ The vault is the source of truth:
 
 ```text
 DirectoryVault (browser) / FsVault (Node) / MemoryVault (tests)
-  ├─ .orbit/workspace.json      hierarchy, cameras, canvas kind metadata
+  ├─ .balaur/workspace.json      hierarchy, cameras, canvas kind metadata
   ├─ canvases/*.canvas           independent JSON Canvas 1.0 documents
   ├─ tasks/*.md                  canonical task entities
   ├─ habits/*.md                 canonical habit definitions
@@ -22,7 +22,7 @@ DirectoryVault (browser) / FsVault (Node) / MemoryVault (tests)
 
 JSON Canvas owns portable spatial content: nodes, geometry, edges, groups, links, and standard file references. The workspace sidecar owns hierarchy, canvas paths, cameras, active canvas, and optional canvas `kind` metadata (`hub`/`project`); none of that application state is added to exported Canvas documents. Legacy `johnnyDecimal` fields are stripped on read (ADR-0003).
 
-Markdown frontmatter and body own life-management fields and declarative component-card fields that JSON Canvas does not define. An entity or component card's immutable `orbit-id` is its identity, a path is its locator, and a canvas node ID is a placement. One canonical file may have zero, one, or many standard `file`-node placements. Widget identity is its safe canonical `widgets/*.html` path.
+Markdown frontmatter and body own life-management fields and declarative component-card fields that JSON Canvas does not define. An entity or component card's immutable `balaur-id` is its identity, a path is its locator, and a canvas node ID is a placement. One canonical file may have zero, one, or many standard `file`-node placements. Widget identity is its safe canonical `widgets/*.html` path.
 
 `LifeIndexer` projects life entities into `MemoryIndex`, and `LifeQuery` is the app-facing read facade for Today, task status, habits, journals, and event ranges. ComponentCardCatalog, `WidgetCatalog`, and `NoteCatalog` preload card/widget/note files and placement diagnostics for synchronous rendering; they do not become sources of truth. Every catalog and index is rebuilt from canonical vault files. Repositories write canonical files before reconciling projections.
 
@@ -38,7 +38,7 @@ A persistent index, including SQLite, is a deferred future optimization rather t
 4. `DirectoryVault` opens the picked folder; `WorkspaceStore` loads or migrates (create if empty, Adopt if files but no sidecar, open if sidecar present);
 5. construct `MemoryIndex`, `LifeIndexer`, `LifeQuery`, canonical repositories, and the component-card/widget/note catalogs;
 6. rebuild the in-memory query and rendering projections from vault files;
-7. render the active workspace from the loaded working set and expose `window.orbitVaultReady`, `window.orbitVaultStore`, and the stable `window.orbitCanvas` integration surface; and
+7. render the active workspace from the loaded working set and expose `window.balaurVaultReady`, `window.balaurVaultStore`, and the stable `window.balaurCanvas` integration surface; and
 8. progressively register the Service Worker.
 
 No handle is persisted; the folder is re-picked every launch. localStorage is limited to theme and AI settings and is not a source of truth or persistence mirror. A vault failure is reported as unavailable canonical files. Browser checks exercise vault-first render via the picker stub, the headless OPFS contract suite, controlled reload, canonical card/widget persistence, and whole-space restore. Malformed-file repair affordances remain browser-pending.
@@ -49,7 +49,7 @@ No handle is persisted; the folder is re-picked every launch. localStorage is li
 
 `app.js` owns the canvas interaction model, rendering, navigation, AI command flow, and UI state. `storage/canvas-validate.js` is the strict shared JSON Canvas validator. `storage/workspace-vault.js` persists a metadata-only sidecar plus one independently valid `.canvas` file per canvas. Invalid or missing canvas files become read-only repair placeholders and are never silently replaced with empty documents.
 
-A single `.canvas` export is standards-compliant but can contain file references whose target `.md` files are not included. `storage/workspace-backup.js` provides the complete version-2 `.orbit.json` file bundle: sidecar metadata plus raw vault files. Import validates paths, canvases, references, entity parsing, duplicate IDs, and diagnostics in staging before activation.
+A single `.canvas` export is standards-compliant but can contain file references whose target `.md` files are not included. `storage/workspace-backup.js` provides the complete version-2 `.balaur.json` file bundle: sidecar metadata plus raw vault files. Import validates paths, canvases, references, entity parsing, duplicate IDs, and diagnostics in staging before activation.
 
 The main canvas renderer intentionally remains imperative. `app.js` owns geometry, camera transforms, selection, drag/resize/connect state, SVG edges, pointer shielding over live iframes, and the synchronous hot path. A measured `<balaur-canvas-node>` prototype was rejected because 100-node rerender, pan, and zoom p95 gates regressed. Extraction stops at bounded contents such as component cards and widget frames; there is no canvas-node Custom Element.
 
@@ -61,9 +61,9 @@ The exception is the security runtime boundary: `<balaur-widget-frame>` owns onl
 
 ### Life files and projections
 
-`storage/frontmatter.js` performs constrained, preservation-first parsing and patching. It changes only Orbit-owned fields and preserves unknown keys, comments, ordering, BOM, line endings, and body content. `storage/entity-codec.js` defines the task, habit, habit-log, journal, and calendar-event contracts and validates dates, instants, enums, weekdays, and IANA timezones.
+`storage/frontmatter.js` performs constrained, preservation-first parsing and patching. It changes only Balaur-owned fields and preserves unknown keys, comments, ordering, BOM, line endings, and body content. `storage/entity-codec.js` defines the task, habit, habit-log, journal, and calendar-event contracts and validates dates, instants, enums, weekdays, and IANA timezones.
 
-`FileTaskRepository`, `FileHabitRepository`, `FileJournalRepository`, `FileEventRepository`, and `FileNoteRepository` are asynchronous canonical-file repositories. `FileNoteRepository` owns path-identified `notes/*.md` files (no mandatory `orbit-id`), their standard `file`-node placements, and the path-generic drain primitive; `NoteCatalog` is its disposable synchronous body/placement projection (ADR-0004). `storage/life-indexer.js` parses all supported vault files, projects typed rows and placements into `MemoryIndex`, detects malformed files and duplicate identities, and supports cold rebuild and warm revision reconciliation. `storage/index-integrity.js` audits the disposable projection against the files and can purge and rebuild it.
+`FileTaskRepository`, `FileHabitRepository`, `FileJournalRepository`, `FileEventRepository`, and `FileNoteRepository` are asynchronous canonical-file repositories. `FileNoteRepository` owns path-identified `notes/*.md` files (no mandatory `balaur-id`), their standard `file`-node placements, and the path-generic drain primitive; `NoteCatalog` is its disposable synchronous body/placement projection (ADR-0004). `storage/life-indexer.js` parses all supported vault files, projects typed rows and placements into `MemoryIndex`, detects malformed files and duplicate identities, and supports cold rebuild and warm revision reconciliation. `storage/index-integrity.js` audits the disposable projection against the files and can purge and rebuild it.
 
 ### Component cards and widgets
 
@@ -79,9 +79,9 @@ The exception is the security runtime boundary: `<balaur-widget-frame>` owns onl
 
 Every canvas level is an independent JSON Canvas 1.0 document with only standard node types (`text`, `file`, `link`, `group`) and standard edge fields. A parent points to a child through a standard file node such as `canvases/inbox.canvas`. Sidecar metadata supplies the parent, portal node, title, camera, and optional `kind`. Navigation can enter and leave nested canvases without flattening their documents.
 
-The graph model (ADR-0003) replaces the Johnny Decimal subsystem. Home is the root canvas; four hub canvases (Inbox, Projects, Wiki, Archive) hang off it. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The AI memory layer traverses from Home via labelled edges + type markers + one-line summaries, bounded to depth 2 and 60 nodes.
+The graph model (ADR-0003) replaces the Johnny Decimal subsystem. Home is the root canvas; four hub canvases (Inbox, Projects, Wiki, Archive) hang off it. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- balaur:inbox -->`, `<!-- balaur:reference -->`), and entity frontmatter `balaur-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields; they are never enforced as an enum. The AI memory layer traverses from Home via labelled edges + type markers + one-line summaries, bounded to depth 2 and 60 nodes.
 
-Portals are ordinary file nodes. Legacy `<!-- orbit:jd -->` comments from pre-graph vaults remain harmless inert text.
+Portals are ordinary file nodes. Legacy `<!-- balaur:jd -->` comments from pre-graph vaults remain harmless inert text.
 
 ## AI and widgets
 
@@ -95,7 +95,7 @@ These controls are capability reduction and lifecycle containment, not hard CPU 
 
 ## Offline shell
 
-The Service Worker caches only deployable same-origin shell resources under `orbit-shell-v13`: local element/storage/AI/widget modules, styles, fonts, icons, the manifest, and the sample widget. It does not cache vault files (the user-picked folder owns them), provider calls, generated exports, or external resources. Network-first requests fall back to the shell cache when offline. See [offline.md](offline.md).
+The Service Worker caches only deployable same-origin shell resources under `balaur-shell-v13`: local element/storage/AI/widget modules, styles, fonts, icons, the manifest, and the sample widget. It does not cache vault files (the user-picked folder owns them), provider calls, generated exports, or external resources. Network-first requests fall back to the shell cache when offline. See [offline.md](offline.md).
 
 ## Verification boundary
 

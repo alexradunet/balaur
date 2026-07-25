@@ -1,7 +1,7 @@
 // Disposable synchronous note content projection (project 003, ADR-0004).
 //
 // A Note is a path-identified canonical notes/*.md file with no mandatory
-// frontmatter and no orbit-id; its identity is its path and its kind
+// frontmatter and no balaur-id; its identity is its path and its kind
 // (inbox/reference/ai) is an inert body marker. This catalog preloads note
 // bodies and their canvas placements so render and AI-card detection read
 // synchronously and never do an async vault read per card (AGENTS.md §5). It is
@@ -19,9 +19,9 @@ export function isNotePath(path) {
 // markers). Single source of truth shared with note-repository.js so the marker
 // strings cannot drift between the projection and the writer.
 export const NOTE_KIND_MARKERS = Object.freeze({
-  inbox: "<!-- orbit:inbox -->",
-  reference: "<!-- orbit:reference -->",
-  ai: "<!-- orbit:ai-card -->",
+  inbox: "<!-- balaur:inbox -->",
+  reference: "<!-- balaur:reference -->",
+  ai: "<!-- balaur:ai-card -->",
 });
 
 function diagnostic(path, code, message, details = null) {

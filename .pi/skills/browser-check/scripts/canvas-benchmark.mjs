@@ -34,14 +34,14 @@ async function settle(session) {
 }
 
 async function replaceDocument(session, nodes) {
-  const current = await session.evaluate("window.orbitCanvas.getDocument().nodes.map(node => node.id)");
+  const current = await session.evaluate("window.balaurCanvas.getDocument().nodes.map(node => node.id)");
   for (let index = 0; index < current.length; index += 45) {
     const ids = current.slice(index, index + 45);
-    await session.evaluate(`window.orbitCanvas.applyOperations(${JSON.stringify(ids.map(id => ({ type: "node.remove", id })))})`);
+    await session.evaluate(`window.balaurCanvas.applyOperations(${JSON.stringify(ids.map(id => ({ type: "node.remove", id })))})`);
   }
   for (let index = 0; index < nodes.length; index += 45) {
     const batch = nodes.slice(index, index + 45).map(node => ({ type: "node.add", node }));
-    await session.evaluate(`window.orbitCanvas.applyOperations(${JSON.stringify(batch)})`);
+    await session.evaluate(`window.balaurCanvas.applyOperations(${JSON.stringify(batch)})`);
   }
   await settle(session);
 }
@@ -50,7 +50,7 @@ function fixtureNodes() {
   return [
     { id: "benchmark-a", type: "text", x: 0, y: 0, width: 300, height: 180, color: "1", text: "# Benchmark A\nPointer and focus probe." },
     { id: "benchmark-b", type: "text", x: 420, y: 0, width: 300, height: 180, color: "2", text: "# Benchmark B\nConnection target." },
-    { id: "benchmark-widget", type: "file", x: 840, y: 0, width: 480, height: 290, color: "5", file: "widgets/focus-orbit.html" },
+    { id: "benchmark-widget", type: "file", x: 840, y: 0, width: 480, height: 290, color: "5", file: "widgets/focus-balaur.html" },
   ];
 }
 
@@ -76,7 +76,7 @@ async function probeBehavior(session) {
     const node = id => document.querySelector('.canvas-node[data-id="' + id + '"]');
     const point = element => { const rect = element.getBoundingClientRect(); return { x: rect.left + rect.width / 2, y: rect.top + Math.min(rect.height / 2, 60) }; };
     const pointer = (target, type, at, pointerId = 71) => target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, buttons: type === "pointerup" ? 0 : 1, pointerId, clientX: at.x, clientY: at.y }));
-    const documentCount = () => window.orbitCanvas.getDocument().nodes.length;
+    const documentCount = () => window.balaurCanvas.getDocument().nodes.length;
     const details = {};
 
     let first = node("benchmark-a");
@@ -98,13 +98,13 @@ async function probeBehavior(session) {
     details.noteTool = documentCount() === beforeNoteTool;
     document.querySelector('.tool[data-tool="select"]').click();
 
-    const dragBefore = window.orbitCanvas.getDocument().nodes.find(item => item.id === "benchmark-a");
+    const dragBefore = window.balaurCanvas.getDocument().nodes.find(item => item.id === "benchmark-a");
     first = node("benchmark-a");
     at = point(first);
     pointer(first.querySelector('.node-content') || first, "pointerdown", at, 73);
     pointer(window, "pointermove", { x: at.x + 32, y: at.y + 24 }, 73);
     pointer(window, "pointerup", { x: at.x + 32, y: at.y + 24 }, 73);
-    const dragAfter = window.orbitCanvas.getDocument().nodes.find(item => item.id === "benchmark-a");
+    const dragAfter = window.balaurCanvas.getDocument().nodes.find(item => item.id === "benchmark-a");
     details.drag = dragAfter.x !== dragBefore.x && dragAfter.y !== dragBefore.y && node("benchmark-a").style.left === dragAfter.x + "px";
 
     const resizeBefore = { width: dragAfter.width, height: dragAfter.height };
@@ -114,16 +114,16 @@ async function probeBehavior(session) {
     pointer(handle, "pointerdown", handlePoint, 74);
     pointer(window, "pointermove", { x: handlePoint.x + 35, y: handlePoint.y + 28 }, 74);
     pointer(window, "pointerup", { x: handlePoint.x + 35, y: handlePoint.y + 28 }, 74);
-    const resizeAfter = window.orbitCanvas.getDocument().nodes.find(item => item.id === "benchmark-a");
+    const resizeAfter = window.balaurCanvas.getDocument().nodes.find(item => item.id === "benchmark-a");
     details.resize = resizeAfter.width > resizeBefore.width && resizeAfter.height > resizeBefore.height;
 
     document.querySelector('.tool[data-tool="connect"]').click();
-    const edgesBefore = window.orbitCanvas.getDocument().edges.length;
+    const edgesBefore = window.balaurCanvas.getDocument().edges.length;
     first = node("benchmark-a");
     pointer(first.querySelector('.node-content') || first, "pointerdown", point(first), 75);
     const second = node("benchmark-b");
     pointer(second.querySelector('.node-content') || second, "pointerdown", point(second), 76);
-    details.connection = window.orbitCanvas.getDocument().edges.length === edgesBefore + 1;
+    details.connection = window.balaurCanvas.getDocument().edges.length === edgesBefore + 1;
     document.querySelector('.tool[data-tool="select"]').click();
 
     const inspector = document.getElementById('inspector');
@@ -197,7 +197,7 @@ async function probeBehavior(session) {
       }
       if (selectPoint) break;
     }
-    const model = window.orbitCanvas.getDocument().nodes.find(node => node.id === "benchmark-widget");
+    const model = window.balaurCanvas.getDocument().nodes.find(node => node.id === "benchmark-widget");
     return {
       header: selectPoint,
       viewport: { x: frameRect.left + frameRect.width / 2, y: frameRect.top + frameRect.height / 2 },
@@ -229,7 +229,7 @@ async function probeBehavior(session) {
     );
     const dragProbe = await session.evaluate(`(() => {
       const widget = document.querySelector('.canvas-node[data-id="benchmark-widget"]');
-      const model = window.orbitCanvas.getDocument().nodes.find(node => node.id === "benchmark-widget");
+      const model = window.balaurCanvas.getDocument().nodes.find(node => node.id === "benchmark-widget");
       return {
         selected: widget?.classList.contains("selected") === true,
         moved: model.x !== ${widgetPoints.before.x} || model.y !== ${widgetPoints.before.y},
@@ -285,7 +285,7 @@ async function measureHotPaths(session) {
     document.querySelector('.tool[data-tool="select"]').click();
 
     const zoom = elapsed(() => canvas.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -80, clientX: canvasRect.left + canvasRect.width / 2, clientY: canvasRect.top + canvasRect.height / 2 })));
-    return { rerender100: rerender, select, drag, pan, zoom, domNodes: document.querySelectorAll('.canvas-node').length, documentNodes: window.orbitCanvas.getDocument().nodes.length };
+    return { rerender100: rerender, select, drag, pan, zoom, domNodes: document.querySelectorAll('.canvas-node').length, documentNodes: window.balaurCanvas.getDocument().nodes.length };
   })()`);
 }
 
@@ -300,7 +300,7 @@ async function runOnce(url, run, functionalOnly) {
       new MutationObserver(capture).observe(document, { childList: true, subtree: true });
     })();` });
     await session.navigate();
-    await session.waitFor("window.orbitCanvas && window.__canvasInitialReadyAt != null && document.querySelectorAll('.canvas-node').length === window.orbitCanvas.getDocument().nodes.length", 20000);
+    await session.waitFor("window.balaurCanvas && window.__canvasInitialReadyAt != null && document.querySelectorAll('.canvas-node').length === window.balaurCanvas.getDocument().nodes.length", 20000);
     await settle(session);
     const initialRender = await session.evaluate("window.__canvasInitialReadyAt");
     const userAgent = await session.evaluate("navigator.userAgent");

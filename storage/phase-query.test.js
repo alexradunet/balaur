@@ -26,7 +26,7 @@ test("LifeQuery computes latest daily habit state and streak", () => {
 
 test("LifeQuery compares event ranges by instant, not offset text", () => {
   const index = new MemoryIndex();
-  index.insertEntityProjection("calendar-event", { id: "offset", sourcePath: "events/o.md", sourceHash: "", title: "Offset", startsAt: "2026-07-21T01:00:00+03:00", endsAt: null, localDate: "2026-07-21", timezone: "Europe/Bucharest", allDay: 0, source: "orbit", createdAt: "", updatedAt: "" });
+  index.insertEntityProjection("calendar-event", { id: "offset", sourcePath: "events/o.md", sourceHash: "", title: "Offset", startsAt: "2026-07-21T01:00:00+03:00", endsAt: null, localDate: "2026-07-21", timezone: "Europe/Bucharest", allDay: 0, source: "balaur", createdAt: "", updatedAt: "" });
   const query = new LifeQuery(index);
   assert.equal(query.eventsInRange("2026-07-20T21:30:00Z", "2026-07-20T22:30:00Z").length, 1);
   assert.throws(() => query.eventsInRange("not-an-instant", null), /Invalid from instant/);
@@ -34,9 +34,9 @@ test("LifeQuery compares event ranges by instant, not offset text", () => {
 
 test("LifeQuery returns journal dates and an exclusive event range", () => {
   const index = new MemoryIndex();
-  index.insertEntityProjection("journal", { localDate: "2026-07-21", sourcePath: "journal/x.md", sourceHash: "", orbitId: "j", createdAt: "", updatedAt: "" });
-  index.insertEntityProjection("calendar-event", { id: "e", sourcePath: "events/e.md", sourceHash: "", title: "Event", startsAt: "2026-07-21T10:00:00Z", endsAt: null, localDate: "2026-07-21", timezone: "UTC", allDay: 0, source: "orbit", createdAt: "", updatedAt: "" });
+  index.insertEntityProjection("journal", { localDate: "2026-07-21", sourcePath: "journal/x.md", sourceHash: "", balaurId: "j", createdAt: "", updatedAt: "" });
+  index.insertEntityProjection("calendar-event", { id: "e", sourcePath: "events/e.md", sourceHash: "", title: "Event", startsAt: "2026-07-21T10:00:00Z", endsAt: null, localDate: "2026-07-21", timezone: "UTC", allDay: 0, source: "balaur", createdAt: "", updatedAt: "" });
   const query = new LifeQuery(index);
-  assert.equal(query.journalForDate("2026-07-21").orbitId, "j");
+  assert.equal(query.journalForDate("2026-07-21").balaurId, "j");
   assert.equal(query.eventsInRange("2026-07-21T00:00:00Z", "2026-07-22T00:00:00Z").length, 1);
 });

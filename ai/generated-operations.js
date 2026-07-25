@@ -167,7 +167,7 @@ function validateCreate(operation, context) {
   const input = plainObject(operation.card, "Component card");
   assertKnownKeys(input, CARD_KEYS, "card");
   const card = {
-    ...(Object.hasOwn(input, "id") ? { id: validateId(input.id, "component-card orbit-id") } : {}),
+    ...(Object.hasOwn(input, "id") ? { id: validateId(input.id, "component-card balaur-id") } : {}),
     ...(Object.hasOwn(input, "path") ? { path: validateCardPath(input.path) } : {}),
     title: input.title,
     recipe: input.recipe,
@@ -175,7 +175,7 @@ function validateCreate(operation, context) {
     body: input.body ?? "",
   };
   if (card.id && ((context.cardIds && has(context.cardIds, card.id)) || cardFromContext(context.cards, card.id))) {
-    throw new TypeError(`Component-card orbit-id already exists: ${card.id}`);
+    throw new TypeError(`Component-card balaur-id already exists: ${card.id}`);
   }
   serializeComponentCard(cardCandidate(card, "generated-card"));
   if (card.id && !card.path) card.path = componentCardPath(card.title, card.id);
@@ -221,7 +221,7 @@ function validateWidgetPlacement(operation, context) {
 
 function validateUpdate(operation, context) {
   assertKnownKeys(operation, new Set(["type", "id", "patch", "canvasId", "placement"]), "operation");
-  const id = validateId(operation.id, "component-card orbit-id");
+  const id = validateId(operation.id, "component-card balaur-id");
   const current = cardFromContext(context.cards, id);
   if (!current) throw new TypeError(`Unknown component card: ${id}`);
   const input = plainObject(operation.patch ?? {}, "Component-card patch");

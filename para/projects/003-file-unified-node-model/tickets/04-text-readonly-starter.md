@@ -46,8 +46,8 @@ In `seedGraphStarterEntities()` (`app.js:100-118`), seed each starter note file 
 exact path its `file` node references, via `noteRepository.createNote({path:STARTER_NOTES.x,
 body:"…", kind:…})` — exactly the way the task is seeded at `STARTER_TASK_PATH` today,
 using the explicit `path` override added in Ticket 01, wrapped in try/catch so
-re-seeding is idempotent. The inbox capture carries the `<!-- orbit:inbox -->` marker;
-the reference pages carry `<!-- orbit:reference -->`. There is no compatibility path and
+re-seeding is idempotent. The inbox capture carries the `<!-- balaur:inbox -->` marker;
+the reference pages carry `<!-- balaur:reference -->`. There is no compatibility path and
 no migration of the old inline starter (hard cut). Leave the legacy `demoCanvas`
 (`app.js:24-42`) untouched — its text nodes now render read-only via the interop path.
 
@@ -56,7 +56,7 @@ no migration of the old inline starter (hard cut). Leave the legacy `demoCanvas`
 - [ ] The inspector no longer offers a Markdown editing textarea for a `text` node; a selected foreign `text` node shows a read-only note instead, and its content still renders on the canvas (the `text` render branch stays).
 - [ ] `grep -n 'item.text=' app.js` returns NO matches (no code path mutates a text node's content).
 - [ ] `createGraphStarterWorkspace` builds Home + four hub canvases whose guide/example cards are standard `file` nodes referencing stable `notes/*.md` path consts (defined beside `STARTER_TASK_PATH`); every node `id`, geometry, and `color` (including the dormant `#6c757d` archive color) and every labelled edge (`e-inbox-filed`, `e-cb-partof`, `e-wiki-relates`) is preserved; the task (`STARTER_TASK_PATH`) and journal (`journalPath`) nodes are unchanged.
-- [ ] `seedGraphStarterEntities` seeds each starter note file at the exact path its `file` node references via `noteRepository.createNote({path, body, kind})`, idempotently (try/catch); the inbox capture carries `<!-- orbit:inbox -->` and the reference pages carry `<!-- orbit:reference -->`.
+- [ ] `seedGraphStarterEntities` seeds each starter note file at the exact path its `file` node references via `noteRepository.createNote({path, body, kind})`, idempotently (try/catch); the inbox capture carries `<!-- balaur:inbox -->` and the reference pages carry `<!-- balaur:reference -->`.
 - [ ] A fresh install (true first run via `createGraphStarterWorkspace`) builds a fully file-backed space; no interactive authoring path produces a `text` node (the only remaining `type:"text"` matches are the legacy `demoCanvas` and the read-only interop render path).
 - [ ] The legacy `demoCanvas` (`app.js:24-42`) is untouched.
 - [ ] `node --check app.js` exits 0.

@@ -1,6 +1,6 @@
 // Contract suite for the file-canonical note repository and note catalog
 // (project 003, ADR-0004). A Note is a path-identified notes/*.md file with no
-// mandatory frontmatter and no orbit-id; its identity is its path and its kind
+// mandatory frontmatter and no balaur-id; its identity is its path and its kind
 // (inbox/reference/ai) is an inert body marker. Run: node --test storage/note-repository.test.js
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -57,7 +57,7 @@ test("createNote prepends the inert kind marker for an inbox note", async () => 
   const { repo, vault } = setup();
   const { path, note } = await repo.createNote({ title: "Trip idea", body: "# Trip idea\n\nAutumn city break.", kind: "inbox" });
   const stored = await vault.read(path);
-  assert.ok(stored.startsWith("<!-- orbit:inbox -->\n"), "marker is the first body line");
+  assert.ok(stored.startsWith("<!-- balaur:inbox -->\n"), "marker is the first body line");
   assert.match(stored, /# Trip idea/);
   assert.match(stored, /Autumn city break\./);
   assert.equal(note.kind, "inbox");
@@ -77,7 +77,7 @@ test("createNote with a canvasId adds a standard file-node placement", async () 
   assert.equal(placement.canvasId, "canvas-root");
 });
 
-test("a note placement uses only standard JSON Canvas file-node fields (no orbit-id)", async () => {
+test("a note placement uses only standard JSON Canvas file-node fields (no balaur-id)", async () => {
   const { repo, vault } = setup();
   await seedCanvases(vault);
   const { path } = await repo.createNote({ title: "Standard", body: "Body.", canvasId: "canvas-root" });
@@ -264,7 +264,7 @@ test("REGRESSION PIN: note placements stay out of the disposable placements inde
   assert.ok(isCanvas(doc));
 
   // ...but the disposable placements index does NOT track it: notes have no
-  // orbit-id and notes/ is not an entity directory, so extractCanvasPlacements
+  // balaur-id and notes/ is not an entity directory, so extractCanvasPlacements
   // skips them.
   assert.equal(index.allPlacements().filter((p) => p.sourcePath === path).length, 0);
   assert.equal(index.placementsForEntity(path).length, 0);
@@ -293,9 +293,9 @@ test("catalog derives the title from the first heading, falling back to the slug
 
 test("catalog reads kind from inert body markers", async () => {
   const vault = new MemoryVault();
-  await vault.write("notes/inbox.md", "<!-- orbit:inbox -->\n# Inbox");
-  await vault.write("notes/reference.md", "<!-- orbit:reference -->\n# Ref");
-  await vault.write("notes/ai.md", "<!-- orbit:ai-card -->\n# AI");
+  await vault.write("notes/inbox.md", "<!-- balaur:inbox -->\n# Inbox");
+  await vault.write("notes/reference.md", "<!-- balaur:reference -->\n# Ref");
+  await vault.write("notes/ai.md", "<!-- balaur:ai-card -->\n# AI");
   await vault.write("notes/plain.md", "# Plain");
   const catalog = new NoteCatalog({ vault });
   await catalog.rebuild();

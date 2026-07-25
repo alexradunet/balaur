@@ -483,7 +483,7 @@ function hasProtocolReducedMotionEvidence(code, strings) {
     });
   }
   for (let index = 0; index < strings.length; index += 1) {
-    if (strings[index] !== "orbit.widget.preferences.v1") continue;
+    if (strings[index] !== "balaur.widget.preferences.v1") continue;
     const token = `__STRING_${index}__`;
     const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const ifCondition = /\bif\s*\(([^)]{0,600})\)/g;

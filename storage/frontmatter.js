@@ -1,7 +1,7 @@
 // Preservation-first frontmatter codec (Phase 1, plan §8).
 //
-// Orbit generates YAML-compatible frontmatter but parses only known, flat,
-// Orbit-owned keys. Unknown keys, comments, ordering, indentation, line endings,
+// Balaur generates YAML-compatible frontmatter but parses only known, flat,
+// Balaur-owned keys. Unknown keys, comments, ordering, indentation, line endings,
 // BOM, and the Markdown body are preserved byte-for-byte. Patching replaces only
 // the exact known property lines being changed (or inserts one missing line
 // before the closing delimiter). When a block cannot be patched safely, the
@@ -268,7 +268,7 @@ export function collectKnownFields(fmLines, spec) {
   return fields;
 }
 
-// Read and parse the known Orbit fields from a full document.
+// Read and parse the known Balaur fields from a full document.
 export function readFields(text, spec) {
   const fm = splitFrontmatter(text);
   if (!fm) throw new ParseError("Missing or unterminated frontmatter", { code: "FM_NO_DELIMITER" });
@@ -289,7 +289,7 @@ export function patchFields(text, patch, spec, { readSpec = spec } = {}) {
   const next = fmLines.slice();
   for (const [key, value] of Object.entries(patch)) {
     if (!(key in spec.fields)) {
-      throw new ParseError(`Refusing to write unknown orbit field: ${key}`, { code: "FM_UNKNOWN_FIELD" });
+      throw new ParseError(`Refusing to write unknown balaur field: ${key}`, { code: "FM_UNKNOWN_FIELD" });
     }
     const kind = spec.fields[key];
     const line = `${key}: ${serializeValue(value, kind)}`;
@@ -321,7 +321,7 @@ export function replaceBody(text, body) {
 export function serializeFrontmatter(fields, spec, order, term = "\n") {
   const lines = [`---${term}`];
   for (const key of order) {
-    if (!(key in spec.fields)) throw new ParseError(`Unknown orbit field in order: ${key}`, { code: "FM_UNKNOWN_FIELD" });
+    if (!(key in spec.fields)) throw new ParseError(`Unknown balaur field in order: ${key}`, { code: "FM_UNKNOWN_FIELD" });
     lines.push(`${key}: ${serializeValue(fields[key], spec.fields[key])}${term}`);
   }
   lines.push(`---${term}`);

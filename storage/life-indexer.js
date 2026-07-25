@@ -14,7 +14,7 @@ import { splitFrontmatter, collectKnownFields } from "./frontmatter.js";
 import { ENTITY_CODECS, parseHabitEntries } from "./entity-codec.js";
 import { isCanvas } from "./canvas-validate.js";
 
-// Entity directory -> orbit-type (canonical vault layout).
+// Entity directory -> balaur-type (canonical vault layout).
 const ENTITY_DIR_TO_TYPE = {
   "tasks": "task",
   "habits": "habit",
@@ -33,17 +33,17 @@ function stripInternal(record) {
   return rest;
 }
 
-// Classify and parse a Markdown file: an Orbit entity, an untyped note, or an
-// error. Untyped notes are valid (entityType null); only malformed Orbit-marked
+// Classify and parse a Markdown file: an Balaur entity, an untyped note, or an
+// error. Untyped notes are valid (entityType null); only malformed Balaur-marked
 // files are errors (plan §14.3).
 function parseMdEntity(content) {
   const fm = splitFrontmatter(content);
   if (!fm) return { kind: "untyped", parsed: null };
-  const probe = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), { fields: { "orbit-type": "enum" } });
-  const type = probe["orbit-type"];
+  const probe = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), { fields: { "balaur-type": "enum" } });
+  const type = probe["balaur-type"];
   if (!type) return { kind: "untyped", parsed: null };
   if (!ENTITY_CODECS[type]) {
-    const err = new Error(`Unknown orbit-type: ${type}`);
+    const err = new Error(`Unknown balaur-type: ${type}`);
     err.code = "ENTITY_UNKNOWN_TYPE";
     throw err;
   }
@@ -88,20 +88,20 @@ export async function buildSourceRecord(path, content, meta = {}) {
     try {
       const fm = splitFrontmatter(content);
       if (fm) identity = collectKnownFields(fm.lines.slice(fm.openIdx + 1, fm.closeIdx), {
-        fields: { "orbit-type": "enum", "orbit-id": "string" },
+        fields: { "balaur-type": "enum", "balaur-id": "string" },
       });
     } catch (_) { /* the full parser below records the useful diagnostic */ }
     try {
       const { kind, parsed } = parseMdEntity(content);
       if (kind === "untyped") return { record, parsed: null };
       record.entityType = parsed.type;
-      record.entityId = parsed.orbitId || identity["orbit-id"] || null;
+      record.entityId = parsed.balaurId || identity["balaur-id"] || null;
       return { record, parsed };
     } catch (err) {
       record.parseStatus = "error";
       record.parseError = `${err.code || "PARSE"}: ${err.message}`;
-      record.entityType = identity["orbit-type"] || entityTypeFromPath(path);
-      record.entityId = identity["orbit-id"] || null;
+      record.entityType = identity["balaur-type"] || entityTypeFromPath(path);
+      record.entityId = identity["balaur-id"] || null;
       return { record, parsed: null };
     }
   }
@@ -116,7 +116,7 @@ export function buildEntityProjection(record, parsed) {
   switch (record.entityType) {
     case "task":
       return { kind: "entity", entityType: "task", row: {
-        id: parsed.orbitId, sourcePath: path, sourceHash: hash, title: parsed.title,
+        id: parsed.balaurId, sourcePath: path, sourceHash: hash, title: parsed.title,
         status: parsed.status, priority: parsed.priority, scheduledOn: parsed.scheduledOn,
         dueOn: parsed.dueOn, completedAt: parsed.completedAt, estimateMinutes: parsed.estimateMinutes,
         recurrenceJson: parsed.recurrence == null ? null : JSON.stringify(parsed.recurrence),
@@ -124,19 +124,19 @@ export function buildEntityProjection(record, parsed) {
       } };
     case "habit":
       return { kind: "entity", entityType: "habit", row: {
-        id: parsed.orbitId, sourcePath: path, sourceHash: hash, title: parsed.title,
+        id: parsed.balaurId, sourcePath: path, sourceHash: hash, title: parsed.title,
         frequency: parsed.frequency, weekdaysJson: JSON.stringify(parsed.weekdays || []),
         target: parsed.target, unit: parsed.unit, archivedAt: parsed.archivedAt,
         createdAt: parsed.createdAt, updatedAt: parsed.updatedAt,
       } };
     case "journal":
       return { kind: "entity", entityType: "journal", row: {
-        localDate: parsed.localDate, sourcePath: path, sourceHash: hash, orbitId: parsed.orbitId,
+        localDate: parsed.localDate, sourcePath: path, sourceHash: hash, balaurId: parsed.balaurId,
         createdAt: parsed.createdAt, updatedAt: parsed.updatedAt,
       } };
     case "calendar-event":
       return { kind: "entity", entityType: "calendar-event", row: {
-        id: parsed.orbitId, sourcePath: path, sourceHash: hash, title: parsed.title,
+        id: parsed.balaurId, sourcePath: path, sourceHash: hash, title: parsed.title,
         startsAt: parsed.startsAt, endsAt: parsed.endsAt, localDate: parsed.localDate,
         timezone: parsed.timezone, allDay: parsed.allDay ? 1 : 0, source: parsed.source,
         createdAt: parsed.createdAt, updatedAt: parsed.updatedAt,
@@ -163,13 +163,13 @@ export function extractCanvasPlacements(canvasId, doc, pathToEntity) {
     if (!entityTypeFromPath(node.file)) continue; // widget/subcanvas/other, not an entity
     const ent = pathToEntity.get(node.file);
     if (!ent) { missing.push({ canvasId, nodeId: node.id, path: node.file }); continue; }
-    if (!ent.entityId) continue; // entity file exists but has no orbit-id (e.g. habit-log)
+    if (!ent.entityId) continue; // entity file exists but has no balaur-id (e.g. habit-log)
     placements.push({ entityId: ent.entityId, entityType: ent.entityType, sourcePath: node.file, canvasId, nodeId: node.id });
   }
   return { placements, missing };
 }
 
-// Detect one orbit-id claimed by more than one file (plan §7.1, §12.1.5).
+// Detect one balaur-id claimed by more than one file (plan §7.1, §12.1.5).
 export function detectDuplicateIds(records) {
   const byId = new Map();
   for (const r of records) {
@@ -183,8 +183,8 @@ export function detectDuplicateIds(records) {
       for (const p of paths) {
         diagnostics.push({
           sourcePath: p, errorCode: "DUPLICATE_ID",
-          message: `Duplicate orbit-id "${id}" across ${paths.length} files`,
-          detailsJson: JSON.stringify({ orbitId: id, paths }),
+          message: `Duplicate balaur-id "${id}" across ${paths.length} files`,
+          detailsJson: JSON.stringify({ balaurId: id, paths }),
         });
       }
     }
@@ -361,7 +361,7 @@ export class LifeIndexer {
     return {
       // The sidecar is workspace metadata, not a source file shown in the
       // life-data count. It may still be retained in the disposable index.
-      sourceFiles: this.index.allSourceFiles().filter((record) => record.path !== ".orbit/workspace.json").length,
+      sourceFiles: this.index.allSourceFiles().filter((record) => record.path !== ".balaur/workspace.json").length,
       tasks: this.index.allTasks().length,
       habits: this.index.allHabits().length,
       placements: this.index.allPlacements().length,

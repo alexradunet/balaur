@@ -25,7 +25,7 @@ A small, standalone proof of concept for a local-first life-management app whose
 - Reactive AI operator cards: connected nodes become inputs and generated notes refresh when inputs change
 - Library filters
 - Folder-backed canonical-file persistence via the File System Access API (Chromium only), with an in-memory query index rebuilt at boot
-- JSON Canvas `.canvas` import/export and whole-space version-2 `.orbit.json` file-bundle backup/restore
+- JSON Canvas `.canvas` import/export and whole-space version-2 `.balaur.json` file-bundle backup/restore
 - Installable offline shell with a web app manifest and Service Worker
 - No package install, CDN, build step, or runtime database dependency
 - An application-local Balaur token and motion system with self-hosted fonts
@@ -89,7 +89,7 @@ On Debian/Ubuntu, copy it to `/usr/local/share/ca-certificates/balaur-dev-ca.crt
 
 A new browser profile opens with a self-teaching graph starter: Home (the root canvas) with four hub portals (Inbox, Projects, Wiki, Archive), example nodes demonstrating the pipeline, and labelled edges. Existing spaces can reload it from **Reset demo** after exporting a backup.
 
-Structure emerges from labelled connections, not folders or numeric codes. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`), and entity frontmatter `orbit-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields.
+Structure emerges from labelled connections, not folders or numeric codes. Node typing uses three existing channels: sidecar `kind` (`hub`/`project`), inert body markers (`<!-- balaur:inbox -->`, `<!-- balaur:reference -->`), and entity frontmatter `balaur-type`. Relation labels (`part-of`, `relates-to`, `filed-to`) are a convention on standard edge `label` fields.
 
 Archive is manual: create or copy the content into the Archive canvas and apply the dormant grey color swatch in the inspector. Nothing is deleted. A cross-canvas reparent command is deferred to a future release.
 
@@ -103,9 +103,9 @@ A task is a canonical Markdown file placed on one or more canvases through stand
 
 ```md
 ---
-orbit-schema: 1
-orbit-type: task
-orbit-id: "task-a1b2c3"
+balaur-schema: 1
+balaur-type: task
+balaur-id: "task-a1b2c3"
 title: "Review monthly budget"
 status: next
 scheduled-on: "2026-07-22"
@@ -120,7 +120,7 @@ Use the task inspector to edit metadata, or switch to **Today** for planned toda
 
 ## Component cards and live widgets
 
-Component cards are declarative data, not generated host code. A canonical `cards/*.md` file owns an immutable Orbit ID, title, recipe, recipe fields, and ordinary Markdown body. Standard JSON Canvas `file` nodes place that card on one or more canvases; patch-only updates refresh every placement without creating a new one. In the inspector, **Delete node** removes only the selected placement, while the separately confirmed **Delete card everywhere** removes the canonical file and all placements. Ask Balaur to **create a metric card** to exercise the local, offline proposal flow. Every typed create or update is validated, described with its target file and canvas, and written only after approval.
+Component cards are declarative data, not generated host code. A canonical `cards/*.md` file owns an immutable Balaur ID, title, recipe, recipe fields, and ordinary Markdown body. Standard JSON Canvas `file` nodes place that card on one or more canvases; patch-only updates refresh every placement without creating a new one. In the inspector, **Delete node** removes only the selected placement, while the separately confirmed **Delete card everywhere** removes the canonical file and all placements. Ask Balaur to **create a metric card** to exercise the local, offline proposal flow. Every typed create or update is validated, described with its target file and canvas, and written only after approval.
 
 Live widgets are different: their canonical source is a self-contained `widgets/*.html` file. **＋ Add → Live widget** prepares a complete source proposal and capability disclosure. Approval saves and places the file but does not execute it. Review **View source**, then choose **Run** on the card. Pause destroys the iframe and private message channel; Reload creates a fresh runtime. Widgets do not receive canvas files, user data, provider keys, repositories, or host mutation commands.
 
@@ -128,7 +128,7 @@ The runtime uses an opaque-origin iframe with exactly `sandbox="allow-scripts"`,
 
 ## Canonical files and queries
 
-Balaur stores `.canvas` documents, canonical `.md` life entities and component cards, `widgets/*.html`, and the `.orbit/workspace.json` sidecar in a folder you pick at launch (Chromium-based browsers only: Chrome, Edge, Brave, or Arc). The folder is re-picked every launch; no handle is persisted. Use **Reload vault** to pick up external edits, or **Open another vault** to switch folders. At boot, `LifeIndexer` projects life files into a disposable in-memory index while the component-card and widget catalogs preload renderable file records. Rendering uses those in-memory working sets rather than reading the vault for every card. Deleting or rebuilding the query index loses no user data. `localStorage` is limited to theme and AI settings.
+Balaur stores `.canvas` documents, canonical `.md` life entities and component cards, `widgets/*.html`, and the `.balaur/workspace.json` sidecar in a folder you pick at launch (Chromium-based browsers only: Chrome, Edge, Brave, or Arc). The folder is re-picked every launch; no handle is persisted. Use **Reload vault** to pick up external edits, or **Open another vault** to switch folders. At boot, `LifeIndexer` projects life files into a disposable in-memory index while the component-card and widget catalogs preload renderable file records. Rendering uses those in-memory working sets rather than reading the vault for every card. Deleting or rebuilding the query index loses no user data. `localStorage` is limited to theme and AI settings.
 
 A persistent index is a deferred optimization, not a v1 dependency. OPFS-backed SQLite Wasm requires COOP/COEP headers that GitHub Pages cannot provide, so the static app uses the pure-JavaScript in-memory projection. Whole-space version-2 export/import preserves the sidecar and raw logical vault files—including cards and widgets—rather than a database snapshot.
 
@@ -136,9 +136,9 @@ Browser checks cover fresh and retained folder-backed profiles, task create/comp
 
 ## Migrating from the IndexedDB version
 
-1. In the currently deployed (IndexedDB) version, select **Export whole space** to save a `.orbit.json` backup.
+1. In the currently deployed (IndexedDB) version, select **Export whole space** to save a `.balaur.json` backup.
 2. Open the new version and pick an **empty** folder when prompted.
-3. Select **Import** and choose the `.orbit.json` file. The restore replaces the picked folder's entire file tree with the backup contents.
+3. Select **Import** and choose the `.balaur.json` file. The restore replaces the picked folder's entire file tree with the backup contents.
 
 ## Connect an AI provider
 
@@ -171,7 +171,7 @@ By default, the key lives in `sessionStorage` for the current tab. Enabling **Re
 
 Each canvas remains a JSON Canvas 1.0 document with only the top-level `nodes` and `edges` arrays. A sub-canvas portal is a standard file node pointing to a child document under `canvases/`. Balaur's browser-local workspace sidecar tracks hierarchy, titles, optional canvas `kind`, and camera positions without adding private fields to canvas objects. The graph starter seeds Home + four hubs + a project canvas with example nodes and labelled edges.
 
-**Export .canvas** exports the currently open level. **Export whole space** produces a version-2 `.orbit.json` file bundle containing the sidecar, every standards-compliant canvas document, canonical Markdown files (including component cards), and widget/attachment files; the normal Import action restores either format. Version-1 bundles are intentionally rejected in canonical-files-only v1.
+**Export .canvas** exports the currently open level. **Export whole space** produces a version-2 `.balaur.json` file bundle containing the sidecar, every standards-compliant canvas document, canonical Markdown files (including component cards), and widget/attachment files; the normal Import action restores either format. Version-1 bundles are intentionally rejected in canonical-files-only v1.
 
 Life-management meaning is encoded portably:
 

@@ -1,7 +1,7 @@
 // Canonical workspace persistence on a VaultStore (Phase 4, ADR-0001, plan §6/§14).
 //
 // Ownership after the file-canonical migration:
-//   .orbit/workspace.json   metadata-only sidecar (hierarchy, cameras, canvas kind)
+//   .balaur/workspace.json   metadata-only sidecar (hierarchy, cameras, canvas kind)
 //   canvases/<name>.canvas  one independently-valid JSON Canvas document each
 //
 // The sidecar never embeds full documents; each canvas document lives at its own
@@ -14,21 +14,61 @@ import { isCanvas } from "./canvas-validate.js";
 import { assertSafePath, caseFoldKey } from "./vault-path.js";
 import { SchemaError, ParseError } from "./vault-errors.js";
 
-export const SIDECAR_PATH = ".orbit/workspace.json";
-export const SIDECAR_FORMAT = "orbit-workspace";
+export const SIDECAR_PATH = ".balaur/workspace.json";
+export const SIDECAR_FORMAT = "balaur-workspace";
 export const SIDECAR_VERSION = 2; // sidecar FILE format version (file-canonical)
-export const ROOT_CANVAS_PATH = "canvases/root.canvas";
 export const CANVAS_MEDIA_TYPE = "application/jsoncanvas+json";
 export const SIDECAR_MEDIA_TYPE = "application/json";
 const DEFAULT_CAMERA = { x: 80, y: 55, zoom: 0.78 };
 
-// Logical .canvas path for a canvas record. The root is always
-// canvases/root.canvas; other canvases use their stored path or a derived
-// canvases/<id>.canvas. The result is strictly validated so a corrupt sidecar
-// cannot escape the vault root (plan §7.3, Phase 4 portal path validation).
-export function canvasPathFor(record, rootId) {
-  if (record.id === rootId) return assertSafePath(ROOT_CANVAS_PATH);
+// Logical .canvas path for a canvas record. Every canvas (root included) uses its
+// stored path or a derived canvases/<id>.canvas; the root is no longer a special case
+// because its identity is the sidecar rootId, not its filename. The result is strictly
+// validated so a corrupt sidecar cannot escape the vault root.
+export function canvasPathFor(record) {
   return assertSafePath(record.path || `canvases/${record.id}.canvas`);
+}
+
+// Collision-free logical .canvas path for a base slug. Returns canvases/<slug>.canvas,
+// appending -2, -3, ... until the path is unused. Comparison is case-folded so
+// case-insensitive filesystems cannot collide (e.g. "Trip" vs "trip").
+export function uniqueCanvasPath(slug, existingPaths) {
+  const taken = new Set((existingPaths || []).map((path) => caseFoldKey(path)));
+  const base = `canvases/${slug}.canvas`;
+  if (!taken.has(caseFoldKey(base))) return base;
+  let n = 2;
+  while (taken.has(caseFoldKey(`canvases/${slug}-${n}.canvas`))) n += 1;
+  return `canvases/${slug}-${n}.canvas`;
+}
+
+// Pure in-memory canvas rename. Validates newPath, updates the record's path, and
+// rewrites every file-node referencing the old path across all canvas documents (a
+// canvas may be referenced from more than one canvas). Returns the change summary;
+// the caller is responsible for the vault write ordering and save (which orphan-removes
+// the old path via WorkspaceStore._save).
+export function renameCanvasPath(workspace, canvasId, newPath) {
+  const record = workspace?.canvases?.[canvasId];
+  if (!record) throw new SchemaError(`No canvas record to rename: ${canvasId}`, { code: "CANVAS_RENAME_MISSING" });
+  const oldPath = record.path;
+  if (typeof oldPath !== "string" || !oldPath) {
+    throw new SchemaError(`Canvas ${canvasId} has no concrete path to rename from`, { code: "CANVAS_RENAME_NO_PATH" });
+  }
+  const safeNew = assertSafePath(newPath);
+  if (!/^canvases\/[^/]+\.canvas$/.test(safeNew)) {
+    throw new SchemaError(`Canvas path is outside canvases/: ${safeNew}`, { code: "SIDECAR_CANVAS_PATH" });
+  }
+  record.path = safeNew;
+  const affectedCanvasIds = [];
+  for (const rec of Object.values(workspace.canvases)) {
+    const nodes = rec?.document?.nodes;
+    if (!Array.isArray(nodes)) continue;
+    let touched = false;
+    for (const node of nodes) {
+      if (node && node.type === "file" && node.file === oldPath) { node.file = safeNew; touched = true; }
+    }
+    if (touched) affectedCanvasIds.push(rec.id);
+  }
+  return { oldPath, newPath: safeNew, affectedCanvasIds };
 }
 
 // Build the metadata-only sidecar object from an in-memory workspace. Canvas
@@ -42,7 +82,7 @@ export function toSidecar(workspace) {
     const entry = {
       id: record.id,
       title: record.title,
-      path: canvasPathFor(record, rootId),
+      path: canvasPathFor(record),
       parentId: record.parentId ?? null,
       portalNodeId: record.portalNodeId ?? null,
       camera: record.camera || { ...DEFAULT_CAMERA },
@@ -100,7 +140,6 @@ export function parseSidecar(text) {
     if (record.kind !== "hub" && record.kind !== "project") delete record.kind;
     const path = assertSafePath(record.path);
     if (!/^canvases\/[^/]+\.canvas$/.test(path)) throw new SchemaError(`Canvas path is outside canvases/: ${path}`, { code: "SIDECAR_CANVAS_PATH" });
-    if (record.id === data.rootId && path !== ROOT_CANVAS_PATH) throw new SchemaError("Root canvas must use canvases/root.canvas", { code: "SIDECAR_CANVAS_PATH" });
     const fold = caseFoldKey(path);
     if (folds.has(fold)) throw new SchemaError(`Canvas path collision: ${path}`, { code: "SIDECAR_CANVAS_COLLISION" });
     folds.set(fold, path);

@@ -23,7 +23,7 @@ blocker.
   inert markers and edge-derived inputs.", contradicting the shipped code and §4.2.
 - Fix: commit `45db054` (AGENTS.md only, 1+/1-). `AGENTS.md:248` now reads: "AI
   operators are standard `file` nodes referencing `notes/*.md` files whose body carries
-  the inert `<!-- orbit:ai-card -->` marker, with edge-derived inputs; their output is
+  the inert `<!-- balaur:ai-card -->` marker, with edge-derived inputs; their output is
   likewise a file-backed note connected by the reserved `AI output` edge (ADR-0004).
   Preserve debouncing, stable output-node reuse, queued reruns, and cycle detection.
   File-node inputs resolve canonical file bodies."
@@ -72,7 +72,7 @@ matches the real total, and the §13 command lists `storage/note-repository.test
   read-only interop note path at `app.js:766`.
 - AGENTS.md §10 (`AGENTS.md:248`): now file-backed (see resolved finding above).
 - docs/life-data.md (`docs/life-data.md:190,194`): note contract (path identity, no
-  mandatory frontmatter/`orbit-id`, kind as inert body marker including `orbit:ai-card`,
+  mandatory frontmatter/`balaur-id`, kind as inert body marker including `balaur:ai-card`,
   title derived from first `# Heading` then path slug, indexer treats as valid untyped
   record `entityType: null`/`parseStatus: "ok"`, placements resolved by canvas scan not
   the disposable index) matches `storage/note-catalog.js`, `storage/life-indexer.js`, and
@@ -82,7 +82,7 @@ matches the real total, and the §13 command lists `storage/note-repository.test
   `FileNoteRepository` (path-identified notes, placements, drain primitive) and
   `NoteCatalog` (ADR-0004). All match the code.
 - docs/generative-canvas.md (`docs/generative-canvas.md:72,77,81`): AI operator carries
-  the `<!-- orbit:ai-card -->` marker, creates a file-backed note (standard `file` node
+  the `<!-- balaur:ai-card -->` marker, creates a file-backed note (standard `file` node
   referencing `notes/*.md`) connected by an edge labeled `AI output`, updates that same
   note file on rerun, and interop clients see ordinary `file` nodes with the marker in
   the body. Matches `app.js:1898-1899`.

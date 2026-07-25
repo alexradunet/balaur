@@ -15,7 +15,7 @@ shared-blast-radius: true
 
 The storage foundation for the file-unified node model (ADR-0004), as three NEW
 files with zero changes to `app.js`. A **Note** is a path-identified canonical
-`notes/*.md` file with no mandatory frontmatter and no `orbit-id`; its identity is
+`notes/*.md` file with no mandatory frontmatter and no `balaur-id`; its identity is
 its path, and its kind (inbox/reference/AI) is an inert body marker. This ticket
 makes notes creatable, placeable, updatable, deletable, and drainable through one
 thin path-keyed repository, proven by a Node contract suite against the in-memory
@@ -37,8 +37,8 @@ and skip on failure) and for every `file` node with `isNotePath(node.file)` push
 `{canvasPath, nodeId}` onto that note's `placements`, else records
 `NOTE_FILE_MISSING`. A note with zero placements is normal — no orphan diagnostic.
 Title = first `# Heading` line else the path slug; kind = `"inbox"`/`"reference"`/
-`"ai"` from the inert markers (`<!-- orbit:inbox -->`, `<!-- orbit:reference -->`,
-`<!-- orbit:ai-card -->`) else `null`.
+`"ai"` from the inert markers (`<!-- balaur:inbox -->`, `<!-- balaur:reference -->`,
+`<!-- balaur:ai-card -->`) else `null`.
 
 Create `storage/note-repository.js`: `class FileNoteRepository`, path-keyed,
 combining the task/journal write discipline with the component-card path-scan
@@ -98,7 +98,7 @@ helper (copy the harness from `phase5.test.js:18-37`).
 - [ ] REGRESSION PIN (mandatory): after `createNote(..., {canvasId})`, `index.allPlacements()` and `index.placementsForEntity(<anything>)` contain NO row for the note path, yet `deleteNote` and `replacePlacement` still resolve the placement by scanning canvas documents (they work without the placements index).
 - [ ] `createNote` accepts an optional explicit `path` override (for the Ticket 04 starter seed).
 - [ ] `node --test storage/note-repository.test.js` passes in full.
-- [ ] Notes gain NO `orbit-id` and NO mandatory frontmatter; `storage/life-indexer.js`, `storage/memory-index.js`, and `storage/canvas-validate.js` are byte-for-byte unchanged (`git diff --stat` shows none of them); no existing phase suite regresses.
+- [ ] Notes gain NO `balaur-id` and NO mandatory frontmatter; `storage/life-indexer.js`, `storage/memory-index.js`, and `storage/canvas-validate.js` are byte-for-byte unchanged (`git diff --stat` shows none of them); no existing phase suite regresses.
 - [ ] `git diff --check` exits 0; only the three new files are created.
 
 ## Blocked by

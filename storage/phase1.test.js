@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 
 import { contentHash, shortId } from "./content-hash.js";
 import {
-  normalizePath, assertSafePath, slugify, entityPath, byteLength,
+  normalizePath, assertSafePath, slugify, canvasSlug, entityPath, byteLength,
   caseFoldKey, samePathFold, MAX_COMPONENT_BYTES,
 } from "./vault-path.js";
 import {
@@ -24,7 +24,7 @@ const plain = (o) => ({ ...o });
 const INST = "2026-07-21T18:00:00.000Z";
 
 const sampleTask = {
-  orbitId: "task-a1b2c3", title: "Finish quarterly review", status: "next",
+  balaurId: "task-a1b2c3", title: "Finish quarterly review", status: "next",
   priority: 1, scheduledOn: "2026-07-22", dueOn: "2026-07-25",
   completedAt: null, estimateMinutes: 45, recurrence: null,
   createdAt: INST, updatedAt: INST,
@@ -113,6 +113,27 @@ test("slugify and entityPath produce the documented layout", () => {
     "tasks/finish-quarterly-review--a1b2c3.md");
 });
 
+test("canvasSlug keeps Unicode, folds punctuation, caps at 60, falls back to id", () => {
+  // Unicode letters are kept (unlike ASCII-only slugify).
+  assert.equal(canvasSlug("Caf\u00e9 R\u00e9sum\u00e9", "canvas-x"), "caf\u00e9-r\u00e9sum\u00e9");
+  // Punctuation folds to hyphens; consecutive hyphens collapse.
+  assert.equal(canvasSlug("Trip -- Plans!!", "canvas-x"), "trip-plans");
+  // Leading/trailing hyphens are trimmed.
+  assert.equal(canvasSlug("  --weird--  ", "canvas-x"), "weird");
+  // Empty or punctuation-only titles fall back to the canvas id.
+  assert.equal(canvasSlug("", "canvas-a1b2c3"), "canvas-a1b2c3");
+  assert.equal(canvasSlug("!!!", "canvas-a1b2c3"), "canvas-a1b2c3");
+  // Over-long slugs truncate at the last hyphen boundary before 60 code points.
+  const long = canvasSlug("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda", "x");
+  assert.equal(long, "alpha-beta-gamma-delta-epsilon-zeta-eta-theta-iota-kappa");
+  assert.ok([...long].length <= 60);
+  assert.ok(!long.endsWith("-"));
+  // With no hyphen in the first 60 chars, hard-truncate at exactly 60 code points.
+  const solid = canvasSlug("a".repeat(80), "x");
+  assert.equal([...solid].length, 60);
+  assert.equal(solid, "a".repeat(60));
+});
+
 // --- constrained value grammar ----------------------------------------------
 
 test("parseValue/serializeValue round-trip primitives", () => {
@@ -153,7 +174,7 @@ test("splitFrontmatter finds the block and reports delimiters", () => {
 
 test("patching one field changes no unrelated byte range", () => {
   const original = [
-    "---", "orbit-schema: 1", "orbit-type: task", 'orbit-id: "task-abc123"',
+    "---", "balaur-schema: 1", "balaur-type: task", 'balaur-id: "task-abc123"',
     'title: "Write: a report #1"', "status: next", "priority: 2",
     "custom-unknown: keep me", "  nested: also kept", "---", "",
     "Body line one", "Body line two", "",
@@ -171,7 +192,7 @@ test("patching one field changes no unrelated byte range", () => {
 });
 
 test("patching preserves BOM and CRLF line endings", () => {
-  const bomDoc = "\uFEFF---\r\norbit-schema: 1\r\norbit-type: task\r\norbit-id: \"t1\"\r\ntitle: \"x\"\r\nstatus: next\r\ncreated-at: \"2026-01-01T00:00:00.000Z\"\r\nupdated-at: \"2026-01-01T00:00:00.000Z\"\r\n---\r\n\r\nBody\r\n";
+  const bomDoc = "\uFEFF---\r\nbalaur-schema: 1\r\nbalaur-type: task\r\nbalaur-id: \"t1\"\r\ntitle: \"x\"\r\nstatus: next\r\ncreated-at: \"2026-01-01T00:00:00.000Z\"\r\nupdated-at: \"2026-01-01T00:00:00.000Z\"\r\n---\r\n\r\nBody\r\n";
   const patched = patchFields(bomDoc, { status: "done" }, TaskCodec.spec);
   assert.ok(patched.startsWith("\uFEFF"), "BOM retained");
   assert.ok(patched.includes("status: done\r\n"), "patched line keeps CRLF");
@@ -179,7 +200,7 @@ test("patching preserves BOM and CRLF line endings", () => {
 });
 
 test("patching inserts a missing known key before the closing delimiter", () => {
-  const doc = "---\norbit-schema: 1\norbit-type: task\norbit-id: \"t1\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n\nBody\n";
+  const doc = "---\nbalaur-schema: 1\nbalaur-type: task\nbalaur-id: \"t1\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n\nBody\n";
   const patched = patchFields(doc, { priority: 3 }, TaskCodec.spec);
   assert.ok(patched.includes("priority: 3\n"));
   assert.ok(patched.indexOf("priority: 3") < patched.lastIndexOf("---"));
@@ -187,7 +208,7 @@ test("patching inserts a missing known key before the closing delimiter", () => 
 });
 
 test("duplicate known keys are rejected on read and on patch", () => {
-  const dup = "---\norbit-schema: 1\norbit-type: task\nstatus: next\nstatus: done\n---\n";
+  const dup = "---\nbalaur-schema: 1\nbalaur-type: task\nstatus: next\nstatus: done\n---\n";
   assert.throws(() => readFields(dup, TaskCodec.spec), ParseError);
   assert.throws(() => patchFields(dup, { status: "done" }, TaskCodec.spec), ParseError);
 });
@@ -201,13 +222,13 @@ test("patching refuses unknown fields and missing frontmatter", () => {
 });
 
 test("external edits: reordered keys, requoted strings, and block arrays still parse", () => {
-  const reordered = "---\norbit-schema: 1\norbit-type: task\nstatus: next\norbit-id: \"t1\"\ntitle: \"x\"\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
+  const reordered = "---\nbalaur-schema: 1\nbalaur-type: task\nstatus: next\nbalaur-id: \"t1\"\ntitle: \"x\"\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
   assert.equal(parseTask(reordered).status, "next");
 
   const requoted = serializeTask({ ...sampleTask, title: 'She said "hi" — café' });
   assert.equal(parseTask(requoted).title, 'She said "hi" — café');
 
-  const blockArr = "---\norbit-schema: 1\norbit-type: habit\norbit-id: \"h1\"\ntitle: \"Walk\"\nfrequency: weekly\nweekdays:\n  - 1\n  - 2\n  - 3\ntarget: 1\nunit: \"walk\"\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
+  const blockArr = "---\nbalaur-schema: 1\nbalaur-type: habit\nbalaur-id: \"h1\"\ntitle: \"Walk\"\nfrequency: weekly\nweekdays:\n  - 1\n  - 2\n  - 3\ntarget: 1\nunit: \"walk\"\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
   assert.deepEqual(parseHabit(blockArr).weekdays, [1, 2, 3]);
 });
 
@@ -225,22 +246,22 @@ test("task body preserves newlines and unicode", () => {
 
 test("habit, journal, and calendar-event round-trip", () => {
   const habit = {
-    orbitId: "habit-morning-walk", title: "Morning walk", frequency: "weekly",
+    balaurId: "habit-morning-walk", title: "Morning walk", frequency: "weekly",
     weekdays: [1, 2, 3, 4, 5], target: 1, unit: "walk", archivedAt: null,
     createdAt: INST, updatedAt: INST, body: "Walk before opening work applications.",
   };
   assert.deepEqual(plain(parseHabit(serializeHabit(habit))), plain(habit));
 
   const journal = {
-    orbitId: "journal-2026-07-21", localDate: "2026-07-21",
+    balaurId: "journal-2026-07-21", localDate: "2026-07-21",
     createdAt: INST, updatedAt: INST, body: "# Tuesday, July 21\n\nJournal text.",
   };
   assert.deepEqual(plain(parseJournal(serializeJournal(journal))), plain(journal));
 
   const event = {
-    orbitId: "event-dentist-m4n5o6", title: "Dentist appointment",
+    balaurId: "event-dentist-m4n5o6", title: "Dentist appointment",
     startsAt: "2026-07-24T09:00:00+03:00", endsAt: "2026-07-24T10:00:00+03:00",
-    localDate: "2026-07-24", timezone: "Europe/Bucharest", allDay: false, source: "orbit",
+    localDate: "2026-07-24", timezone: "Europe/Bucharest", allDay: false, source: "balaur",
     createdAt: INST, updatedAt: INST, body: "Bring the previous imaging report.",
   };
   assert.deepEqual(plain(parseCalendarEvent(serializeCalendarEvent(event))), plain(event));
@@ -248,7 +269,7 @@ test("habit, journal, and calendar-event round-trip", () => {
 
 test("every habit-entry marker must be complete", () => {
   const valid = serializeHabitEntry({ id: "entry-a", habit: "habit-walk", status: "done", value: 1, at: INST });
-  assert.throws(() => parseHabitEntries(`${valid}\n<!-- orbit:habit-entry id=entry-b habit=habit-walk status=done value=1`), ParseError);
+  assert.throws(() => parseHabitEntries(`${valid}\n<!-- balaur:habit-entry id=entry-b habit=habit-walk status=done value=1`), ParseError);
 });
 
 test("habit-log carries local-date and parses check-in event markers", () => {
@@ -263,25 +284,25 @@ test("habit-log carries local-date and parses check-in event markers", () => {
   assert.deepEqual(plain(entries[0]), plain(entry));
 });
 
-test("parseEntity dispatches on orbit-type", () => {
+test("parseEntity dispatches on balaur-type", () => {
   const entity = parseEntity(serializeTask(sampleTask));
   assert.equal(entity.type, "task");
   assert.equal(entity.title, sampleTask.title);
-  assert.throws(() => parseEntity("---\norbit-schema: 1\norbit-type: bogus\n---\n"), ParseError);
+  assert.throws(() => parseEntity("---\nbalaur-schema: 1\nbalaur-type: bogus\n---\n"), ParseError);
 });
 
-test("newer orbit-schema is read-only diagnostic; missing schema is an error", () => {
-  const newer = "---\norbit-schema: 2\norbit-type: task\norbit-id: \"t1\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
+test("newer balaur-schema is read-only diagnostic; missing schema is an error", () => {
+  const newer = "---\nbalaur-schema: 2\nbalaur-type: task\nbalaur-id: \"t1\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
   assert.throws(() => parseTask(newer), (e) => e instanceof SchemaError && e.code === "SCHEMA_NEWER");
-  const missing = "---\norbit-type: task\norbit-id: \"t1\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
+  const missing = "---\nbalaur-type: task\nbalaur-id: \"t1\"\ntitle: \"x\"\nstatus: next\ncreated-at: \"2026-01-01T00:00:00.000Z\"\nupdated-at: \"2026-01-01T00:00:00.000Z\"\n---\n";
   assert.throws(() => parseTask(missing), (e) => e instanceof SchemaError && e.code === "SCHEMA_MISSING");
 });
 
 test("serializeFrontmatter emits keys in stable order", () => {
   const fm = serializeFrontmatter(
-    { "orbit-schema": 1, "orbit-type": "task", "orbit-id": "t1" },
-    { fields: { "orbit-schema": "number", "orbit-type": "enum", "orbit-id": "string" } },
-    ["orbit-schema", "orbit-type", "orbit-id"],
+    { "balaur-schema": 1, "balaur-type": "task", "balaur-id": "t1" },
+    { fields: { "balaur-schema": "number", "balaur-type": "enum", "balaur-id": "string" } },
+    ["balaur-schema", "balaur-type", "balaur-id"],
   );
-  assert.equal(fm, "---\norbit-schema: 1\norbit-type: task\norbit-id: \"t1\"\n---\n");
+  assert.equal(fm, "---\nbalaur-schema: 1\nbalaur-type: task\nbalaur-id: \"t1\"\n---\n");
 });

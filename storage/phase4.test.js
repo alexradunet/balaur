@@ -6,9 +6,9 @@ import assert from "node:assert/strict";
 import { MemoryVault } from "./memory-vault.js";
 import { isCanvas } from "./canvas-validate.js";
 import {
-  SIDECAR_PATH, SIDECAR_FORMAT, SIDECAR_VERSION, ROOT_CANVAS_PATH,
-  canvasPathFor, toSidecar, parseSidecar, sidecarToJSON, canvasToJSON,
-  loadWorkspace, hasWorkspace, WorkspaceStore,
+  SIDECAR_PATH, SIDECAR_FORMAT, SIDECAR_VERSION,
+  canvasPathFor, uniqueCanvasPath, renameCanvasPath, toSidecar, parseSidecar,
+  sidecarToJSON, canvasToJSON, loadWorkspace, hasWorkspace, WorkspaceStore,
 } from "./workspace-vault.js";
 import { ConflictError, SchemaError, PathError } from "./vault-errors.js";
 
@@ -45,12 +45,13 @@ function legacyWorkspace() {
   };
 }
 
-test("canvasPathFor maps root, stored, and derived paths; rejects unsafe paths", () => {
-  assert.equal(canvasPathFor({ id: "canvas-root" }, "canvas-root"), ROOT_CANVAS_PATH);
-  assert.equal(canvasPathFor({ id: "c2", path: "canvases/planning.canvas" }, "root"), "canvases/planning.canvas");
-  assert.equal(canvasPathFor({ id: "c3" }, "root"), "canvases/c3.canvas");
-  assert.throws(() => canvasPathFor({ id: "c4", path: "../escape.canvas" }, "root"), PathError);
-  assert.throws(() => canvasPathFor({ id: "c5", path: "/abs.canvas" }, "root"), PathError);
+test("canvasPathFor maps stored and derived paths; rejects unsafe paths", () => {
+  assert.equal(canvasPathFor({ id: "c2", path: "canvases/planning.canvas" }), "canvases/planning.canvas");
+  assert.equal(canvasPathFor({ id: "c3" }), "canvases/c3.canvas");
+  assert.equal(canvasPathFor({ id: "canvas-root", path: "canvases/home.canvas" }), "canvases/home.canvas");
+  assert.equal(canvasPathFor({ id: "canvas-root" }), "canvases/canvas-root.canvas");
+  assert.throws(() => canvasPathFor({ id: "c4", path: "../escape.canvas" }), PathError);
+  assert.throws(() => canvasPathFor({ id: "c5", path: "/abs.canvas" }), PathError);
 });
 
 test("toSidecar strips documents and stamps format/version/paths", () => {
@@ -58,7 +59,7 @@ test("toSidecar strips documents and stamps format/version/paths", () => {
   assert.equal(sidecar.format, SIDECAR_FORMAT);
   assert.equal(sidecar.version, SIDECAR_VERSION);
   assert.equal(sidecar.rootId, "canvas-root");
-  assert.equal(sidecar.canvases["canvas-root"].path, ROOT_CANVAS_PATH);
+  assert.equal(sidecar.canvases["canvas-root"].path, "canvases/canvas-root.canvas");
   assert.equal(sidecar.canvases["canvas-planning"].path, "canvases/planning.canvas");
   for (const record of Object.values(sidecar.canvases)) {
     assert.ok(!("document" in record), "sidecar records must not embed documents");
@@ -172,11 +173,11 @@ test("an external edit triggers a write conflict and leaves the sidecar untouche
   const sidecarBefore = (await vault.stat(SIDECAR_PATH)).hash;
 
   // External actor rewrites the root canvas behind the store's back.
-  await vault.write(ROOT_CANVAS_PATH, canvasToJSON(doc(textNode("ext", "# External edit"))));
+  await vault.write("canvases/canvas-root.canvas", canvasToJSON(doc(textNode("ext", "# External edit"))));
 
   const ws = (await store.load()).workspace; // repopulates hashes from the vault
   // Now simulate a stale store that still believes the old hash is current.
-  store.hashes.set(ROOT_CANVAS_PATH, "stale-hash");
+  store.hashes.set("canvases/canvas-root.canvas", "stale-hash");
   ws.canvases["canvas-root"].title = "Local change";
   await assert.rejects(() => store.save(ws), ConflictError);
 
@@ -240,7 +241,7 @@ test("removing a canvas from the workspace deletes its orphaned file on save", a
 
   assert.deepEqual(result.orphans, ["canvases/planning.canvas"]);
   assert.equal(await vault.exists("canvases/planning.canvas"), false);
-  assert.equal(await vault.exists(ROOT_CANVAS_PATH), true);
+  assert.equal(await vault.exists("canvases/canvas-root.canvas"), true);
 });
 
 test("save preserves unknown canvas files and uses CAS for owned orphans", async () => {
@@ -310,4 +311,112 @@ test("sidecarToJSON and canvasToJSON are stable, pretty-printed text", () => {
   const ws = legacyWorkspace();
   assert.ok(sidecarToJSON(ws).endsWith("\n"));
   assert.ok(canvasToJSON(ws.canvases["canvas-root"].document).includes("\n  "));
+});
+
+test("uniqueCanvasPath resolves collisions with case-folded sequential suffixes", () => {
+  // No collision: the base path is free.
+  assert.equal(uniqueCanvasPath("trip", []), "canvases/trip.canvas");
+  // Sequential suffixes skip already-taken paths.
+  assert.equal(uniqueCanvasPath("trip", ["canvases/trip.canvas"]), "canvases/trip-2.canvas");
+  assert.equal(uniqueCanvasPath("trip", ["canvases/trip.canvas", "canvases/trip-2.canvas"]), "canvases/trip-3.canvas");
+  // Comparison is case-folded: "Trip" blocks "trip".
+  assert.equal(uniqueCanvasPath("trip", ["canvases/Trip.canvas"]), "canvases/trip-2.canvas");
+});
+
+test("renameCanvasPath updates the record and rewrites file-node references", () => {
+  const ws = {
+    rootId: "c-root",
+    canvases: {
+      "c-root": {
+        id: "c-root", path: "canvases/c-root.canvas",
+        document: { nodes: [
+          { id: "t1", type: "text", x: 0, y: 0, width: 10, height: 10, text: "keep" },
+          { id: "p1", type: "file", x: 0, y: 0, width: 10, height: 10, file: "canvases/child.canvas" },
+          { id: "p2", type: "file", x: 0, y: 0, width: 10, height: 10, file: "canvases/other.canvas" },
+        ], edges: [] },
+      },
+      "c-child": {
+        id: "c-child", path: "canvases/child.canvas",
+        document: { nodes: [
+          { id: "self", type: "file", x: 0, y: 0, width: 10, height: 10, file: "canvases/child.canvas" },
+        ], edges: [] },
+      },
+      "c-other": {
+        id: "c-other", path: "canvases/other.canvas",
+        document: { nodes: [{ id: "o1", type: "text", x: 0, y: 0, width: 10, height: 10, text: "untouched" }], edges: [] },
+      },
+    },
+  };
+  const result = renameCanvasPath(ws, "c-child", "canvases/child-v2.canvas");
+  assert.equal(result.oldPath, "canvases/child.canvas");
+  assert.equal(result.newPath, "canvases/child-v2.canvas");
+  // The cross-referencing root and the self-referencing child are touched, in
+  // insertion order; c-other (no matching file-node) is not.
+  assert.deepEqual(result.affectedCanvasIds, ["c-root", "c-child"]);
+  assert.equal(ws.canvases["c-child"].path, "canvases/child-v2.canvas");
+  const rootNodes = ws.canvases["c-root"].document.nodes;
+  assert.equal(rootNodes.find((n) => n.id === "p1").file, "canvases/child-v2.canvas");
+  assert.equal(ws.canvases["c-child"].document.nodes.find((n) => n.id === "self").file, "canvases/child-v2.canvas");
+  // Non-file nodes and file-nodes pointing at a different path are untouched.
+  assert.equal(rootNodes.find((n) => n.id === "t1").text, "keep");
+  assert.equal(rootNodes.find((n) => n.id === "p2").file, "canvases/other.canvas");
+});
+
+test("renameCanvasPath rejects missing records, missing paths, and bad targets", () => {
+  const ws = {
+    rootId: "c-root",
+    canvases: {
+      "c-root": { id: "c-root", path: "canvases/c-root.canvas", document: { nodes: [], edges: [] } },
+      "c-nopath": { id: "c-nopath", path: null, document: { nodes: [], edges: [] } },
+    },
+  };
+  // Missing canvas id.
+  assert.throws(() => renameCanvasPath(ws, "nope", "canvases/x.canvas"), SchemaError);
+  // Record with no concrete stored path to rename from.
+  assert.throws(() => renameCanvasPath(ws, "c-nopath", "canvases/x.canvas"), SchemaError);
+  // newPath outside canvases/.
+  assert.throws(() => renameCanvasPath(ws, "c-root", "notes/x.canvas"), SchemaError);
+  // Unsafe path (traversal) is rejected by assertSafePath.
+  assert.throws(() => renameCanvasPath(ws, "c-root", "../escape.canvas"), PathError);
+});
+
+test("renameCanvasPath rewrites file-node references and save removes the orphaned old path", async () => {
+  const vault = new MemoryVault();
+  const store = new WorkspaceStore(vault);
+  await store.migrate(legacyWorkspace());
+  const ws = (await store.load()).workspace;
+  const result = renameCanvasPath(ws, "canvas-planning", "canvases/planning-v2.canvas");
+  assert.equal(result.oldPath, "canvases/planning.canvas");
+  assert.equal(result.newPath, "canvases/planning-v2.canvas");
+  assert.deepEqual(result.affectedCanvasIds, ["canvas-root"]);
+  const portal = ws.canvases["canvas-root"].document.nodes.find((n) => n.id === "portal-1");
+  assert.equal(portal.file, "canvases/planning-v2.canvas");
+  await store.save(ws);
+  assert.equal(await vault.exists("canvases/planning.canvas"), false); // old path orphan-removed
+  assert.equal(await vault.exists("canvases/planning-v2.canvas"), true);
+  const reloaded = (await new WorkspaceStore(vault).load()).workspace;
+  assert.equal(reloaded.canvases["canvas-planning"].path, "canvases/planning-v2.canvas");
+  assert.equal(reloaded.canvases["canvas-root"].document.nodes.find((n) => n.id === "portal-1").file, "canvases/planning-v2.canvas");
+});
+
+test("parseSidecar accepts a root canvas at any valid canvases/ path and still rejects paths outside canvases/", () => {
+  const sidecar = toSidecar(legacyWorkspace());
+  sidecar.canvases["canvas-root"].path = "canvases/home.canvas";
+  const parsed = parseSidecar(JSON.stringify(sidecar));
+  assert.equal(parsed.canvases["canvas-root"].path, "canvases/home.canvas");
+  sidecar.canvases["canvas-root"].path = "notes/root.canvas";
+  assert.throws(() => parseSidecar(JSON.stringify(sidecar)), SchemaError);
+});
+
+test("a slug-named root canvas saves, reloads intact, and is located by its path", async () => {
+  const vault = new MemoryVault();
+  const store = new WorkspaceStore(vault);
+  const ws = legacyWorkspace();
+  ws.canvases["canvas-root"].path = "canvases/life-os.canvas";
+  await store.migrate(ws);
+  assert.equal(await vault.exists("canvases/life-os.canvas"), true);
+  const reloaded = (await new WorkspaceStore(vault).load()).workspace;
+  assert.equal(reloaded.canvases["canvas-root"].path, "canvases/life-os.canvas");
+  assert.ok(isCanvas(reloaded.canvases["canvas-root"].document));
+  assert.ok(reloaded.canvases["canvas-root"].document.nodes.some((n) => n.id === "n1"));
 });

@@ -34,7 +34,7 @@ Update documentation in the same change (Step 11):
   the real new total, then update the "**172 tests**" sentence to the actual number and
   name the new note-repository suite as the addition.
 - `docs/life-data.md`: add the note contract (path-identified `notes/*.md`, no
-  mandatory frontmatter/`orbit-id`, kind is an inert body marker, indexer treats it as
+  mandatory frontmatter/`balaur-id`, kind is an inert body marker, indexer treats it as
   valid untyped Markdown), add notes to the ownership list, and update the node-typing
   section (notes are file-backed; `text` is read-only interop).
 - `docs/architecture.md`: update the ownership model and the repository list to include

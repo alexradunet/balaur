@@ -22,7 +22,7 @@ holds sibling tickets' work and was not reviewed.
   `docs/adr/0001-...` (accepted historical record, untouched) and
   `docs/adr/0005-...` (the decision record that supersedes IndexedDbVault, in
   its Supersedes/Context/Verification fields). No stale prose references.
-- `grep -rn "orbit-shell-v" docs/ README.md AGENTS.md` — all current docs read
+- `grep -rn "balaur-shell-v" docs/ README.md AGENTS.md` — all current docs read
   `v13` (offline.md ×6, architecture.md ×1, AGENTS.md ×1); only
   `docs/superpowers/plans/` history shows v2/v3/v4, untouched.
 - ADR-0004 references to `0004-file-unified-node-model.md` (notes,
@@ -40,7 +40,7 @@ holds sibling tickets' work and was not reviewed.
   not manual verification — the pre-existing convention preserved by this
   reword.
 - Boot sequence, cache `v13`, "user-picked folder owns user files", README
-  migration subsection (export → empty folder → import `.orbit.json`), and ADR
+  migration subsection (export → empty folder → import `.balaur.json`), and ADR
   content all match spec §Documentation and plan §5.
 
 ## Findings
@@ -75,7 +75,7 @@ holds sibling tickets' work and was not reviewed.
 
 3 judgement findings, 0 hard violations. The docs faithfully reword from
 IndexedDB to the folder-backed DirectoryVault: adapter trio, gate→picker→
-DirectoryVault→WorkspaceStore→rebuild→render→progressive-SW boot, `orbit-shell-v13`
+DirectoryVault→WorkspaceStore→rebuild→render→progressive-SW boot, `balaur-shell-v13`
 cache, "user-picked folder owns user files", the README migration subsection, and
 the ADR-0005 renumber with provenance all match the spec and plan. The 197 test
 count is real and verified. The findings are minor wording/count drift against the

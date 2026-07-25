@@ -13,7 +13,7 @@ branch: 003-ticket-01
 
 Ticket 01 scope only: plan Steps 1-3, three NEW files, zero changes to `app.js`.
 A Note is a path-identified canonical `notes/*.md` file with no mandatory
-frontmatter and no `orbit-id`; identity is the path, kind (inbox/reference/ai)
+frontmatter and no `balaur-id`; identity is the path, kind (inbox/reference/ai)
 is an inert body marker. Pre-flight passed: worktree
 `/home/balaur/.paseo/worktrees/10x2zhef/003-ticket-01`, branch `003-ticket-01`
 (non-main), clean status, ticket `blocked-by: []`.

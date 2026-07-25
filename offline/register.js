@@ -7,11 +7,11 @@ export async function registerOffline() {
       scope: new URL("../", import.meta.url).href,
       updateViaCache: "none"
     });
-    window.dispatchEvent(new CustomEvent("orbit:offline-ready", { detail: { scope: registration.scope } }));
+    window.dispatchEvent(new CustomEvent("balaur:offline-ready", { detail: { scope: registration.scope } }));
     return registration;
   } catch (error) {
     console.warn("Balaur could not enable offline mode", error);
-    window.dispatchEvent(new CustomEvent("orbit:offline-error", { detail: error }));
+    window.dispatchEvent(new CustomEvent("balaur:offline-error", { detail: error }));
     return null;
   }
 }

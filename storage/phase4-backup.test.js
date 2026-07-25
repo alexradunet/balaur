@@ -15,7 +15,7 @@ import { SchemaError, PathError } from "./vault-errors.js";
 
 const INST = "2026-07-21T18:00:00.000Z";
 const sampleTask = {
-  orbitId: "task-a1b2c3", title: "Finish quarterly review", status: "next",
+  balaurId: "task-a1b2c3", title: "Finish quarterly review", status: "next",
   priority: 1, scheduledOn: "2026-07-22", dueOn: "2026-07-25",
   completedAt: null, estimateMinutes: 45, recurrence: null,
   createdAt: INST, updatedAt: INST,
@@ -69,7 +69,7 @@ test("exportBundle produces a sorted, sidecar-separated bundle", async () => {
   const paths = bundle.files.map((f) => f.path);
   assert.deepEqual(paths, [...paths].sort(), "files must be deterministically sorted");
   assert.ok(!paths.includes(SIDECAR_PATH), "sidecar must not be duplicated into files");
-  assert.ok(paths.includes("canvases/root.canvas"));
+  assert.ok(paths.includes("canvases/canvas-root.canvas"));
   assert.ok(paths.includes("canvases/planning.canvas"));
   assert.ok(paths.includes(TASK_PATH));
   assert.ok(paths.includes("notes/idea.md"));
@@ -147,11 +147,11 @@ test("validateBundle rejects unsafe and duplicate paths, and invalid canvases", 
   await assert.rejects(() => validateBundle(dup), PathError);
 
   const badCanvas = structuredClone(bundle);
-  badCanvas.files.find((f) => f.path === "canvases/root.canvas").text = JSON.stringify({ nodes: [{ bad: 1 }] });
+  badCanvas.files.find((f) => f.path === "canvases/canvas-root.canvas").text = JSON.stringify({ nodes: [{ bad: 1 }] });
   await assert.rejects(() => validateBundle(badCanvas), (e) => e.code === "CANVAS_INVALID");
 });
 
-test("validateBundle flags duplicate orbit-ids in staging", async () => {
+test("validateBundle flags duplicate balaur-ids in staging", async () => {
   const vault = await populatedVault();
   const { bundle } = await exportBundle(vault);
   const dup = structuredClone(bundle);
@@ -159,22 +159,22 @@ test("validateBundle flags duplicate orbit-ids in staging", async () => {
   const summary = await validateBundle(dup);
   const diag = summary.diagnostics.find((d) => d.code === "DUPLICATE_ID");
   assert.ok(diag, "expected a DUPLICATE_ID diagnostic");
-  assert.equal(diag.details.orbitId, "task-a1b2c3");
+  assert.equal(diag.details.balaurId, "task-a1b2c3");
   assert.equal(diag.details.paths.length, 2);
 });
 
-test("validateBundle detects an orbit-id collision between a component card and a life entity", async () => {
+test("validateBundle detects an balaur-id collision between a component card and a life entity", async () => {
   const vault = await populatedVault();
   const { bundle } = await exportBundle(vault);
   const duplicate = structuredClone(bundle);
   duplicate.files.push({
     path: "cards/task-id-copy.md",
     mediaType: "text/markdown",
-    text: serializeComponentCard({ ...sampleCard, id: sampleTask.orbitId }),
+    text: serializeComponentCard({ ...sampleCard, id: sampleTask.balaurId }),
   });
 
   const summary = await validateBundle(duplicate);
-  const diagnostic = summary.diagnostics.find((item) => item.code === "DUPLICATE_ID" && item.details.orbitId === sampleTask.orbitId);
+  const diagnostic = summary.diagnostics.find((item) => item.code === "DUPLICATE_ID" && item.details.balaurId === sampleTask.balaurId);
   assert.deepEqual(diagnostic.details.paths, [TASK_PATH, "cards/task-id-copy.md"]);
 });
 
@@ -183,13 +183,13 @@ test("validateBundle diagnoses malformed component cards", async () => {
   const { bundle } = await exportBundle(vault);
   const malformed = structuredClone(bundle);
   malformed.files.find((file) => file.path === CARD_PATH).text =
-    "---\norbit-schema: 1\norbit-type: component-card\norbit-id: card-broken\ntitle: \"Broken\"\nrecipe: progress\nvalue: 12\nmaximum: 10\n---\n";
+    "---\nbalaur-schema: 1\nbalaur-type: component-card\nbalaur-id: card-broken\ntitle: \"Broken\"\nrecipe: progress\nvalue: 12\nmaximum: 10\n---\n";
 
   const summary = await validateBundle(malformed);
   assert.ok(summary.diagnostics.some((item) => item.path === CARD_PATH && item.code === "ENTITY_MALFORMED"));
 });
 
-test("validateBundle detects duplicate orbit-ids claimed by malformed component cards", async () => {
+test("validateBundle detects duplicate balaur-ids claimed by malformed component cards", async () => {
   const vault = await populatedVault();
   const { bundle } = await exportBundle(vault);
   const malformedDuplicate = structuredClone(bundle);
@@ -208,7 +208,7 @@ test("validateBundle detects duplicate orbit-ids claimed by malformed component 
   });
 
   const summary = await validateBundle(malformedDuplicate);
-  const duplicate = summary.diagnostics.find((item) => item.code === "DUPLICATE_ID" && item.details.orbitId === sampleCard.id);
+  const duplicate = summary.diagnostics.find((item) => item.code === "DUPLICATE_ID" && item.details.balaurId === sampleCard.id);
   assert.deepEqual(duplicate.details.paths, [CARD_PATH, "cards/malformed-duplicate.md"]);
   assert.ok(summary.diagnostics.some((item) => item.path === "cards/malformed-duplicate.md" && item.code === "ENTITY_MALFORMED"));
 });
@@ -217,7 +217,7 @@ test("validateBundle rejects a canvas reference to a missing component card", as
   const vault = await populatedVault();
   const { bundle } = await exportBundle(vault);
   const missing = structuredClone(bundle);
-  const root = missing.files.find((file) => file.path === "canvases/root.canvas");
+  const root = missing.files.find((file) => file.path === "canvases/canvas-root.canvas");
   const document = JSON.parse(root.text);
   document.nodes.push({ id: "missing-card", type: "file", file: "cards/missing.md", x: 0, y: 200, width: 360, height: 220 });
   root.text = JSON.stringify(document, null, 2) + "\n";
@@ -229,8 +229,8 @@ test("validateBundle flags malformed entities without throwing", async () => {
   const vault = await populatedVault();
   const { bundle } = await exportBundle(vault);
   const bad = structuredClone(bundle);
-  // orbit-type task but missing required title/status/created-at/updated-at.
-  bad.files.push({ path: "tasks/broken--x.md", mediaType: "text/markdown", text: "---\norbit-schema: 1\norbit-type: task\norbit-id: task-broken\n---\n# Body only\n" });
+  // balaur-type task but missing required title/status/created-at/updated-at.
+  bad.files.push({ path: "tasks/broken--x.md", mediaType: "text/markdown", text: "---\nbalaur-schema: 1\nbalaur-type: task\nbalaur-id: task-broken\n---\n# Body only\n" });
   const summary = await validateBundle(bad);
   assert.ok(summary.diagnostics.some((d) => d.code === "ENTITY_MALFORMED"));
 });
@@ -274,6 +274,6 @@ test("importBundle writes files first and the sidecar last", async () => {
   const staging = new MemoryVault();
   await importBundle(staging, serializeBundle(bundle));
   assert.equal(await staging.exists(SIDECAR_PATH), true);
-  assert.equal(await staging.exists("canvases/root.canvas"), true);
+  assert.equal(await staging.exists("canvases/canvas-root.canvas"), true);
   assert.equal(await staging.exists(TASK_PATH), true);
 });
