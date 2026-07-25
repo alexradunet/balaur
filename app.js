@@ -1153,10 +1153,11 @@ canvas.addEventListener("pointerdown", async event => {
 });
 canvas.addEventListener("dblclick", async event => {
   if (event.target.closest?.(".canvas-tools,.zoom-tools,.minimap,.edges")) return;
-  // Create a note on empty canvas only. The geometry test (not event.target) is
-  // authoritative so a double click over a card never spawns a note on top of it,
-  // even when a mid-click re-render retargets the event to the background layer.
-  if (nodeAtClientPoint(event.clientX,event.clientY)) return;
+  // Geometry test (not event.target) is authoritative because a mid-click
+  // re-render retargets the event to the background layer, so element-level
+  // listeners (e.g. the sub-canvas dblclick) may never fire.
+  const hitNode=nodeAtClientPoint(event.clientX,event.clientY);
+  if(hitNode){const hitSubcanvas=subcanvasIdFromNode(hitNode);if(hitSubcanvas)enterSubcanvas(hitSubcanvas);return;}
   await addNode("note",canvasPoint(event.clientX,event.clientY));
 });
 canvas.addEventListener("wheel", event => {
