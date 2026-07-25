@@ -226,6 +226,14 @@ function persistWorkspace(){
 function markSaveResult(promise){
   promise.then(()=>{$("#saveState").innerHTML="<i></i> Saved locally";},error=>{
     console.warn("Could not persist the canonical vault workspace",error);
+    if(error?.code==="STORAGE_UNAVAILABLE"){
+      // Vault folder unlinked or its permission revoked mid-session (spec user
+      // story 11): flip read-only in place, mirroring the Reload vault path,
+      // instead of only toasting a generic save failure.
+      setCanonicalWritable(false,"Canonical files are unavailable; reload or re-open the vault folder before editing.");
+      toast("Vault files are unavailable; reload or re-open the vault folder");
+      return;
+    }
     $("#saveState").innerHTML="<i></i> Save failed";
     toast("Could not save the canonical files; your changes are not durable");
   });
@@ -1153,10 +1161,11 @@ canvas.addEventListener("pointerdown", async event => {
 });
 canvas.addEventListener("dblclick", async event => {
   if (event.target.closest?.(".canvas-tools,.zoom-tools,.minimap,.edges")) return;
-  // Create a note on empty canvas only. The geometry test (not event.target) is
-  // authoritative so a double click over a card never spawns a note on top of it,
-  // even when a mid-click re-render retargets the event to the background layer.
-  if (nodeAtClientPoint(event.clientX,event.clientY)) return;
+  // Geometry test (not event.target) is authoritative because a mid-click
+  // re-render retargets the event to the background layer, so element-level
+  // listeners (e.g. the sub-canvas dblclick) may never fire.
+  const hitNode=nodeAtClientPoint(event.clientX,event.clientY);
+  if(hitNode){const hitSubcanvas=subcanvasIdFromNode(hitNode);if(hitSubcanvas)enterSubcanvas(hitSubcanvas);return;}
   await addNode("note",canvasPoint(event.clientX,event.clientY));
 });
 canvas.addEventListener("wheel", event => {
