@@ -38,7 +38,7 @@
 - Modify: `sw.js:1-18`
 
 **Interfaces:**
-- Consumes: self-hosted `@font-face` families from `vendor/pixel-loom/fonts.css`.
+- Consumes: self-hosted `@font-face` families from `design-system/fonts.css`.
 - Produces: `--balaur-*` primitive/semantic tokens and a `motion` cascade layer consumed by every later task.
 
 - [ ] **Step 1: Declare the complete cascade order**
@@ -259,7 +259,7 @@ Replace its token block with body/focus/accessibility rules that consume semanti
 
 - [ ] **Step 5: Load the new files without removing Linen yet**
 
-In `index.html`, add `styles/tokens.css` after `styles/layers.css` and `styles/motion.css` after `styles/responsive.css`. Keep `vendor/pixel-loom/tokens/linen.css` until Task 6 because untouched component rules still consume its names.
+In `index.html`, add `styles/tokens.css` after `styles/layers.css` and `styles/motion.css` after `styles/responsive.css`. Keep `design-system/tokens/linen.css` until Task 6 because untouched component rules still consume its names.
 
 - [ ] **Step 6: Add the new styles to the offline shell and bump the cache**
 
@@ -1003,14 +1003,14 @@ Before removal, search `styles/` for these legacy/vendor consumers:
 --bg|--panel|--panel-2|--line|--muted|--text|--accent|--background|--surface-container|--on-surface|--primary|--secondary|--tertiary|--outline|--font-headline|--font-body|--font-mono|--green|--red|--orange|--yellow|--cyan|--purple
 ```
 
-Migrate every application consumer to `--balaur-*` or component-local variables. `vendor/pixel-loom/fonts.css` contains only self-hosted `@font-face` declarations; the final family aliases are `--balaur-font-display`, `--balaur-font-body`, and `--balaur-font-mono`.
+Migrate every application consumer to `--balaur-*` or component-local variables. `design-system/fonts.css` contains only self-hosted `@font-face` declarations; the final family aliases are `--balaur-font-display`, `--balaur-font-body`, and `--balaur-font-mono`.
 
 Then:
 
 - delete the temporary alias block from `styles/tokens.css`;
-- remove `vendor/pixel-loom/tokens/linen.css` from `index.html`;
+- remove `design-system/tokens/linen.css` from `index.html`;
 - remove the Linen path from `sw.js`;
-- keep `vendor/pixel-loom/fonts.css` and font files.
+- keep `design-system/fonts.css` and font files.
 - bump `CACHE_NAME` to `balaur-shell-v4` so installed copies receive the final cache manifest;
 
 Expected search after removal: no legacy/vendor color token matches in `styles/`.
@@ -1124,7 +1124,7 @@ Search expectations:
 - user-facing `Balaur` in application sources, README, and current product docs: no matches; historical ADRs/plans/specs and explicitly documented internal compatibility names are excluded;
 - `--balaur-duration-*` and `--balaur-ease-*`: definitions in `tokens.css`, consumers in `motion.css`;
 - duration/easing literals in `shell.css`, `canvas.css`, `components.css`, and `responsive.css`: no matches;
-- `vendor/pixel-loom/tokens/linen.css` in `index.html` or `sw.js`: no matches;
+- `design-system/tokens/linen.css` in `index.html` or `sw.js`: no matches;
 - internal `balaur:` markers, storage keys, globals, event names, cache cleanup prefix, and `balaur-workspace`: still present.
 
 - [ ] **Step 8: Commit**

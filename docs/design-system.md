@@ -8,7 +8,7 @@ Balaur uses an application-local, standards-first CSS system. The interface is a
 
 The only design-system assets consumed directly are:
 
-- `vendor/pixel-loom/fonts.css`
+- `design-system/fonts.css`
 - self-hosted Newsreader, Work Sans, and JetBrains Mono font files
 
 The assets are local so the browser and eventual desktop application remain offline-capable. Newsreader is reserved for the Balaur wordmark and current canvas title, Work Sans carries interface and document text, and JetBrains Mono carries metadata, controls, breadcrumbs, and status labels.

@@ -34,7 +34,7 @@ Before changing a subsystem, read its source and design document:
 - `docs/adr/0001-file-canonical-life-data.md` — accepted file-canonical decision
 - `docs/adr/0003-graph-knowledge-model.md` — graph-first knowledge model replacing Johnny Decimal
 - `plans/canonical-v1-files-only.md` — implementation plan and browser-pending work
-- `vendor/pixel-loom/README.md` — design-system provenance
+- `design-system/README.md` — design-system provenance
 
 `plans/` contains historical and forward-looking material. Do not treat a plan as proof of shipped behavior. This guide describes the single shipped model; the browser-pending list below is the boundary for claims about browser verification.
 
@@ -74,7 +74,7 @@ storage/index-integrity.js  Runtime-index audit and purge/rebuild recovery
 styles/                     Named cascade layers, tokens, shell, canvas, components, themes, responsive, motion
 docs/                       Architecture and subsystem documentation
 widgets/                    Sandboxed HTML file-node widgets
-vendor/pixel-loom/          Self-hosted fonts and upstream design-system provenance
+design-system/            Self-hosted fonts and upstream design-system provenance
 .github/workflows/pages.yml Deploys the repository root as a static GitHub Pages artifact
 ```
 
