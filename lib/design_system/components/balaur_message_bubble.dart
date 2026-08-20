@@ -92,6 +92,9 @@ class BalaurMessageBubble extends StatelessWidget {
           ),
         );
         final row = Row(
+          mainAxisAlignment: isHouseholdMember
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: isHouseholdMember

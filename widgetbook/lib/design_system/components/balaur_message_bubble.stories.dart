@@ -22,6 +22,20 @@ final $HouseholdMember = _Story(
   ),
 );
 
+final $HouseholdMemberLong = _Story(
+  name: 'Household member long',
+  args: _Args(
+    content: StringArg(
+      'Please review the Shopping List before tonight and group each item '
+      'by the section where I can find it.',
+    ),
+    role: EnumArg(
+      BalaurMessageBubbleRole.householdMember,
+      values: BalaurMessageBubbleRole.values,
+    ),
+  ),
+);
+
 final $Agent = _Story(
   name: 'Agent',
   args: _Args(

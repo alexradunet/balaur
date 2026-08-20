@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('aligns a Household Member message to the right', (tester) async {
+  testWidgets('keeps a Household Member portrait on the right edge', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      _TestApp(
+      const _TestApp(
         child: BalaurMessageBubble(
           content: 'Add milk.',
           role: BalaurMessageBubbleRole.householdMember,
@@ -13,14 +15,16 @@ void main() {
       ),
     );
 
-    final align = tester.widget<Align>(
-      find.descendant(
-        of: find.byType(BalaurMessageBubble),
-        matching: find.byType(Align),
-      ),
-    );
+    final portrait = find
+        .ancestor(
+          of: find.byType(BalaurAvatar),
+          matching: find.byType(BalaurSurface),
+        )
+        .first;
+    final bubbleRect = tester.getRect(find.byType(BalaurMessageBubble));
+    final portraitRect = tester.getRect(portrait);
 
-    expect(align.alignment, Alignment.centerRight);
+    expect(portraitRect.right, closeTo(bubbleRect.right, 0.1));
   });
 
   testWidgets('shows the streaming state', (tester) async {

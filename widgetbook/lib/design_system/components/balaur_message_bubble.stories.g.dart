@@ -26,6 +26,7 @@ final BalaurMessageBubbleComponent =
           r'''Displays one framed role-playing game dialogue message.''',
       stories: [
         $HouseholdMember..$generatedName = 'HouseholdMember',
+        $HouseholdMemberLong..$generatedName = 'HouseholdMemberLong',
         $Agent..$generatedName = 'Agent',
         $Streaming..$generatedName = 'Streaming',
         $EmptyStreaming..$generatedName = 'EmptyStreaming',
