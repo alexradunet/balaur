@@ -22,7 +22,8 @@ final BalaurMessageBubbleComponent =
       name: component.name ?? 'BalaurMessageBubble',
       path: component.path ?? 'design_system/components',
       docsBuilder: component.docsBuilder,
-      docComment: r'''Displays one Conversation message from a Household Member or an agent.''',
+      docComment:
+          r'''Displays one framed role-playing game dialogue message.''',
       stories: [
         $HouseholdMember..$generatedName = 'HouseholdMember',
         $Agent..$generatedName = 'Agent',
@@ -58,6 +59,9 @@ class BalaurMessageBubbleStory
                content: args.content,
                role: args.role,
                status: args.status,
+               who: args.who,
+               origin: args.origin,
+               avatar: args.avatar,
              ),
        );
 }
@@ -68,6 +72,9 @@ class BalaurMessageBubbleArgs extends StoryArgs<BalaurMessageBubble> {
     Arg<String>? content,
     Arg<BalaurMessageBubbleRole>? role,
     Arg<BalaurMessageBubbleStatus>? status,
+    Arg<String?>? who,
+    Arg<String?>? origin,
+    Arg<ImageProvider<Object>?>? avatar,
   }) : this.keyArg = $initArg('key', key, null),
        this.contentArg = $initArg('content', content, StringArg(''))!,
        this.roleArg = $initArg(
@@ -85,17 +92,34 @@ class BalaurMessageBubbleArgs extends StoryArgs<BalaurMessageBubble> {
            BalaurMessageBubbleStatus.complete,
            values: BalaurMessageBubbleStatus.values,
          ),
-       )!;
+       )!,
+       this.whoArg = $initArg('who', who, NullableStringArg(null))!,
+       this.originArg = $initArg('origin', origin, NullableStringArg(null))!,
+       this.avatarArg = $initArg('avatar', avatar, null);
 
   BalaurMessageBubbleArgs.fixed({
     Key? key,
     String content = '',
     BalaurMessageBubbleRole role = BalaurMessageBubbleRole.householdMember,
     BalaurMessageBubbleStatus status = BalaurMessageBubbleStatus.complete,
+    String? who = null,
+    String? origin = null,
+    ImageProvider<Object>? avatar,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.contentArg = $initArg('content', Arg.fixed(content), null)!,
        this.roleArg = $initArg('role', Arg.fixed(role), null)!,
-       this.statusArg = $initArg('status', Arg.fixed(status), null)!;
+       this.statusArg = $initArg('status', Arg.fixed(status), null)!,
+       this.whoArg = $initArg('who', who == null ? null : Arg.fixed(who), null),
+       this.originArg = $initArg(
+         'origin',
+         origin == null ? null : Arg.fixed(origin),
+         null,
+       ),
+       this.avatarArg = $initArg(
+         'avatar',
+         avatar == null ? null : Arg.fixed(avatar),
+         null,
+       );
 
   final Arg<Key?>? keyArg;
 
@@ -105,6 +129,12 @@ class BalaurMessageBubbleArgs extends StoryArgs<BalaurMessageBubble> {
 
   final Arg<BalaurMessageBubbleStatus> statusArg;
 
+  final Arg<String?>? whoArg;
+
+  final Arg<String?>? originArg;
+
+  final Arg<ImageProvider<Object>?>? avatarArg;
+
   Key? get key => keyArg?.value;
 
   String get content => contentArg.value;
@@ -113,6 +143,20 @@ class BalaurMessageBubbleArgs extends StoryArgs<BalaurMessageBubble> {
 
   BalaurMessageBubbleStatus get status => statusArg.value;
 
+  String? get who => whoArg?.value;
+
+  String? get origin => originArg?.value;
+
+  ImageProvider<Object>? get avatar => avatarArg?.value;
+
   @override
-  List<Arg?> get list => [keyArg, contentArg, roleArg, statusArg];
+  List<Arg?> get list => [
+    keyArg,
+    contentArg,
+    roleArg,
+    statusArg,
+    whoArg,
+    originArg,
+    avatarArg,
+  ];
 }

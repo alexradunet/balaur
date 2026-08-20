@@ -34,15 +34,25 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(
-      tester
-          .widget<CircularProgressIndicator>(
-            find.byType(CircularProgressIndicator),
-          )
-          .semanticsLabel,
-      'Agent response in progress',
+    expect(find.bySemanticsLabel('Agent response in progress'), findsOneWidget);
+    expect(find.text('thinking…'), findsOneWidget);
+  });
+
+  testWidgets('uses the compact portrait below 640 pixels', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      const _TestApp(
+        child: BalaurMessageBubble(
+          content: 'Add milk.',
+          role: BalaurMessageBubbleRole.householdMember,
+        ),
+      ),
     );
+
+    expect(tester.widget<BalaurAvatar>(find.byType(BalaurAvatar)).size, 50);
   });
 
   testWidgets('shows stopped and failed states', (tester) async {

@@ -60,6 +60,24 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/design_system/
+    - assets/design_system/avatars/
+    - assets/design_system/icons/
+
+  fonts:
+    - family: Jersey 15
+      fonts:
+        - asset: assets/design_system/fonts/jersey-15.ttf
+    - family: Piazzolla
+      fonts:
+        - asset: assets/design_system/fonts/piazzolla.ttf
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/design_system/fonts/jetbrains-mono.ttf
+    - family: Silkscreen
+      fonts:
+        - asset: assets/design_system/fonts/silkscreen.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
