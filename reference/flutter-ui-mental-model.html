@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Flutter UI mental model — quick reference</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body><main>
+<header>
+  <div class="eyebrow">Flutter reference</div>
+  <h1>The three-tree mental model</h1>
+  <p class="lede">Use this when a UI does not rebuild, loses state, or lays out unexpectedly.</p>
+</header>
+<table>
+<thead><tr><th>Layer</th><th>What it is</th><th>Lifetime</th></tr></thead>
+<tbody>
+<tr><td><strong>Widget</strong></td><td>Immutable configuration returned by <code>build</code>.</td><td>Cheap and frequently replaced.</td></tr>
+<tr><td><strong>Element</strong></td><td>Mounted instance that connects widgets to the tree and owns location/identity.</td><td>Reused when type and key match at the same location.</td></tr>
+<tr><td><strong>RenderObject</strong></td><td>Mutable object responsible for layout, painting, and hit testing.</td><td>Usually retained and updated through its element.</td></tr>
+</tbody>
+</table>
+<h2>State update loop</h2>
+<pre><code>event
+  → mutate model/state inside setState(...)
+  → element marked dirty
+  → framework schedules a frame
+  → build returns new widgets
+  → elements reconcile old/new widgets
+  → changed render objects lay out and paint</code></pre>
+<div class="callout"><strong>Key distinction:</strong> <code>setState</code> does not immediately redraw and it does not magically observe mutations. Its callback runs synchronously, then Flutter marks that state's element as needing a rebuild.</div>
+<h2>Debugging questions</h2>
+<ol>
+<li>Did state actually change?</li>
+<li>Did the owner notify Flutter (<code>setState</code> or another listenable state mechanism)?</li>
+<li>Is state owned at the right tree location?</li>
+<li>Did a changed type, key, or position replace the element and therefore its state?</li>
+<li>Is this really a rebuild problem, or a constraints/layout problem?</li>
+</ol>
+<h2>React transfer map</h2>
+<table>
+<thead><tr><th>Tempting analogy</th><th>Safer Flutter interpretation</th></tr></thead>
+<tbody>
+<tr><td>Widget = component instance</td><td>Widget = immutable description/configuration</td></tr>
+<tr><td>Element = DOM node</td><td>Element = mounted identity and tree bookkeeping</td></tr>
+<tr><td><code>setState(value)</code></td><td><code>setState(callback)</code> marks this state owner dirty</td></tr>
+<tr><td>CSS performs layout</td><td>Constraints flow down; sizes flow up; parents position children</td></tr>
+</tbody>
+</table>
+<p><strong>Primary source:</strong> <a href="https://docs.flutter.dev/resources/architectural-overview">Flutter architectural overview</a>. See also <a href="https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html"><code>StatefulWidget</code> API documentation</a>.</p>
+<p><a href="../lessons/0001-from-state-change-to-frame.html">← Lesson 1: From state change to frame</a></p>
+</main></body>
+</html>

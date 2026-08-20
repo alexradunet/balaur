@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lesson 1: Change state and update the screen</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body><main>
+<header>
+  <div class="eyebrow">Lesson 1 | Flutter basics</div>
+  <h1>Change state and update the screen</h1>
+  <p class="lede">Learn how Flutter changes application data into a new screen.</p>
+  <div class="meta">
+    <span>Time: 10 minutes</span>
+    <span>Requirement: The Flutter project operates correctly</span>
+    <span>Result: You can find the cause of an old screen</span>
+  </div>
+</header>
+
+<h2>Your task</h2>
+<p>You will cause one user interface (UI) failure.</p>
+<p>You will examine the failure.</p>
+<p>Then, you will correct the failure.</p>
+<p>This process applies to each calendar event, pantry item, and agent action in the household application.</p>
+
+<h2>Learn the update process</h2>
+<p>Flutter uses three related trees.</p>
+<ul>
+  <li>The widget tree contains immutable UI descriptions.</li>
+  <li>The element tree contains mounted objects. Each element connects a widget to one tree location.</li>
+  <li>The render tree contains objects that calculate layout and paint the screen.</li>
+</ul>
+<p>A widget is not a permanent UI object.</p>
+<p>A widget is an immutable description of part of the UI.</p>
+
+<div class="callout">
+<strong>Note:</strong> This model differs from some JavaScript framework models. Do not treat a Flutter widget as a mounted component instance.
+</div>
+
+<p>The <code>setState</code> method runs its callback immediately.</p>
+<p>Then, it marks the related element as dirty.</p>
+<p>A dirty element is an element that requires another build operation.</p>
+<p>Flutter schedules a frame and calls the <code>build</code> method.</p>
+<p>The <code>build</code> method returns new widgets.</p>
+<p>Flutter compares these widgets with the mounted elements and updates the render objects.</p>
+
+<pre><code>user action
+  → change state
+  → mark the element as dirty
+  → build widgets
+  → compare widgets with elements
+  → calculate layout and paint</code></pre>
+
+<p>Use the <a href="../reference/flutter-ui-mental-model.html">Flutter UI quick reference</a> when you examine update or identity problems.</p>
+
+<h2>Predict the result</h2>
+<p>The generated application contains this method:</p>
+<pre><code>void _incrementCounter() {
+  setState(() {
+    _counter++;
+  });
+}</code></pre>
+
+<p>Assume that you remove the <code>setState</code> call.</p>
+<p>The method now contains only <code>_counter++;</code>.</p>
+<p>Predict the answers to these questions:</p>
+<ol>
+  <li>What is the value of <code>_counter</code> after one tap?</li>
+  <li>What number does the screen show?</li>
+</ol>
+<button type="button" data-reveal="prediction">Show the answer</button>
+<div id="prediction" class="answer" hidden tabindex="-1">
+  <p>The value of <code>_counter</code> becomes <code>1</code>.</p>
+  <p>The screen usually continues to show <code>0</code>.</p>
+  <p>The data changed, but Flutter did not mark the element as dirty.</p>
+  <p>Thus, Flutter did not request another build operation.</p>
+</div>
+
+<h2>Cause the failure</h2>
+<div class="exercise">
+<h3>Use the generated application</h3>
+<ol>
+  <li>Run <code>flutter test</code>.</li>
+  <li>Make sure that the test passes.</li>
+  <li>Open <code>lib/main.dart</code>.</li>
+  <li>Replace the complete <code>setState</code> call in <code>_incrementCounter</code> with <code>_counter++;</code>.</li>
+  <li>Run <code>flutter test</code> again.</li>
+  <li>Read the failed test result.</li>
+</ol>
+</div>
+
+<p>The test taps the button and requests a frame.</p>
+<p>The stored value changes, but the element stays clean.</p>
+<p>A clean element does not run its <code>build</code> method again.</p>
+<p>Therefore, the test continues to find <code>0</code> on the screen.</p>
+
+<h2>Correct the failure</h2>
+<div class="exercise">
+<ol>
+  <li>Restore <code>setState(() { _counter++; });</code>.</li>
+  <li>Run <code>flutter test</code>.</li>
+  <li>Make sure that the test passes.</li>
+</ol>
+</div>
+
+<p>The passing test shows that the state notification and the UI update operate together.</p>
+<p>This difference is important for the household application.</p>
+<p>For example, an agent tool can change server data while the screen continues to show old data.</p>
+<p>The UI state owner must receive a notification after the data changes.</p>
+
+<h2>Recall the process</h2>
+<p>Complete the two missing steps from memory.</p>
+<pre><code>user action → change state → ________ → build widgets → ________ → layout and paint</code></pre>
+<button type="button" data-reveal="retrieval">Check the answer</button>
+<div id="retrieval" class="answer" hidden tabindex="-1">
+  <p>First, mark the element as dirty.</p>
+  <p>Then, compare the new widgets with the mounted elements.</p>
+</div>
+
+<h2>Use <code>setState</code> correctly</h2>
+<p>Use <code>setState</code> for small state that belongs to one widget.</p>
+<p>Do not use this lesson as the architecture for all shared application data.</p>
+<p>Later lessons will compare suitable tools for shared and synchronized state.</p>
+
+<div class="callout">
+<strong>Primary source:</strong> Read the official <a href="https://docs.flutter.dev/resources/architectural-overview">Flutter architectural overview</a>.
+Read the sections about widgets and elements.
+Use the <a href="https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html"><code>StatefulWidget</code> API documentation</a> when you need lifecycle information.
+</div>
+
+<section class="next">
+<h2>Completion check</h2>
+<p>Complete the lesson when you can explain these two facts:</p>
+<ul>
+  <li>The application state can change without a UI update.</li>
+  <li>The UI rebuild starts only after the state owner gives a notification.</li>
+</ul>
+<p>Also, make sure that <code>flutter test</code> passes again.</p>
+<p>Tell your teacher why the test failed.</p>
+<p>Ask your teacher about each part that is not clear.</p>
+<p>Your answer will help select the next lesson.</p>
+<p><a href="../reference/flutter-ui-mental-model.html">Open the quick reference</a></p>
+</section>
+<script src="../assets/retrieval.js"></script>
+</main></body>
+</html>
