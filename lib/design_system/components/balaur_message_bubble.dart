@@ -35,7 +35,7 @@ class BalaurMessageBubble extends StatelessWidget {
     final colors = BalaurColors.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final portraitSize = constraints.maxWidth < 640 ? 64.0 : 96.0;
+        final portraitSize = 64.0;
         final name = who ?? (isHouseholdMember ? 'You' : 'Balaur');
         final image =
             avatar ??
@@ -131,9 +131,9 @@ class _FramedPortrait extends StatelessWidget {
     return BalaurSurface(
       material: BalaurSurfaceMaterial.wood,
       borderColor: colors.outline,
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(1),
       child: ColoredBox(
-        color: const Color(0xff101314),
+        color: const Color.fromARGB(255, 186, 130, 10),
         child: Padding(
           padding: const EdgeInsets.all(2),
           child: BalaurAvatar(
