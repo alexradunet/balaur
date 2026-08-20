@@ -3,6 +3,7 @@ import 'package:balaur/design_system/components/balaur_surface.dart';
 import 'package:balaur/design_system/foundations/balaur_assets.dart';
 import 'package:balaur/design_system/foundations/balaur_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 /// Identifies the sender shown by a [BalaurMessageBubble].
 enum BalaurMessageBubbleRole { householdMember, agent }
@@ -59,7 +60,11 @@ class BalaurMessageBubble extends StatelessWidget {
                       ? colors.goldDeep
                       : colors.parchmentEdge,
                   padding: const EdgeInsets.fromLTRB(16, 18, 16, 13),
-                  child: _MessageContent(content: content, status: status),
+                  child: _MessageContent(
+                    content: content,
+                    status: status,
+                    useMarkdown: !isHouseholdMember,
+                  ),
                 ),
                 Positioned(
                   top: -10,
@@ -152,10 +157,15 @@ class _FramedPortrait extends StatelessWidget {
 }
 
 class _MessageContent extends StatelessWidget {
-  const _MessageContent({required this.content, required this.status});
+  const _MessageContent({
+    required this.content,
+    required this.status,
+    required this.useMarkdown,
+  });
 
   final String content;
   final BalaurMessageBubbleStatus status;
+  final bool useMarkdown;
 
   @override
   Widget build(BuildContext context) {
@@ -169,11 +179,24 @@ class _MessageContent extends StatelessWidget {
             label: content,
             readOnly: true,
             child: ExcludeSemantics(
-              child: SelectableText(
-                content,
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: colors.ink, height: 1.55),
-              ),
+              child: useMarkdown
+                  ? MarkdownBody(
+                      data: content,
+                      selectable: true,
+                      styleSheet: _markdownStyleSheet(context, colors),
+                      imageBuilder: (uri, title, alt) => Text(
+                        alt ?? uri.toString(),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colors.inkMuted,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    )
+                  : SelectableText(
+                      content,
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: colors.ink, height: 1.55),
+                    ),
             ),
           ),
         if (status == BalaurMessageBubbleStatus.streaming) ...[
@@ -195,6 +218,62 @@ class _MessageContent extends StatelessWidget {
         if (status == BalaurMessageBubbleStatus.failed)
           _StatusLabel(label: 'Failed', color: colors.emberRed),
       ],
+    );
+  }
+
+  MarkdownStyleSheet _markdownStyleSheet(
+    BuildContext context,
+    BalaurColors colors,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+    final bodyStyle = textTheme.bodyMedium?.copyWith(
+      color: colors.ink,
+      height: 1.55,
+    );
+    final codeStyle = textTheme.bodySmall?.copyWith(
+      color: colors.ink,
+      backgroundColor: colors.surface2,
+      fontFamily: 'JetBrains Mono',
+      height: 1.45,
+    );
+
+    return MarkdownStyleSheet(
+      a: bodyStyle?.copyWith(
+        color: colors.tealInk,
+        decoration: TextDecoration.underline,
+      ),
+      p: bodyStyle,
+      code: codeStyle,
+      h1: textTheme.headlineSmall?.copyWith(color: colors.ink),
+      h2: textTheme.titleLarge?.copyWith(color: colors.ink),
+      h3: textTheme.titleMedium?.copyWith(color: colors.ink),
+      h4: textTheme.titleSmall?.copyWith(color: colors.ink),
+      h5: bodyStyle?.copyWith(fontWeight: FontWeight.w700),
+      h6: bodyStyle?.copyWith(fontWeight: FontWeight.w700),
+      blockSpacing: 10,
+      listIndent: 22,
+      listBullet: bodyStyle,
+      blockquote: bodyStyle?.copyWith(color: colors.inkMuted),
+      blockquotePadding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+      blockquoteDecoration: BoxDecoration(
+        color: colors.surface2,
+        border: Border(left: BorderSide(color: colors.goldDeep, width: 3)),
+      ),
+      codeblockPadding: const EdgeInsets.all(10),
+      codeblockDecoration: BoxDecoration(
+        color: colors.surface2,
+        border: Border.all(color: colors.parchmentEdge),
+      ),
+      tableHead: bodyStyle?.copyWith(fontWeight: FontWeight.w700),
+      tableBody: bodyStyle,
+      tableBorder: TableBorder.all(color: colors.parchmentEdge),
+      tableCellsPadding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.parchmentEdge, width: 2)),
+      ),
     );
   }
 }

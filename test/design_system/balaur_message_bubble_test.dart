@@ -1,6 +1,7 @@
 import 'package:balaur/design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 void main() {
   testWidgets('keeps a Household Member portrait on the right edge', (
@@ -81,6 +82,46 @@ void main() {
 
     expect(find.text('Stopped'), findsOneWidget);
     expect(find.text('Failed'), findsOneWidget);
+  });
+
+  testWidgets('formats agent Markdown', (tester) async {
+    const content = '''
+## Shopping plan
+
+Use **milk** and `notes.md`.''';
+
+    await tester.pumpWidget(
+      const _TestApp(
+        child: BalaurMessageBubble(
+          content: content,
+          role: BalaurMessageBubbleRole.agent,
+        ),
+      ),
+    );
+
+    final markdown = tester.widget<MarkdownBody>(find.byType(MarkdownBody));
+
+    expect(markdown.data, content);
+    expect(markdown.selectable, isTrue);
+    expect(find.text('Shopping plan'), findsOneWidget);
+    expect(
+      find.text('Use milk and notes.md.', findRichText: true),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('keeps Household Member Markdown as plain text', (tester) async {
+    await tester.pumpWidget(
+      const _TestApp(
+        child: BalaurMessageBubble(
+          content: '**Buy milk.**',
+          role: BalaurMessageBubbleRole.householdMember,
+        ),
+      ),
+    );
+
+    expect(find.byType(MarkdownBody), findsNothing);
+    expect(find.text('**Buy milk.**'), findsOneWidget);
   });
 }
 

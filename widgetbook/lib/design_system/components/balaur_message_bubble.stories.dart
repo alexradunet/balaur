@@ -47,6 +47,30 @@ final $Agent = _Story(
   ),
 );
 
+final $AgentMarkdown = _Story(
+  name: 'Agent Markdown',
+  args: _Args(
+    content: StringArg('''
+## Shopping plan
+
+I grouped the list by **store section**:
+
+1. Produce
+   - Tomatoes
+   - Peppers
+2. Dairy
+   - Milk
+
+> Check the pantry before you shop.
+
+Use `notes.md` for the final list.'''),
+    role: EnumArg(
+      BalaurMessageBubbleRole.agent,
+      values: BalaurMessageBubbleRole.values,
+    ),
+  ),
+);
+
 final $Streaming = _Story(
   name: 'Streaming',
   args: _Args(

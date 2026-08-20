@@ -28,6 +28,7 @@ final BalaurMessageBubbleComponent =
         $HouseholdMember..$generatedName = 'HouseholdMember',
         $HouseholdMemberLong..$generatedName = 'HouseholdMemberLong',
         $Agent..$generatedName = 'Agent',
+        $AgentMarkdown..$generatedName = 'AgentMarkdown',
         $Streaming..$generatedName = 'Streaming',
         $EmptyStreaming..$generatedName = 'EmptyStreaming',
         $Stopped..$generatedName = 'Stopped',
