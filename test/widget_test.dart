@@ -52,6 +52,68 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets('navigates to settings and enables chat after saving', (
+    tester,
+  ) async {
+    final settingsStore = InMemoryProviderSettingsStore();
+    await tester.pumpWidget(
+      BalaurApp(
+        gateway: _FakeChatGateway([]),
+        conversationRepository: InMemoryConversationRepository(),
+        settingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('SETTINGS'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Model provider'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('provider-api-key')),
+      'test-key',
+    );
+    await tester.enterText(
+      find.byKey(const Key('provider-model')),
+      'test-model',
+    );
+    await tester.tap(find.byKey(const Key('save-provider-settings')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Model provider settings saved.'), findsOneWidget);
+
+    await tester.tap(find.text('CHAT'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<IconButton>(find.byKey(const Key('send-button'))).onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('uses compact navigation when width is narrow', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      BalaurApp(
+        gateway: _FakeChatGateway([]),
+        conversationRepository: InMemoryConversationRepository(),
+        settingsStore: InMemoryProviderSettingsStore(_configuredSettings),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Navigation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SETTINGS'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Model provider'), findsOneWidget);
+  });
 }
 
 const _configuredSettings = ProviderSettings(

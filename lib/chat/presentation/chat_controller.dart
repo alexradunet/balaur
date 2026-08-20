@@ -30,7 +30,6 @@ class ChatController extends ChangeNotifier {
   int _messageSequence = 0;
 
   List<ChatMessage> get messages => List.unmodifiable(_messages);
-  ProviderSettings get settings => _settings;
   String? get errorMessage => _errorMessage;
   bool get isReady => _isReady;
   bool get isStreaming => _isStreaming;
@@ -50,17 +49,6 @@ class ChatController extends ChangeNotifier {
       _isReady = true;
       _notifyListeners();
     }
-  }
-
-  Future<void> saveSettings(ProviderSettings settings) async {
-    try {
-      await _settingsStore.save(settings);
-      _settings = settings;
-      _errorMessage = null;
-    } on Object catch (error) {
-      _errorMessage = 'Balaur could not save the provider settings: $error';
-    }
-    _notifyListeners();
   }
 
   Future<void> sendMessage(String input) async {

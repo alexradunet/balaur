@@ -2,7 +2,6 @@ import 'package:balaur/chat/data/chat_gateway.dart';
 import 'package:balaur/chat/data/conversation_repository.dart';
 import 'package:balaur/chat/domain/chat_message.dart';
 import 'package:balaur/chat/presentation/chat_controller.dart';
-import 'package:balaur/chat/presentation/provider_settings_dialog.dart';
 import 'package:balaur/design_system/design_system.dart';
 import 'package:balaur/settings/provider_settings_store.dart';
 import 'package:flutter/material.dart';
@@ -13,11 +12,13 @@ class ChatScreen extends StatefulWidget {
     required this.gateway,
     required this.conversationRepository,
     required this.settingsStore,
+    required this.onOpenSettings,
   });
 
   final ChatGateway gateway;
   final ConversationRepository conversationRepository;
   final ProviderSettingsStore settingsStore;
+  final VoidCallback onOpenSettings;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -54,26 +55,13 @@ class _ChatScreenState extends State<ChatScreen> {
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Balaur'),
-            actions: [
-              IconButton(
-                key: const Key('provider-settings-button'),
-                onPressed: _showProviderSettings,
-                tooltip: 'Model provider',
-                icon: const Icon(Icons.settings_outlined),
-              ),
-            ],
-          ),
-          body: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
-                child: _controller.isReady
-                    ? _buildChat(context)
-                    : const Center(child: CircularProgressIndicator()),
-              ),
+        return SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: _controller.isReady
+                  ? _buildChat(context)
+                  : const Center(child: CircularProgressIndicator()),
             ),
           ),
         );
@@ -135,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       actions: [
         TextButton(
-          onPressed: _showProviderSettings,
+          onPressed: widget.onOpenSettings,
           child: const Text('Configure'),
         ),
       ],
@@ -153,16 +141,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ],
     );
-  }
-
-  Future<void> _showProviderSettings() async {
-    final settings = await ProviderSettingsDialog.show(
-      context,
-      _controller.settings,
-    );
-    if (settings != null) {
-      await _controller.saveSettings(settings);
-    }
   }
 
   Future<void> _sendMessage() async {
