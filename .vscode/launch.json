@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Widgetbook",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/widgetbook",
+      "program": "${workspaceFolder}/widgetbook/lib/main.dart",
+      "flutterMode": "debug"
+    }
+  ]
+}
