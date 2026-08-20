@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lesson 2: Own state and pass actions</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body><main>
+<header>
+  <div class="eyebrow">Lesson 2 | Flutter state</div>
+  <h1>Own state and pass actions</h1>
+  <p class="lede">Move the counter button into a stateless child without moving the counter state.</p>
+  <div class="meta">
+    <span>Time: 12 minutes</span>
+    <span>Requirement: Lesson 1</span>
+    <span>Result: You can pass an action callback</span>
+  </div>
+</header>
+
+<h2>Recall the update process</h2>
+<p>Answer this question before you change the code.</p>
+<p>Which object does <code>setState</code> mark as dirty?</p>
+<button type="button" data-reveal="recall">Show the answer</button>
+<div id="recall" class="answer" hidden tabindex="-1">
+  <p><code>setState</code> marks the <code>Element</code> that is associated with the <code>State</code> object.</p>
+  <p>It does not mark an immutable <code>Widget</code> as dirty.</p>
+</div>
+
+<h2>Learn the ownership rule</h2>
+<p>A widget must not own each value that it displays.</p>
+<p>Put state in the lowest common parent of all widgets that use or change it.</p>
+<p>Pass the current data to child widgets.</p>
+<p>Pass callbacks to child widgets that must request changes.</p>
+
+<pre><code>_MyHomePageState
+  ├─ owns: _counter
+  ├─ passes: current data to Text
+  └─ passes: _incrementCounter to IncrementButton</code></pre>
+
+<p>The child can request an increment.</p>
+<p>The parent still owns and changes the counter.</p>
+<p>This design gives one source of truth.</p>
+
+<div class="callout">
+<strong>Household use:</strong> A responsibility tile can show a completion value and send an <code>onToggle</code> callback.
+The shared state owner changes the responsibility.
+</div>
+
+<h2>Create a child widget</h2>
+<p>Add this class after <code>_MyHomePageState</code> in <code>lib/main.dart</code>.</p>
+<pre><code>class IncrementButton extends StatelessWidget {
+  const IncrementButton({
+    super.key,
+    required this.onIncrement,
+  });
+
+  final VoidCallback onIncrement;
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: onIncrement,
+      tooltip: 'Increment',
+      child: const Icon(Icons.add),
+    );
+  }
+}</code></pre>
+
+<p><code>VoidCallback</code> is a Flutter type alias.</p>
+<p>It means <code>void Function()</code>.</p>
+<p>The callback takes no parameters and returns no value.</p>
+
+<h2>Pass the parent action</h2>
+<p>Find the existing <code>floatingActionButton</code> value.</p>
+<p>Replace its complete <code>FloatingActionButton</code> with this widget:</p>
+<pre><code>IncrementButton(
+  onIncrement: _incrementCounter,
+)</code></pre>
+
+<div class="checkpoint">
+<strong>Important:</strong> Pass <code>_incrementCounter</code> without parentheses.
+This syntax passes the function as a value.
+The syntax <code>_incrementCounter()</code> calls the function during <code>build</code>.
+</div>
+
+<h2>Test the callback path</h2>
+<div class="exercise">
+<ol>
+  <li>Run <code>dart format lib/main.dart</code>.</li>
+  <li>Run <code>flutter test</code>.</li>
+  <li>Make sure that the counter test passes.</li>
+  <li>Change the child value to <code>onPressed: () {}</code>.</li>
+  <li>Run <code>flutter test</code> again.</li>
+  <li>Read the failure.</li>
+  <li>Restore <code>onPressed: onIncrement</code>.</li>
+  <li>Run <code>flutter test</code>.</li>
+</ol>
+</div>
+
+<p>The temporary empty callback accepts the tap but requests no state change.</p>
+<p>The failing test proves that the callback connects the child event to the parent state owner.</p>
+
+<h2>Trace one tap</h2>
+<p>Put these steps in the correct order before you show the answer:</p>
+<ul>
+  <li>The parent changes <code>_counter</code>.</li>
+  <li>The child calls <code>onIncrement</code>.</li>
+  <li>Flutter calls both <code>build</code> methods.</li>
+  <li>The user taps the child button.</li>
+  <li><code>setState</code> marks the parent element as dirty.</li>
+</ul>
+<button type="button" data-reveal="order">Show the correct order</button>
+<div id="order" class="answer" hidden tabindex="-1">
+<ol>
+  <li>The user taps the child button.</li>
+  <li>The child calls <code>onIncrement</code>.</li>
+  <li>The parent changes <code>_counter</code> inside <code>setState</code>.</li>
+  <li><code>setState</code> marks the parent element as dirty.</li>
+  <li>Flutter calls both <code>build</code> methods.</li>
+</ol>
+</div>
+
+<h2>Connect this pattern to the product</h2>
+<pre><code>ResponsibilityTile(
+  isComplete: responsibility.isComplete,
+  onToggle: () =&gt; completeResponsibility(responsibility.id),
+)</code></pre>
+<p>The tile receives data and an action.</p>
+<p>It does not own the shared responsibility record.</p>
+<p>Later, the state owner can call a repository instead of changing a local field.</p>
+<p>The tile interface does not need to change.</p>
+
+<div class="callout">
+<strong>Primary source:</strong> Read the official <a href="https://docs.flutter.dev/ui/interactivity">Flutter interactivity guide</a>.
+Pay special attention to the section about state management.
+</div>
+
+<section class="next">
+<h2>Completion check</h2>
+<p>Complete the lesson when all tests pass.</p>
+<p>Then, explain why <code>IncrementButton</code> remains stateless.</p>
+<p>Also explain why <code>_incrementCounter</code> has no parentheses when the parent passes it.</p>
+<p>Ask your teacher about each part that is not clear.</p>
+<p><a href="../reference/flutter-state-ownership.html">Open the state ownership quick reference</a></p>
+<p><a href="0001-from-state-change-to-frame.html">Review Lesson 1</a></p>
+</section>
+<script src="../assets/retrieval.js"></script>
+</main></body>
+</html>

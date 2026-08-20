@@ -8,6 +8,10 @@
   Primary explanation of the widget, element, and render trees and the framework-to-engine layers. Use for: building an accurate mental model and debugging rebuild/layout behavior.
 - [Flutter application architecture guide](https://docs.flutter.dev/app-architecture/guide)
   Official opinionated guide to separating UI and data responsibilities. Use for: evolving the household MVP beyond toy-sized `StatefulWidget` state.
+- [Flutter interactivity guide](https://docs.flutter.dev/ui/interactivity)
+  Official guide to stateful widgets, callbacks, and state ownership. Use for: local interactions and parent-child update paths.
+- [Ephemeral state and application state](https://docs.flutter.dev/data-and-backend/state-mgmt/ephemeral-vs-app)
+  Official comparison of local UI state and shared application state. Use for: selecting the correct owner for each household value.
 - [Dart language documentation](https://dart.dev/language)
   Canonical language reference. Use for: Dart syntax, types, patterns, asynchronous code, and language semantics rather than relying on JS analogies.
 - [`StatefulWidget` API documentation](https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html)

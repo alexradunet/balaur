@@ -1,17 +1,54 @@
-# balaur
+# Balaur
 
-A new Flutter project.
+Balaur is a shared household application with an AI-first interface.
 
-## Getting Started
+## Current chat slice
 
-This project is a starting point for a Flutter application.
+The Flutter client supports streaming chat through an OpenAI-compatible Chat Completions endpoint.
 
-A few resources to get you started if this is your first Flutter project:
+Supported targets:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Android
+- iOS
+- Linux
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The first slice includes:
+
+- A custom Flutter chat interface.
+- Streamed assistant text.
+- Configurable base URL, API key, and model.
+- Secure local storage for provider settings.
+- Stop and error states.
+- Replaceable chat and conversation interfaces.
+
+Conversation messages currently stay in memory. They are lost when the application stops.
+
+## Run the application
+
+Install Flutter and the Linux desktop requirements. Then run this command:
+
+```bash
+flutter run -d linux
+```
+
+Select the settings button in the application. Enter these provider values:
+
+- **Base URL**: Include the OpenAI-compatible API version path, such as `https://api.openai.com/v1`.
+- **API key**: Use a user-provided key for development.
+- **Model**: Enter the model identifier that the endpoint accepts.
+
+The endpoint must support Chat Completions and Server-Sent Events (SSE) streaming.
+
+## Verify the application
+
+Run these commands:
+
+```bash
+flutter analyze
+flutter test
+flutter build linux --debug
+```
+
+## Security
+
+A distributed client cannot fully protect a provider key. Use a backend proxy before you add a service-owned production key.

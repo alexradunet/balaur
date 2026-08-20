@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Flutter state ownership</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body><main>
+<header>
+  <div class="eyebrow">Flutter reference</div>
+  <h1>Own state and pass actions</h1>
+  <p class="lede">Use this guide when you select the location of UI state.</p>
+</header>
+
+<h2>The rule</h2>
+<p>Put state in the lowest common parent of all widgets that use or change it.</p>
+<ul>
+  <li>Pass data down through constructor parameters.</li>
+  <li>Pass actions down through callback parameters.</li>
+  <li>Let the state owner make the change.</li>
+  <li>Keep display-only children stateless.</li>
+</ul>
+
+<pre><code>State owner
+  ├─ data ───────→ child widget
+  └─ callback ←─── child event</code></pre>
+
+<h2>Callback types</h2>
+<table>
+<thead><tr><th>Type</th><th>Meaning</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td><code>VoidCallback</code></td><td>No parameters and no result.</td><td><code>void Function()</code></td></tr>
+<tr><td><code>ValueChanged&lt;T&gt;</code></td><td>One value and no result.</td><td><code>void Function(T)</code></td></tr>
+<tr><td>Custom function type</td><td>Use it for other parameter or result shapes.</td><td><code>Future&lt;void&gt; Function(TaskId)</code></td></tr>
+</tbody>
+</table>
+
+<h2>Selection questions</h2>
+<ol>
+  <li>Which widgets read this value?</li>
+  <li>Which widgets request a change?</li>
+  <li>What is their lowest common parent?</li>
+  <li>Does the value belong only to the current UI session?</li>
+  <li>Must devices or users share the value?</li>
+</ol>
+
+<div class="callout">
+<p>Use local widget state for temporary UI details.</p>
+<p>Use an application state layer for shared household data.</p>
+<p>Use a repository or service to save and synchronize persistent data.</p>
+</div>
+
+<p><strong>Primary sources:</strong> Read <a href="https://docs.flutter.dev/ui/interactivity">Add interactivity to your Flutter app</a>. Also read <a href="https://docs.flutter.dev/data-and-backend/state-mgmt/ephemeral-vs-app">Ephemeral state and app state</a>.</p>
+<p><a href="../lessons/0002-own-state-pass-actions.html">Open Lesson 2</a></p>
+</main></body>
+</html>
