@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "dart": {
+      "command": "dart",
+      "args": ["mcp-server", "--force-roots-fallback"],
+      "lifecycle": "lazy-keep-alive",
+      "requestTimeoutMs": 120000,
+      "directTools": [
+        "roots",
+        "analyze_files",
+        "lsp",
+        "pub",
+        "dtd",
+        "get_runtime_errors",
+        "hot_reload",
+        "widget_inspector"
+      ],
+      "searchKeywords": {
+        "*": ["dart", "flutter"],
+        "roots": ["project root", "workspace", "allow path"],
+        "analyze_files": ["lint", "static analysis", "diagnostics", "fix"],
+        "lsp": ["symbol", "hover", "signature", "code intelligence"],
+        "pub": ["dependencies", "packages", "pub.dev"],
+        "dtd": ["running app", "connect", "tooling daemon"],
+        "get_runtime_errors": ["exceptions", "stack trace"],
+        "widget_inspector": ["widget tree", "layout", "properties"]
+      }
+    }
+  }
+}

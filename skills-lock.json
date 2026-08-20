@@ -25,6 +25,24 @@
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
       "computedHash": "5a17552cc1482f1a40124bf4e6c9dbd90ac0dbb47e71c07d47369f9e5f2ae3b5"
     },
+    "dart-add-unit-test": {
+      "source": "dart-lang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-add-unit-test/SKILL.md",
+      "computedHash": "55dabb37175bc8091a02b7d78d405f7e33173698c48a649ea29748f1186ac9c0"
+    },
+    "dart-best-practices": {
+      "source": "kevmoo/dash_skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-best-practices/SKILL.md",
+      "computedHash": "00ee8d524d433b3f867a8b430c4513d765b2edebfcfaf6289a0c344d74f50e16"
+    },
+    "dart-run-static-analysis": {
+      "source": "dart-lang/skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-run-static-analysis/SKILL.md",
+      "computedHash": "e64ea092e216ecdc9b4a8b49b06d0b9a0b49f680c1116ada1d247b2de3fa6fe1"
+    },
     "diagnosing-bugs": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -36,6 +54,24 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "a11713c0ff7870efa3c331b2e273f09116158485246edc89ae5088eefd1b0b48"
+    },
+    "flutter-add-widget-test": {
+      "source": "flutter/agent-plugins",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-add-widget-test/SKILL.md",
+      "computedHash": "c4f263c59cfe331ef42dba2aa81e25142aa4f7284518907c6b847e04502676b0"
+    },
+    "flutter-apply-architecture-best-practices": {
+      "source": "flutter/agent-plugins",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-apply-architecture-best-practices/SKILL.md",
+      "computedHash": "2b1b63214d6b153c50aacd4bbcb76ce91dece449de9e06f477f8aad3163d667f"
+    },
+    "flutter-build-responsive-layout": {
+      "source": "flutter/agent-plugins",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-build-responsive-layout/SKILL.md",
+      "computedHash": "f762ea2ee83d4f1f35d9093b41d2520dd024ab80c9539d4860b9ae7f2a4dc6a0"
     },
     "git-guardrails-claude-code": {
       "source": "mattpocock/skills",

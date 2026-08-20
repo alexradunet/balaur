@@ -28,3 +28,8 @@ Use these STE controls:
 Keep source code, commands, paths, identifiers, API names, error text, and direct quotations unchanged.
 
 Before each response or prose change, check the text for STE compliance. Revise the text before delivery.
+
+# Development policy
+
+Read `docs/development-policy.md` before you plan or implement features,
+refactors, architecture changes, or dependency changes.
