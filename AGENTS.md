@@ -29,6 +29,11 @@ Keep source code, commands, paths, identifiers, API names, error text, and direc
 
 Before each response or prose change, check the text for STE compliance. Revise the text before delivery.
 
+# Widgetbook
+
+Read `.agents/skills/widgetbook-story-first/SKILL.md` before you add or change a
+Flutter widget, screen, theme, or design token.
+
 # Development policy
 
 Read `docs/development-policy.md` before you plan or implement features,

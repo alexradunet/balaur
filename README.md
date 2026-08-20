@@ -39,6 +39,38 @@ Select the settings button in the application. Enter these provider values:
 
 The endpoint must support Chat Completions and Server-Sent Events (SSE) streaming.
 
+## Develop the user interface in Widgetbook
+
+Use Widgetbook before you integrate a reusable widget or screen.
+Keep production widgets in `lib/`.
+Keep Stories in the mirrored path under `widgetbook/lib/`.
+
+Run generation in watch mode:
+
+```bash
+cd widgetbook
+dart run build_runner watch
+```
+
+Run the isolated catalog in a second terminal:
+
+```bash
+cd widgetbook
+flutter run -d linux
+```
+
+Validate all generated Scenarios:
+
+```bash
+cd widgetbook
+dart run build_runner build
+dart format lib
+flutter test
+```
+
+The catalog pins Widgetbook `4.0.0-beta.11`.
+The project skills define the Story-first development process.
+
 ## Verify the application
 
 Run these commands:

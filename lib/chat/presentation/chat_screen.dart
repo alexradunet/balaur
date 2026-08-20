@@ -3,6 +3,7 @@ import 'package:balaur/chat/data/conversation_repository.dart';
 import 'package:balaur/chat/domain/chat_message.dart';
 import 'package:balaur/chat/presentation/chat_controller.dart';
 import 'package:balaur/chat/presentation/provider_settings_dialog.dart';
+import 'package:balaur/design_system/design_system.dart';
 import 'package:balaur/settings/provider_settings_store.dart';
 import 'package:flutter/material.dart';
 
@@ -95,8 +96,25 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
                   itemCount: _controller.messages.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) =>
-                      _MessageBubble(message: _controller.messages[index]),
+                  itemBuilder: (context, index) {
+                    final message = _controller.messages[index];
+                    return BalaurMessageBubble(
+                      content: message.content,
+                      role: message.role == ChatRole.user
+                          ? BalaurMessageBubbleRole.householdMember
+                          : BalaurMessageBubbleRole.agent,
+                      status: switch (message.status) {
+                        ChatMessageStatus.complete =>
+                          BalaurMessageBubbleStatus.complete,
+                        ChatMessageStatus.streaming =>
+                          BalaurMessageBubbleStatus.streaming,
+                        ChatMessageStatus.interrupted =>
+                          BalaurMessageBubbleStatus.stopped,
+                        ChatMessageStatus.failed =>
+                          BalaurMessageBubbleStatus.failed,
+                      },
+                    );
+                  },
                 ),
         ),
         _Composer(
@@ -194,56 +212,6 @@ class _EmptyConversation extends StatelessWidget {
             const SizedBox(height: 8),
             const Text('Ask Balaur for help with your household.'),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
-
-  final ChatMessage message;
-
-  @override
-  Widget build(BuildContext context) {
-    final isUser = message.role == ChatRole.user;
-    final colors = Theme.of(context).colorScheme;
-
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isUser ? colors.primaryContainer : colors.surfaceContainer,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (message.content.isNotEmpty) SelectableText(message.content),
-                if (message.status == ChatMessageStatus.streaming)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: SizedBox.square(
-                      dimension: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                if (message.status == ChatMessageStatus.interrupted)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      'Stopped',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ),
-              ],
-            ),
-          ),
         ),
       ),
     );
