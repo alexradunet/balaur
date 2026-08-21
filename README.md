@@ -39,6 +39,11 @@ Select the settings button in the application. Enter these provider values:
 
 The endpoint must support Chat Completions and Server-Sent Events (SSE) streaming.
 
+## Run the Household Server
+
+The Household Server uses a pinned PocketBase release in Docker.
+See [`server/README.md`](server/README.md) for setup and test instructions.
+
 ## Develop the user interface in Widgetbook
 
 Use Widgetbook before you integrate a reusable widget or screen.
