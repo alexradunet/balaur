@@ -118,6 +118,27 @@ void main() {
     expect(find.byKey(const Key('chat-composer')), findsOneWidget);
   });
 
+  testWidgets('opens Household Invitation management', (tester) async {
+    final state = InMemoryHouseholdGatewayState(storedSession: _session);
+    await _pumpApp(
+      tester,
+      gateway: _FakeChatGateway([]),
+      householdGateway: InMemoryHouseholdGateway(state: state),
+    );
+    await _enterPairedApplication(tester);
+
+    await tester.tap(find.text('HOUSEHOLD'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('manage-household-invitations')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Household Invitations'), findsOneWidget);
+    expect(
+      find.byKey(const Key('create-household-invitation')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('signs out from the Household account', (tester) async {
     final state = InMemoryHouseholdGatewayState(storedSession: _session);
     await _pumpApp(

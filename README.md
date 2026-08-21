@@ -41,6 +41,14 @@ When Balaur starts, enter these Household values:
 Balaur stores the server address and member session in secure device storage.
 It does not store the member password.
 
+A Household Administrator can select **Household**, then **Manage invitations**.
+The administrator can assign a Household Member or Household Administrator role.
+Balaur shows the invitation value and its Quick Response (QR) code one time.
+
+A new Household Member can select **Use an invitation** during pairing.
+The member can scan the QR code or enter the server and invitation manually.
+The Household Invitation expires after 24 hours and works one time.
+
 After pairing, select **Enter Balaur**.
 Then select the settings button and enter these provider values:
 

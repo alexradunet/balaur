@@ -23,7 +23,10 @@ final HouseholdAccountScreenComponent =
       path: component.path ?? 'household/presentation',
       docsBuilder: component.docsBuilder,
       docComment: null,
-      stories: [$Administrator..$generatedName = 'Administrator'],
+      stories: [
+        $Administrator..$generatedName = 'Administrator',
+        $Member..$generatedName = 'Member',
+      ],
     );
 typedef HouseholdAccountScreenScenario =
     Scenario<HouseholdAccountScreen, HouseholdAccountScreenArgs>;
@@ -49,6 +52,7 @@ class HouseholdAccountScreenStory
                key: args.key,
                session: args.session,
                onSignOut: args.onSignOut,
+               onManageInvitations: args.onManageInvitations,
              ),
        );
 }
@@ -58,17 +62,29 @@ class HouseholdAccountScreenArgs extends StoryArgs<HouseholdAccountScreen> {
     Arg<Key?>? key,
     required Arg<HouseholdSession> session,
     required Arg<Future<void> Function()> onSignOut,
+    Arg<void Function()?>? onManageInvitations,
   }) : this.keyArg = $initArg('key', key, null),
        this.sessionArg = $initArg('session', session, null)!,
-       this.onSignOutArg = $initArg('onSignOut', onSignOut, null)!;
+       this.onSignOutArg = $initArg('onSignOut', onSignOut, null)!,
+       this.onManageInvitationsArg = $initArg(
+         'onManageInvitations',
+         onManageInvitations,
+         null,
+       );
 
   HouseholdAccountScreenArgs.fixed({
     Key? key,
     required HouseholdSession session,
     required Future<void> Function() onSignOut,
+    void Function()? onManageInvitations,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.sessionArg = $initArg('session', Arg.fixed(session), null)!,
-       this.onSignOutArg = $initArg('onSignOut', Arg.fixed(onSignOut), null)!;
+       this.onSignOutArg = $initArg('onSignOut', Arg.fixed(onSignOut), null)!,
+       this.onManageInvitationsArg = $initArg(
+         'onManageInvitations',
+         onManageInvitations == null ? null : Arg.fixed(onManageInvitations),
+         null,
+       );
 
   final Arg<Key?>? keyArg;
 
@@ -76,12 +92,21 @@ class HouseholdAccountScreenArgs extends StoryArgs<HouseholdAccountScreen> {
 
   final Arg<Future<void> Function()> onSignOutArg;
 
+  final Arg<void Function()?>? onManageInvitationsArg;
+
   Key? get key => keyArg?.value;
 
   HouseholdSession get session => sessionArg.value;
 
   Future<void> Function() get onSignOut => onSignOutArg.value;
 
+  void Function()? get onManageInvitations => onManageInvitationsArg?.value;
+
   @override
-  List<Arg?> get list => [keyArg, sessionArg, onSignOutArg];
+  List<Arg?> get list => [
+    keyArg,
+    sessionArg,
+    onSignOutArg,
+    onManageInvitationsArg,
+  ];
 }

@@ -41,6 +41,8 @@ dependencies:
   flutter_markdown_plus: ^1.0.12
   go_router: ^17.5.0
   pocketbase: ^0.24.1
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.0
 
 dev_dependencies:
   flutter_test:

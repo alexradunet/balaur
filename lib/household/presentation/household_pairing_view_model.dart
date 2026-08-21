@@ -1,4 +1,5 @@
 import 'package:balaur/household/data/household_gateway.dart';
+import 'package:balaur/household/domain/household_invitation.dart';
 import 'package:balaur/household/domain/household_server_address.dart';
 import 'package:balaur/household/domain/household_session.dart';
 import 'package:flutter/foundation.dart';
@@ -61,6 +62,31 @@ final class HouseholdPairingViewModel extends ChangeNotifier {
     _notify();
   }
 
+  Future<void> redeemInvitation({
+    required HouseholdInvitationPayload invitation,
+    required String displayName,
+    required String email,
+    required String password,
+  }) async {
+    _setConnecting();
+    try {
+      _session = await _gateway.redeemInvitation(
+        invitation: invitation,
+        displayName: displayName,
+        email: email,
+        password: password,
+      );
+      _status = HouseholdPairingStatus.paired;
+    } on HouseholdGatewayException catch (error) {
+      _status = HouseholdPairingStatus.failed;
+      _errorMessage = _messageFor(error.failure, restoring: false);
+    } on Object {
+      _status = HouseholdPairingStatus.failed;
+      _errorMessage = 'Balaur could not use the Household Invitation.';
+    }
+    _notify();
+  }
+
   Future<void> signOut() async {
     _session = null;
     _setConnecting();
@@ -95,7 +121,15 @@ final class HouseholdPairingViewModel extends ChangeNotifier {
       HouseholdGatewayFailure.storage =>
         'Balaur could not use secure storage for the Household session.',
       HouseholdGatewayFailure.invalidSession =>
-        'The Household Server returned an invalid member session.',
+        'The Household Server returned invalid data.',
+      HouseholdGatewayFailure.invalidInput => 'The Household Server rejected the member details. Check the email address and password.',
+      HouseholdGatewayFailure.forbidden =>
+        'Only a Household Administrator can complete this action.',
+      HouseholdGatewayFailure.invalidInvitation =>
+        'The Household Invitation is not valid.',
+      HouseholdGatewayFailure.expiredInvitation => 'The Household Invitation expired. Ask a Household Administrator for a new one.',
+      HouseholdGatewayFailure.unavailableInvitation =>
+        'The Household Invitation was used or canceled.',
     };
   }
 

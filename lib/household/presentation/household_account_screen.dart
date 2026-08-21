@@ -7,14 +7,20 @@ class HouseholdAccountScreen extends StatelessWidget {
     super.key,
     required this.session,
     required this.onSignOut,
+    this.onManageInvitations,
   });
 
   final HouseholdSession session;
   final Future<void> Function() onSignOut;
+  final VoidCallback? onManageInvitations;
 
   @override
   Widget build(BuildContext context) {
-    return HouseholdAccountView(session: session, onSignOut: onSignOut);
+    return HouseholdAccountView(
+      session: session,
+      onSignOut: onSignOut,
+      onManageInvitations: onManageInvitations,
+    );
   }
 }
 
@@ -24,11 +30,13 @@ class HouseholdAccountView extends StatelessWidget {
     required this.session,
     required this.onSignOut,
     this.onEnter,
+    this.onManageInvitations,
   });
 
   final HouseholdSession session;
   final Future<void> Function() onSignOut;
   final VoidCallback? onEnter;
+  final VoidCallback? onManageInvitations;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +125,15 @@ class HouseholdAccountView extends StatelessWidget {
                         spacing: 12,
                         runSpacing: 12,
                         children: [
+                          if (session.member.role ==
+                                  HouseholdMemberRole.administrator &&
+                              onManageInvitations != null)
+                            BalaurButton(
+                              key: const Key('manage-household-invitations'),
+                              label: 'Manage invitations',
+                              variant: BalaurButtonVariant.wood,
+                              onPressed: onManageInvitations,
+                            ),
                           BalaurButton(
                             key: const Key('sign-out-household'),
                             label: 'Sign out',

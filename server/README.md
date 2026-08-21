@@ -66,13 +66,31 @@ Household data.
 ## Versioned schema
 
 PocketBase runs the files in `pb_migrations` when it starts.
-The first migration creates these records:
+The migrations create these records:
 
 - The `members` authentication collection.
 - The singleton `household_settings` collection and record.
+- The private `household_invitations` collection.
 
-Clients cannot create or change either record type through collection routes.
+The invitation collection stores only a token hash, creator, expiration, role,
+and use state.
+Clients cannot read or change Household Invitations through collection routes.
 The setup route creates the first Household Administrator in one transaction.
+
+A Household Administrator manages Household Invitations through these routes:
+
+- `GET /api/balaur/household-invitations`
+- `POST /api/balaur/household-invitations`
+- `POST /api/balaur/household-invitations/{id}/cancel`
+
+A new Household Member uses this public redemption route:
+
+- `POST /api/balaur/household-invitations/redeem`
+
+Each Household Invitation expires after 24 hours and works one time.
+The redemption route creates local credentials and returns a member session.
+It never returns a PocketBase superuser token.
+Simple Mail Transfer Protocol configuration is not required.
 
 ## Run the route integration test
 
@@ -86,8 +104,11 @@ The script downloads the pinned PocketBase release.
 It verifies the release checksum before it runs the binary.
 The test starts real PocketBase processes and uses temporary data.
 It disables the PocketBase superuser installer during these processes.
-It does not open a browser or create a PocketBase superuser.
-It covers expiration, invalid setup, success, replay, and a second setup.
+It does not open a browser.
+It creates one temporary PocketBase superuser to set an expired test record.
+The temporary data directory is deleted after the test.
+It covers setup and Household Invitation routes, roles, expiration, replay,
+cancellation, and forbidden access.
 
 ## Update PocketBase
 

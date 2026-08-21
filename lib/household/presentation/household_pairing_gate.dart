@@ -9,10 +9,12 @@ class HouseholdPairingGate extends StatefulWidget {
     super.key,
     required this.gateway,
     required this.pairedChild,
+    this.onScanInvitation,
   });
 
   final HouseholdGateway gateway;
   final Widget pairedChild;
+  final HouseholdInvitationScanAction? onScanInvitation;
 
   @override
   State<HouseholdPairingGate> createState() => _HouseholdPairingGateState();
@@ -67,7 +69,9 @@ class _HouseholdPairingGateState extends State<HouseholdPairingGate> {
               session: currentSession,
               errorMessage: _viewModel.errorMessage,
               onPair: _viewModel.pair,
+              onRedeemInvitation: _viewModel.redeemInvitation,
               onSignOut: _signOut,
+              onScanInvitation: widget.onScanInvitation,
               onEnter: currentSession == null
                   ? null
                   : () => setState(() => _entered = true),

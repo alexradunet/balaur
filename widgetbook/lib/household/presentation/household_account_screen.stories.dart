@@ -13,7 +13,15 @@ const component = ComponentMeta(
 const meta = Meta(HouseholdAccountScreen.new);
 
 final $Administrator = _Story(
-  args: _Args.fixed(session: _session, onSignOut: _signOut),
+  args: _Args.fixed(
+    session: _session,
+    onSignOut: _signOut,
+    onManageInvitations: _manageInvitations,
+  ),
+);
+
+final $Member = _Story(
+  args: _Args.fixed(session: _memberSession, onSignOut: _signOut),
 );
 
 final _session = HouseholdSession(
@@ -26,4 +34,15 @@ final _session = HouseholdSession(
   ),
 );
 
+final _memberSession = HouseholdSession(
+  serverAddress: HouseholdServerAddress.parse('https://household.example.com'),
+  member: const HouseholdMember(
+    id: 'member-second',
+    displayName: 'Mara',
+    email: 'mara@example.com',
+    role: HouseholdMemberRole.member,
+  ),
+);
+
 Future<void> _signOut() async {}
+void _manageInvitations() {}

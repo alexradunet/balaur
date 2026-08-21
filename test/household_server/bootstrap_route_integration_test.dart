@@ -4,6 +4,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+const _testSuperuserEmail = 'route-test@example.com';
+const _testSuperuserPassword = 'route-test-correct-horse';
+
 void main() {
   final binaryPath = Platform.environment['POCKETBASE_BINARY'] ?? '';
 
@@ -19,6 +22,11 @@ void main() {
 
       try {
         await _verifyExpiredSetup(
+          binaryPath: binaryPath,
+          projectRoot: projectRoot,
+          dataDirectory: dataDirectory,
+        );
+        await _createTestSuperuser(
           binaryPath: binaryPath,
           projectRoot: projectRoot,
           dataDirectory: dataDirectory,
@@ -42,6 +50,37 @@ void main() {
         : false,
     timeout: const Timeout(Duration(minutes: 2)),
   );
+}
+
+Future<void> _createTestSuperuser({
+  required String binaryPath,
+  required Directory projectRoot,
+  required Directory dataDirectory,
+}) async {
+  final result = await Process.run(
+    binaryPath,
+    <String>[
+      'superuser',
+      'create',
+      _testSuperuserEmail,
+      _testSuperuserPassword,
+      '--dir=${dataDirectory.path}',
+      '--hooksDir=${projectRoot.path}/server/pb_hooks',
+      '--migrationsDir=${projectRoot.path}/server/pb_migrations',
+    ],
+    workingDirectory: projectRoot.path,
+    environment: <String, String>{
+      'BALAUR_DISABLE_POCKETBASE_INSTALLER': '1',
+      'PATH': '/nonexistent',
+    },
+    includeParentEnvironment: true,
+  );
+  if (result.exitCode != 0) {
+    throw StateError(
+      'PocketBase could not create the route-test superuser.\n'
+      '${result.stdout}\n${result.stderr}',
+    );
+  }
 }
 
 Future<void> _verifyExpiredSetup({
@@ -151,6 +190,11 @@ Future<void> _verifyFirstSetup({
     expect(settings, isNot(contains('singletonKey')));
     expect(settings, isNot(contains('setupCompletedAt')));
 
+    await _verifyInvitationRoutes(
+      server: server,
+      administratorToken: authenticationBody['token']! as String,
+    );
+
     final replay = await _request(
       'POST',
       server.uri('/api/balaur/setup'),
@@ -160,6 +204,286 @@ Future<void> _verifyFirstSetup({
   } finally {
     await server.stop();
   }
+}
+
+Future<void> _verifyInvitationRoutes({
+  required _PocketBaseServer server,
+  required String administratorToken,
+}) async {
+  final route = server.uri('/api/balaur/household-invitations');
+  final administratorHeaders = <String, String>{
+    HttpHeaders.authorizationHeader: administratorToken,
+  };
+
+  final unauthenticatedList = await _request('GET', route);
+  expect(unauthenticatedList.statusCode, HttpStatus.unauthorized);
+
+  final invalidRole = await _request(
+    'POST',
+    route,
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'role': 'superuser'},
+  );
+  expect(invalidRole.statusCode, HttpStatus.badRequest);
+
+  final memberInvitation = await _createInvitation(
+    server: server,
+    token: administratorToken,
+    role: 'member',
+  );
+  expect(memberInvitation.response.header('cache-control'), 'no-store');
+  expect(memberInvitation.value, hasLength(48));
+  expect(memberInvitation.invitation['role'], 'member');
+  expect(memberInvitation.invitation['state'], 'active');
+  expect(memberInvitation.invitation, isNot(contains('tokenHash')));
+  final expiresAt = DateTime.parse(
+    memberInvitation.invitation['expiresAt']! as String,
+  );
+  final remaining = expiresAt.difference(DateTime.now().toUtc());
+  expect(remaining, greaterThan(const Duration(hours: 23, minutes: 59)));
+  expect(remaining, lessThanOrEqualTo(const Duration(hours: 24)));
+
+  final listed = await _request('GET', route, headers: administratorHeaders);
+  expect(listed.statusCode, HttpStatus.ok);
+  final listedItems = listed.jsonBody['items']! as List<Object?>;
+  expect(listedItems, hasLength(1));
+  final listedInvitation = listedItems.single! as Map<String, Object?>;
+  expect(listedInvitation['id'], memberInvitation.invitation['id']);
+  expect(listedInvitation, isNot(contains('value')));
+  expect(listedInvitation, isNot(contains('tokenHash')));
+
+  final directInvitationRead = await _request(
+    'GET',
+    server.uri('/api/collections/household_invitations/records'),
+    headers: administratorHeaders,
+  );
+  expect(directInvitationRead.statusCode, HttpStatus.forbidden);
+
+  final memberRedemption = await _redeemInvitation(
+    server: server,
+    value: memberInvitation.value,
+    displayName: 'Mara',
+    email: 'mara@example.com',
+  );
+  expect(memberRedemption.statusCode, HttpStatus.ok);
+  expect(memberRedemption.header('cache-control'), 'no-store');
+  final memberAuthentication = memberRedemption.jsonBody;
+  final memberRecord = memberAuthentication['record']! as Map<String, Object?>;
+  expect(memberRecord['collectionName'], 'members');
+  expect(memberRecord['collectionName'], isNot('_superusers'));
+  expect(memberRecord['role'], 'member');
+  expect(memberRecord['displayName'], 'Mara');
+  final memberToken = memberAuthentication['token']! as String;
+  final memberHeaders = <String, String>{
+    HttpHeaders.authorizationHeader: memberToken,
+  };
+
+  final replay = await _redeemInvitation(
+    server: server,
+    value: memberInvitation.value,
+    displayName: 'Replay',
+    email: 'replay@example.com',
+  );
+  expect(replay.statusCode, HttpStatus.conflict);
+
+  final concurrentInvitation = await _createInvitation(
+    server: server,
+    token: administratorToken,
+    role: 'member',
+  );
+  final concurrentRedemptions = await Future.wait([
+    _redeemInvitation(
+      server: server,
+      value: concurrentInvitation.value,
+      displayName: 'First concurrent member',
+      email: 'first-concurrent@example.com',
+    ),
+    _redeemInvitation(
+      server: server,
+      value: concurrentInvitation.value,
+      displayName: 'Second concurrent member',
+      email: 'second-concurrent@example.com',
+    ),
+  ]);
+  expect(
+    concurrentRedemptions.map((response) => response.statusCode).toList()
+      ..sort(),
+    [HttpStatus.ok, HttpStatus.conflict],
+  );
+  final concurrentAuthentications = await Future.wait([
+    _request(
+      'POST',
+      server.uri('/api/collections/members/auth-with-password'),
+      jsonBody: <String, Object>{
+        'identity': 'first-concurrent@example.com',
+        'password': 'new-correct-horse',
+      },
+    ),
+    _request(
+      'POST',
+      server.uri('/api/collections/members/auth-with-password'),
+      jsonBody: <String, Object>{
+        'identity': 'second-concurrent@example.com',
+        'password': 'new-correct-horse',
+      },
+    ),
+  ]);
+  expect(
+    concurrentAuthentications.map((response) => response.statusCode).toList()
+      ..sort(),
+    [HttpStatus.ok, HttpStatus.badRequest],
+  );
+
+  final forbiddenList = await _request('GET', route, headers: memberHeaders);
+  expect(forbiddenList.statusCode, HttpStatus.forbidden);
+  final forbiddenCreate = await _request(
+    'POST',
+    route,
+    headers: memberHeaders,
+    jsonBody: <String, Object>{'role': 'household_administrator'},
+  );
+  expect(forbiddenCreate.statusCode, HttpStatus.forbidden);
+  final forbiddenCancel = await _request(
+    'POST',
+    server.uri(
+      '/api/balaur/household-invitations/'
+      '${memberInvitation.invitation['id']}/cancel',
+    ),
+    headers: memberHeaders,
+  );
+  expect(forbiddenCancel.statusCode, HttpStatus.forbidden);
+
+  final administratorInvitation = await _createInvitation(
+    server: server,
+    token: administratorToken,
+    role: 'household_administrator',
+  );
+  final administratorRedemption = await _redeemInvitation(
+    server: server,
+    value: administratorInvitation.value,
+    displayName: 'Dana',
+    email: 'dana@example.com',
+  );
+  expect(administratorRedemption.statusCode, HttpStatus.ok);
+  final secondAdministrator =
+      administratorRedemption.jsonBody['record']! as Map<String, Object?>;
+  expect(secondAdministrator['role'], 'household_administrator');
+  final secondAdministratorToken =
+      administratorRedemption.jsonBody['token']! as String;
+
+  final cancelCandidate = await _createInvitation(
+    server: server,
+    token: secondAdministratorToken,
+    role: 'member',
+  );
+  final canceled = await _request(
+    'POST',
+    server.uri(
+      '/api/balaur/household-invitations/'
+      '${cancelCandidate.invitation['id']}/cancel',
+    ),
+    headers: <String, String>{
+      HttpHeaders.authorizationHeader: secondAdministratorToken,
+    },
+  );
+  expect(canceled.statusCode, HttpStatus.ok);
+  final canceledInvitation =
+      canceled.jsonBody['invitation']! as Map<String, Object?>;
+  expect(canceledInvitation['state'], 'canceled');
+  final canceledRedemption = await _redeemInvitation(
+    server: server,
+    value: cancelCandidate.value,
+    displayName: 'Canceled',
+    email: 'canceled@example.com',
+  );
+  expect(canceledRedemption.statusCode, HttpStatus.conflict);
+
+  final expiredCandidate = await _createInvitation(
+    server: server,
+    token: administratorToken,
+    role: 'member',
+  );
+  final superuserAuthentication = await _request(
+    'POST',
+    server.uri('/api/collections/_superusers/auth-with-password'),
+    jsonBody: <String, Object>{
+      'identity': _testSuperuserEmail,
+      'password': _testSuperuserPassword,
+    },
+  );
+  expect(superuserAuthentication.statusCode, HttpStatus.ok);
+  final superuserToken = superuserAuthentication.jsonBody['token']! as String;
+  final expireRecord = await _request(
+    'PATCH',
+    server.uri(
+      '/api/collections/household_invitations/records/'
+      '${expiredCandidate.invitation['id']}',
+    ),
+    headers: <String, String>{HttpHeaders.authorizationHeader: superuserToken},
+    jsonBody: <String, Object>{
+      'expiresAt': DateTime.now()
+          .toUtc()
+          .subtract(const Duration(minutes: 1))
+          .toIso8601String(),
+    },
+  );
+  expect(expireRecord.statusCode, HttpStatus.ok);
+
+  final expiredRedemption = await _redeemInvitation(
+    server: server,
+    value: expiredCandidate.value,
+    displayName: 'Expired',
+    email: 'expired@example.com',
+  );
+  expect(expiredRedemption.statusCode, HttpStatus.gone);
+
+  final invalidRedemption = await _redeemInvitation(
+    server: server,
+    value: 'UnknownInvitation'.padRight(48, 'Z'),
+    displayName: 'Unknown',
+    email: 'unknown@example.com',
+  );
+  expect(invalidRedemption.statusCode, HttpStatus.notFound);
+}
+
+Future<_CreatedInvitationResponse> _createInvitation({
+  required _PocketBaseServer server,
+  required String token,
+  required String role,
+}) async {
+  final response = await _request(
+    'POST',
+    server.uri('/api/balaur/household-invitations'),
+    headers: <String, String>{HttpHeaders.authorizationHeader: token},
+    jsonBody: <String, Object>{'role': role},
+  );
+  expect(response.statusCode, HttpStatus.created);
+  final invitation = response.jsonBody['invitation']! as Map<String, Object?>;
+  final value = response.jsonBody['value']! as String;
+  return _CreatedInvitationResponse(
+    response: response,
+    invitation: invitation,
+    value: value,
+  );
+}
+
+Future<_HttpResponse> _redeemInvitation({
+  required _PocketBaseServer server,
+  required String value,
+  required String displayName,
+  required String email,
+}) {
+  return _request(
+    'POST',
+    server.uri('/api/balaur/household-invitations/redeem'),
+    jsonBody: <String, Object>{
+      'invitation': value,
+      'displayName': displayName,
+      'email': email,
+      'password': 'new-correct-horse',
+      'passwordConfirm': 'new-correct-horse',
+    },
+  );
 }
 
 Future<void> _verifySecondSetupRejection({
@@ -377,6 +701,18 @@ Future<_HttpResponse> _request(
   } finally {
     client.close(force: true);
   }
+}
+
+final class _CreatedInvitationResponse {
+  const _CreatedInvitationResponse({
+    required this.response,
+    required this.invitation,
+    required this.value,
+  });
+
+  final _HttpResponse response;
+  final Map<String, Object?> invitation;
+  final String value;
 }
 
 final class _HttpResponse {

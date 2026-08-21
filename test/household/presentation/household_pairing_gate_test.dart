@@ -82,6 +82,87 @@ void main() {
     );
   });
 
+  testWidgets('joins through manual Household Invitation entry', (
+    tester,
+  ) async {
+    final state = InMemoryHouseholdGatewayState(storedSession: _session);
+    final gateway = InMemoryHouseholdGateway(state: state);
+    final created = await gateway.createInvitation(
+      role: HouseholdMemberRole.administrator,
+    );
+    await gateway.signOut();
+    await _pumpGate(tester, gateway);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('use-household-invitation')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('invitation-household-server-address')),
+      created.payload.serverAddress.value,
+    );
+    await tester.enterText(
+      find.byKey(const Key('household-invitation-value')),
+      created.payload.value,
+    );
+    await _enterInvitationMemberDetails(tester);
+    await tester.ensureVisible(
+      find.byKey(const Key('redeem-household-invitation')),
+    );
+    await tester.tap(find.byKey(const Key('redeem-household-invitation')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Household paired'), findsOneWidget);
+    expect(find.text('Mara'), findsOneWidget);
+    expect(find.text('Household Administrator'), findsOneWidget);
+  });
+
+  testWidgets('fills pairing details from a Household Invitation QR code', (
+    tester,
+  ) async {
+    final state = InMemoryHouseholdGatewayState(storedSession: _session);
+    final gateway = InMemoryHouseholdGateway(state: state);
+    final created = await gateway.createInvitation(
+      role: HouseholdMemberRole.member,
+    );
+    await gateway.signOut();
+    await _pumpGate(
+      tester,
+      gateway,
+      onScanInvitation: (_) async => created.payload.qrValue,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('use-household-invitation')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('scan-household-invitation')));
+    await tester.pumpAndSettle();
+
+    final addressField = tester.widget<TextFormField>(
+      find.byKey(const Key('invitation-household-server-address')),
+    );
+    final invitationField = tester.widget<TextFormField>(
+      find.byKey(const Key('household-invitation-value')),
+    );
+    expect(addressField.controller?.text, created.payload.serverAddress.value);
+    expect(invitationField.controller?.text, created.payload.value);
+  });
+
+  testWidgets('rejects malformed Household Invitation QR data', (tester) async {
+    await _pumpGate(
+      tester,
+      InMemoryHouseholdGateway(),
+      onScanInvitation: (_) async => 'not-a-household-invitation',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('use-household-invitation')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('scan-household-invitation')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('THE INVITATION CODE IS NOT VALID'), findsOneWidget);
+  });
+
   testWidgets('shows the paired state and enters the application', (
     tester,
   ) async {
@@ -101,16 +182,37 @@ void main() {
 
 Future<void> _pumpGate(
   WidgetTester tester,
-  InMemoryHouseholdGateway gateway,
-) async {
+  InMemoryHouseholdGateway gateway, {
+  Future<String?> Function(BuildContext context)? onScanInvitation,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: BalaurTheme.light(),
       home: HouseholdPairingGate(
         gateway: gateway,
         pairedChild: const Center(child: Text('Paired application')),
+        onScanInvitation: onScanInvitation,
       ),
     ),
+  );
+}
+
+Future<void> _enterInvitationMemberDetails(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const Key('invited-household-display-name')),
+    'Mara',
+  );
+  await tester.enterText(
+    find.byKey(const Key('invited-household-email')),
+    'mara@example.com',
+  );
+  await tester.enterText(
+    find.byKey(const Key('invited-household-password')),
+    'new-correct-horse',
+  );
+  await tester.enterText(
+    find.byKey(const Key('invited-household-password-confirm')),
+    'new-correct-horse',
   );
 }
 
