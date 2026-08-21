@@ -26,6 +26,9 @@ Set `BALAUR_PUBLIC_URL` to the stable Hypertext Transfer Protocol Secure
 (HTTPS) address before you start the server.
 The `.env` file is not in Git.
 
+A Balaur debug build accepts `http://localhost:8090` when the application and
+server run on the same device. Profile and release builds require HTTPS.
+
 Do not set `BALAUR_SETUP_SECRET` for a normal deployment.
 The container creates a random setup secret for each incomplete startup.
 

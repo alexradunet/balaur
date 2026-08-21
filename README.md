@@ -38,6 +38,9 @@ When Balaur starts, enter these Household values:
 - **Email address**: Use the Household Member email address.
 - **Password**: Use the local Household Member password.
 
+A debug build also accepts `http://localhost:8090` for a Household Server on
+the same device. Profile and release builds continue to require HTTPS.
+
 Balaur stores the server address and member session in secure device storage.
 It does not store the member password.
 

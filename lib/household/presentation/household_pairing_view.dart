@@ -38,6 +38,7 @@ class HouseholdPairingView extends StatefulWidget {
     this.onEnter,
     this.onScanInvitation,
     this.initialMode = HouseholdPairingMode.credentials,
+    this.allowInsecureLoopback = false,
   });
 
   final HouseholdPairingStatus status;
@@ -49,6 +50,7 @@ class HouseholdPairingView extends StatefulWidget {
   final VoidCallback? onEnter;
   final HouseholdInvitationScanAction? onScanInvitation;
   final HouseholdPairingMode initialMode;
+  final bool allowInsecureLoopback;
 
   @override
   State<HouseholdPairingView> createState() => _HouseholdPairingViewState();
@@ -418,10 +420,12 @@ class _HouseholdPairingViewState extends State<HouseholdPairingView> {
       return error;
     }
     try {
-      HouseholdServerAddress.parse(value!);
+      _parseServerAddress(value!);
       return null;
     } on FormatException {
-      return 'Enter a stable HTTPS address.';
+      return widget.allowInsecureLoopback
+          ? 'Use HTTPS or an HTTP loopback address.'
+          : 'Enter a stable HTTPS address.';
     }
   }
 
@@ -469,9 +473,7 @@ class _HouseholdPairingViewState extends State<HouseholdPairingView> {
     }
     TextInput.finishAutofillContext(shouldSave: false);
     await widget.onPair(
-      serverAddress: HouseholdServerAddress.parse(
-        _serverAddressController.text,
-      ),
+      serverAddress: _parseServerAddress(_serverAddressController.text),
       email: _emailController.text.trim(),
       password: _passwordController.text,
     );
@@ -483,7 +485,10 @@ class _HouseholdPairingViewState extends State<HouseholdPairingView> {
       return;
     }
     try {
-      final payload = HouseholdInvitationPayload.parseQrValue(rawValue);
+      final payload = HouseholdInvitationPayload.parseQrValue(
+        rawValue,
+        allowInsecureLoopback: widget.allowInsecureLoopback,
+      );
       setState(() {
         _invitationServerAddressController.text = payload.serverAddress.value;
         _invitationController.text = payload.value;
@@ -496,6 +501,13 @@ class _HouseholdPairingViewState extends State<HouseholdPairingView> {
     }
   }
 
+  HouseholdServerAddress _parseServerAddress(String value) {
+    return HouseholdServerAddress.parse(
+      value,
+      allowInsecureLoopback: widget.allowInsecureLoopback,
+    );
+  }
+
   Future<void> _redeemInvitation() async {
     if (!_invitationFormKey.currentState!.validate()) {
       return;
@@ -503,7 +515,7 @@ class _HouseholdPairingViewState extends State<HouseholdPairingView> {
     TextInput.finishAutofillContext(shouldSave: false);
     await widget.onRedeemInvitation(
       invitation: HouseholdInvitationPayload(
-        serverAddress: HouseholdServerAddress.parse(
+        serverAddress: _parseServerAddress(
           _invitationServerAddressController.text,
         ),
         value: _invitationController.text.trim(),

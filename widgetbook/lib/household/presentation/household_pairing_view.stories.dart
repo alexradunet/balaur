@@ -19,6 +19,28 @@ final _payload = HouseholdInvitationPayload(
   value: 'InvitationValue'.padRight(48, 'A'),
 );
 
+final $LocalDevelopment = _Story(
+  args: _Args.fixed(
+    status: HouseholdPairingStatus.unpaired,
+    onPair: _pair,
+    onRedeemInvitation: _redeem,
+    onSignOut: _signOut,
+    allowInsecureLoopback: true,
+  ),
+  scenarios: [
+    _Scenario(
+      name: 'Local HTTP server',
+      run: (tester, _) async {
+        await tester.enterText(
+          find.byKey(const Key('household-server-address')),
+          'http://localhost:8090',
+        );
+        await tester.pumpAndSettle();
+      },
+    ),
+  ],
+);
+
 final $Manual = _Story(
   args: _Args.fixed(
     status: HouseholdPairingStatus.unpaired,

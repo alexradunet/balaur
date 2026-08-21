@@ -12,12 +12,12 @@ final class PocketBaseHouseholdGateway implements HouseholdGateway {
   PocketBaseHouseholdGateway({
     required this._credentialStore,
     this.requestTimeout = const Duration(seconds: 10),
-    this.allowInsecureLoopbackForTesting = false,
+    this.allowInsecureLoopback = false,
   });
 
   final HouseholdCredentialStore _credentialStore;
   final Duration requestTimeout;
-  final bool allowInsecureLoopbackForTesting;
+  final bool allowInsecureLoopback;
   AuthStore? _authStore;
   HouseholdServerAddress? _serverAddress;
 
@@ -383,7 +383,7 @@ final class PocketBaseHouseholdGateway implements HouseholdGateway {
     try {
       return HouseholdServerAddress.parse(value);
     } on FormatException {
-      if (allowInsecureLoopbackForTesting) {
+      if (allowInsecureLoopback) {
         return HouseholdServerAddress.loopbackForTesting(value);
       }
       rethrow;
@@ -397,7 +397,7 @@ final class PocketBaseHouseholdGateway implements HouseholdGateway {
     final host = address.uri.host.toLowerCase();
     final isLoopback =
         host == 'localhost' || host == '127.0.0.1' || host == '::1';
-    if (allowInsecureLoopbackForTesting &&
+    if (allowInsecureLoopback &&
         address.uri.scheme == 'http' &&
         isLoopback) {
       return;

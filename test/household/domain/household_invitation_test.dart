@@ -17,6 +17,24 @@ void main() {
       expect(payload.qrValue, contains('invitation='));
     });
 
+    test('permits a loopback HTTP server when explicitly enabled', () {
+      final payload = HouseholdInvitationPayload(
+        serverAddress: HouseholdServerAddress.parse(
+          'http://localhost:8090',
+          allowInsecureLoopback: true,
+        ),
+        value: 'InvitationValue'.padRight(48, 'A'),
+      );
+
+      expect(
+        HouseholdInvitationPayload.parseQrValue(
+          payload.qrValue,
+          allowInsecureLoopback: true,
+        ),
+        payload,
+      );
+    });
+
     test('rejects an insecure Household Server in QR data', () {
       final qrValue = Uri(
         scheme: 'balaur',

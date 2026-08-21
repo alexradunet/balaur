@@ -1,12 +1,15 @@
 final class HouseholdServerAddress {
   const HouseholdServerAddress._(this.uri);
 
-  factory HouseholdServerAddress.parse(String value) {
-    return _parse(value, allowLoopbackHttp: false);
+  factory HouseholdServerAddress.parse(
+    String value, {
+    bool allowInsecureLoopback = false,
+  }) {
+    return _parse(value, allowLoopbackHttp: allowInsecureLoopback);
   }
 
   factory HouseholdServerAddress.loopbackForTesting(String value) {
-    return _parse(value, allowLoopbackHttp: true);
+    return HouseholdServerAddress.parse(value, allowInsecureLoopback: true);
   }
 
   final Uri uri;

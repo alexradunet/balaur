@@ -54,6 +54,7 @@ class HouseholdPairingGateStory
                gateway: args.gateway,
                pairedChild: args.pairedChild,
                onScanInvitation: args.onScanInvitation,
+               allowInsecureLoopback: args.allowInsecureLoopback,
              ),
        );
 }
@@ -64,6 +65,7 @@ class HouseholdPairingGateArgs extends StoryArgs<HouseholdPairingGate> {
     required Arg<HouseholdGateway> gateway,
     required Arg<Widget> pairedChild,
     Arg<Future<String?> Function(BuildContext)?>? onScanInvitation,
+    Arg<bool>? allowInsecureLoopback,
   }) : this.keyArg = $initArg('key', key, null),
        this.gatewayArg = $initArg('gateway', gateway, null)!,
        this.pairedChildArg = $initArg('pairedChild', pairedChild, null)!,
@@ -71,13 +73,19 @@ class HouseholdPairingGateArgs extends StoryArgs<HouseholdPairingGate> {
          'onScanInvitation',
          onScanInvitation,
          null,
-       );
+       ),
+       this.allowInsecureLoopbackArg = $initArg(
+         'allowInsecureLoopback',
+         allowInsecureLoopback,
+         BoolArg(false),
+       )!;
 
   HouseholdPairingGateArgs.fixed({
     Key? key,
     required HouseholdGateway gateway,
     required Widget pairedChild,
     Future<String?> Function(BuildContext)? onScanInvitation,
+    bool allowInsecureLoopback = false,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.gatewayArg = $initArg('gateway', Arg.fixed(gateway), null)!,
        this.pairedChildArg = $initArg(
@@ -89,7 +97,12 @@ class HouseholdPairingGateArgs extends StoryArgs<HouseholdPairingGate> {
          'onScanInvitation',
          onScanInvitation == null ? null : Arg.fixed(onScanInvitation),
          null,
-       );
+       ),
+       this.allowInsecureLoopbackArg = $initArg(
+         'allowInsecureLoopback',
+         Arg.fixed(allowInsecureLoopback),
+         null,
+       )!;
 
   final Arg<Key?>? keyArg;
 
@@ -98,6 +111,8 @@ class HouseholdPairingGateArgs extends StoryArgs<HouseholdPairingGate> {
   final Arg<Widget> pairedChildArg;
 
   final Arg<Future<String?> Function(BuildContext)?>? onScanInvitationArg;
+
+  final Arg<bool> allowInsecureLoopbackArg;
 
   Key? get key => keyArg?.value;
 
@@ -108,11 +123,14 @@ class HouseholdPairingGateArgs extends StoryArgs<HouseholdPairingGate> {
   Future<String?> Function(BuildContext)? get onScanInvitation =>
       onScanInvitationArg?.value;
 
+  bool get allowInsecureLoopback => allowInsecureLoopbackArg.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
     gatewayArg,
     pairedChildArg,
     onScanInvitationArg,
+    allowInsecureLoopbackArg,
   ];
 }

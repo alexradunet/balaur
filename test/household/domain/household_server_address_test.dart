@@ -32,15 +32,17 @@ void main() {
       }
     });
 
-    test('permits insecure loopback only for tests', () {
-      final address = HouseholdServerAddress.loopbackForTesting(
-        'http://127.0.0.1:8090',
+    test('permits insecure loopback when explicitly enabled', () {
+      final address = HouseholdServerAddress.parse(
+        'http://localhost:8090',
+        allowInsecureLoopback: true,
       );
 
-      expect(address.value, 'http://127.0.0.1:8090');
+      expect(address.value, 'http://localhost:8090');
       expect(
-        () => HouseholdServerAddress.loopbackForTesting(
+        () => HouseholdServerAddress.parse(
           'http://household.example.com',
+          allowInsecureLoopback: true,
         ),
         throwsFormatException,
       );

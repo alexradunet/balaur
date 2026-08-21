@@ -35,6 +35,35 @@ void main() {
     expect(find.text('Enter a stable HTTPS address.'), findsOneWidget);
   });
 
+  testWidgets('accepts loopback HTTP when explicitly enabled', (tester) async {
+    await _pumpGate(
+      tester,
+      InMemoryHouseholdGateway(
+        pairFailure: HouseholdGatewayFailure.authentication,
+      ),
+      allowInsecureLoopback: true,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('household-server-address')),
+      'http://localhost:8090',
+    );
+    await tester.enterText(
+      find.byKey(const Key('household-email')),
+      'alex@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('household-password')),
+      'correct-horse',
+    );
+    await tester.tap(find.byKey(const Key('pair-household')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter a stable HTTPS address.'), findsNothing);
+    expect(find.text('PAIRING FAILED'), findsOneWidget);
+  });
+
   testWidgets('shows the connecting state', (tester) async {
     await _pumpGate(tester, InMemoryHouseholdGateway(pauseRestore: true));
     await tester.pump();
@@ -184,6 +213,7 @@ Future<void> _pumpGate(
   WidgetTester tester,
   InMemoryHouseholdGateway gateway, {
   Future<String?> Function(BuildContext context)? onScanInvitation,
+  bool allowInsecureLoopback = false,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -192,6 +222,7 @@ Future<void> _pumpGate(
         gateway: gateway,
         pairedChild: const Center(child: Text('Paired application')),
         onScanInvitation: onScanInvitation,
+        allowInsecureLoopback: allowInsecureLoopback,
       ),
     ),
   );

@@ -10,11 +10,13 @@ class HouseholdPairingGate extends StatefulWidget {
     required this.gateway,
     required this.pairedChild,
     this.onScanInvitation,
+    this.allowInsecureLoopback = false,
   });
 
   final HouseholdGateway gateway;
   final Widget pairedChild;
   final HouseholdInvitationScanAction? onScanInvitation;
+  final bool allowInsecureLoopback;
 
   @override
   State<HouseholdPairingGate> createState() => _HouseholdPairingGateState();
@@ -72,6 +74,7 @@ class _HouseholdPairingGateState extends State<HouseholdPairingGate> {
               onRedeemInvitation: _viewModel.redeemInvitation,
               onSignOut: _signOut,
               onScanInvitation: widget.onScanInvitation,
+              allowInsecureLoopback: widget.allowInsecureLoopback,
               onEnter: currentSession == null
                   ? null
                   : () => setState(() => _entered = true),

@@ -14,6 +14,7 @@ import 'package:balaur/household/presentation/household_qr_scanner_screen.dart';
 import 'package:balaur/navigation/presentation/balaur_navigation_shell.dart';
 import 'package:balaur/settings/presentation/provider_settings_screen.dart';
 import 'package:balaur/settings/provider_settings_store.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_driver/driver_extension.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -35,7 +36,9 @@ void main() {
       settingsStore: SecureProviderSettingsStore(secureStorage),
       householdGateway: PocketBaseHouseholdGateway(
         credentialStore: SecureHouseholdCredentialStore(secureStorage),
+        allowInsecureLoopback: kDebugMode,
       ),
+      allowInsecureLoopback: kDebugMode,
     ),
   );
 }
@@ -47,12 +50,14 @@ class BalaurApp extends StatefulWidget {
     required this.conversationRepository,
     required this.settingsStore,
     required this.householdGateway,
+    this.allowInsecureLoopback = false,
   });
 
   final ChatGateway gateway;
   final ConversationRepository conversationRepository;
   final ProviderSettingsStore settingsStore;
   final HouseholdGateway householdGateway;
+  final bool allowInsecureLoopback;
 
   @override
   State<BalaurApp> createState() => _BalaurAppState();
@@ -157,6 +162,7 @@ class _BalaurAppState extends State<BalaurApp> {
         gateway: widget.householdGateway,
         pairedChild: child ?? const SizedBox.shrink(),
         onScanInvitation: _scanHouseholdInvitation,
+        allowInsecureLoopback: widget.allowInsecureLoopback,
       ),
     );
   }

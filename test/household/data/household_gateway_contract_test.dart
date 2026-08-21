@@ -33,7 +33,7 @@ void main() {
     HouseholdGateway createGateway() => PocketBaseHouseholdGateway(
       credentialStore: credentialStore,
       requestTimeout: const Duration(seconds: 2),
-      allowInsecureLoopbackForTesting: true,
+      allowInsecureLoopback: true,
     );
 
     return _GatewayHarness(
@@ -51,7 +51,7 @@ void main() {
     final address = HouseholdServerAddress.loopbackForTesting(server.baseUrl);
     final testGateway = PocketBaseHouseholdGateway(
       credentialStore: credentialStore,
-      allowInsecureLoopbackForTesting: true,
+      allowInsecureLoopback: true,
     );
     await testGateway.pair(
       serverAddress: address,
@@ -93,7 +93,7 @@ void main() {
     final credentialStore = InMemoryHouseholdCredentialStore();
     final gateway = PocketBaseHouseholdGateway(
       credentialStore: credentialStore,
-      allowInsecureLoopbackForTesting: true,
+      allowInsecureLoopback: true,
     );
 
     await expectLater(
@@ -114,7 +114,7 @@ void main() {
     addTearDown(server.close);
     final gateway = PocketBaseHouseholdGateway(
       credentialStore: InMemoryHouseholdCredentialStore(),
-      allowInsecureLoopbackForTesting: true,
+      allowInsecureLoopback: true,
     );
     await gateway.pair(
       serverAddress: HouseholdServerAddress.loopbackForTesting(server.baseUrl),
@@ -144,7 +144,7 @@ void main() {
     final gateway = PocketBaseHouseholdGateway(
       credentialStore: InMemoryHouseholdCredentialStore(),
       requestTimeout: const Duration(milliseconds: 250),
-      allowInsecureLoopbackForTesting: true,
+      allowInsecureLoopback: true,
     );
 
     await expectLater(

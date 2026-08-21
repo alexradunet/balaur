@@ -24,6 +24,7 @@ final HouseholdPairingViewComponent =
       docsBuilder: component.docsBuilder,
       docComment: null,
       stories: [
+        $LocalDevelopment..$generatedName = 'LocalDevelopment',
         $Manual..$generatedName = 'Manual',
         $Scanned..$generatedName = 'Scanned',
       ],
@@ -58,6 +59,7 @@ class HouseholdPairingViewStory
                onEnter: args.onEnter,
                onScanInvitation: args.onScanInvitation,
                initialMode: args.initialMode,
+               allowInsecureLoopback: args.allowInsecureLoopback,
              ),
        );
 }
@@ -89,6 +91,7 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
     Arg<void Function()?>? onEnter,
     Arg<Future<String?> Function(BuildContext)?>? onScanInvitation,
     Arg<HouseholdPairingMode>? initialMode,
+    Arg<bool>? allowInsecureLoopback,
   }) : this.keyArg = $initArg('key', key, null),
        this.statusArg = $initArg(
          'status',
@@ -124,6 +127,11 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
            HouseholdPairingMode.credentials,
            values: HouseholdPairingMode.values,
          ),
+       )!,
+       this.allowInsecureLoopbackArg = $initArg(
+         'allowInsecureLoopback',
+         allowInsecureLoopback,
+         BoolArg(false),
        )!;
 
   HouseholdPairingViewArgs.fixed({
@@ -148,6 +156,7 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
     void Function()? onEnter,
     Future<String?> Function(BuildContext)? onScanInvitation,
     HouseholdPairingMode initialMode = HouseholdPairingMode.credentials,
+    bool allowInsecureLoopback = false,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.statusArg = $initArg('status', Arg.fixed(status), null)!,
        this.onPairArg = $initArg('onPair', Arg.fixed(onPair), null)!,
@@ -180,6 +189,11 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
        this.initialModeArg = $initArg(
          'initialMode',
          Arg.fixed(initialMode),
+         null,
+       )!,
+       this.allowInsecureLoopbackArg = $initArg(
+         'allowInsecureLoopback',
+         Arg.fixed(allowInsecureLoopback),
          null,
        )!;
 
@@ -218,6 +232,8 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
 
   final Arg<HouseholdPairingMode> initialModeArg;
 
+  final Arg<bool> allowInsecureLoopbackArg;
+
   Key? get key => keyArg?.value;
 
   HouseholdPairingStatus get status => statusArg.value;
@@ -250,6 +266,8 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
 
   HouseholdPairingMode get initialMode => initialModeArg.value;
 
+  bool get allowInsecureLoopback => allowInsecureLoopbackArg.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
@@ -262,5 +280,6 @@ class HouseholdPairingViewArgs extends StoryArgs<HouseholdPairingView> {
     onEnterArg,
     onScanInvitationArg,
     initialModeArg,
+    allowInsecureLoopbackArg,
   ];
 }

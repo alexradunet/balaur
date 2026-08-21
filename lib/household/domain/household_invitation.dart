@@ -25,7 +25,10 @@ final class HouseholdInvitationPayload {
     queryParameters: {'server': serverAddress.value, 'invitation': value},
   ).toString();
 
-  static HouseholdInvitationPayload parseQrValue(String input) {
+  static HouseholdInvitationPayload parseQrValue(
+    String input, {
+    bool allowInsecureLoopback = false,
+  }) {
     final uri = Uri.tryParse(input.trim());
     if (uri == null ||
         uri.scheme != 'balaur' ||
@@ -39,7 +42,10 @@ final class HouseholdInvitationPayload {
       throw const FormatException('Incomplete Household Invitation QR code.');
     }
     return HouseholdInvitationPayload(
-      serverAddress: HouseholdServerAddress.parse(server),
+      serverAddress: HouseholdServerAddress.parse(
+        server,
+        allowInsecureLoopback: allowInsecureLoopback,
+      ),
       value: invitation,
     );
   }
