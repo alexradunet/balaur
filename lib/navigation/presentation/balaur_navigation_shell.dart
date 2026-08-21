@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 enum BalaurDestination {
   chat('/chat'),
+  household('/household'),
   settings('/settings');
 
   const BalaurDestination(this.location);
@@ -11,7 +12,7 @@ enum BalaurDestination {
 }
 
 class BalaurNavigationShell extends StatelessWidget {
-  static const _links = ['chat', 'settings'];
+  static const _links = ['chat', 'household', 'settings'];
   const BalaurNavigationShell({
     super.key,
     required this.active,

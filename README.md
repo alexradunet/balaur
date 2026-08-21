@@ -31,7 +31,18 @@ Install Flutter and the Linux desktop requirements. Then run this command:
 flutter run -d linux
 ```
 
-Select the settings button in the application. Enter these provider values:
+Deploy and bootstrap the Household Server before you start the application.
+When Balaur starts, enter these Household values:
+
+- **Household Server address**: Use the stable HTTPS address.
+- **Email address**: Use the Household Member email address.
+- **Password**: Use the local Household Member password.
+
+Balaur stores the server address and member session in secure device storage.
+It does not store the member password.
+
+After pairing, select **Enter Balaur**.
+Then select the settings button and enter these provider values:
 
 - **Base URL**: Include the OpenAI-compatible API version path, such as `https://api.openai.com/v1`.
 - **API key**: Use a user-provided key for development.

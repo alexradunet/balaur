@@ -585,6 +585,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  pocketbase:
+    dependency: transitive
+    description:
+      name: pocketbase
+      sha256: eacfaeedc52057939cdad3fd0ee9ebb2d465594d1d8d205a738dd13701be8b44
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.24.1"
   pool:
     dependency: transitive
     description:

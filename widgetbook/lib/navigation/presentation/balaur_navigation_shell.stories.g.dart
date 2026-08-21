@@ -25,6 +25,7 @@ final BalaurNavigationShellComponent =
       docComment: null,
       stories: [
         $Chat..$generatedName = 'Chat',
+        $Household..$generatedName = 'Household',
         $Settings..$generatedName = 'Settings',
       ],
     );

@@ -3,6 +3,11 @@ import 'package:balaur/chat/data/conversation_repository.dart';
 import 'package:balaur/chat/data/openai_chat_gateway.dart';
 import 'package:balaur/chat/presentation/chat_screen.dart';
 import 'package:balaur/design_system/design_system.dart';
+import 'package:balaur/household/data/household_credential_store.dart';
+import 'package:balaur/household/data/household_gateway.dart';
+import 'package:balaur/household/data/pocketbase_household_gateway.dart';
+import 'package:balaur/household/presentation/household_account_screen.dart';
+import 'package:balaur/household/presentation/household_pairing_gate.dart';
 import 'package:balaur/navigation/presentation/balaur_navigation_shell.dart';
 import 'package:balaur/settings/presentation/provider_settings_screen.dart';
 import 'package:balaur/settings/provider_settings_store.dart';
@@ -17,11 +22,15 @@ void main() {
   }
 
   WidgetsFlutterBinding.ensureInitialized();
+  const secureStorage = FlutterSecureStorage();
   runApp(
     BalaurApp(
       gateway: OpenAiChatGateway(),
       conversationRepository: InMemoryConversationRepository(),
-      settingsStore: SecureProviderSettingsStore(const FlutterSecureStorage()),
+      settingsStore: SecureProviderSettingsStore(secureStorage),
+      householdGateway: PocketBaseHouseholdGateway(
+        credentialStore: SecureHouseholdCredentialStore(secureStorage),
+      ),
     ),
   );
 }
@@ -32,11 +41,13 @@ class BalaurApp extends StatefulWidget {
     required this.gateway,
     required this.conversationRepository,
     required this.settingsStore,
+    required this.householdGateway,
   });
 
   final ChatGateway gateway;
   final ConversationRepository conversationRepository;
   final ProviderSettingsStore settingsStore;
+  final HouseholdGateway householdGateway;
 
   @override
   State<BalaurApp> createState() => _BalaurAppState();
@@ -55,9 +66,10 @@ class _BalaurAppState extends State<BalaurApp> {
         GoRoute(path: '/', redirect: (_, _) => BalaurDestination.chat.location),
         ShellRoute(
           builder: (context, state, child) {
-            final active = state.uri.path == BalaurDestination.settings.location
-                ? BalaurDestination.settings
-                : BalaurDestination.chat;
+            final active = BalaurDestination.values.firstWhere(
+              (destination) => destination.location == state.uri.path,
+              orElse: () => BalaurDestination.chat,
+            );
             return BalaurNavigationShell(
               active: active,
               onSelect: (destination) => context.go(destination.location),
@@ -75,6 +87,20 @@ class _BalaurAppState extends State<BalaurApp> {
                 onOpenSettings: () =>
                     context.go(BalaurDestination.settings.location),
               ),
+            ),
+            GoRoute(
+              path: BalaurDestination.household.location,
+              builder: (context, _) {
+                final scope = HouseholdSessionScope.of(context);
+                final signOut = scope.onSignOut;
+                return HouseholdAccountScreen(
+                  session: scope.session,
+                  onSignOut: () async {
+                    context.go(BalaurDestination.chat.location);
+                    await signOut();
+                  },
+                );
+              },
             ),
             GoRoute(
               path: BalaurDestination.settings.location,
@@ -102,6 +128,10 @@ class _BalaurAppState extends State<BalaurApp> {
       darkTheme: BalaurTheme.dark(),
       themeMode: _themeMode,
       routerConfig: _router,
+      builder: (context, child) => HouseholdPairingGate(
+        gateway: widget.householdGateway,
+        pairedChild: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 

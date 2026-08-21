@@ -20,6 +20,16 @@ final $Chat = _Story(
   ),
 );
 
+final $Household = _Story(
+  args: _Args.fixed(
+    active: BalaurDestination.household,
+    onSelect: _select,
+    onToggleTheme: _toggleTheme,
+    themeGlyph: '◑',
+    child: const Center(child: Text('Household account')),
+  ),
+);
+
 final $Settings = _Story(
   args: _Args.fixed(
     active: BalaurDestination.settings,
