@@ -38,3 +38,20 @@ Flutter widget, screen, theme, or design token.
 
 Read `docs/development-policy.md` before you plan or implement features,
 refactors, architecture changes, or dependency changes.
+
+## Agent skills
+
+### Issue tracker
+
+Use GitHub Issues for issues and specifications.
+See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels.
+See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use the single-context domain documentation layout.
+See `docs/agents/domain.md`.

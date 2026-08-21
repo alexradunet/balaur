@@ -16,6 +16,10 @@
   Canonical language reference. Use for: Dart syntax, types, patterns, asynchronous code, and language semantics rather than relying on JS analogies.
 - [`StatefulWidget` API documentation](https://api.flutter.dev/flutter/widgets/StatefulWidget-class.html)
   Precise framework contract for mutable UI state and widget identity. Use for: lifecycle, state placement, keys, and rebuild-cost questions.
+- [`BuildContext` API documentation](https://api.flutter.dev/flutter/widgets/BuildContext-class.html)
+  Primary definition of context as an interface to an element location. Use for: ancestor lookup, lifecycle safety, and context selection.
+- [`GoRouterHelper` API documentation](https://pub.dev/documentation/go_router/latest/go_router/GoRouterHelper.html)
+  Package API for navigation extensions such as `context.go`. Use for: understanding the existing Balaur navigation callbacks.
 - [Flutter testing overview](https://docs.flutter.dev/testing/overview)
   Official guide to unit, widget, and integration tests. Use for: selecting the fastest feedback loop for each household behavior.
 - [Flutter adaptive and responsive design](https://docs.flutter.dev/ui/adaptive-responsive)

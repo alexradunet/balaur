@@ -37,6 +37,7 @@ summary { color: var(--accent); cursor: pointer; font-weight: 700; }
 button { background: var(--accent); border: 0; border-radius: .3rem; color: var(--paper); cursor: pointer; font: inherit; font-weight: 700; padding: .55rem .85rem; }
 button:disabled { cursor: default; opacity: .55; }
 .answer { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: .8rem; }
+.mermaid { background: transparent; border: 1px solid var(--line); display: flex; justify-content: center; padding: 1rem; }
 .next { border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1.5rem; }
 @media (prefers-color-scheme: dark) {
   :root { --paper: #181b18; --ink: #edf0e9; --muted: #adb5aa; --accent: #79d7c1; --accent-soft: #193b34; --line: #39413a; --code: #242a25; }

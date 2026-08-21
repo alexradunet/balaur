@@ -3,148 +3,215 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Lesson 2: Own state and pass actions</title>
+  <title>Lesson 2: Trace the Balaur application root</title>
   <link rel="stylesheet" href="../assets/course.css">
 </head>
 <body><main>
 <header>
-  <div class="eyebrow">Lesson 2 | Flutter state</div>
-  <h1>Own state and pass actions</h1>
-  <p class="lede">Move the counter button into a stateless child without moving the counter state.</p>
+  <div class="eyebrow">Lesson 2 | Existing Balaur code</div>
+  <h1>Trace the application root</h1>
+  <p class="lede">Use the existing theme control to connect widgets, elements, state, and callbacks.</p>
   <div class="meta">
-    <span>Time: 12 minutes</span>
-    <span>Requirement: Lesson 1</span>
-    <span>Result: You can pass an action callback</span>
+    <span>Time: 15 minutes</span>
+    <span>File: lib/main.dart</span>
+    <span>Result: You can trace one complete UI update</span>
   </div>
 </header>
 
-<h2>Recall the update process</h2>
-<p>Answer this question before you change the code.</p>
-<p>Which object does <code>setState</code> mark as dirty?</p>
-<button type="button" data-reveal="recall">Show the answer</button>
-<div id="recall" class="answer" hidden tabindex="-1">
-  <p><code>setState</code> marks the <code>Element</code> that is associated with the <code>State</code> object.</p>
-  <p>It does not mark an immutable <code>Widget</code> as dirty.</p>
-</div>
+<h2>Start the application</h2>
+<p>The <code>main</code> function is the application entry point.</p>
+<pre><code>void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    BalaurApp(
+      gateway: OpenAiChatGateway(),
+      conversationRepository: InMemoryConversationRepository(),
+      settingsStore: SecureProviderSettingsStore(
+        const FlutterSecureStorage(),
+      ),
+    ),
+  );
+}</code></pre>
+<p><code>ensureInitialized</code> prepares Flutter services before the application uses plugins.</p>
+<p><code>runApp</code> mounts the supplied widget as the root widget.</p>
+<p>The <code>BalaurApp</code> constructor receives three service objects.</p>
+<p>This technique is dependency injection.</p>
+<p>Dependency injection supplies an object with its external dependencies.</p>
 
-<h2>Learn the ownership rule</h2>
-<p>A widget must not own each value that it displays.</p>
-<p>Put state in the lowest common parent of all widgets that use or change it.</p>
-<p>Pass the current data to child widgets.</p>
-<p>Pass callbacks to child widgets that must request changes.</p>
+<pre class="mermaid">
+flowchart TD
+    M[main] --> G[OpenAiChatGateway]
+    M --> C[InMemoryConversationRepository]
+    M --> P[SecureProviderSettingsStore]
+    G --> W[BalaurApp widget]
+    C --> W
+    P --> W
+    W --> R[runApp]
+</pre>
 
-<pre><code>_MyHomePageState
-  ├─ owns: _counter
-  ├─ passes: current data to Text
-  └─ passes: _incrementCounter to IncrementButton</code></pre>
-
-<p>The child can request an increment.</p>
-<p>The parent still owns and changes the counter.</p>
-<p>This design gives one source of truth.</p>
-
-<div class="callout">
-<strong>Household use:</strong> A responsibility tile can show a completion value and send an <code>onToggle</code> callback.
-The shared state owner changes the responsibility.
-</div>
-
-<h2>Create a child widget</h2>
-<p>Add this class after <code>_MyHomePageState</code> in <code>lib/main.dart</code>.</p>
-<pre><code>class IncrementButton extends StatelessWidget {
-  const IncrementButton({
+<h2>Examine the root widget</h2>
+<pre><code>class BalaurApp extends StatefulWidget {
+  const BalaurApp({
     super.key,
-    required this.onIncrement,
+    required this.gateway,
+    required this.conversationRepository,
+    required this.settingsStore,
   });
 
-  final VoidCallback onIncrement;
+  final ChatGateway gateway;
+  final ConversationRepository conversationRepository;
+  final ProviderSettingsStore settingsStore;
 
   @override
-  Widget build(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: onIncrement,
-      tooltip: 'Increment',
-      child: const Icon(Icons.add),
-    );
-  }
+  State&lt;BalaurApp&gt; createState() =&gt; _BalaurAppState();
 }</code></pre>
+<p><code>BalaurApp</code> is an immutable widget description.</p>
+<p>Its three <code>final</code> fields contain configuration values.</p>
+<p>The widget creates one <code>_BalaurAppState</code> when Flutter mounts it.</p>
 
-<p><code>VoidCallback</code> is a Flutter type alias.</p>
-<p>It means <code>void Function()</code>.</p>
-<p>The callback takes no parameters and returns no value.</p>
-
-<h2>Pass the parent action</h2>
-<p>Find the existing <code>floatingActionButton</code> value.</p>
-<p>Replace its complete <code>FloatingActionButton</code> with this widget:</p>
-<pre><code>IncrementButton(
-  onIncrement: _incrementCounter,
-)</code></pre>
-
-<div class="checkpoint">
-<strong>Important:</strong> Pass <code>_incrementCounter</code> without parentheses.
-This syntax passes the function as a value.
-The syntax <code>_incrementCounter()</code> calls the function during <code>build</code>.
-</div>
-
-<h2>Test the callback path</h2>
-<div class="exercise">
-<ol>
-  <li>Run <code>dart format lib/main.dart</code>.</li>
-  <li>Run <code>flutter test</code>.</li>
-  <li>Make sure that the counter test passes.</li>
-  <li>Change the child value to <code>onPressed: () {}</code>.</li>
-  <li>Run <code>flutter test</code> again.</li>
-  <li>Read the failure.</li>
-  <li>Restore <code>onPressed: onIncrement</code>.</li>
-  <li>Run <code>flutter test</code>.</li>
-</ol>
-</div>
-
-<p>The temporary empty callback accepts the tap but requests no state change.</p>
-<p>The failing test proves that the callback connects the child event to the parent state owner.</p>
-
-<h2>Trace one tap</h2>
-<p>Put these steps in the correct order before you show the answer:</p>
-<ul>
-  <li>The parent changes <code>_counter</code>.</li>
-  <li>The child calls <code>onIncrement</code>.</li>
-  <li>Flutter calls both <code>build</code> methods.</li>
-  <li>The user taps the child button.</li>
-  <li><code>setState</code> marks the parent element as dirty.</li>
-</ul>
-<button type="button" data-reveal="order">Show the correct order</button>
-<div id="order" class="answer" hidden tabindex="-1">
-<ol>
-  <li>The user taps the child button.</li>
-  <li>The child calls <code>onIncrement</code>.</li>
-  <li>The parent changes <code>_counter</code> inside <code>setState</code>.</li>
-  <li><code>setState</code> marks the parent element as dirty.</li>
-  <li>Flutter calls both <code>build</code> methods.</li>
-</ol>
-</div>
-
-<h2>Connect this pattern to the product</h2>
-<pre><code>ResponsibilityTile(
-  isComplete: responsibility.isComplete,
-  onToggle: () =&gt; completeResponsibility(responsibility.id),
-)</code></pre>
-<p>The tile receives data and an action.</p>
-<p>It does not own the shared responsibility record.</p>
-<p>Later, the state owner can call a repository instead of changing a local field.</p>
-<p>The tile interface does not need to change.</p>
+<pre class="mermaid">
+flowchart LR
+    W[BalaurApp widget] -->|creates| E[StatefulElement]
+    E -->|creates and retains| S[_BalaurAppState]
+    S -->|widget property| W
+</pre>
 
 <div class="callout">
-<strong>Primary source:</strong> Read the official <a href="https://docs.flutter.dev/ui/interactivity">Flutter interactivity guide</a>.
-Pay special attention to the section about state management.
+<strong>Important:</strong> The <code>widget</code> property in <code>_BalaurAppState</code> refers to the current <code>BalaurApp</code> configuration.
+The associated element maintains this connection.
+</div>
+
+<h2>Separate configuration from mutable state</h2>
+<pre><code>class _BalaurAppState extends State&lt;BalaurApp&gt; {
+  late final GoRouter _router;
+  ThemeMode _themeMode = ThemeMode.system;
+}</code></pre>
+<table>
+<thead><tr><th>Value</th><th>Owner</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td><code>gateway</code></td><td><code>BalaurApp</code> widget</td><td>A parent supplies this configuration.</td></tr>
+<tr><td><code>conversationRepository</code></td><td><code>BalaurApp</code> widget</td><td>A parent supplies this configuration.</td></tr>
+<tr><td><code>settingsStore</code></td><td><code>BalaurApp</code> widget</td><td>A parent supplies this configuration.</td></tr>
+<tr><td><code>_router</code></td><td><code>_BalaurAppState</code></td><td>The mounted application owns its lifecycle.</td></tr>
+<tr><td><code>_themeMode</code></td><td><code>_BalaurAppState</code></td><td>The value changes while the application operates.</td></tr>
+</tbody>
+</table>
+
+<h2>Initialize the router once</h2>
+<p>Flutter calls <code>initState</code> once after it creates the <code>State</code> object.</p>
+<p>The method creates the router and stores it in <code>_router</code>.</p>
+<p>The <code>late final</code> declaration permits one assignment during <code>initState</code>.</p>
+<p>A theme rebuild does not create another router.</p>
+
+<p>The route builders use expressions such as <code>widget.gateway</code>.</p>
+<p>The <code>State</code> object gets the current widget through its associated element.</p>
+<p>This design keeps constructor configuration immutable and available to route builders.</p>
+
+<h2>Build the application UI</h2>
+<pre><code>@override
+Widget build(BuildContext context) {
+  return MaterialApp.router(
+    title: 'Balaur',
+    theme: BalaurTheme.light(),
+    darkTheme: BalaurTheme.dark(),
+    themeMode: _themeMode,
+    routerConfig: _router,
+  );
+}</code></pre>
+<p>The <code>build</code> method reads <code>_themeMode</code>.</p>
+<p>Therefore, a change to <code>_themeMode</code> requires another build operation.</p>
+<p>The method returns a new <code>MaterialApp</code> widget description.</p>
+<p>Flutter updates the existing elements with the new description.</p>
+
+<h2>Trace the theme callback</h2>
+<p>The router passes <code>_toggleTheme</code> to <code>BalaurNavigationShell</code>.</p>
+<pre><code>BalaurNavigationShell(
+  onToggleTheme: _toggleTheme,
+  child: child,
+)</code></pre>
+<p>The code passes the function without parentheses.</p>
+<p>The navigation shell passes the same callback to <code>BalaurTopbar</code>.</p>
+<p>The theme button calls the callback after a tap.</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    actor User
+    participant Button as Theme button
+    participant Shell as Navigation shell
+    participant State as _BalaurAppState
+    participant Element as StatefulElement
+    participant Flutter
+
+    User->>Button: Tap
+    Button->>Shell: Call onToggleTheme
+    Shell->>State: Call _toggleTheme
+    State->>State: Change _themeMode
+    State->>Element: Mark dirty with setState
+    Flutter->>State: Call build later
+    State-->>Flutter: Return new MaterialApp widget
+</pre>
+
+<h2>Read <code>setState</code> in context</h2>
+<pre><code>setState(() {
+  _themeMode = isDark ? ThemeMode.light : ThemeMode.dark;
+});</code></pre>
+<p>The callback changes data in <code>_BalaurAppState</code>.</p>
+<p><code>setState</code> marks the associated <code>StatefulElement</code> as dirty.</p>
+<p>Flutter later calls <code>build</code> on this state object.</p>
+<p>The new <code>MaterialApp</code> description contains the new theme mode.</p>
+
+<h2>Predict a code change</h2>
+<p>Assume that <code>_toggleTheme</code> changes <code>_themeMode</code> without <code>setState</code>.</p>
+<p>What happens after a theme button tap?</p>
+<button type="button" data-reveal="prediction">Show the answer</button>
+<div id="prediction" class="answer" hidden tabindex="-1">
+  <p>The <code>State</code> object contains the new theme mode.</p>
+  <p>The element does not become dirty.</p>
+  <p>Therefore, <code>build</code> does not run for this change.</p>
+  <p>The visible theme stays unchanged until another operation causes a rebuild.</p>
+</div>
+
+<h2>Complete the trace</h2>
+<div class="exercise">
+<ol>
+  <li>Open <code>lib/main.dart</code>.</li>
+  <li>Find each theme callback from <code>BalaurNavigationShell</code> to <code>setState</code>.</li>
+  <li>Find each read of the <code>widget</code> property inside <code>_BalaurAppState</code>.</li>
+  <li>Run <code>flutter test test/widget_test.dart</code>.</li>
+  <li>Make sure that all tests pass.</li>
+</ol>
+</div>
+
+<h2>Release the router</h2>
+<pre><code>@override
+void dispose() {
+  _router.dispose();
+  super.dispose();
+}</code></pre>
+<p>Flutter calls <code>dispose</code> when it permanently removes the element.</p>
+<p>The state object releases the router that it created.</p>
+<p>This ownership pair prevents a router resource leak.</p>
+
+<div class="callout">
+<strong>Primary source:</strong> Read <a href="https://docs.flutter.dev/ui/interactivity">Add interactivity to your Flutter app</a>.
+Use the <a href="https://api.flutter.dev/flutter/widgets/State-class.html"><code>State</code> API documentation</a> for lifecycle details.
 </div>
 
 <section class="next">
 <h2>Completion check</h2>
-<p>Complete the lesson when all tests pass.</p>
-<p>Then, explain why <code>IncrementButton</code> remains stateless.</p>
-<p>Also explain why <code>_incrementCounter</code> has no parentheses when the parent passes it.</p>
-<p>Ask your teacher about each part that is not clear.</p>
-<p><a href="../reference/flutter-state-ownership.html">Open the state ownership quick reference</a></p>
+<p>Explain these items without looking at the lesson:</p>
+<ol>
+  <li>Why does <code>_themeMode</code> belong to <code>_BalaurAppState</code>?</li>
+  <li>How does <code>_BalaurAppState</code> get <code>widget.gateway</code>?</li>
+  <li>Why does a theme change keep the same router?</li>
+  <li>Which object becomes dirty after <code>setState</code>?</li>
+</ol>
+<p>Send your answers to your teacher.</p>
+<p>Ask about each part that is not clear.</p>
+<p><a href="../reference/flutter-state-ownership.html">Open the state ownership reference</a></p>
 <p><a href="0001-from-state-change-to-frame.html">Review Lesson 1</a></p>
 </section>
 <script src="../assets/retrieval.js"></script>
+<script src="../assets/mermaid-init.js"></script>
 </main></body>
 </html>

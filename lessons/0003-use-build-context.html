@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lesson 3: Use BuildContext</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body><main>
+<header>
+  <div class="eyebrow">Lesson 3 | Existing Balaur code</div>
+  <h1>Use <code>BuildContext</code></h1>
+  <p class="lede">Trace <code>context.go</code> from the existing router code to its mounted tree location.</p>
+  <div class="meta">
+    <span>Time: 15 minutes</span>
+    <span>Files: main.dart and balaur_navigation_shell.dart</span>
+    <span>Result: You can select a valid context</span>
+  </div>
+</header>
+
+<h2>Connect context to an element</h2>
+<p>A <code>BuildContext</code> is a restricted interface to an <code>Element</code>.</p>
+<p>Therefore, a context identifies one mounted location in the element tree.</p>
+<p>Flutter uses the interface to prevent direct element manipulation.</p>
+
+<pre class="mermaid">
+flowchart LR
+    W[Widget description] --> E[Element]
+    E --> C[BuildContext interface]
+    C --> A[Ancestor lookup]
+</pre>
+
+<div class="callout">
+<strong>Key rule:</strong> A context belongs to one element location.
+It is not a reference to the complete application.
+</div>
+
+<h2>Find context in Balaur</h2>
+<p>The shell route builder receives a context.</p>
+<pre><code>ShellRoute(
+  builder: (context, state, child) {
+    // ...
+    return BalaurNavigationShell(
+      onSelect: (destination) =&gt; context.go(destination.location),
+      onToggleTheme: _toggleTheme,
+      child: child,
+    );
+  },
+)</code></pre>
+<p>The builder context identifies an element below the router service.</p>
+<p>The <code>onSelect</code> callback captures this context.</p>
+<p>After a navigation tap, the callback calls <code>context.go</code>.</p>
+
+<h2>Understand <code>context.go</code></h2>
+<p><code>go_router</code> adds <code>go</code> to <code>BuildContext</code> with a Dart extension.</p>
+<p>The method is not part of the Flutter <code>BuildContext</code> interface.</p>
+<p>The method finds the router from the current context and changes its location.</p>
+
+<pre class="mermaid">
+flowchart BT
+    B[Navigation button element]
+    S[Shell route element and context]
+    I[Inherited router service]
+    R[GoRouter]
+
+    B --> S
+    S -->|ancestor lookup| I
+    I --> R
+</pre>
+
+<p>The diagram is simplified.</p>
+<p>The important direction is upward from the current element to its ancestors.</p>
+
+<h2>Trace a settings navigation</h2>
+<pre class="mermaid">
+sequenceDiagram
+    actor User
+    participant Topbar
+    participant Shell as BalaurNavigationShell
+    participant Context as Shell route context
+    participant Router as GoRouter
+
+    User->>Topbar: Select SETTINGS
+    Topbar->>Shell: Call onNavigate
+    Shell->>Shell: Convert name to destination
+    Shell->>Context: Call onSelect callback
+    Context->>Router: context.go('/settings')
+    Router->>Router: Match settings route
+</pre>
+
+<p><code>BalaurNavigationShell</code> does not own the router.</p>
+<p>It sends a selected destination through <code>onSelect</code>.</p>
+<p>The route builder owns the navigation action because it has a suitable context.</p>
+
+<h2>Compare two contexts</h2>
+<p><code>_BalaurAppState.build</code> also receives a context.</p>
+<pre><code>@override
+Widget build(BuildContext context) {
+  return MaterialApp.router(
+    routerConfig: _router,
+    // ...
+  );
+}</code></pre>
+<p>This context belongs to the <code>BalaurApp</code> element.</p>
+<p>The returned <code>MaterialApp.router</code> is below that element.</p>
+<p>Therefore, the root context cannot find services that <code>MaterialApp.router</code> provides below it.</p>
+
+<pre class="mermaid">
+flowchart TD
+    A[BalaurApp element and context]
+    M[MaterialApp router element]
+    P[Router provider]
+    S[Shell route element and context]
+
+    A --> M
+    M --> P
+    P --> S
+</pre>
+
+<p>The shell context can search upward and find the router provider.</p>
+<p>The <code>BalaurApp</code> context cannot search downward to find it.</p>
+
+<h2>Predict the valid context</h2>
+<p>Which context can correctly call <code>context.go('/settings')</code>?</p>
+<ol>
+  <li>The context passed to <code>_BalaurAppState.build</code>.</li>
+  <li>The context passed to the <code>ShellRoute</code> builder.</li>
+</ol>
+<button type="button" data-reveal="prediction">Show the answer</button>
+<div id="prediction" class="answer" hidden tabindex="-1">
+  <p>The <code>ShellRoute</code> builder context is valid.</p>
+  <p>Its element is below the router provider.</p>
+  <p>The <code>BalaurApp</code> context is above the router provider.</p>
+</div>
+
+<h2>Use context after asynchronous work</h2>
+<p>An element can become unmounted while an asynchronous operation waits.</p>
+<p>Use <code>context.mounted</code> before you use that context after the wait.</p>
+<pre><code>await settingsStore.save(settings);
+
+if (!context.mounted) return;
+context.go('/chat');</code></pre>
+<p>Do not store a context as a general long-term application reference.</p>
+<p>Use the current context during a synchronous operation when possible.</p>
+
+<h2>Examine the existing navigation path</h2>
+<div class="exercise">
+<ol>
+  <li>Open <code>lib/main.dart</code>.</li>
+  <li>Find the two calls to <code>context.go</code>.</li>
+  <li>Identify the builder that supplies each context.</li>
+  <li>Open <code>lib/navigation/presentation/balaur_navigation_shell.dart</code>.</li>
+  <li>Trace <code>onSelect</code> from the shell to the route builder.</li>
+  <li>Run <code>flutter test test/widget_test.dart</code>.</li>
+  <li>Find the test that proves settings navigation operates correctly.</li>
+</ol>
+</div>
+
+<h2>Recall the model</h2>
+<p>Complete this sentence from memory:</p>
+<blockquote>A <code>BuildContext</code> is an interface to an ________. It identifies one mounted ________ in the tree.</blockquote>
+<button type="button" data-reveal="recall">Show the answer</button>
+<div id="recall" class="answer" hidden tabindex="-1">
+  <p>A <code>BuildContext</code> is an interface to an <code>Element</code>.</p>
+  <p>It identifies one mounted location in the tree.</p>
+</div>
+
+<div class="callout">
+<strong>Primary source:</strong> Read the official <a href="https://api.flutter.dev/flutter/widgets/BuildContext-class.html"><code>BuildContext</code> API documentation</a>.
+Read the <a href="https://pub.dev/documentation/go_router/latest/go_router/GoRouterHelper.html"><code>GoRouterHelper</code> API documentation</a> for <code>context.go</code>.
+</div>
+
+<section class="next">
+<h2>Completion check</h2>
+<p>Answer these questions without looking at the lesson:</p>
+<ol>
+  <li>What Flutter object implements <code>BuildContext</code>?</li>
+  <li>Why can the shell route context find the router?</li>
+  <li>Why can the <code>BalaurApp</code> context fail to find that router?</li>
+  <li>What check must follow an asynchronous gap?</li>
+</ol>
+<p>Send your answers to your teacher.</p>
+<p>Ask about each part that is not clear.</p>
+<p><a href="../reference/flutter-build-context.html">Open the BuildContext quick reference</a></p>
+<p><a href="0002-own-state-pass-actions.html">Review Lesson 2</a></p>
+</section>
+<script src="../assets/retrieval.js"></script>
+<script src="../assets/mermaid-init.js"></script>
+</main></body>
+</html>

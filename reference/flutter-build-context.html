@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Flutter BuildContext quick reference</title>
+  <link rel="stylesheet" href="../assets/course.css">
+</head>
+<body><main>
+<header>
+  <div class="eyebrow">Flutter reference</div>
+  <h1>Use <code>BuildContext</code></h1>
+  <p class="lede">Use this guide when code must find a theme, router, media value, or other tree service.</p>
+</header>
+
+<h2>Definition</h2>
+<p>A <code>BuildContext</code> is a restricted interface to an <code>Element</code>.</p>
+<p>It identifies one mounted location in the element tree.</p>
+<p>It does not contain global application state.</p>
+
+<h2>Ancestor lookup</h2>
+<pre><code>Theme.of(context)
+MediaQuery.of(context)
+Navigator.of(context)
+GoRouter.of(context)
+context.go('/settings')</code></pre>
+<p>These operations start at the context location.</p>
+<p>They search the ancestor chain for the required service.</p>
+
+<h2>Rules</h2>
+<ul>
+  <li>Use the context below the provider that you must find.</li>
+  <li>Do not store a context for later general use.</li>
+  <li>Check <code>context.mounted</code> after an asynchronous gap.</li>
+  <li>Use a <code>Builder</code> when you need a context below a new widget.</li>
+  <li>Remember that each mounted widget has a different context.</li>
+</ul>
+
+<h2>Asynchronous use</h2>
+<pre><code>await saveSettings();
+
+if (!context.mounted) return;
+context.go('/chat');</code></pre>
+
+<h2>Diagnostic question</h2>
+<p>Ask this question when an ancestor lookup fails:</p>
+<blockquote>Is this context below the provider that I want to find?</blockquote>
+
+<p><strong>Primary source:</strong> <a href="https://api.flutter.dev/flutter/widgets/BuildContext-class.html"><code>BuildContext</code> API documentation</a>.</p>
+<p><a href="../lessons/0003-use-build-context.html">Open Lesson 3</a></p>
+</main></body>
+</html>
