@@ -6,6 +6,8 @@ import 'package:balaur/household/data/household_credential_store.dart';
 import 'package:balaur/household/data/household_gateway.dart';
 import 'package:balaur/household/data/in_memory_household_gateway.dart';
 import 'package:balaur/household/data/pocketbase_household_gateway.dart';
+import 'package:balaur/household/domain/calendar_connection.dart';
+import 'package:balaur/household/domain/calendar_entry.dart';
 import 'package:balaur/household/domain/household_invitation.dart';
 import 'package:balaur/household/domain/household_server_address.dart';
 import 'package:balaur/household/domain/household_session.dart';
@@ -13,7 +15,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   _householdGatewayContract('In-memory Household Gateway', () async {
-    final state = InMemoryHouseholdGatewayState();
+    final state = InMemoryHouseholdGatewayState(
+      calendarEntries: _calendarEntries,
+    );
     HouseholdGateway createGateway() =>
         InMemoryHouseholdGateway(state: state, accounts: const [_account]);
 
@@ -23,6 +27,14 @@ void main() {
       serverAddress: HouseholdServerAddress.parse(
         'https://household.example.com',
       ),
+      completeCalendarAuthorization: () async {
+        state.calendarConnection = CalendarConnection(
+          provider: 'google',
+          status: CalendarConnectionStatus.awaitingSelection,
+          householdTimeZone: 'UTC',
+          availableCalendars: _calendars,
+        );
+      },
       close: () async {},
     );
   });
@@ -40,6 +52,7 @@ void main() {
       gateway: createGateway(),
       restart: () async => createGateway(),
       serverAddress: HouseholdServerAddress.loopbackForTesting(server.baseUrl),
+      completeCalendarAuthorization: server.completeCalendarAuthorization,
       close: server.close,
     );
   });
@@ -328,6 +341,73 @@ void _householdGatewayContract(
       );
     });
 
+    test('connects, selects, replaces, and disconnects a calendar', () async {
+      await harness.gateway.pair(
+        serverAddress: harness.serverAddress,
+        email: _account.email,
+        password: _account.password,
+      );
+
+      expect(
+        (await harness.gateway.loadCalendarConnection()).status,
+        CalendarConnectionStatus.disconnected,
+      );
+      final authorizationUri = await harness.gateway.beginCalendarConnection(
+        replace: false,
+      );
+      expect(authorizationUri.scheme, 'https');
+      await harness.completeCalendarAuthorization();
+
+      final pending = await harness.gateway.loadCalendarConnection();
+      expect(pending.status, CalendarConnectionStatus.awaitingSelection);
+      expect(pending.availableCalendars, _calendars);
+
+      final connected = await harness.gateway.selectCalendar(
+        _calendars.first.id,
+      );
+      expect(connected.status, CalendarConnectionStatus.connected);
+      expect(connected.selectedCalendar, _calendars.first);
+      final entries = await harness.gateway.loadCalendarEntries(
+        rangeStart: DateTime.utc(2026, 8, 21),
+        rangeEnd: DateTime.utc(2026, 8, 22),
+      );
+      expect(entries, _calendarEntries);
+
+      await expectLater(
+        harness.gateway.beginCalendarConnection(replace: false),
+        throwsA(_hasFailure(HouseholdGatewayFailure.invalidInput)),
+      );
+      await harness.gateway.beginCalendarConnection(replace: true);
+      await harness.gateway.disconnectCalendarConnection();
+
+      final disconnected = await harness.gateway.loadCalendarConnection();
+      expect(disconnected.status, CalendarConnectionStatus.disconnected);
+      expect(disconnected.selectedCalendar, isNull);
+    });
+
+    test('exports a confirmed Household Archive', () async {
+      await harness.gateway.pair(
+        serverAddress: harness.serverAddress,
+        email: _account.email,
+        password: _account.password,
+      );
+
+      final archive = await harness.gateway.exportHouseholdArchive(
+        password: _account.password,
+        includeCalendarSnapshot: false,
+      );
+
+      expect(archive.fileName, endsWith('.zip'));
+      expect(archive.bytes.take(2), <int>[0x50, 0x4b]);
+      await expectLater(
+        harness.gateway.exportHouseholdArchive(
+          password: 'wrong-password',
+          includeCalendarSnapshot: false,
+        ),
+        throwsA(_hasFailure(HouseholdGatewayFailure.authentication)),
+      );
+    });
+
     test('prevents a Household Member from managing invitations', () async {
       await harness.gateway.pair(
         serverAddress: harness.serverAddress,
@@ -349,6 +429,29 @@ void _householdGatewayContract(
         harness.gateway.listInvitations(),
         throwsA(_hasFailure(HouseholdGatewayFailure.forbidden)),
       );
+      expect(
+        (await harness.gateway.loadCalendarConnection()).status,
+        CalendarConnectionStatus.disconnected,
+      );
+      await expectLater(
+        harness.gateway.beginCalendarConnection(replace: false),
+        throwsA(_hasFailure(HouseholdGatewayFailure.forbidden)),
+      );
+      await expectLater(
+        harness.gateway.selectCalendar(_calendars.first.id),
+        throwsA(_hasFailure(HouseholdGatewayFailure.forbidden)),
+      );
+      await expectLater(
+        harness.gateway.disconnectCalendarConnection(),
+        throwsA(_hasFailure(HouseholdGatewayFailure.forbidden)),
+      );
+      await expectLater(
+        harness.gateway.exportHouseholdArchive(
+          password: 'new-correct-horse',
+          includeCalendarSnapshot: false,
+        ),
+        throwsA(_hasFailure(HouseholdGatewayFailure.forbidden)),
+      );
     });
   });
 }
@@ -359,12 +462,14 @@ final class _GatewayHarness {
     required this.restart,
     required this.serverAddress,
     required this.close,
+    required this.completeCalendarAuthorization,
   });
 
   final HouseholdGateway gateway;
   final Future<HouseholdGateway> Function() restart;
   final HouseholdServerAddress serverAddress;
   final Future<void> Function() close;
+  final Future<void> Function() completeCalendarAuthorization;
 }
 
 const _member = HouseholdMember(
@@ -379,6 +484,31 @@ const _account = InMemoryHouseholdAccount(
   password: 'correct-horse',
   member: _member,
 );
+
+const _calendars = [
+  CalendarSourceCalendar(
+    id: 'family@example.com',
+    name: 'Family',
+    colorHex: '#4285f4',
+  ),
+  CalendarSourceCalendar(
+    id: 'school@example.com',
+    name: 'School',
+    colorHex: '#d50000',
+  ),
+];
+
+final _calendarEntries = [
+  CalendarEntry(
+    id: 'family-dinner',
+    title: 'Family dinner',
+    start: DateTime.utc(2026, 8, 21, 18),
+    end: DateTime.utc(2026, 8, 21, 19, 30),
+    allDay: false,
+    location: 'Home',
+    colorHex: '#4285f4',
+  ),
+];
 
 Map<String, Object?> _memberRecord({
   String id = 'member-example',
@@ -407,6 +537,11 @@ final class _FakePocketBaseServer {
   final bool invalidToken;
   late final StreamSubscription<HttpRequest> _subscription;
   final Map<String, _FakeInvitation> _invitations = {};
+  CalendarConnection _calendarConnection = CalendarConnection(
+    provider: 'google',
+    status: CalendarConnectionStatus.disconnected,
+    householdTimeZone: 'UTC',
+  );
   int _nextInvitation = 1;
   int requestCount = 0;
 
@@ -428,6 +563,15 @@ final class _FakePocketBaseServer {
     await _server.close(force: true);
   }
 
+  Future<void> completeCalendarAuthorization() async {
+    _calendarConnection = CalendarConnection(
+      provider: 'google',
+      status: CalendarConnectionStatus.awaitingSelection,
+      householdTimeZone: 'UTC',
+      availableCalendars: _calendars,
+    );
+  }
+
   Future<void> _handle(HttpRequest request) async {
     requestCount += 1;
     try {
@@ -439,6 +583,37 @@ final class _FakePocketBaseServer {
       if (request.method == 'POST' &&
           request.uri.path == '/api/collections/members/auth-refresh') {
         await _refresh(request);
+        return;
+      }
+      if (request.uri.path == '/api/balaur/calendar-connection') {
+        if (request.method == 'GET') {
+          await _loadCalendarConnection(request);
+          return;
+        }
+      }
+      if (request.method == 'POST' &&
+          request.uri.path == '/api/balaur/calendar-connection/authorize') {
+        await _beginCalendarConnection(request);
+        return;
+      }
+      if (request.method == 'POST' &&
+          request.uri.path == '/api/balaur/calendar-connection/select') {
+        await _selectCalendar(request);
+        return;
+      }
+      if (request.method == 'POST' &&
+          request.uri.path == '/api/balaur/calendar-connection/disconnect') {
+        await _disconnectCalendarConnection(request);
+        return;
+      }
+      if (request.method == 'GET' &&
+          request.uri.path == '/api/balaur/calendar-entries') {
+        await _loadCalendarEntries(request);
+        return;
+      }
+      if (request.method == 'POST' &&
+          request.uri.path == '/api/balaur/household-archive') {
+        await _exportHouseholdArchive(request);
         return;
       }
       if (request.method == 'POST' &&
@@ -566,6 +741,202 @@ final class _FakePocketBaseServer {
     } on Object {
       return null;
     }
+  }
+
+  Future<void> _loadCalendarConnection(HttpRequest request) async {
+    if (_authorizationRecord(request) == null) {
+      await _error(
+        request.response,
+        HttpStatus.unauthorized,
+        'The session is not valid.',
+      );
+      return;
+    }
+    await _json(request.response, HttpStatus.ok, {
+      'connection': _calendarConnectionJson,
+    });
+  }
+
+  Future<void> _beginCalendarConnection(HttpRequest request) async {
+    final member = _authorizationRecord(request);
+    if (member?['role'] != 'household_administrator') {
+      await _error(
+        request.response,
+        HttpStatus.forbidden,
+        'Household Administrator access is required.',
+      );
+      return;
+    }
+    final body = await _jsonRequestBody(request);
+    if (_calendarConnection.status == CalendarConnectionStatus.connected &&
+        body['replace'] != true) {
+      await _error(
+        request.response,
+        HttpStatus.conflict,
+        'Replace the current Calendar Connection first.',
+      );
+      return;
+    }
+    _calendarConnection = CalendarConnection(
+      provider: 'google',
+      status: CalendarConnectionStatus.authorizing,
+      householdTimeZone: 'UTC',
+    );
+    await _json(request.response, HttpStatus.ok, {
+      'authorizationUrl':
+          'https://accounts.example.com/authorize?state=fake-state',
+      'connection': _calendarConnectionJson,
+    });
+  }
+
+  Future<void> _selectCalendar(HttpRequest request) async {
+    final member = _authorizationRecord(request);
+    if (member?['role'] != 'household_administrator') {
+      await _error(
+        request.response,
+        HttpStatus.forbidden,
+        'Household Administrator access is required.',
+      );
+      return;
+    }
+    final body = await _jsonRequestBody(request);
+    CalendarSourceCalendar? selected;
+    for (final calendar in _calendarConnection.availableCalendars) {
+      if (calendar.id == body['calendarId']) {
+        selected = calendar;
+        break;
+      }
+    }
+    if (selected == null ||
+        _calendarConnection.status !=
+            CalendarConnectionStatus.awaitingSelection) {
+      await _error(
+        request.response,
+        HttpStatus.badRequest,
+        'Select a calendar from the authorized list.',
+      );
+      return;
+    }
+    _calendarConnection = CalendarConnection(
+      provider: 'google',
+      status: CalendarConnectionStatus.connected,
+      householdTimeZone: 'UTC',
+      selectedCalendar: selected,
+    );
+    await _json(request.response, HttpStatus.ok, {
+      'connection': _calendarConnectionJson,
+    });
+  }
+
+  Future<void> _exportHouseholdArchive(HttpRequest request) async {
+    final member = _authorizationRecord(request);
+    if (member?['role'] != 'household_administrator') {
+      await _error(
+        request.response,
+        HttpStatus.forbidden,
+        'Household Administrator access is required.',
+      );
+      return;
+    }
+    final body = await _jsonRequestBody(request);
+    if (body['password'] != _account.password) {
+      await _error(
+        request.response,
+        HttpStatus.unauthorized,
+        'Confirm the Household Administrator password.',
+      );
+      return;
+    }
+    request.response
+      ..statusCode = HttpStatus.ok
+      ..headers.contentType = ContentType('application', 'zip')
+      ..headers.set(
+        'content-disposition',
+        'attachment; filename="balaur-household-2026-08-21.zip"',
+      )
+      ..add(<int>[0x50, 0x4b, 0x05, 0x06, ...List<int>.filled(18, 0)]);
+    await request.response.close();
+  }
+
+  Future<void> _loadCalendarEntries(HttpRequest request) async {
+    if (_authorizationRecord(request) == null) {
+      await _error(
+        request.response,
+        HttpStatus.unauthorized,
+        'The session is not valid.',
+      );
+      return;
+    }
+    if (_calendarConnection.status != CalendarConnectionStatus.connected) {
+      await _error(
+        request.response,
+        424,
+        'The Calendar Connection is disconnected.',
+      );
+      return;
+    }
+    await _json(request.response, HttpStatus.ok, {
+      'items': _calendarEntries.map(_calendarEntryJson).toList(growable: false),
+    });
+  }
+
+  Map<String, Object?> _calendarEntryJson(CalendarEntry entry) {
+    return {
+      'id': entry.id,
+      'title': entry.title,
+      'start': entry.start.toIso8601String(),
+      'end': entry.end.toIso8601String(),
+      'allDay': entry.allDay,
+      'location': entry.location,
+      'colorHex': entry.colorHex,
+    };
+  }
+
+  Future<void> _disconnectCalendarConnection(HttpRequest request) async {
+    final member = _authorizationRecord(request);
+    if (member?['role'] != 'household_administrator') {
+      await _error(
+        request.response,
+        HttpStatus.forbidden,
+        'Household Administrator access is required.',
+      );
+      return;
+    }
+    _calendarConnection = CalendarConnection(
+      provider: 'google',
+      status: CalendarConnectionStatus.disconnected,
+      householdTimeZone: 'UTC',
+    );
+    await _json(request.response, HttpStatus.ok, {
+      'connection': _calendarConnectionJson,
+    });
+  }
+
+  Map<String, Object?> get _calendarConnectionJson => {
+    'provider': _calendarConnection.provider,
+    'status': switch (_calendarConnection.status) {
+      CalendarConnectionStatus.disconnected => 'disconnected',
+      CalendarConnectionStatus.authorizing => 'authorizing',
+      CalendarConnectionStatus.awaitingSelection => 'awaiting_selection',
+      CalendarConnectionStatus.connected => 'connected',
+      CalendarConnectionStatus.authorizationFailed => 'authorization_failed',
+    },
+    'householdTimeZone': _calendarConnection.householdTimeZone,
+    'selectedCalendar': _calendarJson(_calendarConnection.selectedCalendar),
+    'availableCalendars': _calendarConnection.availableCalendars
+        .map(_calendarJson)
+        .toList(growable: false),
+  };
+
+  Map<String, Object?>? _calendarJson(CalendarSourceCalendar? calendar) {
+    if (calendar == null) {
+      return null;
+    }
+    return {
+      'id': calendar.id,
+      'name': calendar.name,
+      'colorHex': ?calendar.colorHex,
+    };
   }
 
   Future<void> _createInvitation(HttpRequest request) async {

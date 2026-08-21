@@ -8,11 +8,15 @@ class HouseholdAccountScreen extends StatelessWidget {
     required this.session,
     required this.onSignOut,
     this.onManageInvitations,
+    this.onManageCalendarConnection,
+    this.onExportArchive,
   });
 
   final HouseholdSession session;
   final Future<void> Function() onSignOut;
   final VoidCallback? onManageInvitations;
+  final VoidCallback? onManageCalendarConnection;
+  final VoidCallback? onExportArchive;
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +24,8 @@ class HouseholdAccountScreen extends StatelessWidget {
       session: session,
       onSignOut: onSignOut,
       onManageInvitations: onManageInvitations,
+      onManageCalendarConnection: onManageCalendarConnection,
+      onExportArchive: onExportArchive,
     );
   }
 }
@@ -31,12 +37,16 @@ class HouseholdAccountView extends StatelessWidget {
     required this.onSignOut,
     this.onEnter,
     this.onManageInvitations,
+    this.onManageCalendarConnection,
+    this.onExportArchive,
   });
 
   final HouseholdSession session;
   final Future<void> Function() onSignOut;
   final VoidCallback? onEnter;
   final VoidCallback? onManageInvitations;
+  final VoidCallback? onManageCalendarConnection;
+  final VoidCallback? onExportArchive;
 
   @override
   Widget build(BuildContext context) {
@@ -127,12 +137,32 @@ class HouseholdAccountView extends StatelessWidget {
                         children: [
                           if (session.member.role ==
                                   HouseholdMemberRole.administrator &&
+                              onManageCalendarConnection != null)
+                            BalaurButton(
+                              key: const Key(
+                                'manage-household-calendar-connection',
+                              ),
+                              label: 'Manage calendar',
+                              variant: BalaurButtonVariant.wood,
+                              onPressed: onManageCalendarConnection,
+                            ),
+                          if (session.member.role ==
+                                  HouseholdMemberRole.administrator &&
                               onManageInvitations != null)
                             BalaurButton(
                               key: const Key('manage-household-invitations'),
                               label: 'Manage invitations',
                               variant: BalaurButtonVariant.wood,
                               onPressed: onManageInvitations,
+                            ),
+                          if (session.member.role ==
+                                  HouseholdMemberRole.administrator &&
+                              onExportArchive != null)
+                            BalaurButton(
+                              key: const Key('export-household-archive'),
+                              label: 'Export archive',
+                              variant: BalaurButtonVariant.wood,
+                              onPressed: onExportArchive,
                             ),
                           BalaurButton(
                             key: const Key('sign-out-household'),

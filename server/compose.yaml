@@ -1,6 +1,6 @@
 services:
   household-server:
-    image: balaur-household-server:0.39.11
+    image: "${BALAUR_HOUSEHOLD_IMAGE:-balaur-household-server:0.39.11}"
     build:
       context: .
     restart: unless-stopped
@@ -10,16 +10,20 @@ services:
       BALAUR_PUBLIC_URL: "${BALAUR_PUBLIC_URL:-http://localhost:8090}"
       BALAUR_SETUP_TTL_SECONDS: "${BALAUR_SETUP_TTL_SECONDS:-1800}"
       BALAUR_SETUP_SECRET: "${BALAUR_SETUP_SECRET:-}"
+      BALAUR_GOOGLE_OAUTH_CLIENT_ID: "${BALAUR_GOOGLE_OAUTH_CLIENT_ID:-}"
+      BALAUR_GOOGLE_OAUTH_CLIENT_SECRET: "${BALAUR_GOOGLE_OAUTH_CLIENT_SECRET:-}"
+      BALAUR_CALENDAR_ENCRYPTION_KEY: "${BALAUR_CALENDAR_ENCRYPTION_KEY:-}"
     volumes:
-      - household-data:/pb/pb_data
+      - "${BALAUR_DATA_DIR:-./pb_data}:/pb/pb_data"
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 20s
-
-volumes:
-  household-data:

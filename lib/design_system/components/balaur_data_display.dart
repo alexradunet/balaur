@@ -137,6 +137,7 @@ class BalaurCalendarCell extends StatelessWidget {
     this.selected = false,
     this.dimmed = false,
     this.onPressed,
+    this.semanticLabel,
   });
 
   final int day;
@@ -145,14 +146,15 @@ class BalaurCalendarCell extends StatelessWidget {
   final bool selected;
   final bool dimmed;
   final VoidCallback? onPressed;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     final colors = BalaurColors.of(context);
     return Semantics(
       selected: selected,
-      label: 'Day $day${today ? ', today' : ''}, $pips items',
-      button: true,
+      label: semanticLabel ?? 'Day $day${today ? ', today' : ''}, $pips items',
+      button: onPressed != null,
       child: Opacity(
         opacity: dimmed ? 0.4 : 1,
         child: LayoutBuilder(
@@ -263,8 +265,11 @@ class BalaurDayEntry extends StatelessWidget {
             child: Text(
               time.toUpperCase(),
               textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.labelMedium
-                  ?.copyWith(color: colors.inkMuted),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -310,8 +315,11 @@ class BalaurDayEntry extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       detail,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: colors.inkMuted, fontSize: 13),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.ink,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ],

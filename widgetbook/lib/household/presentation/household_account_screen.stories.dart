@@ -17,6 +17,8 @@ final $Administrator = _Story(
     session: _session,
     onSignOut: _signOut,
     onManageInvitations: _manageInvitations,
+    onManageCalendarConnection: _manageCalendarConnection,
+    onExportArchive: _exportArchive,
   ),
 );
 
@@ -46,3 +48,5 @@ final _memberSession = HouseholdSession(
 
 Future<void> _signOut() async {}
 void _manageInvitations() {}
+void _manageCalendarConnection() {}
+void _exportArchive() {}

@@ -20,6 +20,16 @@ final $Chat = _Story(
   ),
 );
 
+final $Calendar = _Story(
+  args: _Args.fixed(
+    active: BalaurDestination.calendar,
+    onSelect: _select,
+    onToggleTheme: _toggleTheme,
+    themeGlyph: '◑',
+    child: const Center(child: Text('Household calendar')),
+  ),
+);
+
 final $Household = _Story(
   args: _Args.fixed(
     active: BalaurDestination.household,

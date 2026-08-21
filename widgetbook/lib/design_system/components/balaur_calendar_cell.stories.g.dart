@@ -58,6 +58,7 @@ class BalaurCalendarCellStory
                selected: args.selected,
                dimmed: args.dimmed,
                onPressed: args.onPressed,
+               semanticLabel: args.semanticLabel,
              ),
        );
 }
@@ -71,13 +72,19 @@ class BalaurCalendarCellArgs extends StoryArgs<BalaurCalendarCell> {
     Arg<bool>? selected,
     Arg<bool>? dimmed,
     Arg<void Function()?>? onPressed,
+    Arg<String?>? semanticLabel,
   }) : this.keyArg = $initArg('key', key, null),
        this.dayArg = $initArg('day', day, IntArg(0))!,
        this.pipsArg = $initArg('pips', pips, IntArg(0))!,
        this.todayArg = $initArg('today', today, BoolArg(false))!,
        this.selectedArg = $initArg('selected', selected, BoolArg(false))!,
        this.dimmedArg = $initArg('dimmed', dimmed, BoolArg(false))!,
-       this.onPressedArg = $initArg('onPressed', onPressed, null);
+       this.onPressedArg = $initArg('onPressed', onPressed, null),
+       this.semanticLabelArg = $initArg(
+         'semanticLabel',
+         semanticLabel,
+         NullableStringArg(null),
+       )!;
 
   BalaurCalendarCellArgs.fixed({
     Key? key,
@@ -87,6 +94,7 @@ class BalaurCalendarCellArgs extends StoryArgs<BalaurCalendarCell> {
     bool selected = false,
     bool dimmed = false,
     void Function()? onPressed,
+    String? semanticLabel = null,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.dayArg = $initArg('day', Arg.fixed(day), null)!,
        this.pipsArg = $initArg('pips', Arg.fixed(pips), null)!,
@@ -96,6 +104,11 @@ class BalaurCalendarCellArgs extends StoryArgs<BalaurCalendarCell> {
        this.onPressedArg = $initArg(
          'onPressed',
          onPressed == null ? null : Arg.fixed(onPressed),
+         null,
+       ),
+       this.semanticLabelArg = $initArg(
+         'semanticLabel',
+         semanticLabel == null ? null : Arg.fixed(semanticLabel),
          null,
        );
 
@@ -113,6 +126,8 @@ class BalaurCalendarCellArgs extends StoryArgs<BalaurCalendarCell> {
 
   final Arg<void Function()?>? onPressedArg;
 
+  final Arg<String?>? semanticLabelArg;
+
   Key? get key => keyArg?.value;
 
   int get day => dayArg.value;
@@ -127,6 +142,8 @@ class BalaurCalendarCellArgs extends StoryArgs<BalaurCalendarCell> {
 
   void Function()? get onPressed => onPressedArg?.value;
 
+  String? get semanticLabel => semanticLabelArg?.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
@@ -136,5 +153,6 @@ class BalaurCalendarCellArgs extends StoryArgs<BalaurCalendarCell> {
     selectedArg,
     dimmedArg,
     onPressedArg,
+    semanticLabelArg,
   ];
 }

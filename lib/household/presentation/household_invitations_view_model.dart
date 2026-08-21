@@ -127,6 +127,10 @@ final class HouseholdInvitationsViewModel extends ChangeNotifier {
         'The Household Invitation expired.',
       HouseholdGatewayFailure.unavailableInvitation =>
         'The Household Invitation is not active.',
+      HouseholdGatewayFailure.calendarAuthorization =>
+        'The Household Server Calendar Connection is not configured.',
+      HouseholdGatewayFailure.server =>
+        'The Household Server could not complete the request.',
     };
   }
 

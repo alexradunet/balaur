@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _testSuperuserEmail = 'route-test@example.com';
@@ -353,6 +354,17 @@ Future<void> _verifyInvitationRoutes({
   );
   expect(forbiddenCancel.statusCode, HttpStatus.forbidden);
 
+  await _verifyCalendarConnectionRoutes(
+    server: server,
+    administratorToken: administratorToken,
+    memberToken: memberToken,
+  );
+  await _verifyHouseholdArchiveRoutes(
+    server: server,
+    administratorToken: administratorToken,
+    memberToken: memberToken,
+  );
+
   final administratorInvitation = await _createInvitation(
     server: server,
     token: administratorToken,
@@ -444,6 +456,422 @@ Future<void> _verifyInvitationRoutes({
     email: 'unknown@example.com',
   );
   expect(invalidRedemption.statusCode, HttpStatus.notFound);
+}
+
+Future<void> _verifyCalendarConnectionRoutes({
+  required _PocketBaseServer server,
+  required String administratorToken,
+  required String memberToken,
+}) async {
+  final route = server.uri('/api/balaur/calendar-connection');
+  final administratorHeaders = <String, String>{
+    HttpHeaders.authorizationHeader: administratorToken,
+  };
+  final memberHeaders = <String, String>{
+    HttpHeaders.authorizationHeader: memberToken,
+  };
+
+  final unauthenticated = await _request('GET', route);
+  expect(unauthenticated.statusCode, HttpStatus.unauthorized);
+
+  final memberStatus = await _request('GET', route, headers: memberHeaders);
+  expect(memberStatus.statusCode, HttpStatus.ok);
+  expect(
+    memberStatus.jsonBody['connection'],
+    isA<Map<String, Object?>>()
+        .having((value) => value['status'], 'status', 'disconnected')
+        .having(
+          (value) => value.containsKey('refreshTokenCiphertext'),
+          'secret',
+          false,
+        )
+        .having((value) => value.containsKey('oauthStateHash'), 'state', false),
+  );
+
+  for (final path in <String>[
+    '/api/balaur/calendar-connection/authorize',
+    '/api/balaur/calendar-connection/select',
+    '/api/balaur/calendar-connection/disconnect',
+  ]) {
+    final forbidden = await _request(
+      'POST',
+      server.uri(path),
+      headers: memberHeaders,
+      jsonBody: <String, Object>{
+        'replace': false,
+        'calendarId': 'family@example.com',
+      },
+    );
+    expect(forbidden.statusCode, HttpStatus.forbidden);
+  }
+
+  final begin = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/authorize'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'replace': false},
+  );
+  expect(begin.statusCode, HttpStatus.ok);
+  expect(begin.header('cache-control'), 'no-store');
+  expect(begin.jsonBody['requestedScopes'], <Object?>[
+    'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+    'https://www.googleapis.com/auth/calendar.events.readonly',
+  ]);
+  final authorizationUrl = Uri.parse(
+    begin.jsonBody['authorizationUrl']! as String,
+  );
+  final state = authorizationUrl.queryParameters['state'];
+  expect(state, isNotNull);
+  expect(state, hasLength(64));
+
+  final invalidState = await _request(
+    'GET',
+    server.uri(
+      '/api/balaur/calendar-source/callback'
+      '?state=${'InvalidCalendarState'.padRight(64, 'Z')}'
+      '&code=fake-authorization-code',
+    ),
+  );
+  expect(invalidState.statusCode, HttpStatus.badRequest);
+  final stillAuthorizing = await _request(
+    'GET',
+    route,
+    headers: administratorHeaders,
+  );
+  expect(
+    (stillAuthorizing.jsonBody['connection']!
+        as Map<String, Object?>)['status'],
+    'authorizing',
+  );
+
+  final denialUrl = authorizationUrl.replace(
+    queryParameters: <String, String>{
+      ...authorizationUrl.queryParameters,
+      'decision': 'deny',
+    },
+  );
+  final denial = await _request('GET', denialUrl);
+  expect(denial.statusCode, HttpStatus.ok);
+  expect(denial.body, contains('authorization failed'));
+  final deniedStatus = await _request(
+    'GET',
+    route,
+    headers: administratorHeaders,
+  );
+  expect(
+    (deniedStatus.jsonBody['connection']! as Map<String, Object?>)['status'],
+    'authorization_failed',
+  );
+
+  final reconnect = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/authorize'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'replace': false},
+  );
+  expect(reconnect.statusCode, HttpStatus.ok);
+  final reconnectUrl = Uri.parse(
+    reconnect.jsonBody['authorizationUrl']! as String,
+  );
+  final callback = await _request('GET', reconnectUrl);
+  expect(callback.statusCode, HttpStatus.ok);
+  expect(callback.body, contains('authorization is complete'));
+
+  final selectionStatus = await _request(
+    'GET',
+    route,
+    headers: administratorHeaders,
+  );
+  final selectionConnection =
+      selectionStatus.jsonBody['connection']! as Map<String, Object?>;
+  expect(selectionConnection['status'], 'awaiting_selection');
+  expect(selectionConnection['householdTimeZone'], 'Europe/Bucharest');
+  final available = selectionConnection['availableCalendars']! as List<Object?>;
+  expect(available, hasLength(2));
+
+  final invalidSelection = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/select'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'calendarId': 'unknown@example.com'},
+  );
+  expect(invalidSelection.statusCode, HttpStatus.badRequest);
+
+  final selected = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/select'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'calendarId': 'family@example.com'},
+  );
+  expect(selected.statusCode, HttpStatus.ok);
+  final connected = selected.jsonBody['connection']! as Map<String, Object?>;
+  expect(connected['status'], 'connected');
+  expect(connected['selectedCalendar'], <String, Object?>{
+    'id': 'family@example.com',
+    'name': 'Family',
+    'colorHex': '#4285f4',
+  });
+  expect(connected, isNot(contains('refreshTokenCiphertext')));
+
+  final unauthenticatedEntries = await _request(
+    'GET',
+    server.uri(
+      '/api/balaur/calendar-entries'
+      '?timeMin=2026-08-21T00%3A00%3A00Z'
+      '&timeMax=2026-08-22T00%3A00%3A00Z',
+    ),
+  );
+  expect(unauthenticatedEntries.statusCode, HttpStatus.unauthorized);
+
+  final invalidRange = await _request(
+    'GET',
+    server.uri(
+      '/api/balaur/calendar-entries'
+      '?timeMin=2026-01-01T00%3A00%3A00Z'
+      '&timeMax=2026-04-01T00%3A00%3A00Z',
+    ),
+    headers: memberHeaders,
+  );
+  expect(invalidRange.statusCode, HttpStatus.badRequest);
+
+  final entriesResponse = await _request(
+    'GET',
+    server.uri(
+      '/api/balaur/calendar-entries'
+      '?timeMin=2026-08-21T00%3A00%3A00Z'
+      '&timeMax=2026-08-22T00%3A00%3A00Z',
+    ),
+    headers: memberHeaders,
+  );
+  expect(entriesResponse.statusCode, HttpStatus.ok);
+  expect(entriesResponse.header('cache-control'), 'no-store');
+  final entries = entriesResponse.jsonBody['items']! as List<Object?>;
+  expect(entries, hasLength(2));
+
+  final allDay = entries.first! as Map<String, Object?>;
+  expect(allDay['title'], 'Busy');
+  expect(allDay['start'], '2026-08-21');
+  expect(allDay['end'], '2026-08-22');
+  expect(allDay['allDay'], isTrue);
+  expect(allDay['colorHex'], '#4285f4');
+  final timed = entries.last! as Map<String, Object?>;
+  expect(timed['title'], 'Family dinner');
+  expect(timed['start'], '2026-08-21T18:00:00Z');
+  expect(timed['end'], '2026-08-21T19:30:00Z');
+  expect(timed['location'], 'Home');
+  expect(
+    entries,
+    isNot(
+      contains(
+        predicate<Map<String, Object?>>(
+          (entry) => entry['title'] == 'Canceled',
+        ),
+      ),
+    ),
+  );
+
+  final directRead = await _request(
+    'GET',
+    server.uri('/api/collections/calendar_connections/records'),
+    headers: administratorHeaders,
+  );
+  expect(directRead.statusCode, HttpStatus.forbidden);
+
+  final startWithoutReplace = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/authorize'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'replace': false},
+  );
+  expect(startWithoutReplace.statusCode, HttpStatus.conflict);
+
+  final revoked = await _request(
+    'POST',
+    server.uri('/api/balaur/testing/calendar-source/revoke'),
+    headers: administratorHeaders,
+  );
+  expect(revoked.statusCode, HttpStatus.noContent);
+  final revokedEntries = await _request(
+    'GET',
+    server.uri(
+      '/api/balaur/calendar-entries'
+      '?timeMin=2026-08-21T00%3A00%3A00Z'
+      '&timeMax=2026-08-22T00%3A00%3A00Z',
+    ),
+    headers: memberHeaders,
+  );
+  expect(revokedEntries.statusCode, 424);
+  final revokedStatus = await _request(
+    'GET',
+    route,
+    headers: administratorHeaders,
+  );
+  expect(
+    (revokedStatus.jsonBody['connection']! as Map<String, Object?>)['status'],
+    'disconnected',
+  );
+
+  final recoveredAuthorization = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/authorize'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'replace': false},
+  );
+  final recoveredUrl = Uri.parse(
+    recoveredAuthorization.jsonBody['authorizationUrl']! as String,
+  );
+  expect((await _request('GET', recoveredUrl)).statusCode, HttpStatus.ok);
+  final recoveredSelection = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/select'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'calendarId': 'family@example.com'},
+  );
+  expect(recoveredSelection.statusCode, HttpStatus.ok);
+  final replace = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/authorize'),
+    headers: administratorHeaders,
+    jsonBody: <String, Object>{'replace': true},
+  );
+  expect(replace.statusCode, HttpStatus.ok);
+
+  final disconnected = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/disconnect'),
+    headers: administratorHeaders,
+  );
+  expect(disconnected.statusCode, HttpStatus.ok);
+  expect(
+    (disconnected.jsonBody['connection']! as Map<String, Object?>)['status'],
+    'disconnected',
+  );
+}
+
+Future<void> _verifyHouseholdArchiveRoutes({
+  required _PocketBaseServer server,
+  required String administratorToken,
+  required String memberToken,
+}) async {
+  final route = server.uri('/api/balaur/household-archive');
+  final unauthenticated = await _request(
+    'POST',
+    route,
+    jsonBody: <String, Object>{
+      'password': 'correct-horse',
+      'includeCalendarSnapshot': false,
+    },
+  );
+  expect(unauthenticated.statusCode, HttpStatus.unauthorized);
+
+  final member = await _request(
+    'POST',
+    route,
+    headers: <String, String>{HttpHeaders.authorizationHeader: memberToken},
+    jsonBody: <String, Object>{
+      'password': 'new-correct-horse',
+      'includeCalendarSnapshot': false,
+    },
+  );
+  expect(member.statusCode, HttpStatus.forbidden);
+
+  final wrongPassword = await _request(
+    'POST',
+    route,
+    headers: <String, String>{
+      HttpHeaders.authorizationHeader: administratorToken,
+    },
+    jsonBody: <String, Object>{
+      'password': 'wrong-password',
+      'includeCalendarSnapshot': false,
+    },
+  );
+  expect(wrongPassword.statusCode, HttpStatus.unauthorized);
+
+  final authorization = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/authorize'),
+    headers: <String, String>{
+      HttpHeaders.authorizationHeader: administratorToken,
+    },
+    jsonBody: <String, Object>{'replace': false},
+  );
+  expect(authorization.statusCode, HttpStatus.ok);
+  final authorizationUrl = Uri.parse(
+    authorization.jsonBody['authorizationUrl']! as String,
+  );
+  expect((await _request('GET', authorizationUrl)).statusCode, HttpStatus.ok);
+  final selected = await _request(
+    'POST',
+    server.uri('/api/balaur/calendar-connection/select'),
+    headers: <String, String>{
+      HttpHeaders.authorizationHeader: administratorToken,
+    },
+    jsonBody: <String, Object>{'calendarId': 'family@example.com'},
+  );
+  expect(selected.statusCode, HttpStatus.ok);
+
+  final exported = await _binaryRequest(
+    'POST',
+    route,
+    headers: <String, String>{
+      HttpHeaders.authorizationHeader: administratorToken,
+    },
+    jsonBody: <String, Object>{
+      'password': 'correct-horse',
+      'includeCalendarSnapshot': true,
+    },
+  );
+  expect(exported.statusCode, HttpStatus.ok);
+  expect(exported.header('content-type'), contains('application/zip'));
+  expect(exported.header('content-disposition'), contains('balaur-household-'));
+
+  final archive = ZipDecoder().decodeBytes(exported.body);
+  final files = <String, List<int>>{
+    for (final file in archive.files)
+      file.name: file.isFile ? file.content as List<int> : <int>[],
+  };
+  expect(
+    files.keys,
+    containsAll(<String>[
+      'manifest.json',
+      'household-state.json',
+      'members.json',
+      'shared-files/',
+      'calendar.ics',
+    ]),
+  );
+  final manifest =
+      jsonDecode(utf8.decode(files['manifest.json']!)) as Map<String, Object?>;
+  expect(manifest['format'], 'balaur-household-archive');
+  expect(manifest['version'], 1);
+  final state = jsonDecode(
+    utf8.decode(files['household-state.json']!),
+  ) as Map<String, Object?>;
+  expect(
+    (state['household']! as Map<String, Object?>)['timeZone'],
+    'Europe/Bucharest',
+  );
+  final members =
+      jsonDecode(utf8.decode(files['members.json']!)) as List<Object?>;
+  expect(members, isNotEmpty);
+  final calendarSnapshot = utf8.decode(files['calendar.ics']!);
+  expect(calendarSnapshot, contains('BEGIN:VCALENDAR'));
+  expect(calendarSnapshot, contains('Family dinner'));
+
+  final archiveText = files.values
+      .map((bytes) => utf8.decode(bytes, allowMalformed: true))
+      .join('\\n');
+  for (final excluded in <String>[
+    'correct-horse',
+    'fake-refresh-token',
+    'RouteTestCalendarEncryptionKey12',
+    'tokenHash',
+    'passwordHash',
+    'Conversation',
+  ]) {
+    expect(archiveText, isNot(contains(excluded)));
+  }
 }
 
 Future<_CreatedInvitationResponse> _createInvitation({
@@ -598,6 +1026,8 @@ final class _PocketBaseServer {
             '${expiresAt.millisecondsSinceEpoch ~/ 1000}',
         'BALAUR_DISABLE_POCKETBASE_INSTALLER': '1',
         'PATH': '/nonexistent',
+        'BALAUR_CALENDAR_SOURCE_ADAPTER': 'fake',
+        'BALAUR_CALENDAR_ENCRYPTION_KEY': 'RouteTestCalendarEncryptionKey12',
       },
       includeParentEnvironment: true,
     );
@@ -701,6 +1131,53 @@ Future<_HttpResponse> _request(
   } finally {
     client.close(force: true);
   }
+}
+
+Future<_BinaryResponse> _binaryRequest(
+  String method,
+  Uri uri, {
+  Map<String, String> headers = const <String, String>{},
+  Map<String, Object>? jsonBody,
+}) async {
+  final client = HttpClient();
+  try {
+    final request = await client.openUrl(method, uri);
+    headers.forEach(request.headers.set);
+    if (jsonBody != null) {
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode(jsonBody));
+    }
+    final response = await request.close();
+    final responseHeaders = <String, String>{};
+    response.headers.forEach((name, values) {
+      responseHeaders[name.toLowerCase()] = values.join(', ');
+    });
+    final body = await response.fold<List<int>>(
+      <int>[],
+      (bytes, chunk) => bytes..addAll(chunk),
+    );
+    return _BinaryResponse(
+      statusCode: response.statusCode,
+      headers: responseHeaders,
+      body: body,
+    );
+  } finally {
+    client.close(force: true);
+  }
+}
+
+final class _BinaryResponse {
+  const _BinaryResponse({
+    required this.statusCode,
+    required this.headers,
+    required this.body,
+  });
+
+  final int statusCode;
+  final Map<String, String> headers;
+  final List<int> body;
+
+  String? header(String name) => headers[name.toLowerCase()];
 }
 
 final class _CreatedInvitationResponse {

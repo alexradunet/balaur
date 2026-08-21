@@ -43,6 +43,11 @@ dependencies:
   pocketbase: ^0.24.1
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.4.0
+  url_launcher: ^6.3.2
+  timezone: ^0.11.1
+  file_selector: ^1.1.0
+  http: ^1.6.0
+  share_plus: ^13.3.0
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +59,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  archive: ^4.1.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

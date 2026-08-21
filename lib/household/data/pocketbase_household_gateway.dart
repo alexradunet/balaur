@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:balaur/household/data/household_credential_store.dart';
 import 'package:balaur/household/data/household_gateway.dart';
+import 'package:balaur/household/domain/calendar_connection.dart';
+import 'package:balaur/household/domain/calendar_entry.dart';
+import 'package:balaur/household/domain/household_archive.dart';
 import 'package:balaur/household/domain/household_invitation.dart';
 import 'package:balaur/household/domain/household_server_address.dart';
 import 'package:balaur/household/domain/household_session.dart';
+import 'package:http/http.dart' as http;
 import 'package:pocketbase/pocketbase.dart';
 
 final class PocketBaseHouseholdGateway implements HouseholdGateway {
@@ -270,11 +275,294 @@ final class PocketBaseHouseholdGateway implements HouseholdGateway {
   }
 
   @override
+  Future<CalendarConnection> loadCalendarConnection() async {
+    final response = await _sendCalendarRequest(
+      '/api/balaur/calendar-connection',
+    );
+    return _calendarConnectionResponse(response);
+  }
+
+  @override
+  Future<Uri> beginCalendarConnection({required bool replace}) async {
+    final response = await _sendCalendarRequest(
+      '/api/balaur/calendar-connection/authorize',
+      method: 'POST',
+      body: {'replace': replace},
+    );
+    try {
+      final value = response['authorizationUrl'];
+      if (value is! String) {
+        throw const FormatException('Invalid Calendar authorization response.');
+      }
+      final uri = Uri.parse(value);
+      final isSecure = uri.scheme == 'https' && uri.host.isNotEmpty;
+      final isTestLoopback =
+          allowInsecureLoopback &&
+          uri.scheme == 'http' &&
+          (uri.host == 'localhost' ||
+              uri.host == '127.0.0.1' ||
+              uri.host == '::1');
+      if (!isSecure && !isTestLoopback) {
+        throw const FormatException('Invalid Calendar authorization URL.');
+      }
+      return uri;
+    } on Object {
+      throw const HouseholdGatewayException(
+        HouseholdGatewayFailure.invalidSession,
+      );
+    }
+  }
+
+  @override
+  Future<CalendarConnection> selectCalendar(String calendarId) async {
+    final response = await _sendCalendarRequest(
+      '/api/balaur/calendar-connection/select',
+      method: 'POST',
+      body: {'calendarId': calendarId},
+    );
+    return _calendarConnectionResponse(response);
+  }
+
+  @override
+  Future<CalendarConnection> disconnectCalendarConnection() async {
+    final response = await _sendCalendarRequest(
+      '/api/balaur/calendar-connection/disconnect',
+      method: 'POST',
+    );
+    return _calendarConnectionResponse(response);
+  }
+
+  @override
+  Future<List<CalendarEntry>> loadCalendarEntries({
+    required DateTime rangeStart,
+    required DateTime rangeEnd,
+  }) async {
+    final path = Uri(
+      path: '/api/balaur/calendar-entries',
+      queryParameters: {
+        'timeMin': rangeStart.toUtc().toIso8601String(),
+        'timeMax': rangeEnd.toUtc().toIso8601String(),
+      },
+    ).toString();
+    final response = await _sendCalendarRequest(path);
+    try {
+      final items = response['items'];
+      if (items is! List<dynamic>) {
+        throw const FormatException('Invalid Calendar Entry list.');
+      }
+      return items
+          .map((value) => _calendarEntryFromJson(value as Map<String, dynamic>))
+          .toList(growable: false);
+    } on Object {
+      throw const HouseholdGatewayException(
+        HouseholdGatewayFailure.invalidSession,
+      );
+    }
+  }
+
+  @override
+  Future<HouseholdArchive> exportHouseholdArchive({
+    required String password,
+    required bool includeCalendarSnapshot,
+  }) async {
+    _authenticatedClient();
+    final authStore = _authStore!;
+    final serverAddress = _serverAddress!;
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('${serverAddress.value}/api/balaur/household-archive'),
+            headers: <String, String>{
+              'Authorization': authStore.token,
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(<String, Object>{
+              'password': password,
+              'includeCalendarSnapshot': includeCalendarSnapshot,
+            }),
+          )
+          .timeout(requestTimeout);
+    } on TimeoutException {
+      throw const HouseholdGatewayException(HouseholdGatewayFailure.connection);
+    } on Object {
+      throw const HouseholdGatewayException(HouseholdGatewayFailure.connection);
+    }
+    if (response.statusCode >= 400) {
+      throw HouseholdGatewayException(switch (response.statusCode) {
+        401 => HouseholdGatewayFailure.authentication,
+        403 => HouseholdGatewayFailure.forbidden,
+        409 => HouseholdGatewayFailure.invalidInput,
+        _ => HouseholdGatewayFailure.server,
+      });
+    }
+    final disposition = response.headers['content-disposition'] ?? '';
+    final match = RegExp(r'filename=\"([A-Za-z0-9._-]+)\"')
+        .firstMatch(disposition);
+    return HouseholdArchive(
+      fileName: match?.group(1) ?? 'balaur-household.zip',
+      bytes: Uint8List.fromList(response.bodyBytes),
+    );
+  }
+
+  @override
   Future<void> signOut() async {
     _authStore?.clear();
     _authStore = null;
     _serverAddress = null;
     await _clearStoredSession();
+  }
+
+  Future<Map<String, dynamic>> _sendCalendarRequest(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+  }) async {
+    final client = _authenticatedClient();
+    try {
+      return await client
+          .send<Map<String, dynamic>>(
+            path,
+            method: method,
+            body: body ?? const <String, dynamic>{},
+          )
+          .timeout(requestTimeout);
+    } on TimeoutException {
+      throw const HouseholdGatewayException(HouseholdGatewayFailure.connection);
+    } on ClientException catch (error) {
+      throw HouseholdGatewayException(_calendarFailure(error));
+    }
+  }
+
+  CalendarConnection _calendarConnectionResponse(
+    Map<String, dynamic> response,
+  ) {
+    try {
+      final value = response['connection'];
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('Invalid Calendar Connection response.');
+      }
+      return _calendarConnectionFromJson(value);
+    } on HouseholdGatewayException {
+      rethrow;
+    } on Object {
+      throw const HouseholdGatewayException(
+        HouseholdGatewayFailure.invalidSession,
+      );
+    }
+  }
+
+  CalendarConnection _calendarConnectionFromJson(Map<String, dynamic> json) {
+    final provider = json['provider'];
+    final householdTimeZone = json['householdTimeZone'];
+    final available = json['availableCalendars'];
+    if (provider is! String ||
+        provider != 'google' ||
+        householdTimeZone is! String ||
+        householdTimeZone.isEmpty ||
+        available is! List<dynamic>) {
+      throw const FormatException('Invalid Calendar Connection record.');
+    }
+    final selectedValue = json['selectedCalendar'];
+    final CalendarSourceCalendar? selected = switch (selectedValue) {
+      null => null,
+      Map<String, dynamic>() => _calendarFromJson(selectedValue),
+      _ => throw const FormatException(
+        'Invalid selected Calendar Source calendar.',
+      ),
+    };
+    return CalendarConnection(
+      provider: provider,
+      status: switch (json['status']) {
+        'disconnected' => CalendarConnectionStatus.disconnected,
+        'authorizing' => CalendarConnectionStatus.authorizing,
+        'awaiting_selection' => CalendarConnectionStatus.awaitingSelection,
+        'connected' => CalendarConnectionStatus.connected,
+        'authorization_failed' => CalendarConnectionStatus.authorizationFailed,
+        _ => throw const FormatException('Invalid Calendar Connection status.'),
+      },
+      householdTimeZone: householdTimeZone,
+      selectedCalendar: selected,
+      availableCalendars: available
+          .map((value) => _calendarFromJson(value as Map<String, dynamic>))
+          .toList(growable: false),
+    );
+  }
+
+  CalendarSourceCalendar _calendarFromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final name = json['name'];
+    final color = json['colorHex'];
+    if (id is! String ||
+        id.isEmpty ||
+        name is! String ||
+        name.isEmpty ||
+        color != null && color is! String) {
+      throw const FormatException('Invalid Calendar Source calendar.');
+    }
+    return CalendarSourceCalendar(
+      id: id,
+      name: name,
+      colorHex: color as String?,
+    );
+  }
+
+  CalendarEntry _calendarEntryFromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final title = json['title'];
+    final startValue = json['start'];
+    final endValue = json['end'];
+    final allDay = json['allDay'];
+    final location = json['location'];
+    final colorHex = json['colorHex'];
+    if (id is! String ||
+        title is! String ||
+        startValue is! String ||
+        endValue is! String ||
+        allDay is! bool ||
+        location != null && location is! String ||
+        colorHex is! String) {
+      throw const FormatException('Invalid Calendar Entry record.');
+    }
+    final start = allDay
+        ? _parseDateOnly(startValue)
+        : DateTime.parse(startValue).toUtc();
+    final end = allDay
+        ? _parseDateOnly(endValue)
+        : DateTime.parse(endValue).toUtc();
+    return CalendarEntry(
+      id: id,
+      title: title,
+      start: start,
+      end: end,
+      allDay: allDay,
+      location: location as String?,
+      colorHex: colorHex,
+    );
+  }
+
+  DateTime _parseDateOnly(String value) {
+    final match = RegExp(r'^(\\d{4})-(\\d{2})-(\\d{2})$').firstMatch(value);
+    if (match == null) {
+      throw const FormatException('Invalid Calendar Entry date.');
+    }
+    return DateTime.utc(
+      int.parse(match.group(1)!),
+      int.parse(match.group(2)!),
+      int.parse(match.group(3)!),
+    );
+  }
+
+  HouseholdGatewayFailure _calendarFailure(ClientException error) {
+    return switch (error.statusCode) {
+      400 || 409 => HouseholdGatewayFailure.invalidInput,
+      401 => HouseholdGatewayFailure.authentication,
+      403 => HouseholdGatewayFailure.forbidden,
+      503 => HouseholdGatewayFailure.calendarAuthorization,
+      424 => HouseholdGatewayFailure.calendarAuthorization,
+      502 => HouseholdGatewayFailure.server,
+      _ => HouseholdGatewayFailure.connection,
+    };
   }
 
   PocketBase _authenticatedClient() {
@@ -397,9 +685,7 @@ final class PocketBaseHouseholdGateway implements HouseholdGateway {
     final host = address.uri.host.toLowerCase();
     final isLoopback =
         host == 'localhost' || host == '127.0.0.1' || host == '::1';
-    if (allowInsecureLoopback &&
-        address.uri.scheme == 'http' &&
-        isLoopback) {
+    if (allowInsecureLoopback && address.uri.scheme == 'http' && isLoopback) {
       return;
     }
     throw const HouseholdGatewayException(HouseholdGatewayFailure.connection);

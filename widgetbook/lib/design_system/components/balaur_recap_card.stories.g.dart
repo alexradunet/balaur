@@ -21,8 +21,7 @@ final BalaurRecapCardComponent =
       name: component.name ?? 'BalaurRecapCard',
       path: component.path ?? 'design_system/components',
       docsBuilder: component.docsBuilder,
-      docComment:
-          r'''Displays the older Conversation context that Balaur carries forward.''',
+      docComment: r'''Displays the older Conversation context that Balaur carries forward.''',
       stories: [$EarlierToday..$generatedName = 'EarlierToday'],
     );
 typedef BalaurRecapCardScenario =

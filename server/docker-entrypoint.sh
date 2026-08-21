@@ -42,4 +42,6 @@ if [ "${1:-}" = "serve" ]; then
   esac
 fi
 
-exec /pb/pocketbase "$@"
+mkdir -p /pb/pb_data
+chown pocketbase:pocketbase /pb/pb_data
+exec su-exec pocketbase:pocketbase /pb/pocketbase "$@"

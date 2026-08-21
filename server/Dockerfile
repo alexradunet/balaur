@@ -26,7 +26,7 @@ RUN set -eu; \
 
 FROM alpine:3.22.1
 
-RUN apk add --no-cache ca-certificates \
+RUN apk add --no-cache ca-certificates su-exec \
     && addgroup -S -g 10001 pocketbase \
     && adduser -S -D -H -u 10001 -G pocketbase pocketbase \
     && mkdir -p /pb/pb_data \
@@ -38,7 +38,6 @@ COPY --chown=pocketbase:pocketbase pb_hooks /pb/pb_hooks
 COPY --chown=pocketbase:pocketbase pb_migrations /pb/pb_migrations
 COPY --chown=pocketbase:pocketbase --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-USER pocketbase
 EXPOSE 8090
 VOLUME ["/pb/pb_data"]
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=5 \

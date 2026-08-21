@@ -53,6 +53,8 @@ class HouseholdAccountScreenStory
                session: args.session,
                onSignOut: args.onSignOut,
                onManageInvitations: args.onManageInvitations,
+               onManageCalendarConnection: args.onManageCalendarConnection,
+               onExportArchive: args.onExportArchive,
              ),
        );
 }
@@ -63,12 +65,24 @@ class HouseholdAccountScreenArgs extends StoryArgs<HouseholdAccountScreen> {
     required Arg<HouseholdSession> session,
     required Arg<Future<void> Function()> onSignOut,
     Arg<void Function()?>? onManageInvitations,
+    Arg<void Function()?>? onManageCalendarConnection,
+    Arg<void Function()?>? onExportArchive,
   }) : this.keyArg = $initArg('key', key, null),
        this.sessionArg = $initArg('session', session, null)!,
        this.onSignOutArg = $initArg('onSignOut', onSignOut, null)!,
        this.onManageInvitationsArg = $initArg(
          'onManageInvitations',
          onManageInvitations,
+         null,
+       ),
+       this.onManageCalendarConnectionArg = $initArg(
+         'onManageCalendarConnection',
+         onManageCalendarConnection,
+         null,
+       ),
+       this.onExportArchiveArg = $initArg(
+         'onExportArchive',
+         onExportArchive,
          null,
        );
 
@@ -77,12 +91,26 @@ class HouseholdAccountScreenArgs extends StoryArgs<HouseholdAccountScreen> {
     required HouseholdSession session,
     required Future<void> Function() onSignOut,
     void Function()? onManageInvitations,
+    void Function()? onManageCalendarConnection,
+    void Function()? onExportArchive,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.sessionArg = $initArg('session', Arg.fixed(session), null)!,
        this.onSignOutArg = $initArg('onSignOut', Arg.fixed(onSignOut), null)!,
        this.onManageInvitationsArg = $initArg(
          'onManageInvitations',
          onManageInvitations == null ? null : Arg.fixed(onManageInvitations),
+         null,
+       ),
+       this.onManageCalendarConnectionArg = $initArg(
+         'onManageCalendarConnection',
+         onManageCalendarConnection == null
+             ? null
+             : Arg.fixed(onManageCalendarConnection),
+         null,
+       ),
+       this.onExportArchiveArg = $initArg(
+         'onExportArchive',
+         onExportArchive == null ? null : Arg.fixed(onExportArchive),
          null,
        );
 
@@ -94,6 +122,10 @@ class HouseholdAccountScreenArgs extends StoryArgs<HouseholdAccountScreen> {
 
   final Arg<void Function()?>? onManageInvitationsArg;
 
+  final Arg<void Function()?>? onManageCalendarConnectionArg;
+
+  final Arg<void Function()?>? onExportArchiveArg;
+
   Key? get key => keyArg?.value;
 
   HouseholdSession get session => sessionArg.value;
@@ -102,11 +134,18 @@ class HouseholdAccountScreenArgs extends StoryArgs<HouseholdAccountScreen> {
 
   void Function()? get onManageInvitations => onManageInvitationsArg?.value;
 
+  void Function()? get onManageCalendarConnection =>
+      onManageCalendarConnectionArg?.value;
+
+  void Function()? get onExportArchive => onExportArchiveArg?.value;
+
   @override
   List<Arg?> get list => [
     keyArg,
     sessionArg,
     onSignOutArg,
     onManageInvitationsArg,
+    onManageCalendarConnectionArg,
+    onExportArchiveArg,
   ];
 }

@@ -130,6 +130,10 @@ final class HouseholdPairingViewModel extends ChangeNotifier {
       HouseholdGatewayFailure.expiredInvitation => 'The Household Invitation expired. Ask a Household Administrator for a new one.',
       HouseholdGatewayFailure.unavailableInvitation =>
         'The Household Invitation was used or canceled.',
+      HouseholdGatewayFailure.calendarAuthorization =>
+        'The Household Server Calendar Connection is not configured.',
+      HouseholdGatewayFailure.server =>
+        'The Household Server could not complete the request.',
     };
   }
 

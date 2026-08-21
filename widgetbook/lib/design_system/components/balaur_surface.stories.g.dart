@@ -16,18 +16,18 @@ typedef _Scenario = BalaurSurfaceScenario;
 typedef _Defaults = BalaurSurfaceDefaults;
 typedef _Story = BalaurSurfaceStory;
 typedef _Args = BalaurSurfaceArgs;
-final BalaurSurfaceComponent = Component<BalaurSurface, StoryArgs<BalaurSurface>>(
-  name: component.name ?? 'BalaurSurface',
-  path: component.path ?? 'design_system/components',
-  docsBuilder: component.docsBuilder,
-  docComment:
-      r'''Draws a reusable Hearthwood material with pixel-hard construction.''',
-  stories: [
-    $Parchment..$generatedName = 'Parchment',
-    $Wood..$generatedName = 'Wood',
-    $Inset..$generatedName = 'Inset',
-  ],
-);
+final BalaurSurfaceComponent =
+    Component<BalaurSurface, StoryArgs<BalaurSurface>>(
+      name: component.name ?? 'BalaurSurface',
+      path: component.path ?? 'design_system/components',
+      docsBuilder: component.docsBuilder,
+      docComment: r'''Draws a reusable Hearthwood material with pixel-hard construction.''',
+      stories: [
+        $Parchment..$generatedName = 'Parchment',
+        $Wood..$generatedName = 'Wood',
+        $Inset..$generatedName = 'Inset',
+      ],
+    );
 typedef BalaurSurfaceScenario = Scenario<BalaurSurface, BalaurSurfaceArgs>;
 typedef BalaurSurfaceDefaults = Defaults<BalaurSurface, BalaurSurfaceArgs>;
 

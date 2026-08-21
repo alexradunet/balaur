@@ -4,6 +4,7 @@ import 'package:balaur/chat/domain/chat_message.dart';
 import 'package:balaur/design_system/design_system.dart';
 import 'package:balaur/household/data/household_gateway.dart';
 import 'package:balaur/household/data/in_memory_household_gateway.dart';
+import 'package:balaur/household/domain/calendar_connection.dart';
 import 'package:balaur/household/domain/household_server_address.dart';
 import 'package:balaur/household/domain/household_session.dart';
 import 'package:balaur/main.dart';
@@ -123,6 +124,35 @@ void main() {
     expect(find.byKey(const Key('chat-composer')), findsOneWidget);
   });
 
+  testWidgets('opens the Household Calendar destination', (tester) async {
+    final state = InMemoryHouseholdGatewayState(
+      storedSession: _session,
+      calendarConnection: CalendarConnection(
+        provider: 'google',
+        status: CalendarConnectionStatus.connected,
+        householdTimeZone: 'UTC',
+        selectedCalendar: const CalendarSourceCalendar(
+          id: 'family@example.com',
+          name: 'Family',
+          colorHex: '#4285f4',
+        ),
+      ),
+    );
+    await _pumpApp(
+      tester,
+      gateway: _FakeChatGateway([]),
+      householdGateway: InMemoryHouseholdGateway(state: state),
+    );
+    await _enterPairedApplication(tester);
+
+    await tester.tap(find.text('CALENDAR'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Household Calendar'), findsOneWidget);
+    expect(find.byKey(const Key('calendar-month-panel')), findsOneWidget);
+    expect(find.byKey(const Key('calendar-agenda-panel')), findsOneWidget);
+  });
+
   testWidgets('opens Household Invitation management', (tester) async {
     final state = InMemoryHouseholdGatewayState(storedSession: _session);
     await _pumpApp(
@@ -142,6 +172,48 @@ void main() {
       find.byKey(const Key('create-household-invitation')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('opens Calendar Connection management', (tester) async {
+    final state = InMemoryHouseholdGatewayState(storedSession: _session);
+    await _pumpApp(
+      tester,
+      gateway: _FakeChatGateway([]),
+      householdGateway: InMemoryHouseholdGateway(state: state),
+    );
+    await _enterPairedApplication(tester);
+
+    await tester.tap(find.text('HOUSEHOLD'));
+    await tester.pumpAndSettle();
+    final manageCalendar = find.byKey(
+      const Key('manage-household-calendar-connection'),
+    );
+    await tester.ensureVisible(manageCalendar);
+    await tester.tap(manageCalendar);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendar Connection'), findsOneWidget);
+    expect(find.byKey(const Key('connect-google-calendar')), findsOneWidget);
+  });
+
+  testWidgets('opens Household Archive export', (tester) async {
+    final state = InMemoryHouseholdGatewayState(storedSession: _session);
+    await _pumpApp(
+      tester,
+      gateway: _FakeChatGateway([]),
+      householdGateway: InMemoryHouseholdGateway(state: state),
+    );
+    await _enterPairedApplication(tester);
+
+    await tester.tap(find.text('HOUSEHOLD'));
+    await tester.pumpAndSettle();
+    final export = find.byKey(const Key('export-household-archive'));
+    await tester.ensureVisible(export);
+    await tester.tap(export);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Household Archive'), findsOneWidget);
+    expect(find.byKey(const Key('household-archive-password')), findsOneWidget);
   });
 
   testWidgets('signs out from the Household account', (tester) async {
