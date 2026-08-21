@@ -16,6 +16,10 @@ typedef _Scenario = BalaurComposerScenario;
 typedef _Defaults = BalaurComposerDefaults;
 typedef _Story = BalaurComposerStory;
 typedef _Args = BalaurComposerArgs;
+typedef _ChoicesScenario = BalaurComposerChoicesScenario;
+typedef _ChoicesDefaults = BalaurComposerChoicesDefaults;
+typedef _ChoicesStory = BalaurComposerChoicesStory;
+typedef _ChoicesArgs = BalaurComposerChoicesArgs;
 final BalaurComposerComponent =
     Component<BalaurComposer, StoryArgs<BalaurComposer>>(
       name: component.name ?? 'BalaurComposer',
@@ -24,7 +28,9 @@ final BalaurComposerComponent =
       docComment: r'''Displays the owner's single seat of action.''',
       stories: [
         $Draft..$generatedName = 'Draft',
-        $Decision..$generatedName = 'Decision',
+        $Responding..$generatedName = 'Responding',
+        $Disabled..$generatedName = 'Disabled',
+        $DialogueChoices..$generatedName = 'DialogueChoices',
       ],
     );
 typedef BalaurComposerScenario = Scenario<BalaurComposer, BalaurComposerArgs>;
@@ -47,13 +53,14 @@ class BalaurComposerStory extends Story<BalaurComposer, BalaurComposerArgs> {
                key: args.key,
                onSend: args.onSend,
                controller: args.controller,
-               who: args.who,
                avatar: args.avatar,
                placeholder: args.placeholder,
                sendLabel: args.sendLabel,
                tools: args.tools,
                promptLabel: args.promptLabel,
-               decision: args.decision,
+               enabled: args.enabled,
+               responding: args.responding,
+               onStop: args.onStop,
              ),
        );
 }
@@ -63,17 +70,17 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
     Arg<Key?>? key,
     required Arg<void Function(String)> onSend,
     Arg<TextEditingController?>? controller,
-    Arg<String>? who,
     Arg<ImageProvider<Object>?>? avatar,
     Arg<String>? placeholder,
     Arg<String>? sendLabel,
     Arg<List<BalaurComposerTool>>? tools,
     Arg<String?>? promptLabel,
-    Arg<Widget?>? decision,
+    Arg<bool>? enabled,
+    Arg<bool>? responding,
+    Arg<void Function()?>? onStop,
   }) : this.keyArg = $initArg('key', key, null),
        this.onSendArg = $initArg('onSend', onSend, null)!,
        this.controllerArg = $initArg('controller', controller, null),
-       this.whoArg = $initArg('who', who, StringArg('You'))!,
        this.avatarArg = $initArg('avatar', avatar, null),
        this.placeholderArg = $initArg(
          'placeholder',
@@ -87,19 +94,22 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
          promptLabel,
          NullableStringArg(null),
        )!,
-       this.decisionArg = $initArg('decision', decision, null);
+       this.enabledArg = $initArg('enabled', enabled, BoolArg(true))!,
+       this.respondingArg = $initArg('responding', responding, BoolArg(false))!,
+       this.onStopArg = $initArg('onStop', onStop, null);
 
   BalaurComposerArgs.fixed({
     Key? key,
     required void Function(String) onSend,
     TextEditingController? controller,
-    String who = 'You',
     ImageProvider<Object>? avatar,
     String placeholder = 'Speak; I am listening.',
     String sendLabel = 'Send',
     List<BalaurComposerTool> tools = const [],
     String? promptLabel = null,
-    Widget? decision,
+    bool enabled = true,
+    bool responding = false,
+    void Function()? onStop,
   }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
        this.onSendArg = $initArg('onSend', Arg.fixed(onSend), null)!,
        this.controllerArg = $initArg(
@@ -107,7 +117,6 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
          controller == null ? null : Arg.fixed(controller),
          null,
        ),
-       this.whoArg = $initArg('who', Arg.fixed(who), null)!,
        this.avatarArg = $initArg(
          'avatar',
          avatar == null ? null : Arg.fixed(avatar),
@@ -125,9 +134,15 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
          promptLabel == null ? null : Arg.fixed(promptLabel),
          null,
        ),
-       this.decisionArg = $initArg(
-         'decision',
-         decision == null ? null : Arg.fixed(decision),
+       this.enabledArg = $initArg('enabled', Arg.fixed(enabled), null)!,
+       this.respondingArg = $initArg(
+         'responding',
+         Arg.fixed(responding),
+         null,
+       )!,
+       this.onStopArg = $initArg(
+         'onStop',
+         onStop == null ? null : Arg.fixed(onStop),
          null,
        );
 
@@ -136,8 +151,6 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
   final Arg<void Function(String)> onSendArg;
 
   final Arg<TextEditingController?>? controllerArg;
-
-  final Arg<String> whoArg;
 
   final Arg<ImageProvider<Object>?>? avatarArg;
 
@@ -149,15 +162,17 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
 
   final Arg<String?>? promptLabelArg;
 
-  final Arg<Widget?>? decisionArg;
+  final Arg<bool> enabledArg;
+
+  final Arg<bool> respondingArg;
+
+  final Arg<void Function()?>? onStopArg;
 
   Key? get key => keyArg?.value;
 
   void Function(String) get onSend => onSendArg.value;
 
   TextEditingController? get controller => controllerArg?.value;
-
-  String get who => whoArg.value;
 
   ImageProvider<Object>? get avatar => avatarArg?.value;
 
@@ -169,19 +184,120 @@ class BalaurComposerArgs extends StoryArgs<BalaurComposer> {
 
   String? get promptLabel => promptLabelArg?.value;
 
-  Widget? get decision => decisionArg?.value;
+  bool get enabled => enabledArg.value;
+
+  bool get responding => respondingArg.value;
+
+  void Function()? get onStop => onStopArg?.value;
 
   @override
   List<Arg?> get list => [
     keyArg,
     onSendArg,
     controllerArg,
-    whoArg,
     avatarArg,
     placeholderArg,
     sendLabelArg,
     toolsArg,
     promptLabelArg,
-    decisionArg,
+    enabledArg,
+    respondingArg,
+    onStopArg,
+  ];
+}
+
+typedef BalaurComposerChoicesScenario =
+    Scenario<BalaurComposer, BalaurComposerChoicesArgs>;
+typedef BalaurComposerChoicesDefaults =
+    Defaults<BalaurComposer, BalaurComposerChoicesArgs>;
+
+class BalaurComposerChoicesStory
+    extends Story<BalaurComposer, BalaurComposerChoicesArgs> {
+  BalaurComposerChoicesStory({
+    super.name,
+    super.designLink,
+    super.setup,
+    super.modes,
+    required super.args,
+    StoryWidgetBuilder<BalaurComposer, BalaurComposerChoicesArgs>? builder,
+    super.scenarios,
+    super.excludeFromTests,
+  }) : super(
+         builder:
+             builder ??
+             (context, args) => BalaurComposer.choices(
+               key: args.key,
+               choices: args.choices,
+               onPick: args.onPick,
+               avatar: args.avatar,
+               promptLabel: args.promptLabel,
+             ),
+       );
+}
+
+class BalaurComposerChoicesArgs extends StoryArgs<BalaurComposer> {
+  BalaurComposerChoicesArgs({
+    Arg<Key?>? key,
+    required Arg<List<BalaurDialogueChoice>> choices,
+    required Arg<void Function(int)> onPick,
+    Arg<ImageProvider<Object>?>? avatar,
+    Arg<String?>? promptLabel,
+  }) : this.keyArg = $initArg('key', key, null),
+       this.choicesArg = $initArg('choices', choices, null)!,
+       this.onPickArg = $initArg('onPick', onPick, null)!,
+       this.avatarArg = $initArg('avatar', avatar, null),
+       this.promptLabelArg = $initArg(
+         'promptLabel',
+         promptLabel,
+         NullableStringArg('Your word'),
+       )!;
+
+  BalaurComposerChoicesArgs.fixed({
+    Key? key,
+    required List<BalaurDialogueChoice> choices,
+    required void Function(int) onPick,
+    ImageProvider<Object>? avatar,
+    String? promptLabel = 'Your word',
+  }) : this.keyArg = $initArg('key', key == null ? null : Arg.fixed(key), null),
+       this.choicesArg = $initArg('choices', Arg.fixed(choices), null)!,
+       this.onPickArg = $initArg('onPick', Arg.fixed(onPick), null)!,
+       this.avatarArg = $initArg(
+         'avatar',
+         avatar == null ? null : Arg.fixed(avatar),
+         null,
+       ),
+       this.promptLabelArg = $initArg(
+         'promptLabel',
+         promptLabel == null ? null : Arg.fixed(promptLabel),
+         null,
+       );
+
+  final Arg<Key?>? keyArg;
+
+  final Arg<List<BalaurDialogueChoice>> choicesArg;
+
+  final Arg<void Function(int)> onPickArg;
+
+  final Arg<ImageProvider<Object>?>? avatarArg;
+
+  final Arg<String?>? promptLabelArg;
+
+  Key? get key => keyArg?.value;
+
+  List<BalaurDialogueChoice> get choices => choicesArg.value;
+
+  void Function(int) get onPick => onPickArg.value;
+
+  ImageProvider<Object>? get avatar => avatarArg?.value;
+
+  String? get promptLabel => promptLabelArg?.value;
+
+  @override
+  List<Arg?> get list => [
+    keyArg,
+    choicesArg,
+    onPickArg,
+    avatarArg,
+    promptLabelArg,
   ];
 }

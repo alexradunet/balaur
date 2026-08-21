@@ -1,6 +1,7 @@
 import 'package:balaur/chat/data/chat_gateway.dart';
 import 'package:balaur/chat/data/conversation_repository.dart';
 import 'package:balaur/chat/domain/chat_message.dart';
+import 'package:balaur/design_system/design_system.dart';
 import 'package:balaur/household/data/household_gateway.dart';
 import 'package:balaur/household/data/in_memory_household_gateway.dart';
 import 'package:balaur/household/domain/household_server_address.dart';
@@ -44,7 +45,9 @@ void main() {
       findsOneWidget,
     );
     expect(
-      tester.widget<IconButton>(find.byKey(const Key('send-button'))).onPressed,
+      tester
+          .widget<BalaurButton>(find.byKey(const Key('send-button')))
+          .onPressed,
       isNull,
     );
   });
@@ -81,7 +84,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      tester.widget<IconButton>(find.byKey(const Key('send-button'))).onPressed,
+      tester
+          .widget<BalaurButton>(find.byKey(const Key('send-button')))
+          .onPressed,
       isNotNull,
     );
   });

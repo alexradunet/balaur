@@ -70,22 +70,11 @@ final class BalaurDialogueChoice {
   final String? hint;
 }
 
-/// Displays a numbered dialogue decision in the owner's voice.
-class BalaurDialogueChoices extends StatelessWidget {
-  const BalaurDialogueChoices({
-    super.key,
-    required this.choices,
-    required this.onPick,
-    this.kicker = 'Your word',
-    this.who = 'You',
-    this.avatar,
-  });
+class _ComposerChoices extends StatelessWidget {
+  const _ComposerChoices({required this.choices, required this.onPick});
 
   final List<BalaurDialogueChoice> choices;
   final ValueChanged<int> onPick;
-  final String kicker;
-  final String who;
-  final ImageProvider? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -109,86 +98,22 @@ class BalaurDialogueChoices extends StatelessWidget {
       final selected = index;
       bindings[SingleActivator(digits[index])] = () => onPick(selected);
     }
+
     return CallbackShortcuts(
       bindings: bindings,
       child: Focus(
         autofocus: true,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final showPortrait = constraints.maxWidth >= 420;
-            final panel = Expanded(
-              child: _DialoguePanel(
-                choices: choices,
-                onPick: onPick,
-                kicker: kicker,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < choices.length; index++)
+              _ChoiceButton(
+                index: index,
+                choice: choices[index],
+                onPressed: () => onPick(index),
               ),
-            );
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                panel,
-                if (showPortrait) ...[
-                  const SizedBox(width: 14),
-                  _OwnerPortrait(
-                    image: avatar ?? BalaurAssets.soulAvatar(5),
-                    who: who,
-                  ),
-                ],
-              ],
-            );
-          },
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _DialoguePanel extends StatelessWidget {
-  const _DialoguePanel({
-    required this.choices,
-    required this.onPick,
-    required this.kicker,
-  });
-
-  final List<BalaurDialogueChoice> choices;
-  final ValueChanged<int> onPick;
-  final String kicker;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = BalaurColors.of(context);
-    return BalaurSurface(
-      ornate: true,
-      borderColor: colors.goldDeep,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Expanded(child: BalaurStitch()),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text(
-                  kicker.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.goldInk,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              const Expanded(child: BalaurStitch()),
-            ],
-          ),
-          const SizedBox(height: 4),
-          for (var index = 0; index < choices.length; index++)
-            _ChoiceButton(
-              index: index,
-              choice: choices[index],
-              onPressed: () => onPick(index),
-            ),
-        ],
       ),
     );
   }
@@ -262,226 +187,6 @@ class _ChoiceButton extends StatelessWidget {
   }
 }
 
-class _OwnerPortrait extends StatelessWidget {
-  const _OwnerPortrait({required this.image, required this.who});
-
-  final ImageProvider image;
-  final String who;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = BalaurColors.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        BalaurSurface(
-          material: BalaurSurfaceMaterial.wood,
-          padding: const EdgeInsets.all(5),
-          child: ColoredBox(
-            color: const Color(0xff101314),
-            child: BalaurAvatar(
-              image: image,
-              kind: BalaurAvatarKind.soul,
-              size: 54,
-              mirrored: true,
-            ),
-          ),
-        ),
-        Transform.translate(
-          offset: const Offset(0, -2),
-          child: BalaurSurface(
-            material: BalaurSurfaceMaterial.wood,
-            hardShadow: false,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            child: Text(
-              who.toUpperCase(),
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.copyWith(color: colors.indigo, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Displays the owner's unsent message in the dialogue column.
-class BalaurMessageDraft extends StatefulWidget {
-  const BalaurMessageDraft({
-    super.key,
-    required this.onSend,
-    this.controller,
-    this.who = 'You',
-    this.avatar,
-    this.placeholder = 'Speak; I am listening.',
-    this.sendLabel = 'Send',
-  });
-
-  final ValueChanged<String> onSend;
-  final TextEditingController? controller;
-  final String who;
-  final ImageProvider? avatar;
-  final String placeholder;
-  final String sendLabel;
-
-  @override
-  State<BalaurMessageDraft> createState() => _BalaurMessageDraftState();
-}
-
-class _BalaurMessageDraftState extends State<BalaurMessageDraft> {
-  late final TextEditingController _localController = TextEditingController();
-  bool _focused = false;
-
-  TextEditingController get _controller =>
-      widget.controller ?? _localController;
-
-  @override
-  void dispose() {
-    _localController.dispose();
-    super.dispose();
-  }
-
-  void _send() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) {
-      return;
-    }
-    widget.onSend(text);
-    _controller.clear();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = BalaurColors.of(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final showPortrait = constraints.maxWidth >= 420;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Focus(
-                onFocusChange: (focused) => setState(() => _focused = focused),
-                child: BalaurSurface(
-                  dashed: !_focused,
-                  hardShadow: _focused,
-                  borderColor: _focused
-                      ? colors.goldDeep
-                      : colors.parchmentEdge,
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: _controller,
-                        minLines: 2,
-                        maxLines: 6,
-                        textInputAction: TextInputAction.newline,
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(color: colors.ink),
-                        decoration: InputDecoration.collapsed(
-                          hintText: widget.placeholder,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Divider(color: colors.parchmentEdge, height: 2),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'UNSENT · ENTER SPEAKS',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: colors.inkMuted),
-                            ),
-                          ),
-                          BalaurButton(
-                            label: widget.sendLabel,
-                            onPressed: _send,
-                            size: BalaurButtonSize.small,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (showPortrait) ...[
-              const SizedBox(width: 14),
-              _OwnerPortrait(
-                image: widget.avatar ?? BalaurAssets.soulAvatar(5),
-                who: widget.who,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Displays a page-level wood input ledge.
-class BalaurChatBar extends StatelessWidget {
-  const BalaurChatBar({
-    super.key,
-    required this.onSend,
-    this.controller,
-    this.placeholder = 'Speak; I am listening.',
-    this.sendLabel = 'Send',
-    this.above,
-  });
-
-  final ValueChanged<String> onSend;
-  final TextEditingController? controller;
-  final String placeholder;
-  final String sendLabel;
-  final Widget? above;
-
-  @override
-  Widget build(BuildContext context) {
-    return BalaurSurface(
-      material: BalaurSurfaceMaterial.wood,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (above case final above?) ...[above, const SizedBox(height: 10)],
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  minLines: 2,
-                  maxLines: 6,
-                  decoration: InputDecoration(hintText: placeholder),
-                  onSubmitted: (text) {
-                    if (text.trim().isNotEmpty) {
-                      onSend(text.trim());
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              BalaurButton(
-                label: sendLabel,
-                onPressed: () {
-                  final text = controller?.text.trim() ?? '';
-                  if (text.isNotEmpty) {
-                    onSend(text);
-                    controller?.clear();
-                  }
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Contains one composer tool.
 @immutable
 final class BalaurComposerTool {
@@ -497,54 +202,129 @@ final class BalaurComposerTool {
 }
 
 /// Displays the owner's single seat of action.
-class BalaurComposer extends StatelessWidget {
+class BalaurComposer extends StatefulWidget {
   const BalaurComposer({
     super.key,
-    required this.onSend,
+    required ValueChanged<String> onSend,
     this.controller,
-    this.who = 'You',
     this.avatar,
     this.placeholder = 'Speak; I am listening.',
     this.sendLabel = 'Send',
     this.tools = const [],
     this.promptLabel,
-    this.decision,
-  });
+    this.enabled = true,
+    this.responding = false,
+    this.onStop,
+  }) : onSend = onSend,
+       choices = null,
+       onPick = null,
+       assert(!responding || onStop != null);
 
-  final ValueChanged<String> onSend;
+  const BalaurComposer.choices({
+    super.key,
+    required List<BalaurDialogueChoice> choices,
+    required ValueChanged<int> onPick,
+    this.avatar,
+    this.promptLabel = 'Your word',
+  }) : choices = choices,
+       onPick = onPick,
+       onSend = null,
+       controller = null,
+       placeholder = '',
+       sendLabel = '',
+       tools = const [],
+       enabled = true,
+       responding = false,
+       onStop = null;
+
+  final ValueChanged<String>? onSend;
   final TextEditingController? controller;
-  final String who;
   final ImageProvider? avatar;
   final String placeholder;
   final String sendLabel;
   final List<BalaurComposerTool> tools;
   final String? promptLabel;
-  final Widget? decision;
+  final bool enabled;
+  final bool responding;
+  final VoidCallback? onStop;
+  final List<BalaurDialogueChoice>? choices;
+  final ValueChanged<int>? onPick;
+
+  @override
+  State<BalaurComposer> createState() => _BalaurComposerState();
+}
+
+class _BalaurComposerState extends State<BalaurComposer> {
+  TextEditingController? _localController;
+  bool _focused = false;
+
+  TextEditingController get _controller =>
+      widget.controller ?? (_localController ??= TextEditingController());
+
+  bool get _acceptsInput => widget.enabled && !widget.responding;
+
+  @override
+  void dispose() {
+    _localController?.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final onSend = widget.onSend;
+    if (!_acceptsInput || onSend == null) {
+      return;
+    }
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      return;
+    }
+    _controller.clear();
+    onSend(text);
+  }
+
+  void _insertNewline() {
+    if (!_acceptsInput) {
+      return;
+    }
+    final value = _controller.value;
+    final selection = value.selection;
+    final start = selection.isValid ? selection.start : value.text.length;
+    final end = selection.isValid ? selection.end : value.text.length;
+    final text = value.text.replaceRange(start, end, '\n');
+    _controller.value = value.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: start + 1),
+      composing: TextRange.empty,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = BalaurColors.of(context);
-    final deciding = decision != null;
+    final choices = widget.choices;
     return BalaurSurface(
       material: BalaurSurfaceMaterial.wood,
       ornate: true,
-      borderColor: deciding ? colors.goldDeep : colors.outline,
+      borderColor: choices == null ? colors.outline : colors.goldDeep,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              for (final tool in tools)
+              for (final tool in widget.tools)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Tooltip(
                     message: tool.tooltip,
-                    child: _ComposerToolButton(tool: tool, enabled: !deciding),
+                    child: _ComposerToolButton(
+                      tool: tool,
+                      enabled: _acceptsInput,
+                    ),
                   ),
                 ),
               const Spacer(),
-              if (promptLabel case final label?)
+              if (widget.promptLabel case final label?)
                 Flexible(
                   child: Text(
                     label.toUpperCase(),
@@ -557,7 +337,7 @@ class BalaurComposer extends StatelessWidget {
                 ),
               const Spacer(),
               BalaurAvatar(
-                image: avatar ?? BalaurAssets.soulAvatar(5),
+                image: widget.avatar ?? BalaurAssets.soulAvatar(5),
                 kind: BalaurAvatarKind.soul,
                 size: 42,
                 mirrored: true,
@@ -565,16 +345,87 @@ class BalaurComposer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          decision ??
-              BalaurMessageDraft(
-                controller: controller,
-                who: who,
-                avatar: avatar,
-                placeholder: placeholder,
-                sendLabel: sendLabel,
-                onSend: onSend,
-              ),
+          if (choices != null)
+            BalaurSurface(
+              borderColor: colors.goldDeep,
+              hardShadow: false,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: _ComposerChoices(choices: choices, onPick: widget.onPick!),
+            )
+          else
+            _buildDraft(context, colors),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDraft(BuildContext context, BalaurColors colors) {
+    return Focus(
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: BalaurSurface(
+        dashed: !_focused,
+        hardShadow: _focused,
+        borderColor: _focused ? colors.goldDeep : colors.parchmentEdge,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): _send,
+                const SingleActivator(LogicalKeyboardKey.enter, shift: true):
+                    _insertNewline,
+                const SingleActivator(LogicalKeyboardKey.numpadEnter): _send,
+                const SingleActivator(
+                  LogicalKeyboardKey.numpadEnter,
+                  shift: true,
+                ): _insertNewline,
+              },
+              child: TextField(
+                key: const Key('chat-composer'),
+                controller: _controller,
+                enabled: _acceptsInput,
+                minLines: 2,
+                maxLines: 6,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.newline,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: colors.ink),
+                decoration: InputDecoration.collapsed(
+                  hintText: widget.placeholder,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Divider(color: colors.parchmentEdge, height: 2),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'ENTER SENDS · SHIFT+ENTER ADDS A LINE',
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: colors.inkMuted),
+                  ),
+                ),
+                if (widget.responding)
+                  BalaurButton(
+                    key: const Key('stop-button'),
+                    label: 'Stop',
+                    onPressed: widget.onStop,
+                    size: BalaurButtonSize.small,
+                  )
+                else
+                  BalaurButton(
+                    key: const Key('send-button'),
+                    label: widget.sendLabel,
+                    onPressed: widget.enabled ? _send : null,
+                    size: BalaurButtonSize.small,
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

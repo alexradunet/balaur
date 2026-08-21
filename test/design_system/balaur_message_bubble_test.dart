@@ -28,19 +28,32 @@ void main() {
     expect(portraitRect.right, closeTo(bubbleRect.right, 0.1));
   });
 
-  testWidgets('shows the streaming state', (tester) async {
+  testWidgets('uses the message text style for the streaming state', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const _TestApp(
-        child: BalaurMessageBubble(
-          content: '',
-          role: BalaurMessageBubbleRole.agent,
-          status: BalaurMessageBubbleStatus.streaming,
+        child: Column(
+          children: [
+            BalaurMessageBubble(
+              content: 'Normal message.',
+              role: BalaurMessageBubbleRole.householdMember,
+            ),
+            BalaurMessageBubble(
+              content: '',
+              role: BalaurMessageBubbleRole.agent,
+              status: BalaurMessageBubbleStatus.streaming,
+            ),
+          ],
         ),
       ),
     );
 
+    final message = tester.widget<SelectableText>(find.byType(SelectableText));
+    final indicator = tester.widget<Text>(find.text('thinking…'));
+
     expect(find.bySemanticsLabel('Agent response in progress'), findsOneWidget);
-    expect(find.text('thinking…'), findsOneWidget);
+    expect(indicator.style, message.style);
   });
 
   testWidgets('uses the compact portrait below 640 pixels', (tester) async {

@@ -207,8 +207,8 @@ class _MessageContent extends StatelessWidget {
             child: ExcludeSemantics(
               child: Text(
                 'thinking…',
-                style: Theme.of(context).textTheme.labelMedium
-                    ?.copyWith(color: colors.tealInk),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: colors.ink, height: 1.55),
               ),
             ),
           ),

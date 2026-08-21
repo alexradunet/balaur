@@ -105,10 +105,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
         ),
-        _Composer(
+        BalaurComposer(
           controller: _composerController,
-          isEnabled: _controller.isConfigured && !_controller.isStreaming,
-          isStreaming: _controller.isStreaming,
+          enabled: _controller.isConfigured,
+          responding: _controller.isStreaming,
           onSend: _sendMessage,
           onStop: _controller.stop,
         ),
@@ -143,12 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Future<void> _sendMessage() async {
-    final content = _composerController.text;
-    if (content.trim().isEmpty) {
-      return;
-    }
-    _composerController.clear();
+  Future<void> _sendMessage(String content) async {
     await _controller.sendMessage(content);
   }
 
@@ -189,67 +184,6 @@ class _EmptyConversation extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text('Ask Balaur for help with your household.'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Composer extends StatelessWidget {
-  const _Composer({
-    required this.controller,
-    required this.isEnabled,
-    required this.isStreaming,
-    required this.onSend,
-    required this.onStop,
-  });
-
-  final TextEditingController controller;
-  final bool isEnabled;
-  final bool isStreaming;
-  final Future<void> Function() onSend;
-  final Future<void> Function() onStop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      elevation: 8,
-      color: Theme.of(context).colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                key: const Key('chat-composer'),
-                controller: controller,
-                enabled: isEnabled,
-                minLines: 1,
-                maxLines: 5,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Message Balaur',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (isStreaming)
-              IconButton.filled(
-                key: const Key('stop-button'),
-                onPressed: onStop,
-                tooltip: 'Stop response',
-                icon: const Icon(Icons.stop),
-              )
-            else
-              IconButton.filled(
-                key: const Key('send-button'),
-                onPressed: isEnabled ? onSend : null,
-                tooltip: 'Send message',
-                icon: const Icon(Icons.arrow_upward),
-              ),
           ],
         ),
       ),
